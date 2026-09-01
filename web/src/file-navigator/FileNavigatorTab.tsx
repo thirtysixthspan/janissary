@@ -1,8 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import type { FileNavigatorRow } from '@shared/protocol';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { useFileNavigatorRename } from './useFileNavigatorRename';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
+import { findPendingNewDir } from './file-navigator-new-file';
 import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
 import { useFileNavigatorOpener } from './useFileNavigatorOpener';
@@ -10,11 +9,11 @@ import { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import { useFileNavigatorKeyDown } from './useFileNavigatorKeyDown';
 import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { setClipboard } from './file-navigator-clipboard';
-import { normalizeOperationPaths, useFileNavigatorSelection } from './useFileNavigatorSelection';
+import { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
 import { useSelectionAction } from '../useSelectionAction';
 import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
-import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
+import { createFileNavigatorActions } from './file-navigator-menu-actions';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
 import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import { nextDock } from '../dock-cycle';
@@ -66,29 +65,8 @@ export function FileNavigatorTab({
 
   const toggle = intents.toggle;
   const openFile = (path: string, edit: boolean) => opener.open(path, edit);
-  const editFile = (path: string) => files.remote
-    ? client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command: 'edit' } })
-    : intents.sendCommand(`edit ${files.absoluteRoot}/${path}`);
   const reroot = intents.reroot;
   const rerootTo = intents.rerootTo;
-  const createNewFile = () => {
-    const destination = newFileTargetDir(files.rows, selection.cursor) ?? '';
-    if (files.remote) {
-      client.send({ method: 'fileNavigatorCreateFile', params: { index, destination } });
-      return;
-    }
-    const text = newFileCommand(files.absoluteRoot, destination || null);
-    intents.sendCommand(text);
-  };
-  const createNewDirectory = () => {
-    const targetDir = newFileTargetDir(files.rows, selection.cursor);
-    setPendingNewDir(newDirectoryTargetPath(targetDir));
-    if (files.remote) {
-      client.send({ method: 'fileNavigatorCreateDirectory', params: { index, destination: targetDir ?? '' } });
-      return;
-    }
-    intents.sendCommand(newDirectoryCommand(files.absoluteRoot, targetDir));
-  };
 
   const rowEvents = useFileNavigatorRowEvents({
     rows: files.rows,
@@ -98,33 +76,12 @@ export function FileNavigatorTab({
     actions: { reroot, toggle, openFile },
   });
   const multiOpenSelection = multiOpen?.(selection.operationPaths) ?? null;
-  const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
-  const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
-  const menuActions: FileNavigatorMenuActions = {
-    open: (row) => {
-      if (multiOpenSelection?.includes(row.path)) for (const path of multiOpenSelection) openFile(path, false);
-      else rowEvents.onRowDoubleClick(row, false);
-    },
-    edit: (row) => {
-      if (multiOpenSelection?.includes(row.path)) for (const path of multiOpenSelection) editFile(path);
-      else editFile(row.path);
-    },
-    openWith: (row) => opener.openWith(
-      row.path,
-      selection.selected.has(row.path) ? selection.operationPaths : [row.path],
-    ),
-    copy: (row) => setClipboard('copy', [`${files.absoluteRoot}/${row.path}`], files.remote?.host),
-    paste: (row) => paste.paste(files.rows, row.path),
-    duplicate: (row) => paste.duplicate(row),
-    rename: beginRename,
-    remove: (row) => deletion.request(
-      selection.selected.has(row.path)
-        ? selection.operationPaths
-        : normalizeOperationPaths(files.rows, new Set([row.path])),
-    ),
-    newFile: createNewFile,
-    newDirectory: createNewDirectory,
-  };
+  const {
+    editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
+  } = createFileNavigatorActions({
+    files, client, index, intents, selection, opener, paste, deletion, rename, rowEvents,
+    multiOpenSelection, setPendingNewDir,
+  });
 
   const onKeyDown = useFileNavigatorKeyDown({
     rows: files.rows,

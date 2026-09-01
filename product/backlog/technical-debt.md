@@ -2,16 +2,6 @@
 
 ## ready
 
-* Move the file navigator's context-menu and file-creation rules out of the tab component into a module beside it, so the multi-select and remote branches can be exercised without a render.
-
-Existing Debt: The file-navigator tab component builds an eleven-entry menu-action table, the new-file and new-directory creators, and the edit path in its own body — including the rule that a menu action on a row inside the current selection applies to the whole selection, and the remote-versus-local branch choosing between a protocol call and a shell command — which is §5 (components render, they do not decide), with three of those branches calling the client directly although the feature already has an intents hook for exactly that. Severity: 5/10
-
-Existing Risk: 4/10 - None of those rules is reachable except by rendering the whole tab, which is why their only cover is a 1476-line render test, the largest in the app: an edge case such as a menu action on an unselected row while a multi-row selection exists, or a remote tree creating a directory, is expensive to pin and easy to leave uncovered when the next branch is added beside it.
-
-Proposal Risk: 2/10 - The rules become directly callable, but the extraction is behavior-preserving by eye: every assertion that covers them today goes through the DOM, so a slip in one of the selection-membership branches would show up as a green suite and a menu entry acting on the wrong paths.
-
-Proposal: `web/src/file-navigator/FileNavigatorTab.tsx` defines `editFile`, `createNewFile`, `createNewDirectory`, `clipboardPaths`, `beginRename`, and the `menuActions` object inside the component body, over collaborators the component already holds — `intents`, `selection`, `opener`, `paste`, `deletion`, `rename`, `rowEvents`, and `multiOpenSelection`. Extract them into a new `web/src/file-navigator/file-navigator-menu-actions.ts` as one factory taking those collaborators plus `client`, `index`, and `files`, returning the same `FileNavigatorMenuActions` object and the two creators; the component keeps its hook calls, its effects, and its JSX. Keep the extraction inside this one file — folding the three direct `client.send` calls into `web/src/file-navigator/useFileNavigatorIntents.ts`, where the feature's other protocol calls already live, is a second edit and belongs to a follow-up entry. The component's props do not change, so `web/src/Sidebar.tsx` and `web/src/ViewTabBody.tsx` are unaffected, and `web/src/file-navigator/FileNavigatorTab.test.tsx` drives every one of these paths through the rendered tree and needs no edit. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/file-navigator/FileNavigatorTab.tsx`.
-
 ## development
 
 * Hand the client plugin host its registry and its failure ledger as one injected object instead of importing two module-level singletons into the plugin body component.
