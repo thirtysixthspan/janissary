@@ -2,17 +2,6 @@
 
 ## ready
 
-* Colocate the four root-level modules whose every consumer already sits inside one feature directory.
-
-Existing Debt: Four modules sit in the flat root as though they were shared, but each one's entire consumer set is inside a single feature — the transcript-search command parser is used only by the agent tabs' command interceptions, the command-line populator only by two picker hooks, the tab-flag formatter only by the shared meta row, and the selection-action hook only by two file-navigator components — which is §2 (colocate by default; promote on the second real consumer) applied backwards. Severity: 3/10
-
-Existing Risk: 3/10 - Root placement reads as a shared contract, so the next feature that needs one of these behaviors will import it rather than ask whether the behavior belongs to it, and the cross-feature coupling that creates is invisible to the lint zones because the root is not a zone.
-
-Proposal Risk: 1/10 - Each module ends up inside the zone that owns it, and a later cross-feature import becomes a lint error rather than a habit; the residual risk is misjudging one of the four — the selection-action hook queries a server-provided plugin action, so a second surface gaining multi-row selection would have to promote it back to the shared layer.
-
-Proposal: Move `web/src/search-intercept.ts` into `web/src/agent-tabs/command-input/`, whose `command-interceptions.ts` is its only importer; `web/src/populate-command-line.ts` into `web/src/pickers/`, imported only by `useTaskPicker.ts` and `useProfilePicker.ts` there; `web/src/tab-flag-display.ts` into `web/src/shared/`, beside the `AgentTabMeta.tsx` that is its only importer; and `web/src/useSelectionAction.ts`, together with its colocated `web/src/useSelectionAction.test.ts`, into `web/src/file-navigator/`, imported only by `FileNavigatorTab.tsx` and `FileNavigatorRows.tsx`. Five importing files each change one import path, the moved modules keep their contents, and the moved test keeps its `./useSelectionAction` import valid from the new directory. None of the four has a second consumer to promote for, and none carries knowledge of more than the feature it moves into — check that again per module before moving, since that is the whole justification for the move.
-
-
 * Move the quick-open picker and the route chooser into the pickers feature so every picker lives in one directory.
 
 Existing Debt: The quick-open component and its hook, and the route chooser, sit in the flat `web/src` root while every other picker — history, theme, app theme, queue, task, profile, tab navigation — lives in the pickers directory, so the feature's own overlay stack climbs out of its directory to import two of the overlays it renders, which is §1 (organize by feature, not by a flat root). Severity: 3/10
