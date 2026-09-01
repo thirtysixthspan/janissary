@@ -1,5 +1,5 @@
-import type { JanusClient } from './ws';
-import type { CommandInputDropHandle } from './drop-handles';
+import type { JanusClient } from '../ws';
+import type { CommandInputDropHandle } from '../drop-handles';
 
 // Populate the command line with `text` (via the shared recall ref) without submitting it — or,
 // on a harness tab (no command line), send it straight into that harness's PTY as terminal input.

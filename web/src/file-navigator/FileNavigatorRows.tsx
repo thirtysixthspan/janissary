@@ -7,7 +7,7 @@ import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
 import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
-import type { useSelectionAction } from '../useSelectionAction';
+import type { useSelectionAction } from './useSelectionAction';
 
 type Properties = {
   files: FileNavigatorView;

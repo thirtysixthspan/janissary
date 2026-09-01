@@ -1,6 +1,6 @@
 import type { BufferLine } from '@shared/protocol';
 import { findMatches } from '@shared/search-matches';
-import { parseSearchTranscriptCommand } from '../../search-intercept';
+import { parseSearchTranscriptCommand } from './search-intercept';
 
 // Returns a pattern to open search mode with, or null when the input should proceed through the
 // normal command pipeline — including a `search transcript` pattern with no matches, which falls

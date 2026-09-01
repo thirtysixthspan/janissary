@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { FileSelectionAction } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 
 // The entry a tab plugin contributes for a whole selection of rows, for the row context menu.
 // Queried only when a menu opens on a row that belongs to a multi-row selection: every other menu

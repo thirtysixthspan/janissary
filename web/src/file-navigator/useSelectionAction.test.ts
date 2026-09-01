@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { useSelectionAction } from './useSelectionAction';
 
 const OFFERED = { label: 'Add to playlist', action: 'queue' };
