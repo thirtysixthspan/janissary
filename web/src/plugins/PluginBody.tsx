@@ -12,7 +12,8 @@ import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../SplitTabButton';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
-import { clientPluginFailure, clientPluginRegistry, type ClientPluginRegistration } from './registry';
+import { usePluginHost } from './host';
+import { type ClientPluginRegistration } from './registry';
 
 const CLIENT_ACTIVATION_MS = 5000;
 
@@ -127,6 +128,7 @@ export function PluginBody({
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
 }) {
+  const host = usePluginHost();
   const [failed, setFailed] = useState(false);
   const pluginId = plugin.id;
   // The caller rebuilds `onSplit` on every render, so calling through a ref is what actually keeps
@@ -156,9 +158,9 @@ export function PluginBody({
   );
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      pluginId, label, client, active, dock, close, splitAction, registerDirty,
+      host, pluginId, label, client, active, dock, close, splitAction, registerDirty,
     ),
-    [active, client, close, dock, label, pluginId, registerDirty, splitAction],
+    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;
@@ -168,6 +170,6 @@ export function PluginBody({
     capabilitiesRef.current.reportFailure(errorText(error));
   }, []);
 
-  if (failed || clientPluginFailure(pluginId) !== undefined) return null;
-  return contentForPlugin(plugin, clientPluginRegistry.get(pluginId), capabilities, fail);
+  if (failed || host.failure(pluginId) !== undefined) return null;
+  return contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail);
 }

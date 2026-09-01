@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderBare, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './tab-handles';
 import type { DirtyTabHandle } from './tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
+import { createPluginHost, PluginHostProvider } from './plugins/host';
 
 vi.mock('./harness/HarnessTab', () => {
   const { forwardRef, useImperativeHandle, createElement } = React;
@@ -55,10 +56,18 @@ vi.mock('./plugins/registry', () => {
   });
   return {
     clientPluginRegistry: new Map([['video', { schemaVersion: 1, Component }]]),
-    clientPluginFailure: () => {},
-    disableClientPlugin: () => true,
   };
 });
+
+// The host is built over the mocked registry above, and shadowing Testing Library's `render` is what
+// puts it above every layer these cases mount without touching a single call site.
+const pluginHost = createPluginHost();
+
+function render(ui: React.ReactElement) {
+  return renderBare(ui, {
+    wrapper: ({ children }) => <PluginHostProvider host={pluginHost}>{children}</PluginHostProvider>,
+  });
+}
 
 function makeEditorTab(label: string, url: string): TabView {
   return {

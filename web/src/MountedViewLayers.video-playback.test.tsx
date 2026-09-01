@@ -1,13 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render as renderBare, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './tab-handles';
 import type { DirtyTabHandle } from './tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
+import { createPluginHost, PluginHostProvider } from './plugins/host';
 
 // Deliberately kept out of `MountedViewLayers.test.tsx`, which installs a fixture registration:
 // these assertions load the real video plugin and pin its DOM node across focus changes.
+
+// A host over the production registry, since these cases want the real video plugin. Shadowing
+// Testing Library's `render` puts the provider above every layer without touching a call site.
+const pluginHost = createPluginHost();
+
+function render(ui: React.ReactElement) {
+  return renderBare(ui, {
+    wrapper: ({ children }) => <PluginHostProvider host={pluginHost}>{children}</PluginHostProvider>,
+  });
+}
 
 function makeVideoTab(label: string): TabView {
   return {

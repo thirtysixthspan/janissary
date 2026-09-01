@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
-import { disableClientPlugin } from './registry';
+import type { PluginHost } from './host';
 
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
@@ -41,6 +41,7 @@ export type TabPluginClientCapabilities = {
 };
 
 export function createPluginClientCapabilities(
+  host: PluginHost,
   pluginId: string,
   label: string,
   client: JanusClient,
@@ -74,7 +75,7 @@ export function createPluginClientCapabilities(
     // disables the plugin for this session; the server then closes its tabs, and any later report
     // from a component still finishing its work is dropped instead of racing the teardown.
     reportFailure: (reason) => {
-      if (!disableClientPlugin(pluginId, reason)) return;
+      if (!host.disable(pluginId, reason)) return;
       client.send({ method: 'pluginFailed', params: { tab: label, reason } });
     },
   };
