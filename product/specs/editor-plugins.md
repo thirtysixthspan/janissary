@@ -30,6 +30,8 @@ A command is given the name it was invoked as, the file's name, every selection 
 
 The file's name is how a command varies by language; the declaration carries no language or file-type field of its own.
 
+Alongside the request, the plugin contract publishes the buffer helpers a command composes with — ordering a selection into a start and an end, extracting the text a range covers, finding the word under a caret, and converting between a position and a character offset. These are part of the versioned contract, so a plugin never depends on the editor's internals for them and a change to what a plugin sees has to be a change to the contract.
+
 ### What a command may change
 
 A command answers with a list of range replacements and, optionally, a whole new set of selections — in creation order, the new primary last. Answering with no selections at all leaves the editor's set as it was; answering with an empty set is refused, since an editor always has at least one caret. Every position it names is a position in the whole document, whichever slice it was given.

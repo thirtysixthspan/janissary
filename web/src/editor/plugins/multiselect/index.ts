@@ -3,9 +3,10 @@
 // command answers with an empty edit list and a new selection set, which is exactly the reach the
 // version-2 contract gives a command.
 
-import { primarySelection, type EditorPluginHandler, type EditorPluginRequest, type EditorPluginResult, type EditorSelection } from '../api';
-import { selectionBounds, textIn, wordRangeAt } from '../../model';
-import { offsetToPos, posToOffset } from '../../offsets';
+import {
+  primarySelection, selectionBounds, textIn, wordRangeAt, offsetToPos, posToOffset,
+  type EditorPluginHandler, type EditorPluginRequest, type EditorPluginResult, type EditorSelection,
+} from '../api';
 import { nextOccurrence, type OffsetRange } from './occurrences';
 
 const selectionsOnly = (selections: readonly EditorSelection[]): EditorPluginResult => ({ edits: [], selections });

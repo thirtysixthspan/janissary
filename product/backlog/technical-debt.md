@@ -2,17 +2,6 @@
 
 ## ready
 
-* Publish the editor-plugin contract properly and put its import boundary under lint, so an editor plugin stops reaching into the editor's own internals.
-
-Existing Debt: The editor-plugin layer copies the tab-plugin architecture — a versioned api module, a static declaration table, lazy loaders, per-plugin failure isolation — but nothing enforces its boundary: one bundled plugin imports the editor's model and offset modules directly, and the contract module itself borrows a type from that model, so "plugins depend only on a published contract" holds by convention rather than by construction. Severity: 5/10
-
-Existing Risk: 4/10 - A refactor of the editor's caret and offset helpers changes what a plugin sees without touching the versioned contract or its version number, so a bundled plugin's chords quietly stop agreeing with the buffer and its edits land at the wrong positions.
-
-Proposal Risk: 2/10 - A static reach past the contract becomes a lint error, but a plugin can still ask for a wider slice of the buffer than it needs, since the slice is declared by the plugin rather than granted by the host.
-
-Proposal: `eslint.plugin-boundaries.mjs` constrains only the tab-plugin layer — `src/plugins/*/**` and `web/src/plugins/*/**` — and has no rule matching `web/src/editor/plugins/*/**`, which is why `web/src/editor/plugins/multiselect/index.ts` can import `selectionBounds`, `textIn`, and `wordRangeAt` from `web/src/editor/model` and `offsetToPos`/`posToOffset` from `web/src/editor/offsets`, while the `commenting` and `indenting` plugins correctly use `../api` alone. Promote those five helpers into the published contract — re-export them from `web/src/editor/plugins/api.ts`, or hand them to the handler on its request — and do the same for the `Pos` type that `api.ts` currently imports from `../model`, so the contract owns its own vocabulary instead of borrowing the host's. Then add a fourth entry to the `pluginBoundaries` array for `web/src/editor/plugins/*/**/*.ts` restricting `^\.\./(?!api$)`, with a message shaped like the two existing plugin rules. Leave `EDITOR_PLUGIN_API_VERSION` alone if the helpers move unchanged; bump it only if a signature changes on the way. `web/src/editor/plugins/multiselect/index.test.ts` and `web/src/editor/plugins/host.test.ts` pin the multiselect commands and the load/disable behavior, and the new lint zone should get a case in whichever boundary test module exists by then — see the separate entry on testing the plugin boundary rules.
-
-
 * Put the plugin architecture's import-boundary lint rules under test the way the client feature zones already are.
 
 Existing Debt: The six restricted-import blocks that encode the whole plugin architecture — plugins may not reach past their API, host infrastructure may import only a manifest, core may reach behavior only through the lazy loader maps, and the client plugin host must not pull a shared contract into the entry bundle — are intricate regexes with negative lookaheads and a type-only exemption, and not one of them is exercised anywhere, while the far simpler feature-zone config beside them has a dedicated test module. Severity: 5/10
