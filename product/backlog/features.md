@@ -2,8 +2,6 @@
 
 ## ready
 
-* conversations feature to exist as a new plugin. this will create a new conversation ui similar to existing AI conversation user interfaces like claude or openai on the web. each conversation will be persisted in the users ~/.janissary/conversations directory. the conversations tab should be a list of conversations ordered by most recent activity. conversations should be recorded in json format as metadata, query and response objects. Each conversation will be viewable in a conversation tab. the conversations tab should have a tab to create a new conversation. conversations should be model independent. A query in a conversation should be able to be sent to one or more models for a response. opening an existing conversation will show the recent conversation history, and reconstruct the history on scrollback as necessary.
-
 ## development
 
 ## deferred
