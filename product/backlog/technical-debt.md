@@ -2,16 +2,6 @@
 
 ## ready
 
-* Give the ACP tool surface one descriptor table instead of three hand-kept parallel lists of the same three tools.
-
-Existing Debt: The browser, question, and database tools are each spelled out three separate times on the ACP run path — once as a primer fragment concatenated into a template string, once as an arm of the command runner, and once as a term in the extractor's fallback chain, in a different order from the runner — so the tool set exists only as a coincidence between three lists that nothing relates to each other. Severity: 5/10
-
-Existing Risk: 5/10 - A fourth tool added to two of the three lists is primed and extracted but never executed, or executed but never primed, which the agent experiences as a tool that silently does nothing rather than as an error anyone sees.
-
-Proposal Risk: 2/10 - One table replaces the three lists, but resolution stays first-match over an ordered array, so two tools whose extractors both claim the same reply text still resolve by position in that array.
-
-Proposal: `AcpManager.run` in `src/acp/manager.ts` assembles `runAcpToolLoop`'s options by hand. Its `primer` concatenates `this.managers.database.primer`, `BROWSER_PRIMER` from `src/browser/command.ts`, and `QUESTION_PRIMER` from `src/question-command.ts`, plus a trailing Markdown instruction. Its `runCommand` tests `/^browser\b/i` then `/^question\b/i` and otherwise falls through to `this.managers.database.runInTab`. Its `extractCommand` chains `extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? extractQuestionCommand(t)` — browser, database, question, which is not the runner's order. Introduce an `AcpTool` type and a table in a new `src/acp/tool-table.ts` (a distinct concern from the existing `src/acp/tools.ts`, which classifies tool-permission requests), whose entries each carry `{ primer, match, run, extract }` and which is built from a `Managers`; then derive all three options by walking it — `primer` by joining the fragments, `runCommand` by finding the first entry whose `match` accepts the command, `extractCommand` by returning the first non-undefined `extract`. Keep the database entry last so it remains the fall-through it is today, and state the first-match resolution rule in the table module's own comment, as `ai/guidelines/plugins.md` section 2 asks of any extension point. Note that the runner matches on the command string while the extractor reads the agent's reply text, so an entry carries two different predicates and the table must not collapse them into one. `src/acp/manager.test.ts` covers the browser/question/database dispatch and the primer's contents, and `src/acp/loop.test.ts` covers the loop's use of the extractor; both pin the behavior that must not move.
-
 * Derive the remote wire protocol's frame-type lists and its decoder switch from the frame union itself, so a new frame type fails the build instead of being refused at runtime.
 
 Existing Debt: The remote frame union is mirrored by hand in three unlinked places — two `Set<string>` literals naming all twenty-two frame types and a decoder switching on a plain `string` with a catch-all default — so nothing ties the declared contract to the code that admits it, even though this repo already established the compile-time idiom for exactly this problem in two other protocol modules. Severity: 6/10

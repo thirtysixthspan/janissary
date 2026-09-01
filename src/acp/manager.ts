@@ -2,13 +2,12 @@ import type { AcpSession, AcpInfo } from './types.js';
 import { connectAcp } from './index.js';
 import { createRemoteAcpSession } from '../remote/acp-session.js';
 import { runAcpToolLoop } from './loop.js';
-import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isRateLimitError } from './rate-limit.js';
 import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
-import { extractQuestionCommand, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
+import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
 // wired up); the model string drives the `provider/model` label shown in the connections panel.
@@ -21,6 +20,10 @@ const ACP_MODEL = 'google/gemini-3.1-flash-lite';
 // forever with the busy dot lit. `send` and `schedule` queue because something else delivers them to
 // a tab; `acp` is typed by a person, who can retype it.
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
+
+// Appended after the tool table's own primer fragments: it describes how the tab renders a reply,
+// which is the manager's concern rather than any one tool's.
+const MARKDOWN_INSTRUCTION = 'Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.';
 
 // Which agent and model run — decided here on both paths, and sent across for a remote tab, so one
 // definition holds and the two installations cannot silently disagree about the model.
@@ -155,16 +158,13 @@ export class AcpManager {
 
     const updateRunning = makeUpdateRunning(label, this.managers);
 
+    const tools = createAcpToolTable(this.managers);
+
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
-      primer: `${this.managers.database.primer}\n\n${BROWSER_PRIMER}\n\n${QUESTION_PRIMER}\n\nWrite your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.`,
-      runCommand: (c) => {
-        if (/^browser\b/i.test(c)) return this.managers.browser.run(label, c);
-        if (/^question\b/i.test(c)) return runQuestionCommand(c, label, this.managers.questions);
-        return this.managers.database.runInTab(label, c);
-      },
-      extractCommand: (t) =>
-        extractBrowserCommand(t) ?? this.managers.database.extract(t) ?? extractQuestionCommand(t),
+      primer: `${toolPrimer(tools)}\n\n${MARKDOWN_INSTRUCTION}`,
+      runCommand: toolRunner(tools, label),
+      extractCommand: toolExtractor(tools),
     }, {
       startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
       chunk: (buffer) => updateRunning(buffer, true),
