@@ -3,7 +3,12 @@
 // runs entirely in the client: declarations are static data in ./registry.ts and implementations are
 // lazily imported modules, so nothing about an editor plugin reaches the server.
 
-import type { Pos } from '../model';
+import { selectionBounds as hostSelectionBounds, textIn as hostTextIn, wordRangeAt as hostWordRangeAt, type Pos } from '../model';
+import { offsetToPos as hostOffsetToPos, posToOffset as hostPosToOffset } from '../offsets';
+
+// A document position, published here so a plugin takes its coordinate vocabulary from the contract
+// rather than from the editor's own model.
+export type { Pos } from '../model';
 
 // Version 2 replaced the single `selection` on a request and a result with the whole selection set,
 // so a command can create, drop, or collapse carets rather than only move one.
@@ -62,6 +67,20 @@ export type EditorPluginRequest = {
 // The primary selection — the most recently created caret, and the one a command that thinks in
 // terms of a single selection (commenting, indenting) acts on.
 export const primarySelection = (request: EditorPluginRequest): EditorSelection => request.selections.at(-1)!;
+
+// The buffer helpers a plugin may use, published here so a plugin never reaches into the editor's
+// own model and offset modules for them.
+//
+// Each signature is written out rather than inherited from the host function, and that is the point:
+// a bare re-export would leave the plugin-visible signature defined in `../model` and `../offsets`,
+// so a refactor of the editor's caret and offset helpers would change what a plugin sees without
+// touching this contract or its version number. Spelled here, such a refactor fails to typecheck in
+// the versioned module — which is where the decision to bump `EDITOR_PLUGIN_API_VERSION` belongs.
+export const selectionBounds: (selection: EditorSelection) => EditorRange = hostSelectionBounds;
+export const textIn: (lines: readonly string[], range: EditorRange) => string = hostTextIn;
+export const wordRangeAt: (lines: readonly string[], line: number, col: number) => EditorRange = hostWordRangeAt;
+export const posToOffset: (lines: readonly string[], pos: Pos) => number = hostPosToOffset;
+export const offsetToPos: (lines: readonly string[], offset: number) => Pos = hostOffsetToPos;
 
 // One range replacement, in absolute document coordinates regardless of which slice was requested.
 export type EditorPluginEdit = { start: Pos; end: Pos; text: string };

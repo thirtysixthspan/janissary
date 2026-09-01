@@ -89,6 +89,25 @@ export const pluginBoundaries = [
       }],
     },
   },
+  // The editor-plugin layer, which copies the tab-plugin architecture — a versioned api module, a
+  // static declaration table, lazy loaders, per-plugin failure isolation — and needs the same
+  // boundary to make "plugins depend only on a published contract" hold by construction. `../api` is
+  // the whole surface: the buffer helpers a plugin composes with (selection bounds, text extraction,
+  // word ranges, offset conversion) are published there rather than reached for in the editor's own
+  // model and offset modules. Tests are exempt as they are for the two rules above — a plugin's test
+  // legitimately drives `applyPluginResult` against a real `EditorState`.
+  {
+    files: ['web/src/editor/plugins/*/**/*.ts', 'web/src/editor/plugins/*/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: String.raw`^\.\./(?!api$)`,
+          message: 'Editor plugins must use web/src/editor/plugins/api.ts instead of the editor\'s internals.',
+        }],
+      }],
+    },
+  },
   // The client plugin host itself. It is reachable from the entry bundle, so a runtime import of any
   // plugin's shared contract would ship that plugin's guards eagerly and defeat the lazy chunk.
   // Type-only imports are fine — they are erased before the bundler ever sees them. The second
