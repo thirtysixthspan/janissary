@@ -317,7 +317,9 @@ scrolls by that same single row to bring the caret back into sight — the curso
 start or end of the document from an arrow press. Scrolling this way advances by screen rows, not
 by whole buffer lines: a soft-wrapped line at the edge of the view is crossed one row per press,
 exactly as it is in the middle of the view, so holding ↓ through a wrapped paragraph scrolls it
-smoothly rather than a whole wrapped line at a time. Only when there is nothing left to scroll —
+smoothly rather than a whole wrapped line at a time. A row that is only partly visible at the edge
+counts as not visible: the view brings it into place before the press resolves, so ↓ at the bottom
+of the view behaves exactly like ↑ at the top of it. Only when there is nothing left to scroll —
 the view is already at the top or bottom of the document — does the press fall back to moving a
 whole line.
 
