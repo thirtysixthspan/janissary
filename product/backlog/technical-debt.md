@@ -2,16 +2,6 @@
 
 ## ready
 
-* Move the quick-open picker and the route chooser into the pickers feature so every picker lives in one directory.
-
-Existing Debt: The quick-open component and its hook, and the route chooser, sit in the flat `web/src` root while every other picker — history, theme, app theme, queue, task, profile, tab navigation — lives in the pickers directory, so the feature's own overlay stack climbs out of its directory to import two of the overlays it renders, which is §1 (organize by feature, not by a flat root). Severity: 3/10
-
-Existing Risk: 3/10 - Nothing misbehaves today, but the pickers lint zone cannot protect what sits outside the directory: another feature may import the quick-open component directly and the boundary rule that would have refused it does not apply at the root, while each new picker keeps having two plausible homes.
-
-Proposal Risk: 1/10 - The move carries no behavior, only paths; what it leaves behind is the fuzzy matcher, which the editor's find bar also imports and so correctly stays at the root under §2 — meaning the pickers feature still reaches outward for its match type, and the root still looks like a shared layer it is not.
-
-Proposal: `web/src/QuickOpen.tsx`, `web/src/useQuickOpen.ts`, and `web/src/RouteChooser.tsx`, with their colocated `QuickOpen.test.tsx`, `useQuickOpen.test.ts`, and `RouteChooser.test.tsx`, sit at the root; `web/src/pickers/PickerOverlays.tsx` imports the two components as `../QuickOpen` and `../RouteChooser`, and `web/src/App.tsx` imports `./useQuickOpen`. Move all six files into `web/src/pickers/`, rewrite the imports inside them that reach `./fuzzy-match`, `./rel-path`, and `./ws` to `../`, drop the `../` from the two `PickerOverlays.tsx` imports, and point `App.tsx` at `./pickers/useQuickOpen`. Two importing files change, the six moved files keep their contents otherwise unchanged, and the three moved tests are the cover: they assert the rendered result rows, the query-and-select flow, and the chooser's keyboard picks, and must keep passing with only their own relative imports adjusted.
-
 * Lift the agent tab's intent builder into the shared layer so the harness tab stops hand-writing the same three protocol calls in its JSX.
 
 Existing Debt: The builder that turns the shared meta row's callbacks into protocol calls lives inside the agent-tabs feature while the component it serves lives in the shared layer, so the harness tab — which may not import a sibling feature under §3 (no feature imports another feature) — inlines three `client.send` calls in its JSX instead, reaching past the seam in violation of §8 (a component imports hooks and pure modules, not services). Severity: 5/10

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QuickOpen } from './QuickOpen';
-import type { FuzzyMatchResult } from './fuzzy-match';
+import type { FuzzyMatchResult } from '../fuzzy-match';
 
 function renderQuickOpen(overrides: Partial<React.ComponentProps<typeof QuickOpen>> = {}) {
   const onChangeQuery = vi.fn();
