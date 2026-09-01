@@ -39,6 +39,15 @@ describe('client feature boundaries', () => {
     expect(messages[0]?.message).toContain('not import a sibling feature');
   });
 
+  it('includes the schedule launch dialog in feature isolation', async () => {
+    const messages = await boundaryMessages(
+      "import { HarnessTab } from '../harness/HarnessTab'; void HarnessTab;",
+      'web/src/ScheduleLaunchDialog/ScheduleDialog.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('not import a sibling feature');
+  });
+
   it('allows an import within the same feature', async () => {
     const messages = await boundaryMessages(
       "import { harnessLaunchCommand } from './harness-launch-command'; void harnessLaunchCommand;",
