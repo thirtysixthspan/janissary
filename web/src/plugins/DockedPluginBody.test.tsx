@@ -1,18 +1,25 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render as renderBare, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { Sidebar } from '../Sidebar';
-import {
-  clearClientPluginFailures,
-  clientPlugin,
-  clientPluginRegistry,
-  type ClientPluginRegistration,
-} from './registry';
+import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
+import { clientPlugin, type ClientPluginRegistration } from './registry';
 
-const registry = clientPluginRegistry as Map<string, ClientPluginRegistration>;
-const productionEntries = [...registry];
+// Each case owns its registry and its failure ledger, so a fixture plugin never has to be written
+// into the production map and a disabled plugin cannot leak into the next case.
+let registry: Map<string, ClientPluginRegistration>;
+let host: PluginHost;
+
+// Shadows Testing Library's `render` so every call site below gets the provider without saying so.
+// The sidebar is what renders the docked body, so the wrapper is how the host reaches it.
+function render(ui: React.ReactElement) {
+  return renderBare(ui, {
+    wrapper: ({ children }) => <PluginHostProvider host={host}>{children}</PluginHostProvider>,
+  });
+}
+
 const acceptsAnyPayload = (value: unknown): value is unknown => value !== undefined;
 
 function pluginTab(label: string, id: string): TabView {
@@ -45,14 +52,11 @@ function registerCountingPlugin(id: string, mounts: () => void) {
 }
 
 beforeEach(() => {
-  registry.clear();
-  clearClientPluginFailures();
+  registry = new Map();
+  host = createPluginHost(registry);
 });
 
 afterEach(() => {
-  registry.clear();
-  for (const [id, entry] of productionEntries) registry.set(id, entry);
-  clearClientPluginFailures();
   vi.restoreAllMocks();
 });
 

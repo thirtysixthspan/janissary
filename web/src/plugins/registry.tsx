@@ -76,19 +76,3 @@ export const clientPluginRegistry = createClientPluginRegistry({
   schedules: clientPlugin(1, clientPluginLoaders.schedules),
   video: clientPlugin(1, clientPluginLoaders.video),
 } satisfies Record<ProductionTabPluginId, ClientPluginRegistration>);
-
-const failures = new Map<string, string>();
-
-export function clientPluginFailure(id: string): string | undefined {
-  return failures.get(id);
-}
-
-export function disableClientPlugin(id: string, reason: string): boolean {
-  if (failures.has(id)) return false;
-  failures.set(id, reason);
-  return true;
-}
-
-export function clearClientPluginFailures(): void {
-  failures.clear();
-}

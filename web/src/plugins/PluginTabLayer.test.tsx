@@ -1,20 +1,29 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderBare, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
+import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { PluginTabLayer } from './PluginTabLayer';
 import {
-  clearClientPluginFailures,
   clientPlugin,
-  clientPluginRegistry,
   type ClientPluginLoader,
   type ClientPluginProperties,
   type ClientPluginRegistration,
 } from './registry';
 
-const registry = clientPluginRegistry as Map<string, ClientPluginRegistration>;
-const productionEntries = [...registry];
+// Each case owns its registry and its failure ledger, so a fixture plugin never has to be written
+// into the production map and a disabled plugin cannot leak into the next case.
+let registry: Map<string, ClientPluginRegistration>;
+let host: PluginHost;
+
+// Shadows Testing Library's `render` so every call site below gets the provider without saying so,
+// and `rerender` keeps it — the wrapper is what carries the host down to `PluginBody`.
+function render(ui: React.ReactElement) {
+  return renderBare(ui, {
+    wrapper: ({ children }) => <PluginHostProvider host={host}>{children}</PluginHostProvider>,
+  });
+}
 
 function tab(id = 'fixture', schemaVersion = 1, label = id): TabView {
   return {
@@ -45,14 +54,11 @@ function properties(view: TabView, value: JanusClient, visible = true) {
 }
 
 beforeEach(() => {
-  registry.clear();
-  clearClientPluginFailures();
+  registry = new Map();
+  host = createPluginHost(registry);
 });
 
 afterEach(() => {
-  registry.clear();
-  for (const [id, entry] of productionEntries) registry.set(id, entry);
-  clearClientPluginFailures();
   vi.restoreAllMocks();
 });
 
@@ -355,5 +361,23 @@ describe('PluginTabLayer lazy lifecycle', () => {
     expect(fixture.send).toHaveBeenCalledWith(expect.objectContaining({
       params: { tab: 'bad', reason: 'unknown client plugin "bad"' },
     }));
+  });
+
+  // The failure ledger belongs to the host instance, so a plugin poisoned under one host renders
+  // normally under another. A module-level ledger could not express that at all.
+  it('scopes a disabled plugin to the host that disabled it', async () => {
+    registry.set('fixture', registration(async () => ({
+      default: () => <div>fixture mounted</div>, isPayload: acceptsAnyPayload,
+    })));
+    host.disable('fixture', 'poisoned in an earlier tab');
+
+    const poisoned = client();
+    render(<PluginTabLayer {...properties(tab(), poisoned.value)} />);
+    expect(screen.queryByText('fixture mounted')).not.toBeInTheDocument();
+
+    host = createPluginHost(registry);
+    const fresh = client();
+    render(<PluginTabLayer {...properties(tab(), fresh.value)} />);
+    await waitFor(() => { expect(screen.getByText('fixture mounted')).toBeInTheDocument(); });
   });
 });

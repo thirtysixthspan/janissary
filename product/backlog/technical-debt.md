@@ -2,16 +2,6 @@
 
 ## ready
 
-* Hand the client plugin host its registry and its failure ledger as one injected object instead of importing two module-level singletons into the plugin body component.
-
-Existing Debt: The plugin body component imports the process-wide plugin registry map and the module-level failure ledger directly and reads both during its render, which is the hidden global §7 (services are framework-free and injected) names — the ledger is mutable module state, written from the capability object handed to every plugin, that no caller can construct, substitute, or scope. Severity: 7/10
-
-Existing Risk: 6/10 - Failure state lives as long as the page: once any tab poisons a plugin id, every later tab for that id renders nothing until a reload, and because one map backs every test file the suites stay honest only by remembering a global reset in `beforeEach` — a forgotten one silently disables a plugin in an unrelated case, and the reverse hides a real regression.
-
-Proposal Risk: 3/10 - The registry and ledger become a value the app shell owns and passes down, but that value still has run-long lifetime, so a test reusing one instance across cases — or a provider mounted above a remount boundary — can still carry failure state further than intended.
-
-Proposal: `web/src/plugins/registry.tsx` exports `clientPluginRegistry`, a `ReadonlyMap` built at module scope, plus a module-level `failures` map reached through `clientPluginFailure`, `disableClientPlugin`, and `clearClientPluginFailures`. `web/src/plugins/PluginBody.tsx` imports `clientPluginFailure` and `clientPluginRegistry` and calls both in its render body, and `web/src/plugins/api.ts` closes over `disableClientPlugin` inside the `reportFailure` capability it builds for every plugin. Introduce a host value — a `createPluginHost()` in a new `web/src/plugins/host.tsx` returning the registry plus `failure(id)` and `disable(id, reason)` over an instance-owned map — construct it once beside the client in `web/src/main.tsx`, and thread it to `PluginBody` through a context provider read by `web/src/plugins/PluginTabLayer.tsx` and `web/src/plugins/DockedPluginBody.tsx`, the only two frames that render it (`web/src/Sidebar.tsx` renders the docked one). `createPluginClientCapabilities` in `api.ts` takes that host rather than importing the ledger. Keep the default host's registry built by the existing `createClientPluginRegistry` call so `web/src/plugins/registry.test.tsx` and `web/src/plugins/fixture-v1/compatibility.test.tsx`, which assert catalog parity and schema versions against that map, keep passing untouched. The bulk of the work is the tests that exist only because there is no seam today: `web/src/plugins/PluginTabLayer.test.tsx` and `web/src/plugins/DockedPluginBody.test.tsx` cast the registry to a mutable `Map` to insert fixtures and call `clearClientPluginFailures()` around every case, `web/src/plugins/api.test.ts` does the same reset, and `web/src/MountedViewLayers.test.tsx` `vi.mock`s the whole registry module — each becomes a fresh host per case, and the reset export goes away with them.
-
 ## development
 
 ## deferred
