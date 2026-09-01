@@ -1,6 +1,6 @@
 # Find React Organization Debt
 
-Your job: read the layout and contents of `web/src/` against [`react-code-organization.md`](../../guidelines/react-code-organization.md) and find places where the code violates it, then log each one as a new entry under the `## development` section of `product/backlog/technical-debt.md`. This task **researches and records** organization debt. It never moves a file, never renames one, never extracts a module, and never touches an import. Resolving what lands here belongs to [`resolve-technical-debt.md`](../resolve-technical-debt.md), and for the subset that is a pure single-file extraction, to [`improve-modularity.md`](../hygiene/improve-modularity.md).
+Your job: read the layout and contents of `web/src/` against [`react-code-organization.md`](../../guidelines/react-code-organization.md) and find places where the code violates it, then log each one as a new entry, in the structured format Step 5 defines, under the `## development` section of `product/backlog/technical-debt.md`. This task **researches and records** organization debt. It never moves a file, never renames one, never extracts a module, and never touches an import. Resolving what lands here belongs to [`resolve-technical-debt.md`](../resolve-technical-debt.md), and for the subset that is a pure single-file extraction, to [`improve-modularity.md`](../hygiene/improve-modularity.md).
 
 The guideline is the spec for this task. It defines feature-based organization over type-named buckets, colocation with promotion to shared only on the second consumer, one-way `shared → feature → app` dependency flow with no cross-feature imports, no barrel files at feature boundaries, components that render rather than decide, hooks as the reactive seam, framework-free injected services, and the pure module → service → hook → component layering. **Read it in full before Step 2.** Every entry you write must trace to one of its numbered sections, and you cite that section by number in the entry.
 
@@ -22,9 +22,9 @@ The guideline's rules exist because each one, when broken, makes a specific futu
 
 Three things follow:
 
-- **A violation is only debt if it costs something.** A single small helper sitting in a shared location with one consumer is technically §2, and it is also nothing. The same helper carrying a feature-specific flag so two callers can share it is real — the guideline calls that out precisely because it spreads. Judge the cost before logging.
+- **A violation is only debt if it costs something.** A single small helper sitting in a shared location with one consumer is technically §2, and it is also nothing. The same helper carrying a feature-specific flag so two callers can share it is real — the guideline calls that out precisely because it spreads. Judge the cost before logging, and write that judgment into the entry's `Existing Debt` severity and its two risk paragraphs in Step 5: how much the violation costs the app today, and how much of that cost the proposed move actually removes.
 - **Only log what someone can finish in one sitting.** "Restructure `web/src/` into feature directories" is a true observation and a useless backlog item. If a violation is that large, log the smallest real slice of it — one feature's files, one boundary — and let the rest be re-found later. Never write an entry that amounts to a redesign.
-- **Some entries route to a playbook and most do not.** [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers a hygiene playbook **only** when the entry names one, and inferring a playbook from a description is forbidden there. Step 5 says exactly which findings earn the `improve-modularity.md` trigger sentence and which must be written without one so they get hand-planned. Getting this wrong either strands work or hands a target past a playbook's own safeguards.
+- **Some entries route to a playbook and most do not.** [`resolve-technical-debt.md`](../resolve-technical-debt.md) triggers a hygiene playbook **only** when the entry names one, and inferring a playbook from a description is forbidden there. Step 5 says exactly which findings earn the `improve-modularity.md` trigger sentence — closing their `Proposal` paragraph — and which must be written without one so they get hand-planned. Getting this wrong either strands work or hands a target past a playbook's own safeguards.
 
 Scope is `web/src/` only. The guideline governs the React app; `src/` is the Node server and is covered by [`architecture-principles.md`](../../guidelines/architecture-principles.md) and other research tasks. Do not log a `src/` finding here.
 
@@ -46,9 +46,11 @@ The working tree **must be clean** — no modified *and no untracked* files. Thi
 
 ## Step 1 — Load the existing backlog
 
-Read `product/backlog/technical-debt.md`. Collect every existing bullet from **every** section — `## ready`, `## development`, `## deferred`, and `## declined` — into one list. This is your dedupe set.
+Read `product/backlog/technical-debt.md`. Entries appear in more than one shape, and all of them count: newer ones follow the structured format Step 5 defines, where the `*` bullet carries a one-sentence summary and labeled paragraphs beneath it carry the rest — an entry begins at its `*` bullet and runs through its `Proposal` paragraph — while older ones are a single free-form paragraph ending in a severity rating. Read whichever you find as written; you are not migrating the old ones.
 
-If a finding is already logged anywhere in the file, even worded differently, skip it this run. `## declined` matters as much as the others: an item there was considered and rejected, and re-logging it wastes a reviewer's time twice. Also skip a finding whose files are named in a bullet about something else, when resolving that bullet would collide with your proposal.
+Collect every existing entry from **every** section — `## ready`, `## development`, `## deferred`, and `## declined` — into one list, identifying each by its lead `*` bullet: the summary line of a structured entry, the whole bullet of an older paragraph one. This is your dedupe set.
+
+If a finding is already logged anywhere in the file, even worded differently, skip it this run. `## declined` matters as much as the others: an item there was considered and rejected, and re-logging it wastes a reviewer's time twice. Also skip a finding whose files are named in an entry about something else, when resolving that entry would collide with your proposal.
 
 ---
 
@@ -144,21 +146,59 @@ Do not pad the list to hit the cap. Finding zero candidates is a valid outcome �
 
 ## Step 5 — Write each entry
 
-Match the existing style in `product/backlog/technical-debt.md`: one `*` bullet, one paragraph, imperative and concrete, no IDs and no scores beyond the severity rating. Each bullet must:
+Every entry is one `*` bullet carrying a one-sentence summary, followed by four labeled paragraphs — `Existing Debt`, `Existing Risk`, `Proposal Risk`, `Proposal`, in that order and no other. Nothing is indented and nothing is bolded: every part sits flush at the left margin with a plain-text label, and a blank line separates it from the part before. No IDs, no extra parts beyond these five, and no scores beyond the three the template names:
 
-- Name the exact file(s) involved.
-- Cite the guideline section by number and name, e.g. "§3 (no cross-feature imports)".
-- State what you actually read that confirms the violation — the specific import, the specific logic in the component, the specific missing teardown. Not the rule, the evidence.
-- State the cost in one clause: what future change this makes harder or riskier.
-- State the action that resolves it, concretely enough that whoever picks it up does not re-survey the tree.
-- Note the blast radius: roughly how many files import the code and would be affected.
-- Carry a severity rating.
+```
+* <one sentence, glanceable>
+
+Existing Debt: <one sentence, naming the guideline section and the evidence> Severity: <N>/10
+
+Existing Risk: <N>/10 - <one sentence>
+
+Proposal Risk: <N>/10 - <one sentence>
+
+Proposal: <the detailed plan, with the files, the action, and the blast radius>
+```
+
+The `*` bullet is the entry's identity line — it is what a reader scans, and what other tasks quote when they list, defer, or resolve the item — so it has to stand on its own without the paragraphs beneath it. Those paragraphs belong to it: an entry begins at its `*` bullet and runs through its `Proposal` paragraph, and the next `*` bullet begins the next entry.
+
+Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section — without it, a `Proposal` paragraph and the `*` bullet that follows it read as one run of text.
+
+### The five parts
+
+- **The summary bullet.** One sentence summarizing the whole proposal, readable at a glance: what would be done and roughly how much of the app it reaches. It carries no label. Write it as a change, not as a complaint. Keep it free of paths — the scope belongs in words ("out of the tab-navigator components", "across the picker feature's hooks") and the file references belong in the `Proposal` paragraph.
+- **Existing Debt.** One sentence naming the violation that exists today: cite the guideline section by number and name, e.g. "§3 (no cross-feature imports)", and state what you actually read that confirms it — the specific import, the specific logic in the component body, the specific missing teardown. Not the rule, the evidence. Then a **debt severity** score from the scale below, written as a trailing `Severity: <N>/10` after that sentence's full stop. Describe what *is*, not what should be done about it; the fix is the `Proposal` paragraph's job.
+- **Existing Risk.** An **existing risk** score, then ` - `, then one sentence on what the violation risks if it is never resolved: the bug the missing seam invites, the change it will make dangerous later, the coupling every new file in the area will inherit.
+- **Proposal Risk.** A **proposed risk** score, then ` - `, then one sentence on the risk the code still carries once the move has landed. Both risk paragraphs come before the plan they judge, so write each to stand on its own for a reader who has not reached the `Proposal` paragraph yet — name the hazard rather than pointing back at a step they have not read.
+- **Proposal.** The detailed plan, and the only long part. Write it for the audience that will actually use it: an AI agent that has not read the code, opening this entry cold and expected to execute the work successfully from what it says. Name the exact files, directories, components, hooks, and imports involved, each by path; say what changes in each one and what the resulting shape should be, concretely enough that whoever picks it up does not re-survey the tree. Give the blast radius — roughly how many files import the code and would be affected — and name the existing tests that pin the behavior which must not move. Reference files by path only, never by line number: the files move, the facts don't. Per Background, scope it as a single unit of work an agent could finish and verify in one sitting. When the finding routes to a playbook, the trigger sentence below is this paragraph's **final** sentence. Multiple sentences are expected; keep it to one paragraph.
+
+"Low risk" is not a risk. If you genuinely see none in either risk paragraph, say what would make it visible if you were wrong.
+
+### The scales
+
+Both scales run 1–10. Score the **debt severity** by how much the violation is costing the app now:
+
+| Debt severity | Meaning |
+|---------------|---------|
+| **1–3** | A single stray file, a barrel with few consumers, a `use*` prefix on a function that calls no hook. Nothing spreads and nearby work is unaffected. |
+| **4–7** | A real violation contained to one area: a component holding testable rules, a hook doing two jobs, a shared module carrying feature-specific knowledge, a feature scattered across a couple of locations. Every change through the area pays for the missing seam. |
+| **8–10** | A §3 cross-feature import or §8 layer inversion on an actively changing path, or a §7 service that cannot be substituted in tests. The coupling is spreading — each new file in the area inherits it. |
+
+Score both **risk** values on one scale — likelihood times blast radius, judged against the code as it stands (`Existing Risk`) and as it would stand after the work (`Proposal Risk`):
+
+| Risk | Meaning |
+|------|---------|
+| **1–3** | Unlikely to bite, or bites harmlessly: a cosmetic glitch, an edge case behind a rarely-taken branch, something a test would catch first. |
+| **4–7** | Plausible failure in normal use with real user-visible consequences — a broken interaction, a stale view, data that has to be re-entered — but recoverable and contained to one area. |
+| **8–10** | Likely, or catastrophic when it happens: data loss, silent corruption, a security or sandbox weakness, or a failure that takes out a core path for every user. |
+
+**The two risk scores are the case for the work.** `Proposal Risk` should come in materially below `Existing Risk`; if it does not, the proposal is not buying enough to be worth logging — either sharpen it or drop the candidate. Never close the gap by scoring optimistically: if the move relocates the coupling rather than removing it, say so in the `Proposal Risk` sentence and let the two numbers sit close together.
 
 ### Routing — which entries name a playbook
 
 Only one class of finding routes to a hygiene playbook. Apply this test exactly:
 
-**Attach the trigger sentence** when the fix is a pure extraction out of **one** existing source file into one or more new module files, with every existing import still working — typically a §5 component holding logic that should move into a hook or pure module, or a §6 hook holding pure computation. In that case, and only that case, end the bullet with this sentence, verbatim in this form:
+**Attach the trigger sentence** when the fix is a pure extraction out of **one** existing source file into one or more new module files, with every existing import still working — typically a §5 component holding logic that should move into a hook or pure module, or a §6 hook holding pure computation. In that case, and only that case, close the entry's `Proposal` paragraph with this sentence, verbatim in this form:
 
 ```
 Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `<path>`.
@@ -173,39 +213,51 @@ Before attaching it, confirm the target clears that playbook's own blockers — 
 
 **Write no trigger sentence** for everything else — §1 scatter, §2 misplaced shared code, §3 cross-feature imports, §4 barrels, §7 service coupling, §8 layer inversions. These are multi-file moves or design changes, which `improve-modularity.md` explicitly refuses. They get hand-planned by `resolve-technical-debt.md`, which is the correct path. Do not invent a playbook reference to make an entry look actionable, and do not name a playbook that does not exist.
 
-### Severity
+### Worked examples
 
-| Severity | Meaning |
-|----------|---------|
-| **high** | A §3 cross-feature import or §8 layer inversion on an actively changing path, or a §7 service that cannot be substituted in tests. The coupling is spreading — each new file in the area inherits it. |
-| **medium** | A real violation contained to one area: a component holding testable rules, a hook doing two jobs, a shared module carrying feature-specific knowledge, a feature scattered across a couple of locations. |
-| **low** | A single stray file, a barrel with few consumers, a `use*` prefix on a function that calls no hook. Worth doing, nothing is on fire. |
-
-An entry in the right shape reads roughly like this:
+A routed entry, because the fix is a single-file extraction:
 
 ```
-* Move the sorting and grouping rules out of `web/src/widget/WidgetList.tsx` into a pure module beside it: the component body computes the display order inline across roughly forty lines, mixing the ordering rules with the JSX, which violates §5 (components render, they do not decide) — the rules cannot be unit tested without rendering, and `WidgetPanel.tsx` already reimplements a near-identical ordering because there was nothing to import. Extract them into `web/src/widget/order.ts` as plain functions and have both components call it; three files import `WidgetList.tsx` and none of them are affected, since its props do not change. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/widget/WidgetList.tsx`. Severity: **medium**.
+* Move the sorting and grouping rules out of the widget list component into a pure module beside it, so the ordering can be tested and shared instead of re-derived.
+
+Existing Debt: The widget list computes its display order inline across roughly forty lines of the component body, mixing the ordering rules with the JSX in violation of §5 (components render, they do not decide), and the widget panel has reimplemented a near-identical ordering because there was nothing to import. Severity: 5/10
+
+Existing Risk: 4/10 - Neither ordering can be exercised without rendering the component that holds it, so a rule corrected in one surface keeps producing the old order in the other and no test can tell.
+
+Proposal Risk: 2/10 - The rules become plain functions anyone can call directly, but the extraction is behavior-preserving by eye only: nothing pins the current comparator, so a transcription slip would land unnoticed until someone looked at the rendered order.
+
+Proposal: `web/src/widget/WidgetList.tsx` builds its display order in the component body. Extract those rules into a new `web/src/widget/order.ts` as plain functions that take the widget array and return the ordered array, and have the component call them in place of the inline block. Scope the change to that one file: `web/src/widget/WidgetPanel.tsx` holds a near-duplicate of the same ordering, but switching it over is a second edit that would push this past what the playbook accepts, so leave it for a follow-up entry once the shared module exists. `WidgetList.tsx`'s props do not change, so the three files that import it are unaffected and no import path moves. `web/src/widget/WidgetList.test.tsx` renders the list and asserts on the rendered row order — it needs no edit and must keep passing. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/widget/WidgetList.tsx`.
 ```
 
-And one without a playbook, because it is a multi-file move:
+And a hand-planned one, because it is a multi-file move:
 
 ```
-* Break the cross-feature import from `web/src/widget/useWidgetSync.ts` into `web/src/gadget/gadget-state.ts`: the widget feature reaches directly into the gadget feature's state module to read the active gadget id, violating §3 (no feature imports another feature), so neither feature can be tested, moved, or deleted independently and a cycle appears the moment gadget needs anything from widget. The shared piece is the active-id lookup itself — lift it into a shared module both features import, or pass the id down from the app shell that already composes both. Two files import `useWidgetSync.ts` and one imports `gadget-state.ts`, so the change is contained. Severity: **high**.
+* Break the widget feature's reach into the gadget feature by lifting the active-id lookup both need into a shared module the app shell owns.
+
+Existing Debt: The widget sync hook imports the active gadget id straight out of the gadget feature's state module, violating §3 (no feature imports another feature), so neither feature can be tested, moved, or deleted without the other. Severity: 7/10
+
+Existing Risk: 6/10 - A cycle appears the moment the gadget feature needs anything back from widget, and every file added near the seam inherits the coupling, so what is a two-file untangling today becomes a multi-feature one later.
+
+Proposal Risk: 3/10 - The features stop importing each other, but the lookup becomes a third place holding active-id knowledge and nothing stops a later contributor from putting feature-specific branching in it.
+
+Proposal: `web/src/widget/useWidgetSync.ts` imports the active gadget id from `web/src/gadget/gadget-state.ts`. The shared piece is the lookup itself: move it into a new `web/src/shared/active-gadget.ts` that neither feature owns and have both import it from there, or pass the id down as a prop from `web/src/App.tsx`, which already composes both features and may read it directly under §3. Two files import `useWidgetSync.ts` and one imports `gadget-state.ts`, so the change is contained to four files. `web/src/widget/useWidgetSync.test.ts` stubs the gadget state module by path and needs its stub retargeted at the new module — that test edit, and the second source file, are why this cannot be routed to `improve-modularity.md`.
 ```
 
 ---
 
 ## Step 6 — Integrate into the `## development` section
 
-Open `product/backlog/technical-debt.md` and add your new bullets to the end of the `## development` section only. Leave `## ready`, `## deferred`, and `## declined` exactly as they are — do not reorder, reword, or remove anything in any section, including `## development`'s existing entries.
+Open `product/backlog/technical-debt.md` and add your new entries to the end of the `## development` section only. Leave `## ready`, `## deferred`, and `## declined` exactly as they are — do not reorder, reword, reformat, or remove anything in any section, including `## development`'s existing entries. Older paragraph-form entries stay exactly as written; the new format applies to what you add, not to what is already there.
 
 Before moving on, verify:
 
 1. `git status` shows `product/backlog/technical-debt.md` as the **only** changed file. No file under `web/src/` or `src/` may appear. If one does, you refactored something, which this task never does — revert it.
 2. `git diff` shows the only changes are new lines appended inside `## development` — nothing removed, nothing changed elsewhere in the file.
-3. Every new bullet names its files and cites a guideline section by number.
-4. Every bullet carrying the trigger sentence names exactly one file, in the exact form given in Step 5, and clears all four `improve-modularity.md` blockers. Every other bullet carries no playbook reference at all.
-5. None of the new bullets duplicate an item from Step 1's dedupe set.
+3. Every new entry carries all five parts, in order — the `*` summary bullet, then `Existing Debt`, `Existing Risk`, `Proposal Risk`, and `Proposal` — each unindented, each separated by a blank line, with all three scores present.
+   Two blank lines separate each entry's `Proposal` paragraph from the next entry's `*` bullet, so each entry reads as one block running from its bullet to its plan and the boundary between blocks is wider than the gaps inside them.
+4. Every new entry names its files in the `Proposal` paragraph and cites a guideline section by number in `Existing Debt`.
+5. Every entry carrying the trigger sentence ends its `Proposal` paragraph with it, names exactly one file, in the exact form given in Step 5, and clears all four `improve-modularity.md` blockers. Every other entry carries no playbook reference at all.
+6. None of the new entries duplicate an item from Step 1's dedupe set.
 
 If anything else changed on disk, revert it (`git checkout -- <file>`) before committing.
 
@@ -231,7 +283,7 @@ Give the user a short report in this exact shape:
 Candidates seen:     <count from Step 2>
 Filtered out:        <count> (<file or area>: <one-line reason>, …)
 New entries added:   <count> (to product/backlog/technical-debt.md, ## development)
-Entries:             <one line per new entry: file(s), guideline section, severity, routed or hand-planned — or "none found">
+Entries:             <one line per new entry: its summary bullet, guideline section, debt severity, existing → proposal risk, routed or hand-planned — or "none found">
 Commit:              <short-sha> pushed to master | push failed (see above)
 ```
 
