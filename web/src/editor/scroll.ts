@@ -9,24 +9,33 @@ function probeY(rect: DOMRect, dir: 'up' | 'down'): number {
   return dir === 'up' ? rect.top - rect.height / 2 : rect.bottom + rect.height / 2;
 }
 
-function probeOutsideBody(body: HTMLElement, rect: DOMRect, dir: 'up' | 'down'): boolean {
+// Whether the probe point clears both edges of the body's visible box by half a caret box. Being
+// merely inside that box is not enough: a screen row is taller than the caret's inline box and the
+// body's height is not a whole number of rows, so the row past the caret is routinely painted as a
+// sliver a few pixels tall at the edge of the scrollport. A probe point landing in that sliver sits
+// against the body's own border, where the hit test resolves the body rather than a row and the
+// press degrades to a whole buffer line. Requiring clearance keeps the point on a painted row.
+function probeIsClear(body: HTMLElement, rect: DOMRect, dir: 'up' | 'down'): boolean {
   const view = body.getBoundingClientRect();
   const y = probeY(rect, dir);
-  return y < view.top || y > view.bottom;
+  const clearance = rect.height / 2;
+  return y >= view.top + clearance && y <= view.bottom - clearance;
 }
 
-// Scroll the body just enough that the screen row the caret would move onto is painted, so the
-// probe can resolve it. Does nothing in the common case (the row is already on screen) and nothing
-// when the caret has no real layout — a zero-height rect, as in jsdom. When the body has already
-// scrolled as far as it can, the probe stays unreachable and visualVerticalHit keeps returning
-// null, leaving the logical-line fallback in place.
+// Scroll the body just enough that the screen row the caret would move onto is painted with room
+// to spare, so the probe can resolve it. Does nothing in the common case (the row is well within
+// the view) and nothing when the caret has no real layout — a zero-height rect, as in jsdom. One
+// nudge always suffices: scrollIntoView has put the caret's own box inside the body, so scrolling
+// by a caret box moves the probe point a caret box clear of the edge. When the body has already
+// scrolled as far as it can, the probe stays where it is and visualVerticalHit — which still
+// accepts any point inside the body — falls back to the logical line at the document's edges.
 export function revealVerticalProbe(body: HTMLElement, caret: HTMLElement, dir: 'up' | 'down'): void {
   const rect = caret.getBoundingClientRect();
-  if (rect.height === 0 || !probeOutsideBody(body, rect, dir)) return;
+  if (rect.height === 0 || probeIsClear(body, rect, dir)) return;
   // The caret may be off-screen entirely (the view was scrolled away with the wheel); bring it back
   // to the nearest edge before deciding whether a further nudge is needed.
   caret.scrollIntoView({ block: 'nearest' });
   const revealed = caret.getBoundingClientRect();
-  if (!probeOutsideBody(body, revealed, dir)) return;
+  if (probeIsClear(body, revealed, dir)) return;
   body.scrollTop += dir === 'up' ? -revealed.height : revealed.height;
 }

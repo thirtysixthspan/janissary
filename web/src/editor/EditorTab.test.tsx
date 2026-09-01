@@ -360,6 +360,41 @@ describe('EditorTab', () => {
     delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
   });
 
+  it('ArrowDown scrolls when the row below is painted only as a sliver at the bottom edge', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    const firstContent = container.querySelector(':scope .editor-row .editor-content')!;
+    const firstText = firstContent.lastChild!.firstChild!;
+    const caret = container.querySelector('.editor-caret')!;
+
+    // The caret sits a row above the bottom border, so the row it would move onto is painted as an
+    // eight-pixel sliver: the probe point falls inside the body but against its border, where a
+    // browser resolves no row at all. The body has to scroll before the press can be resolved.
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue(
+      { top: 0, bottom: 28, left: 0, right: 80, width: 80, height: 28, x: 0, y: 0, toJSON: () => ({}) },
+    );
+    vi.spyOn(caret, 'getBoundingClientRect').mockImplementation(() => (
+      { top: 6 - body.scrollTop, bottom: 20 - body.scrollTop, left: 3, right: 3, width: 0, height: 14, x: 3, y: 6 - body.scrollTop, toJSON: () => ({}) }
+    ));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint =
+      vi.fn().mockReturnValue(firstContent as Element);
+    (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint =
+      vi.fn().mockReturnValue({ offsetNode: firstText, offset: 5 });
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      const current = container.querySelector(':scope .editor-row-current .editor-content');
+      expect(current?.textContent).toBe('line one');
+    });
+    expect(body.scrollTop).toBe(14);
+
+    vi.restoreAllMocks();
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
   it('consumes Shift+ArrowLeft/Right locally instead of letting them reach the window-level tab-switch shortcut', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

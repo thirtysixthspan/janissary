@@ -58,6 +58,33 @@ describe('revealVerticalProbe', () => {
     body.remove();
   });
 
+  it('scrolls down when the row below is painted only as a sliver at the bottom edge', () => {
+    const { body, caret } = makeBodyAndCaret();
+    // The probe point lands exactly on the body's bottom border: inside the box, but on the part of
+    // the row below that the browser is only partly painting, where the hit test finds no row.
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 99, bottom: 113, left: 5, height: 14 }));
+    revealVerticalProbe(body, caret, 'down');
+    expect(body.scrollTop).toBe(14);
+    body.remove();
+  });
+
+  it('scrolls up when the row above is painted only as a sliver at the top edge', () => {
+    const { body, caret } = makeBodyAndCaret();
+    body.scrollTop = 50;
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 27, bottom: 41, left: 5, height: 14 }));
+    revealVerticalProbe(body, caret, 'up');
+    expect(body.scrollTop).toBe(36);
+    body.remove();
+  });
+
+  it('does not scroll when the probe point already clears the edge by half a caret box', () => {
+    const { body, caret } = makeBodyAndCaret();
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 92, bottom: 106, left: 5, height: 14 }));
+    revealVerticalProbe(body, caret, 'down');
+    expect(body.scrollTop).toBe(0);
+    body.remove();
+  });
+
   it('brings a caret scrolled entirely out of view back before nudging', () => {
     const { body, caret, scrollIntoView } = makeBodyAndCaret();
     const rects = [
