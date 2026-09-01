@@ -6,7 +6,7 @@ import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 import type { DirtyTabHandle } from './tab-handles';
 import { useTabHandles } from './useTabHandles';
 import { useTabNav } from './useTabNav';
-import { useQuickOpen } from './useQuickOpen';
+import { useQuickOpen } from './pickers/useQuickOpen';
 import { useQueuePicker } from './pickers/useQueuePicker';
 import { usePopulatePickers } from './pickers/usePopulatePickers';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
