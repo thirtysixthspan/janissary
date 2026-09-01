@@ -18,10 +18,10 @@ Do the steps below **in order**. Do not skip steps. Do not invent your own proce
 
 This task follows the common industry framing of technical debt, so keep it in mind while reading code and writing entries:
 
-- **Debt has a type, not just a size.** Fowler's technical debt quadrant classifies debt along two axes: was it taken on *deliberately* or *inadvertently*, and was the choice *prudent* or *reckless*? Deliberate-and-prudent debt ("we know this cuts a corner, but shipping now is worth it, and we can see the payoff") is a normal, healthy trade-off — it is not automatically worth logging on its own. What belongs in this backlog is debt whose "interest" is visibly compounding now: reckless shortcuts, inadvertent debt from outdated assumptions or code that never caught up with a later architectural decision, and anything that makes nearby changes harder or riskier than they should be. Use this lens to decide whether a candidate is worth logging at all, and to write its **Debt** and **Risks** in Step 4.
+- **Debt has a type, not just a size.** Fowler's technical debt quadrant classifies debt along two axes: was it taken on *deliberately* or *inadvertently*, and was the choice *prudent* or *reckless*? Deliberate-and-prudent debt ("we know this cuts a corner, but shipping now is worth it, and we can see the payoff") is a normal, healthy trade-off — it is not automatically worth logging on its own. What belongs in this backlog is debt whose "interest" is visibly compounding now: reckless shortcuts, inadvertent debt from outdated assumptions or code that never caught up with a later architectural decision, and anything that makes nearby changes harder or riskier than they should be. Use this lens to decide whether a candidate is worth logging at all, and to write its `Existing Debt` and its two risk paragraphs in Step 4.
 - **A code smell is a symptom, not the debt itself.** The established smell taxonomy (long methods, duplicated code, large/"blob" classes mixing unrelated responsibilities, deep conditional nesting, inconsistent error-handling styles) is a reliable way to *find* debt by reading, but the debt is the underlying design gap the smell points to. An entry that names the cause ("no shared validation layer, so each route hand-rolls its own checks") is more useful than one that only names the symptom ("duplicated code in routes").
 - **Debt worth logging is debt worth resolving safely and incrementally.** The tasks that consume this backlog resolve debt through small, verifiable steps — contain the area, keep it under test, refactor, verify behavior didn't change — rather than large rewrites, mirroring the boy-scout rule (leave code a little better, in small steps) and, for anything large enough to need staged replacement, the strangler-fig pattern (build the replacement alongside the old code and cut over incrementally). Size each entry as a single unit of work someone could pick up and finish in one sitting, not "rewrite module X" or "redesign the architecture."
-- **Prioritize like the debt has a cost, not just a badness score.** Industry guidance weighs debt by business impact/risk against remediation effort, favoring high-impact/low-effort items — this is why Step 3 caps the run and asks you to keep the entries most likely to cause real harm or slow down future work, not just the most numerous. The entry format in Step 4 records that judgment in numbers: how bad the debt is today (**Debt** severity) and how much safer the code gets once the work is done (the drop from the existing risk score to the proposed one in **Risks**).
+- **Prioritize like the debt has a cost, not just a badness score.** Industry guidance weighs debt by business impact/risk against remediation effort, favoring high-impact/low-effort items — this is why Step 3 caps the run and asks you to keep the entries most likely to cause real harm or slow down future work, not just the most numerous. The entry format in Step 4 records that judgment in numbers: how bad the debt is today (the `Existing Debt` severity) and how much safer the code gets once the work is done (the drop from `Existing Risk` to `Proposal Risk`).
 
 ---
 
@@ -43,9 +43,9 @@ The working tree **must be clean** — no modified *and no untracked* files. Thi
 
 Read `product/backlog/technical-debt.md`. It has three flat sections — `## ready`, `## development`, `## deferred` — each a `*` bullet list with no IDs.
 
-Entries appear in more than one shape, and all of them count. Older entries are a single free-form paragraph ending in a severity rating; newer ones follow the structured format Step 4 defines, where the `*` bullet carries the entry's **Proposal** and indented sub-bullets carry the rest. Read whichever you find as written — you are not migrating the old ones.
+Entries appear in more than one shape, and all of them count. Older entries are a single free-form paragraph ending in a severity rating; newer ones follow the structured format Step 4 defines, where the `*` bullet carries a one-sentence summary and labeled paragraphs beneath it carry the rest. Read whichever you find as written — you are not migrating the old ones.
 
-Collect every existing entry from all three sections into one list, identifying each by its lead `*` bullet — the Proposal line of a structured entry, the whole bullet of an older paragraph one. This is the dedupe set: nothing you add in Step 5 may restate an item already present anywhere in the file, even worded differently. If the same underlying issue is already listed (in any section), skip it.
+Collect every existing entry from all three sections into one list, identifying each by its lead `*` bullet — the summary line of a structured entry, the whole bullet of an older paragraph one. This is the dedupe set: nothing you add in Step 5 may restate an item already present anywhere in the file, even worded differently. If the same underlying issue is already listed (in any section), skip it.
 
 ---
 
@@ -77,31 +77,31 @@ If you find zero genuine candidates after a good-faith read, that is a valid out
 
 ## Step 4 — Write each entry
 
-Every entry is one `*` bullet carrying its **Proposal**, followed by three sub-bullets indented two spaces — **Debt**, **Refactor**, **Risks**, in that order and no other. **Risks** carries three labeled parts of its own. No IDs, no extra fields beyond these four, and no scores beyond the three the template names:
+Every entry is one `*` bullet carrying a one-sentence summary, followed by four labeled paragraphs — `Existing Debt`, `Existing Risk`, `Proposal Risk`, `Proposal`, in that order and no other. Nothing is indented and nothing is bolded: every part sits flush at the left margin with a plain-text label, and a blank line separates it from the part before. No IDs, no extra parts beyond these five, and no scores beyond the three the template names:
 
 ```
-* **Proposal:** <one sentence, glanceable>
-  * **Debt:** <one sentence> — **Debt severity: <N>/10**
-  * **Refactor:** <the detailed plan, with code references an agent can act on>
-  * **Risks:**
-    * **Existing:** <one sentence> — **Existing risk: <N>/10**
-    * **Refactoring:** <one sentence>
-    * **Proposed:** <one sentence> — **Proposed risk: <N>/10**
+* <one sentence, glanceable>
+
+Existing Debt: <one sentence> Severity: <N>/10
+
+Existing Risk: <N>/10 - <one sentence>
+
+Proposal Risk: <N>/10 - <one sentence>
+
+Proposal: <the detailed plan, with code references an agent can act on>
 ```
 
-The Proposal bullet is the entry's identity line — it is what a reader scans, and what other tasks quote when they list, defer, or resolve the item — so it has to stand on its own without the fields beneath it.
+The `*` bullet is the entry's identity line — it is what a reader scans, and what other tasks quote when they list, defer, or resolve the item — so it has to stand on its own without the paragraphs beneath it. Those paragraphs belong to it: an entry begins at its `*` bullet and runs through its `Proposal` paragraph, and the next `*` bullet begins the next entry.
 
-### The four fields
+### The five parts
 
-- **Proposal.** One sentence summarizing the whole proposal, readable at a glance: what would be done and roughly how much of the codebase it reaches. Write it as a change, not as a complaint. Keep it free of paths — the scope belongs in words ("across the picker overlays", "in the websocket client layer") and the file references belong in Refactor.
-- **Debt.** One sentence naming the technical debt that exists today within the proposal's scope — the design gap behind the smell (per Background), not just the symptom — followed by a **debt severity** score from the scale below. Describe what *is*, not what should be done about it; the fix is Refactor's job.
-- **Refactor.** The detailed plan, and the only long field. Write it for the audience that will actually use it: an AI agent that has not read the code, opening this entry cold and expected to execute the refactor successfully from what it says. That means concrete code references — the modules, files, directories, functions, and call sites involved, each named by path — plus what changes in each one, what the resulting shape should be, and which existing tests cover the behavior that must not move. Reference files by path only, never by line number: the files move, the facts don't. Multiple sentences are expected; keep it to one paragraph. Per Background, scope it as a single unit of work an agent could finish and verify in one sitting — when an area is too large for that, propose the first safe increment rather than the whole rewrite.
-- **Risks.** Three labeled parts, each one sentence:
-  - **Existing** — what the debt risks if it is never resolved (the bug it invites, the incident it enables, the change it will make dangerous later), followed by an **existing risk** score.
-  - **Refactoring** — what could go wrong while performing the refactor itself: the behavior that could regress, the caller that could be missed, the area with no test to catch a mistake. No score.
-  - **Proposed** — the risk the code still carries once the refactor has landed, followed by a **proposed risk** score.
+- **The summary bullet.** One sentence summarizing the whole proposal, readable at a glance: what would be done and roughly how much of the codebase it reaches. It carries no label. Write it as a change, not as a complaint. Keep it free of paths — the scope belongs in words ("across the picker overlays", "in the websocket client layer") and the file references belong in the `Proposal` paragraph.
+- **Existing Debt.** One sentence naming the technical debt that exists today within the proposal's scope — the design gap behind the smell (per Background), not just the symptom — then a **debt severity** score from the scale below, written as a trailing `Severity: <N>/10` after that sentence's full stop. Describe what *is*, not what should be done about it; the fix is the `Proposal` paragraph's job.
+- **Existing Risk.** An **existing risk** score, then ` - `, then one sentence on what the debt risks if it is never resolved: the bug it invites, the incident it enables, the change it will make dangerous later.
+- **Proposal Risk.** A **proposed risk** score, then ` - `, then one sentence on the risk the code still carries once the work has landed. Both risk paragraphs come before the plan they judge, so write each to stand on its own for a reader who has not reached the `Proposal` paragraph yet — name the hazard rather than pointing back at a step they have not read.
+- **Proposal.** The detailed plan, and the only long part. Write it for the audience that will actually use it: an AI agent that has not read the code, opening this entry cold and expected to execute the work successfully from what it says. That means concrete code references — the modules, files, directories, functions, and call sites involved, each named by path — plus what changes in each one, what the resulting shape should be, and which existing tests cover the behavior that must not move. Reference files by path only, never by line number: the files move, the facts don't. Where a step could regress behavior nothing covers, say so here beside the step. Multiple sentences are expected; keep it to one paragraph. Per Background, scope it as a single unit of work an agent could finish and verify in one sitting — when an area is too large for that, propose the first safe increment rather than the whole rewrite.
 
-  "Low risk" is not a risk. If you genuinely see none in a part, say what would make it visible if you were wrong.
+"Low risk" is not a risk. If you genuinely see none in either risk paragraph, say what would make it visible if you were wrong.
 
 ### The scales
 
@@ -113,7 +113,7 @@ Both scales run 1–10. Score the **debt severity** by how much the design gap i
 | **4–7** | A real design gap that makes nearby changes cost more — a missing shared abstraction, an eroded type boundary, a pattern each new caller has to re-implement. Interest is accruing on a path people touch. |
 | **8–10** | Reckless or actively compounding debt on a core, high-churn path: every change through the area is now slower and riskier, and the cost is visibly growing run over run. |
 
-Score both **risk** values on one scale — likelihood times blast radius, judged against the code as it stands (existing) and as it would stand after the refactor (proposed):
+Score both **risk** values on one scale — likelihood times blast radius, judged against the code as it stands (`Existing Risk`) and as it would stand after the work (`Proposal Risk`):
 
 | Risk | Meaning |
 |------|---------|
@@ -121,18 +121,20 @@ Score both **risk** values on one scale — likelihood times blast radius, judge
 | **4–7** | Plausible failure in normal use with real user-visible consequences — a broken interaction, a stale view, data that has to be re-entered — but recoverable and contained to one area. |
 | **8–10** | Likely, or catastrophic when it happens: data loss, silent corruption, a security or sandbox weakness, or a failure that takes out a core path for every user. |
 
-**The two risk scores are the case for the work.** The proposed score should come in materially below the existing one; if it does not, the Refactor is not buying enough to be worth logging — either sharpen it or drop the candidate. Never close the gap by scoring optimistically: if the refactor relocates the risk rather than reducing it, say so in the Proposed line and let the two numbers sit close together.
+**The two risk scores are the case for the work.** `Proposal Risk` should come in materially below `Existing Risk`; if it does not, the proposal is not buying enough to be worth logging — either sharpen it or drop the candidate. Never close the gap by scoring optimistically: if the work relocates the risk rather than reducing it, say so in the `Proposal Risk` sentence and let the two numbers sit close together.
 
 ### Worked example
 
 ```
-* **Proposal:** Give the websocket client one explicit failure contract for request errors and connection loss, and make its callers handle it.
-  * **Debt:** The client's request path has no way to express failure, so a server error and a dropped socket are both indistinguishable from a successful empty response, and every caller was written against a type that says failure cannot happen. — **Debt severity: 7/10**
-  * **Refactor:** `JanusClient.request` in `web/src/ws.ts` ignores the `error` field carried on `rpc-reply`, resolves `undefined as T` when the socket is not open, and leaves every pending promise unsettled when the socket closes. Introduce a typed result (or a rejection) covering both server errors and a closed socket, settle every pending call when the connection closes or the client is disposed, and export the failure type alongside `JanusClient` so callers can narrow on it. Update the three call sites that dereference the declared result immediately — `web/src/useQuickOpen.ts`, `web/src/file-navigator/useFileNavigatorSearch.ts`, and `web/src/file-navigator/useFileNavigatorMoveOperations.ts` — to handle the failure branch and surface it the way each feature already reports errors. The colocated tests beside those three hooks pin the current success paths and must keep passing unchanged; add failure cases beside them.
-  * **Risks:**
-    * **Existing:** A disconnect during a file move leaves the navigator showing a result the server never produced, so the user believes an operation succeeded that did not. — **Existing risk: 8/10**
-    * **Refactoring:** Callers that today silently receive `undefined` will start receiving errors, so a path that appeared to work while disconnected may begin surfacing failures the surrounding UI has no state to render.
-    * **Proposed:** Failures become explicit but each feature still chooses how to present them, so an unhandled branch would show a raw error rather than a designed empty state. — **Proposed risk: 3/10**
+* Hand the server's state snapshot to the web client as the one object it already is, instead of unpacking it into a sixteen-argument positional callback.
+
+Existing Debt: The wire contract defines the state snapshot once as a named record, and the client immediately flattens it into a positional parameter list whose order does not match the record's and whose optionality disagrees with it, so field identity survives on the wire and is lost the moment it lands. Severity: 6/10
+
+Existing Risk: 5/10 - Two adjacent same-typed fields swapped in the positional call — the two `string` theme fields, the two `number` name-length limits — typecheck and ship, putting the syntax theme where the app theme belongs with no test able to tell the difference.
+
+Proposal Risk: 2/10 - Fields are matched by name and a rename is a compile error, but the snapshot is still fanned out into fifteen separate `useState` setters, so an added field still means an added setter and an added dependency-array entry.
+
+Proposal: `StateEvent` in `src/protocol/events.ts` carries sixteen named payload fields. `StateListener` in `web/src/ws.ts` re-declares them as sixteen positional parameters in a different order — `harnessLaunch` and `scheduleLaunch` are the second and third fields of the event but the fourteenth and fifteenth parameters here — and `activeTabNameMaxLength` is required on the event but optional in the listener; `JanusClient.onEvent`'s `state` arm then spreads the event across that call by hand. The sole real subscriber, `useServerState` in `web/src/useServerState.ts`, destructures all sixteen positionally on one line and re-supplies a `= 50` default the event can never need. Change `StateListener` to take the `StateEvent` (or a narrowed object type exported beside it), delete the positional spread in `onEvent`, and have `useServerState` destructure by name; the two `?? null` normalizations `onEvent` applies to `route` and the launch views belong in that same place with the comment explaining why `route` must be `null` rather than `undefined`. `web/src/App.test.tsx` builds a fake client deliberately typed against `StateListener` so a signature change is a type error there, and `web/src/useServerState.test.ts` derives the listener type from `onState`; both pin the current fan-out and must keep passing.
 ```
 
 ---
@@ -145,7 +147,8 @@ Before moving on, verify:
 
 1. `git status` shows `product/backlog/technical-debt.md` as the **only** changed file.
 2. `git diff` shows the only changes are new lines appended inside `## development` — nothing removed, nothing changed elsewhere in the file.
-3. Every new entry carries all four fields, in order, with the sub-bullets indented under its Proposal, the three labeled parts under Risks, and all three scores present.
+3. Every new entry carries all five parts, in order — the `*` summary bullet, then `Existing Debt`, `Existing Risk`, `Proposal Risk`, and `Proposal` — each unindented, each separated by a blank line, with all three scores present.
+   A blank line also separates the last entry's `Proposal` paragraph from the next entry's `*` bullet, so each entry reads as one block running from its bullet to its plan.
 4. None of the new entries duplicate an item from Step 1's dedupe set.
 
 If anything else changed on disk, revert it (`git checkout -- <file>`) before committing.
@@ -171,7 +174,7 @@ Give the user a short report in this exact shape:
 ```
 Existing entries:  <count found in Step 1, across all sections>
 New entries added: <count> (to product/backlog/technical-debt.md, ## development)
-Entries:           <one line per new entry: its Proposal, debt severity, and existing → proposed risk — or "none found">
+Entries:           <one line per new entry: its summary bullet, debt severity, and existing → proposal risk — or "none found">
 Commit:            <short-sha> pushed to master | push failed (see above)
 ```
 
