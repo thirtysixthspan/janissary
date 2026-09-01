@@ -7,7 +7,7 @@ import { notify } from '../notifications.js';
 import { listPersonas } from '../personas.js';
 import { projectFilesFor } from '../project-files.js';
 import type { Managers } from '../managers.js';
-import type { MaybePromise } from '../file-navigator/filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 
 export type EditorControllerAdapter = {
   saveFile(url: string, content: string): MaybePromise<void>;

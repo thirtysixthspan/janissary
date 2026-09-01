@@ -20,7 +20,7 @@ import type { Managers } from '../managers.js';
 import { invalidateDirectory } from './filesystem-cache.js';
 import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
-import type { MaybePromise } from './filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import { createNavigatorFile, openNavigatorFile } from './manager-files.js';
 import type { FileOpenerChoice } from '../protocol.js';
 import { findOpenFilesTab, withFilesState } from './manager-state.js';

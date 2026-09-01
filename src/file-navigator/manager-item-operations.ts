@@ -7,7 +7,7 @@ import {
 import type { FilesTabState } from './state.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult } from '../protocol.js';
-import { mapMaybe, type MaybePromise } from './filesystem-port.js';
+import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
 
 function failedOperation(path: string, reason: string): BatchResult {
   return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };

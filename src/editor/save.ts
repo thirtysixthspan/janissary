@@ -7,7 +7,7 @@ import { nextFreeName } from './next-free-name.js';
 import { atomicWriteFile } from '../atomic-write.js';
 import { remoteFileFor } from '../file-navigator/remote-file-cache.js';
 import { notify } from '../notifications.js';
-import type { MaybePromise } from '../file-navigator/filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import { errorText } from '../error-text.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved

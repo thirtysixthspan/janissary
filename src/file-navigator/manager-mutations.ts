@@ -5,7 +5,7 @@ import { replayHistory } from './manager-history.js';
 import { deleteOne, moveOne, renameOne, unavailable } from './manager-item-operations.js';
 import { withFilesState } from './manager-state.js';
 import type { FilesTabState } from './state.js';
-import type { MaybePromise } from './filesystem-port.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '../protocol.js';
 

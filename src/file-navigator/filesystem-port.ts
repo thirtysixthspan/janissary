@@ -14,16 +14,9 @@ import { failureResult, OUTSIDE_ROOT_REASON, runFileOperation, type FileOperatio
 import type { BulkConflictPolicy } from '../protocol.js';
 import type { UndoRedoResult } from '../protocol.js';
 import type { HistoryStep } from './moves.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import { replayHistory } from './manager-history.js';
 
-export type MaybePromise<T> = T | Promise<T>;
-export function mapMaybe<T, Result>(value: MaybePromise<T>, map: (item: T) => Result): MaybePromise<Result> {
-  return value instanceof Promise ? mapPromise(value, map) : map(value);
-}
-
-async function mapPromise<T, Result>(value: Promise<T>, map: (item: T) => Result): Promise<Result> {
-  return map(await value);
-}
 export type WatchHandle = { stop: () => void };
 export type GitMetadata = {
   statuses: [string, GitFileStatus][];

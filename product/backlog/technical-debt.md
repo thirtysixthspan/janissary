@@ -2,16 +2,6 @@
 
 ## ready
 
-* Move the sync-or-async result helper out of the file navigator's local filesystem module into a shared one, so the editor, controller, and remote layers stop importing a filesystem implementation to reach a three-line generic.
-
-Existing Debt: The `MaybePromise` union and its `mapMaybe` combinator are declared at the top of the module that also declares the filesystem port interface and its entire local implementation, so five modules outside the file navigator — including the editor's save path and its controller adapter — reach into another feature's internals for a general-purpose type, and that module carries three responsibilities where the code guidelines ask for one. Severity: 4/10
-
-Existing Risk: 3/10 - The union cannot be narrowed statically, so a caller that forgets a branch treats a pending promise as a settled result — the same failure the local port already has to catch at runtime, by throwing when a history replay unexpectedly turns out to be asynchronous.
-
-Proposal Risk: 2/10 - The helper is shared and the import graph shrinks, but the sync-or-async union itself remains, so every caller still routes through `mapMaybe` instead of awaiting.
-
-Proposal: `src/file-navigator/filesystem-port.ts` opens with `MaybePromise`, `mapMaybe`, and a private `mapPromise`, then declares `WatchHandle`, `GitMetadata`, `ReplayResult`, the `FileSystemPort` interface, and the whole `LocalFileSystemPort` class, which pulls in `node:fs`, `../git-status.js`, `./batch.js`, `./paste.js`, and more. Move the three helper declarations into a new top-level `src/maybe-promise.ts` and re-point every importer: inside the feature, `manager.ts`, `manager-batch.ts`, `manager-history.ts`, `manager-files.ts`, `manager-item-operations.ts`, and `manager-mutations.ts`; outside it, `src/controller/file-navigator.ts` and `src/controller/editor-adapter.ts`, `src/editor/save.ts`, and `src/remote/filesystem-operations.ts` and `src/remote/serve-file-navigator.ts`, plus the two remote test modules that import it directly. Leave no re-export behind in `filesystem-port.ts` — update the import sites instead, so there is exactly one place the type comes from. Remember that `src/` is NodeNext, so the new relative imports carry `.js`; note also that some of these are type-only imports and some pull `mapMaybe` as a value, and only the latter change what ends up in the runtime graph. Splitting `LocalFileSystemPort` out from the interface it implements would finish the job on that file's responsibilities, but it reaches more code and is better as a separate change. `src/file-navigator/filesystem.test.ts`, `src/remote/serve-file-navigator.test.ts`, and `src/remote/file-navigator-refusal-contract.test.ts` exercise both port implementations through this type; the move is import-only, so a failure there means a path was missed.
-
 ## development
 
 * Derive the remote wire protocol's frame-type lists and its decoder switch from the frame union itself, so a new frame type fails the build instead of being refused at runtime.
