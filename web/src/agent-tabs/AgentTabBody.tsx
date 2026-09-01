@@ -10,7 +10,7 @@ import type { useViewSearchState } from '../useViewSearchState';
 import { useStatusWindows } from '../useStatusWindows';
 import { statusButton } from '../status-button';
 import { tabBodyBorder } from '../tab-body-border';
-import { agentTabIntents } from './agent-tab-intents';
+import { agentTabIntents } from '../shared/agent-tab-intents';
 
 type Properties = {
   current: TabView;
@@ -44,7 +44,7 @@ export function AgentTabBody({
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
-  const intents = agentTabIntents(client, current.label);
+  const intents = agentTabIntents(client, current.label, 'openTranscriptFor');
   return (
     <div
       className="tab-body"

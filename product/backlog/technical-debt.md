@@ -2,17 +2,6 @@
 
 ## ready
 
-* Lift the agent tab's intent builder into the shared layer so the harness tab stops hand-writing the same three protocol calls in its JSX.
-
-Existing Debt: The builder that turns the shared meta row's callbacks into protocol calls lives inside the agent-tabs feature while the component it serves lives in the shared layer, so the harness tab — which may not import a sibling feature under §3 (no feature imports another feature) — inlines three `client.send` calls in its JSX instead, reaching past the seam in violation of §8 (a component imports hooks and pure modules, not services). Severity: 5/10
-
-Existing Risk: 5/10 - The two call sites have already diverged — one sends `openTranscriptFor`, the other `openHarnessTranscriptFor` — so a renamed or re-parameterized RPC must be found by grep across two features, and the next surface to render the same meta row will copy whichever version it happens to find.
-
-Proposal Risk: 2/10 - One module owns the calls afterwards, but it takes the transcript method from its caller, and that parameter is the seam where feature-specific knowledge could creep back into a shared module: keeping it a caller-supplied value rather than a branch on tab kind is what §2 requires here.
-
-Proposal: `web/src/agent-tabs/agent-tab-intents.ts` exports `agentTabIntents(client, label)`, returning the five callbacks `web/src/shared/AgentTabMeta.tsx` takes as props, and is used by `web/src/agent-tabs/AgentTabBody.tsx` and `web/src/agent-tabs/InactiveAgentTabBody.tsx`. `web/src/harness/HarnessTab.tsx` builds `onOpenFileNavigator`, `onLaunchAgentHere`, and `onOpenTranscript` inline inside its `AgentTabMeta` element, sending `openHarnessTranscriptFor` where the agent tabs send `openTranscriptFor`. Move the module and its test to `web/src/shared/agent-tab-intents.ts`, beside the component whose props it builds, take the transcript method as a parameter, and call it from all three components. Four source files change and one test moves; `web/src/agent-tabs/agent-tab-intents.test.ts` asserts each method name and travels with the module, while `web/src/harness/HarnessTab.test.tsx` and `web/src/shared/AgentTabMeta.test.tsx` pin the rendered buttons and the sends they produce and must keep passing unchanged.
-
-
 * Move the host's "New schedule" launch dialog out of the schedules plugin directory so it can use the app's own dialog hooks instead of a private copy of them.
 
 Existing Debt: The schedule launch dialog is rendered only by the app shell, and nothing inside the schedules plugin imports it, yet it lives in the plugin's directory where the import boundary forbids reaching host modules — so it carries a private lifecycle hook that reproduces the shared dialog hook line for line (focus on mount, capture-phase keydown, click-outside swallow, ref-refreshed handler), which is §2 (colocate; promote to shared on the second consumer) failing because the file sits where the shared module cannot be reached. Severity: 6/10

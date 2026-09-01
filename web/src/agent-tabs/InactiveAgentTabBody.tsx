@@ -8,7 +8,7 @@ import { StatusPanels } from '../StatusPanels';
 import { useStatusWindows } from '../useStatusWindows';
 import { statusButton } from '../status-button';
 import { tabBodyBorder } from '../tab-body-border';
-import { agentTabIntents } from './agent-tab-intents';
+import { agentTabIntents } from '../shared/agent-tab-intents';
 
 export function InactiveAgentTabBody({
   tab, client, onSplit,
@@ -16,7 +16,7 @@ export function InactiveAgentTabBody({
   const transcriptReference = useRef<HTMLDivElement>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const statusWindows = useStatusWindows(tab.label, tab.connections.length > 0, tab.schedule.length > 0);
-  const intents = agentTabIntents(client, tab.label);
+  const intents = agentTabIntents(client, tab.label, 'openTranscriptFor');
   return (
     <div
       className="tab-body"
