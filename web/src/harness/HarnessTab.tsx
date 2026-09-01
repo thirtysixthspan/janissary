@@ -3,6 +3,7 @@ import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTarget } from '@shared/protocol';
 import { useXterm } from '../useXterm';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
+import { agentTabIntents } from '../shared/agent-tab-intents';
 import type { StatusWindowButtonProps } from '../status-button';
 import type { HarnessTabHandle } from '../tab-handles';
 
@@ -44,6 +45,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
 
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
 
+  const intents = agentTabIntents(client, label, 'openHarnessTranscriptFor');
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
@@ -53,9 +55,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         remote={remote}
         model={harness.model}
         effort={harness.effort}
-        onOpenFileNavigator={() => client.send({ method: 'openFileNavigatorFor', params: { label } })}
-        onLaunchAgentHere={cwd === undefined ? undefined : () => client.send({ method: 'launchAgentFor', params: { label } })}
-        onOpenTranscript={() => client.send({ method: 'openHarnessTranscriptFor', params: { label } })}
+        onOpenFileNavigator={intents.onOpenFileNavigator}
+        onLaunchAgentHere={cwd === undefined ? undefined : intents.onLaunchAgentHere}
+        onOpenTranscript={intents.onOpenTranscript}
         connectionsButton={connectionsButton}
         scheduleButton={scheduleButton}
         onSplit={onSplit}

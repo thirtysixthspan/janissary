@@ -10,7 +10,7 @@ function fakeClient() {
 describe('agentTabIntents', () => {
   it('sends the metadata actions for its tab label', () => {
     const { client, send } = fakeClient();
-    const intents = agentTabIntents(client, 'agent2');
+    const intents = agentTabIntents(client, 'agent2', 'openTranscriptFor');
 
     intents.onOpenFileNavigator();
     intents.onLaunchAgentHere();
@@ -23,7 +23,7 @@ describe('agentTabIntents', () => {
 
   it('sends transcript and ACP connection intents', () => {
     const { client, send } = fakeClient();
-    const intents = agentTabIntents(client, 'agent2');
+    const intents = agentTabIntents(client, 'agent2', 'openTranscriptFor');
     const acpRef = { scope: 'tab' as const, label: 'agent2' };
 
     intents.onToggleCollapse();
@@ -33,9 +33,18 @@ describe('agentTabIntents', () => {
     expect(send).toHaveBeenNthCalledWith(2, { method: 'openAcpTranscript', params: { acpRef } });
   });
 
+  it('sends the transcript method its caller supplied', () => {
+    const { client, send } = fakeClient();
+    const intents = agentTabIntents(client, 'claude', 'openHarnessTranscriptFor');
+
+    intents.onOpenTranscript();
+
+    expect(send).toHaveBeenCalledWith({ method: 'openHarnessTranscriptFor', params: { label: 'claude' } });
+  });
+
   it('does not send until an intent is invoked', () => {
     const { client, send } = fakeClient();
-    agentTabIntents(client, 'agent2');
+    agentTabIntents(client, 'agent2', 'openTranscriptFor');
     expect(send).not.toHaveBeenCalled();
   });
 });
