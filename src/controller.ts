@@ -17,64 +17,21 @@ import { createEditorControllerAdapter, type EditorControllerAdapter } from './c
 import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
 import { createPluginControllerAdapter, type PluginControllerAdapter } from './controller/plugin-adapter.js';
 
-export class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter, PluginControllerAdapter {
-  managers: Managers = {} as Managers;
+// The five adapter surfaces reach the class type by declaration merging rather than by fifty-six
+// mirrored declarations. The `Object.assign` in the constructor is still the only thing that puts
+// the implementations there, so a factory dropped from it typechecks — `src/controller.test.ts`
+// covers that gap by asserting every adapter member is callable on a constructed controller.
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- that unimplemented-member gap is exactly what the test above covers
+export interface Controller extends
+  TabControllerAdapter,
+  MonitorControllerAdapter,
+  EditorControllerAdapter,
+  FileNavigatorControllerAdapter,
+  PluginControllerAdapter {}
 
-  declare setActiveTab: TabControllerAdapter['setActiveTab'];
-  declare focusTab: TabControllerAdapter['focusTab'];
-  declare moveTabToOtherPane: TabControllerAdapter['moveTabToOtherPane'];
-  declare moveTab: TabControllerAdapter['moveTab'];
-  declare reorderTab: TabControllerAdapter['reorderTab'];
-  declare reorderTabTo: TabControllerAdapter['reorderTabTo'];
-  declare closeTab: TabControllerAdapter['closeTab'];
-  declare renameTab: TabControllerAdapter['renameTab'];
-  declare editQueuedCommand: TabControllerAdapter['editQueuedCommand'];
-  declare deleteQueuedCommand: TabControllerAdapter['deleteQueuedCommand'];
-  declare toggleCollapse: TabControllerAdapter['toggleCollapse'];
-  declare promoteToTerminal: TabControllerAdapter['promoteToTerminal'];
-  declare ptyInput: TabControllerAdapter['ptyInput'];
-  declare ptyResize: TabControllerAdapter['ptyResize'];
-  declare ptyKill: TabControllerAdapter['ptyKill'];
-  declare resize: TabControllerAdapter['resize'];
-  declare runSuggestion: MonitorControllerAdapter['runSuggestion'];
-  declare rateSuggestion: MonitorControllerAdapter['rateSuggestion'];
-  declare resetMonitorContext: MonitorControllerAdapter['resetMonitorContext'];
-  declare monitorContextSnapshot: MonitorControllerAdapter['monitorContextSnapshot'];
-  declare saveFile: EditorControllerAdapter['saveFile'];
-  declare pluginIntent: PluginControllerAdapter['pluginIntent'];
-  declare pluginFailed: PluginControllerAdapter['pluginFailed'];
-  declare syncEditorBuffer: EditorControllerAdapter['syncEditorBuffer'];
-  declare resyncEditorTab: EditorControllerAdapter['resyncEditorTab'];
-  declare projectFiles: EditorControllerAdapter['projectFiles'];
-  declare projectFilesFallback: EditorControllerAdapter['projectFilesFallback'];
-  declare editorPersonas: EditorControllerAdapter['editorPersonas'];
-  declare editorSuggest: EditorControllerAdapter['editorSuggest'];
-  declare closeEditorConnection: EditorControllerAdapter['closeEditorConnection'];
-  declare editorPluginFailed: EditorControllerAdapter['editorPluginFailed'];
-  declare fileNavigatorToggle: FileNavigatorControllerAdapter['fileNavigatorToggle'];
-  declare fileNavigatorCollapseAll: FileNavigatorControllerAdapter['fileNavigatorCollapseAll'];
-  declare fileNavigatorSetDetail: FileNavigatorControllerAdapter['fileNavigatorSetDetail'];
-  declare fileNavigatorReroot: FileNavigatorControllerAdapter['fileNavigatorReroot'];
-  declare moveFileNavigatorItem: FileNavigatorControllerAdapter['moveFileNavigatorItem'];
-  declare moveFileNavigatorItems: FileNavigatorControllerAdapter['moveFileNavigatorItems'];
-  declare pasteFileNavigatorItems: FileNavigatorControllerAdapter['pasteFileNavigatorItems'];
-  declare deleteFileNavigatorItem: FileNavigatorControllerAdapter['deleteFileNavigatorItem'];
-  declare deleteFileNavigatorItems: FileNavigatorControllerAdapter['deleteFileNavigatorItems'];
-  declare renameFileNavigatorItem: FileNavigatorControllerAdapter['renameFileNavigatorItem'];
-  declare fileNavigatorSearch: FileNavigatorControllerAdapter['fileNavigatorSearch'];
-  declare revealFileNavigatorItem: FileNavigatorControllerAdapter['revealFileNavigatorItem'];
-  declare fileNavigatorOpeners: FileNavigatorControllerAdapter['fileNavigatorOpeners'];
-  declare fileNavigatorOpen: FileNavigatorControllerAdapter['fileNavigatorOpen'];
-  declare fileNavigatorCreateFile: FileNavigatorControllerAdapter['fileNavigatorCreateFile'];
-  declare fileNavigatorCreateDirectory: FileNavigatorControllerAdapter['fileNavigatorCreateDirectory'];
-  declare fileNavigatorSelectionAction: FileNavigatorControllerAdapter['fileNavigatorSelectionAction'];
-  declare runFileNavigatorSelectionAction: FileNavigatorControllerAdapter['runFileNavigatorSelectionAction'];
-  declare reportFileNavigatorSelection: FileNavigatorControllerAdapter['reportFileNavigatorSelection'];
-  declare undoFileNavigatorItem: FileNavigatorControllerAdapter['undoFileNavigatorItem'];
-  declare redoFileNavigatorItem: FileNavigatorControllerAdapter['redoFileNavigatorItem'];
-  declare setDock: FileNavigatorControllerAdapter['setDock'];
-  declare openFileNavigatorFor: FileNavigatorControllerAdapter['openFileNavigatorFor'];
-  declare launchAgentFor: FileNavigatorControllerAdapter['launchAgentFor'];
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- pairs with the interface above
+export class Controller {
+  managers: Managers = {} as Managers;
 
   get rootDir(): string { return this.projectDir ?? process.cwd(); }
 

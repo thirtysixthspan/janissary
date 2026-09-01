@@ -2,16 +2,6 @@
 
 ## ready
 
-* Let the controller inherit its adapter method signatures by declaration merging instead of restating fifty-six of them by hand.
-
-Existing Debt: The controller composes five adapter objects onto itself at construction and, because that assignment is invisible to the type system, re-declares every one of their methods as a separate declaration line — a mirror that grows by a line for every RPC the adapters gain and whose only job is to restate what the five adapter types already say. Severity: 4/10
-
-Existing Risk: 3/10 - A declaration line for a method no adapter actually supplies typechecks and produces a controller method that is undefined at call time, failing as a `TypeError` inside the RPC dispatcher rather than at build.
-
-Proposal Risk: 1/10 - The signatures come straight from the adapter types and cannot drift, but the assignment is still the only thing that puts the implementations there, so an adapter factory dropped from the constructor would still typecheck.
-
-Proposal: `src/controller.ts` declares `class Controller implements TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter, PluginControllerAdapter`, then spends fifty-six consecutive lines on `declare <method>: <Adapter>['<method>'];` before a constructor that `Object.assign`s the five factories from `src/controller/tab-adapter.ts`, `monitor-adapter.ts`, `editor-adapter.ts`, `file-navigator-adapter.ts`, and `plugin-adapter.ts` onto `this`. Replace the whole block with a declaration-merged interface beside the class — `export interface Controller extends TabControllerAdapter, MonitorControllerAdapter, EditorControllerAdapter, FileNavigatorControllerAdapter, PluginControllerAdapter {}` — which supplies those members to the class type without obliging the class to define them. The `implements` clause can stay (the merged members satisfy it) or go as redundant; keep the `Object.assign` and the constructor's ordering exactly as they are, since `createManagers` must run first and `managers.schedule.start()` last. One thing to watch: with the members supplied by the interface rather than required by `implements`, a method the class also defines directly is no longer cross-checked against the adapter's signature, so confirm none of the fifty-six names collides with a real method on the class before deleting the block. `src/controller.test.ts` exercises the delegated methods through the controller and `src/message-handler-exhaustive.test.ts` walks every client RPC method through the dispatcher, so between them a member lost in the conversion fails there rather than in production.
-
 * Give the ACP tool surface one descriptor table instead of three hand-kept parallel lists of the same three tools.
 
 Existing Debt: The browser, question, and database tools are each spelled out three separate times on the ACP run path — once as a primer fragment concatenated into a template string, once as an arm of the command runner, and once as a term in the extractor's fallback chain, in a different order from the runner — so the tool set exists only as a coincidence between three lists that nothing relates to each other. Severity: 5/10
