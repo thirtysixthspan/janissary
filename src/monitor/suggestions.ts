@@ -10,16 +10,16 @@ import { monitorTabs } from './window.js';
 // Find a suggestion anywhere in the monitor feeds by id.
 export function findSuggestion(managers: Managers, id: string): MonitorSuggestion | undefined {
   return monitorTabs(managers)
-    .flatMap((t) => t.monitor!.suggestions)
+    .flatMap((t) => t.monitor.suggestions)
     .find((s) => s.id === id);
 }
 
 // Remove a suggestion from whichever feed holds it (thumbs-down).
 export function removeSuggestion(managers: Managers, id: string): void {
   for (const tab of monitorTabs(managers)) {
-    const before = tab.monitor!.suggestions.length;
-    tab.monitor!.suggestions = tab.monitor!.suggestions.filter((s) => s.id !== id);
-    if (tab.monitor!.suggestions.length !== before) messageBus.emit('state', { type: 'dirty' });
+    const before = tab.monitor.suggestions.length;
+    tab.monitor.suggestions = tab.monitor.suggestions.filter((s) => s.id !== id);
+    if (tab.monitor.suggestions.length !== before) messageBus.emit('state', { type: 'dirty' });
   }
 }
 

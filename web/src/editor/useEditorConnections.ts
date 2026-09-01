@@ -7,6 +7,7 @@ import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { statusButton, type StatusWindowButtonProps } from '../status-button';
 import { useStatusWindows } from '../useStatusWindows';
+import { isEditorTabView } from '../shared/tab-view-guards';
 
 export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
   connectionsButton: StatusWindowButtonProps;
@@ -17,9 +18,12 @@ export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
   const windows = useStatusWindows(tab.label, tab.connections.length > 0, false);
 
+  // There is no connection to close without the editor payload that names the file, so a tab missing
+  // it is left alone rather than dereferenced — the row simply does nothing.
   const closeRow = (row: ConnectionView) => {
+    if (!isEditorTabView(tab)) return;
     const persona = row.text.replace(/ \(acp\)$/, '');
-    client.send({ method: 'closeEditorConnection', params: { url: tab.editor!.url, persona } });
+    client.send({ method: 'closeEditorConnection', params: { url: tab.editor.url, persona } });
   };
 
   const openAcpTranscript = (acpRef: AcpRef) => {

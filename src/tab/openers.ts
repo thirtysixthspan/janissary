@@ -121,10 +121,14 @@ export function updatePluginTab(
 export function openEditorTab(
   target: OpenTarget, view: EditorView, watch: (label: string, path: string) => void,
 ): string {
-  const existing = view.newFile ? undefined : target.tabs.find((t) => t.editor?.path === view.path);
+  // Matched on the payload rather than the view discriminant, exactly as before — the predicate is
+  // typed only so the payload stays narrowed for the line assignment below.
+  const existing = view.newFile ? undefined : target.tabs.find(
+    (t): t is Tab & { editor: EditorView } => t.editor?.path === view.path,
+  );
   if (existing) {
     releaseFileReference(target.openFiles, view.url);
-    if (view.line !== undefined) existing.editor!.line = view.line;
+    if (view.line !== undefined) existing.editor.line = view.line;
     target.setActiveTab(target.tabs.indexOf(existing));
     messageBus.emit('state', { type: 'dirty' });
     return existing.label;

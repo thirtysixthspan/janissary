@@ -1,7 +1,8 @@
-import type { MonitorSuggestion, Tab } from '../tab/types.js';
+import type { MonitorSuggestion } from '../tab/types.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { isMonitorTab, type MonitorTab } from '../tab/view-guards.js';
 export { findSuggestion, removeSuggestion, runSuggestion, rateSuggestion } from './suggestions.js';
 
 // Monitor reporting tabs: each external-mode monitor gets its own view-only tab
@@ -11,7 +12,7 @@ export { findSuggestion, removeSuggestion, runSuggestion, rateSuggestion } from 
 // action strip, and accept no commands; their only interactions are the per-suggestion
 // Run/Dismiss buttons (RPCs handled here).
 
-const makeMonitorTab = (name: string, dotColor: string, number: number): Tab => ({
+const makeMonitorTab = (name: string, dotColor: string, number: number): MonitorTab => ({
   // Group 0: reporting tabs sit outside the action-tab group system.
   ...makeTab(name, dotColor, number, [], [], undefined, 0, dotColor),
   view: 'monitor',
@@ -33,15 +34,17 @@ export function allocateMonitorLabel(managers: Managers, persona: string): strin
   return `${persona}-${n}`;
 }
 
-// All monitor reporting tabs currently open.
-export function monitorTabs(managers: Managers): Tab[] {
-  return managers.tab.tabs.filter((t) => t.view === 'monitor');
+// All monitor reporting tabs currently open. The guard admits only those that actually carry the
+// payload, so every consumer reads `monitor` without asserting — a reporting tab somehow missing it
+// is skipped rather than dereferenced.
+export function monitorTabs(managers: Managers): MonitorTab[] {
+  return managers.tab.tabs.filter((t) => isMonitorTab(t));
 }
 
 // Open the named monitor's reporting tab or reuse the existing one. Reporting tabs are
 // appended at the end of the tab list so action-tab indices (including `activeTab`)
 // never shift, and the active tab is left untouched.
-export function openMonitorTab(managers: Managers, name: string, dotColor: string): Tab {
+export function openMonitorTab(managers: Managers, name: string, dotColor: string): MonitorTab {
   const existing = monitorTabs(managers).find((t) => t.label === name);
   if (existing) return existing;
   const tabs = managers.tab.tabs;
@@ -54,7 +57,7 @@ export function openMonitorTab(managers: Managers, name: string, dotColor: strin
 // Append a suggestion to the named monitor's feed (opening its tab if needed).
 export function pushSuggestion(managers: Managers, name: string, dotColor: string, suggestion: MonitorSuggestion): void {
   const tab = openMonitorTab(managers, name, dotColor);
-  tab.monitor!.suggestions.push(suggestion);
+  tab.monitor.suggestions.push(suggestion);
   messageBus.emit('state', { type: 'dirty' });
 }
 

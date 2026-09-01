@@ -40,9 +40,7 @@ export type TabPluginNotificationPort = {
 // The instance keys of the tabs this plugin currently owns. Empty means there is nothing to tell it
 // about, which is also the test for whether to deliver at all.
 function ownedTabs(managers: Managers, id: string): string[] {
-  return managers.tab.tabs
-    .filter((tab) => tab.plugin?.id === id)
-    .map((tab) => tab.plugin!.instanceKey);
+  return managers.tab.tabs.flatMap((tab) => (tab.plugin?.id === id ? [tab.plugin.instanceKey] : []));
 }
 
 // A notification never activates a plugin: only one that is already active, still enabled, and
