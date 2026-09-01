@@ -18,6 +18,7 @@ const clientFeatureDirectories = [
   'pickers',
   'QuitDialog',
   'SaveChangesDialog',
+  'ScheduleLaunchDialog',
 ];
 const clientFeatureZones = [
   ...clientFeatureDirectories.flatMap((target) => clientFeatureDirectories
