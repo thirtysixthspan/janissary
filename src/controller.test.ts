@@ -17,6 +17,11 @@ import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
+import { createTabControllerAdapter } from './controller/tab-adapter.js';
+import { createMonitorControllerAdapter } from './controller/monitor-adapter.js';
+import { createEditorControllerAdapter } from './controller/editor-adapter.js';
+import { createFileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
+import { createPluginControllerAdapter } from './controller/plugin-adapter.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -41,6 +46,27 @@ describe('Controller rootDir', () => {
   it('falls back to process.cwd() when projectDir is omitted', () => {
     const c = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
     expect(c.rootDir).toBe(process.cwd());
+  });
+});
+
+// The controller's adapter members reach its type by declaration merging, which cannot check that
+// the constructor's `Object.assign` actually supplies them. Walk the factories at runtime instead:
+// an adapter dropped from the composition leaves its methods undefined, and this fails rather than
+// the RPC dispatcher throwing a TypeError in production.
+describe('Controller adapter composition', () => {
+  it('exposes every method the five adapter factories supply', () => {
+    const { c } = makeController();
+    const names = [
+      createTabControllerAdapter,
+      createMonitorControllerAdapter,
+      createEditorControllerAdapter,
+      createFileNavigatorControllerAdapter,
+      createPluginControllerAdapter,
+    ].flatMap((create) => Object.keys(create(c.managers)));
+    const members = c as unknown as Record<string, unknown>;
+
+    expect(names.length).toBeGreaterThan(0);
+    expect(names.filter((name) => typeof members[name] !== 'function')).toEqual([]);
   });
 });
 
