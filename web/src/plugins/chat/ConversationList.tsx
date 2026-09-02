@@ -18,9 +18,15 @@ export function ConversationList({
   payload: ConversationListPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<number | null>(
+    payload.entries.length === 0 ? null : 0,
+  );
   const [pendingDelete, setPendingDelete] = useState<ChatSummary | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (capabilities.active) listRef.current?.focus();
+  }, [capabilities.active]);
 
   useEffect(() => {
     if (selected === null) return;
@@ -29,9 +35,9 @@ export function ConversationList({
   }, [selected]);
 
   useEffect(() => {
-    if (selected !== null && selected >= payload.entries.length) {
-      setSelected(payload.entries.length === 0 ? null : payload.entries.length - 1);
-    }
+    if (payload.entries.length === 0) setSelected(null);
+    else if (selected === null) setSelected(0);
+    else if (selected >= payload.entries.length) setSelected(payload.entries.length - 1);
   }, [payload.entries.length, selected]);
 
   const open = (id: string) => { void capabilities.intent('open', { id }); };
@@ -69,8 +75,12 @@ export function ConversationList({
             data-index={index}
             role="button"
             tabIndex={-1}
-            onClick={() => { setSelected(index); listRef.current?.focus(); }}
-            onDoubleClick={() => { open(entry.id); }}
+            onMouseEnter={() => { setSelected(index); }}
+            onClick={() => {
+              setSelected(index);
+              listRef.current?.focus();
+              open(entry.id);
+            }}
           >
             <span className="chat-row-title">{entry.title}</span>
             <time dateTime={new Date(entry.updatedAt).toISOString()}>

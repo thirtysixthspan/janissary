@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatSummary } from '@shared/plugins/chat/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { ConversationList } from './ConversationList';
@@ -23,6 +23,10 @@ function entry(id: string, title: string, updatedAt: number): ChatSummary {
   return { id, title, updatedAt };
 }
 
+beforeEach(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
 describe('ConversationList', () => {
   it('renders rows in the host-provided most-recent-first order with activity times', () => {
     const { value } = capabilities();
@@ -36,6 +40,57 @@ describe('ConversationList', () => {
     expect([...container.querySelectorAll('.chat-row-title')].map((node) => node.textContent))
       .toEqual(['Newest', 'Older']);
     expect(container.querySelectorAll('time')).toHaveLength(2);
+  });
+
+  it('focuses the active list and highlights its first conversation', () => {
+    const { value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    expect(container.querySelector('.chat-list')).toHaveFocus();
+    expect(container.querySelector('.chat-row')).toHaveClass('selected');
+  });
+
+  it('moves the highlight with arrow keys and opens the current conversation with Enter', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    const list = container.querySelector('.chat-list') as HTMLElement;
+    const rows = container.querySelectorAll('.chat-row');
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    expect(rows[1]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'ArrowUp' });
+    expect(rows[0]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'ArrowUp' });
+    expect(rows[0]).toHaveClass('selected');
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
+  });
+
+  it('moves the highlight on hover and opens a conversation with one click', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    const rows = container.querySelectorAll('.chat-row');
+    fireEvent.mouseEnter(rows[1]);
+    expect(rows[1]).toHaveClass('selected');
+    fireEvent.click(rows[1]);
+    expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
   });
 
   it('renders the empty state and creates a new conversation', () => {
