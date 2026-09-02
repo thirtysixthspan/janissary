@@ -14,6 +14,7 @@ type TopicSource = {
   subscribe(fire: () => void): Subscription;
   read(managers: Managers): TabPluginNotification['data'];
   act(managers: Managers, action: TabPluginTopicAction): void;
+  empty: TabPluginNotification['data'];
 };
 
 // Focus the tab a schedule row belongs to. Refused for a tab that owns no row, so the action stays
@@ -25,6 +26,7 @@ function focusScheduleOwner(managers: Managers, label: string): void {
 }
 
 function actOnSchedules(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'schedules') return;
   switch (action.action) {
     case 'cancel': {
       managers.schedule.cancel(action.tab, action.id);
@@ -40,11 +42,38 @@ function actOnSchedules(managers: Managers, action: TabPluginTopicAction): void 
   }
 }
 
+function actOnConversations(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'conversations') return;
+  switch (action.action) {
+    case 'create': { managers.conversations.create(action.id); return; }
+    case 'load': { managers.conversations.load(action.id); return; }
+    case 'loadOlder': { managers.conversations.loadOlder(action.id); return; }
+    case 'send': { managers.conversations.send(action.id, action.query); return; }
+    case 'cancel': { managers.conversations.cancel(action.id); return; }
+    case 'openFiles': { managers.conversations.openFiles(action.id); return; }
+    case 'launchAgent': { managers.conversations.launchAgent(action.id); return; }
+    case 'selectModel': {
+      managers.conversations.selectModel(action.id, {
+        harness: action.harness, model: action.model,
+      });
+      return;
+    }
+    case 'delete': { managers.conversations.delete(action.id); }
+  }
+}
+
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
     read: (managers) => managers.schedule.aggregatedView(),
     act: actOnSchedules,
+    empty: [],
+  },
+  conversations: {
+    subscribe: (fire) => messageBus.on('conversations', 'changed', fire),
+    read: (managers) => managers.conversations.view(),
+    act: actOnConversations,
+    empty: { summaries: [], windows: [], models: [] },
   },
 };
 
@@ -56,6 +85,12 @@ export function readTopicData(
   managers: Managers, topic: TabPluginNotificationTopic,
 ): TabPluginNotification['data'] {
   return TOPIC_SOURCES[topic].read(managers);
+}
+
+export function emptyTopicData(
+  topic: TabPluginNotificationTopic,
+): TabPluginNotification['data'] {
+  return TOPIC_SOURCES[topic].empty;
 }
 
 export function runTopicAction(managers: Managers, action: TabPluginTopicAction): void {

@@ -179,8 +179,10 @@ async function finishProvisioning(name: string, target: string, remoteUrl: strin
   mkdirSync(workspaceTempPath(name), { recursive: true });
 }
 
-export function untrustWorkspace(workspaceDir: string): void {
-  const claudeJson = path.join(homedir(), '.claude.json');
+export function untrustWorkspace(
+  workspaceDir: string,
+  claudeJson: string = path.join(homedir(), '.claude.json'),
+): void {
   let data: Record<string, unknown>;
   try {
     data = JSON.parse(readFileSync(claudeJson, 'utf8')) as Record<string, unknown>;

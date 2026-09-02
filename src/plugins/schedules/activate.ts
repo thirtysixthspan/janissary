@@ -1,6 +1,7 @@
 import type {
   AggregatedScheduleView,
   TabPluginActivation,
+  TabPluginNotification,
   TabPluginServerCapabilities,
 } from '../api.js';
 import {
@@ -30,6 +31,12 @@ function toPayload(rows: readonly AggregatedScheduleView[]): SchedulesPayload {
   return { entries };
 }
 
+function isSchedulesData(
+  data: TabPluginNotification['data'],
+): data is readonly AggregatedScheduleView[] {
+  return Array.isArray(data);
+}
+
 // `schedules` opens or focuses the list; `schedules left`/`schedules right` dock it into that
 // sidebar; bare `schedules` on a docked list undocks it back to the centre and makes it active,
 // which is what `dockTab(…, null)` means.
@@ -46,9 +53,11 @@ export function activate(): TabPluginActivation {
     command: (argument, capabilities) => {
       const dock = parseDock(argument);
       if (dock === undefined) return capabilities.rejectRequest('Usage: schedules [left|right]');
+      const data = capabilities.topicData('schedules');
+      if (!isSchedulesData(data)) return capabilities.reportFailure('invalid schedules topic data');
       capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
         title: TAB_TITLE,
-        payload: toPayload(capabilities.topicData('schedules')),
+        payload: toPayload(data),
       }));
       capabilities.dockTab(INSTANCE_KEY, dock);
     },
@@ -56,6 +65,7 @@ export function activate(): TabPluginActivation {
     // host speaks first and the list redraws from the slice the topic hands it. No title is returned:
     // the name in the tab strip has nothing to do with what the list currently holds.
     notify: (event, capabilities) => {
+      if (event.topic !== 'schedules') return;
       capabilities.updateTab(INSTANCE_KEY, () => ({ payload: toPayload(event.data) }));
     },
     intent: (request, capabilities) => {

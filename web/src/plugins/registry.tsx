@@ -31,6 +31,7 @@ export type ClientPluginLoader<Payload = unknown> = () => Promise<ClientPluginMo
 // payload each one resolves to is deliberately different per plugin.
 export const clientPluginLoaders = {
   audio: () => import('./audio/index'),
+  chat: () => import('./chat/index'),
   image: () => import('./image/index'),
   markdown: () => import('./markdown/index'),
   page: () => import('./page/index'),
@@ -70,6 +71,7 @@ export function createClientPluginRegistry(
 // against its plugin's own constant, so the duplication cannot drift silently.
 export const clientPluginRegistry = createClientPluginRegistry({
   audio: clientPlugin(1, clientPluginLoaders.audio),
+  chat: clientPlugin(1, clientPluginLoaders.chat),
   image: clientPlugin(1, clientPluginLoaders.image),
   markdown: clientPlugin(1, clientPluginLoaders.markdown),
   page: clientPlugin(1, clientPluginLoaders.page),

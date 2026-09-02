@@ -27,4 +27,33 @@ describe('FileNavigatorHeader', () => {
     render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
     expect(screen.queryByLabelText('Remote')).toBeNull();
   });
+
+  it('keeps the centre-strip header on one line', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
+    expect(container.querySelector('.files-header')).not.toHaveClass('files-header--docked');
+  });
+
+  it('stacks the header onto two lines while docked', () => {
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" dock="left" branch="master" {...callbacks} />,
+    );
+    const header = container.querySelector('.files-header');
+
+    expect(header).toHaveClass('files-header--docked');
+    expect(header?.children).toHaveLength(2);
+    expect(header?.children[0]).toHaveClass('files-meta');
+    expect(header?.children[1]).toHaveClass('files-actions');
+  });
+
+  it('offers the docked header the same actions apart from the split control', () => {
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" dock="left" onSplit={vi.fn()} {...callbacks} />,
+    );
+    const actions = container.querySelector('.files-actions');
+
+    expect(actions?.querySelector('.tab-split')).toBeNull();
+    for (const action of ['.files-search', '.files-new-file', '.files-new-directory', '.files-dock-cycle', '.files-detail-cycle', '.files-collapse-all']) {
+      expect(actions?.querySelector(action), action).not.toBeNull();
+    }
+  });
 });

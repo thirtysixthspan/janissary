@@ -6,6 +6,7 @@ import {
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
   type TabPluginTopicAction,
+  type TabPluginNotificationTopic,
 } from './api.js';
 import { createPluginContext } from './context.js';
 import { readTopicData, runTopicAction } from './topics.js';
@@ -18,7 +19,7 @@ const origin = { label: 'janus', command: 'schedules' };
 
 function declaration(
   capabilities: readonly TabPluginCapabilityName[],
-  notifications?: readonly 'schedules'[],
+  notifications?: readonly TabPluginNotificationTopic[],
 ): TabPluginDeclaration {
   return {
     id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 1,
@@ -38,6 +39,11 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       setActiveTab,
     },
     schedule: { aggregatedView: () => rows, cancel, clearAll },
+    conversations: {
+      view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
+      create: vi.fn(), load: vi.fn(), loadOlder: vi.fn(), send: vi.fn(), cancel: vi.fn(),
+      openFiles: vi.fn(), launchAgent: vi.fn(), selectModel: vi.fn(), delete: vi.fn(),
+    },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
 }
@@ -55,6 +61,54 @@ function contextFor(
     () => true,
   );
 }
+
+describe('the conversations topic source', () => {
+  it('reads the manager view and routes every action', () => {
+    const { managers } = makeManagers();
+    expect(readTopicData(managers, 'conversations')).toEqual({
+      summaries: [], windows: [], models: [],
+    });
+    const actions: TabPluginTopicAction[] = [
+      { topic: 'conversations', action: 'create', id: 'one' },
+      { topic: 'conversations', action: 'load', id: 'one' },
+      { topic: 'conversations', action: 'loadOlder', id: 'one' },
+      { topic: 'conversations', action: 'send', id: 'one', query: 'hello' },
+      { topic: 'conversations', action: 'cancel', id: 'one' },
+      {
+        topic: 'conversations', action: 'selectModel', id: 'one',
+        harness: 'claude', model: 'sonnet',
+      },
+      { topic: 'conversations', action: 'delete', id: 'one' },
+    ];
+    for (const action of actions) runTopicAction(managers, action);
+    expect(managers.conversations.create).toHaveBeenCalledWith('one');
+    expect(managers.conversations.load).toHaveBeenCalledWith('one');
+    expect(managers.conversations.loadOlder).toHaveBeenCalledWith('one');
+    expect(managers.conversations.send).toHaveBeenCalledWith('one', 'hello');
+    expect(managers.conversations.cancel).toHaveBeenCalledWith('one');
+    expect(managers.conversations.selectModel).toHaveBeenCalledWith(
+      'one', { harness: 'claude', model: 'sonnet' },
+    );
+    expect(managers.conversations.delete).toHaveBeenCalledWith('one');
+  });
+
+  it('refuses a conversations action when the plugin did not declare the topic', () => {
+    const { managers } = makeManagers();
+    const capabilities = contextFor(managers, ['topicAction'], []);
+    expect(() => capabilities.topicAction({
+      topic: 'conversations', action: 'delete', id: 'one',
+    })).toThrow('used topic "conversations" without declaring it');
+    expect(managers.conversations.delete).not.toHaveBeenCalled();
+  });
+
+  it('routes workspace actions through the conversations manager', () => {
+    const { managers } = makeManagers();
+    runTopicAction(managers, { topic: 'conversations', action: 'openFiles', id: 'one' });
+    runTopicAction(managers, { topic: 'conversations', action: 'launchAgent', id: 'one' });
+    expect(managers.conversations.openFiles).toHaveBeenCalledWith('one');
+    expect(managers.conversations.launchAgent).toHaveBeenCalledWith('one');
+  });
+});
 
 describe('the schedules topic source', () => {
   it('reads the aggregated rows the host already computes', () => {

@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import type { PluginHost } from './host';
 
+export { renderMarkdown } from './markdown-render';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

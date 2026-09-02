@@ -13,11 +13,14 @@ import { TabPluginHost } from './host.js';
 
 const origin = { label: 'janus', command: 'fixture' };
 
-function declaration(capabilities: readonly TabPluginCapabilityName[]): TabPluginDeclaration {
+function declaration(
+  capabilities: readonly TabPluginCapabilityName[],
+  notifications?: TabPluginDeclaration['notifications'],
+): TabPluginDeclaration {
   return {
     id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
     payloadSchemaVersion: 1, tabLabelPrefix: 'fixture', fileExtensions: { '.fixture': 'text/plain' },
-    capabilities,
+    capabilities, notifications,
   };
 }
 
@@ -153,6 +156,24 @@ describe('isJsonCompatible', () => {
 // it lost, after disablement, after shutdown. A handler that kept running does not get to keep
 // acting through the object it was handed.
 describe('capability revocation', () => {
+  it('returns each topic zero value after the plugin is disabled', () => {
+    const { managers } = makeManagers();
+    const activation: TabPluginActivation = {
+      isPayload: () => true, intent: () => null,
+      opener: { inline: () => {}, external: () => {} },
+    };
+    const conversations = createPluginContext(
+      managers,
+      declaration(['topicData'], ['conversations']),
+      activation,
+      origin,
+      () => false,
+    );
+    expect(conversations.topicData('conversations')).toEqual({
+      summaries: [], windows: [], models: [],
+    });
+  });
+
   it('turns side-effecting capabilities into no-ops once the plugin is no longer enabled', () => {
     const { managers } = makeManagers();
     const openRequests: string[] = [];

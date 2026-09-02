@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { MarkdownPayload } from '@shared/plugins/markdown/shared';
-import type { TabPluginClientCapabilities } from '../api';
-import { renderMarkdown } from './render';
+import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 import { onMarkdownKey } from './markdown-handlers';
 
 // A markdown view tab body: a compact metadata header (name, size, location) above the rendered

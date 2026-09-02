@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl, trustWorkspace } from './index.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl, trustWorkspace, untrustWorkspace } from './index.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -90,6 +90,24 @@ describe('trustWorkspace', () => {
     writeFileSync(config, original);
     expect(() => trustWorkspace('/workspace/new', config)).toThrow('not an object');
     expect(readFileSync(config, 'utf8')).toBe(original);
+  });
+});
+
+describe('untrustWorkspace', () => {
+  it('removes only the injected workspace trust entry', () => {
+    const config = path.join(tmpDir, 'untrust-claude.json');
+    writeFileSync(config, JSON.stringify({
+      projects: {
+        '/workspace/remove': { hasTrustDialogAccepted: true },
+        '/workspace/keep': { hasTrustDialogAccepted: true },
+      },
+    }));
+
+    untrustWorkspace('/workspace/remove', config);
+
+    expect(JSON.parse(readFileSync(config, 'utf8'))).toEqual({
+      projects: { '/workspace/keep': { hasTrustDialogAccepted: true } },
+    });
   });
 });
 

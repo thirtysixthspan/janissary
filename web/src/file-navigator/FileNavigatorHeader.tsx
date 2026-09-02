@@ -26,15 +26,16 @@ type Properties = {
 };
 
 // The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, search,
-// new items, dock cycle, collapse all) on the right. Split out of `FileNavigatorTab` to keep it under
-// the file-size limit.
+// new items, dock cycle, collapse all) on the right. Docked into a sidebar the row has no width for
+// both on one line, so it stacks onto two — see `.files-header--docked`. Split out of
+// `FileNavigatorTab` to keep it under the file-size limit.
 export function FileNavigatorHeader({
   root, remote, branch, githubUrl, dock, details, onOpenGithub, onCycleDock, onSetDetail, onCollapseAll,
   onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
-    <div className="files-header">
+    <div className={`files-header${dock ? ' files-header--docked' : ''}`}>
       <div className="files-meta">
         {remote && <RemoteChip remote={remote} />}
         <span className="files-loc">{root}</span>

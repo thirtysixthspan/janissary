@@ -428,6 +428,21 @@ describe('ProfileManager.newAgentAt', () => {
     expect(managers.tab.addBusy).not.toHaveBeenCalled();
   });
 
+  it('places an agent directly in a supplied durable workspace', () => {
+    const source = makeTab('conversation', 'red', 1, [], [], undefined, 4, 'green');
+    const managers = makeAtManagers([source], {});
+
+    new ProfileManager(managers).newAgentInWorkspace('conversation', '/conversations/first/workspace');
+
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(expect.objectContaining({
+      group: 4, groupColor: 'green', workspaceDir: '/conversations/first/workspace',
+    }));
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(
+      expect.any(String), '/conversations/first/workspace',
+    );
+    expect(managers.workspace.retain).not.toHaveBeenCalled();
+  });
+
   it('joins a remote creator\'s existing channel and workspace', () => {
     const source = makeTab('claude', 'red');
     source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
