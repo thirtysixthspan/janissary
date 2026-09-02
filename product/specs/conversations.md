@@ -20,6 +20,8 @@ Deleting a row always asks for confirmation first. Confirming removes the conver
 
 A new tab is titled `New conversation`. Its first submitted query supplies the permanent title: the first line, capped at 60 characters. Later queries do not rename it.
 
+The metadata row includes a folder button and a new-agent button. The folder opens a left-docked file navigator rooted at the conversation's private workspace, or retargets the most recently focused navigator there, while focus stays on the conversation. The new-agent button opens an ordinary agent tab in the conversation tab's group with that same workspace as both its current directory and sandbox boundary. Both controls are disabled after the conversation is deleted.
+
 The tab opens with the most recent 20 turns and the newest turn visible. An active tab follows each newly rendered query and streamed response to the bottom. Reaching the top loads 20 older turns at a time until the full history is visible; prepending that history preserves the current viewport instead of returning to the newest turn. Each turn shows the query, a sanitized Markdown response, and the harness/model pair that answered it. Responses appear progressively while the model is replying.
 
 The header offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
@@ -34,7 +36,7 @@ A failed query remains in the conversation with its error rendered in place. Rat
 
 ### Storage and workspace
 
-Each conversation is stored in its own directory under the user's Janissary data directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created only when the first query is sent, survives application restarts and project workspace sweeps, and is removed only when the conversation is deleted.
+Each conversation is stored in its own directory under the user's Janissary data directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
 
 The conversation's ACP agent is tool-less. It runs with its current directory and sandbox workspace set to that conversation's private workspace, so it receives neither the project tree nor another conversation's data. Seatbelt confinement is best-effort: it applies on macOS while workspace sandboxing is enabled and available.
 

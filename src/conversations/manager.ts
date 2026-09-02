@@ -113,6 +113,20 @@ export class ConversationsManager {
     return true;
   }
 
+  openFiles(id: string): boolean {
+    const target = this.workspaceTarget(id);
+    if (!target) return false;
+    this.managers.fileNavigator.openOrRetarget(target.label);
+    return true;
+  }
+
+  launchAgent(id: string): boolean {
+    const target = this.workspaceTarget(id);
+    if (!target) return false;
+    this.managers.profile.newAgentInWorkspace(target.label, target.workspace);
+    return true;
+  }
+
   delete(id: string): void {
     this.cancel(id);
     this.responder.close(id);
@@ -140,6 +154,17 @@ export class ConversationsManager {
     if (!conversation) return;
     const size = this.windowSizes.get(id) ?? CONVERSATION_WINDOW_SIZE;
     return conversationWindow(conversation, size);
+  }
+
+  private workspaceTarget(id: string): { label: string; workspace: string } | undefined {
+    const conversation = this.get(id);
+    const tab = this.managers.tab.tabs.find((candidate) =>
+      candidate.plugin?.id === 'chat' && candidate.plugin.instanceKey === id);
+    if (!conversation || !tab) return;
+    if (conversation.turns.length === 0) this.store.write(conversation);
+    const workspace = this.store.ensure(id);
+    this.managers.tab.setCwd(tab.label, workspace);
+    return { label: tab.label, workspace };
   }
 
   private cancelClosedConversations(): void {

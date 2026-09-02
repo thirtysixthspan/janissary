@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
 import { ConversationsManager } from './manager.js';
 import { ConversationSessions } from './sessions.js';
 import { CONVERSATION_SCHEMA_VERSION, ConversationStore } from './store.js';
@@ -27,14 +28,22 @@ function fakeSession(): FakeSession {
 
 function fixture() {
   const store = new ConversationStore({ home });
-  const managers = { tab: { tabs: [] } } as unknown as Managers;
+  const tabs: Tab[] = [];
+  const setCwd = vi.fn();
+  const openOrRetarget = vi.fn();
+  const newAgentInWorkspace = vi.fn();
+  const managers = {
+    tab: { tabs, setCwd },
+    fileNavigator: { openOrRetarget },
+    profile: { newAgentInWorkspace },
+  } as unknown as Managers;
   let time = 100;
   const manager = new ConversationsManager(managers, {
     store,
     sessions: new ConversationSessions(),
     now: () => ++time,
   });
-  return { manager, managers, store };
+  return { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store };
 }
 
 beforeEach(() => {
@@ -191,6 +200,38 @@ describe('ConversationsManager', () => {
     manager.send('first', 'First');
     expect(existsSync(path.join(store.directory('first'), 'workspace'))).toBe(true);
     expect(existsSync(path.join(store.directory('first'), 'workspace.tmp'))).toBe(true);
+    manager.dispose();
+  });
+
+  it('opens workspace tools against an open conversation tab and persists a new conversation', () => {
+    const { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store } = fixture();
+    manager.create('first');
+    managers.tab.tabs.push({
+      label: 'First chat', plugin: { id: 'chat', instanceKey: 'first' },
+    } as Tab);
+
+    expect(manager.openFiles('first')).toBe(true);
+    const workspace = path.join(store.directory('first'), 'workspace');
+    expect(store.read('first')).toMatchObject({ id: 'first', turns: [] });
+    expect(existsSync(workspace)).toBe(true);
+    expect(setCwd).toHaveBeenCalledWith('First chat', workspace);
+    expect(openOrRetarget).toHaveBeenCalledWith('First chat');
+
+    expect(manager.launchAgent('first')).toBe(true);
+    expect(newAgentInWorkspace).toHaveBeenCalledWith('First chat', workspace);
+    manager.dispose();
+  });
+
+  it('refuses workspace tools without an owning open conversation tab', () => {
+    const { manager, newAgentInWorkspace, openOrRetarget, store } = fixture();
+    const ensure = vi.spyOn(store, 'ensure');
+    manager.create('first');
+
+    expect(manager.openFiles('first')).toBe(false);
+    expect(manager.launchAgent('first')).toBe(false);
+    expect(ensure).not.toHaveBeenCalled();
+    expect(openOrRetarget).not.toHaveBeenCalled();
+    expect(newAgentInWorkspace).not.toHaveBeenCalled();
     manager.dispose();
   });
 

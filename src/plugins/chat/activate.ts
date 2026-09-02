@@ -142,6 +142,13 @@ function runIntent(
       capabilities.topicAction({ topic: 'conversations', action: 'cancel', id });
       return null;
     }
+    case 'open-files':
+    case 'launch-agent': {
+      if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
+      const action = intent === 'open-files' ? 'openFiles' : 'launchAgent';
+      capabilities.topicAction({ topic: 'conversations', action, id });
+      return null;
+    }
     case 'select-model': {
       if (!isSelectModelIntent(value)) return capabilities.rejectRequest('invalid select-model payload');
       capabilities.topicAction({ topic: 'conversations', action: 'selectModel', id, ...value });

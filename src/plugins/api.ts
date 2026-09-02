@@ -105,6 +105,8 @@ export type TabPluginTopicAction =
   | { topic: 'conversations'; action: 'loadOlder'; id: string }
   | { topic: 'conversations'; action: 'send'; id: string; query: string }
   | { topic: 'conversations'; action: 'cancel'; id: string }
+  | { topic: 'conversations'; action: 'openFiles'; id: string }
+  | { topic: 'conversations'; action: 'launchAgent'; id: string }
   | {
     topic: 'conversations';
     action: 'selectModel';

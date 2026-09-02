@@ -135,6 +135,21 @@ describe('ChatTab', () => {
     });
   });
 
+  it('opens workspace tools and disables them after deletion', () => {
+    const { intent, value } = capabilities();
+    const rendered = render(<ChatTab payload={payload()} capabilities={value} />);
+    const files = screen.getByTitle('Open file navigator in this workspace');
+    const agent = screen.getByTitle('New agent in this workspace');
+    fireEvent.click(files);
+    fireEvent.click(agent);
+    expect(intent).toHaveBeenNthCalledWith(1, 'open-files', {});
+    expect(intent).toHaveBeenNthCalledWith(2, 'launch-agent', {});
+
+    rendered.rerender(<ChatTab payload={payload({ deleted: true })} capabilities={value} />);
+    expect(files).toBeDisabled();
+    expect(agent).toBeDisabled();
+  });
+
   it('sends the composer text', () => {
     const { intent, value } = capabilities();
     render(<ChatTab payload={payload()} capabilities={value} />);

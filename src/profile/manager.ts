@@ -125,6 +125,19 @@ export class ProfileManager {
     });
   }
 
+  newAgentInWorkspace(label: string, workspaceDir: string): void {
+    const creator = this.managers.tab.tabs.find((tab) => tab.label === label);
+    if (!creator) return;
+    const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
+    if (resolved === null) {
+      notify(this.managers, 'manual', label, 'All agent names are in use.');
+      return;
+    }
+    placeAgent(this.managers, {
+      resolved, creator, cwd: workspaceDir, workspaceDir, offline: false,
+    });
+  }
+
   private waitForRemoteWorkspace(joinedLabel: string, sourceLabel: string): void {
     const ready = this.managers.remote.readyOf(sourceLabel);
     if (!ready) return;

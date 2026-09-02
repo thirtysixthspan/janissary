@@ -146,7 +146,7 @@ Schedules is the first bundled plugin that opens on no file. It claims no extens
 
 ### Bundled chat plugin
 
-Chat claims no files and contributes the `chat` command. It owns a singleton list tab plus one tab per open conversation, and redraws those tabs from the conversation topic. Every mutation goes back through that topic's narrow actions; the plugin never owns storage or an agent process. See [[conversations]].
+Chat claims no files and contributes the `chat` command. It owns a singleton list tab plus one tab per open conversation, and redraws those tabs from the conversation topic. Every mutation and conversation-workspace request goes back through that topic's narrow actions; the plugin never owns storage, file navigation, or an agent process. See [[conversations]].
 
 ### Bundled video plugin
 

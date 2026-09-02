@@ -42,7 +42,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
       create: vi.fn(), load: vi.fn(), loadOlder: vi.fn(), send: vi.fn(), cancel: vi.fn(),
-      selectModel: vi.fn(), delete: vi.fn(),
+      openFiles: vi.fn(), launchAgent: vi.fn(), selectModel: vi.fn(), delete: vi.fn(),
     },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
@@ -99,6 +99,14 @@ describe('the conversations topic source', () => {
       topic: 'conversations', action: 'delete', id: 'one',
     })).toThrow('used topic "conversations" without declaring it');
     expect(managers.conversations.delete).not.toHaveBeenCalled();
+  });
+
+  it('routes workspace actions through the conversations manager', () => {
+    const { managers } = makeManagers();
+    runTopicAction(managers, { topic: 'conversations', action: 'openFiles', id: 'one' });
+    runTopicAction(managers, { topic: 'conversations', action: 'launchAgent', id: 'one' });
+    expect(managers.conversations.openFiles).toHaveBeenCalledWith('one');
+    expect(managers.conversations.launchAgent).toHaveBeenCalledWith('one');
   });
 });
 

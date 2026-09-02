@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ChatTabPayload, ChatTurn } from '@shared/plugins/chat/shared';
 import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 
@@ -83,7 +85,25 @@ export function ChatTab({
             </optgroup>
           ))}
         </select>
-        {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
+        <span className="plugin-actions">
+          <button
+            type="button"
+            title="Open file navigator in this workspace"
+            disabled={conversation.deleted}
+            onClick={() => { void capabilities.intent('open-files', {}); }}
+          >
+            <FontAwesomeIcon icon={faFolder} />
+          </button>
+          <button
+            type="button"
+            title="New agent in this workspace"
+            disabled={conversation.deleted}
+            onClick={() => { void capabilities.intent('launch-agent', {}); }}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          {capabilities.splitAction}
+        </span>
       </div>
       <div
         className="chat-turns"

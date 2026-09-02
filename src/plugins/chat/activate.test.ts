@@ -126,6 +126,16 @@ describe('chat plugin intents', () => {
       .toThrow(new TabPluginRejection('unknown chat intent "unknown"'));
   });
 
+  it('maps workspace intents to their narrow conversation actions', () => {
+    const value = fixture();
+    expect(run('open-files', {}, conversation, value)).toBeNull();
+    expect(run('launch-agent', {}, conversation, value)).toBeNull();
+    expect(value.actions).toEqual([
+      { topic: 'conversations', action: 'openFiles', id: 'first' },
+      { topic: 'conversations', action: 'launchAgent', id: 'first' },
+    ]);
+  });
+
   it('reports an invalid authoritative tab payload as a failure', () => {
     const value = fixture();
     expect(() => run('send', { query: 'hello' }, { broken: true }, value))
