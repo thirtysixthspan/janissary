@@ -20,7 +20,7 @@ Deleting a row always asks for confirmation first. Confirming removes the conver
 
 A new tab is titled `New conversation`. Its first submitted query supplies the permanent title: the first line, capped at 60 characters. Later queries do not rename it.
 
-The tab opens with the most recent 20 turns. Reaching the top loads 20 older turns at a time until the full history is visible. Each turn shows the query, a sanitized Markdown response, and the harness/model pair that answered it. Responses appear progressively while the model is replying.
+The tab opens with the most recent 20 turns and the newest turn visible. An active tab follows each newly rendered query and streamed response to the bottom. Reaching the top loads 20 older turns at a time until the full history is visible; prepending that history preserves the current viewport instead of returning to the newest turn. Each turn shows the query, a sanitized Markdown response, and the harness/model pair that answered it. Responses appear progressively while the model is replying.
 
 The header offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 

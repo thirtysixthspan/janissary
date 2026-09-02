@@ -33,6 +33,22 @@ function payload(overrides: Partial<ChatTabPayload['conversation']> = {}): ChatT
   };
 }
 
+function turn(query: string, response: string, streaming?: true) {
+  return {
+    query,
+    response,
+    streaming,
+    pair: { harness: 'opencode' as const, model: 'google/gemini' },
+  };
+}
+
+function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0) {
+  Object.defineProperties(element, {
+    scrollHeight: { value: scrollHeight, writable: true, configurable: true },
+    scrollTop: { value: scrollTop, writable: true, configurable: true },
+  });
+}
+
 describe('ChatTab', () => {
   it('renders sanitized Markdown, streaming text, and failures in place', () => {
     const { value } = capabilities();
@@ -57,6 +73,55 @@ describe('ChatTab', () => {
     expect(container.querySelector('script')).toBeNull();
     expect(screen.getByText('partial')).toBeInTheDocument();
     expect(screen.getByText('agent failed')).toHaveClass('chat-response', 'failed');
+  });
+
+  it('scrolls to the bottom when a new user query is rendered', () => {
+    const { value } = capabilities();
+    const rendered = render(<ChatTab payload={payload()} capabilities={value} />);
+    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    stubScroll(viewport, 800);
+    rendered.rerender(<ChatTab
+      payload={payload({ turns: [turn('new query', '', true)] })}
+      capabilities={value}
+    />);
+    expect(viewport.scrollTop).toBe(800);
+  });
+
+  it('follows a growing streamed response to its new bottom', () => {
+    const { value } = capabilities();
+    const rendered = render(<ChatTab
+      payload={payload({ turns: [turn('question', '', true)] })}
+      capabilities={value}
+    />);
+    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    stubScroll(viewport, 800);
+    Object.defineProperty(viewport, 'scrollHeight', {
+      value: 1200, writable: true, configurable: true,
+    });
+    rendered.rerender(<ChatTab
+      payload={payload({ turns: [turn('question', 'partial answer', true)] })}
+      capabilities={value}
+    />);
+    expect(viewport.scrollTop).toBe(1200);
+  });
+
+  it('preserves the viewport when older turns are prepended', () => {
+    const { value } = capabilities();
+    const latest = turn('latest question', 'latest answer');
+    const rendered = render(<ChatTab
+      payload={payload({ turns: [latest], hasOlder: true })}
+      capabilities={value}
+    />);
+    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    stubScroll(viewport, 1000, 120);
+    rendered.rerender(<ChatTab
+      payload={payload({
+        turns: [turn('older question', 'older answer'), latest],
+        hasOlder: false,
+      })}
+      capabilities={value}
+    />);
+    expect(viewport.scrollTop).toBe(120);
   });
 
   it('groups catalogued models and emits a selection', () => {

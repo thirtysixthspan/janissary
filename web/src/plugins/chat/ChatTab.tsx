@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ChatTabPayload, ChatTurn } from '@shared/plugins/chat/shared';
 import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 
@@ -16,6 +16,25 @@ export function ChatTab({
   const { conversation, models } = payload;
   const [query, setQuery] = useState('');
   const streaming = conversation.turns.some((turn) => turn.streaming === true);
+  const turnsRef = useRef<HTMLDivElement>(null);
+  const latestTurn = conversation.turns.at(-1);
+  const latestQuery = latestTurn?.query;
+  const latestResponse = latestTurn?.response;
+  const latestError = latestTurn?.error;
+  const latestStreaming = latestTurn?.streaming;
+
+  useEffect(() => {
+    const element = turnsRef.current;
+    if (!capabilities.active || !element) return;
+    element.scrollTop = element.scrollHeight;
+  }, [
+    capabilities.active,
+    conversation.id,
+    latestError,
+    latestQuery,
+    latestResponse,
+    latestStreaming,
+  ]);
 
   useEffect(() => {
     if (!capabilities.active || !streaming) return;
@@ -68,6 +87,7 @@ export function ChatTab({
       </div>
       <div
         className="chat-turns"
+        ref={turnsRef}
         onScroll={(event) => {
           if (event.currentTarget.scrollTop === 0 && conversation.hasOlder) {
             void capabilities.intent('load-older', {});
