@@ -11,6 +11,7 @@ import { useEditorConnections } from './useEditorConnections';
 import { useEditorFind } from './useEditorFind';
 import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { useEditorInteractions } from './useEditorInteractions';
+import { keepCaretRowVisible } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
 import { handleSuggestPillClick } from './handleSuggestPillClick';
@@ -75,7 +76,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     const last = lastCursorRef.current;
     const moved = !last || last.line !== state.cursor.line || last.col !== state.cursor.col;
     lastCursorRef.current = { line: state.cursor.line, col: state.cursor.col };
-    if (moved) caretRef.current?.scrollIntoView({ block: 'nearest' });
+    // The whole screen row the caret lands on comes into view with it, not just the caret's own box:
+    // a row is taller than the caret, so bounding the caret alone leaves the line it is on clipped
+    // at the edge the move came from — below the fold, going down.
+    if (moved && bodyRef.current && caretRef.current) keepCaretRowVisible(bodyRef.current, caretRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stable refs hold caret/scroll state; active and cursor changes trigger scrolling
   }, [active, state?.cursor.line, state?.cursor.col]);
 
