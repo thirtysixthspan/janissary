@@ -10,9 +10,9 @@ The bundled chat view provides durable, ordinary conversations with an ACP-capab
 
 ### Conversation list
 
-The list is ordered by most recent activity. A **New conversation** entry appears above the saved rows. When there are no rows, `No conversations yet` appears as well.
+The list is ordered by most recent activity. Its metadata row has no title and places an icon-only **New conversation** action with the other right-aligned tab actions. When there are no saved rows, `No conversations yet` appears below the metadata row.
 
-The first saved row is current when the list opens. Up and Down move the highlighted current row without wrapping, pointer hover moves the highlight to that row, and Enter or a single click opens the current conversation. Opening focuses its existing conversation tab or creates one.
+The first saved row is current when the list opens. Up and Down move the highlighted current row without wrapping, and Enter opens it. A click on an unselected row makes that row current without opening it; clicking the current row opens its conversation. Opening focuses its existing conversation tab or creates one.
 
 Deleting a row always asks for confirmation first. Confirming removes the conversation history, its private workspace, and everything inside that workspace; cancelling changes nothing.
 

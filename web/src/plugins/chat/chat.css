@@ -1,6 +1,5 @@
 .chat-list, .chat-tab { min-height: 0; }
 .chat-list-header, .chat-header { min-height: 28px; }
-.chat-new { align-self: flex-start; display: flex; align-items: center; gap: 7px; }
 .chat-empty { color: var(--muted); padding: 10px 4px; }
 .chat-rows { overflow: auto; min-height: 0; }
 .chat-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px; border-radius: 4px; }

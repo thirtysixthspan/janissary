@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatSummary } from '@shared/plugins/chat/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -77,7 +77,7 @@ describe('ConversationList', () => {
     expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
   });
 
-  it('moves the highlight on hover and opens a conversation with one click', () => {
+  it('selects a conversation with one click and opens it with the second', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
@@ -87,10 +87,26 @@ describe('ConversationList', () => {
       capabilities={value}
     />);
     const rows = container.querySelectorAll('.chat-row');
-    fireEvent.mouseEnter(rows[1]);
+    fireEvent.click(rows[1]);
     expect(rows[1]).toHaveClass('selected');
+    expect(intent).not.toHaveBeenCalled();
     fireEvent.click(rows[1]);
     expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
+  });
+
+  it('shows the new-conversation icon before Split without a redundant heading', () => {
+    const { value } = capabilities();
+    value.splitAction = <button type="button">Split</button>;
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [] }}
+      capabilities={value}
+    />);
+    const actions = container.querySelector(':scope .chat-list-header .plugin-actions') as HTMLElement;
+    const [create, split] = within(actions).getAllByRole('button');
+    expect(screen.queryByText('Conversations')).toBeNull();
+    expect(create).toHaveAttribute('title', 'New conversation');
+    expect(create).toHaveTextContent('');
+    expect(split).toHaveTextContent('Split');
   });
 
   it('renders the empty state and creates a new conversation', () => {

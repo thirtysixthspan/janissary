@@ -56,16 +56,17 @@ export function ConversationList({
   return (
     <div className="chat-list plugin-tab" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
       <div className="plugin-meta chat-list-header">
-        <span className="plugin-name">Conversations</span>
-        {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
+        <span className="plugin-actions">
+          <button
+            type="button"
+            title="New conversation"
+            onClick={() => { void capabilities.intent('create', {}); }}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          {capabilities.splitAction}
+        </span>
       </div>
-      <button
-        type="button"
-        className="chat-new"
-        onClick={() => { void capabilities.intent('create', {}); }}
-      >
-        <FontAwesomeIcon icon={faPlus} /> New conversation
-      </button>
       {payload.entries.length === 0 && <div className="chat-empty">No conversations yet</div>}
       <div className="chat-rows">
         {payload.entries.map((entry, index) => (
@@ -75,11 +76,11 @@ export function ConversationList({
             data-index={index}
             role="button"
             tabIndex={-1}
-            onMouseEnter={() => { setSelected(index); }}
             onClick={() => {
+              const shouldOpen = selected === index;
               setSelected(index);
               listRef.current?.focus();
-              open(entry.id);
+              if (shouldOpen) open(entry.id);
             }}
           >
             <span className="chat-row-title">{entry.title}</span>
