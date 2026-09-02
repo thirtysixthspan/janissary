@@ -724,6 +724,11 @@ html, body, #root {
   display: flex; align-items: center; justify-content: space-between;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
+/* Docked into a sidebar the header has no width for a root path and seven icon buttons on one line,
+   so it stacks: the host chip, root, and branch on the first line and the buttons alone on the
+   second, still pushed to the trailing edge by the action group's own automatic margin. */
+.files-header--docked { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px; }
+.files-header--docked .files-meta { flex: none; }
 .files-meta {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
   flex: 1; min-width: 0;

@@ -24,6 +24,16 @@ describe('metadata theme', () => {
     expect(metadataRule).not.toContain('user-select: none');
   });
 
+  it('stacks the docked file navigator header onto two lines', () => {
+    const dockedRule = theme.match(/\.files-header--docked \{[^}]+\}/)?.[0];
+    const actionRule = theme.match(
+      /\.tab-meta-actions, \.monitor-actions, \.editor-actions, \.files-actions \{[^}]+\}/,
+    )?.[0];
+
+    expect(dockedRule).toContain('flex-direction: column');
+    expect(actionRule).toContain('margin-left: auto');
+  });
+
   it('keeps host metadata action groups at the right edge', () => {
     const actionRule = theme.match(
       /\.tab-meta-actions, \.monitor-actions, \.editor-actions, \.files-actions \{[^}]+\}/,

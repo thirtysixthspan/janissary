@@ -585,6 +585,12 @@ A remote tree's header begins with a host chip ahead of the root path and branch
 host and uses the full remote destination as its tooltip, matching the chip in the owning tab's
 metadata row.
 
+In the centre tab strip the header is a single line, with the root path and branch at the leading
+edge and the buttons at the trailing edge. Docked into a sidebar it takes two lines instead: the
+host chip, root path, and branch on the first, and the buttons alone on the second, still at the
+trailing edge. Docking changes only how the header is laid out — the same buttons are offered
+either way, apart from the split control a docked tree already withholds.
+
 When the tree is rooted inside a git repository whose `origin` remote points at GitHub, the header
 also carries a **GitHub** button, shown before Search files. Clicking it opens that repository's
 commits page for the currently checked-out branch (for example
