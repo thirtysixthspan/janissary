@@ -8,11 +8,10 @@ import { isRateLimitError } from './rate-limit.js';
 import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
+import { acpLaunchFor, MARKDOWN_INSTRUCTION } from './launch.js';
 
 // The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
 // wired up); the model string drives the `provider/model` label shown in the connections panel.
-const ACP_COMMAND = 'opencode';
-const ACP_ARGS = ['acp'];
 const ACP_MODEL = 'google/gemini-3.1-flash-lite';
 
 // Refused rather than queued: `RemoteChannel.send` silently drops every frame until ssh has
@@ -21,19 +20,7 @@ const ACP_MODEL = 'google/gemini-3.1-flash-lite';
 // a tab; `acp` is typed by a person, who can retype it.
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
-// Appended after the tool table's own primer fragments: it describes how the tab renders a reply,
-// which is the manager's concern rather than any one tool's.
-const MARKDOWN_INSTRUCTION = 'Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.';
-
-// Which agent and model run — decided here on both paths, and sent across for a remote tab, so one
-// definition holds and the two installations cannot silently disagree about the model.
-function acpLaunch(): { command: string; args: string[]; env: Record<string, string> } {
-  return {
-    command: ACP_COMMAND,
-    args: ACP_ARGS,
-    env: { OPENCODE_CONFIG_CONTENT: JSON.stringify({ model: ACP_MODEL }) },
-  };
-}
+const ACP_HARNESS = { harness: 'opencode', model: ACP_MODEL, variant: 'default' } as const;
 
 // Split a `provider/model` config string into its parts; a bare `model` with no slash has no
 // provider. Drives the connections-panel label.
@@ -91,9 +78,9 @@ export class AcpManager {
       };
       const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
       session = channel
-        ? createRemoteAcpSession(channel, { ...acpLaunch(), id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
+        ? createRemoteAcpSession(channel, { ...acpLaunchFor(ACP_HARNESS), id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
         : connectAcp({
-          ...acpLaunch(), cwd,
+          ...acpLaunchFor(ACP_HARNESS), cwd,
           onError: connect.onError,
           onConnect: connect.onConnect,
           workspaceDir: tab?.workspaceDir,

@@ -12,7 +12,7 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
-import { readTopicData, runTopicAction } from './topics.js';
+import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -145,7 +145,7 @@ export function createPluginContext(
     },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
-      return isEnabled() ? readTopicData(managers, topic) : [];
+      return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
     },
     topicAction: (action) => {
       requireDeclaredTopic(declaration, action.topic);

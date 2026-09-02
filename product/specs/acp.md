@@ -12,6 +12,8 @@ Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns t
 
 If the agent process dies — a failed spawn, a missing binary, or a crash mid-session — the session no longer exists, so it is reported as an `ACP: <message>` line in the tab and forgotten. The tab stays open and the next `acp <prompt>` starts a fresh session rather than writing into a dead one. A prompt that merely *fails* is different: a rate-limited reply reports itself and leaves the session alone, so the accumulated conversation is not thrown away for a condition that clears on its own.
 
+The `acp` command's per-tab session and a [[conversations]] session are separate uses of the same protocol channel. A conversation session is tool-less, runs in the conversation's own workspace, and sends a plain text query directly; it does not enter the `acp` command's database/browser tool loop.
+
 ### Reply streaming
 
 The agent is instructed (via the prompt primer) to write its replies in **GitHub-flavored Markdown**, and the tab renders them as formatted Markdown. The reply streams into a running log entry keyed by the prompt text; that entry is flagged `markdown` so the raw Markdown is kept verbatim (not split into plain-text lines) and `flattenBuffer` (`src/tab.ts`) emits it as a single `markdown` buffer line. The web client renders that line by converting the Markdown to HTML (`marked`, GFM enabled) and sanitizing it (`DOMPurify`) before insertion — so headings, lists, tables, fenced code blocks, blockquotes, and links all render, with partial Markdown rendering progressively as it streams. While awaiting the agent, the tab's busy indicator flashes (the dot blinks). On completion the entry is finalized.

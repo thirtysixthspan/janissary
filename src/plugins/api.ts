@@ -1,4 +1,4 @@
-import type { AggregatedScheduleView } from '../protocol.js';
+import type { AggregatedScheduleView, ConversationsView } from '../protocol.js';
 
 export const TAB_PLUGIN_API_VERSION = 1;
 
@@ -59,12 +59,13 @@ export class TabPluginRejection extends Error {
 // Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
 // — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
 // shell output. Adding one is additive; each needs its own justification and its own data slice.
-export type TabPluginNotificationTopic = 'schedules';
+export type TabPluginNotificationTopic = 'schedules' | 'conversations';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
 const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   schedules: true,
+  conversations: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -77,11 +78,17 @@ export function isTabPluginNotificationTopic(name: string): name is TabPluginNot
 // One delivery of a host topic. `data` is the slice the host already computes for that topic, and
 // `tabs` are the instance keys of this plugin's own open tabs — the host works that set out to
 // decide whether to deliver at all, so passing it leaves the plugin with no bookkeeping of its own.
-export type TabPluginNotification = {
-  topic: 'schedules';
-  data: readonly AggregatedScheduleView[];
-  tabs: readonly string[];
-};
+export type TabPluginNotification =
+  | {
+    topic: 'schedules';
+    data: readonly AggregatedScheduleView[];
+    tabs: readonly string[];
+  }
+  | {
+    topic: 'conversations';
+    data: ConversationsView;
+    tabs: readonly string[];
+  };
 
 // What a plugin may ask the host to do to a topic it declared an interest in. Deliberately tied to a
 // topic rather than offered as free-standing capabilities: a plugin may act only on state the host
@@ -92,7 +99,20 @@ export type TabPluginTopicAction =
   | { topic: 'schedules'; action: 'clear' }
   // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
   // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
-  | { topic: 'schedules'; action: 'focusOwner'; tab: string };
+  | { topic: 'schedules'; action: 'focusOwner'; tab: string }
+  | { topic: 'conversations'; action: 'create'; id: string }
+  | { topic: 'conversations'; action: 'load'; id: string }
+  | { topic: 'conversations'; action: 'loadOlder'; id: string }
+  | { topic: 'conversations'; action: 'send'; id: string; query: string }
+  | { topic: 'conversations'; action: 'cancel'; id: string }
+  | {
+    topic: 'conversations';
+    action: 'selectModel';
+    id: string;
+    harness: 'claude' | 'opencode';
+    model: string;
+  }
+  | { topic: 'conversations'; action: 'delete'; id: string };
 
 export type TabPluginDeclaration = {
   id: string;
@@ -246,7 +266,14 @@ export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 export type { PluginFailedRequest, PluginIntentRequest, PluginTabView } from '../protocol.js';
 // Re-exported so a plugin can type a `schedules` notification handler without importing
 // `../protocol.js`, which the plugin import boundary forbids.
-export type { AggregatedScheduleView } from '../protocol.js';
+export type {
+  AggregatedScheduleView,
+  ConversationModelPair,
+  ConversationSummaryView,
+  ConversationTurnView,
+  ConversationWindowView,
+  ConversationsView,
+} from '../protocol.js';
 
 // Resolution: core openers and commands resolve first, then one plugin contribution by exact
 // extension or case-insensitive first token. Ordering: duplicate claims are rejected, so array

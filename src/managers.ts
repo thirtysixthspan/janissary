@@ -22,6 +22,7 @@ import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
+import type { ConversationsManager } from './conversations/manager.js';
 
 export type ManagerLifecycle = {
   dispose?(): void;
@@ -52,6 +53,7 @@ type ManagerRegistry = {
   editorAcp: EditorAcpManager;
   questions: Questions;
   plugins: TabPluginHost;
+  conversations: ConversationsManager;
 };
 
 export type Managers = {

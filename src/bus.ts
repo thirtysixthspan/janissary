@@ -102,8 +102,9 @@ type FileNavigatorEvent = { type: 'collect'; id: number };
 // `state: dirty`, which fires on essentially every mutation: this one is a named, low-frequency
 // signal a tab plugin may subscribe to (see src/plugins/notifications.ts).
 type ScheduleEvent = { type: 'changed' };
+type ConversationsEvent = { type: 'changed' };
 export type BusChannels = {
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
-  fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent;
+  fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();

@@ -83,7 +83,7 @@ function dispatch(port: TabPluginNotificationPort, topic: TabPluginNotificationT
       topic,
       data,
       tabs: ownedTabs(port.managers, record.declaration.id),
-    });
+    } as TabPluginNotification);
   }
 }
 

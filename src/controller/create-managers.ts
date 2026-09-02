@@ -25,6 +25,7 @@ import { Questions } from '../questions.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { TabPluginHost } from '../plugins/host.js';
+import { ConversationsManager } from '../conversations/manager.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -40,6 +41,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
       notify(managers, 'question', label, undefined, undefined, label);
     }
   });
+  managers.conversations = new ConversationsManager(managers);
   managers.plugins = new TabPluginHost(managers);
   managers.workspace = new WorkspaceManager(projectDir);
   managers.gitSync = new GitSync(managers.workspace);

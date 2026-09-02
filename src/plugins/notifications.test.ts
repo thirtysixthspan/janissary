@@ -8,14 +8,25 @@ import {
   type TabPluginActivation,
   type TabPluginDeclaration,
   type TabPluginNotification,
+  type TabPluginNotificationTopic,
 } from './api.js';
 import { TabPluginHost } from './host.js';
+import { ConversationResponder } from '../conversations/responder.js';
+import type { ConversationSessions } from '../conversations/sessions.js';
+import type { ConversationStore } from '../conversations/store.js';
+import { CONVERSATION_SCHEMA_VERSION } from '../conversations/store.js';
+import type { AcpSession, PromptHandlers } from '../acp/types.js';
 
 const ROWS: AggregatedScheduleView[] = [
   { tab: 'janus', id: 's1', spec: 'every 5m', next: 'in 5m', recurring: true, command: 'ls' },
 ];
+const CONVERSATIONS = {
+  summaries: [{ id: 'first', title: 'First', updatedAt: 1 }],
+  windows: [],
+  models: [{ harness: 'opencode' as const, model: 'model' }],
+};
 
-function manifest(id: string, notifications?: readonly 'schedules'[]): TabPluginDeclaration {
+function manifest(id: string, notifications?: readonly TabPluginNotificationTopic[]): TabPluginDeclaration {
   return {
     id, version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 1,
     tabLabelPrefix: id, fileExtensions: { [`.${id}`]: 'text/plain' },
@@ -37,6 +48,7 @@ function makeManagers(): Managers {
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn(), aggregatedView: () => ROWS },
+    conversations: { view: () => CONVERSATIONS },
     questions: { cancelTab: vi.fn(), pendingFor: vi.fn() },
     database: { forgetTab: vi.fn(), closeAll: vi.fn() },
   } as unknown as Managers);
@@ -64,6 +76,11 @@ function fireSchedules(): Promise<void> {
   return new Promise((resolve) => { setTimeout(resolve, 0); });
 }
 
+function fireConversations(): Promise<void> {
+  messageBus.emit('conversations', { type: 'changed' });
+  return new Promise((resolve) => { setTimeout(resolve, 0); });
+}
+
 async function openTab(host: TabPluginHost, managers: Managers, id = 'fixture') {
   await host.runOpener(id, 'inline', `/tmp/a.${id}`, {
     label: managers.tab.tabs[0].label, command: `open /tmp/a.${id}`,
@@ -72,6 +89,67 @@ async function openTab(host: TabPluginHost, managers: Managers, id = 'fixture') 
 }
 
 describe('tab plugin notifications', () => {
+  it('delivers conversations only to a running plugin with an open tab', async () => {
+    const managers = makeManagers();
+    const seen: TabPluginNotification[] = [];
+    const host = new TabPluginHost(managers, [manifest('fixture', ['conversations'])], {
+      fixture: async () => ({ activate: () => activationFor((event) => { seen.push(event); }) }),
+    });
+    await fireConversations();
+    expect(seen).toEqual([]);
+    await openTab(host, managers);
+    await fireConversations();
+    expect(seen).toEqual([{
+      topic: 'conversations', data: CONVERSATIONS, tabs: ['/tmp/a.fixture'],
+    }]);
+  });
+
+  it('delivers one conversations notification for a burst of stream chunks', async () => {
+    vi.useFakeTimers();
+    const managers = makeManagers();
+    const notify = vi.fn();
+    const host = new TabPluginHost(managers, [manifest('fixture', ['conversations'])], {
+      fixture: async () => ({ activate: () => activationFor(notify) }),
+    });
+    await openTab(host, managers);
+    let handlers: PromptHandlers | undefined;
+    const session: AcpSession = {
+      prompt: (_text, value) => { handlers = value; },
+      kill: vi.fn(),
+    };
+    const sessions = {
+      has: () => false,
+      session: () => session,
+      close: vi.fn(),
+      dispose: vi.fn(),
+    } as unknown as ConversationSessions;
+    const store = {
+      ensure: () => '/tmp/first',
+      write: vi.fn(),
+    } as unknown as ConversationStore;
+    const responder = new ConversationResponder(
+      store, sessions, () => 2,
+      () => { messageBus.emit('conversations', { type: 'changed' }); },
+    );
+    responder.send({
+      schemaVersion: CONVERSATION_SCHEMA_VERSION,
+      id: 'first', title: 'New conversation', createdAt: 1, updatedAt: 1,
+      pair: { harness: 'opencode', model: 'model' }, turns: [],
+    }, 'hello');
+    notify.mockClear();
+
+    handlers?.onChunk('one');
+    handlers?.onChunk('two');
+    handlers?.onChunk('three');
+    expect(notify).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(100);
+    expect(notify).toHaveBeenCalledOnce();
+
+    responder.dispose();
+    host.dispose();
+    vi.useRealTimers();
+  });
+
   it('delivers the current rows and the plugin\'s own instance keys', async () => {
     const managers = makeManagers();
     const seen: TabPluginNotification[] = [];

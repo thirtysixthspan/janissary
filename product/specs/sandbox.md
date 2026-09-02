@@ -15,6 +15,8 @@ shell (`src/shell.ts`), a harness/interactive PTY (`src/pty.ts`), or an ACP agen
 `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec` isn't on the host
 (non-macOS). Everything a sandboxed process itself spawns inherits the same confinement.
 
+A conversation's ACP agent is also confined to its own private workspace. That workspace belongs to the durable conversation rather than to a tab or project clone, and closing the tab or shutting down the application does not sweep it. See [[conversations]].
+
 ### Filesystem policy
 
 Rule ordering follows Seatbelt's "last matching rule wins" semantic: broad allow → `$HOME` deny →

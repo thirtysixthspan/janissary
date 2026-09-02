@@ -17,6 +17,42 @@ export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, 
 export type { CompletionResult } from './completion/types.js';
 export type { ProfileRow } from './profile/types.js';
 
+export type ConversationHarness = 'claude' | 'opencode';
+
+export type ConversationModelPair = {
+  harness: ConversationHarness;
+  model: string;
+};
+
+export type ConversationSummaryView = {
+  id: string;
+  title: string;
+  updatedAt: number;
+};
+
+export type ConversationTurnView = {
+  query: string;
+  response: string;
+  pair: ConversationModelPair;
+  error?: string;
+  streaming?: boolean;
+};
+
+export type ConversationWindowView = {
+  id: string;
+  title: string;
+  pair: ConversationModelPair;
+  turns: ConversationTurnView[];
+  hasOlder: boolean;
+  deleted?: boolean;
+};
+
+export type ConversationsView = {
+  summaries: ConversationSummaryView[];
+  windows: ConversationWindowView[];
+  models: ConversationModelPair[];
+};
+
 export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
 export type { SuggestionView, MonitorRpcCall } from './protocol/monitor.js';
