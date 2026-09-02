@@ -2,6 +2,8 @@
 // attribute; the column from caretPositionFromPoint (caretRangeFromPoint fallback) resolved to a
 // string offset within the row's content cell.
 
+import { probePoint, scrollport } from './screen-rows';
+
 export type MouseHit = { line: number; col: number; inGutter: boolean };
 
 // Total text offset of (node, offset) within `cell`, summing the text nodes before it in
@@ -78,18 +80,27 @@ export function hitFromPoint(body: HTMLElement, x: number, y: number): MouseHit 
   return { line: lastLine, col: Number.MAX_SAFE_INTEGER, inGutter: false };
 }
 
+// A point that has to land on a rendered row. Unlike hitFromPoint, which serves drag selection and
+// clamps a pointer it cannot resolve to the first or last line, an arrow press that resolves nothing
+// must say so: clamping would turn it into a jump to the start or end of the document.
+function rowHitAt(body: HTMLElement, x: number, y: number): MouseHit | null {
+  const element = document.elementFromPoint(x, y);
+  if (!element || !body.contains(element)) return null;
+  return hitFromEvent({ target: element, clientX: x, clientY: y });
+}
+
 // One visual row up/down from the caret's current screen position, for wrapped-line-aware
-// ArrowUp/ArrowDown. Probes a point half a line-height above/below the caret's box and resolves
-// it the same way a mouse click would. Returns null when the caret has no real layout (a
-// zero-height rect — unmounted, or a non-layout test environment like jsdom) or when the probe
-// point falls outside the body's visible box (caret at the screen edge or scrolled out of view,
-// where point hit-testing cannot reach the target row) so callers can fall back to logical-line
-// movement.
+// ArrowUp/ArrowDown. Probes the centre of the screen row next to the caret's own (see
+// screen-rows.ts) and resolves it the same way a mouse click would. Returns null when the caret has
+// no real layout (a zero-height rect — unmounted, or a non-layout test environment like jsdom), when
+// the probe point falls outside the part of the body that paints rows (caret at the screen edge or
+// scrolled out of view, where point hit-testing cannot reach the target row), or when it lands on
+// something other than a row — so callers can fall back to logical-line movement.
 export function visualVerticalHit(body: HTMLElement, caret: HTMLElement, dir: 'up' | 'down'): MouseHit | null {
   const rect = caret.getBoundingClientRect();
   if (rect.height === 0) return null;
-  const y = dir === 'up' ? rect.top - rect.height / 2 : rect.bottom + rect.height / 2;
-  const view = body.getBoundingClientRect();
-  if (y < view.top || y > view.bottom) return null;
-  return hitFromPoint(body, rect.left, y);
+  const y = probePoint(body, rect, dir);
+  const port = scrollport(body);
+  if (y < port.top || y > port.bottom) return null;
+  return rowHitAt(body, rect.left, y);
 }

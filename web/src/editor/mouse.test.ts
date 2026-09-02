@@ -225,6 +225,38 @@ describe('visualVerticalHit', () => {
     container.remove();
   });
 
+  it('returns null instead of clamping to the last line when the probe lands outside the body', () => {
+    const { container, caret } = makeContainerWithRows([0, 1, 2]);
+    const overlay = document.createElement('div');
+    document.body.append(overlay);
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 20, bottom: 120, height: 100 }));
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 60, bottom: 74, left: 5, height: 14 }));
+    // Something painted over the bottom of the body — anything the body does not contain — answers
+    // the hit test. Clamping there would send an arrow press to the end of the document.
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = vi.fn().mockReturnValue(overlay);
+
+    expect(visualVerticalHit(container, caret, 'down')).toBeNull();
+
+    overlay.remove();
+    container.remove();
+  });
+
+  it('probes the centre of the row below rather than a fraction of a row into it', () => {
+    const { container, caret } = makeContainerWithRows([7]);
+    vi.spyOn(globalThis, 'getComputedStyle').mockReturnValue({ lineHeight: '24px' } as CSSStyleDeclaration);
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 0, bottom: 200, height: 200 }));
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 50, bottom: 64, left: 5, height: 14 }));
+    const probed = vi.fn().mockReturnValue(container.querySelector('.editor-content'));
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint = probed;
+
+    expect(visualVerticalHit(container, caret, 'down')).toEqual({ line: 7, col: 0, inGutter: false });
+    // The caret's row runs 45..69 and the row below it 69..93: the probe lands on 81, its centre,
+    // not on 71 — a couple of pixels in from an edge the browser may be painting only partly.
+    expect(probed).toHaveBeenCalledWith(5, 81);
+
+    container.remove();
+  });
+
   it('resolves a point one line-height above the caret for dir "up"', () => {
     const container = document.createElement('div');
     document.body.append(container);

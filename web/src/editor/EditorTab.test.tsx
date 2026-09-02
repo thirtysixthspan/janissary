@@ -395,6 +395,86 @@ describe('EditorTab', () => {
     delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
   });
 
+  // The geometry the editor really has, which jsdom has none of: a 40px scrollport of 24px screen
+  // rows, and a caret that is a 14px inline box centred in whichever row it sits on. `elementFromPoint`
+  // answers the probe and, as a browser would, the caret moves down one row once it has.
+  function mockScreenRows(body: HTMLElement, caretTop: number, hit: Element) {
+    const flat = { left: 0, right: 80, width: 80, toJSON: () => ({}) };
+    const computed = globalThis.getComputedStyle;
+    vi.spyOn(globalThis, 'getComputedStyle').mockImplementation((element, pseudo) => (
+      element === body ? { lineHeight: '24px' } as CSSStyleDeclaration : computed(element, pseudo)
+    ));
+    const moved = { down: false };
+    const top = () => caretTop - body.scrollTop + (moved.down ? 24 : 0);
+    const caretRow = () => ({ top: top() - 5, bottom: top() + 19 });
+    const rectFor = (element: Element): DOMRect => {
+      if (element === body) return { ...flat, top: 0, bottom: 40, height: 40, x: 0, y: 0 } as DOMRect;
+      if (!element.classList.contains('editor-caret')) return { ...flat, top: 0, bottom: 0, height: 0, x: 0, y: 0 } as DOMRect;
+      return { ...flat, top: top(), bottom: top() + 14, height: 14, x: 0, y: top() } as DOMRect;
+    };
+    // Spying on the prototype rather than the caret node is what keeps the caret measurable across
+    // the re-render, which replaces its span with a differently keyed one at the new column.
+    // eslint-disable-next-line unicorn/no-this-outside-of-class -- the spy is only reachable as a method
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function measure(this: Element) { return rectFor(this); });
+    (document as unknown as { elementFromPoint: (x: number, y: number) => Element | null }).elementFromPoint =
+      vi.fn(() => { moved.down = true; return hit; });
+    return caretRow;
+  }
+
+  it('keeps the whole line the caret lands on inside the view when ArrowDown scrolls the body', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    const firstContent = container.querySelector(':scope .editor-row .editor-content')!;
+    const firstText = firstContent.lastChild!.firstChild!;
+    // The caret's own row already hangs nine pixels below the fold, as it does whenever a scrollport
+    // is not a whole number of rows tall.
+    const caretRow = mockScreenRows(body, 30, firstContent);
+    (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint =
+      vi.fn().mockReturnValue({ offsetNode: firstText, offset: 5 });
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      const current = container.querySelector(':scope .editor-row-current .editor-content');
+      expect(current?.textContent).toBe('line one');
+    });
+    // Not the caret's own box — the whole row it is on ends up inside the body.
+    expect(caretRow().top).toBeGreaterThanOrEqual(0);
+    expect(caretRow().bottom).toBeLessThanOrEqual(40);
+
+    vi.restoreAllMocks();
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
+  it('scrolls ArrowDown at the bottom edge by a whole screen row, not by the shorter caret box', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    const firstContent = container.querySelector(':scope .editor-row .editor-content')!;
+    const firstText = firstContent.lastChild!.firstChild!;
+    // The caret is on the last fully painted row, its row flush against the bottom edge.
+    const caretRow = mockScreenRows(body, 21, firstContent);
+    (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node; offset: number } }).caretPositionFromPoint =
+      vi.fn().mockReturnValue({ offsetNode: firstText, offset: 5 });
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowDown' });
+
+    await waitFor(() => {
+      const current = container.querySelector(':scope .editor-row-current .editor-content');
+      expect(current?.textContent).toBe('line one');
+    });
+    // One screen row of 24px, not the caret box's 14 — so the caret keeps its place against the
+    // bottom edge and the view scrolls with it instead of falling behind by ten pixels a press.
+    expect(body.scrollTop).toBe(24);
+    expect(caretRow()).toEqual({ top: 16, bottom: 40 });
+
+    vi.restoreAllMocks();
+    delete (document as unknown as { elementFromPoint?: unknown }).elementFromPoint;
+    delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+  });
+
   it('consumes Shift+ArrowLeft/Right locally instead of letting them reach the window-level tab-switch shortcut', async () => {
     const { client } = makeClient();
     await renderLoaded(client);

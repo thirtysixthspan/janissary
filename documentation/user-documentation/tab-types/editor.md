@@ -64,7 +64,7 @@ These editing shortcuts are bundled with the editor. If one fails, its attempted
 
 The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
 
-Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view; staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press.
+Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press.
 
 Switching to another tab and back leaves your scroll position exactly where you left it, even if the cursor itself is out of view — only an actual cursor move while the tab is active pulls the view back to it.
 

@@ -308,7 +308,9 @@ was — the view does not jump to the top of the document.
 
 After any cursor movement (typing, arrow keys, mouse click, page up/down), the caret is scrolled
 into view to ensure it remains visible. Moving the cursor to a different line or column triggers the
-scroll; staying in position does not.
+scroll; staying in position does not. What comes into view is the whole screen row the caret lands
+on, not the caret alone: a cursor movement can never leave the line the caret is on clipped at the
+top or bottom edge of the view, or off the page entirely.
 
 Keyboard cursor movement keeps this scrolling smooth at the edges of the view. When the caret sits
 on the first or last visible row, or has been scrolled out of view entirely (for example with the
@@ -317,9 +319,11 @@ scrolls by that same single row to bring the caret back into sight — the curso
 start or end of the document from an arrow press. Scrolling this way advances by screen rows, not
 by whole buffer lines: a soft-wrapped line at the edge of the view is crossed one row per press,
 exactly as it is in the middle of the view, so holding ↓ through a wrapped paragraph scrolls it
-smoothly rather than a whole wrapped line at a time. A row that is only partly visible at the edge
-counts as not visible: the view brings it into place before the press resolves, so ↓ at the bottom
-of the view behaves exactly like ↑ at the top of it. Only when there is nothing left to scroll —
+smoothly rather than a whole wrapped line at a time. Each press at the edge scrolls the view by
+exactly one screen row, so the caret keeps its place against that edge instead of drifting past it
+as the view falls behind. A row that is only partly visible at the edge counts as not visible: the
+view brings it into place before the press resolves, so ↓ at the bottom of the view behaves exactly
+like ↑ at the top of it. Only when there is nothing left to scroll —
 the view is already at the top or bottom of the document — does the press fall back to moving a
 whole line.
 
