@@ -94,6 +94,57 @@ describe('ConversationList', () => {
     expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
   });
 
+  it('still takes a second click on the row that is current when the list opens', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    const rows = container.querySelectorAll('.chat-row');
+    expect(rows[0]).toHaveClass('selected');
+    fireEvent.click(rows[0]);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(rows[0]);
+    expect(intent).toHaveBeenCalledWith('open', { id: 'first' });
+  });
+
+  it('takes a second click on a row the arrow keys made current', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    const list = container.querySelector('.chat-list') as HTMLElement;
+    const rows = container.querySelectorAll('.chat-row');
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.click(rows[1]);
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.click(rows[1]);
+    expect(intent).toHaveBeenCalledWith('open', { id: 'second' });
+  });
+
+  it('opens nothing when consecutive clicks land on different rows', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(<ConversationList
+      payload={{ kind: 'list', entries: [
+        entry('first', 'First chat', 2),
+        entry('second', 'Second chat', 1),
+      ] }}
+      capabilities={value}
+    />);
+    const rows = container.querySelectorAll('.chat-row');
+    fireEvent.click(rows[0]);
+    fireEvent.click(rows[1]);
+    expect(rows[1]).toHaveClass('selected');
+    expect(intent).not.toHaveBeenCalled();
+  });
+
   it('shows the new-conversation icon before Split without a redundant heading', () => {
     const { value } = capabilities();
     value.splitAction = <button type="button">Split</button>;

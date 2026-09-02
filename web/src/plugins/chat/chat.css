@@ -22,8 +22,18 @@
 
 .chat-empty { color: var(--muted); padding: 10px 12px; }
 .chat-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
-.chat-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px; border-radius: 4px; }
-.chat-row:hover, .chat-row.selected { background: var(--bg-soft); }
+
+/* The list carries the current row itself, so it hides the browser's focus ring around the whole
+   box the way the file-navigator tree does. The current row is marked the way that tree marks its
+   cursor — an accent bar down the leading edge — because hover paints the same soft background and
+   would otherwise be indistinguishable from it. */
+.chat-list { outline: none; }
+.chat-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 8px; border-radius: 4px; cursor: pointer; border-left: 2px solid transparent;
+}
+.chat-row:hover { background: var(--bg-soft); }
+.chat-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
 .chat-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-row time, .chat-pair { color: var(--muted); font-size: 12px; }
 .chat-row button { border: 0; background: transparent; color: var(--muted); }

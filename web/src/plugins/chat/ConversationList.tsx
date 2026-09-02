@@ -6,7 +6,7 @@ import type {
   ConversationListPayload,
 } from '@shared/plugins/chat/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { nextChatSelection } from './chat-keys';
+import { chatClickSelection, nextChatSelection } from './chat-keys';
 import { DeleteConversationDialog } from './DeleteConversationDialog';
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -21,6 +21,7 @@ export function ConversationList({
   const [selected, setSelected] = useState<number | null>(
     payload.entries.length === 0 ? null : 0,
   );
+  const [confirmed, setConfirmed] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ChatSummary | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +35,8 @@ export function ConversationList({
       ?.scrollIntoView({ block: 'nearest' });
   }, [selected]);
 
+  useEffect(() => { setConfirmed(null); }, [payload.entries.length]);
+
   useEffect(() => {
     if (payload.entries.length === 0) setSelected(null);
     else if (selected === null) setSelected(0);
@@ -45,6 +48,7 @@ export function ConversationList({
     if (NAVIGATION_KEYS.has(event.key)) {
       event.preventDefault();
       setSelected(nextChatSelection(payload.entries.length, selected, event.key));
+      setConfirmed(null);
       return;
     }
     if (event.key === 'Enter' && selected !== null) {
@@ -77,10 +81,11 @@ export function ConversationList({
             role="button"
             tabIndex={-1}
             onClick={() => {
-              const shouldOpen = selected === index;
-              setSelected(index);
+              const click = chatClickSelection(index, confirmed);
+              setSelected(click.selected);
+              setConfirmed(click.selected);
               listRef.current?.focus();
-              if (shouldOpen) open(entry.id);
+              if (click.opens) open(entry.id);
             }}
           >
             <span className="chat-row-title">{entry.title}</span>

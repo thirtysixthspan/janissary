@@ -36,6 +36,21 @@ describe('conversation list metadata row', () => {
   });
 });
 
+describe('conversation list rows', () => {
+  it('marks the current row differently from a hovered row', () => {
+    const hovered = rule('.chat-row:hover');
+    const current = rule('.chat-row.selected');
+
+    expect(hovered).toContain('background: var(--bg-soft)');
+    expect(hovered).not.toContain('border-left-color');
+    expect(current).toContain('border-left-color: var(--accent)');
+  });
+
+  it('leaves the focused list without an outline of its own', () => {
+    expect(rule('.chat-list')).toContain('outline: none');
+  });
+});
+
 describe('chat stylesheet tokens', () => {
   it('names only custom properties the application theme defines', () => {
     const referenced = [...chat.matchAll(/var\((--[\w-]+)/g)].map((match) => match[1]);
