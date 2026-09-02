@@ -1,18 +1,38 @@
 .chat-list, .chat-tab { min-height: 0; }
 .chat-list-header, .chat-header { min-height: 28px; }
-.chat-empty { color: var(--muted); padding: 10px 4px; }
-.chat-rows { overflow: auto; min-height: 0; }
+
+/* The conversation list frames itself the way the host's own tab bodies do rather than through the
+   padded plugin frame, so its metadata row reads like the agent, harness, and file-navigator rows:
+   a full-width band of muted 12px text with a rule beneath it. The rows and the empty message take
+   back the padding the frame gives up. */
+.chat-list.plugin-tab { padding: 0; gap: 0; }
+.chat-list-header { padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+
+/* The metadata actions of both chat rows, styled like the host controls they sit beside — the split
+   button here, the file-navigator and agent-tab icons elsewhere. Without this they would arrive with
+   the browser's default button chrome. */
+.chat-list-header .plugin-actions button, .chat-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.chat-list-header .plugin-actions button:hover, .chat-header .plugin-actions button:hover { color: var(--fg); }
+.chat-list-header .plugin-actions button:disabled, .chat-header .plugin-actions button:disabled {
+  opacity: 0.45; cursor: default; color: var(--muted);
+}
+
+.chat-empty { color: var(--muted); padding: 10px 12px; }
+.chat-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
 .chat-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px; border-radius: 4px; }
-.chat-row:hover, .chat-row.selected { background: var(--selection); }
+.chat-row:hover, .chat-row.selected { background: var(--bg-soft); }
 .chat-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-row time, .chat-pair { color: var(--muted); font-size: 12px; }
 .chat-row button { border: 0; background: transparent; color: var(--muted); }
 .chat-header select { max-width: min(50vw, 420px); }
 .chat-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
 .chat-turn { display: flex; flex-direction: column; gap: 5px; }
-.chat-query { align-self: flex-end; max-width: 80%; padding: 8px 10px; border-radius: 8px; background: var(--selection); white-space: pre-wrap; }
+.chat-query { align-self: flex-end; max-width: 80%; padding: 8px 10px; border-radius: 8px; background: var(--bg-soft); white-space: pre-wrap; }
 .chat-response { user-select: text; }
-.chat-response.failed, .chat-deleted { color: var(--red); }
+.chat-response.failed, .chat-deleted { color: var(--error); }
 .chat-pair { align-self: flex-start; }
 .chat-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 .chat-composer textarea { min-height: 64px; resize: vertical; }

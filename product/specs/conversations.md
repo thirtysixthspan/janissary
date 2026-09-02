@@ -10,7 +10,7 @@ The bundled chat view provides durable, ordinary conversations with an ACP-capab
 
 ### Conversation list
 
-The list is ordered by most recent activity. Its metadata row has no title and places an icon-only **New conversation** action with the other right-aligned tab actions. When there are no saved rows, `No conversations yet` appears below the metadata row.
+The list is ordered by most recent activity. Its metadata row has no title and places an icon-only **New conversation** action with the other right-aligned tab actions. The row is formatted like the metadata row of an agent, harness, or file-navigator tab: a full-width band of muted secondary text separated from the rows below it by a rule, whose action icons carry no button chrome of their own and brighten on hover. When there are no saved rows, `No conversations yet` appears below the metadata row.
 
 The first saved row is current when the list opens. Up and Down move the highlighted current row without wrapping, and Enter opens it. A click on an unselected row makes that row current without opening it; clicking the current row opens its conversation. Opening focuses its existing conversation tab or creates one.
 
