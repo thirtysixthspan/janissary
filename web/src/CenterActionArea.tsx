@@ -61,6 +61,12 @@ export function CenterActionArea({
             method: 'reorderTabTo',
             params: { from: visibleEntries[from].index, to: visibleEntries[to].index },
           })}
+          crossStripDrop={split ? {
+            zone: 'center-action',
+            onDrop: (from) => client.send({
+              method: 'moveTabToOtherPane', params: { index: visibleEntries[from].index },
+            }),
+          } : undefined}
           tabNameMaxLength={tabNameMaxLength}
           activeTabNameMaxLength={activeTabNameMaxLength}
           onFocusCommandBar={onFocusCommandBar}

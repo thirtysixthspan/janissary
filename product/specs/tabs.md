@@ -57,7 +57,10 @@ in the other pane focuses its selected tab before the interaction continues. The
 Each visible agent tab keeps its command line, including the agent tab in the pane without keyboard focus. The unfocused command line does not take focus when it mounts; interacting with it first focuses its pane through the normal pane-focus handoff, after which command submission targets that tab. An agent tab's metadata row shows the same working directory, flags, status buttons, file navigator, new-agent, transcript, and Split actions in either pane regardless of which pane has keyboard focus. Focused-only overlays such as pickers, transcript search, and dialogs remain attached only to the pane with keyboard focus.
 
 Tab selection, creation, and reordering are pane-aware. A tab created from an action tab inherits
-that tab's pane. Dragging and `Ctrl+←` / `Ctrl+→` reorder only among tabs in the focused pane, while
+that tab's pane. Dragging within a strip and `Ctrl+←` / `Ctrl+→` reorder only among tabs in the
+focused pane. Releasing a dragged tab over the other center strip moves it into that pane through
+the same selection and collapse transition as the tab's Split button. The moved tab keeps its
+global order, so the exact destination tab under the pointer does not choose a new position.
 Shift+Left, Shift+Right, `next`, and the tab navigator continue through all non-docked action tabs.
 Moving the last tab out of either pane collapses the split and clears pane placement from the
 remaining tabs. Closing or docking a pane's selected tab chooses the most recently focused eligible
@@ -100,9 +103,9 @@ Releasing the mouse (mouse-up) anywhere in the body of an agent tab also moves f
 
 ### Dragging tabs to reorder
 
-Dragging a tab label reorders it within its strip. Once the pointer moves past a small threshold, the dragged tab follows the pointer and neighboring tabs shift live to preview the resulting order. The destination is clamped to the dragged tab's own group, so dragging beyond a group edge leaves the preview pinned at that edge.
+Dragging a tab label reorders it within its strip. In a split center area, releasing it over the other pane's strip moves the tab to that pane instead. Sidebar and reporting strips do not accept center tabs. Once the pointer moves past a small threshold, the dragged tab follows the pointer and neighboring tabs shift live to preview the resulting order. The within-strip destination is clamped to the dragged tab's own group, so dragging beyond a group edge leaves the preview pinned at that edge.
 
-Releasing the mouse commits the previewed order even when the pointer is outside the strip. Pressing Escape cancels instead, restores the original order, and sends no reorder. A press that stays below the movement threshold remains an ordinary click, so selecting and double-clicking to rename keep their existing behavior. After a committed drag, the dragged tab remains focused.
+Releasing the mouse elsewhere commits the previewed order even when the pointer is outside the source strip. Pressing Escape cancels instead, restores the original order, and sends no reorder or pane move. A press that stays below the movement threshold remains an ordinary click, so selecting and double-clicking to rename keep their existing behavior. After a committed drag, the dragged tab remains focused.
 
 ### Metadata row
 

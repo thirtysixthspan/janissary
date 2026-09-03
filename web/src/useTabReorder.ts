@@ -19,6 +19,11 @@ type Drag = {
 
 export type TabDragTransform = Point & { dragged: boolean };
 
+export type CrossStripDrop = {
+  zone: string;
+  onDrop: (from: number) => void;
+};
+
 function measuredTabs(strip: HTMLDivElement): Rect[] {
   return [...strip.querySelectorAll<HTMLElement>(':scope > .tab')].map((element) => {
     const rect = element.getBoundingClientRect();
@@ -62,12 +67,24 @@ function previewOrder(size: number, from: number, to: number): number[] {
   return order;
 }
 
-export function useTabReorder(tabs: TabView[], onReorder?: (from: number, to: number) => void) {
+function isOtherStripInZone(event: MouseEvent, source: HTMLElement, zone: string): boolean {
+  if (!(event.target instanceof Element)) return false;
+  const target = event.target.closest<HTMLElement>('[data-tab-drop-zone]');
+  return target !== null && target !== source && target.dataset.tabDropZone === zone;
+}
+
+export function useTabReorder(
+  tabs: TabView[],
+  onReorder?: (from: number, to: number) => void,
+  crossStripDrop?: CrossStripDrop,
+) {
   const stripRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const callbackRef = useRef(onReorder);
   callbackRef.current = onReorder;
+  const crossStripDropRef = useRef(crossStripDrop);
+  crossStripDropRef.current = crossStripDrop;
 
   const cancel = useCallback(() => {
     const current = dragRef.current;
@@ -112,10 +129,16 @@ export function useTabReorder(tabs: TabView[], onReorder?: (from: number, to: nu
       current.pointer = pointer;
       current.to = nearestSlot(current.rects, pointer, allowedRange(tabs, from));
       setDrag({ ...current });
-    }, () => {
+    }, (up) => {
       globalThis.removeEventListener('keydown', onKeyDown);
-      if (current.started && !current.cancelled && current.to !== current.from) {
-        callbackRef.current?.(current.from, current.to);
+      if (current.started && !current.cancelled) {
+        const crossDrop = crossStripDropRef.current;
+        const strip = stripRef.current;
+        if (crossDrop && strip && isOtherStripInZone(up, strip, crossDrop.zone)) {
+          crossDrop.onDrop(current.from);
+        } else if (current.to !== current.from) {
+          callbackRef.current?.(current.from, current.to);
+        }
       }
       dragRef.current = null;
       setDrag(null);
