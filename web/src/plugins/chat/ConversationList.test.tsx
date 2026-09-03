@@ -168,6 +168,30 @@ describe('ConversationList', () => {
     expect(intent).toHaveBeenCalledWith('create', {});
   });
 
+  it('creates a new conversation with Cmd+N and prevents the browser default', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(
+      <ConversationList payload={{ kind: 'list', entries: [] }} capabilities={value} />,
+    );
+    const handled = fireEvent.keyDown(container.querySelector('.chat-list') as HTMLElement, {
+      key: 'n', metaKey: true,
+    });
+    expect(handled).toBe(false);
+    expect(intent).toHaveBeenCalledWith('create', {});
+  });
+
+  it('creates a new conversation with Ctrl+N and prevents the browser default', () => {
+    const { intent, value } = capabilities();
+    const { container } = render(
+      <ConversationList payload={{ kind: 'list', entries: [] }} capabilities={value} />,
+    );
+    const handled = fireEvent.keyDown(container.querySelector('.chat-list') as HTMLElement, {
+      key: 'n', ctrlKey: true,
+    });
+    expect(handled).toBe(false);
+    expect(intent).toHaveBeenCalledWith('create', {});
+  });
+
   it('deletes only after the confirmation path', () => {
     const { intent, value } = capabilities();
     render(<ConversationList

@@ -43,8 +43,16 @@ export function ConversationList({
     else if (selected >= payload.entries.length) setSelected(payload.entries.length - 1);
   }, [payload.entries.length, selected]);
 
+  const create = () => { void capabilities.intent('create', {}); };
   const open = (id: string) => { void capabilities.intent('open', { id }); };
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+      && event.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      event.stopPropagation();
+      create();
+      return;
+    }
     if (NAVIGATION_KEYS.has(event.key)) {
       event.preventDefault();
       setSelected(nextChatSelection(payload.entries.length, selected, event.key));
@@ -64,7 +72,7 @@ export function ConversationList({
           <button
             type="button"
             title="New conversation"
-            onClick={() => { void capabilities.intent('create', {}); }}
+            onClick={create}
           >
             <FontAwesomeIcon icon={faPlus} />
           </button>

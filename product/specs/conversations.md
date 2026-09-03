@@ -12,7 +12,7 @@ The bundled chat view provides durable, ordinary conversations with an ACP-capab
 
 The list is ordered by most recent activity. Its metadata row has no title and places an icon-only **New conversation** action with the other right-aligned tab actions. The row is formatted like the metadata row of an agent, harness, or file-navigator tab: a full-width band of muted secondary text separated from the rows below it by a rule, whose action icons carry no button chrome of their own and brighten on hover. When there are no saved rows, `No conversations yet` appears below the metadata row.
 
-The first saved row is current when the list opens. The current row is highlighted by a marker along its leading edge that remains distinguishable while the pointer hovers another row. Up and Down move the current row without wrapping, Home and End move it to the ends, and Enter opens it.
+The first saved row is current when the list opens. The current row is highlighted by a marker along its leading edge that remains distinguishable while the pointer hovers another row. Up and Down move the current row without wrapping, Home and End move it to the ends, and Enter opens it. Cmd+N, or Ctrl+N on non-macOS platforms, creates a conversation and opens its `New conversation` tab.
 
 Opening with the mouse always takes two clicks on the same row: a single click only moves the current row there, and the click after it opens that conversation. This holds for the row that is current when the list opens and for a row the arrow keys moved to, and clicking away to another row starts the count again. Opening focuses the conversation's existing tab or creates one.
 
