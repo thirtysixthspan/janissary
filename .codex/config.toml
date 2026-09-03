@@ -12,3 +12,6 @@ sandbox_permissions = []
 [shell_environment_policy.filters]
 GH_TOKEN = "include"
 GITHUB_TOKEN = "include"
+
+[features]
+apps = false
