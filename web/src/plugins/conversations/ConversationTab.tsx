@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
 import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
+import { ConversationComposer } from './ConversationComposer';
 
 function pairValue(harness: string, model: string): string {
   return `${harness}:${model}`;
@@ -16,7 +17,6 @@ export function ConversationTab({
   capabilities: TabPluginClientCapabilities;
 }) {
   const { conversation, models } = payload;
-  const [query, setQuery] = useState('');
   const streaming = conversation.turns.some((turn) => turn.streaming === true);
   const turnsRef = useRef<HTMLDivElement>(null);
   const latestTurn = conversation.turns.at(-1);
@@ -48,12 +48,6 @@ export function ConversationTab({
     globalThis.addEventListener('keydown', onKeyDown);
     return () => { globalThis.removeEventListener('keydown', onKeyDown); };
   }, [capabilities, streaming]);
-
-  const send = () => {
-    if (!query.trim() || streaming || conversation.deleted) return;
-    void capabilities.intent('send', { query });
-    setQuery('');
-  };
 
   const groups = (['claude', 'opencode'] as const).map((harness) => ({
     harness,
@@ -127,22 +121,13 @@ export function ConversationTab({
         })}
       </div>
       {conversation.deleted && <div className="conversation-deleted">This conversation was deleted.</div>}
-      <div className="conversation-composer">
-        <textarea
-          aria-label="Message"
-          value={query}
-          disabled={conversation.deleted}
-          onChange={(event) => { setQuery(event.target.value); }}
-          onKeyDown={(event) => {
-            if (event.key !== 'Enter' || event.shiftKey) return;
-            event.preventDefault();
-            send();
-          }}
-        />
-        <button type="button" disabled={!query.trim() || streaming || conversation.deleted} onClick={send}>
-          Send
-        </button>
-      </div>
+      <ConversationComposer
+        history={conversation.turns.map((turn) => turn.query)}
+        streaming={streaming}
+        deleted={conversation.deleted === true}
+        active={capabilities.active}
+        onSend={(query) => { void capabilities.intent('send', { query }); }}
+      />
     </div>
   );
 }

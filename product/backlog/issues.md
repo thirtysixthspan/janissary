@@ -2,8 +2,6 @@
 
 ## ready
 
-* in a conversation tab, the input should be the same and reuse components of the command bar in the agent tab as much as possible.
-
 * in a conversation tab, you should be able to rename the conversation by double clicking the converation title in the metadata row (similar interaction to renaming a tab) and have it reflected everywhere else like the tab title.
 
 * update the list of available models from all providers that is stored in harness-models.json.

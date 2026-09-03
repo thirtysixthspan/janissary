@@ -1,5 +1,5 @@
 // Pure, React-free parsing for the editor's `>`-led persona-suggestion request line, modeled on
-// ../ghost-suggestion.ts's isolation of a single-line parsing concern.
+// ../shared/command-bar/ghost-suggestion.ts's isolation of a single-line parsing concern.
 
 export type SuggestRequest = { persona: string; prompt: string };
 
