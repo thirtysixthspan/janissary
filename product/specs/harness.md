@@ -428,14 +428,34 @@ interactive command (`harness <name> --model <name> --effort <level>`) or via `p
 (see Profiles for the harness-entry schema) — both paths behave the same way.
 
 `--model <name>` is passed to the harness binary's `--model` flag verbatim, but is validated first
-against that harness's known model catalog (currently only opencode's and claude's catalogs are
-populated); an unknown model is rejected with `Unknown model "<model>" for harness "<name>" — add
-it to harness-models.json.` and no tab is opened.
+against that harness's known model catalog; an unknown model is rejected with `Unknown model
+"<model>" for harness "<name>" — add it to harness-models.json.` and no tab is opened.
 
 A project can supply its own `.janissary/harness-models.json` (a JSON object mapping harness name to
 a list of model ids) to replace the bundled catalog entirely for that project. If the file is
 missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
 the bundled catalog is used.
+
+### What the bundled catalog holds
+
+The bundled catalog names models for the `claude`, `codex`, and `opencode` harnesses. The `opencode`
+list spans the three providers that harness reaches — OpenCode Zen, OpenCode Go, and Google AI
+directly — with each model carrying its provider prefix, and is the list the conversation tab's model
+picker is built from alongside the `claude` list. See [[conversations]].
+
+The catalog is maintained by hand against each provider's own published list, and two rules decide
+what goes in it. A model is only removed on evidence that it is gone — a stale entry costs a
+launch that fails with the provider's own message, while a missing entry costs a launch janissary
+refuses outright for a model that would have worked. And a model is only added if it can hold a
+conversation: embedding, speech, transcription, image, and video models are left out even where the
+provider offers them through the same key, because every entry in the `claude` and `opencode` lists
+is a row in the conversation picker and a row that cannot answer a query is a defect rather than an
+option. Where a model has both a dated id and a shorter alias, both are listed — they name the same
+model, and dropping either would reject a profile that pins it.
+
+The `opencode` list carries OpenCode Zen's free tier rather than its full catalog. Zen's paid models
+are mostly other providers' models re-exposed, and reachable more directly through the entries
+already listed.
 
 `--effort <level>` selects an effort level with no validation against any fixed set of levels — the
 level is forwarded verbatim, translated to whichever flag the target harness actually understands so

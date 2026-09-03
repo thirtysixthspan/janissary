@@ -195,8 +195,10 @@ describe('completeCommandLine — syntax theme', () => {
 describe('completeCommandLine — harness model', () => {
   const noFiles = '/no/such/dir/xyz';
 
+  // `claude-f` rather than a longer prefix: it is the one that stays unambiguous however many models
+  // a catalog refresh adds beside it, so this pins the routing rather than the catalog's contents.
   it('completes a model name after --model for the named harness', () => {
-    const r = completeCommandLine('harness claude --model claude-s', 32, noFiles);
-    expect(r.newInput).toBe('harness claude --model claude-sonnet-5 ');
+    const r = completeCommandLine('harness claude --model claude-f', 31, noFiles);
+    expect(r.newInput).toBe('harness claude --model claude-fable-5 ');
   });
 });

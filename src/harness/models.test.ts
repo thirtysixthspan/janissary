@@ -50,6 +50,42 @@ describe('harness-models', () => {
   });
 });
 
+// The bundled catalog is hand-edited whenever a provider ships or retires a model, so these guard
+// the two ways that edit goes wrong silently, and the one membership rule the refresh follows.
+describe('the bundled catalog', () => {
+  const harnesses = ['claude', 'codex', 'opencode'];
+
+  it('names exactly the harnesses the specs describe', () => {
+    for (const harness of harnesses) expect(modelsFor(harness).length).toBeGreaterThan(0);
+  });
+
+  it.each(harnesses)('lists only nonempty, trimmed model ids for %s', (harness) => {
+    for (const model of modelsFor(harness)) {
+      expect(model).toBe(model.trim());
+      expect(model.length).toBeGreaterThan(0);
+    }
+  });
+
+  // A duplicate is invisible in use — validation still passes — but shows twice in the conversation
+  // tab's model picker.
+  it.each(harnesses)('lists each model id once for %s', (harness) => {
+    const models = modelsFor(harness);
+    expect(new Set(models).size).toBe(models.length);
+  });
+
+  // `availableConversationModels` builds the conversation picker from the claude and opencode lists,
+  // so a model that cannot answer a prompt is an offered choice that fails on the first query.
+  it.each(['claude', 'opencode'])('offers no non-conversational model for %s', (harness) => {
+    const excluded = /embedding|-tts|transcribe|-live|-image$|^veo|\/veo|lyria/;
+    for (const model of modelsFor(harness)) expect(model).not.toMatch(excluded);
+  });
+
+  // The ACP agent — every conversation and every remote agent tab — launches on this exact pair.
+  it('keeps the model the ACP agent launches with', () => {
+    expect(modelsFor('opencode')).toContain('google/gemini-3.1-flash-lite');
+  });
+});
+
 describe('loadHarnessModels', () => {
   let tmpDir: string;
 

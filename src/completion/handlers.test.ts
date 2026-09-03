@@ -9,6 +9,7 @@ import {
   completeConnectionClose,
   completeHarnessModel,
 } from './handlers.js';
+import { modelsFor } from '../harness/models.js';
 
 describe('completeSendTarget', () => {
   it('completes a tab label for the send command at argument 1', () => {
@@ -133,19 +134,28 @@ describe('completeSyntaxTheme', () => {
   });
 });
 
+// These exercise the completion mechanics against the real bundled catalog, so they are written to
+// survive a catalog refresh: the single-match case uses the one prefix that stays unambiguous however
+// many models are added beside it, and the multi-match case derives its expectation from the catalog
+// rather than restating it.
 describe('completeHarnessModel', () => {
   it('completes a single match for the harness model flag', () => {
     const r = completeHarnessModel(
-      'harness', ['harness', 'claude', '--model'], 'claude-op', 'harness claude --model claude-op', '', 23,
+      'harness', ['harness', 'claude', '--model'], 'claude-f', 'harness claude --model claude-f', '', 23,
     );
-    expect(r?.newInput).toBe('harness claude --model claude-opus-5 ');
+    expect(r?.newInput).toBe('harness claude --model claude-fable-5 ');
   });
 
   it('completes multiple matches to their longest common prefix', () => {
     const r = completeHarnessModel(
       'harness', ['harness', 'claude', '--model'], 'claude-', 'harness claude --model claude-', '', 23,
     );
-    expect(r?.matches).toEqual(['claude-fable-5', 'claude-haiku-4-5-20251001', 'claude-opus-5', 'claude-sonnet-5']);
+    // Sorted, because completion offers its matches in that order rather than the catalog's.
+    expect(r?.matches).toEqual(
+      modelsFor('claude').filter((model) => model.startsWith('claude-')).toSorted((a, b) => a.localeCompare(b)),
+    );
+    expect(r?.matches.length).toBeGreaterThan(1);
+    expect(r?.newInput).toBe('harness claude --model claude-');
   });
 
   it('returns null for a non-harness command', () => {
