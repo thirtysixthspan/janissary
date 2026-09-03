@@ -39,7 +39,9 @@ The token reaches the workspace whether or not isolation is actually active on t
 
 [Tokens for agents](/user-documentation/advanced-agents/tokens) covers how to create the token, which permissions it needs, where to save it, and how it reaches an agent or harness launched on another machine with `on <address>`.
 
-Pushing from inside a workspace never touches your own git config or an ambient GitHub credential cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
+Pushing from inside a workspace never uses a credential from your own git config or one cached elsewhere on your machine, such as an old keychain-stored login — only the token in `.janissary/github-token` is used. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
+
+Commits are a separate matter, and they *are* yours. The name and email git resolves for your project — the same ones a commit you make outside the workspace carries — are passed into every workspaced tab, so an agent's commits are attributed to you. This holds on a machine reached with `on <address>` too: the identity travels with the tab rather than being taken from the remote account, which would otherwise sign the commits as whoever that host logs in as, or refuse to commit at all if that account has no name and email set.
 
 A codex harness needs one extra thing. Codex hides credential-looking variables from the commands it runs, and the GitHub token looks exactly like one — so a push from a codex tab fails as if you had never set a token up. The standard `.codex/config.toml` that `janus init` writes tells codex to keep it. If you scaffolded the project with `janus init` and trusted the project the first time you opened codex in it, this is already handled. Claude and opencode tabs need nothing extra — they pass the token through to `git` and `gh` as-is.
 

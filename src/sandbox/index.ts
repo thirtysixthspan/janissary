@@ -10,6 +10,7 @@ import {
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
+import { getGitIdentity, gitIdentityEnv } from '../git-identity.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
@@ -219,18 +220,28 @@ function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.P
   return credentials;
 }
 
+// Everything a workspaced spawn's environment gains regardless of whether this machine can confine
+// it: the project's credentials, plus the four variables carrying the git identity of the user who
+// opened janissary (see `git-identity.ts`). The identity is read from the module cache rather than
+// threaded through `SandboxOptions` the way the tokens are, because unlike a token — which the
+// remote side merges per provision — it is a single process-wide fact on either machine.
+function workspaceEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
+  return { ...gitIdentityEnv(getGitIdentity()), ...workspaceCredentialEnv(tmpDir, tokens) };
+}
+
 // Handing a workspaced tab its scoped credentials is a provisioning concern, not an isolation one:
 // the clone's `origin` is HTTPS and its `credential.helper` is `!gh auth git-credential` on every
 // host (see src/workspace/index.ts), so `git push` and `gh` need `GH_TOKEN` whether or not Seatbelt
 // is confining the process, and a harness needs its own token on exactly the same terms. This is the
 // unconfined path's share of that — a non-darwin remote, or a host with `sandboxWorkspaces` off,
-// would otherwise get a workspace it cannot push from or authenticate a harness in. Without a
-// token, or outside a workspace, the caller's own environment object is returned untouched.
+// would otherwise get a workspace it cannot push from, authenticate a harness in, or attribute a
+// commit from. Without a token and without an identity, or outside a workspace, the caller's own
+// environment object is returned untouched.
 function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
   if (!options.workspaceDir) return env;
   const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
-  const credentials = workspaceCredentialEnv(tmpDir, options.tokens ?? {});
-  return Object.keys(credentials).length === 0 ? env : { ...env, ...credentials };
+  const added = workspaceEnv(tmpDir, options.tokens ?? {});
+  return Object.keys(added).length === 0 ? env : { ...env, ...added };
 }
 
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
@@ -262,7 +273,7 @@ export function sandboxSpawn(
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
   scrubbed.JANISSARY_NODE = process.execPath;
-  Object.assign(scrubbed, workspaceCredentialEnv(tmpDir, options.tokens ?? {}));
+  Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [

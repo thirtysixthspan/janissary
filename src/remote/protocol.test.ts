@@ -22,6 +22,7 @@ describe('frame codec', () => {
           opencode: 'oc_live_scoped',
           gemini: 'AIzaSyScoped',
         },
+        identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
       },
       { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40, agentName: 'joined' },
       { type: 'input', id: 'r1', data: 'hello' },
@@ -126,6 +127,11 @@ describe('frame codec', () => {
     ['provision without a label', { type: 'provision' }],
     ['provision with an unknown token', { type: 'provision', label: 'agent', tokens: { other: 'secret' } }],
     ['provision with a non-string token', { type: 'provision', label: 'agent', tokens: { github: 42 } }],
+    ['provision with a non-object identity', { type: 'provision', label: 'agent', identity: 'Ada Lovelace' }],
+    ['provision with an array identity', { type: 'provision', label: 'agent', identity: ['Ada Lovelace'] }],
+    ['provision with an unknown identity key', { type: 'provision', label: 'agent', identity: { handle: 'ada' } }],
+    ['provision with a non-string identity value', { type: 'provision', label: 'agent', identity: { name: 42 } }],
+    ['provision with an empty identity value', { type: 'provision', label: 'agent', identity: { name: '' } }],
     ['spawn without an id', { type: 'spawn', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
     ['spawn with an empty program', { type: 'spawn', id: 'r1', program: '', command: 'bash', mode: 'pty', cols: 80, rows: 24 }],
     ['spawn with a non-string command', { type: 'spawn', id: 'r1', program: 'bash', command: 1, mode: 'pty', cols: 80, rows: 24 }],
@@ -188,6 +194,18 @@ describe('frame codec', () => {
       type: 'filesystem-request', session: 'files1', request: 'q1',
       operation: 'read-file', args: { path: 'src/a.txt' },
     });
+  });
+
+  // A provision that names neither keeps its shape rather than growing empty records, so a remote
+  // that receives one can tell "sent nothing" from "sent nothing configured".
+  it('leaves tokens and identity absent when the provision frame declares neither', () => {
+    expect(decodeFrame(JSON.stringify({ type: 'provision', label: 'agent' })))
+      .toEqual({ type: 'provision', label: 'agent' });
+  });
+
+  it('keeps the half of an identity the provision frame carries', () => {
+    expect(decodeFrame(JSON.stringify({ type: 'provision', label: 'agent', identity: { email: 'ada@example.com' } })))
+      .toEqual({ type: 'provision', label: 'agent', identity: { email: 'ada@example.com' } });
   });
 
   it('drops undeclared properties from an acp-open rather than forwarding them', () => {
@@ -261,8 +279,11 @@ describe('handshake', () => {
   // — which is what refusing at the handshake exists to prevent, for every one of them.
   // Version 7 added workspace filesystem sessions and knows none of the ACP frames: it would refuse
   // each as unknown while the local tab sat waiting on a reply that never comes — accepting prompts
-  // and answering nothing.
-  it.each([1, 2, 3, 4, 5, 6, 7])('rejects a remote speaking older protocol version %i', (version) => {
+  // and answering nothing. Version 8 does not know the `git-pull` filesystem operation.
+  // Version 9 does not know `provision`'s `identity`, and is the quietest failure of the set: it
+  // provisions a workspace that looks entirely healthy and attributes every commit made in it to the
+  // ssh destination's own account rather than to the user who opened janissary.
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])('rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));

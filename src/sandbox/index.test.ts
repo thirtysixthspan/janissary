@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'nod
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
+import { setGitIdentity } from '../git-identity.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 
@@ -357,6 +358,67 @@ describe('sandboxSpawn', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
     expect(result.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+// The identity is read from the module cache rather than from `SandboxOptions`, so these set it
+// directly and clear it afterwards — an identity left behind would change every other spawn in the
+// suite, which is the same reason the injection is gated on `workspaceDir`.
+describe('sandboxSpawn git identity', () => {
+  beforeEach(() => {
+    loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
+    setGitIdentity({ name: 'Ada Lovelace', email: 'ada@example.com' });
+    return () => { setGitIdentity({}); };
+  });
+
+  it('injects the author and committer pair on a confined workspaced spawn', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.GIT_AUTHOR_NAME).toBe('Ada Lovelace');
+    expect(result.env.GIT_COMMITTER_NAME).toBe('Ada Lovelace');
+    expect(result.env.GIT_AUTHOR_EMAIL).toBe('ada@example.com');
+    expect(result.env.GIT_COMMITTER_EMAIL).toBe('ada@example.com');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // A remote workspace on a Linux host takes the unconfined path, and that is precisely where the
+  // machine's own git config is the wrong user's — so the identity has to arrive there too.
+  it('injects it for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    setGitIdentity({ name: 'Ada Lovelace', email: 'ada@example.com' });
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.GIT_AUTHOR_NAME).toBe('Ada Lovelace');
+    expect(result.env.GIT_COMMITTER_EMAIL).toBe('ada@example.com');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects nothing on a spawn that has no workspaceDir', () => {
+    configureUnconfined();
+    setGitIdentity({ name: 'Ada Lovelace', email: 'ada@example.com' });
+    const env = { PATH: '/usr/bin' };
+    expect(sandboxSpawn({}, 'bash', [], env)).toEqual({ command: 'bash', args: [], env });
+  });
+
+  // The user who opened janissary is the author, not whoever the spawning environment names.
+  it('overrides an ambient author already in the environment', () => {
+    configureUnconfined();
+    setGitIdentity({ name: 'Ada Lovelace', email: 'ada@example.com' });
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], { GIT_AUTHOR_NAME: 'build-bot' });
+    expect(result.env.GIT_AUTHOR_NAME).toBe('Ada Lovelace');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('injects nothing for a workspaced spawn when no identity has been loaded', () => {
+    configureUnconfined();
+    setGitIdentity({});
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin' };
+    expect(sandboxSpawn({ workspaceDir }, 'bash', [], env)).toEqual({ command: 'bash', args: [], env });
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 });

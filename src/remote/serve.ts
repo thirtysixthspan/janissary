@@ -1,5 +1,6 @@
 import { loadConfig } from '../config.js';
 import { getProjectTokens, loadProjectTokens, type ProjectTokens } from '../project-tokens.js';
+import { loadGitIdentity, setGitIdentity, type GitIdentity } from '../git-identity.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
@@ -95,7 +96,7 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.refuse(frame.error); return; }
     switch (frame.type) {
-    case 'provision': { void this.provision(frame.label, frame.tokens ?? {}); return; }
+    case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
@@ -120,7 +121,7 @@ export class RemoteServer {
 
   // Clone the project root's `origin` into `.janissary/workspace/<label>` under this root, using the
   // very same `WorkspaceManager` the local server uses for a `-w` launch.
-  private async provision(label: string, forwarded: ProjectTokens): Promise<void> {
+  private async provision(label: string, forwarded: ProjectTokens, identity: GitIdentity): Promise<void> {
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
     try {
@@ -140,6 +141,10 @@ export class RemoteServer {
     // on either machine and are working as intended, so a mirrored notice would speak on the
     // ordinary case rather than warn about anything.
     const tokens = { ...own, ...forwarded };
+    // The identity, unlike the tokens, is replaced whole or not at all: a name from the local
+    // machine paired with an email from this one belongs to nobody, so a forwarded identity either
+    // stands on its own or this machine's own stays as the fallback.
+    if (Object.keys(identity).length > 0) setGitIdentity(identity);
     this.processes = new RemoteProcesses((frame) => this.emit(frame), result.dir, label, tokens);
     this.files = new RemoteFileNavigators((frame) => this.emit(frame), result.dir);
     this.acp = new RemoteAcp((frame) => this.emit(frame), result.dir, tokens);
@@ -195,6 +200,7 @@ export function runRemoteServer(pathArgument: string | undefined): void {
   }
   loadConfig(resolved.root);
   loadProjectTokens(resolved.root);
+  loadGitIdentity(resolved.root);
   initWorkspaceDir(resolved.root);
   // Raw mode so the remote tty's line discipline neither echoes the framed input nor rewrites it.
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
