@@ -30,6 +30,16 @@ function setup(secondaryTab: number | undefined = 2) {
   return { ...render(<CenterActionArea {...properties} />), properties, send };
 }
 
+function mockTabRects(container: HTMLElement): void {
+  for (const [index, element] of [...container.querySelectorAll<HTMLElement>('.tab')].entries()) {
+    vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+      x: index * 100, y: 0, left: index * 100, top: 0,
+      right: index * 100 + 80, bottom: 30, width: 80, height: 30,
+      toJSON: vi.fn(),
+    });
+  }
+}
+
 describe('CenterActionArea', () => {
   it('renders a filtered strip and selected body for each pane', () => {
     setup();
@@ -52,6 +62,26 @@ describe('CenterActionArea', () => {
     const { send } = setup();
     fireEvent.pointerDown(screen.getByText('right-one-visible'));
     expect(send).toHaveBeenCalledWith({ method: 'setActiveTab', params: { index: 2 } });
+  });
+
+  it('maps a cross-pane strip drop to the dragged tab server index', () => {
+    const tabs = [tab('excluded'), tab('left'), tab('right', 'right')];
+    const send = vi.fn();
+    const client = { send, renameTab: vi.fn() } as unknown as JanusClient;
+    const entries = tabs.slice(1).map((item, offset) => ({ tab: item, index: offset + 1 }));
+    const { container } = render(<CenterActionArea
+      entries={entries} tabs={tabs} activeTab={1} secondaryTab={2} client={client}
+      closeTab={vi.fn()} tabNameMaxLength={16} activeTabNameMaxLength={50}
+      onFocusCommandBar={vi.fn()} onFocusEditor={vi.fn()} windowFocused
+      renderBody={() => null} persistentLayers={null}
+    />);
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('left'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseUp(screen.getByText('right'));
+    expect(send).toHaveBeenCalledWith({
+      method: 'moveTabToOtherPane', params: { index: 1 },
+    });
   });
 
   it('collapses to one strip when the secondary selection disappears', () => {

@@ -56,7 +56,9 @@ Drag the divider between the panes to resize them. The divider starts in the mid
 15% or 85% of the center area, so neither pane can disappear accidentally. Moving, closing, or
 docking the last tab from one side collapses the split back to a single strip.
 
-Tab-strip dragging and `Ctrl+←` / `Ctrl+→` reorder tabs only inside the focused pane. Global
+Dragging within a tab strip and `Ctrl+←` / `Ctrl+→` reorder tabs only inside the focused pane.
+To move a tab between panes, drag its label onto the other pane's tab strip. The tab keeps its
+place in the overall tab order, regardless of which destination label you release it over. Global
 navigation still crosses both panes: `Shift+←` / `Shift+→`, `next`, and `Ctrl+G` move through every
 central action tab. Sidebars remain outside the split, and the lower reporting area stays full
 width.
@@ -77,7 +79,7 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 ## Switching and reordering
 
-`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right — within its own group only (see [Tab groups](/user-documentation/getting-started/groups)). With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
+`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
 
 ## Renaming a tab
 

@@ -394,6 +394,55 @@ describe('TabStrip', () => {
     expect(onReorder).toHaveBeenCalledWith(0, 1);
   });
 
+  it('moves a dragged tab to another strip in the same drop zone', () => {
+    const onReorder = vi.fn();
+    const onCrossStripDrop = vi.fn();
+    const crossStripDrop = { zone: 'center', onDrop: onCrossStripDrop };
+    const { container } = render(<>
+      <TabStrip
+        tabs={[makeTab({ label: 'source' })]} activeTab={0} onSelect={vi.fn()}
+        onClose={vi.fn()} onRename={vi.fn()} onReorder={onReorder}
+        crossStripDrop={crossStripDrop} tabNameMaxLength={100}
+      />
+      <TabStrip
+        tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
+        onClose={vi.fn()} onRename={vi.fn()}
+        crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100}
+      />
+    </>);
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('source'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseUp(screen.getByText('target'));
+    expect(onCrossStripDrop).toHaveBeenCalledOnce();
+    expect(onCrossStripDrop).toHaveBeenCalledWith(0);
+    expect(onReorder).not.toHaveBeenCalled();
+  });
+
+  it('does not move a dragged tab to a strip in another drop zone', () => {
+    const onReorder = vi.fn();
+    const onCrossStripDrop = vi.fn();
+    const { container } = render(<>
+      <TabStrip
+        tabs={[makeTab({ label: 'source' }), makeTab({ label: 'source-two' })]}
+        activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+        onReorder={onReorder}
+        crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100}
+      />
+      <TabStrip
+        tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
+        onClose={vi.fn()} onRename={vi.fn()}
+        crossStripDrop={{ zone: 'sidebar', onDrop: vi.fn() }} tabNameMaxLength={100}
+      />
+    </>);
+    mockTabRects(container);
+    fireEvent.mouseDown(screen.getByText('source'), { clientX: 40 });
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseUp(screen.getByText('target'));
+    expect(onCrossStripDrop).not.toHaveBeenCalled();
+    expect(onReorder).toHaveBeenCalledWith(0, 1);
+  });
+
   it('clamps a drag to the dragged tab group', () => {
     const onReorder = vi.fn();
     const tabs = [
