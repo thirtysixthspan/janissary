@@ -56,7 +56,19 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
   // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
   // would silently win regardless of which one is actually visible and drop-targetable.
-  if (dropRef && active) dropRef.current = { insertAtCaret: (text: string) => api.insert(text) };
+  //
+  // Focuses the textarea before inserting: the caller is a file-navigator drag release, so focus is
+  // still in the file tree, where the letters the user types next are a type-to-select gesture
+  // rather than text. `insert` leaves the caret at the end of what it inserted, so once focus is
+  // here the user simply carries on typing from there.
+  if (dropRef && active) {
+    dropRef.current = {
+      insertAtCaret: (text: string) => {
+        textareaRef.current?.focus();
+        api.insert(text);
+      },
+    };
+  }
 
   const loaded = state !== null;
   useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);

@@ -356,6 +356,11 @@ path at the editor's current cursor position, separated by newlines and recorded
 step, without moving anything on disk. Unlike dropping onto the command bar, the editor body shows
 no highlight while a drag passes over it.
 
+The drop moves keyboard focus to the editor, and leaves the cursor at the end of the path it
+inserted — the end of the last one where several were dropped at once — so typing carries straight
+on from there. Without that, focus would stay in the file tree the drag started in, where the next
+letters typed select a row rather than entering text.
+
 For a remote tree, each inserted editor path uses the same `<host>:<absolute-remote-path>` form as a
 command-bar drop rather than a tree-relative path.
 
