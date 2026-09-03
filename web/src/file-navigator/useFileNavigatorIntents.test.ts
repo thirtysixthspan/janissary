@@ -27,10 +27,12 @@ describe('useFileNavigatorIntents', () => {
     intents.setDock('left');
     intents.setDetail('modified');
     intents.collapseAll();
+    intents.pull();
 
     expect(send).toHaveBeenNthCalledWith(1, { method: 'setDock', params: { index: 3, dock: 'left' } });
     expect(send).toHaveBeenNthCalledWith(2, { method: 'fileNavigatorSetDetail', params: { index: 3, details: 'modified' } });
     expect(send).toHaveBeenNthCalledWith(3, { method: 'fileNavigatorCollapseAll', params: { index: 3 } });
+    expect(send).toHaveBeenNthCalledWith(4, { method: 'fileNavigatorPull', params: { index: 3 } });
   });
 
   it('adapts command and GitHub actions to command messages', () => {

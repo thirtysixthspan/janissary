@@ -39,6 +39,9 @@ export type FilesTabState = {
   githubUrl?: string;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
+  // Set while a header-button `git pull` is in flight for this tab, so a second click coalesces
+  // instead of spawning an overlapping `git pull` that would collide on git's own lockfiles.
+  pullInFlight?: boolean;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
   // rebuilds. Its `revision` changes only when a new restore is applied, which is what stops the
   // repeated full-state broadcasts from re-applying an old hint over a selection the user has

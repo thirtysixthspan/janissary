@@ -5,6 +5,7 @@ import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
+import { FileNavigatorPullButton } from './FileNavigatorPullButton';
 import { SplitTabButton } from '../SplitTabButton';
 import { RemoteChip } from '../shared/RemoteChip';
 
@@ -16,6 +17,7 @@ type Properties = {
   dock?: 'left' | 'right';
   details?: FileNavigatorDetail;
   onOpenGithub: (githubUrl: string) => void;
+  onPull?: () => void;
   onCycleDock?: () => void;
   onSetDetail: (details: FileNavigatorDetail) => void;
   onCollapseAll: () => void;
@@ -30,8 +32,8 @@ type Properties = {
 // both on one line, so it stacks onto two — see `.files-header--docked`. Split out of
 // `FileNavigatorTab` to keep it under the file-size limit.
 export function FileNavigatorHeader({
-  root, remote, branch, githubUrl, dock, details, onOpenGithub, onCycleDock, onSetDetail, onCollapseAll,
-  onSearch, onNewFile, onNewDirectory, onSplit,
+  root, remote, branch, githubUrl, dock, details, onOpenGithub, onPull, onCycleDock, onSetDetail,
+  onCollapseAll, onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
@@ -43,6 +45,7 @@ export function FileNavigatorHeader({
       </div>
       <div className="files-actions">
         {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
+        {onPull && <FileNavigatorPullButton onClick={onPull} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>

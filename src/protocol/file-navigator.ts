@@ -45,6 +45,10 @@ export type FileNavigatorRpcCall =
   | { method: 'fileNavigatorToggle'; params: { index: number; path: string } }
   // Collapse every expanded directory in a file navigator tab back to just its root.
   | { method: 'fileNavigatorCollapseAll'; params: { index: number } }
+  // Pull the tab root's repository up to date from `origin` (the header's pull button), then
+  // refresh the tree's rows and git metadata. Fire-and-forget: the outcome surfaces through the
+  // next state broadcast, or as a notifications-feed line when the pull fails.
+  | { method: 'fileNavigatorPull'; params: { index: number } }
   // Switch which per-row detail a file navigator tab shows (its header's detail button).
   | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
   // Re-root a file navigator tab to the parent directory.

@@ -78,6 +78,12 @@ When the tree is rooted inside a git repository whose `origin` remote points at 
 
 The button doesn't show up for a directory with no `origin` remote, a remote that isn't a `github.com` URL, or a branch the app can't determine. It refreshes along with the rest of the header whenever the tree does.
 
+## Pulling the latest from origin
+
+Anywhere the header shows a branch name, it also shows a **Pull from origin** button (tooltip "Pull from origin"), between the GitHub button and the search button. Clicking it runs `git pull` in the tree's own folder, then refreshes the tree: rows are re-read from disk and the branch text and status colors are recomputed, so what you see matches what the pull brought down. For a tree rooted on a remote host, the pull runs there, inside the workspace.
+
+Clicking again while a pull is still running does nothing, so overlapping pulls can't collide. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reports one line in the [notifications](/user-documentation/tab-types/notifications) tab with git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
+
 ## Finding a file by name
 
 Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.

@@ -17,7 +17,9 @@ import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
-import { invalidateDirectory } from './filesystem-cache.js';
+import { clearFilesystemCache, invalidateDirectory } from './filesystem-cache.js';
+import { errorText } from '../error-text.js';
+import { notify } from '../notifications.js';
 import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 import type { MaybePromise } from '../maybe-promise.js';
@@ -219,6 +221,33 @@ export class FileNavigatorManager {
   // Switch which detail this tree shows beside each row name (the header's detail button).
   setDetail(label: string, details: FileNavigatorDetail): void {
     setTabDetail(this.tabs, label, details, (l) => this.rebuild(l));
+  }
+
+  // Pull the tree root's repository up to date from `origin` (the header's pull button), then
+  // refresh the whole view: a pull can change any watched directory, so the listing cache is
+  // dropped wholesale and both the rows and the git metadata are recomputed rather than left to
+  // the debounced watchers a git-driven replace may not deliver. A failed pull is one
+  // notifications-feed line and leaves the tree exactly as it was. Coalesced: a click while one
+  // pull is still in flight is ignored, since overlapping `git pull`s collide on git's lockfiles.
+  pull(label: string): void {
+    withFilesState(this.tabs, label, undefined, (state) => {
+      if (state.pullInFlight) return;
+      state.pullInFlight = true;
+      const root = state.root;
+      void state.filesystem.pull(root).then(() => {
+        const current = this.tabs.get(label);
+        if (!current) return;
+        current.pullInFlight = false;
+        if (current.root !== root) return;
+        clearFilesystemCache(current);
+        this.rebuild(label);
+        this.refreshGit(label);
+      }, (error: unknown) => {
+        const current = this.tabs.get(label);
+        if (current) current.pullInFlight = false;
+        notify(this.managers, 'file-operation', label, `Could not pull: ${errorText(error)}`);
+      });
+    });
   }
 
   // Replay a saved tree view onto this tab: expand every saved directory that still resolves, then

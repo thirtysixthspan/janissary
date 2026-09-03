@@ -70,6 +70,9 @@ const READ_OPERATIONS = {
     run: (context, args) => context.unwatch(args.path ?? ''),
   },
   git: { ...noArguments, run: (context) => context.git() },
+  // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
+  // rejection (git's own error) travels back as the request's error reply.
+  'git-pull': { ...noArguments, run: (context) => context.filesystem.pull(context.root) },
   search: { ...noArguments, run: (context) => context.filesystem.search(context.root) },
   'read-file': {
     valid: (args) => stringValue(args.path),

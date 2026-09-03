@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { changedPaths, currentBranch, remoteUrl, type GitFileStatus } from '../git-status.js';
+import { pullRoot } from '../git-pull.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { readDirSorted, type FileNavigatorEntry } from './index.js';
@@ -50,6 +51,9 @@ export interface FileSystemPort {
   statRows(root: string, relPaths: string[]): MaybePromise<Record<string, RowStat | null>>;
   watch(root: string, relPath: string, onChange: () => void): MaybePromise<WatchHandle>;
   gitMetadata(root: string, onResult: (metadata: GitMetadata) => void): void;
+  // Pull the tree root's repository up to date from `origin` (the header's pull button). Rejects
+  // with the git error on failure — like `readFile`, raw work with nowhere to put a reason.
+  pull(root: string): Promise<void>;
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
@@ -108,6 +112,8 @@ export class LocalFileSystemPort implements FileSystemPort {
   }
 
   search(root: string): Promise<string[]> { return listProjectFiles(root); }
+
+  pull(root: string): Promise<void> { return pullRoot(root); }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
     const absolute = containedPath(root, relPath);

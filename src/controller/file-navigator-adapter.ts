@@ -7,6 +7,7 @@ import type { BulkConflictPolicy, FileOpenerResolution, FileSelectionAction, Fil
 export type FileNavigatorControllerAdapter = {
   fileNavigatorToggle(index: number, path: string): void;
   fileNavigatorCollapseAll(index: number): void;
+  fileNavigatorPull(index: number): void;
   fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void;
   fileNavigatorReroot(index: number, relPath?: string): void;
   moveFileNavigatorItem(index: number, fromRelPath: string, toRelPath: string): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItem>;
@@ -35,6 +36,7 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
   return {
     fileNavigatorToggle: (index, path) => fileNavigatorRpc.fileNavigatorToggle(managers, index, path),
     fileNavigatorCollapseAll: (index) => fileNavigatorRpc.fileNavigatorCollapseAll(managers, index),
+    fileNavigatorPull: (index) => fileNavigatorRpc.fileNavigatorPull(managers, index),
     fileNavigatorSetDetail: (index, details) => fileNavigatorRpc.fileNavigatorSetDetail(managers, index, details),
     fileNavigatorReroot: (index, relPath) => fileNavigatorRpc.fileNavigatorReroot(managers, index, relPath),
     moveFileNavigatorItem: (index, from, to) => fileNavigatorRpc.moveFileNavigatorItem(managers, index, from, to),
