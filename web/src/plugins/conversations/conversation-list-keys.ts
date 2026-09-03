@@ -2,14 +2,14 @@
 // on the row a previous click already made current, so opening with the mouse always takes a second
 // click — including on the first row, which is current from the moment the list opens, and on a row
 // the arrow keys moved to, which clears `confirmed` back to null.
-export function chatClickSelection(
+export function conversationClickSelection(
   clicked: number,
   confirmed: number | null,
 ): { selected: number; opens: boolean } {
   return { selected: clicked, opens: confirmed === clicked };
 }
 
-export function nextChatSelection(
+export function nextConversationSelection(
   length: number,
   selected: number | null,
   key: string,

@@ -74,7 +74,7 @@ A plugin whose tab identity *is* what the tab shows may move that identity with 
 
 ### Being told when host state changes
 
-A plugin may declare that it wants to be told when a named kind of host state changes, so a view can keep up with something the plugin does not own. This version defines two kinds: the set of scheduled commands and the conversation view. The latter contains the ordered summaries, loaded conversation windows, and selectable model pairs used by the chat plugin.
+A plugin may declare that it wants to be told when a named kind of host state changes, so a view can keep up with something the plugin does not own. This version defines two kinds: the set of scheduled commands and the conversation view. The latter contains the ordered summaries, loaded conversation windows, and selectable model pairs used by the conversations plugin.
 
 These announcements are deliberately narrow. One is sent only to a plugin that is already running and already has at least one tab open — a plugin nobody has used is never started by one, and a plugin with nothing on screen is never told about anything. The plugin is told which of its own tabs are open, so it does not have to track them itself, and it responds by changing what those tabs show. Nothing waits on the plugin, so a slow or broken one delays neither the application nor any other plugin: exceeding its deadline or failing disables that plugin alone, and a plugin cannot write to a transcript while handling one, since nobody asked it for anything.
 
@@ -144,9 +144,9 @@ Page is the bundled plugin that claims web addresses, so `open <url>`, `open pag
 
 Schedules is the first bundled plugin that opens on no file. It claims no extensions and contributes only the `schedules` command, so it is reached solely that way and costs nothing until someone asks for it. It is told when the set of scheduled commands changes and redraws its list from that, reads the current entries when the tab first opens, and cancels an entry, clears them all, or switches to an owning tab through the actions that state defines. Everything the user sees — the command grammar, the singleton tab, both layouts, the selection keys, the confirmation before a delete, and profile capture and restore — is unchanged by its being a plugin, except that a docked list now shows the application's dock control in its own slim header above the list. See [[scheduling]].
 
-### Bundled chat plugin
+### Bundled conversations plugin
 
-Chat claims no files and contributes the `chat` command. It owns a singleton list tab plus one tab per open conversation, and redraws those tabs from the conversation topic. Every mutation and conversation-workspace request goes back through that topic's narrow actions; the plugin never owns storage, file navigation, or an agent process. See [[conversations]].
+Conversations claims no files and contributes the `conversations` command. It owns a singleton list tab plus one tab per open conversation, and redraws those tabs from the conversation topic. Every mutation and conversation-workspace request goes back through that topic's narrow actions; the plugin never owns storage, file navigation, or an agent process. See [[conversations]].
 
 ### Bundled video plugin
 

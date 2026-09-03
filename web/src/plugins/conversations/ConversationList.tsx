@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type {
-  ChatSummary,
+  ConversationSummary,
   ConversationListPayload,
-} from '@shared/plugins/chat/shared';
+} from '@shared/plugins/conversations/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { chatClickSelection, nextChatSelection } from './chat-keys';
+import { conversationClickSelection, nextConversationSelection } from './conversation-list-keys';
 import { DeleteConversationDialog } from './DeleteConversationDialog';
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -22,7 +22,7 @@ export function ConversationList({
     payload.entries.length === 0 ? null : 0,
   );
   const [confirmed, setConfirmed] = useState<number | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<ChatSummary | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ConversationSummary | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export function ConversationList({
     }
     if (NAVIGATION_KEYS.has(event.key)) {
       event.preventDefault();
-      setSelected(nextChatSelection(payload.entries.length, selected, event.key));
+      setSelected(nextConversationSelection(payload.entries.length, selected, event.key));
       setConfirmed(null);
       return;
     }
@@ -66,8 +66,8 @@ export function ConversationList({
   };
 
   return (
-    <div className="chat-list plugin-tab" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
-      <div className="plugin-meta chat-list-header">
+    <div className="conversation-list plugin-tab" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
+      <div className="plugin-meta conversation-list-header">
         <span className="plugin-actions">
           <button
             type="button"
@@ -79,24 +79,24 @@ export function ConversationList({
           {capabilities.splitAction}
         </span>
       </div>
-      {payload.entries.length === 0 && <div className="chat-empty">No conversations yet</div>}
-      <div className="chat-rows">
+      {payload.entries.length === 0 && <div className="conversation-empty">No conversations yet</div>}
+      <div className="conversation-rows">
         {payload.entries.map((entry, index) => (
           <div
             key={entry.id}
-            className={`chat-row${selected === index ? ' selected' : ''}`}
+            className={`conversation-row${selected === index ? ' selected' : ''}`}
             data-index={index}
             role="button"
             tabIndex={-1}
             onClick={() => {
-              const click = chatClickSelection(index, confirmed);
+              const click = conversationClickSelection(index, confirmed);
               setSelected(click.selected);
               setConfirmed(click.selected);
               listRef.current?.focus();
               if (click.opens) open(entry.id);
             }}
           >
-            <span className="chat-row-title">{entry.title}</span>
+            <span className="conversation-row-title">{entry.title}</span>
             <time dateTime={new Date(entry.updatedAt).toISOString()}>
               {new Date(entry.updatedAt).toLocaleString()}
             </time>

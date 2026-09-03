@@ -10,9 +10,9 @@ import {
 import { activate } from './activate.js';
 
 const DATA: ConversationsView = {
-  summaries: [{ id: 'first', title: 'First chat', updatedAt: 2 }],
+  summaries: [{ id: 'first', title: 'First conversation', updatedAt: 2 }],
   windows: [{
-    id: 'first', title: 'First chat',
+    id: 'first', title: 'First conversation',
     pair: { harness: 'opencode', model: 'google/gemini' },
     turns: [], hasOlder: false,
   }],
@@ -51,47 +51,47 @@ function fixture(data: ConversationsView = DATA) {
   return { actions, capabilities, docks, opened, updated };
 }
 
-describe('chat plugin command', () => {
+describe('conversations plugin command', () => {
   it('opens and focuses the singleton list', () => {
     const value = fixture();
     activate().command?.('', value.capabilities);
     expect(value.opened).toEqual([{
-      key: 'chat',
-      value: { title: 'chat', payload: { kind: 'list', entries: DATA.summaries } },
+      key: 'conversations',
+      value: { title: 'conversations', payload: { kind: 'list', entries: DATA.summaries } },
     }]);
   });
 
   it('docks left or right and undocks on a bare command', () => {
     const left = fixture();
     activate().command?.('left', left.capabilities);
-    expect(left.docks).toEqual([{ key: 'chat', dock: 'left' }]);
+    expect(left.docks).toEqual([{ key: 'conversations', dock: 'left' }]);
     const right = fixture();
     activate().command?.('right', right.capabilities);
-    expect(right.docks).toEqual([{ key: 'chat', dock: 'right' }]);
+    expect(right.docks).toEqual([{ key: 'conversations', dock: 'right' }]);
     const bare = fixture();
     activate().command?.('', bare.capabilities);
-    expect(bare.docks).toEqual([{ key: 'chat', dock: null }]);
+    expect(bare.docks).toEqual([{ key: 'conversations', dock: null }]);
   });
 
   it('opens a case-insensitive title match and reports a miss', () => {
     const value = fixture();
-    activate().command?.('first CHAT', value.capabilities);
+    activate().command?.('first CONVERSATION', value.capabilities);
     expect(value.actions).toContainEqual({ topic: 'conversations', action: 'load', id: 'first' });
-    expect(value.opened[0]).toMatchObject({ key: 'first', value: { title: 'First chat' } });
+    expect(value.opened[0]).toMatchObject({ key: 'first', value: { title: 'First conversation' } });
 
     expect(() => activate().command?.('missing', value.capabilities))
       .toThrow(new TabPluginRejection('No conversation matching "missing".'));
   });
 });
 
-describe('chat plugin intents', () => {
+describe('conversations plugin intents', () => {
   const list = { kind: 'list' as const, entries: DATA.summaries };
   const conversation = {
     kind: 'conversation' as const, conversation: DATA.windows[0], models: DATA.models,
   };
   const run = (
     name: string, payload: unknown, tabPayload: unknown, value: ReturnType<typeof fixture>,
-  ) => activate().intent({ tab: 'chat', intent: name, payload, tabPayload }, value.capabilities);
+  ) => activate().intent({ tab: 'conversations', intent: name, payload, tabPayload }, value.capabilities);
 
   it('maps every intent to its conversation topic action', () => {
     const value = fixture();
@@ -123,7 +123,7 @@ describe('chat plugin intents', () => {
     expect(() => run('send', {}, conversation, value))
       .toThrow(new TabPluginRejection('invalid send payload'));
     expect(() => run('unknown', {}, conversation, value))
-      .toThrow(new TabPluginRejection('unknown chat intent "unknown"'));
+      .toThrow(new TabPluginRejection('unknown conversations intent "unknown"'));
   });
 
   it('maps workspace intents to their narrow conversation actions', () => {
@@ -139,20 +139,20 @@ describe('chat plugin intents', () => {
   it('reports an invalid authoritative tab payload as a failure', () => {
     const value = fixture();
     expect(() => run('send', { query: 'hello' }, { broken: true }, value))
-      .toThrow('invalid chat tab payload');
+      .toThrow('invalid conversations tab payload');
   });
 });
 
-describe('chat plugin notifications', () => {
+describe('conversations plugin notifications', () => {
   it('updates the list and each open conversation tab', () => {
     const value = fixture();
-    activate().notify?.({ topic: 'conversations', data: DATA, tabs: ['chat', 'first'] }, value.capabilities);
+    activate().notify?.({ topic: 'conversations', data: DATA, tabs: ['conversations', 'first'] }, value.capabilities);
     expect(value.updated).toEqual([
-      { key: 'chat', value: { payload: { kind: 'list', entries: DATA.summaries } } },
+      { key: 'conversations', value: { payload: { kind: 'list', entries: DATA.summaries } } },
       {
         key: 'first',
         value: {
-          title: 'First chat',
+          title: 'First conversation',
           payload: { kind: 'conversation', conversation: DATA.windows[0], models: DATA.models },
         },
       },

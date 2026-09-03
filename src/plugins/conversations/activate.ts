@@ -5,24 +5,24 @@ import type {
   TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isChatPayload,
+  isConversationsPayload,
   isConversationsData,
   isEmptyIntent,
   isIdIntent,
   isSelectModelIntent,
   isSendIntent,
-  type ChatPayload,
-  type ChatTabPayload,
   type ConversationListPayload,
+  type ConversationsPayload,
+  type ConversationTabPayload,
 } from './shared.js';
 
-const LIST_KEY = 'chat';
+const LIST_KEY = 'conversations';
 
 function listPayload(data: ConversationsView): ConversationListPayload {
   return { kind: 'list', entries: [...data.summaries] };
 }
 
-function chatPayload(data: ConversationsView, id: string): ChatTabPayload | undefined {
+function conversationPayload(data: ConversationsView, id: string): ConversationTabPayload | undefined {
   const conversation = data.windows.find((window) => window.id === id);
   return conversation
     ? { kind: 'conversation', conversation, models: [...data.models] }
@@ -40,7 +40,7 @@ function openConversation(
   capabilities: TabPluginServerCapabilities,
 ): void {
   capabilities.topicAction({ topic: 'conversations', action: 'load', id });
-  const payload = chatPayload(dataFrom(capabilities), id);
+  const payload = conversationPayload(dataFrom(capabilities), id);
   if (!payload) return capabilities.rejectRequest(`Conversation "${id}" not found`);
   capabilities.openOrFocusTab(id, () => ({ title: payload.conversation.title, payload }));
 }
@@ -54,12 +54,12 @@ function parseDock(argument: string): 'left' | 'right' | null | undefined {
 
 export function activate(): TabPluginActivation {
   return {
-    isPayload: isChatPayload,
+    isPayload: isConversationsPayload,
     command: (argument, capabilities) => {
       const dock = parseDock(argument);
       if (dock !== undefined) {
         capabilities.openOrFocusTab(LIST_KEY, () => ({
-          title: 'chat', payload: listPayload(dataFrom(capabilities)),
+          title: 'conversations', payload: listPayload(dataFrom(capabilities)),
         }));
         capabilities.dockTab(LIST_KEY, dock);
         return;
@@ -78,21 +78,21 @@ export function activate(): TabPluginActivation {
           capabilities.updateTab(key, () => ({ payload: listPayload(event.data) }));
           continue;
         }
-        const payload = chatPayload(event.data, key);
+        const payload = conversationPayload(event.data, key);
         if (payload) capabilities.updateTab(key, () => ({
           title: payload.conversation.title, payload,
         }));
       }
     },
     intent: (request, capabilities) => {
-      if (!isChatPayload(request.tabPayload)) {
-        return capabilities.reportFailure('invalid chat tab payload');
+      if (!isConversationsPayload(request.tabPayload)) {
+        return capabilities.reportFailure('invalid conversations tab payload');
       }
       return runIntent(request.intent, request.payload, request.tabPayload, capabilities);
     },
     opener: {
-      inline: (_file, capabilities) => capabilities.rejectRequest('chat opens no files'),
-      external: (_file, capabilities) => capabilities.rejectRequest('chat opens no files'),
+      inline: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
+      external: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
     },
   };
 }
@@ -100,7 +100,7 @@ export function activate(): TabPluginActivation {
 function runIntent(
   intent: string,
   value: unknown,
-  tab: ChatPayload,
+  tab: ConversationsPayload,
   capabilities: TabPluginServerCapabilities,
 ): null | never {
   if (intent === 'create') {
@@ -109,7 +109,7 @@ function runIntent(
     }
     const id = randomUUID();
     capabilities.topicAction({ topic: 'conversations', action: 'create', id });
-    const payload = chatPayload(dataFrom(capabilities), id);
+    const payload = conversationPayload(dataFrom(capabilities), id);
     if (!payload) return capabilities.reportFailure('created conversation is unavailable');
     capabilities.openOrFocusTab(id, () => ({ title: 'New conversation', payload }));
     return null;
@@ -155,7 +155,7 @@ function runIntent(
       return null;
     }
     default: {
-      return capabilities.rejectRequest(`unknown chat intent "${intent}"`);
+      return capabilities.rejectRequest(`unknown conversations intent "${intent}"`);
     }
   }
 }

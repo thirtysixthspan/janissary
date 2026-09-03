@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getOutput } from './commands.js';
+import { availableCommands, getOutput } from './commands.js';
+
+describe('availableCommands', () => {
+  it('exposes conversations without the former chat command', () => {
+    expect(availableCommands).toContain('conversations');
+    expect(availableCommands).not.toContain('chat');
+  });
+});
 
 describe('getOutput("help")', () => {
   it('documents the queue command', () => {

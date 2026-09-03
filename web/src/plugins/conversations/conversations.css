@@ -1,0 +1,49 @@
+.conversation-list, .conversation-tab { min-height: 0; }
+.conversation-list-header, .conversation-header { min-height: 28px; }
+
+/* The conversation list frames itself the way the host's own tab bodies do rather than through the
+   padded plugin frame, so its metadata row reads like the agent, harness, and file-navigator rows:
+   a full-width band of muted 12px text with a rule beneath it. The rows and the empty message take
+   back the padding the frame gives up. */
+.conversation-list.plugin-tab { padding: 0; gap: 0; }
+.conversation-list-header { padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+
+/* The metadata actions of both conversation rows, styled like the host controls they sit beside — the split
+   button here, the file-navigator and agent-tab icons elsewhere. Without this they would arrive with
+   the browser's default button chrome. */
+.conversation-list-header .plugin-actions button, .conversation-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.conversation-list-header .plugin-actions button:hover, .conversation-header .plugin-actions button:hover { color: var(--fg); }
+.conversation-list-header .plugin-actions button:disabled, .conversation-header .plugin-actions button:disabled {
+  opacity: 0.45; cursor: default; color: var(--muted);
+}
+
+.conversation-empty { color: var(--muted); padding: 10px 12px; }
+.conversation-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
+
+/* The list carries the current row itself, so it hides the browser's focus ring around the whole
+   box the way the file-navigator tree does. The current row is marked the way that tree marks its
+   cursor — an accent bar down the leading edge — because hover paints the same soft background and
+   would otherwise be indistinguishable from it. */
+.conversation-list { outline: none; }
+.conversation-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 8px; border-radius: 4px; cursor: pointer; border-left: 2px solid transparent;
+}
+.conversation-row:hover { background: var(--bg-soft); }
+.conversation-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
+.conversation-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-row time, .conversation-pair { color: var(--muted); font-size: 12px; }
+.conversation-row button { border: 0; background: transparent; color: var(--muted); }
+.conversation-header select { max-width: min(50vw, 420px); }
+.conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.conversation-turn { display: flex; flex-direction: column; gap: 5px; }
+.conversation-query { align-self: flex-end; max-width: 80%; padding: 8px 10px; border-radius: 8px; background: var(--bg-soft); white-space: pre-wrap; }
+.conversation-response { user-select: text; }
+.conversation-response.failed, .conversation-deleted { color: var(--error); }
+.conversation-pair { align-self: flex-start; }
+.conversation-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.conversation-composer textarea { min-height: 64px; resize: vertical; }
+.conversation-composer button { align-self: end; }

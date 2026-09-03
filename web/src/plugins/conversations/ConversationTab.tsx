@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
-import type { ChatTabPayload, ChatTurn } from '@shared/plugins/chat/shared';
+import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
 import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 
 function pairValue(harness: string, model: string): string {
   return `${harness}:${model}`;
 }
 
-export function ChatTab({
+export function ConversationTab({
   payload,
   capabilities,
 }: {
-  payload: ChatTabPayload;
+  payload: ConversationTabPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
   const { conversation, models } = payload;
@@ -61,8 +61,8 @@ export function ChatTab({
   })).filter((group) => group.models.length > 0);
 
   return (
-    <div className="chat-tab plugin-tab">
-      <div className="plugin-meta chat-header">
+    <div className="conversation-tab plugin-tab">
+      <div className="plugin-meta conversation-header">
         <span className="plugin-name">{conversation.title}</span>
         <select
           aria-label="Model"
@@ -106,7 +106,7 @@ export function ChatTab({
         </span>
       </div>
       <div
-        className="chat-turns"
+        className="conversation-turns"
         ref={turnsRef}
         onScroll={(event) => {
           if (event.currentTarget.scrollTop === 0 && conversation.hasOlder) {
@@ -116,18 +116,18 @@ export function ChatTab({
       >
         {conversation.turns.map((turn, index) => {
           return (
-            <div className="chat-turn" key={`${String(index)}:${turn.query}`}>
-              <div className="chat-query">{turn.query}</div>
-              <div className={`chat-response${turn.error ? ' failed' : ''}`}>
+            <div className="conversation-turn" key={`${String(index)}:${turn.query}`}>
+              <div className="conversation-query">{turn.query}</div>
+              <div className={`conversation-response${turn.error ? ' failed' : ''}`}>
                 <TurnResponse turn={turn} />
               </div>
-              <div className="chat-pair">{pairValue(turn.pair.harness, turn.pair.model)}</div>
+              <div className="conversation-pair">{pairValue(turn.pair.harness, turn.pair.model)}</div>
             </div>
           );
         })}
       </div>
-      {conversation.deleted && <div className="chat-deleted">This conversation was deleted.</div>}
-      <div className="chat-composer">
+      {conversation.deleted && <div className="conversation-deleted">This conversation was deleted.</div>}
+      <div className="conversation-composer">
         <textarea
           aria-label="Message"
           value={query}
@@ -147,7 +147,7 @@ export function ChatTab({
   );
 }
 
-function TurnResponse({ turn }: { turn: ChatTurn }) {
+function TurnResponse({ turn }: { turn: ConversationTurn }) {
   if (turn.error) return turn.error;
   const html = renderMarkdown(turn.response);
   return html === undefined

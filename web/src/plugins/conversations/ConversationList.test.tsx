@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatSummary } from '@shared/plugins/chat/shared';
+import type { ConversationSummary } from '@shared/plugins/conversations/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { ConversationList } from './ConversationList';
 
@@ -19,7 +19,7 @@ function capabilities() {
   return { intent, value };
 }
 
-function entry(id: string, title: string, updatedAt: number): ChatSummary {
+function entry(id: string, title: string, updatedAt: number): ConversationSummary {
   return { id, title, updatedAt };
 }
 
@@ -37,7 +37,7 @@ describe('ConversationList', () => {
       ] }}
       capabilities={value}
     />);
-    expect([...container.querySelectorAll('.chat-row-title')].map((node) => node.textContent))
+    expect([...container.querySelectorAll('.conversation-row-title')].map((node) => node.textContent))
       .toEqual(['Newest', 'Older']);
     expect(container.querySelectorAll('time')).toHaveLength(2);
   });
@@ -46,26 +46,26 @@ describe('ConversationList', () => {
     const { value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    expect(container.querySelector('.chat-list')).toHaveFocus();
-    expect(container.querySelector('.chat-row')).toHaveClass('selected');
+    expect(container.querySelector('.conversation-list')).toHaveFocus();
+    expect(container.querySelector('.conversation-row')).toHaveClass('selected');
   });
 
   it('moves the highlight with arrow keys and opens the current conversation with Enter', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    const list = container.querySelector('.chat-list') as HTMLElement;
-    const rows = container.querySelectorAll('.chat-row');
+    const list = container.querySelector('.conversation-list') as HTMLElement;
+    const rows = container.querySelectorAll('.conversation-row');
     fireEvent.keyDown(list, { key: 'ArrowDown' });
     expect(rows[1]).toHaveClass('selected');
     fireEvent.keyDown(list, { key: 'ArrowUp' });
@@ -81,12 +81,12 @@ describe('ConversationList', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    const rows = container.querySelectorAll('.chat-row');
+    const rows = container.querySelectorAll('.conversation-row');
     fireEvent.click(rows[1]);
     expect(rows[1]).toHaveClass('selected');
     expect(intent).not.toHaveBeenCalled();
@@ -98,12 +98,12 @@ describe('ConversationList', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    const rows = container.querySelectorAll('.chat-row');
+    const rows = container.querySelectorAll('.conversation-row');
     expect(rows[0]).toHaveClass('selected');
     fireEvent.click(rows[0]);
     expect(intent).not.toHaveBeenCalled();
@@ -115,13 +115,13 @@ describe('ConversationList', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    const list = container.querySelector('.chat-list') as HTMLElement;
-    const rows = container.querySelectorAll('.chat-row');
+    const list = container.querySelector('.conversation-list') as HTMLElement;
+    const rows = container.querySelectorAll('.conversation-row');
     fireEvent.keyDown(list, { key: 'ArrowDown' });
     fireEvent.click(rows[1]);
     expect(intent).not.toHaveBeenCalled();
@@ -133,12 +133,12 @@ describe('ConversationList', () => {
     const { intent, value } = capabilities();
     const { container } = render(<ConversationList
       payload={{ kind: 'list', entries: [
-        entry('first', 'First chat', 2),
-        entry('second', 'Second chat', 1),
+        entry('first', 'First conversation', 2),
+        entry('second', 'Second conversation', 1),
       ] }}
       capabilities={value}
     />);
-    const rows = container.querySelectorAll('.chat-row');
+    const rows = container.querySelectorAll('.conversation-row');
     fireEvent.click(rows[0]);
     fireEvent.click(rows[1]);
     expect(rows[1]).toHaveClass('selected');
@@ -152,7 +152,7 @@ describe('ConversationList', () => {
       payload={{ kind: 'list', entries: [] }}
       capabilities={value}
     />);
-    const actions = container.querySelector(':scope .chat-list-header .plugin-actions') as HTMLElement;
+    const actions = container.querySelector(':scope .conversation-list-header .plugin-actions') as HTMLElement;
     const [create, split] = within(actions).getAllByRole('button');
     expect(screen.queryByText('Conversations')).toBeNull();
     expect(create).toHaveAttribute('title', 'New conversation');
@@ -173,7 +173,7 @@ describe('ConversationList', () => {
     const { container } = render(
       <ConversationList payload={{ kind: 'list', entries: [] }} capabilities={value} />,
     );
-    const handled = fireEvent.keyDown(container.querySelector('.chat-list') as HTMLElement, {
+    const handled = fireEvent.keyDown(container.querySelector('.conversation-list') as HTMLElement, {
       key: 'n', metaKey: true,
     });
     expect(handled).toBe(false);
@@ -185,7 +185,7 @@ describe('ConversationList', () => {
     const { container } = render(
       <ConversationList payload={{ kind: 'list', entries: [] }} capabilities={value} />,
     );
-    const handled = fireEvent.keyDown(container.querySelector('.chat-list') as HTMLElement, {
+    const handled = fireEvent.keyDown(container.querySelector('.conversation-list') as HTMLElement, {
       key: 'n', ctrlKey: true,
     });
     expect(handled).toBe(false);
@@ -195,14 +195,14 @@ describe('ConversationList', () => {
   it('deletes only after the confirmation path', () => {
     const { intent, value } = capabilities();
     render(<ConversationList
-      payload={{ kind: 'list', entries: [entry('first', 'First chat', 1)] }}
+      payload={{ kind: 'list', entries: [entry('first', 'First conversation', 1)] }}
       capabilities={value}
     />);
-    fireEvent.click(screen.getByRole('button', { name: 'Delete First chat' }));
-    expect(screen.getByText('Delete conversation "First chat"?')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete First conversation' }));
+    expect(screen.getByText('Delete conversation "First conversation"?')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(intent).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete First chat' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete First conversation' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(intent).toHaveBeenCalledWith('delete', { id: 'first' });
   });
