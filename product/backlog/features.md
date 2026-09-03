@@ -2,8 +2,6 @@
 
 ## ready
 
-* create support for AI controlled end-to-end testing of the janissary UI from within a sandbox. add a flag to the harness command that will spin up an instance of chrome using browserless.io outside the sandbox, and allow the AI to connect to it from within the sandbox. Connection details should be passed via the sandbox environment variables. The AI should be able to run a modified version of janissary in the sandbox and have janissary use the chrome instance outside the sandbox. when the harness is closed, the chrome instance is stopped. create an ai guidelines document on how sandbox AIs can access and use the chrome instances for end-to-end testing. for remote harness connections the chrome instance should be started on the remote machine. 
-
 ## development
 
 ## deferred
