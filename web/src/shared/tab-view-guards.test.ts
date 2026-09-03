@@ -46,7 +46,7 @@ describe.each([
 
 describe('indexedTabs', () => {
   const strip = [
-    makeTab({ label: 'chat' }),
+    makeTab({ label: 'conversations' }),
     makeTab({ label: 'claude', view: 'harness', harness: HARNESS }),
     makeTab({ label: 'notes', view: 'editor', editor: EDITOR }),
     makeTab({ label: 'ssh', view: 'harness', harness: HARNESS }),

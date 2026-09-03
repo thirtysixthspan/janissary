@@ -1,9 +1,9 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ChatTabPayload } from '@shared/plugins/chat/shared';
+import type { ConversationTabPayload } from '@shared/plugins/conversations/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { ChatTab } from './ChatTab';
+import { ConversationTab } from './ConversationTab';
 
 function capabilities() {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(async () => null);
@@ -19,12 +19,12 @@ function capabilities() {
   return { intent, value };
 }
 
-function payload(overrides: Partial<ChatTabPayload['conversation']> = {}): ChatTabPayload {
+function payload(overrides: Partial<ConversationTabPayload['conversation']> = {}): ConversationTabPayload {
   const opencode = { harness: 'opencode' as const, model: 'google/gemini' };
   return {
     kind: 'conversation',
     conversation: {
-      id: 'first', title: 'First chat', pair: opencode, turns: [], hasOlder: false, ...overrides,
+      id: 'first', title: 'First conversation', pair: opencode, turns: [], hasOlder: false, ...overrides,
     },
     models: [
       { harness: 'claude', model: 'claude-sonnet' },
@@ -49,10 +49,10 @@ function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0) {
   });
 }
 
-describe('ChatTab', () => {
+describe('ConversationTab', () => {
   it('renders sanitized Markdown, streaming text, and failures in place', () => {
     const { value } = capabilities();
-    const { container } = render(<ChatTab
+    const { container } = render(<ConversationTab
       payload={payload({ turns: [
         {
           query: 'markdown', response: '**safe**<script>bad()</script>',
@@ -72,15 +72,15 @@ describe('ChatTab', () => {
     expect(container.querySelector('strong')).toHaveTextContent('safe');
     expect(container.querySelector('script')).toBeNull();
     expect(screen.getByText('partial')).toBeInTheDocument();
-    expect(screen.getByText('agent failed')).toHaveClass('chat-response', 'failed');
+    expect(screen.getByText('agent failed')).toHaveClass('conversation-response', 'failed');
   });
 
   it('scrolls to the bottom when a new user query is rendered', () => {
     const { value } = capabilities();
-    const rendered = render(<ChatTab payload={payload()} capabilities={value} />);
-    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    const rendered = render(<ConversationTab payload={payload()} capabilities={value} />);
+    const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
     stubScroll(viewport, 800);
-    rendered.rerender(<ChatTab
+    rendered.rerender(<ConversationTab
       payload={payload({ turns: [turn('new query', '', true)] })}
       capabilities={value}
     />);
@@ -89,16 +89,16 @@ describe('ChatTab', () => {
 
   it('follows a growing streamed response to its new bottom', () => {
     const { value } = capabilities();
-    const rendered = render(<ChatTab
+    const rendered = render(<ConversationTab
       payload={payload({ turns: [turn('question', '', true)] })}
       capabilities={value}
     />);
-    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
     stubScroll(viewport, 800);
     Object.defineProperty(viewport, 'scrollHeight', {
       value: 1200, writable: true, configurable: true,
     });
-    rendered.rerender(<ChatTab
+    rendered.rerender(<ConversationTab
       payload={payload({ turns: [turn('question', 'partial answer', true)] })}
       capabilities={value}
     />);
@@ -108,13 +108,13 @@ describe('ChatTab', () => {
   it('preserves the viewport when older turns are prepended', () => {
     const { value } = capabilities();
     const latest = turn('latest question', 'latest answer');
-    const rendered = render(<ChatTab
+    const rendered = render(<ConversationTab
       payload={payload({ turns: [latest], hasOlder: true })}
       capabilities={value}
     />);
-    const viewport = rendered.container.querySelector('.chat-turns') as HTMLElement;
+    const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
     stubScroll(viewport, 1000, 120);
-    rendered.rerender(<ChatTab
+    rendered.rerender(<ConversationTab
       payload={payload({
         turns: [turn('older question', 'older answer'), latest],
         hasOlder: false,
@@ -126,7 +126,7 @@ describe('ChatTab', () => {
 
   it('groups catalogued models and emits a selection', () => {
     const { intent, value } = capabilities();
-    render(<ChatTab payload={payload()} capabilities={value} />);
+    render(<ConversationTab payload={payload()} capabilities={value} />);
     expect(screen.getByRole('group', { name: 'claude' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'opencode' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'claude:claude-sonnet' } });
@@ -137,7 +137,7 @@ describe('ChatTab', () => {
 
   it('opens workspace tools and disables them after deletion', () => {
     const { intent, value } = capabilities();
-    const rendered = render(<ChatTab payload={payload()} capabilities={value} />);
+    const rendered = render(<ConversationTab payload={payload()} capabilities={value} />);
     const files = screen.getByTitle('Open file navigator in this workspace');
     const agent = screen.getByTitle('New agent in this workspace');
     fireEvent.click(files);
@@ -145,14 +145,14 @@ describe('ChatTab', () => {
     expect(intent).toHaveBeenNthCalledWith(1, 'open-files', {});
     expect(intent).toHaveBeenNthCalledWith(2, 'launch-agent', {});
 
-    rendered.rerender(<ChatTab payload={payload({ deleted: true })} capabilities={value} />);
+    rendered.rerender(<ConversationTab payload={payload({ deleted: true })} capabilities={value} />);
     expect(files).toBeDisabled();
     expect(agent).toBeDisabled();
   });
 
   it('sends the composer text', () => {
     const { intent, value } = capabilities();
-    render(<ChatTab payload={payload()} capabilities={value} />);
+    render(<ConversationTab payload={payload()} capabilities={value} />);
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send' }));
     expect(intent).toHaveBeenCalledWith('send', { query: 'Hello' });
@@ -160,7 +160,7 @@ describe('ChatTab', () => {
 
   it('cancels a stream with Escape while active', () => {
     const { intent, value } = capabilities();
-    render(<ChatTab payload={payload({ turns: [{
+    render(<ConversationTab payload={payload({ turns: [{
       query: 'long', response: 'partial', streaming: true,
       pair: { harness: 'opencode', model: 'google/gemini' },
     }] })} capabilities={value} />);
@@ -170,13 +170,13 @@ describe('ChatTab', () => {
 
   it('loads older turns at the top only while older turns remain', () => {
     const first = capabilities();
-    const rendered = render(<ChatTab payload={payload({ hasOlder: true })} capabilities={first.value} />);
-    fireEvent.scroll(rendered.container.querySelector('.chat-turns')!, { target: { scrollTop: 0 } });
+    const rendered = render(<ConversationTab payload={payload({ hasOlder: true })} capabilities={first.value} />);
+    fireEvent.scroll(rendered.container.querySelector('.conversation-turns')!, { target: { scrollTop: 0 } });
     expect(first.intent).toHaveBeenCalledWith('load-older', {});
     rendered.unmount();
     const last = capabilities();
-    const complete = render(<ChatTab payload={payload({ hasOlder: false })} capabilities={last.value} />);
-    fireEvent.scroll(complete.container.querySelector('.chat-turns')!, { target: { scrollTop: 0 } });
+    const complete = render(<ConversationTab payload={payload({ hasOlder: false })} capabilities={last.value} />);
+    fireEvent.scroll(complete.container.querySelector('.conversation-turns')!, { target: { scrollTop: 0 } });
     expect(last.intent).not.toHaveBeenCalled();
   });
 });

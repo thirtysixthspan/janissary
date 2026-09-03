@@ -1,53 +1,53 @@
-export const CHAT_PAYLOAD_SCHEMA_VERSION = 1;
+export const CONVERSATIONS_PAYLOAD_SCHEMA_VERSION = 1;
 
-export type ChatModelPair = { harness: 'claude' | 'opencode'; model: string };
-export type ChatSummary = { id: string; title: string; updatedAt: number };
-export type ChatTurn = {
+export type ConversationModelPair = { harness: 'claude' | 'opencode'; model: string };
+export type ConversationSummary = { id: string; title: string; updatedAt: number };
+export type ConversationTurn = {
   query: string;
   response: string;
-  pair: ChatModelPair;
+  pair: ConversationModelPair;
   error?: string;
   streaming?: boolean;
 };
-export type ChatWindow = {
+export type ConversationWindow = {
   id: string;
   title: string;
-  pair: ChatModelPair;
-  turns: ChatTurn[];
+  pair: ConversationModelPair;
+  turns: ConversationTurn[];
   hasOlder: boolean;
   deleted?: boolean;
 };
 export type ConversationsData = {
-  summaries: ChatSummary[];
-  windows: ChatWindow[];
-  models: ChatModelPair[];
+  summaries: ConversationSummary[];
+  windows: ConversationWindow[];
+  models: ConversationModelPair[];
 };
-export type ConversationListPayload = { kind: 'list'; entries: ChatSummary[] };
-export type ChatTabPayload = {
+export type ConversationListPayload = { kind: 'list'; entries: ConversationSummary[] };
+export type ConversationTabPayload = {
   kind: 'conversation';
-  conversation: ChatWindow;
-  models: ChatModelPair[];
+  conversation: ConversationWindow;
+  models: ConversationModelPair[];
 };
-export type ChatPayload = ConversationListPayload | ChatTabPayload;
+export type ConversationsPayload = ConversationListPayload | ConversationTabPayload;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isPair(value: unknown): value is ChatModelPair {
+function isPair(value: unknown): value is ConversationModelPair {
   return isRecord(value)
     && (value.harness === 'claude' || value.harness === 'opencode')
     && typeof value.model === 'string';
 }
 
-function isSummary(value: unknown): value is ChatSummary {
+function isSummary(value: unknown): value is ConversationSummary {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.title === 'string'
     && typeof value.updatedAt === 'number';
 }
 
-function isTurn(value: unknown): value is ChatTurn {
+function isTurn(value: unknown): value is ConversationTurn {
   return isRecord(value)
     && typeof value.query === 'string'
     && typeof value.response === 'string'
@@ -56,7 +56,7 @@ function isTurn(value: unknown): value is ChatTurn {
     && (value.streaming === undefined || typeof value.streaming === 'boolean');
 }
 
-function isWindow(value: unknown): value is ChatWindow {
+function isWindow(value: unknown): value is ConversationWindow {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.title === 'string'
@@ -77,7 +77,7 @@ export function isConversationsData(value: unknown): value is ConversationsData 
     && value.models.every((pair) => isPair(pair));
 }
 
-export function isChatPayload(value: unknown): value is ChatPayload {
+export function isConversationsPayload(value: unknown): value is ConversationsPayload {
   if (!isRecord(value)) return false;
   if (value.kind === 'list') {
     return Array.isArray(value.entries) && value.entries.every((entry) => isSummary(entry));
@@ -100,6 +100,6 @@ export function isSendIntent(value: unknown): value is { query: string } {
   return isRecord(value) && typeof value.query === 'string';
 }
 
-export function isSelectModelIntent(value: unknown): value is ChatModelPair {
+export function isSelectModelIntent(value: unknown): value is ConversationModelPair {
   return isPair(value);
 }

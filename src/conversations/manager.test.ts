@@ -207,18 +207,18 @@ describe('ConversationsManager', () => {
     const { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store } = fixture();
     manager.create('first');
     managers.tab.tabs.push({
-      label: 'First chat', plugin: { id: 'chat', instanceKey: 'first' },
+      label: 'First conversation', plugin: { id: 'conversations', instanceKey: 'first' },
     } as Tab);
 
     expect(manager.openFiles('first')).toBe(true);
     const workspace = path.join(store.directory('first'), 'workspace');
     expect(store.read('first')).toMatchObject({ id: 'first', turns: [] });
     expect(existsSync(workspace)).toBe(true);
-    expect(setCwd).toHaveBeenCalledWith('First chat', workspace);
-    expect(openOrRetarget).toHaveBeenCalledWith('First chat');
+    expect(setCwd).toHaveBeenCalledWith('First conversation', workspace);
+    expect(openOrRetarget).toHaveBeenCalledWith('First conversation');
 
     expect(manager.launchAgent('first')).toBe(true);
-    expect(newAgentInWorkspace).toHaveBeenCalledWith('First chat', workspace);
+    expect(newAgentInWorkspace).toHaveBeenCalledWith('First conversation', workspace);
     manager.dispose();
   });
 

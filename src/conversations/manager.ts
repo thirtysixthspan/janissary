@@ -159,7 +159,7 @@ export class ConversationsManager {
   private workspaceTarget(id: string): { label: string; workspace: string } | undefined {
     const conversation = this.get(id);
     const tab = this.managers.tab.tabs.find((candidate) =>
-      candidate.plugin?.id === 'chat' && candidate.plugin.instanceKey === id);
+      candidate.plugin?.id === 'conversations' && candidate.plugin.instanceKey === id);
     if (!conversation || !tab) return;
     if (conversation.turns.length === 0) this.store.write(conversation);
     const workspace = this.store.ensure(id);
@@ -170,7 +170,7 @@ export class ConversationsManager {
   private cancelClosedConversations(): void {
     for (const id of this.responder.ids()) {
       const open = this.managers.tab.tabs.some((tab) =>
-        tab.plugin?.id === 'chat' && tab.plugin.instanceKey === id);
+        tab.plugin?.id === 'conversations' && tab.plugin.instanceKey === id);
       if (!open) this.cancel(id);
     }
   }

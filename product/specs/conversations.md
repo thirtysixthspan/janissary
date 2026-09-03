@@ -1,12 +1,12 @@
 # Conversations
 
-The bundled chat view provides durable, ordinary conversations with an ACP-capable model. Conversation history is shared across project directories on the same machine.
+The bundled conversations view provides durable, ordinary conversations with an ACP-capable model. Conversation history is shared across project directories on the same machine.
 
 ### Command grammar
 
-`chat` opens or focuses the singleton conversation list. `chat left` and `chat right` dock that list in the named sidebar. Running bare `chat` while the list is docked returns it to the centre.
+`conversations` opens or focuses the singleton conversation list. `conversations left` and `conversations right` dock that list in the named sidebar. Running bare `conversations` while the list is docked returns it to the centre.
 
-`chat <title>` opens the conversation whose title matches case-insensitively. The docking words take precedence over conversations titled `left` or `right`. A missing match reports `No conversation matching "<title>".`
+`conversations <title>` opens the conversation whose title matches case-insensitively. The docking words take precedence over conversations titled `left` or `right`. A missing match reports `No conversation matching "<title>".`
 
 ### Conversation list
 
@@ -44,4 +44,4 @@ The conversation's ACP agent is tool-less. It runs with its current directory an
 
 ### Profiles
 
-Conversation records and workspaces survive independently of profiles. Restoring a saved chat view reopens the conversation list; individual open conversation tabs are not restored, and their saved conversations remain available from the list.
+Conversation records and workspaces survive independently of profiles. Restoring a saved conversations view reopens the conversation list; individual open conversation tabs are not restored, and their saved conversations remain available from the list.
