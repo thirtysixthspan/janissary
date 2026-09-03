@@ -2,6 +2,8 @@
 
 ## ready
 
+* add a git pull button to the file navigator metadata row that pull the latest from git origin, and refreshes the file navigator view.
+
 ## development
 
 ## deferred
