@@ -52,11 +52,16 @@
 }
 /* The conversation tab gives up the padded plugin frame for the same reason its list does: the
    command bar it ends with is a full-width band with a rule along its top, and an inset one reads as
-   a floating box. The header, the turn list, and the deleted notice take back the padding. */
+   a floating box. The header, the turn list, and the deleted notice take back the padding.
+
+   The turn list takes back twice the vertical padding the rows around it use, so the conversation
+   reads as its own region rather than crowding the title above it and the rule above the command
+   bar below it. Its horizontal padding stays at 12px, keeping the turns aligned with both. The
+   deleted notice matches, because it is what sits above the command bar once it appears. */
 .conversation-tab.plugin-tab { padding: 0; gap: 0; }
 .conversation-header { padding: 8px 12px 0; }
-.conversation-deleted { padding: 0 12px 8px; }
-.conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 8px 12px; }
+.conversation-deleted { padding: 0 12px 16px; }
+.conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 12px; }
 .conversation-turn { display: flex; flex-direction: column; gap: 5px; }
 .conversation-query { align-self: flex-end; max-width: 80%; padding: 8px 10px; border-radius: 8px; background: var(--bg-soft); white-space: pre-wrap; }
 .conversation-response { user-select: text; }

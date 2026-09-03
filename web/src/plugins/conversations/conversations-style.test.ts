@@ -6,6 +6,15 @@ function rule(selector: string): string | undefined {
   return conversations.split('\n').find((line) => line.startsWith(`${selector} {`));
 }
 
+function padding(selector: string): string[] {
+  const declared = /padding: ([^;]+);/.exec(rule(selector) ?? '');
+  return declared === null ? [] : declared[1].split(' ');
+}
+
+function pixels(value: string): number {
+  return Number(value.replace('px', ''));
+}
+
 describe('conversation list metadata row', () => {
   it('drops the padded plugin frame so the row spans the full width', () => {
     const frame = rule('.conversation-list.plugin-tab');
@@ -49,8 +58,20 @@ describe('conversation tab frame', () => {
 
   it('gives the padding back to the regions above the command bar', () => {
     expect(rule('.conversation-header')).toContain('padding: 8px 12px 0');
-    expect(rule('.conversation-turns')).toContain('padding: 8px 12px');
-    expect(rule('.conversation-deleted')).toContain('padding: 0 12px 8px');
+    expect(rule('.conversation-turns')).toContain('padding: 16px 12px');
+    expect(rule('.conversation-deleted')).toContain('padding: 0 12px 16px');
+  });
+
+  // Aligned with the title above and the command line below, but clear of both, so the conversation
+  // reads as its own region instead of crowding the rows it sits between.
+  it('insets the conversation further than the rows it sits between, without misaligning it', () => {
+    const [turnsVertical, turnsHorizontal] = padding('.conversation-turns');
+    const [headerVertical, headerHorizontal] = padding('.conversation-header');
+    const notice = padding('.conversation-deleted');
+
+    expect(pixels(turnsVertical)).toBeGreaterThan(pixels(headerVertical));
+    expect(turnsHorizontal).toBe(headerHorizontal);
+    expect(notice.at(-1)).toBe(turnsVertical);
   });
 
   it('spaces the model selector from the icon buttons it sits beside', () => {
