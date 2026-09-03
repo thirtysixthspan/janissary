@@ -38,12 +38,15 @@
 .conversation-row time, .conversation-pair { color: var(--muted); font-size: 12px; }
 .conversation-row button { border: 0; background: transparent; color: var(--muted); }
 .conversation-header select { max-width: min(50vw, 420px); }
-.conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+/* The conversation tab gives up the padded plugin frame for the same reason its list does: the
+   command bar it ends with is a full-width band with a rule along its top, and an inset one reads as
+   a floating box. The header, the turn list, and the deleted notice take back the padding. */
+.conversation-tab.plugin-tab { padding: 0; gap: 0; }
+.conversation-header { padding: 8px 12px 0; }
+.conversation-deleted { padding: 0 12px 8px; }
+.conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 8px 12px; }
 .conversation-turn { display: flex; flex-direction: column; gap: 5px; }
 .conversation-query { align-self: flex-end; max-width: 80%; padding: 8px 10px; border-radius: 8px; background: var(--bg-soft); white-space: pre-wrap; }
 .conversation-response { user-select: text; }
 .conversation-response.failed, .conversation-deleted { color: var(--error); }
 .conversation-pair { align-self: flex-start; }
-.conversation-composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
-.conversation-composer textarea { min-height: 64px; resize: vertical; }
-.conversation-composer button { align-self: end; }

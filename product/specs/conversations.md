@@ -28,6 +28,14 @@ The tab opens with the most recent 20 turns and the newest turn visible. An acti
 
 The header offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 
+### The message input
+
+The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
+
+The status dot blinks while a reply is streaming. Sending is refused during that time, and a refused Enter leaves the typed text in place, so a query composed while the previous reply finishes is not lost. Shift+Enter still starts a new line while streaming. Once the conversation is deleted the line is disabled outright.
+
+The input takes focus when a conversation tab opens on screen. A conversation tab opened out of view does not take focus from whatever tab is showing. See [[tab-plugins]].
+
 ### Sessions, failures, and cancellation
 
 Each conversation has one live ACP agent session at a time. A restarted app, cancelled reply, changed model, failed connection, or closed conversation tab ends that session. The next query starts another session and replays the 20 most recent completed turns before sending the new query.

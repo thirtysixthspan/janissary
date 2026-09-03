@@ -4,6 +4,14 @@ import type { PluginHost } from './host';
 
 export { renderMarkdown } from './markdown-render';
 
+// The host's command bar, published so a plugin whose tab takes a line of text renders the one the
+// agent tab renders rather than a second textarea that drifts from it. Both are free of any feature:
+// the shell is markup plus its autosize, the hook is the baseline keymap, and a plugin with keys of
+// its own composes around them exactly as the agent tab does. Additive, so `TAB_PLUGIN_API_VERSION`
+// does not move — that constant versions what a manifest must declare, which this does not change.
+export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
+export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

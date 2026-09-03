@@ -150,11 +150,14 @@ describe('ConversationTab', () => {
     expect(agent).toBeDisabled();
   });
 
-  it('sends the composer text', () => {
+  // The composer is the host's command bar, which submits on Enter and has no send button of its
+  // own — see ConversationComposer.test.tsx for the rest of its behavior.
+  it('sends the composer text on Enter', () => {
     const { intent, value } = capabilities();
     render(<ConversationTab payload={payload()} capabilities={value} />);
-    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Hello' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    const input = screen.getByLabelText('Message');
+    fireEvent.change(input, { target: { value: 'Hello' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('send', { query: 'Hello' });
   });
 

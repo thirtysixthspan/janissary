@@ -36,6 +36,31 @@ describe('conversation list metadata row', () => {
   });
 });
 
+describe('conversation tab frame', () => {
+  // The command bar the tab ends with is a full-width band with a rule along its top. Inset by the
+  // plugin frame's padding it reads as a floating box instead, so the frame gives the padding up and
+  // the regions above the bar take it back.
+  it('drops the padded plugin frame so the command bar spans the full width', () => {
+    const frame = rule('.conversation-tab.plugin-tab');
+
+    expect(frame).toContain('padding: 0');
+    expect(frame).toContain('gap: 0');
+  });
+
+  it('gives the padding back to the regions above the command bar', () => {
+    expect(rule('.conversation-header')).toContain('padding: 8px 12px 0');
+    expect(rule('.conversation-turns')).toContain('padding: 8px 12px');
+    expect(rule('.conversation-deleted')).toContain('padding: 0 12px 8px');
+  });
+
+  // The bar is the host's own component rendering host-styled classes, so a rule here would be a
+  // second definition of something theme.css already owns.
+  it('leaves the command bar styling to the application theme', () => {
+    expect(conversations).not.toContain('.command');
+    expect(theme).toContain('.command-area {');
+  });
+});
+
 describe('conversation list rows', () => {
   it('marks the current row differently from a hovered row', () => {
     const hovered = rule('.conversation-row:hover');

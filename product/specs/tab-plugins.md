@@ -52,6 +52,12 @@ Plugin views that present the same shape share one plugin-wide look rather than 
 
 The application keeps the styling of everything it draws itself, including the frames it wraps around a plugin tab, the tab strip, the sidebars, and the split control it renders into a plugin's header. Every theme reaches plugin views the same way it always has, so switching themes recolors a plugin tab exactly as it recolors an application tab.
 
+### Borrowing the application's command bar
+
+A plugin whose view takes a line of text renders the application's own command bar rather than an input of its own, so a plugin that asks for text asks for it the way every other part of the application does. Two pieces are offered. The first is the bar itself — the status dot, the prompt glyph, the inline suggestion overlay, and a text area that grows with its content and stops at the height the agent tab's does. The second is the bar's keys: Enter sends, Shift+Enter starts a new line, Ctrl+Enter sends as well, Up and Down walk back and forward through what was entered before, and Right or End at the end of the line accepts the suggestion.
+
+Neither piece knows anything about any plugin, and neither imposes a policy the plugin cannot override: a plugin with keys of its own keeps its own handler and hands the key on where the standard behavior should take over, which is exactly how the agent tab layers its completion and its queue popup over the same two pieces. A plugin that borrows the bar is bound by the same rule as one that draws its own view — the application still owns how the bar looks, and a plugin never restates that styling.
+
 ### Docking a plugin tab
 
 A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, a profile that asks for it, and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.

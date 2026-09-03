@@ -1,12 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import React, { useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
-import { statusDotIcon, promptIcon } from '../../icons';
 import { handleTabCompletion } from './command-completion';
-import { findGhostSuggestion } from './ghost-suggestion';
-import { isCaretOnFirstLine, isCaretOnLastLine } from './command-caret-lines';
-import { spliceIntoTextarea } from './textarea-splice';
-import { useCommandHistoryRecall } from './useCommandHistoryRecall';
+import { spliceIntoTextarea } from '../../shared/command-bar/textarea-splice';
+import { useCommandBarKeys } from '../../shared/command-bar/useCommandBarKeys';
+import { CommandBarShell } from '../../shared/command-bar/CommandBarShell';
 import type { CommandInputDropHandle } from '../../drop-handles';
 
 export type CommandInputProperties = {
@@ -30,6 +27,10 @@ export type CommandInputProperties = {
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
 };
 
+// The agent tab's command bar: the shared bar plus the modality only an agent tab has — a modal
+// history picker, the queue popup, Tab completion against the server, and the file-navigator drop
+// target. Every baseline key belongs to `useCommandBarKeys`, which this handler calls at the two
+// points where it should take over.
 export function CommandInput({
   dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
   autoFocus = true, queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
@@ -37,25 +38,12 @@ export function CommandInput({
   const [value, setValue] = useState('');
   const [completions, setCompletions] = useState<string[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
-  const ghost = findGhostSuggestion(ghostHistory, value);
 
-  // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
-  // grow to fit. Runs after every value change (typing, paste, history recall, ghost accept,
-  // Shift+Enter newline, submit-clear).
-  useEffect(() => {
-    const element = inputRef.current;
-    if (!element) return;
-    element.style.height = '0';
-    element.style.height = `${element.scrollHeight}px`;
-  }, [value, inputRef]);
-
-  const recall = (text: string) => {
-    setValue(text);
-    requestAnimationFrame(() => { const element = inputRef.current; if (element) element.selectionStart = element.selectionEnd = text.length; });
-  };
-  if (recallRef) recallRef.current = recall;
-
-  const { recallOlder, recallNewer, reset: resetHistoryWalk } = useCommandHistoryRecall(history, recall);
+  const bar = useCommandBarKeys({
+    value, setValue, inputRef, history, ghostHistory, onSubmit,
+    onClear: () => { setCompletions([]); },
+  });
+  if (recallRef) recallRef.current = bar.recall;
 
   // Focuses the textarea before splicing: unlike a keyboard-driven insert, the caller is a
   // file-navigator drag release, so the textarea is never already the focused/selected element.
@@ -73,37 +61,6 @@ export function CommandInput({
     };
   }
 
-  const submit = () => {
-    const text = value.trim();
-    // Clear before calling onSubmit: a client-intercepted command (e.g. `queue`) may
-    // synchronously populate the command line again (selecting the front queued entry), and
-    // that write must win over this clear rather than being stomped by it.
-    setValue('');
-    setCompletions([]);
-    resetHistoryWalk();
-    if (text) onSubmit(text);
-  };
-
-  const insertNewline = () => {
-    const element = inputRef.current;
-    if (!element) return;
-    spliceIntoTextarea(element, value, '\n');
-  };
-
-  const handleArrowUpKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Off the first line, native ArrowUp moves the caret up one line instead.
-    if (!isCaretOnFirstLine(value, inputRef.current?.selectionStart)) return;
-    e.preventDefault();
-    recallOlder(value);
-  };
-
-  const handleArrowDownKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Off the last line, native ArrowDown moves the caret down one line instead.
-    if (!isCaretOnLastLine(value, inputRef.current?.selectionStart)) return;
-    e.preventDefault();
-    recallNewer();
-  };
-
   // While the queue popup is open: Enter/ArrowUp/ArrowDown are owned by the window handler
   // (no-op / move the selector); Backspace/Delete on an empty line deletes the selected row.
   // Returns true once handled, so the caller stops there. All other keys behave normally.
@@ -119,10 +76,9 @@ export function CommandInput({
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (pickerOpen) return; // history picker is modal; the window handler owns the keys
-    // Shift+Enter inserts a newline and Ctrl+Enter submits — both ahead of the shift/ctrl guard
-    // below, which would otherwise swallow them.
-    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); insertNewline(); return; }
-    if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); e.stopPropagation(); submit(); return; }
+    // Shift+Enter inserts a newline and Ctrl+Enter submits — both handled by the shared bar, and
+    // taken ahead of the shift/ctrl guard below, which would otherwise swallow them.
+    if (e.key === 'Enter' && (e.shiftKey || e.ctrlKey)) { bar.onKeyDown(e); return; }
     // Defer tab chords (Shift+Arrow switch, Ctrl+Arrow reorder) and Shift+Up/Down (scroll) to the window handler.
     if (e.shiftKey || e.ctrlKey) return;
     if (queueOpen && handleQueueOpenKey(e)) return;
@@ -131,68 +87,26 @@ export function CommandInput({
       handleTabCompletion(value, inputRef.current?.selectionStart ?? value.length, complete, setValue, setCompletions, inputRef);
       return;
     }
-    switch (e.key) {
-    case 'Enter': {
-      // Don't let the window key handler also see this Enter: submitting `hist` opens the picker,
-      // and React flushes that state before the event bubbles to window — which would otherwise
-      // immediately run the selected (most recent) entry.
-      e.preventDefault();
-      e.stopPropagation();
-      submit();
-
-    break;
-    }
-    case 'ArrowUp': {
-      handleArrowUpKey(e);
-
-    break;
-    }
-    case 'ArrowDown': {
-      handleArrowDownKey(e);
-
-    break;
-    }
-    case 'ArrowRight': case 'End': {
-      const element = inputRef.current;
-      if (ghost && element && element.selectionStart === value.length && element.selectionEnd === value.length) {
-        e.preventDefault();
-        recall(ghost);
-        setCompletions([]);
-      }
-
-    break;
-    }
-    // No default
-    }
+    bar.onKeyDown(e);
   };
 
   return (
-    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={rootRef}>
-      {completions.length > 0 && <div className="completions">{completions.join('  ')}</div>}
-      <div className="command" onClick={() => inputRef.current?.focus()}>
-        <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
-        <span>{busy ? <>queue <FontAwesomeIcon icon={promptIcon} /></> : <FontAwesomeIcon icon={promptIcon} />}</span>
-        <div className="input-wrap">
-          {ghost && (
-            <span className="ghost" aria-hidden="true">
-              <span className="ghost-typed">{value}</span>{ghost.slice(value.length)}
-            </span>
-          )}
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={value}
-            autoFocus={autoFocus}
-            spellCheck={false}
-            onChange={(e) => {
-              setValue(e.target.value);
-              setCompletions([]);
-              if (queueOpen) onEditQueued?.(e.target.value);
-            }}
-            onKeyDown={onKeyDown}
-          />
-        </div>
-      </div>
-    </div>
+    <CommandBarShell
+      value={value}
+      onChange={(next) => {
+        setValue(next);
+        setCompletions([]);
+        if (queueOpen) onEditQueued?.(next);
+      }}
+      onKeyDown={onKeyDown}
+      inputRef={inputRef}
+      rootRef={rootRef}
+      ghost={bar.ghost}
+      above={completions.length > 0 ? <div className="completions">{completions.join('  ')}</div> : undefined}
+      label={busy ? 'queue' : undefined}
+      dotColor={dotColor}
+      busy={busy}
+      autoFocus={autoFocus}
+    />
   );
 }
