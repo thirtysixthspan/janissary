@@ -188,6 +188,9 @@ Drag selected rows onto an active plain-text editor to insert their tree-relativ
 by newlines, as one editor undo step. The editor does not highlight during the drag. Inactive or
 hidden editors are not drop targets.
 
+Dropping hands keyboard focus to the editor and leaves the cursor just after the path it inserted,
+so you can keep typing without reaching for the mouse.
+
 ## Creating files and directories
 
 Click the header's **New file** button, or press `Cmd+N` (`Ctrl+N`) while the tree has keyboard focus, to open a fresh, unsaved editor tab named `untitled.md`. The target directory follows your current selection: a selected directory creates the file inside it, a selected file creates it in that file's directory, and no selection (or the `..` row) creates it at the tree root. If that directory already has an `untitled.md`, the next free name opens instead (`untitled-2.md`, and so on).

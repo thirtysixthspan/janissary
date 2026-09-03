@@ -77,6 +77,20 @@ const queryRowText = (container: HTMLElement) => (container.querySelector(':scop
 const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
 const hasDirtyDot = hasEnabledSaveButton;
 
+// The caret renders as an empty span sitting inline at its column (render.tsx), so where it sits in
+// the buffer reads back as the text preceding it on its own row — no reaching into editor state.
+function textBeforeCaret(container: HTMLElement): string {
+  const caret = container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-caret');
+  const row = caret?.closest('.editor-content');
+  if (!caret || !row) return '';
+  let before = '';
+  for (const node of row.childNodes) {
+    if (node === caret) break;
+    before += node.textContent ?? '';
+  }
+  return before;
+}
+
 // `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
 // the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
 function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
@@ -1222,6 +1236,48 @@ describe('EditorTab', () => {
       act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
 
       expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('src/notes.txtline one');
+    });
+
+    // The drop arrives from a file-navigator drag release, so focus is still in the file tree —
+    // where the next letters typed are a type-to-select gesture rather than text. Blurring first
+    // matters: an active editor tab claims focus on mount, so without it this passes either way.
+    it('moves keyboard focus to the editor', async () => {
+      const { client } = makeClient();
+      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
+      const view = makeView();
+      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+      const textarea = screen.getByLabelText('Edit notes.txt');
+      act(() => { (textarea as HTMLTextAreaElement).blur(); });
+      expect(textarea).not.toHaveFocus();
+
+      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+
+      expect(textarea).toHaveFocus();
+    });
+
+    it('leaves the caret at the end of the dropped path', async () => {
+      const { client } = makeClient();
+      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
+      const view = makeView();
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+
+      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+
+      expect(textBeforeCaret(container)).toBe('src/notes.txt');
+    });
+
+    it('leaves the caret at the end of the last path when several are dropped at once', async () => {
+      const { client } = makeClient();
+      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
+      const view = makeView();
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
+
+      act(() => { dropRef.current?.insertAtCaret('src/one.txt\nsrc/two.txt'); });
+
+      expect(textBeforeCaret(container)).toBe('src/two.txt');
     });
 
     it('leaves a shared dropRef untouched when the tab is inactive', async () => {
