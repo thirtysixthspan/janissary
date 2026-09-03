@@ -38,6 +38,13 @@
 .conversation-row time, .conversation-pair { color: var(--muted); font-size: 12px; }
 .conversation-row button { border: 0; background: transparent; color: var(--muted); }
 .conversation-header select { max-width: min(50vw, 420px); }
+
+/* The rename field takes the title's own type and weight and no chrome of its own, so opening it
+   replaces the name in place instead of moving the row. Same treatment `.tab-rename-input` gets. */
+.conversation-title-input {
+  font: inherit; font-weight: 600; color: var(--fg); background: transparent;
+  border: none; outline: none; padding: 0; margin: 0;
+}
 /* The conversation tab gives up the padded plugin frame for the same reason its list does: the
    command bar it ends with is a full-width band with a rule along its top, and an inset one reads as
    a floating box. The header, the turn list, and the deleted notice take back the padding. */

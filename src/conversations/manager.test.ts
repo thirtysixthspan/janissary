@@ -182,6 +182,90 @@ describe('ConversationsManager', () => {
     manager.dispose();
   });
 
+  it('renames a conversation and reports the new title through the view', () => {
+    const { manager } = fixture();
+    manager.create('first');
+
+    expect(manager.rename('first', '  Parser notes  ')).toBe(true);
+    expect(manager.view().windows[0].title).toBe('Parser notes');
+    expect(manager.view().summaries[0].title).toBe('Parser notes');
+    manager.dispose();
+  });
+
+  // `selectModel`'s rule: a conversation already on disk is rewritten, one that is not stays that
+  // way — a rename is not among the things that create the conversation's directory.
+  it('persists a rename only for a conversation that already has turns', () => {
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    const { manager, store } = fixture();
+    const write = vi.spyOn(store, 'write');
+    manager.create('first');
+    manager.rename('first', 'Before any query');
+    expect(write).not.toHaveBeenCalled();
+    expect(existsSync(store.directory('first'))).toBe(false);
+
+    manager.send('first', 'First');
+    write.mockClear();
+    manager.rename('first', 'After a query');
+
+    expect(write).toHaveBeenCalledOnce();
+    manager.dispose();
+  });
+
+  it('refuses a rename with no name in it, and one for an unknown conversation', () => {
+    const { manager } = fixture();
+    manager.create('first');
+
+    expect(manager.rename('first', ' '.repeat(3))).toBe(false);
+    expect(manager.rename('missing', 'Anything')).toBe(false);
+    expect(manager.view().windows[0].title).toBe('New conversation');
+    manager.dispose();
+  });
+
+  it('caps a rename at the length an automatic title is capped at', () => {
+    const { manager } = fixture();
+    manager.create('first');
+    manager.rename('first', 'x'.repeat(80));
+
+    expect(manager.view().windows[0].title).toHaveLength(60);
+    manager.dispose();
+  });
+
+  it('lets the first query name a conversation nobody has named', () => {
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    const { manager } = fixture();
+    manager.create('first');
+    manager.send('first', 'Why is the parser slow?');
+
+    expect(manager.view().windows[0].title).toBe('Why is the parser slow?');
+    manager.dispose();
+  });
+
+  // An explicit rename is not something the next thing typed should quietly undo.
+  it('leaves a renamed conversation named when its first query arrives', () => {
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    const { manager } = fixture();
+    manager.create('first');
+    manager.rename('first', 'Parser notes');
+    manager.send('first', 'Why is the parser slow?');
+
+    expect(manager.view().windows[0].title).toBe('Parser notes');
+    manager.dispose();
+  });
+
+  // Cancel puts back what the cancel undid — not a name the responder never set.
+  it('keeps a name given while a reply was streaming when that reply is cancelled', () => {
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    const { manager } = fixture();
+    manager.create('first');
+    manager.send('first', 'Why is the parser slow?');
+    manager.rename('first', 'Parser notes');
+
+    expect(manager.cancel('first')).toBe(true);
+    expect(manager.view().windows[0].title).toBe('Parser notes');
+    manager.dispose();
+  });
+
   it('refuses a second send while a response is in flight', () => {
     mocks.connectAcp.mockReturnValue(fakeSession());
     const { manager } = fixture();

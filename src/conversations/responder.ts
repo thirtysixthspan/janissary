@@ -7,6 +7,7 @@ import {
   availableConversationModels,
   conversationPrompt,
   conversationTitle,
+  DEFAULT_CONVERSATION_TITLE,
   hasConversationModel,
 } from './view.js';
 
@@ -15,7 +16,11 @@ const STREAM_TICK_MS = 100;
 type InFlight = {
   conversation: Conversation;
   turn: ConversationTurnView;
-  previousTitle: string;
+  // The naming this send performed, if it performed one: the title it replaced, and the title it
+  // set. Cancel undoes the naming only while the title it set still stands — a rename made while the
+  // reply was streaming has already replaced it, and must not be rolled back to a name the user
+  // never chose.
+  naming?: { from: string; to: string };
   previousUpdatedAt: number;
   timer?: ReturnType<typeof setTimeout>;
 };
@@ -44,13 +49,17 @@ export class ConversationResponder {
       : availableConversationModels()[0] ?? conversation.pair;
     conversation.pair = pair;
     const turn: ConversationTurnView = { query, response: '', pair, streaming: true };
+    // The first query names a conversation nobody has named. One the user renamed keeps that name —
+    // an explicit rename is not something the next thing typed should quietly undo.
+    const names = conversation.turns.length === 0 && conversation.title === DEFAULT_CONVERSATION_TITLE;
+    const naming = names ? { from: conversation.title, to: conversationTitle(query) } : undefined;
     const pending: InFlight = {
       conversation,
       turn,
-      previousTitle: conversation.title,
+      ...(naming && { naming }),
       previousUpdatedAt: conversation.updatedAt,
     };
-    if (conversation.turns.length === 0) conversation.title = conversationTitle(query);
+    if (naming) conversation.title = naming.to;
     conversation.updatedAt = this.now();
     conversation.turns.push(turn);
     this.inFlight.set(id, pending);
@@ -76,7 +85,9 @@ export class ConversationResponder {
     pending.conversation.turns = pending.conversation.turns.filter(
       (turn) => turn !== pending.turn,
     );
-    pending.conversation.title = pending.previousTitle;
+    if (pending.naming && pending.conversation.title === pending.naming.to) {
+      pending.conversation.title = pending.naming.from;
+    }
     pending.conversation.updatedAt = pending.previousUpdatedAt;
     this.inFlight.delete(id);
     this.changed();

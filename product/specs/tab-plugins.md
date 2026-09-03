@@ -58,6 +58,8 @@ A plugin whose view takes a line of text renders the application's own command b
 
 Neither piece knows anything about any plugin, and neither imposes a policy the plugin cannot override: a plugin with keys of its own keeps its own handler and hands the key on where the standard behavior should take over, which is exactly how the agent tab layers its completion and its queue popup over the same two pieces. A plugin that borrows the bar is bound by the same rule as one that draws its own view — the application still owns how the bar looks, and a plugin never restates that styling.
 
+The application's rename field is offered on the same terms, for the same reason: a plugin that lets the user rename something renames it the way the tab strip and the file navigator already do — an edit field with the current text selected, Enter or a click away to commit, Escape to cancel.
+
 ### Docking a plugin tab
 
 A plugin tab can be docked into either sidebar and undocked back to the centre, exactly as the built-in dockable views can, and by the same means — the dock control shown on a docked tab, a profile that asks for it, and the plugin itself (see Placing its own tab). A docked plugin tab leaves the tab strip, so it has no position, group, or focus there; it appears instead in that sidebar's own tab switcher alongside whatever else is docked to the same side.

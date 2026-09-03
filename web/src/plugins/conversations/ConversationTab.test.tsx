@@ -161,6 +161,17 @@ describe('ConversationTab', () => {
     expect(intent).toHaveBeenCalledWith('send', { query: 'Hello' });
   });
 
+  // The interaction itself is covered by ConversationTitle.test.tsx; this pins the wiring.
+  it('emits a rename when the title is edited', () => {
+    const { intent, value } = capabilities();
+    const rendered = render(<ConversationTab payload={payload()} capabilities={value} />);
+    fireEvent.doubleClick(screen.getByText('First conversation'));
+    const input = rendered.container.querySelector('.conversation-title-input')!;
+    fireEvent.change(input, { target: { value: 'Parser notes' } });
+    fireEvent.blur(input);
+    expect(intent).toHaveBeenCalledWith('rename', { title: 'Parser notes' });
+  });
+
   it('cancels a stream with Escape while active', () => {
     const { intent, value } = capabilities();
     render(<ConversationTab payload={payload({ turns: [{

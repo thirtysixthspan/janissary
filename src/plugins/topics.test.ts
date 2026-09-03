@@ -42,7 +42,8 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
       create: vi.fn(), load: vi.fn(), loadOlder: vi.fn(), send: vi.fn(), cancel: vi.fn(),
-      openFiles: vi.fn(), launchAgent: vi.fn(), selectModel: vi.fn(), delete: vi.fn(),
+      openFiles: vi.fn(), launchAgent: vi.fn(), selectModel: vi.fn(), rename: vi.fn(),
+      delete: vi.fn(),
     },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
@@ -78,6 +79,7 @@ describe('the conversations topic source', () => {
         topic: 'conversations', action: 'selectModel', id: 'one',
         harness: 'claude', model: 'sonnet',
       },
+      { topic: 'conversations', action: 'rename', id: 'one', title: 'Parser notes' },
       { topic: 'conversations', action: 'delete', id: 'one' },
     ];
     for (const action of actions) runTopicAction(managers, action);
@@ -89,6 +91,7 @@ describe('the conversations topic source', () => {
     expect(managers.conversations.selectModel).toHaveBeenCalledWith(
       'one', { harness: 'claude', model: 'sonnet' },
     );
+    expect(managers.conversations.rename).toHaveBeenCalledWith('one', 'Parser notes');
     expect(managers.conversations.delete).toHaveBeenCalledWith('one');
   });
 
