@@ -60,11 +60,21 @@ export const HOME_WRITE_CARVEOUTS = [
 // login/interactive bash shell sources these on startup; without the carve-in, spawning
 // `bash -lc` inside the sandbox fails that read silently and the shell starts with none of the
 // user's aliases/functions/PATH additions).
+//
+// `.cache/opencode/models.json` is opencode's cached provider/model catalog: without it a
+// workspaced opencode harness cannot see the model list the non-sandboxed opencode on the same
+// machine has already fetched, since the `$HOME` content deny covers it and the only other
+// `.cache` entries carved in (`pip`, `yarn`, via the write carve-outs above) are unrelated
+// subdirectories. Read-only, and deliberately not added to HOME_WRITE_CARVEOUTS: a non-sandboxed
+// opencode reads this same file, so a writable cache would let a sandboxed agent feed it a forged
+// catalog — the same poisoning argument that keeps the whole `~/.cache` out of the write table.
+// A sandboxed opencode wanting a fresher catalog than the cache holds can fetch one over the
+// network, which the default profile allows.
 export const HOME_READ_CARVEINS = [
   ...HOME_WRITE_CARVEOUTS,
   '.claude/settings.json', '.claude/plugins', '.claude/skills', '.claude/agents', '.claude/commands', '.claude/keybindings.json',
   '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm', '.rvm',
-  '.bash_profile', '.bashrc',
+  '.bash_profile', '.bashrc', '.cache/opencode/models.json',
 ];
 
 // Directories where `opendir`/`readdir` must work even though most of their *contents* aren't

@@ -37,8 +37,13 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   `hosts.yml`, which stays denied), `~/Library/Keychains`, `~/.nvm` (nvm's loader scripts and every
   installed Node version under `versions/`), `~/.rvm` (same, for Ruby — execute needs no separate
   carve-in for either since `process-exec` is already allowed everywhere except
-  `/tmp`/`/private/tmp`), and `~/.bash_profile`/`~/.bashrc` (sourced by a login/interactive `bash`
-  shell on startup)). `$HOME`'s directory **metadata** (stat/lstat) stays allowed
+  `/tmp`/`/private/tmp`), `~/.bash_profile`/`~/.bashrc` (sourced by a login/interactive `bash`
+  shell on startup), and `~/.cache/opencode/models.json` (opencode's cached provider/model
+  catalog, so a workspaced opencode harness sees the same model list the non-sandboxed opencode on
+  that machine has already fetched — read-only, and deliberately not a write carve-out, since a
+  non-sandboxed opencode reads the same file and a writable cache would let a sandboxed process
+  hand it a forged catalog; only that one file is carved in, not the rest of `~/.cache/opencode`)).
+  `$HOME`'s directory **metadata** (stat/lstat) stays allowed
   everywhere, not just the carve-ins — resolving a path (`realpath`, a pre-exec `chdir`, git's
   ancestor-ownership walk) requires traversing every ancestor directory between `$HOME` and the
   workspace, and Seatbelt checks each ancestor individually rather than just the final target.
