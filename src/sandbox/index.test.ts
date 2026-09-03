@@ -149,6 +149,22 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  // opencode's cached model catalog is readable so a workspaced harness sees the same model list
+  // the non-sandboxed opencode has already fetched. Asserted alongside the directories it must NOT
+  // have widened into: carving in the cache tree itself would let a sandboxed agent read (and, if
+  // it were ever also a write carve-out) forge anything else opencode caches there.
+  it('binds a read-carvein param to opencode\'s model cache without carving in its directory', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
+    const home = realpathSync(homedir());
+    expect(dValues).toContain(path.join(home, '.cache/opencode/models.json'));
+    expect(dValues).not.toContain(path.join(home, '.cache/opencode'));
+    expect(dValues).not.toContain(path.join(home, '.cache'));
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   it('scrubs credential-shaped vars and agent-socket escape vectors, keeping provider keys', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
