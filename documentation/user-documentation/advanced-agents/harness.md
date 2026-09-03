@@ -49,7 +49,9 @@ Typing `harness` with no arguments opens a **New harness** dialog instead of err
 harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--model <name>] [--effort <level>]
 ```
 
-`--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens (today only opencode's and claude's catalogs are populated).
+`--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens. The bundled catalog covers claude, codex, and opencode; the opencode entries carry a provider prefix (`opencode/…`, `opencode-go/…`, `google/…`) because that harness reaches three providers, and the model you name has to match the one whose key you've configured.
+
+The catalog is kept up to date by hand and lists only models you can actually hold a conversation with — embedding, speech, and image models are left out even where the same key would reach them. If a model you want is missing, or you've been given access to one that isn't public yet, the override file below is the way in.
 
 A project can drop its own `.janissary/harness-models.json` (a JSON object mapping harness name to a list of model ids) into its `.janissary/` directory to replace the bundled catalog entirely for that project — useful for pinning a project-specific set of models or covering a harness the bundled catalog doesn't populate. Likewise, a project can drop `.janissary/agent-names.json` (a JSON array of names) to replace the bundled agent name pool. If either file is missing, the bundled default is used; if it exists but isn't valid JSON, a warning is printed and the bundled default is used instead.
 
