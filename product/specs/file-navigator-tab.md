@@ -98,10 +98,10 @@ tab keeps its independent lifetime.
 ### Remote trees
 
 A tree rooted in a remote workspace has the same rows, detail modes, branch and git-status metadata,
-search, watches, open/edit actions, creation, rename, delete, move, clipboard actions, and undo/redo
-as a local tree. Every filesystem operation runs on the remote host and is contained within the
-workspace provisioned for the channel. The header shows the same host chip as the owning tab,
-ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
+git pull, search, watches, open/edit actions, creation, rename, delete, move, clipboard actions,
+and undo/redo as a local tree. Every filesystem operation runs on the remote host and is contained
+within the workspace provisioned for the channel. The header shows the same host chip as the owning
+tab, ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
 destination.
 
 Opening or editing a remote file reads it into the local remote-file cache and then uses the normal
@@ -599,6 +599,18 @@ kind of tab the `open` command opens a URL into — not a native browser tab. Th
 when there is no `origin` remote, the remote isn't a `github.com` URL, or the current branch can't
 be determined — the same quiet degradation as the branch text. It refreshes together with the
 branch metadata above.
+
+When the tree is rooted inside a git repository — the same condition under which the branch text is
+shown — the header also carries a **Pull from origin** button, shown between the GitHub button and
+Search files. Clicking it runs `git pull` at the tree's own root (on the remote host inside the
+workspace, for a remote tree) and then refreshes the whole view: every visible directory is re-read
+from disk, and the branch text and git-status coloring are recomputed, without waiting on the
+directory watchers a git-driven replace may not deliver. A click while a pull is already running in
+that tab does nothing rather than starting an overlapping pull. A pull that fails leaves the tree
+exactly as it was and reports one line in the notifications feed carrying git's own error
+(`Could not pull: <git error>`). The button is absent wherever the header shows no branch text —
+outside a git repository, or while a waiting tree has no metadata yet — the same quiet degradation
+as the branch text.
 
 ### Finding a file by name
 

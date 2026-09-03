@@ -12,13 +12,14 @@ import type { RowStat } from './stats.js';
 import type { HistoryStep } from './moves.js';
 import { mapRemoteHistory } from './remote-port-history.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
+import { RemotePortWatchers } from './remote-port-watchers.js';
 
 type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 
 export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   private requestNumber = 0;
   private pending = new Map<string, Pending>();
-  private watchers = new Map<string, Set<() => void>>();
+  private watchers = new RemotePortWatchers();
   private closed = false;
   private opened: Promise<void>;
   private workspace: Promise<string>;
@@ -53,8 +54,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   onEvent(path: string): void {
-    const listeners = this.watchers.get(path) ?? [];
-    for (const listener of listeners) listener();
+    this.watchers.emit(path);
   }
 
   onClose(): void {
@@ -76,9 +76,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   async watch(root: string, relPath: string, onChange: () => void): Promise<WatchHandle> {
     const path = await this.paths.to(root, relPath);
     await this.request('watch', { path });
-    const listeners = this.watchers.get(path) ?? new Set();
-    listeners.add(onChange);
-    this.watchers.set(path, listeners);
+    this.watchers.listen(path, onChange);
     return { stop: () => { void this.unwatch(path, onChange); } };
   }
 
@@ -87,6 +85,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
       onResult({ ...metadata, statuses: await this.paths.filterEntries(root, metadata.statuses) });
     }, () => onResult({ statuses: [] }));
   }
+
+  // `git-pull` carries no path arguments: the far side pulls its own workspace root, so `_root`
+  // exists only to keep the port signature uniform with `gitMetadata`'s.
+  pull(_root: string): Promise<void> { return this.request('git-pull', {}); }
 
   async search(root: string): Promise<string[]> {
     const matches = await this.request<string[]>('search', {});
@@ -175,10 +177,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   private async unwatch(path: string, listener: () => void): Promise<void> {
-    const listeners = this.watchers.get(path);
-    listeners?.delete(listener);
-    if ((listeners?.size ?? 0) > 0) return;
-    this.watchers.delete(path);
+    if (!this.watchers.forget(path, listener)) return;
     try { await this.request('unwatch', { path }); } catch { /* teardown is best effort */ }
   }
 

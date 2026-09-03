@@ -96,6 +96,21 @@ describe('FileNavigatorTab', () => {
     expect(container.querySelector('.files-github')).toBeNull();
   });
 
+  it('renders a .files-pull button when branch is present and clicking it sends fileNavigatorPull', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles({ branch: 'main' })} client={client} index={0} />);
+    const pull = container.querySelector('.files-pull');
+    expect(pull).not.toBeNull();
+    fireEvent.click(pull!);
+    expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorPull', params: { index: 0 } });
+  });
+
+  it('renders no .files-pull element when branch is undefined', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-pull')).toBeNull();
+  });
+
   it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(

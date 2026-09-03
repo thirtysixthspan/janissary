@@ -22,7 +22,11 @@
 // version-7 remote recognizes none of them: it would refuse each one as an unknown frame while the
 // local tab sat waiting, accepting prompts and answering nothing — precisely the "looks healthy
 // while doing the wrong thing" failure this check exists to prevent.
-export const REMOTE_PROTOCOL_VERSION = 8;
+//
+// Version 9 adds the `git-pull` filesystem operation, backing the file navigator header's pull
+// button. A version-8 remote refuses it as an unknown operation, so the pull fails with a clear
+// error reply rather than both ends disagreeing silently about what the button does.
+export const REMOTE_PROTOCOL_VERSION = 9;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -31,8 +35,8 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 export type RemoteHandshake = { version: number; root: string };
 
 export type RemoteFilesystemOperation =
-  | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'search' | 'read-file' | 'write-file'
-  | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'search' | 'read-file'
+  | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay';
 
 export type RemoteFilesystemArguments = {

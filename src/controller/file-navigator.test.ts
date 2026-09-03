@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   fileNavigatorToggle,
   fileNavigatorCollapseAll,
+  fileNavigatorPull,
   fileNavigatorReroot,
   moveFileNavigatorItem,
   moveFileNavigatorItems,
@@ -60,6 +61,20 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', { collapseAll: (...args: unknown[]) => { calls.push(args); } });
     fileNavigatorCollapseAll(managers, 0);
     expect(calls).toEqual([['agent']]);
+  });
+
+  it('fileNavigatorPull delegates to FileNavigatorManager.pull when the tab exists', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { pull: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorPull(managers, 0);
+    expect(calls).toEqual([['agent']]);
+  });
+
+  it('fileNavigatorPull is a no-op when the tab index has no label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { pull: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorPull(managers, 0);
+    expect(calls).toHaveLength(0);
   });
 
   it('fileNavigatorReroot delegates to FileNavigatorManager.reroot when the tab exists', () => {

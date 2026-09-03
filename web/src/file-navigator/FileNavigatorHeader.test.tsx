@@ -47,13 +47,26 @@ describe('FileNavigatorHeader', () => {
 
   it('offers the docked header the same actions apart from the split control', () => {
     const { container } = render(
-      <FileNavigatorHeader root="/local/ws" dock="left" onSplit={vi.fn()} {...callbacks} />,
+      <FileNavigatorHeader root="/local/ws" dock="left" onSplit={vi.fn()} onPull={vi.fn()} {...callbacks} />,
     );
     const actions = container.querySelector('.files-actions');
 
     expect(actions?.querySelector('.tab-split')).toBeNull();
-    for (const action of ['.files-search', '.files-new-file', '.files-new-directory', '.files-dock-cycle', '.files-detail-cycle', '.files-collapse-all']) {
+    for (const action of ['.files-pull', '.files-search', '.files-new-file', '.files-new-directory', '.files-dock-cycle', '.files-detail-cycle', '.files-collapse-all']) {
       expect(actions?.querySelector(action), action).not.toBeNull();
     }
+  });
+
+  it('renders the pull button when onPull is provided and places it after the GitHub button', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" onPull={vi.fn()} githubUrl="https://github.com/owner/repo/commits/main/" {...callbacks} />);
+    const actions = [...(container.querySelector('.files-actions')!.children)];
+    const pull = actions.find((child) => child.className === 'files-pull');
+    expect(pull).toBeDefined();
+    expect(actions.indexOf(pull!)).toBeGreaterThan(actions.findIndex((child) => child.className === 'files-github'));
+  });
+
+  it('renders no pull button without onPull', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
+    expect(container.querySelector('.files-pull')).toBeNull();
   });
 });

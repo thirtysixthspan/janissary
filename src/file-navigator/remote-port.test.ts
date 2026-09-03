@@ -60,6 +60,16 @@ describe('RemoteFileSystemPort', () => {
       .toMatchObject({ operation: 'unwatch', args: { path: 'src' } }));
   });
 
+  it('pulls through the git-pull operation with no path arguments', async () => {
+    const h = harness();
+    const pending = h.port.pull('/remote/ws');
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'git-pull', args: {} });
+    h.reply(undefined);
+    await expect(pending).resolves.toBeUndefined();
+  });
+
   it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
     const h = harness();
     const write = h.port.writeFile('/remote/ws', '../outside', Buffer.from(''));

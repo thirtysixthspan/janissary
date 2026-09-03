@@ -25,6 +25,11 @@ export function fileNavigatorCollapseAll(managers: Managers, index: number): voi
   if (label) managers.fileNavigator.collapseAll(label);
 }
 
+export function fileNavigatorPull(managers: Managers, index: number): void {
+  const label = managers.tab.tabs[index]?.label;
+  if (label) managers.fileNavigator.pull(label);
+}
+
 export function fileNavigatorSetDetail(managers: Managers, index: number, details: FileNavigatorDetail): void {
   const label = managers.tab.tabs[index]?.label;
   if (label) managers.fileNavigator.setDetail(label, details);

@@ -47,6 +47,7 @@ const makeController = () =>
     pluginFailed: vi.fn(),
     fileNavigatorToggle: vi.fn(),
     fileNavigatorCollapseAll: vi.fn(),
+    fileNavigatorPull: vi.fn(),
     fileNavigatorReroot: vi.fn(),
     moveFileNavigatorItem: vi.fn(),
     deleteFileNavigatorItem: vi.fn(),
@@ -307,6 +308,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 16, { method: 'fileNavigatorCollapseAll', params: { index: 0 } });
     expect(controller.fileNavigatorCollapseAll).toHaveBeenCalledWith(0);
+  });
+
+  it('routes fileNavigatorPull', () => {
+    const controller = makeController();
+    dispatchCall(controller, 16, { method: 'fileNavigatorPull', params: { index: 0 } });
+    expect(controller.fileNavigatorPull).toHaveBeenCalledWith(0);
   });
 
   it('routes fileNavigatorReroot', () => {

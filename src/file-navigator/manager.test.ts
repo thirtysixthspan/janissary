@@ -15,11 +15,16 @@ vi.mock('node:fs', async (importOriginal) => {
 const changedPathsMock = vi.fn((_root: string): Promise<Map<string, string>> => Promise.resolve(new Map<string, string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
+const pullRootMock = vi.fn((_root: string): Promise<void> => Promise.resolve());
 
 vi.mock('../git-status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
   currentBranch: (...args: [string]) => currentBranchMock(...args),
   remoteUrl: (...args: [string]) => remoteUrlMock(...args),
+}));
+
+vi.mock('../git-pull.js', () => ({
+  pullRoot: (...args: [string]) => pullRootMock(...args),
 }));
 
 const { FileNavigatorManager } = await import('./manager.js');
@@ -48,6 +53,8 @@ describe('FileNavigatorManager', () => {
     currentBranchMock.mockResolvedValue(undefined);
     remoteUrlMock.mockReset();
     remoteUrlMock.mockResolvedValue(undefined);
+    pullRootMock.mockReset();
+    pullRootMock.mockResolvedValue(undefined);
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -1009,6 +1016,71 @@ describe('FileNavigatorManager', () => {
 
     await vi.waitFor(() => {
       expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBe('https://github.com/owner/repo/commits/feature/');
+    });
+  });
+
+  describe('git pull', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    const navTab = () => tabs.find((t) => t.label.startsWith('navigator'))!;
+
+    it('re-reads cached rows from disk and refreshes git metadata', async () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      writeFileSync(path.join(root, 'pulled.txt'), 'new');
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+
+      manager.pull(navLabel());
+
+      await vi.waitFor(() => {
+        expect(navTab().files!.rows.some((row) => row.path === 'pulled.txt')).toBe(true);
+      });
+      await vi.waitFor(() => {
+        expect(navTab().files!.githubUrl).toBe('https://github.com/owner/repo/commits/main/');
+      });
+      expect(pullRootMock).toHaveBeenCalledWith(root);
+    });
+
+    it('reports a failed pull as one notifications-feed line and rebuilds nothing', async () => {
+      tabs = [...tabs, {
+        label: 'notifications', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
+        log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0, view: 'notifications',
+      } as Tab];
+      pullRootMock.mockRejectedValue(new Error('git pull failed'));
+      const manager = run();
+      manager.open('files', 'janus');
+      writeFileSync(path.join(root, 'failed-pull.txt'), 'new');
+
+      manager.pull(navLabel());
+      await vi.waitFor(() => expect(outputs).toContain('Could not pull: git pull failed'));
+
+      expect(outputs).toHaveLength(1);
+      expect(pullRootMock).toHaveBeenCalledWith(root);
+      expect(navTab().files!.rows.some((row) => row.path === 'failed-pull.txt')).toBe(false);
+    });
+
+    it('ignores a second pull while one is still in flight', async () => {
+      const { promise, resolve } = Promise.withResolvers<void>();
+      pullRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.pull(label);
+      manager.pull(label);
+      expect(pullRootMock).toHaveBeenCalledTimes(1);
+
+      resolve();
+      const introspect = manager as unknown as { tabs: Map<string, { pullInFlight?: boolean }> };
+      await vi.waitFor(() => expect(introspect.tabs.get(label)!.pullInFlight).toBe(false));
+      manager.pull(label);
+      expect(pullRootMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op for an unknown tab label', () => {
+      const manager = run();
+      manager.pull('missing');
+      expect(pullRootMock).not.toHaveBeenCalled();
     });
   });
 
