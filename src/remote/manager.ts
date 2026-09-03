@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import { getProjectTokens } from '../project-tokens.js';
+import { getGitIdentity } from '../git-identity.js';
 import type { Managers } from '../managers.js';
 import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
@@ -80,7 +81,9 @@ export class RemoteManager {
       },
       {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
-        onAttached: () => deferred.channel?.send({ type: 'provision', label, tokens: getProjectTokens() }),
+        onAttached: () => deferred.channel?.send({
+          type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(),
+        }),
         onFrame: (frame) => {
           switch (frame.type) {
           case 'workspace-ready': {

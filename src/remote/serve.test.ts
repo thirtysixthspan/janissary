@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { loadProjectTokens } from '../project-tokens.js';
+import { loadGitIdentity, getGitIdentity } from '../git-identity.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
@@ -250,6 +251,31 @@ describe('RemoteServer', () => {
       rmSync(tokenPath, { force: true });
       loadProjectTokens(repoDir);
     }
+  });
+
+  // The identity is a process-wide fact rather than a per-spawn option, so what a provision did with
+  // it is read back from the module every sandboxed spawn on this machine will consult.
+  it('installs the forwarded git identity over the remote machine\'s own', async () => {
+    loadGitIdentity(repoDir);
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({
+      type: 'provision', label: 'identity-forwarded',
+      identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
+    })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    expect(getGitIdentity()).toEqual({ name: 'Ada Lovelace', email: 'ada@example.com' });
+    server.shutdown(0);
+  });
+
+  it('keeps the remote machine\'s own git identity when none is forwarded', async () => {
+    loadGitIdentity(repoDir);
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'identity-own' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    expect(getGitIdentity()).toEqual({ name: 'test', email: 'test@test.com' });
+    server.shutdown(0);
   });
 
   it('removes the clone when the session ends, after disposing the ACP agent that lives in it', async () => {

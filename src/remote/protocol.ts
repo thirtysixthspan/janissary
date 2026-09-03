@@ -26,7 +26,12 @@
 // Version 9 adds the `git-pull` filesystem operation, backing the file navigator header's pull
 // button. A version-8 remote refuses it as an unknown operation, so the pull fails with a clear
 // error reply rather than both ends disagreeing silently about what the button does.
-export const REMOTE_PROTOCOL_VERSION = 9;
+//
+// Version 10 adds `identity` to `provision`: the git name and email of the user who opened
+// janissary, which the remote is expected to install over its own machine's. This is the archetype
+// of the failure the check exists for — a version-9 remote ignores the field, provisions normally,
+// and silently attributes every commit the workspace makes to the ssh destination's account.
+export const REMOTE_PROTOCOL_VERSION = 10;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -58,13 +63,17 @@ export type RemoteFilesystemArguments = {
 };
 
 import type { ProjectTokens } from '../project-tokens.js';
+import type { GitIdentity } from '../git-identity.js';
 import { decodeKnownFrame } from './frame-decode.js';
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
-  | { type: 'provision'; label: string; tokens?: ProjectTokens }
+  // `identity` is the git name and email of the user who opened janissary locally, so commits made
+  // in the remote workspace are attributed to them rather than to whatever account the ssh
+  // destination resolved to.
+  | { type: 'provision'; label: string; tokens?: ProjectTokens; identity?: GitIdentity }
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY

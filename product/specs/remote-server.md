@@ -122,11 +122,18 @@ accepts prompts and answers nothing, which is exactly the failure this check exi
 ends must therefore be updated together, and a stale remote is refused at the handshake before any
 tab is provisioned.
 
+Forwarding the launching user's git identity moves it again, and is the quietest failure of the set:
+an installation that does not know the field provisions a workspace that looks entirely healthy and
+attributes every commit made in it to whatever account the ssh destination resolved to — the exact
+bug the field exists to fix, still present and now harder to notice. It is therefore refused at the
+handshake like every other field one end fills in and the other must honor.
+
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
 optional flags must use their declared values; exit codes must be integers; transcript blocks must
 all be strings; and the provisioning token map accepts only known token names with nonempty string
-values. Filesystem frames additionally require nonempty session and request ids, an operation from
+values, as does the git identity record beside it — an unknown key or an empty value in either is a
+mismatched sender rather than a field to quietly drop. Filesystem frames additionally require nonempty session and request ids, an operation from
 the declared closed set, and the exact argument shape for that operation; paths and history entries
 are validated before the workspace holder sees them. An ACP frame's agent command must be a nonempty
 string, its argument list an array of strings (possibly empty), and its environment overrides a plain
@@ -203,6 +210,17 @@ with the remote project's own matching file as the same fallback. It matters mos
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
 which without a forwarded token leaves it reporting itself logged out.
+
+The git name and email of the user who opened janissary ride on the same provisioning frame, and are
+injected as `GIT_AUTHOR_NAME`/`GIT_AUTHOR_EMAIL` and `GIT_COMMITTER_NAME`/`GIT_COMMITTER_EMAIL` into
+the same workspaced processes, on the same isolation-independent terms. They are what a commit made
+inside a remote workspace is attributed to. Without them the workspace inherits the remote account's
+own git config, so an agent's commits are signed by the ssh destination rather than by the person who
+asked for them — or fail outright with git's "Please tell me who you are" where that account has no
+identity configured at all. A forwarded identity replaces the remote machine's own whole rather than
+per field: a name from one machine paired with an email from the other belongs to nobody. Where
+nothing is forwarded, the remote project's own git config stays the fallback, exactly as it was.
+See [[sandbox]].
 
 Unlike the GitHub token, neither harness credential carries a notice. A workspace with no GitHub
 credential is invisible until a much later `git push` fails, which is the whole reason that notice

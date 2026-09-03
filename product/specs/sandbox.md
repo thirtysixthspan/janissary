@@ -160,7 +160,22 @@ from either, but the request itself loads the key from `GOOGLE_GENERATIVE_AI_API
 workspace given only the first saw the provider accepted and then the first prompt fail. The token
 exists at all because the Google provider's key lives in opencode's own credential store, which is a
 denied secret path, so without it that provider has no route into a workspace other than the ambient
-environment. `TMPDIR` is overridden to the workspace's private temp dir
+environment. Four more variables are added for every workspaced spawn, carrying the git name and email of the user
+who opened janissary: `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, and
+`GIT_COMMITTER_EMAIL`. Git reads these in preference to `user.name`/`user.email`, so they are what a
+commit made inside a workspace is attributed to. The identity is read once at startup, by asking git
+what it resolves for the project directory — the same answer a commit made there outside a workspace
+would get. Both the author and the committer pair are set: git distinguishes the two, a commit an
+agent makes has no distinction to draw, and setting only the author would leave the committer
+resolving from whatever config the machine happens to have. A half the identity does not have plants
+no variable at all, since git reads an empty `GIT_AUTHOR_NAME` as a name rather than as an absence.
+Like the credentials, this is added on the confined and pass-through paths alike, and for a stronger
+reason: locally the sandbox already carves in `~/.gitconfig`, so the identity was never in doubt, but
+a remote workspace runs as whatever account the ssh destination resolved to and would otherwise
+attribute an agent's commits to that account — or fail outright where it has no identity configured.
+The four are not on the scrub list: they carry a name and an email address, not a credential, and
+scrubbing them is precisely what this exists to avoid. See [[remote-server]] for how the identity
+reaches a remote machine. `TMPDIR` is overridden to the workspace's private temp dir
 (`<workspace>.tmp`) regardless of what the caller passed in. `JANISSARY_NODE` is added, set to
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a
