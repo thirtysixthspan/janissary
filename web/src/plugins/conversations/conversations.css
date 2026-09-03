@@ -37,7 +37,12 @@
 .conversation-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conversation-row time, .conversation-pair { color: var(--muted); font-size: 12px; }
 .conversation-row button { border: 0; background: transparent; color: var(--muted); }
-.conversation-header select { max-width: min(50vw, 420px); }
+
+/* The model selector rides in the right-aligned action group with the workspace and split controls.
+   That group's 2px gap is meant for adjacent icon buttons and would jam the selector against the
+   folder icon, so this row widens it and caps how much of the row the selector may claim. */
+.conversation-header .plugin-actions { gap: 8px; }
+.conversation-header .plugin-actions select { max-width: min(50vw, 420px); }
 
 /* The rename field takes the title's own type and weight and no chrome of its own, so opening it
    replaces the name in place instead of moving the row. Same treatment `.tab-rename-input` gets. */
