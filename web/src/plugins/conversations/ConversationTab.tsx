@@ -63,28 +63,28 @@ export function ConversationTab({
           deleted={conversation.deleted === true}
           onRename={(title) => { void capabilities.intent('rename', { title }); }}
         />
-        <select
-          aria-label="Model"
-          value={pairValue(conversation.pair.harness, conversation.pair.model)}
-          disabled={streaming || conversation.deleted}
-          onChange={(event) => {
-            const separator = event.target.value.indexOf(':');
-            const harness = event.target.value.slice(0, separator) as 'claude' | 'opencode';
-            const model = event.target.value.slice(separator + 1);
-            void capabilities.intent('select-model', { harness, model });
-          }}
-        >
-          {groups.map((group) => (
-            <optgroup key={group.harness} label={group.harness}>
-              {group.models.map((pair) => (
-                <option key={pairValue(pair.harness, pair.model)} value={pairValue(pair.harness, pair.model)}>
-                  {pair.model}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
         <span className="plugin-actions">
+          <select
+            aria-label="Model"
+            value={pairValue(conversation.pair.harness, conversation.pair.model)}
+            disabled={streaming || conversation.deleted}
+            onChange={(event) => {
+              const separator = event.target.value.indexOf(':');
+              const harness = event.target.value.slice(0, separator) as 'claude' | 'opencode';
+              const model = event.target.value.slice(separator + 1);
+              void capabilities.intent('select-model', { harness, model });
+            }}
+          >
+            {groups.map((group) => (
+              <optgroup key={group.harness} label={group.harness}>
+                {group.models.map((pair) => (
+                  <option key={pairValue(pair.harness, pair.model)} value={pairValue(pair.harness, pair.model)}>
+                    {pair.model}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
           <button
             type="button"
             title="Open file navigator in this workspace"

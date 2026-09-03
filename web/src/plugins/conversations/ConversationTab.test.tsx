@@ -135,6 +135,18 @@ describe('ConversationTab', () => {
     });
   });
 
+  it('places the model selector with the right-aligned metadata actions', () => {
+    const { value } = capabilities();
+    const { container } = render(<ConversationTab payload={payload()} capabilities={value} />);
+    const actions = container.querySelector(':scope .conversation-header .plugin-actions')!;
+    const model = screen.getByLabelText('Model');
+
+    expect(actions).toContainElement(model);
+    expect(actions.firstElementChild).toBe(model);
+    expect(model.compareDocumentPosition(screen.getByTitle('Open file navigator in this workspace')))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('opens workspace tools and disables them after deletion', () => {
     const { intent, value } = capabilities();
     const rendered = render(<ConversationTab payload={payload()} capabilities={value} />);

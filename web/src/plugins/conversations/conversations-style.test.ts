@@ -53,6 +53,12 @@ describe('conversation tab frame', () => {
     expect(rule('.conversation-deleted')).toContain('padding: 0 12px 8px');
   });
 
+  it('spaces the model selector from the icon buttons it sits beside', () => {
+    expect(rule('.conversation-header .plugin-actions')).toContain('gap: 8px');
+    expect(rule('.conversation-header .plugin-actions select'))
+      .toContain('max-width: min(50vw, 420px)');
+  });
+
   // The bar is the host's own component rendering host-styled classes, so a rule here would be a
   // second definition of something theme.css already owns.
   it('leaves the command bar styling to the application theme', () => {
