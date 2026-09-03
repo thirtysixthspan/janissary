@@ -11,7 +11,9 @@ import {
 import {
   availableConversationModels,
   conversationWindow,
+  CONVERSATION_TITLE_MAX_LENGTH,
   CONVERSATION_WINDOW_SIZE,
+  DEFAULT_CONVERSATION_TITLE,
   hasConversationModel,
 } from './view.js';
 
@@ -66,7 +68,7 @@ export class ConversationsManager {
     this.conversations.set(id, {
       schemaVersion: CONVERSATION_SCHEMA_VERSION,
       id,
-      title: 'New conversation',
+      title: DEFAULT_CONVERSATION_TITLE,
       createdAt: timestamp,
       updatedAt: timestamp,
       pair,
@@ -108,6 +110,20 @@ export class ConversationsManager {
     if (!conversation || !hasConversationModel(pair)) return false;
     this.cancel(id);
     conversation.pair = pair;
+    if (conversation.turns.length > 0) this.store.write(conversation);
+    this.changed();
+    return true;
+  }
+
+  // Persists on exactly `selectModel`'s terms: a conversation already on disk is rewritten, and one
+  // that is not stays that way — a rename is not among the things documented to create the
+  // conversation's directory. Either way the new title reaches the tab, its metadata row, and the
+  // conversation list, since all three read this record.
+  rename(id: string, title: string): boolean {
+    const conversation = this.get(id);
+    const trimmed = title.trim().slice(0, CONVERSATION_TITLE_MAX_LENGTH);
+    if (!conversation || !trimmed) return false;
+    conversation.title = trimmed;
     if (conversation.turns.length > 0) this.store.write(conversation);
     this.changed();
     return true;

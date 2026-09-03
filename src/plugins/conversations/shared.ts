@@ -103,3 +103,7 @@ export function isSendIntent(value: unknown): value is { query: string } {
 export function isSelectModelIntent(value: unknown): value is ConversationModelPair {
   return isPair(value);
 }
+
+export function isRenameIntent(value: unknown): value is { title: string } {
+  return isRecord(value) && typeof value.title === 'string';
+}

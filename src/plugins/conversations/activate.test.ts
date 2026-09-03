@@ -136,6 +136,23 @@ describe('conversations plugin intents', () => {
     ]);
   });
 
+  it('maps a rename to its conversation topic action', () => {
+    const value = fixture();
+    expect(run('rename', { title: 'Parser notes' }, conversation, value)).toBeNull();
+    expect(value.actions).toEqual([
+      { topic: 'conversations', action: 'rename', id: 'first', title: 'Parser notes' },
+    ]);
+  });
+
+  it('rejects a rename without a title, and one raised from the list tab', () => {
+    const value = fixture();
+    expect(() => run('rename', {}, conversation, value))
+      .toThrow(new TabPluginRejection('invalid rename payload'));
+    expect(() => run('rename', { title: 'Parser notes' }, list, value))
+      .toThrow(new TabPluginRejection('invalid rename payload'));
+    expect(value.actions).toEqual([]);
+  });
+
   it('reports an invalid authoritative tab payload as a failure', () => {
     const value = fixture();
     expect(() => run('send', { query: 'hello' }, { broken: true }, value))

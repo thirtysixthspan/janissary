@@ -9,8 +9,17 @@ import type { Conversation } from './store.js';
 
 export const CONVERSATION_WINDOW_SIZE = 20;
 
+// The name a conversation carries until something names it. Also what `rename` compares against to
+// tell a conversation nobody has named from one somebody has: the first query titles the former and
+// leaves the latter alone, which needs no stored flag to decide.
+export const DEFAULT_CONVERSATION_TITLE = 'New conversation';
+
+// The longest title a conversation can carry, whichever way it got one — the first line of its first
+// query, or a rename.
+export const CONVERSATION_TITLE_MAX_LENGTH = 60;
+
 export function conversationTitle(query: string): string {
-  return (query.split('\n', 1)[0] ?? '').slice(0, 60) || 'New conversation';
+  return (query.split('\n', 1)[0] ?? '').slice(0, CONVERSATION_TITLE_MAX_LENGTH) || DEFAULT_CONVERSATION_TITLE;
 }
 
 export function availableConversationModels(): ConversationModelPair[] {

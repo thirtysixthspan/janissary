@@ -114,6 +114,9 @@ export type TabPluginTopicAction =
     harness: 'claude' | 'opencode';
     model: string;
   }
+  // The title the user typed over the conversation's own. Trimmed, capped, and refused when empty by
+  // the manager, so a plugin cannot leave a conversation nameless.
+  | { topic: 'conversations'; action: 'rename'; id: string; title: string }
   | { topic: 'conversations'; action: 'delete'; id: string };
 
 export type TabPluginDeclaration = {

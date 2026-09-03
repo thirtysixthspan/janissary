@@ -58,6 +58,7 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
       });
       return;
     }
+    case 'rename': { managers.conversations.rename(action.id, action.title); return; }
     case 'delete': { managers.conversations.delete(action.id); }
   }
 }

@@ -9,6 +9,7 @@ import {
   isConversationsData,
   isEmptyIntent,
   isIdIntent,
+  isRenameIntent,
   isSelectModelIntent,
   isSendIntent,
   type ConversationListPayload,
@@ -97,16 +98,15 @@ export function activate(): TabPluginActivation {
   };
 }
 
-function runIntent(
+// The three intents the list tab raises. Kept apart from the conversation tab's own so neither
+// dispatcher carries the other's guard about which kind of tab it is looking at.
+function runListIntent(
   intent: string,
   value: unknown,
-  tab: ConversationsPayload,
   capabilities: TabPluginServerCapabilities,
 ): null | never {
   if (intent === 'create') {
-    if (tab.kind !== 'list' || !isEmptyIntent(value)) {
-      return capabilities.rejectRequest('invalid create payload');
-    }
+    if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid create payload');
     const id = randomUUID();
     capabilities.topicAction({ topic: 'conversations', action: 'create', id });
     const payload = conversationPayload(dataFrom(capabilities), id);
@@ -114,18 +114,36 @@ function runIntent(
     capabilities.openOrFocusTab(id, () => ({ title: 'New conversation', payload }));
     return null;
   }
-  if (intent === 'open' || intent === 'delete') {
-    if (tab.kind !== 'list' || !isIdIntent(value)) {
-      return capabilities.rejectRequest(`invalid ${intent} payload`);
-    }
-    if (intent === 'open') openConversation(value.id, capabilities);
-    else capabilities.topicAction({ topic: 'conversations', action: 'delete', id: value.id });
-    return null;
+  if (!isIdIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
+  if (intent === 'open') openConversation(value.id, capabilities);
+  else capabilities.topicAction({ topic: 'conversations', action: 'delete', id: value.id });
+  return null;
+}
+
+const LIST_INTENTS = new Set(['create', 'open', 'delete']);
+
+function runIntent(
+  intent: string,
+  value: unknown,
+  tab: ConversationsPayload,
+  capabilities: TabPluginServerCapabilities,
+): null | never {
+  if (LIST_INTENTS.has(intent)) {
+    if (tab.kind !== 'list') return capabilities.rejectRequest(`invalid ${intent} payload`);
+    return runListIntent(intent, value, capabilities);
   }
   if (tab.kind !== 'conversation') {
     return capabilities.rejectRequest(`invalid ${intent} payload`);
   }
-  const id = tab.conversation.id;
+  return runConversationIntent(intent, value, tab.conversation.id, capabilities);
+}
+
+function runConversationIntent(
+  intent: string,
+  value: unknown,
+  id: string,
+  capabilities: TabPluginServerCapabilities,
+): null | never {
   switch (intent) {
     case 'load-older': {
       if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid load-older payload');
@@ -147,6 +165,11 @@ function runIntent(
       if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
       const action = intent === 'open-files' ? 'openFiles' : 'launchAgent';
       capabilities.topicAction({ topic: 'conversations', action, id });
+      return null;
+    }
+    case 'rename': {
+      if (!isRenameIntent(value)) return capabilities.rejectRequest('invalid rename payload');
+      capabilities.topicAction({ topic: 'conversations', action: 'rename', id, title: value.title });
       return null;
     }
     case 'select-model': {

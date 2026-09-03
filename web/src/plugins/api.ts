@@ -12,6 +12,11 @@ export { renderMarkdown } from './markdown-render';
 export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
 export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
 
+// The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
+// the same terms and for the same reason: a plugin that renames something should rename it the way
+// the tab strip and the file navigator already do.
+export { InlineEditInput } from '../InlineEditInput';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

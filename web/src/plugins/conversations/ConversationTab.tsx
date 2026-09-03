@@ -4,6 +4,7 @@ import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
 import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 import { ConversationComposer } from './ConversationComposer';
+import { ConversationTitle } from './ConversationTitle';
 
 function pairValue(harness: string, model: string): string {
   return `${harness}:${model}`;
@@ -57,7 +58,11 @@ export function ConversationTab({
   return (
     <div className="conversation-tab plugin-tab">
       <div className="plugin-meta conversation-header">
-        <span className="plugin-name">{conversation.title}</span>
+        <ConversationTitle
+          title={conversation.title}
+          deleted={conversation.deleted === true}
+          onRename={(title) => { void capabilities.intent('rename', { title }); }}
+        />
         <select
           aria-label="Model"
           value={pairValue(conversation.pair.harness, conversation.pair.model)}
