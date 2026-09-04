@@ -1,6 +1,6 @@
 # Work an Issue
 
-Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Ordinarily, shipping means merging the change to master. A named work item prefixed with `PR <number>:` instead updates that open pull request's branch and leaves the pull request open. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, and the plan file's location — nothing else.
+Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Ordinarily, shipping means merging the change to master. Passing a **pull request number** instead enters PR mode, where the work item is drawn from that pull request branch's own `./product/backlog/pull-request.md`, the completed entry is removed from it, and the pull request is updated and left open. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, the pull-request backlog, and the plan file's location — nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -10,7 +10,13 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below.
 
-**PR update mode.** A named work item beginning with the exact prefix `PR <positive integer>:` enters PR update mode. For example, `PR 232: keep the command palette open after a failed search` means pull request 232 is the delivery target and the text after the colon is the work item. The prefix is routing metadata, not part of the issue text. In this mode, check out the open PR's head branch before reviewing or changing the code, commit and push the completed fix to that same branch, and leave the PR open. These rules override every general instruction below to merge to master.
+**PR update mode.** An invocation argument that is a **pull request reference** — a bare positive integer, a `#`-prefixed integer, or a GitHub pull request URL — enters PR update mode, with that pull request as the delivery target. For example, `execute ai/tasks/work-an-issue.md 232` works pull request 232. Anything else is ordinary work-item text. A head branch name is not accepted as a reference, even though `gh pr view` would resolve one: a branch name and an issue text are both free-form strings, and nothing could tell them apart without guessing.
+
+In this mode the work item is **drawn from `./product/backlog/pull-request.md` on the pull request's own head branch** — the file [`pull-request-review.md`](pull-request-review.md) writes — and never from `./product/backlog/issues.md`, which lives on master and describes master's problems. Check out the head branch first, take the work item from that backlog, commit and push the completed fix to the same branch, and leave the pull request open. When the fix is done, remove the resolved entry from that backlog; when no entry remains in any of its sections, remove the file from the branch as well. A pull-request work item is never written to the issues file and never carries a `PR #` prefix — it lives strictly in the branch's own backlog.
+
+An optional selector may follow the reference — `execute ai/tasks/work-an-issue.md 232 "the untracked file check"` — to choose a specific entry. With no selector, the first resolvable entry is taken.
+
+These rules override every general instruction below to merge to master.
 
 **Stay within the project directory.** The current working directory is the project directory for this session. Do not read or write any file outside it — no absolute paths escaping the project root, no `..` traversal above it, no touching files elsewhere on the machine (home directory config, other repos, system paths).
 
@@ -18,7 +24,7 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. Run `./scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. In PR update mode, read `./product/backlog/pull-request.md` on the pull request's head branch, remove the resolved entry from it, and remove the file itself once it holds no entries at all. Run `./scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
 
 ### Forbidden — no exceptions
 
@@ -26,33 +32,47 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
 3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
-5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a work item named at invocation to the file.
+5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries. In ordinary mode, never add a work item named at invocation to the file.
 6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
 7. **Merging or replacing a PR in PR update mode.** Never execute `ai/tasks/workspace/merge-change-to-master.md`, call `gh pr merge`, create a replacement pull request, or push the fix to a different branch. The existing PR must remain open after its head branch is updated.
 8. **Updating a PR that is not open.** If the numbered PR does not exist or its state is not `OPEN`, report that and stop. Do not substitute another PR or branch.
+9. **Reading or editing `./product/backlog/issues.md` in PR update mode.** That file belongs to master. In PR mode the branch's own `./product/backlog/pull-request.md` is the only source of work and the only backlog you touch — never fall back to the issues file when it is missing or empty, and never record a pull-request work item there.
+10. **Deleting `./product/backlog/pull-request.md` while any entry remains in it.** The file goes only when all four of its sections — `## ready`, `## development`, `## deferred`, and `## declined` — are empty. An entry a human moved to `## deferred` or `## declined` is a decision on the record, and deleting the file would erase it.
 
 ---
 
 ## Step 0 — Prepare the workspace
 
-Inspect the named work item before running the ordinary preparation workflow.
+Inspect the invocation argument before running the ordinary preparation workflow: a pull request reference selects PR update mode, anything else the ordinary path.
 
 - **In PR update mode:**
   1. Run `gh pr view <number> --json state,headRefName,url`. Confirm its state is `OPEN`, then record its head branch and URL for the rest of the task. If the lookup fails or the state is not `OPEN`, stop as required above.
   2. Run `gh pr checkout <number>` to check out the PR's head branch. Do not create a new branch.
   3. Run `git pull --rebase` to bring the checked-out branch up to date through the upstream configured by `gh pr checkout`. If the checkout or pull cannot complete, report the error and stop rather than working on another branch.
   4. Confirm `git branch --show-current` is the head branch recorded in step 1.
-  5. Execute only Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` so dependencies match the PR branch. Do not execute its Step 1, which would switch back to master.
+  5. Execute only Steps 2 and 3 of `ai/tasks/workspace/prepare-workspace.md` so dependencies match the PR branch. Do not execute its Step 1, which would switch back to master. Unlike `pull-request-review.md`, this task builds, tests, and lints, so it does need `node_modules`.
 - **Otherwise:** execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything else.
 
 ---
 
 ## Step 1 — List small fixes and pick one
 
+**In PR update mode, this whole step reads the branch's pull-request backlog instead of the issues file.** Do that and skip the rest:
+
+1. Read `./product/backlog/pull-request.md` from the checked-out head branch. If the file does not exist, or exists with no entry in any section, report that the pull request has no recorded work and stop — do not fall back to `./product/backlog/issues.md`, and do not invent a work item from the invocation.
+2. Walk its entries in order, `## ready` first and then `## development`. Never take an entry from `## deferred` or `## declined`: those record a human's decision not to do the work.
+3. If a selector followed the pull request reference, use it to choose the entry — it may be quoted text, a paraphrase, or a position such as "the second one". If it matches no entry, report that and stop; unlike an ordinary named work item, a selector is a lookup into this backlog, never a new work item in its own right.
+4. Rate each candidate's complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this), and take the **first** one rated below 7. If every entry rates 7 or higher, report the list with ratings and stop — do not implement one.
+5. The entry's `*` summary bullet is the issue text for planning and reporting. Its `Proposal` paragraph is the starting point for Step 2's plan, not a substitute for it — verify what it claims against the code before building on it, since it was written by a reviewer who did not run the tests.
+
+State your pick and its rating, then go to Step 2.
+
+**Otherwise** — the ordinary path:
+
 1. Read `./product/backlog/issues.md` and list every issue.
 2. If no issues exist **and** the task invocation named no work item, report "No issues in `./product/backlog/issues.md`" and stop. When a work item was named, an empty issues file is not a reason to stop — go on to the named-item branch below.
 3. Pick the issue to fix:
-   - **If a specific work item is named in the task invocation** (e.g. `execute ai/tasks/work-an-issue.md "<issue text>"`), fix that one. In PR update mode, use only the text after `PR <number>:` as the issue text throughout selection, planning, backlog matching, and reporting. First look for the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the work item**: take it at face value and fix it exactly as if it had been listed, without stopping and without adding it to the issues file. A named work item is never rejected for being absent from the backlog. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
+   - **If a specific work item is named in the task invocation** (e.g. `execute ai/tasks/work-an-issue.md "<issue text>"`), fix that one. First look for the entry in `./product/backlog/issues.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the work item**: take it at face value and fix it exactly as if it had been listed, without stopping and without adding it to the issues file. A named work item is never rejected for being absent from the backlog. Assess its complexity by reviewing the codebase to understand what areas it touches (do not use a shell loop for this); if it requires significant new architecture (rating 7+), report the assessment and stop — do not implement it.
    - **Otherwise**, for each issue, assess the complexity by reviewing the codebase to understand what areas it touches. Do not use a shell loop for this. If every issue requires significant new architecture (rating 7+), report the list with assessments and stop — do not pick one. Otherwise, pick the **first** issue listed in the file (top of the list).
 4. State your pick, whether it came from the issues file or from the invocation, and why.
 
@@ -120,7 +140,13 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
    ```bash
    mv ./product/plans/ready/<fix-name>.md ./product/plans/complete/<fix-name>.md
    ```
-2. Remove the fixed issue's line from `./product/backlog/issues.md`. Only remove that single line — do not modify any other content in the file. If the work item came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
+2. Remove the resolved work item from the backlog it came from:
+   - **In PR update mode**, remove the resolved entry from `./product/backlog/pull-request.md` on the head branch. Remove it **whole** — its `*` bullet through its `Proposal` paragraph, plus the blank lines that separated it from the next entry — leaving every other entry and all four `##` headings byte-for-byte untouched. Entries there are the five-part structure `pull-request-review.md` defines, not single lines, so removing "the line" would leave four orphaned paragraphs behind.
+
+     Then check whether the file still holds an entry in **any** of its four sections. If one remains anywhere, leave the file in place with its now-possibly-empty heading, the way every other file in `./product/backlog/` is left. If none remains, the backlog is drained: remove the file with `git rm ./product/backlog/pull-request.md`. Use `git rm` rather than a plain `rm` — the file is tracked on the branch, and `git rm` states the intent where it happens and fails loudly if it is not tracked.
+
+     `./product/backlog/issues.md` is not read or modified in this mode.
+   - **Otherwise**, remove the fixed issue's line from `./product/backlog/issues.md`. Only remove that single line — do not modify any other content in the file. If the work item came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
 ---
 
@@ -157,13 +183,14 @@ Status:         merged
 In PR update mode, use this exact shape instead:
 
 ```
-Issue:          <the issue text after the PR prefix>
+Issue:          <the resolved entry's summary bullet from ./product/backlog/pull-request.md>
 Plan:           ./product/plans/ready/<file> → ./product/plans/complete/<file>
 Complexity:     N/10
 Implementation: <one-line summary of the fix>
 Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
 Docs:           <help.md/user-documentation file(s) updated, or "none needed">
+Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file removed from the branch
 Branch:         <the existing PR head branch>
 PR:             <url> (#<number>)
 Status:         pushed to open PR (not merged)
