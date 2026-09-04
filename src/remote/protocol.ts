@@ -31,7 +31,12 @@
 // janissary, which the remote is expected to install over its own machine's. This is the archetype
 // of the failure the check exists for — a version-9 remote ignores the field, provisions normally,
 // and silently attributes every commit the workspace makes to the ssh destination's account.
-export const REMOTE_PROTOCOL_VERSION = 10;
+//
+// Version 11 widens what `git-pull` answers with: git's own outcome summary, which the file
+// navigator reports as a notifications line. A version-10 remote replies with no result at all, so
+// every remote pull would report the bare fallback text while both ends looked healthy — the same
+// carries-not-shape distinction the `identity` bump above is the archetype of.
+export const REMOTE_PROTOCOL_VERSION = 11;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

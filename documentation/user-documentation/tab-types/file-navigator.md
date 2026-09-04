@@ -82,7 +82,9 @@ The button doesn't show up for a directory with no `origin` remote, a remote tha
 
 Anywhere the header shows a branch name, it also shows a **Pull from origin** button (tooltip "Pull from origin"), between the GitHub button and the search button. Clicking it runs `git pull` in the tree's own folder, then refreshes the tree: rows are re-read from disk and the branch text and status colors are recomputed, so what you see matches what the pull brought down. For a tree rooted on a remote host, the pull runs there, inside the workspace.
 
-Clicking again while a pull is still running does nothing, so overlapping pulls can't collide. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reports one line in the [notifications](/user-documentation/tab-types/notifications) tab with git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
+Clicking again while a pull is still running does nothing, so overlapping pulls can't collide.
+
+Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
 
 ## Finding a file by name
 

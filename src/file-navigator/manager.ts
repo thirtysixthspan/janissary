@@ -18,7 +18,7 @@ import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { clearFilesystemCache, invalidateDirectory } from './filesystem-cache.js';
-import { errorText } from '../error-text.js';
+import { pullFailureText, pullSuccessText } from './pull-report.js';
 import { notify } from '../notifications.js';
 import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
@@ -226,15 +226,20 @@ export class FileNavigatorManager {
   // Pull the tree root's repository up to date from `origin` (the header's pull button), then
   // refresh the whole view: a pull can change any watched directory, so the listing cache is
   // dropped wholesale and both the rows and the git metadata are recomputed rather than left to
-  // the debounced watchers a git-driven replace may not deliver. A failed pull is one
-  // notifications-feed line and leaves the tree exactly as it was. Coalesced: a click while one
-  // pull is still in flight is ignored, since overlapping `git pull`s collide on git's lockfiles.
+  // the debounced watchers a git-driven replace may not deliver. Either outcome is one
+  // notifications-feed line — git's own summary of what came down, or its error, in which case the
+  // tree is left exactly as it was. The success line is posted before the tab-still-open guard: the
+  // user armed the pull and is owed its outcome even if they re-rooted or closed the tree while it
+  // ran. Coalesced: a click while one pull is still in flight is ignored, since overlapping
+  // `git pull`s collide on git's lockfiles, and a coalesced click reports nothing because nothing
+  // happened.
   pull(label: string): void {
     withFilesState(this.tabs, label, undefined, (state) => {
       if (state.pullInFlight) return;
       state.pullInFlight = true;
       const root = state.root;
-      void state.filesystem.pull(root).then(() => {
+      void state.filesystem.pull(root).then((summary) => {
+        notify(this.managers, 'file-operation', label, pullSuccessText(summary));
         const current = this.tabs.get(label);
         if (!current) return;
         current.pullInFlight = false;
@@ -245,7 +250,7 @@ export class FileNavigatorManager {
       }, (error: unknown) => {
         const current = this.tabs.get(label);
         if (current) current.pullInFlight = false;
-        notify(this.managers, 'file-operation', label, `Could not pull: ${errorText(error)}`);
+        notify(this.managers, 'file-operation', label, pullFailureText(error));
       });
     });
   }

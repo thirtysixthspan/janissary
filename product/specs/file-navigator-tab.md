@@ -611,9 +611,16 @@ Search files. Clicking it runs `git pull` at the tree's own root (on the remote 
 workspace, for a remote tree) and then refreshes the whole view: every visible directory is re-read
 from disk, and the branch text and git-status coloring are recomputed, without waiting on the
 directory watchers a git-driven replace may not deliver. A click while a pull is already running in
-that tab does nothing rather than starting an overlapping pull. A pull that fails leaves the tree
-exactly as it was and reports one line in the notifications feed carrying git's own error
-(`Could not pull: <git error>`). The button is absent wherever the header shows no branch text —
+that tab does nothing rather than starting an overlapping pull, and reports nothing.
+
+Every pull that runs reports its outcome as exactly one line in the notifications feed. A pull that
+succeeds reads `Pulled from origin: <git summary>`, carrying git's own account of what it did —
+`Already up to date.` when there was nothing to take, otherwise the count of what changed. When git
+reports no summary at all the line is `Pulled from origin`. A pull that fails leaves the tree exactly
+as it was and reads `Could not pull: <git error>`, carrying git's own error. The outcome is reported
+whether the tree that started the pull is still open or still rooted where it was.
+
+The button is absent wherever the header shows no branch text —
 outside a git repository, or while a waiting tree has no metadata yet — the same quiet degradation
 as the branch text.
 
