@@ -134,6 +134,10 @@ export type FileNavigatorRow = {
   mode?: number;
 };
 
+// A file navigator tab's `git pull` state, driving the header pull button's working/success/failure
+// signal — the file navigator's counterpart to an editor tab's `sync`.
+export type FileNavigatorPullStatus = 'pulling' | 'pulled' | 'error';
+
 // A file navigator view (opened via `files [path]`). The server owns the tree — `rows` is the
 // pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
 // `root` is display-abbreviated for the header; `absoluteRoot` is the same root unshortened, used
@@ -149,6 +153,10 @@ export type FileNavigatorView = {
   // there's no github.com origin remote.
   githubUrl?: string;
   waitingFor?: string;
+  // What the header's pull button is currently signalling: a pull in flight, or the outcome of one
+  // that just settled. Absent is the button's resting state — no pull has run recently — which is
+  // also where a settled pull returns after its brief flash (see `manager-pull.ts`).
+  pull?: FileNavigatorPullStatus;
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
   restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };

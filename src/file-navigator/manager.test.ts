@@ -1100,11 +1100,68 @@ describe('FileNavigatorManager', () => {
       expect(pullRootMock).toHaveBeenCalledTimes(1);
 
       resolve('Already up to date.');
-      const introspect = manager as unknown as { tabs: Map<string, { pullInFlight?: boolean }> };
-      await vi.waitFor(() => expect(introspect.tabs.get(label)!.pullInFlight).toBe(false));
+      await vi.waitFor(() => expect(navTab().files!.pull).toBe('pulled'));
       expect(outputs).toEqual(['Pulled from origin: Already up to date.']);
       manager.pull(label);
       expect(pullRootMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('signals working, then success, then returns the button to rest', async () => {
+      vi.useFakeTimers();
+      try {
+        pullRootMock.mockResolvedValue('Already up to date.');
+        const manager = run();
+        manager.open('files', 'janus');
+
+        manager.pull(navLabel());
+        expect(navTab().files!.pull).toBe('pulling');
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(navTab().files!.pull).toBe('pulled');
+
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(navTab().files!.pull).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('signals failure the same way and returns to rest', async () => {
+      vi.useFakeTimers();
+      try {
+        pullRootMock.mockRejectedValue(new Error('git pull failed'));
+        const manager = run();
+        manager.open('files', 'janus');
+
+        manager.pull(navLabel());
+        expect(navTab().files!.pull).toBe('pulling');
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(navTab().files!.pull).toBe('error');
+
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(navTab().files!.pull).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops the flash timer when the tab closes before it fires', async () => {
+      vi.useFakeTimers();
+      try {
+        pullRootMock.mockResolvedValue('Already up to date.');
+        const manager = run();
+        manager.open('files', 'janus');
+        const label = navLabel();
+
+        manager.pull(label);
+        await vi.advanceTimersByTimeAsync(0);
+        manager.closeTab(label);
+
+        expect(() => vi.advanceTimersByTime(3000)).not.toThrow();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('is a no-op for an unknown tab label', () => {

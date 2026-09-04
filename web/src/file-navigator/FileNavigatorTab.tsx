@@ -120,7 +120,7 @@ export function FileNavigatorTab({
     >
       <FileNavigatorHeader
         root={files.root} remote={files.remote} branch={files.branch} githubUrl={files.githubUrl}
-        dock={dock} details={files.details}
+        dock={dock} details={files.details} pull={files.pull}
         onOpenGithub={intents.openGithub}
         onPull={files.branch ? intents.pull : undefined}
         onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}

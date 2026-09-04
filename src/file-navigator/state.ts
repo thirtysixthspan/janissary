@@ -1,5 +1,5 @@
 import type { GitFileStatus } from '../git-status.js';
-import type { FileNavigatorDetail, RemoteTarget } from '../tab/types.js';
+import type { FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget } from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 import type { RowStat } from './stats.js';
@@ -39,9 +39,12 @@ export type FilesTabState = {
   githubUrl?: string;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
-  // Set while a header-button `git pull` is in flight for this tab, so a second click coalesces
-  // instead of spawning an overlapping `git pull` that would collide on git's own lockfiles.
-  pullInFlight?: boolean;
+  // What this tab's header pull button is signalling. `pulling` is also the coalescing check: a
+  // second click while it is set is ignored rather than spawning an overlapping `git pull` that
+  // would collide on git's own lockfiles. `pullFlash` is the timer returning a settled `pulled` or
+  // `error` to the resting state (see `manager-pull.ts`).
+  pull?: FileNavigatorPullStatus;
+  pullFlash?: ReturnType<typeof setTimeout>;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
   // rebuilds. Its `revision` changes only when a new restore is applied, which is what stops the
   // repeated full-state broadcasts from re-applying an old hint over a selection the user has

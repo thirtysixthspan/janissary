@@ -69,4 +69,9 @@ describe('FileNavigatorHeader', () => {
     const { container } = render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
     expect(container.querySelector('.files-pull')).toBeNull();
   });
+
+  it('passes the pull status through to the button', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" onPull={vi.fn()} pull="pulling" {...callbacks} />);
+    expect(container.querySelector('.files-pull--pulling')).not.toBeNull();
+  });
 });

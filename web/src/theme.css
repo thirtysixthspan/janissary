@@ -257,8 +257,11 @@ html, body, #root {
 .editor-sync-icon--synced { color: var(--success); }
 .editor-sync-icon--error { color: var(--error); }
 .editor-sync-icon--clickable { cursor: pointer; }
-.editor-sync-icon--provisioning svg, .editor-sync-icon--syncing svg { animation: editor-sync-spin 1s linear infinite; }
-@keyframes editor-sync-spin { to { transform: rotate(360deg); } }
+.editor-sync-icon--provisioning svg, .editor-sync-icon--syncing svg { animation: icon-spin 1s linear infinite; }
+
+/* Shared by the editor's sync icon and the file navigator's pull button — both spin their icon to
+   say the same thing, so they spin it the same way. */
+@keyframes icon-spin { to { transform: rotate(360deg); } }
 
 /* While the agent is busy, blink the dot fully on/off (600ms each), mirroring the Ink tab strip. */
 .tab .dot.busy { animation: dot-blink 1.2s step-end infinite; }
@@ -741,6 +744,12 @@ html, body, #root {
   padding: 0 4px; line-height: 1;
 }
 .files-collapse-all:hover, .files-detail-cycle:hover, .files-dock-cycle:hover, .files-github:hover, .files-new-directory:hover, .files-new-file:hover, .files-pull:hover, .files-search:hover { color: var(--fg); }
+
+/* The pull button's own working/success/failure signal, in the editor sync icon's vocabulary. These
+   follow the hover rule above so a settled pull keeps its color under the pointer. */
+.files-pull--pulled { color: var(--success); }
+.files-pull--error { color: var(--error); }
+.files-pull--pulling svg { animation: icon-spin 1s linear infinite; }
 .file-search-popup {
   position: absolute; top: 34px; right: 8px; z-index: 30; width: 280px;
   background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
