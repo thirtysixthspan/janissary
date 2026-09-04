@@ -95,6 +95,8 @@ The `*` bullet is the entry's identity line — it is what a reader scans, and w
 
 Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section — without it, a `Proposal` paragraph and the `*` bullet that follows it read as one run of text.
 
+This format is intentionally copied in [`pull-request-review.md`](../pull-request-review.md), which restates it so a task stands alone rather than sending its reader to another file mid-run — a change to the format or to either scale belongs in both. The two differ on purpose in exactly two places: the first labeled paragraph is `Existing Debt` here and `Existing Issue` there, and the severity scale below is reworded there for pull-request review while the risk scale is identical in both.
+
 ### The five parts
 
 - **The summary bullet.** One sentence summarizing the whole proposal, readable at a glance: what would be done and roughly how much of the codebase it reaches. It carries no label. Write it as a change, not as a complaint. Keep it free of paths — the scope belongs in words ("across the picker overlays", "in the websocket client layer") and the file references belong in the `Proposal` paragraph.

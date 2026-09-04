@@ -136,6 +136,8 @@ Proposal: <the detailed plan, with code references an agent can act on>
 
 Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section.
 
+This format is an intentional copy of the one in [`find-technical-debt.md`](research/find-technical-debt.md) Step 4, restated here so a task stands alone rather than sending its reader to another file mid-run — a change to the format or to either scale belongs in both. The two differ on purpose in exactly two places: the first labeled paragraph is `Existing Issue` here and `Existing Debt` there, and the severity scale below is reworded for pull-request review while the risk scale is identical in both.
+
 - **The summary bullet.** One sentence summarizing the whole proposal, readable at a glance, and naming which of the five dimensions it came from in plain words — "Correct the pull request description's claim that…", "Deliver the plan's…", "Handle the empty…". It carries no label. Write it as a change, not as a complaint. Keep it free of paths: the scope belongs in words, the file references belong in `Proposal`.
 - **Existing Issue.** One sentence naming what is wrong today within the proposal's scope — describe what *is*, not what should be done about it — then an **issue severity** score as a trailing `Severity: <N>/10` after that sentence's full stop.
 - **Existing Risk.** A score, then ` - `, then one sentence on what the issue risks if it is never resolved: the bug it invites, the incident it enables, the change it will make dangerous later.
