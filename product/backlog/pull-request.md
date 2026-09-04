@@ -4,17 +4,6 @@
 
 ## development
 
-* Correct the pull request description's claim that both scoring scales carry over unchanged from the technical-debt task, when only one of the two does.
-
-Existing Issue: The description states that both 1-10 scales "carry over unchanged", but only the risk table is reproduced verbatim — all three bands of the severity table were rewritten for a pull-request context, so a reader who trusts that sentence will score findings against the debt-severity rubric rather than the issue-severity rubric the task actually ships. Severity: 4/10
-
-Existing Risk: 4/10 - Findings get scored against the wrong rubric, producing severity numbers that look comparable between two backlog files that appear to share a scale and are not, which quietly corrupts any later attempt to rank work across both.
-
-Proposal Risk: 1/10 - The sentence and the file agree, but nothing enforces the agreement, so a later edit to either table can reopen the same gap without anything noticing.
-
-Proposal: The pull request body's fourth "What" paragraph ends with the clause "Both 1-10 scales, the two-blank-lines separator, and the 'write the Proposal for an agent that has not read the code, by path and never by line number' standard carry over unchanged". Under "The scales" in `ai/tasks/pull-request-review.md`, the risk table is byte-identical to the one in `ai/tasks/research/find-technical-debt.md`, while the issue-severity table's three bands are new text written for pull-request review — the 8-10 band, for instance, reads "The pull request does not do what it says, omits something its plan treats as essential, or introduces a security or data-loss hazard on a core path", against the debt table's "Reckless or actively compounding debt on a core, high-churn path". Edit that clause of the pull request description to say the risk scale carries over unchanged while the severity scale is rewritten band by band for pull-request review, keeping the rest of the sentence as written. Do not change the tables in the task file to match the description instead: the rewritten severity bands are correct and deliberate, and the description is the side that is wrong. No test covers either file, so the only guard against a repeat is that both tables now sit under one heading in one file.
-
-
 * Distinguish a pull request that reviewed clean from one whose every finding was already recorded, which the report currently renders identically.
 
 Existing Issue: Step 4 sends a run whose candidates were all dropped as duplicates to the same clean report as a run that found nothing, so both print "clean - nothing recorded", and the report never states whether the per-dimension `Findings` counts are measured before or after the dedupe pass. Severity: 5/10
