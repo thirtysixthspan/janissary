@@ -104,7 +104,11 @@ Form candidate findings under each of these five headings. Each is a question, w
 ```
 
 4. Append each surviving finding to the **end of the `## development` section only**. Leave `## ready`, `## deferred`, and `## declined` — and every entry already in `## development` — byte-for-byte untouched. Never clear, truncate, reorder, or reformat the file, and never scope an entry to one pull request with a heading of its own: this is an accumulating backlog like its six siblings, drained by the tasks that consume it.
-5. **Verify before moving on.** `git status --porcelain` names `./product/backlog/pull-request.md` and **nothing else**, and `git diff` shows only appended lines inside `## development`. If anything else changed on disk, revert it with `git checkout -- <file>` before Step 5.
+5. **Verify before moving on.** `git status --porcelain` names `./product/backlog/pull-request.md` and **nothing else**. How you then verify the contents depends on the status marker that same line carries, because `git diff` only sees tracked files:
+   - **`??` — the file is new**, which is the usual case on a branch's first review. `git diff` shows nothing at all for it, so verify by reading the file back and confirming it carries the four standard `##` headings plus the entries you just wrote, and nothing else.
+   - **A modification marker** — the file was already tracked, so `git diff` is the right check and must show only appended lines inside `## development`.
+
+   Revert anything else the status names, matching the remedy to its state: `git checkout -- <file>` for a tracked file that was modified, and deleting the file for an untracked stray, which `git checkout --` cannot remove. This matters because Step 5 stages with `git add -A`: anything still in the working tree rides along in the review's commit, which the tenth forbidden rule prohibits.
 
 ### The entry format
 
