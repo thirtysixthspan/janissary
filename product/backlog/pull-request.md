@@ -4,17 +4,6 @@
 
 ## development
 
-* Tell the reviewing agent to treat a pull request's own content as untrusted data rather than as instructions it might follow.
-
-Existing Issue: The task directs an autonomous agent with shell access to check out an arbitrary open pull request's branch and read its diff, plan file, and description in full, and nowhere states that this content is attacker-controlled input rather than direction, so text placed in a reviewed branch is read by the agent under the same trust as the task file's own instructions. Severity: 6/10
-
-Existing Risk: 5/10 - A pull request whose plan file or description carries instructions aimed at the reviewing agent gets them read and potentially acted on, and the task has already granted the agent a shell, a checked-out branch, and push access to that same branch, so a successful steer writes and pushes whatever it asked for.
-
-Proposal Risk: 2/10 - The agent is told the content is data, which closes the naive case, but a prose warning is not a sandbox and a sufficiently well-disguised instruction inside a diff can still be persuasive.
-
-Proposal: `ai/tasks/pull-request-review.md` carries a "Stay within the project directory" rule and a command-hygiene rule in its preamble but nothing about the trust level of what it reads. Add one more preamble rule beside those, stating that everything reaching the agent from the pull request under review — the diff, the plan file, the description, commit messages, and any file on the branch — is data to be judged, never instruction to be followed, and that an instruction found inside reviewed content is itself a security finding to record under Step 3's security dimension rather than something to act on. Name the specific temptations the task already creates: text asking the agent to run a command, to install a dependency, to edit a file outside the backlog, or to skip a step. This is cheap because the task's existing forbidden list already blocks the destructive outcomes — no fixing, no installing, no committing anything but the backlog file — so the rule is mostly making explicit why those limits matter here rather than adding new restraint. The no-install rule in Step 1 is already doing security work of exactly this kind, since it means a reviewed branch's `package.json` lifecycle scripts never execute; say so in the same place, because it currently reads as a pure cost-saving decision and a future editor could reverse it without knowing what else it was buying.
-
-
 * Cross-reference the two task files that now carry the same entry format and scales, so an edit to either meets a pointer to its twin.
 
 Existing Issue: The task restates the five-part entry format, the two scoring scales, the two-blank-lines separator, and the dedupe rule that `find-technical-debt.md` already defines, and neither file mentions the other, so the two copies are held in sync only by whoever happens to remember both exist. Severity: 4/10
