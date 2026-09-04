@@ -51,9 +51,11 @@ export interface FileSystemPort {
   statRows(root: string, relPaths: string[]): MaybePromise<Record<string, RowStat | null>>;
   watch(root: string, relPath: string, onChange: () => void): MaybePromise<WatchHandle>;
   gitMetadata(root: string, onResult: (metadata: GitMetadata) => void): void;
-  // Pull the tree root's repository up to date from `origin` (the header's pull button). Rejects
-  // with the git error on failure — like `readFile`, raw work with nowhere to put a reason.
-  pull(root: string): Promise<void>;
+  // Pull the tree root's repository up to date from `origin` (the header's pull button). Resolves
+  // with git's own outcome summary, so the caller can report what the pull did rather than only that
+  // it finished. Rejects with the git error on failure — like `readFile`, raw work with nowhere to
+  // put a reason.
+  pull(root: string): Promise<string>;
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
@@ -113,7 +115,7 @@ export class LocalFileSystemPort implements FileSystemPort {
 
   search(root: string): Promise<string[]> { return listProjectFiles(root); }
 
-  pull(root: string): Promise<void> { return pullRoot(root); }
+  pull(root: string): Promise<string> { return pullRoot(root); }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
     const absolute = containedPath(root, relPath);

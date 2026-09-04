@@ -85,7 +85,9 @@ Twelve event types can produce a notification line:
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection
   order and truncating past three names with `… and N more`. A shared cause and recovery action is
   appended once. If the named items failed for different reasons, the suffix reads `Reasons:
-  <name>: <reason> | <name>: <reason>` instead.
+  <name>: <reason> | <name>: <reason>` instead. A file navigator pull reports through this same event
+  and is the one case that also reports a success: `Pulled from origin: <git summary>` when the pull
+  worked, `Could not pull: <git error>` when it did not.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
   neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled

@@ -15,7 +15,7 @@ vi.mock('node:fs', async (importOriginal) => {
 const changedPathsMock = vi.fn((_root: string): Promise<Map<string, string>> => Promise.resolve(new Map<string, string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
-const pullRootMock = vi.fn((_root: string): Promise<void> => Promise.resolve());
+const pullRootMock = vi.fn((_root: string): Promise<string> => Promise.resolve(''));
 
 vi.mock('../git-status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
@@ -54,7 +54,7 @@ describe('FileNavigatorManager', () => {
     remoteUrlMock.mockReset();
     remoteUrlMock.mockResolvedValue(undefined);
     pullRootMock.mockReset();
-    pullRootMock.mockResolvedValue(undefined);
+    pullRootMock.mockResolvedValue('');
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -1022,6 +1022,12 @@ describe('FileNavigatorManager', () => {
   describe('git pull', () => {
     const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
     const navTab = () => tabs.find((t) => t.label.startsWith('navigator'))!;
+    const openNotificationsTab = () => {
+      tabs = [...tabs, {
+        label: 'notifications', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
+        log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0, view: 'notifications',
+      } as Tab];
+    };
 
     it('re-reads cached rows from disk and refreshes git metadata', async () => {
       const manager = run();
@@ -1041,11 +1047,33 @@ describe('FileNavigatorManager', () => {
       expect(pullRootMock).toHaveBeenCalledWith(root);
     });
 
+    it('reports a successful pull as one notifications-feed line carrying git\'s summary', async () => {
+      openNotificationsTab();
+      pullRootMock.mockResolvedValue('3 files changed, 12 insertions(+), 4 deletions(-)');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.pull(navLabel());
+
+      await vi.waitFor(() => {
+        expect(outputs).toContain('Pulled from origin: 3 files changed, 12 insertions(+), 4 deletions(-)');
+      });
+      expect(outputs).toHaveLength(1);
+    });
+
+    it('reports a pull that brought nothing without a summary suffix', async () => {
+      openNotificationsTab();
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.pull(navLabel());
+
+      await vi.waitFor(() => expect(outputs).toContain('Pulled from origin'));
+      expect(outputs).toHaveLength(1);
+    });
+
     it('reports a failed pull as one notifications-feed line and rebuilds nothing', async () => {
-      tabs = [...tabs, {
-        label: 'notifications', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
-        log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0, view: 'notifications',
-      } as Tab];
+      openNotificationsTab();
       pullRootMock.mockRejectedValue(new Error('git pull failed'));
       const manager = run();
       manager.open('files', 'janus');
@@ -1060,7 +1088,8 @@ describe('FileNavigatorManager', () => {
     });
 
     it('ignores a second pull while one is still in flight', async () => {
-      const { promise, resolve } = Promise.withResolvers<void>();
+      openNotificationsTab();
+      const { promise, resolve } = Promise.withResolvers<string>();
       pullRootMock.mockReturnValue(promise);
       const manager = run();
       manager.open('files', 'janus');
@@ -1070,9 +1099,10 @@ describe('FileNavigatorManager', () => {
       manager.pull(label);
       expect(pullRootMock).toHaveBeenCalledTimes(1);
 
-      resolve();
+      resolve('Already up to date.');
       const introspect = manager as unknown as { tabs: Map<string, { pullInFlight?: boolean }> };
       await vi.waitFor(() => expect(introspect.tabs.get(label)!.pullInFlight).toBe(false));
+      expect(outputs).toEqual(['Pulled from origin: Already up to date.']);
       manager.pull(label);
       expect(pullRootMock).toHaveBeenCalledTimes(2);
     });

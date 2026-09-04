@@ -87,8 +87,9 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   // `git-pull` carries no path arguments: the far side pulls its own workspace root, so `_root`
-  // exists only to keep the port signature uniform with `gitMetadata`'s.
-  pull(_root: string): Promise<void> { return this.request('git-pull', {}); }
+  // exists only to keep the port signature uniform with `gitMetadata`'s. The reply carries git's own
+  // outcome summary, which only the host that ran the pull can know.
+  pull(_root: string): Promise<string> { return this.request('git-pull', {}); }
 
   async search(root: string): Promise<string[]> {
     const matches = await this.request<string[]>('search', {});

@@ -66,8 +66,8 @@ describe('RemoteFileSystemPort', () => {
     await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
     expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
       .toMatchObject({ operation: 'git-pull', args: {} });
-    h.reply(undefined);
-    await expect(pending).resolves.toBeUndefined();
+    h.reply('Already up to date.');
+    await expect(pending).resolves.toBe('Already up to date.');
   });
 
   it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
