@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileNavigatorDetail, RemoteTarget } from '@shared/protocol';
+import type { FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget } from '@shared/protocol';
 import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
@@ -16,6 +16,7 @@ type Properties = {
   githubUrl?: string;
   dock?: 'left' | 'right';
   details?: FileNavigatorDetail;
+  pull?: FileNavigatorPullStatus;
   onOpenGithub: (githubUrl: string) => void;
   onPull?: () => void;
   onCycleDock?: () => void;
@@ -32,8 +33,8 @@ type Properties = {
 // both on one line, so it stacks onto two — see `.files-header--docked`. Split out of
 // `FileNavigatorTab` to keep it under the file-size limit.
 export function FileNavigatorHeader({
-  root, remote, branch, githubUrl, dock, details, onOpenGithub, onPull, onCycleDock, onSetDetail,
-  onCollapseAll, onSearch, onNewFile, onNewDirectory, onSplit,
+  root, remote, branch, githubUrl, dock, details, pull, onOpenGithub, onPull, onCycleDock,
+  onSetDetail, onCollapseAll, onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
@@ -45,7 +46,7 @@ export function FileNavigatorHeader({
       </div>
       <div className="files-actions">
         {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
-        {onPull && <FileNavigatorPullButton onClick={onPull} />}
+        {onPull && <FileNavigatorPullButton status={pull} onClick={onPull} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>

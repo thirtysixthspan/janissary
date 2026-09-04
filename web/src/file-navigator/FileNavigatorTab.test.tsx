@@ -105,6 +105,14 @@ describe('FileNavigatorTab', () => {
     expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorPull', params: { index: 0 } });
   });
 
+  it('signals the pull status the tree payload carries on its pull button', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileNavigatorTab files={makeFiles({ branch: 'main', pull: 'pulling' })} client={client} index={0} />,
+    );
+    expect(container.querySelector('.files-pull--pulling')).not.toBeNull();
+  });
+
   it('renders no .files-pull element when branch is undefined', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);

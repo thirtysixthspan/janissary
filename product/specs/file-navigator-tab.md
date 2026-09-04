@@ -620,6 +620,14 @@ reports no summary at all the line is `Pulled from origin`. A pull that fails le
 as it was and reads `Could not pull: <git error>`, carrying git's own error. The outcome is reported
 whether the tree that started the pull is still open or still rooted where it was.
 
+The button also says what is happening on its own face, in the same vocabulary an editor tab's sync
+icon uses (see [[editor-tab]]): its icon spins while the pull runs, turns the success color when the
+pull succeeds, and turns the error color when it fails. Its tooltip names the same three states, and
+the failure tooltip points at the notifications tab for git's own error. A settled state holds
+briefly and then the button returns to its ordinary resting appearance — the notifications line is
+the durable record, not the button. The button stays clickable throughout; a click while it is
+spinning is coalesced away like any other.
+
 The button is absent wherever the header shows no branch text —
 outside a git repository, or while a waiting tree has no metadata yet — the same quiet degradation
 as the branch text.
