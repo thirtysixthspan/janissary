@@ -1,6 +1,6 @@
 # Work an Issue
 
-Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Ordinarily, shipping means merging the change to master. Passing a **pull request number** instead enters PR mode, where the work item is drawn from that pull request branch's own `./product/backlog/pull-request.md`, the completed entry is removed from it, and the pull request is updated and left open. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, the pull-request backlog, and the plan file's location — nothing else.
+Your job: take a work item — the simplest issue in `./product/backlog/issues.md`, or the one the user names when running this task, which need not be listed there at all — develop a plan to resolve it, implement the fix, update functional specs, update `help.md` and public documentation where the fix changes behavior they already document, record the plan in `./product/plans/complete/`, remove the issue from the issues file when that is where it came from, and ship the result. Ordinarily, shipping means merging the change to master. Passing a **pull request number** instead enters PR mode, where the work item is drawn from that pull request branch's own `./product/backlog/pull-request.md`, the completed entry is removed from it, and the pull request is updated and left open. You change source code, tests, spec files, `help.md`, `documentation/user-documentation/`, the issues file, the pull-request backlog, the plan file's location, and — in PR mode only, when the resolved entry calls for it — the pull request's own description. Nothing else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -14,6 +14,8 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 In this mode the work item is **drawn from `./product/backlog/pull-request.md` on the pull request's own head branch** — the file [`pull-request-review.md`](pull-request-review.md) writes — and never from `./product/backlog/issues.md`, which lives on master and describes master's problems. Check out the head branch first, take the work item from that backlog, commit and push the completed fix to the same branch, and leave the pull request open. When the fix is done, remove the resolved entry from that backlog; when no entry remains in any of its sections, remove the file from the branch as well. A pull-request work item is never written to the issues file and never carries a `PR #` prefix — it lives strictly in the branch's own backlog.
 
+Some entries are not fixed by a file change at all: a description-fidelity finding's remedy is a correction to the **pull request's own description**. In PR mode that is a delivery the task can make, by updating the description in Step 8 with everything the entry did not name left exactly as the author wrote it. The title is never touched.
+
 An optional selector may follow the reference — `execute ai/tasks/work-an-issue.md 232 "the untracked file check"` — to choose a specific entry. With no selector, the first resolvable entry is taken.
 
 These rules override every general instruction below to merge to master.
@@ -24,7 +26,7 @@ These rules override every general instruction below to merge to master.
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. In PR update mode, read `./product/backlog/pull-request.md` on the pull request's head branch, remove the resolved entry from it, and remove the file itself once it holds no entries at all. Run `./scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. In PR update mode, read `./product/backlog/pull-request.md` on the pull request's head branch, remove the resolved entry from it, and remove the file itself once it holds no entries at all. In PR update mode, update the pull request's description with `gh pr edit --body-file` when the resolved entry calls for it (Step 8). Run `./scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
 
 ### Forbidden — no exceptions
 
@@ -38,6 +40,7 @@ Read any file in the repo. Edit source, tests, CSS, and spec files as the fix re
 8. **Updating a PR that is not open.** If the numbered PR does not exist or its state is not `OPEN`, report that and stop. Do not substitute another PR or branch.
 9. **Reading or editing `./product/backlog/issues.md` in PR update mode.** That file belongs to master. In PR mode the branch's own `./product/backlog/pull-request.md` is the only source of work and the only backlog you touch — never fall back to the issues file when it is missing or empty, and never record a pull-request work item there.
 10. **Deleting `./product/backlog/pull-request.md` while any entry remains in it.** The file goes only when all four of its sections — `## ready`, `## development`, `## deferred`, and `## declined` — are empty. An entry a human moved to `## deferred` or `## declined` is a decision on the record, and deleting the file would erase it.
+11. **Reaching past the description edit's boundaries.** Never edit a pull request's description in ordinary mode — `merge-change-to-master.md` writes and merges that pull request in the same run, so there is no established description to correct. Never edit a pull request's **title** in either mode: it has to match the commit subject under this repo's Conventional Commits rules, so changing one alone breaks the pair. And never change more of a description than the resolved entry names — the rest is the author's statement of intent, and it is the evidence the next reviewer needs.
 
 ---
 
@@ -156,10 +159,17 @@ After implementation, tests, specs/docs, plan promotion, and issue removal are c
 
 - **In PR update mode:**
   1. Run `gh pr view <number> --json state,headRefName,url` again and `git branch --show-current`. Stop if the PR is no longer `OPEN` or the current branch is not its recorded head branch.
-  2. Run `./scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop.
+  2. Run `./scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop. An entry whose only remedy is a description correction still reaches this point with changes to ship — it wrote a plan file to `./product/plans/complete/` and removed its entry from `./product/backlog/pull-request.md` — so this guard never fires merely because the fix was not a code change.
   3. Compose a Conventional Commits subject and body describing the completed fix, then commit with `./scripts/run.mjs pr-commit "<subject>" "<body>"`. Do not amend, squash, or otherwise rewrite commits that were already on the PR branch.
   4. Run `git push`, which pushes through the upstream configured by `gh pr checkout`. If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts while preserving both sides, rerun `./scripts/run.mjs check-diff`, and retry `git push`. Repeat at most three times. Never force-push. If the third attempt fails, leave the local commit intact and report the failure.
-  5. Confirm the PR is still `OPEN` and its `headRefOid` matches `git rev-parse HEAD` using `gh pr view <number> --json state,headRefName,headRefOid,url`. Do not merge it.
+  5. **When the resolved entry called for a description correction**, apply it now — after the push, never before. A description is a live artifact on GitHub while a file edit is not until it is pushed, so editing it earlier would leave the pull request describing work that is not on its branch if a later step failed. Read the current body with `gh pr view <number> --json body`, apply the change the entry's `Proposal` names, and leave every other paragraph exactly as the author wrote it — `gh pr edit` replaces the body wholesale, so preserving the rest is your job, not the tool's. Write the full revised body to `./temp/pr-body.md` and apply it:
+
+     ```bash
+     gh pr edit <number> --body-file ./temp/pr-body.md
+     ```
+
+     Use the body file rather than an inline `--body` string: multi-line markdown breaks on shell quoting, which is why `scripts/pr-create-pr.sh` takes a body file too. `temp/` is gitignored, so the scratch file cannot reach a commit. Do not touch the title. When the entry called for no description change, skip this sub-step entirely.
+  6. Confirm the PR is still `OPEN` and its `headRefOid` matches `git rev-parse HEAD` using `gh pr view <number> --json state,headRefName,headRefOid,url`. Do not merge it.
 - **Otherwise:** execute `ai/tasks/workspace/merge-change-to-master.md` in full. That document owns the merge workflow — follow its steps without deviation before giving the final report.
 
 ---
@@ -191,6 +201,7 @@ Tests:          <count> new tests across <files>
 Spec:           <spec file(s) created or updated, with one-line description of change>
 Docs:           <help.md/user-documentation file(s) updated, or "none needed">
 Backlog:        entry removed, <n> remaining in product/backlog/pull-request.md | drained — file removed from the branch
+Description:    updated — <one line on what changed> | not needed
 Branch:         <the existing PR head branch>
 PR:             <url> (#<number>)
 Status:         pushed to open PR (not merged)
