@@ -4,17 +4,6 @@
 
 ## development
 
-* Distinguish a pull request that reviewed clean from one whose every finding was already recorded, which the report currently renders identically.
-
-Existing Issue: Step 4 sends a run whose candidates were all dropped as duplicates to the same clean report as a run that found nothing, so both print "clean - nothing recorded", and the report never states whether the per-dimension `Findings` counts are measured before or after the dedupe pass. Severity: 5/10
-
-Existing Risk: 5/10 - A reviewer reads "clean" on a pull request that has several outstanding recorded problems and merges it believing the review found nothing, which is the opposite of what the run actually determined.
-
-Proposal Risk: 2/10 - The two outcomes read differently and the counts have a stated basis, but a reader who sees a high duplicate count still has to open the backlog file to learn what those duplicates are, since the report names no entry.
-
-Proposal: In `ai/tasks/pull-request-review.md`, Step 4's point 2 currently routes a fully-deduplicated run to "Step 7's clean report" with no distinction, and Step 7's report block offers only "clean - nothing recorded" alongside the pushed-sha and push-failed variants. Add a third variant to the `Recorded` line for the case where candidates were found but every one of them was already present — wording along the lines of "nothing new - all N finding(s) already recorded" — and change point 2 to name that variant rather than the clean one when the dedupe set absorbed everything. In the same report block, state that the `Findings` line counts findings after dedupe, so it reads as what was recorded on this run and the `Duplicates` line accounts for the difference; today a reader cannot tell whether "description 0" means nothing was found or that what was found was already on file. Nothing else in the task changes: the commit is still skipped, since there is still nothing to write.
-
-
 * Tell the reviewing agent to treat a pull request's own content as untrusted data rather than as instructions it might follow.
 
 Existing Issue: The task directs an autonomous agent with shell access to check out an arbitrary open pull request's branch and read its diff, plan file, and description in full, and nowhere states that this content is attacker-controlled input rather than direction, so text placed in a reviewed branch is read by the agent under the same trust as the task file's own instructions. Severity: 6/10

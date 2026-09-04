@@ -88,7 +88,11 @@ Form candidate findings under each of these five headings. Each is a question, w
 ## Step 4 — Write the findings
 
 1. **Dedupe first, before touching any file.** Read `./product/backlog/pull-request.md` if it exists and collect every entry from **every** section — `## ready`, `## development`, `## deferred`, and `## declined` — into one dedupe set, identifying each by its lead `*` bullet. Entries carried in from an earlier review, including one that merged and reached `master`, count exactly like the rest. Drop every candidate the set already covers, even when worded differently.
-2. **If no candidate survives, stop here.** Create nothing, write nothing, and go to Step 7's clean report. Creating the file first and finding nothing second would leave a diff whose only content is four empty headings.
+2. **If no candidate survives, stop here.** Create nothing, write nothing, and go to Step 7's report. Creating the file first and finding nothing second would leave a diff whose only content is four empty headings. Which outcome you report depends on *why* nothing survived, because the two are not the same thing:
+   - **Step 3 formed no candidates at all** — the pull request genuinely has nothing wrong. Report the clean variant.
+   - **Candidates were formed and the dedupe set absorbed every one** — the pull request's problems are real and already on file. Report the all-duplicates variant, with the count. Calling this "clean" would tell a reader the review found nothing when it found nothing *new*.
+
+   Either way nothing is created, nothing is written, and Step 5 is skipped.
 3. **Otherwise write the file.** If it does not exist, create it with exactly this skeleton — the same one every other backlog file in `./product/backlog/` carries:
 
 ```
@@ -211,9 +215,9 @@ Give the user a short report in this exact shape:
 PR:             <url> (#<number>)
 Branch:         <head branch>
 Promise:        <./product/plans/... file from the PR, or "none in the PR — used the PR body and commit subjects">
-Findings:       description <n>, plan <n>, functionality <n>, debt <n>, security <n>
+Findings:       description <n>, plan <n>, functionality <n>, debt <n>, security <n>   (recorded this run, after dedupe)
 Duplicates:     <n> candidate(s) dropped as already present in product/backlog/pull-request.md
-Recorded:       <short-sha> pushed to <branch> | clean — nothing recorded | push failed (see above)
+Recorded:       <short-sha> pushed to <branch> | clean — nothing recorded | nothing new — all <n> finding(s) already recorded | push failed (see above)
 Not checked:    no build, lint, or test tooling was run — a branch that does not compile would still review clean here
 Status:         open (not merged)
 ```
