@@ -63,6 +63,12 @@ header. The file is not written to disk until the user explicitly saves (Ctrl+S 
 first save, the file is created at the given path and the size display updates to reflect the new
 on-disk size. Subsequent saves overwrite the file as usual.
 
+Because there is nothing on disk to read, a new file's editor opens its empty buffer without
+reading anything at all — it never reports a failure to load the file it is about to create. The
+buffer is editable and focused from the moment the tab opens, and starts clean: the save indicator
+appears only once something has been typed. This applies wherever a new file is opened, including
+the file navigator's New file button, its keyboard shortcut, and its context menu entry.
+
 Opening the same not-yet-existing path more than once (for example, creating several new files in
 the same directory from the file navigator without renaming any of them) does not focus an
 existing tab the way opening an already-existing file would — each open creates its own new,

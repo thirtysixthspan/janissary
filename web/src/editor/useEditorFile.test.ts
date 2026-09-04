@@ -68,6 +68,31 @@ describe('useEditorFile — load', () => {
     expect(client.readFile).not.toHaveBeenCalled();
   });
 
+  it('loads a new file as an empty buffer without reading a path that is not on disk yet', async () => {
+    const client = makeClient({ readFile: vi.fn().mockRejectedValue(new Error('HTTP 404')) });
+    const api = makeApi();
+    const view = makeView({ name: 'untitled.md', size: 'unknown', newFile: true });
+
+    const { result } = renderHook(() => useEditorFile(client, view, api));
+
+    await waitFor(() => expect(api.load).toHaveBeenCalledWith('', undefined));
+    expect(client.readFile).not.toHaveBeenCalled();
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it('reports a new file dirty once it is typed into', async () => {
+    const client = makeClient();
+    const api = makeApi();
+    const { result, rerender } = renderHook(() => useEditorFile(client, makeView({ newFile: true }), api));
+    await waitFor(() => expect(api.load).toHaveBeenCalledWith('', undefined));
+
+    act(() => { api.setState(fromText('first draft')); });
+    rerender();
+
+    expect(result.current.dirty).toBe(true);
+  });
+
   it('does not re-read a buffer that is already loaded', async () => {
     const client = makeClient();
     const api = makeApi();

@@ -53,6 +53,15 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     // signal `finishOpenSynced` already flips once the workspace is ready — before fetching.
     if (editor.sync === 'provisioning') return;
     if (api.stateRef.current !== null) return;
+    // A new file has nothing to read: its path is deliberately one that isn't taken yet, and stays
+    // off disk until the first save, so its registered reference answers 404 by design (see
+    // `open-route.ts`). Fetching it would report a real resource failure for a file the user has
+    // not created yet. Start on the empty buffer that first save will write instead.
+    if (editor.newFile) {
+      api.load('', editor.line === undefined ? undefined : editor.line - 1);
+      setLastSaved('');
+      return;
+    }
     let cancelled = false;
     const load = async () => {
       try {
