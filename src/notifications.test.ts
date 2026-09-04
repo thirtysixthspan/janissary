@@ -138,6 +138,27 @@ describe('shouldNotify — harness-recording-failed event', () => {
   });
 });
 
+describe('shouldNotify — e2e-browser-gone event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'e2e-browser-gone', 'claude', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'e2e-browser-gone', 'claude', 'janus')).toBe(true);
+  });
+
+  // The tab whose browser just died is very often the tab the user is watching, which is exactly
+  // the case focus suppression would have discarded.
+  it('bypasses focus suppression when the -b tab is the active one', () => {
+    expect(shouldNotify(allOn, 'e2e-browser-gone', 'claude', 'claude')).toBe(true);
+  });
+
+  it('renders the reported detail as the body', () => {
+    expect(notificationText('e2e-browser-gone', 'claude', 'e2e browser exited')).toBe('e2e browser exited');
+  });
+
+  it('falls back to a fixed body when no detail is given', () => {
+    expect(notificationText('e2e-browser-gone', 'claude')).toBe('e2e browser stopped');
+  });
+});
+
 describe('shouldNotify — file-operation event', () => {
   it('fires regardless of notification config', () => {
     expect(shouldNotify(undefined, 'file-operation', 'build', 'janus')).toBe(true);

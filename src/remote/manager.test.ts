@@ -1,8 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
+import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
+
+vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 
 function address(token: string): RemoteAddress {
   const parsed = parseRemoteAddress(token);
@@ -92,5 +96,66 @@ describe('RemoteManager shared channels', () => {
     expect(joinedHandlers.onClosed).toHaveBeenCalledOnce();
     expect(h.remote.get('creator')).toBeUndefined();
     expect(h.remote.get('joined')).toBeUndefined();
+  });
+});
+
+// A remote `-b` tab's browser dying is reported by the far side as a `browser-exited` frame. The
+// tab it names is resolved from the frame's session id, not the channel's label — joined tabs share
+// a channel, so the channel label would name the wrong one.
+function browserHarness(tabs: Tab[]) {
+  let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
+  const closeTab = vi.fn();
+  const managers = {
+    pty: {
+      spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+        transport = handlers;
+        return { id: 'ssh1', program: 'ssh', write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+      }),
+      reassignTransports: vi.fn(),
+    },
+    tab: { findIndex: vi.fn(() => -1), closeTab, tabs, cur: () => ({ label: 'creator' }) },
+  } as unknown as Managers;
+  const remote = new RemoteManager(managers);
+  remote.open('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+  transport?.onData(`${encodeHandshake('/remote')}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  return {
+    managers,
+    closeTab,
+    send: (id: string) => transport?.onData(`${encodeFrame({ type: 'browser-exited', id })}\n`),
+  };
+}
+
+function harnessTab(label: string, ptyId: string): Tab {
+  return { label, harness: { name: 'claude', program: 'claude', ptyId, status: 'running' } } as unknown as Tab;
+}
+
+describe('RemoteManager browser-exited frames', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('notifies against the tab owning that session id', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1')]);
+    h.send('rpty1');
+    expect(notify).toHaveBeenCalledWith(h.managers, 'e2e-browser-gone', 'creator', expect.stringContaining('remote'));
+  });
+
+  // The channel label is `creator`; naming the tab from it would report the wrong tab entirely.
+  it('names the joined tab that owns the session, not the channel\'s own label', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1'), harnessTab('joined', 'rpty2')]);
+    h.send('rpty2');
+    expect(notify).toHaveBeenCalledWith(h.managers, 'e2e-browser-gone', 'joined', expect.any(String));
+  });
+
+  it('drops a frame for an already-closed tab', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1')]);
+    h.send('gone-session');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  // The frame is a report about the tab, not a channel-level fault: it must not tear the transport
+  // down the way an unexpected frame would.
+  it('keeps the channel open', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1')]);
+    h.send('rpty1');
+    expect(h.closeTab).not.toHaveBeenCalled();
   });
 });

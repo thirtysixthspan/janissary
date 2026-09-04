@@ -8,7 +8,10 @@ type Properties = { view: HarnessLaunchView; client: JanusClient };
 
 function initialFields(names: string[]): HarnessLaunchFields {
   const name = names[0] ?? 'claude';
-  return { name, label: '', workspace: true, offline: false, autoApprove: autoApproveSupported(name), model: '', effort: '' };
+  return {
+    name, label: '', workspace: true, offline: false, browser: false,
+    autoApprove: autoApproveSupported(name), model: '', effort: '',
+  };
 }
 
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
@@ -73,6 +76,10 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
           <label className="harness-launch-check">
             <input type="checkbox" checked={fields.offline} onChange={(e) => update({ offline: e.target.checked })} />
             Offline (--offline)
+          </label>
+          <label className="harness-launch-check">
+            <input type="checkbox" checked={fields.browser} onChange={(e) => update({ browser: e.target.checked })} />
+            E2E browser (-b)
           </label>
           <label className={`harness-launch-check${autoApproveEnabled ? '' : ' disabled'}`}>
             <input

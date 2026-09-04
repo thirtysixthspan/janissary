@@ -11,6 +11,7 @@ import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project-init.js';
 import { runRemoteServer } from './remote/serve.js';
+import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -168,6 +169,16 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   // frame protocol over stdin/stdout, and takes no instance lock, opens no window, and starts no
   // HTTP server — so it returns before any of the boot below.
   if (args.remoteServe) { runRemoteServer(args.remoteServePath); return; }
+
+  // The confined browser behind a `-b` harness tab's protocol guard. Like `remote-serve` it is a
+  // long-lived child of a janissary server rather than a server itself, so it takes no lock, opens
+  // no window, and returns before the boot below. It runs until killed.
+  if (args.e2eBrowser) {
+    const parsed = parseE2EBrowserArgs(args.e2eBrowserArgs);
+    if ('error' in parsed) throw new CliUsageError(parsed.error);
+    await runE2EBrowser(parsed);
+    return;
+  }
 
   const cwd = args.projectDir ?? process.cwd();
   if (args.stop) { stopInstance(cwd); return; }

@@ -14,6 +14,10 @@ export interface SpawnTabOptions {
   groupColor: string;
   dotColor: string;
   autoApprove: boolean;
+  // `-b`/`--browser`: start a headless Chromium for this tab behind a protocol guard and inject the
+  // two variables the harness drives it through. Owned by the tab's `HarnessRuntime`, so it is
+  // stopped by the same disposal the reader and recorder go through.
+  browser: boolean;
   model?: string;
   effort?: string;
   // Set only for a workspace clone still in flight: the PTY spawn waits on it.

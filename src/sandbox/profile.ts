@@ -136,6 +136,16 @@ ${secretDenyClauses})
 ; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
 ; node at JANISSARY_NODE (see index.ts) instead of relying on PATH resolution inside the
 ; sandboxed process, which doesn't always find a working node first.
+; PLAYWRIGHT_DIR/PLAYWRIGHT_CORE_DIR are janissary's own copy of the Playwright client, which a
+; harness launched with -b imports from JANISSARY_PLAYWRIGHT to drive the e2e browser (see
+; src/browser/e2e-server.ts). Client and server must be the same version to connect, and a fresh
+; workspace clone has no node_modules until the AI installs them, so the project's own copy cannot
+; be relied on. playwright-core is carved in separately because it is playwright's only runtime
+; dependency and in a hoisted layout sits as a sibling rather than nested, so the parent alone
+; leaves every internal require denied. Unconditional rather than gated on -b: gating it would
+; mean threading a field through SandboxOptions, spawnPty, PseudoterminalManager.spawn, and the
+; remote's spawn path to withhold read access to two directories of janissary's own dependency tree
+; that hold no user data.
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
@@ -144,6 +154,8 @@ ${secretDenyClauses})
   (subpath (param "SELF_DIR_R"))
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
+  (subpath (param "PLAYWRIGHT_DIR"))
+  (subpath (param "PLAYWRIGHT_CORE_DIR"))
 ${readCarveClauses}
 ${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The

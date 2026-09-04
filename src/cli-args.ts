@@ -19,11 +19,31 @@ export interface CliArgs {
   // workspace-failed frame, not as a CLI usage error.
   remoteServe: boolean;
   remoteServePath: string | undefined;
+  // `janus e2e-browser --port <n> --ws-path <token> --dir <path>`: run as the confined browser
+  // server behind a `-b` harness tab's protocol guard (see product/specs/harness.md). Its own flags
+  // are parsed by `parseE2EBrowserArgs` from the raw argv rather than here, since they are never
+  // typed by a user — `startE2EBrowserServer` is the only caller.
+  e2eBrowser: boolean;
+  e2eBrowserArgs: string[];
   port: number | undefined;
   projectDir: string | undefined;
 }
 
+// The `e2e-browser` subcommand's own args (`--ws-path`, `--dir`) are not declared to `parseArgs`, so
+// strict mode would reject them as unknown options. It is recognized before any option parsing and
+// its arguments are handed on verbatim for `parseE2EBrowserArgs` to read.
+function e2eBrowserCommand(rest: string[]): CliArgs {
+  return {
+    help: false, version: false, relaunch: false, noOpen: false,
+    stop: false, init: false, remoteServe: false, remoteServePath: undefined,
+    e2eBrowser: true, e2eBrowserArgs: rest,
+    port: undefined, projectDir: undefined,
+  };
+}
+
 export function parseCliArgs(argv: string[]): CliArgs {
+  if (argv[0] === 'e2e-browser') return e2eBrowserCommand(argv.slice(1));
+
   let values: Record<string, string | boolean | string[] | undefined>;
   let positionals: string[];
   try {
@@ -54,8 +74,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     throw new CliUsageError(`invalid --port value: ${values.port}`);
   }
 
-  // `stop`, `init`, and `remote-serve` are positional subcommands, not a project directory: each
-  // takes its own optional directory argument after the keyword.
+  // `stop`, `init`, `remote-serve`, and `e2e-browser` are positional subcommands, not a project
+  // directory: each takes its own arguments after the keyword.
   const stop = positionals[0] === 'stop';
   const init = positionals[0] === 'init';
   const remoteServe = positionals[0] === 'remote-serve';
@@ -70,6 +90,8 @@ export function parseCliArgs(argv: string[]): CliArgs {
     init,
     remoteServe,
     remoteServePath: remoteServe ? positionals[1] : undefined,
+    e2eBrowser: false,
+    e2eBrowserArgs: [],
     port,
     projectDir,
   };

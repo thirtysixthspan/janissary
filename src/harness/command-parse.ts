@@ -7,7 +7,7 @@ import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 
 export type HarnessParsed =
   | {
-    name: string; workspace: boolean; offline: boolean; autoApprove: boolean;
+    name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
     label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
   }
   | { capture: true; label: string }
@@ -48,15 +48,15 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
 }
 
 // Parse the option flags following the harness name: workspace and auto-approve opt-ins/outs, --offline,
-// --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split out of
-// `parseHarnessCommand` so that function's own branching stays under the complexity limit.
+// -b/--browser, --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split
+// out of `parseHarnessCommand` so that function's own branching stays under the complexity limit.
 // A present `on` forces `workspace` true, so no caller has to remember the implication: the remote
 // server does nothing but workspaced launches, so a remote launch without one has no meaning.
 function parseHarnessFlags(
   tokens: string[],
   name: string,
 ): {
-  workspace: boolean; offline: boolean; autoApprove: boolean;
+  workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
   model?: string; effort?: string; label?: string; remote?: RemoteAddress;
 } | { error: string } {
   const remote = findRemoteClause(tokens);
@@ -64,6 +64,7 @@ function parseHarnessFlags(
   const noWorkspace = tokens.some((t) => t.toLowerCase() === '--no-workspace');
   const workspace = remote !== undefined || !noWorkspace;
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
+  const browser = tokens.some((t) => t === '-b' || t.toLowerCase() === '--browser');
   const noAutoApprove = tokens.some((t) => t.toLowerCase() === '--no-auto-approve');
   const requestedAutoApprove = tokens.some((t) => t === '-y' || t === '--yes');
   const autoApprove = supportsHarnessAutoApprove(name) && !noAutoApprove;
@@ -77,10 +78,10 @@ function parseHarnessFlags(
   const effort = findFlagValue(tokens, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { workspace, offline, autoApprove, model, effort, remote };
+  if (asIndex === -1) return { workspace, offline, autoApprove, browser, model, effort, remote };
   const label = tokens[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { workspace, offline, autoApprove, model, effort, label, remote };
+  return { workspace, offline, autoApprove, browser, model, effort, label, remote };
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
@@ -97,7 +98,8 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
 
 /**
  * Parse a `harness <name> [as <label>] [on <address>] [-w|--workspace] [--offline] [-y|--yes]
- * [--model <name>] [--effort <level>]` command, validating the harness name against the known set.
+ * [-b|--browser] [--model <name>] [--effort <level>]` command, validating the harness name against
+ * the known set.
  * `on <address>` runs the harness on another host over one ssh session and implies `-w`, since the
  * remote server does nothing but workspaced launches (see `product/specs/remote-server.md`).
  * `as <label>`
@@ -107,6 +109,10 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  * prompts; it is supported for claude and codex (a hard error otherwise) and works with or without `-w`/`--workspace` —
  * without a workspace, the new tab's terminal shows a security warning since prompts are then
  * approved unattended against the real working directory, with no sandbox.
+ * `-b`/`--browser` starts a headless Chromium for the tab and injects the two variables a sandboxed
+ * AI drives it through (see `product/specs/harness.md`). It is accepted for every harness, with or
+ * without a workspace, and is deliberately not rejected alongside `--offline`: both apply, and the
+ * offline profile then denies the harness the network route to its own browser.
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.
  * `--effort <level>` selects an effort level, passed through verbatim with no validation.
  * A trailing `with <prompt>` clause (after all options) carries free-text to inject into the new

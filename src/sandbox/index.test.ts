@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync, existsSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git-identity.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { BROWSER_SANDBOX_PROFILE } from './browser-profile.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
 // remote takes, reachable from any platform the suite runs on.
@@ -133,6 +134,61 @@ describe('sandboxSpawn', () => {
     for (const required of ['WORKSPACE', 'TMPDIR', 'HOME', 'GIT_OBJECTS']) {
       expect(dNames).toContain(required);
     }
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The Playwright carve-in is unconditional rather than gated on `-b`: gating it would mean
+  // threading a field through SandboxOptions, spawnPty, and the remote's spawn path to withhold read
+  // access to two directories of janissary's own dependency tree that hold no user data.
+  it('binds the Playwright params to real directories for every sandboxed spawn, -b or not', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const dValues = new Map(result.args
+      .filter((_, i) => result.args[i - 1] === '-D')
+      .map((v) => [v.slice(0, v.indexOf('=')), v.slice(v.indexOf('=') + 1)]));
+    for (const param of ['PLAYWRIGHT_DIR', 'PLAYWRIGHT_CORE_DIR']) {
+      const value = dValues.get(param);
+      expect(value).toBeTruthy();
+      expect(existsSync(value ?? '')).toBe(true);
+    }
+    // Resolved separately, not assumed nested: in a hoisted layout playwright-core is a sibling.
+    expect(dValues.get('PLAYWRIGHT_DIR')).not.toBe(dValues.get('PLAYWRIGHT_CORE_DIR'));
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_DIR"))');
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_CORE_DIR"))');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('selects the browser profile, and its own short param list, for a browser spawn', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn(
+      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' } }, 'node', ['main.js'],
+    );
+    expect(result.args[0]).toBe('-p');
+    expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
+    expect(result.args[1]).not.toBe(SANDBOX_PROFILE);
+    const dNames = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]);
+    // The harness spawn's tables never reach the browser profile — it does not name them and must
+    // not learn about them.
+    expect(dNames).not.toContain('GIT_OBJECTS');
+    expect(dNames).not.toContain('SELF_DIR_L');
+    expect(dNames).not.toContain('PLAYWRIGHT_DIR');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The browser child authenticates to nothing and pushes nowhere, so none of the credential
+  // injection a harness spawn gets applies to it.
+  it('injects no credentials into a browser spawn', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn(
+      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: { github: 'scoped-token' } },
+      'node', ['main.js'], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' },
+    );
+    expect(result.env.GH_TOKEN).toBeUndefined();
+    expect(result.env.NPM_TOKEN).toBeUndefined();
+    expect(result.env.TMPDIR).toBeTruthy();
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 

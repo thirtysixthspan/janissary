@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './browser-profile.js';
+import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
@@ -29,6 +31,13 @@ export type SandboxOptions = {
   // actually confine the process, because a host that cannot confine anything still needs its
   // harness authenticated and its pushes credentialed.
   tokens?: ProjectTokens;
+  // Set only for the e2e browser child (`src/browser/e2e-server.ts`): confine it with the minimal
+  // browser profile instead of the harness one, carving in the named Chromium app bundle and
+  // janissary's own installation root (the child runs `janus e2e-browser`, so it reads janissary's
+  // entry point and dependencies). The harness profile's read carve-ins — Keychains, `.claude`,
+  // `.codex`, opencode's state directory — are close to an inventory of what an escape would want,
+  // and a browser needs none of them.
+  browser?: { chromiumDir: string; appDir: string };
 };
 
 export type SandboxResult = {
@@ -61,6 +70,12 @@ export function sandboxNotice(): string | undefined {
 // fails to carve in. Falls back to the input path if it doesn't exist (yet).
 function resolvePath(p: string): string {
   try { return realpathSync(p); } catch { return p; }
+}
+
+// One path in both the forms a Seatbelt carve-in needs — see `dualParams` in paths.ts for why a
+// rule that names only one of them leaves the other operation denied.
+function dualPath(p: string): { literal: string; real: string } {
+  return { literal: p, real: resolvePath(p) };
 }
 
 let cachedDarwinUserCacheDir: string | undefined;
@@ -264,14 +279,28 @@ export function sandboxSpawn(
   const workspaceDir = resolvePath(options.workspaceDir);
   const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
   const home = resolvePath(homedir());
-  const gitObjects = parentGitObjectsDir(options.workspaceDir);
-  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
   const darwinCacheDir = darwinUserCacheDir();
-  const scratchDir = claudeScratchDir();
-  const serverNodeDir = serverNodeDirs();
-
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
+
+  // The browser child gets its own profile and its own short parameter list, and none of the
+  // credential injection below: it authenticates to nothing and pushes nowhere.
+  if (options.browser) {
+    const params = browserProfileParams({
+      workspace: workspaceDir, tmp: tmpDir, home, cache: darwinCacheDir,
+      chromium: dualPath(options.browser.chromiumDir),
+      node: dualPath(path.dirname(process.execPath)),
+      app: dualPath(options.browser.appDir),
+    });
+    return { command: 'sandbox-exec', args: ['-p', BROWSER_SANDBOX_PROFILE, ...params, '--', command, ...args], env: scrubbed };
+  }
+
+  const gitObjects = parentGitObjectsDir(options.workspaceDir);
+  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
+  const scratchDir = claudeScratchDir();
+  const serverNodeDir = serverNodeDirs();
+  const playwright = playwrightPackagePaths();
+
   scrubbed.JANISSARY_NODE = process.execPath;
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
@@ -287,6 +316,8 @@ export function sandboxSpawn(
     '-D', `CLAUDE_SCRATCH_DIR=${scratchDir}`,
     '-D', `SERVER_NODE_DIR_L=${serverNodeDir.literal}`,
     '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
+    '-D', `PLAYWRIGHT_DIR=${playwright.dirs[0]}`,
+    '-D', `PLAYWRIGHT_CORE_DIR=${playwright.dirs[1]}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

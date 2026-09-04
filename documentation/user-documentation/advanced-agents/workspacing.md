@@ -20,3 +20,13 @@ Agents and harnesses get a workspace by default. Use `--no-workspace` when you d
 Add `--offline` to deny network access too.
 
 Isolation is on by default (`sandboxWorkspaces` in `.janissary/config.json`; it requires macOS). When a workspaced tab is created and isolation isn't actually active — the setting is off, or the platform can't enforce it — the tab says so with a one-line notice, so you're never silently unprotected.
+
+## Browsers can't start inside a workspace
+
+One consequence of the reading rules above is worth knowing before it puzzles you: a harness inside a workspace **cannot launch a browser**. Playwright keeps its Chromium under your home directory, which the workspace can't read, so any attempt to start one fails on a permission error. That isn't a bug to work around — it's the boundary doing its job.
+
+If you want a workspaced harness to check its work in a real browser, launch it with `-b`/`--browser` and Janissary provides one from outside the workspace. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser).
+
+That browser is contained in its own right, since handing an AI a browser would otherwise be a way straight back out through `file://` URLs. Two things stop it: the address the harness gets belongs to a guard that refuses `file:` URLs and drops the connection, and the browser itself runs in an empty scratch directory rather than anywhere near your files. On macOS the browser is sandboxed to that directory as well, so even a `file:` read that slipped past the guard finds nothing worth having.
+
+Be aware of the asymmetry: on a machine without macOS sandboxing, or with `sandboxWorkspaces` switched off, the browser runs unconfined and the guard is the only layer left. It's the same trade-off a workspaced tab already makes on a non-macOS host — the disposable clone still applies, the kernel-enforced boundary doesn't.

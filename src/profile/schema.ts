@@ -71,6 +71,7 @@ function harnessProblems(value: Record<string, unknown>, loc: string): string[] 
     ...checkField(value, 'workspace', 'boolean', loc),
     ...checkField(value, 'autoApprove', 'boolean', loc),
     ...checkField(value, 'offline', 'boolean', loc),
+    ...checkField(value, 'browser', 'boolean', loc),
     ...checkField(value, 'run', 'string[]', loc),
     ...checkField(value, 'schedule', 'string[]', loc),
   ];

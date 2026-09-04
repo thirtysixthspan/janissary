@@ -84,6 +84,14 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   `JANISSARY_NODE` env var (see [Environment scrubbing](#environment-scrubbing)) so a script
   running inside the sandbox can invoke a known-good `node` without depending on `PATH` resolution
   order inside that sandboxed context.
+- Janissary's own **Playwright client** package directories (`PLAYWRIGHT_DIR`/`PLAYWRIGHT_CORE_DIR`)
+  are readable, so a harness launched with `-b`/`--browser` can import the client Janissary hands it
+  via `JANISSARY_PLAYWRIGHT` (see [End-to-end browser](#end-to-end-browser)). `playwright-core` is
+  carved in separately from `playwright` rather than assumed to sit inside it: it is `playwright`'s
+  only runtime dependency, and in a hoisted layout it is a sibling, so carving in the parent alone
+  leaves every internal import denied. The carve-in applies to every sandboxed spawn, not only a
+  `-b` one — it grants read access to two directories of Janissary's own dependency tree, which hold
+  no user data, and gating it would thread a flag through every spawn path to no benefit.
 - `/dev/null` and tty/pty devices get their own narrow read/write/ioctl allow, independent of the
   workspace/`$HOME` rules — a PTY-backed tab needs `ioctl` (raw-mode termios, window size) on its
   controlling terminal, which is a distinct Seatbelt operation from `file-read*`/`file-write*`.
@@ -180,7 +188,13 @@ reaches a remote machine. `TMPDIR` is overridden to the workspace's private temp
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a
 known-good `node` directly instead of relying on a bare `node` resolving correctly via `PATH` in
-whatever context spawned it.
+whatever context spawned it. A tab launched with `-b`/`--browser` additionally gets
+`JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client, and
+`JANISSARY_BROWSER_WS_ENDPOINT`, the endpoint of the guard in front of that tab's browser (see
+[End-to-end browser](#end-to-end-browser)). Both name paths and ports on the machine the harness
+runs on, so a remote launch builds its own pair on the far side rather than being handed these.
+Neither is a credential: the endpoint's unguessable path is the only secret either carries, and it
+grants nothing beyond the one contained browser it names.
 
 ### Known OS quirks and their carve-ins
 
@@ -238,6 +252,55 @@ dedicated handling:
   even attempted. `sandbox.ts` resolves this once as `CLAUDE_SCRATCH_DIR` (`/private/tmp/claude-<uid>`,
   from `process.getuid()`, cached for the process's life) and carves in write access for it —
   reads already work via the broad file-read* allow, same as the Darwin cache dir.
+
+### End-to-end browser
+
+A harness launched with `-b`/`--browser` (see Harness Tab) gets a headless Chromium it can drive.
+That browser is contained by two independent layers, because neither is sufficient alone.
+
+**The protocol guard.** The endpoint the harness is handed does not belong to the browser; it
+belongs to a Janissary process in front of it. The guard relays browser-control traffic in both
+directions and inspects every frame, in both text and binary form, by decoding it as UTF-8 and
+parsing it as JSON. A frame from the harness naming a `file:` URL anywhere ends the session, as does
+a reply from the browser whose navigation-result fields hold one, as does any frame that will not
+parse at all. Ending the session means the connection is closed outright rather than one call
+failing, so there is no partial read to salvage. Matching is on parsed values, not a text search, so
+a `file:` URL written with JSON escapes is caught. Ordinary page content that merely mentions
+`file://` relays through untouched. The guard listens on loopback only and accepts connections on
+one unguessable path; the browser's own address behind it never leaves the Janissary process.
+
+What the guard does not see is a server-initiated redirect that lands on a `file:` URL. That gap is
+what the second layer exists to make harmless.
+
+**The browser's own sandbox.** The browser process runs under its own Seatbelt profile — deliberately
+not the harness profile, whose carve-ins (`~/Library/Keychains`, `~/.claude`, `~/.codex`, opencode's
+state directory) are close to an inventory of what an escape would want. A browser needs none of
+them. Its profile denies everything by default, allows reads broadly outside `$HOME`, denies `$HOME`'s
+contents, and carves back in exactly three paths: the Chromium application bundle, the Node binary's
+directory, and Janissary's own installation root — the three the process cannot start without. It may
+write only inside its own scratch directory, that directory's temp sibling, and the Darwin per-user
+cache. Networking, POSIX shared memory, IOKit property reads, and `sysctl-read` are allowed, since
+Chromium fails to start rather than degrading without them.
+
+That scratch directory is created fresh and empty for each `-b` tab, is never a clone of the
+project, and is removed when the tab closes. It holds the browser's profile and downloads, so a
+`file:` read that got past the guard finds a disposable directory with nothing in it — and cannot
+reach the code under test, which the browser has no reason to read.
+
+Chromium refuses to initialize its own internal sandbox inside an outer one, so a confined Chromium
+runs with that internal sandbox off. This costs nothing that was not already given up: Playwright
+defaults it off, and every Chromium Janissary launches today already runs that way with nothing
+around it. The outer profile is a strict improvement on that.
+
+**Where only one layer applies.** On a host without Seatbelt, or with `sandboxWorkspaces` off, the
+browser starts unconfined and the guard is the only layer left. The scratch directory is still
+created and still used, so writes stay tidy either way. This is the same asymmetry a workspaced tab
+already has on a non-macOS host.
+
+An operator wanting a third layer can apply Chromium's enterprise `URLBlocklist` policy with
+`file://*` on the host. It is the only control that lives inside the browser process where a client
+cannot reach it. Janissary does not apply it: a mandatory policy needs admin-installed managed
+preferences per host and applies to the whole browser installation rather than to one tab.
 
 ### Practical consequences
 

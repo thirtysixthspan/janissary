@@ -36,7 +36,14 @@
 // navigator reports as a notifications line. A version-10 remote replies with no result at all, so
 // every remote pull would report the bare fallback text while both ends looked healthy — the same
 // carries-not-shape distinction the `identity` bump above is the archetype of.
-export const REMOTE_PROTOCOL_VERSION = 11;
+//
+// Version 12 adds the e2e browser: `browser` on `spawn`, which the remote acts on by starting its
+// own protocol guard and confined Chromium on its own host, and a `browser-exited` frame back for
+// when that browser is gone. Two changes, one bump. A version-11 remote ignores the flag and spawns
+// the harness with no browser variables at all, so a `harness … on <host> -b` tab would come up
+// looking healthy while every `chromium.connect` inside it failed with nothing to point at — the
+// same failure the check exists for.
+export const REMOTE_PROTOCOL_VERSION = 12;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -89,6 +96,11 @@ export type ClientFrame =
     // harness-specific environment and to start the transcript source for the tab.
     harness?: string;
     cols: number; rows: number; offline?: boolean; agentName?: string;
+    // `-b`: start an e2e browser for this process on the remote host. A boolean rather than an
+    // endpoint computed here and shipped over, following the shape `offline` and `harness` already
+    // use — the remote starts its own guard, its own confined browser, and its own workspace
+    // directory, exactly as `harnessEnv`'s doc comment states the general rule.
+    browser?: boolean;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }
@@ -120,6 +132,11 @@ export type ServerFrame =
   | { type: 'workspace-failed'; message: string }
   | { type: 'output'; id: string; data: string }
   | { type: 'exit'; id: string; exitCode: number }
+  // The remote's e2e browser for that session is gone — a failed launch, a browser that exited, or
+  // a guard that died. The local side raises the same notification it would for a local one. No
+  // supervisor and no restart on either side: once it is gone, `connect()` fails with a plain
+  // connection error.
+  | { type: 'browser-exited'; id: string }
   | { type: 'transcript'; blocks: string[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
@@ -148,6 +165,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
+  'browser-exited': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };
