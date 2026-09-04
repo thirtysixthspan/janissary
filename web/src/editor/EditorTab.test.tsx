@@ -202,6 +202,18 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.getByText('Failed to load notes.txt')).toBeInTheDocument());
   });
 
+  it('opens a not-yet-created file on an empty buffer instead of reporting a failed load', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: () => Promise.resolve('') } as unknown as Response));
+    const { client } = makeClient();
+    const view = makeView({ name: 'untitled.md', path: '/repo/untitled.md', size: 'unknown', newFile: true });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+
+    await waitFor(() => expect(container.querySelectorAll('.editor-gutter')).toHaveLength(1));
+    expect(screen.queryByText('Failed to load untitled.md')).not.toBeInTheDocument();
+    expect(container.querySelector('.editor-error')).toBeNull();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('typing inserts at the cursor and Enter splits the line', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
