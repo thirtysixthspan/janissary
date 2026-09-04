@@ -2,6 +2,8 @@
 
 ## ready
 
+* when creating a new file from the file navigator using either the metadata button or the context menu item, the editor is opened but an error appears in the metadata - untitled.md unknown $root/untitled.md Failed to load untitled.md
+
 ## development
 
 ## deferred
