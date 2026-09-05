@@ -43,7 +43,7 @@ const keychainWriteClause =
 const claudeConfigWriteClause =
   String.raw`  (require-all (subpath (param "HOME")) (regex #"/\.claude\.json\.[0-9a-f-]+\.tmp$"))`;
 
-function buildProfile(networkClause: string): string {
+function buildProfile(networkClause: string, browserClause = ''): string {
   return String.raw`(version 1)
 (deny default)
 (allow process-fork)
@@ -208,9 +208,19 @@ ${secretDenyClauses})
 (allow signal (target children))
 
 ${networkClause}
+${browserClause}
 `;
 }
 
-// Network allowed by default; `--offline` swaps in the deny-network variant.
+const BROWSER_NETWORK_DENY = `; A browser-enabled harness receives only the guard
+; endpoint, but Playwright also serves its own private websocket path from an unauthenticated
+; discovery route on the browser port. Deny that one loopback destination last so the harness
+; cannot bypass the guard.
+(deny network-outbound (remote ip (param "BROWSER_ENDPOINT")))`;
+
+// Network allowed by default; `--offline` swaps in the deny-network variant. Browser launches use
+// parallel static variants so an ordinary spawn neither references nor binds a placeholder port.
 export const SANDBOX_PROFILE = buildProfile('(allow network*)');
 export const SANDBOX_PROFILE_OFFLINE = buildProfile('(deny network*)');
+export const SANDBOX_PROFILE_WITH_BROWSER = buildProfile('(allow network*)', BROWSER_NETWORK_DENY);
+export const SANDBOX_PROFILE_OFFLINE_WITH_BROWSER = buildProfile('(deny network*)', BROWSER_NETWORK_DENY);

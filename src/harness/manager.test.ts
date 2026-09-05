@@ -32,6 +32,7 @@ vi.mock('./scratch-dir.js', () => ({
     return {
       env: { ...base, JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok', JANISSARY_PLAYWRIGHT: '/pw/index.js' },
       handle,
+      browserPort: 50_400,
     };
   }),
 }));
@@ -593,7 +594,7 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness opencode --no-workspace --model opencode-go/glm-5.2 --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'opencode', 'opencode', "opencode --model 'opencode-go/glm-5.2'",
-      '/project', undefined, false, undefined,
+      '/project', undefined, false, undefined, undefined,
     );
   });
 
@@ -603,7 +604,7 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness claude --no-workspace --no-auto-approve --effort high')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", '/project', undefined, false,
-      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
+      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' }, undefined,
     );
   });
 
@@ -613,7 +614,7 @@ describe('HarnessManager model/effort', () => {
     expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', 'claude', '/project', undefined, false,
-      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' },
+      { CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' }, undefined,
     );
   });
 
@@ -625,7 +626,7 @@ describe('HarnessManager model/effort', () => {
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
-      { CLAUDE_CODE_TMPDIR: expect.any(String), DISABLE_AUTOUPDATER: '1' },
+      { CLAUDE_CODE_TMPDIR: expect.any(String), DISABLE_AUTOUPDATER: '1' }, undefined,
     );
   });
 
@@ -1146,7 +1147,7 @@ describe('HarnessManager e2e browser', () => {
     vi.clearAllMocks();
   });
 
-  it('reaches the PTY spawn\'s extraEnv with both variables for a -b launch', () => {
+  it('reaches the PTY spawn with the guarded environment and private port for a -b launch', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness claude --no-workspace --no-auto-approve -b')).toBeUndefined();
@@ -1158,6 +1159,7 @@ describe('HarnessManager e2e browser', () => {
         JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok',
         JANISSARY_PLAYWRIGHT: '/pw/index.js',
       },
+      50_400,
     );
   });
 

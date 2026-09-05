@@ -29,6 +29,9 @@ export type E2EBrowserServer = {
   // environment by the caller.
   env: NodeJS.ProcessEnv;
   handle: E2EBrowserHandle;
+  // Kept out of `env`: the harness needs the guarded endpoint, while its Seatbelt wrapper alone
+  // needs the browser server's private port so it can deny a direct connection to it.
+  browserPort: number;
 };
 
 export type E2EBrowserOptions = {
@@ -78,6 +81,7 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
       JANISSARY_PLAYWRIGHT: playwrightPackagePaths().entry,
     },
     handle: { close: () => stopSession(session) },
+    browserPort: ports.browserPort,
   };
 }
 

@@ -223,7 +223,7 @@ export class HarnessManager {
     try {
       const id = channel
         ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser })
-        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
+        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env, spawnEnv.browserPort);
       this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
       this.markRunning(label, id);
     } catch (error) {

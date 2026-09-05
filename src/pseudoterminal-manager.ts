@@ -25,7 +25,7 @@ export class PseudoterminalManager {
   // override that isn't part of Seatbelt confinement).
   spawn(
     label: string, program: string, command: string, cwd: string,
-    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv,
+    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv, browserPort?: number,
   ): string {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
@@ -34,6 +34,7 @@ export class PseudoterminalManager {
       workspaceDir,
       offline,
       tokens: workspaceDir ? getProjectTokens() : undefined,
+      browserPort,
     }, extraEnv);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;

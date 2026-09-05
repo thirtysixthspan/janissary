@@ -24,6 +24,8 @@ export type HarnessSpawnEnv = {
   // Set only for a `-b` launch. The caller hands it to the tab's `HarnessRuntime`, which closes it
   // on the same disposal path the reader and recorder go through.
   handle?: E2EBrowserHandle;
+  // Janissary-only spawn metadata. This never enters `env`, where the harness could read it.
+  browserPort?: number;
 };
 
 /**
@@ -41,5 +43,5 @@ export function harnessSpawnEnv(
   const base = harnessEnv(options.name, options.cwd);
   if (!options.browser) return { env: base };
   const browser = startE2EBrowserServer({ label: options.label, onGone: options.onBrowserGone });
-  return { env: { ...base, ...browser.env }, handle: browser.handle };
+  return { env: { ...base, ...browser.env }, handle: browser.handle, browserPort: browser.browserPort };
 }

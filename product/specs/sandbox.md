@@ -270,7 +270,15 @@ normalization a browser's own URL parser applies — ASCII tabs and newlines rem
 leading controls and spaces trimmed — so a scheme padded or split by those characters names the same
 thing to the guard as it does to the browser. Ordinary page content that merely mentions
 `file://` relays through untouched. The guard listens on loopback only and accepts connections on
-one unguessable path; the browser's own address behind it never leaves the Janissary process.
+one unguessable path; the browser's own address behind it is not handed to the harness.
+
+Playwright also publishes its own WebSocket path through an unauthenticated discovery route on the
+browser's private loopback port. For a workspaced harness that Seatbelt actually confines, the
+harness profile denies outbound connections to that specific port after its general network rule,
+so the guard is the only transport route to the browser. The private port travels as Janissary-only
+spawn metadata, never as an environment variable the harness can read. Spawns without a browser
+use the original static profile, which has no private-port deny or parameter. The guard's port and
+every other destination allowed by the workspace policy stay reachable.
 
 Both ends of that private hop are pinned to one loopback address rather than resolved by name, and
 the endpoint the harness receives names the same one. A host that answers `localhost` with an IPv6
@@ -323,10 +331,14 @@ runs with that internal sandbox off. This costs nothing that was not already giv
 defaults it off, and every Chromium Janissary launches today already runs that way with nothing
 around it. The outer profile is a strict improvement on that.
 
-**Where only one layer applies.** On a host without Seatbelt, or with `sandboxWorkspaces` off, the
-browser starts unconfined and the guard is the only layer left. The scratch directory is still
-created and still used, so writes stay tidy either way. This is the same asymmetry a workspaced tab
-already has on a non-macOS host.
+**Where confinement does not apply.** On a host without Seatbelt, with `sandboxWorkspaces` off, or
+for a `--no-workspace` launch, the browser starts unconfined and no policy prevents the harness from
+reaching its private port. Janissary still hands out only the guard endpoint, but a process that
+scans loopback can ask Playwright for its private path and bypass the guard. The scratch directory
+is still created and the browser still receives its minimal environment, so writes stay tidy and
+server credentials stay withheld. This is the same host asymmetry a workspaced tab already has on
+a non-macOS host, now stated as a limit of the browser boundary rather than a guarantee the guard
+cannot enforce by itself.
 
 An operator wanting a third layer can apply Chromium's enterprise `URLBlocklist` policy with
 `file://*` on the host. It is the only control that lives inside the browser process where a client

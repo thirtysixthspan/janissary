@@ -136,6 +136,12 @@ describe('startE2EBrowserServer ports', () => {
     expect(guardCall(0).port).not.toBe(guardCall(0).upstreamPort);
   });
 
+  it('returns the private browser port as Janissary-only metadata', () => {
+    const server = start();
+    expect(server.browserPort).toBe(guardCall(0).upstreamPort);
+    expect(Object.values(server.env)).not.toContain(String(server.browserPort));
+  });
+
   it('gives two live browsers four distinct ports', () => {
     const first = start();
     const second = start();

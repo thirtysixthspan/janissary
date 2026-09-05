@@ -75,7 +75,10 @@ export class RemoteProcesses {
         },
         frame.cols,
         frame.rows,
-        { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
+        {
+          workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens,
+          ...(spawnEnv.browserPort !== undefined && { browserPort: spawnEnv.browserPort }),
+        },
         spawnEnv.env,
       );
     } catch (error) {

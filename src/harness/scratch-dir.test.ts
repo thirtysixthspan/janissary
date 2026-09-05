@@ -17,7 +17,7 @@ const BROWSER_ENV = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() } });
+  startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() }, browserPort: 50_400 });
 });
 
 function spawnEnv(name: string, browser: boolean) {
@@ -60,8 +60,14 @@ describe('harnessSpawnEnv with a browser', () => {
 
   it('hands back the handle so the caller can own its disposal', () => {
     const handle = { close: vi.fn() };
-    startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle });
+    startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle, browserPort: 50_400 });
     expect(spawnEnv('claude', true).handle).toBe(handle);
+  });
+
+  it('returns the private browser port without adding it to the harness environment', () => {
+    const result = spawnEnv('claude', true);
+    expect(result.browserPort).toBe(50_400);
+    expect(Object.values(result.env ?? {})).not.toContain('50400');
   });
 
   it('starts the browser under the tab\'s label, so its workspace is named for the tab', () => {

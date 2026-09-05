@@ -52,6 +52,15 @@ describe('PseudoterminalManager', () => {
     );
   });
 
+  it('puts the private browser port in the PTY sandbox options', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+
+    manager.spawn('main', 'claude', 'claude', '/repo', '/workspace', false, undefined, 50_400);
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ browserPort: 50_400 });
+  });
+
   it('resize changes the dimensions used for subsequently spawned PTYs', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const manager = new PseudoterminalManager(managers);
