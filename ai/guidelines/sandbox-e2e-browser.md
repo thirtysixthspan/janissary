@@ -12,7 +12,7 @@ Two environment variables, both set only when the tab was launched with `-b`/`--
 
 | Variable | What it is |
 | --- | --- |
-| `JANISSARY_BROWSER_WS_ENDPOINT` | The websocket endpoint to connect a Playwright client to. |
+| `JANISSARY_BROWSER_WS_ENDPOINT` | A scoped bearer capability: the secret websocket endpoint that grants control of this tab's contained browser. |
 | `JANISSARY_PLAYWRIGHT` | The path to janissary's own Playwright client entry point. |
 
 If they are unset, you have no browser and no way to get one. Say so rather than working around it; the human can relaunch the tab with `-b`.
@@ -45,7 +45,7 @@ It is `chromium.connect(endpoint)`, not `connectOverCDP`. The endpoint speaks Pl
 
 **Your own server, which you start yourself.** Install the workspace clone's dependencies, start its build inside the sandbox, read the URL and token out of that server's own output, and navigate there. The browser runs on the same host as your server in both the local and remote case, so a `127.0.0.1` URL resolves either way.
 
-Janissary deliberately gives you no URL and no session token for the janissary window the human is working in. That is not an oversight and there is no other route to it: driving the human's own window would create, focus, and close real tabs in the session they are using, and your clone renders the same UI anyway. Test the code you changed, not the code they are running.
+Janissary does not give you the URL or session token for the live janissary window the human is using. Active workspace confinement blocks the normal route through project state where those values are recorded. This reduces disclosure; it is not proof that the live session is unreachable when Seatbelt is unavailable, `sandboxWorkspaces` is off, or the harness was launched with `--no-workspace`. In those configurations an unconfined same-user process may discover services through accessible file, process, or listener state; the browser security warning in the harness documentation describes the resulting trust requirement. In every configuration, test the server built from your own workspace rather than the code the human is running.
 
 ## What will end your session
 

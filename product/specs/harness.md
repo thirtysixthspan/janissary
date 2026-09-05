@@ -167,10 +167,14 @@ whichever host the harness runs on, and gives the harness two environment variab
 
 The AI writes its own script, connects to the endpoint, and drives a real browser against a real
 page. What it points that browser at is its own work: it starts the workspace clone's build inside
-the sandbox and navigates to that server. Janissary injects no application URL and no session token,
-so the agent never touches the Janissary window the user is working in, and it tests the code it
-just changed rather than the code the user is running. There is no test runner and no pass/fail
-reporting — the two variables are the whole surface.
+the sandbox and navigates to that server. Janissary does not inject the live application's URL or
+session token, and active workspace confinement blocks the normal route through the project's state
+directory where those values are recorded. This reduces disclosure; it does not prove the live
+session unreachable when Seatbelt is unavailable, `sandboxWorkspaces` is off, or the harness uses
+`--no-workspace`. In those configurations the harness is not confined from discovering same-user
+process, file, or listener state by other means. See Sandbox, especially "Where confinement does not
+apply." The intended target remains the server built from the harness's own workspace. There is no
+test runner and no pass/fail reporting — the two variables are the whole surface.
 
 The browser is always headless, since the AI never needs to look at a window. Each `-b` tab gets its
 own browser; browsers are never shared or pooled between tabs. The flag is accepted for every

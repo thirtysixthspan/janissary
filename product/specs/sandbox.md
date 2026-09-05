@@ -193,8 +193,10 @@ whatever context spawned it. A tab launched with `-b`/`--browser` additionally g
 `JANISSARY_BROWSER_WS_ENDPOINT`, the endpoint of the guard in front of that tab's browser (see
 [End-to-end browser](#end-to-end-browser)). Both name paths and ports on the machine the harness
 runs on, so a remote launch builds its own pair on the far side rather than being handed these.
-Neither is a credential: the endpoint's unguessable path is the only secret either carries, and it
-grants nothing beyond the one contained browser it names.
+`JANISSARY_PLAYWRIGHT` is a non-secret filesystem path. `JANISSARY_BROWSER_WS_ENDPOINT` is a scoped
+bearer capability: its unguessable path authorizes control of the one contained browser it names.
+That narrower scope does not make the value non-secret; it must be protected from other processes
+and users that should not control that browser.
 
 ### Known OS quirks and their carve-ins
 

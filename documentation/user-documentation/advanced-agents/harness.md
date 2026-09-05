@@ -88,9 +88,9 @@ A harness working inside a workspace can't launch a browser of its own — the s
 harness claude -b
 ```
 
-Janissary starts a headless Chromium for that tab and hands the harness two environment variables: `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. From there the harness writes its own script, connects, and drives a real page.
+Janissary starts a headless Chromium for that tab and hands the harness two environment variables: `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
 
-What it points that browser at is its own work: it starts the workspace clone's build and navigates to that. Janissary never hands over the address or session token of the window you're working in, so a harness can't create, focus, or close tabs in your session — and it tests the code it just changed rather than the code you're running.
+What it points that browser at is its own work: it starts the workspace clone's build and navigates to that. Janissary doesn't hand the harness the address or session token of the window you're working in, and active workspace confinement blocks the normal route through project state where those values are recorded. That reduces disclosure; it doesn't by itself prove the live session unreachable when the harness is unconfined. The warning below covers those configurations. The browser should still test the code in its own workspace rather than the code you're running.
 
 There's no test runner here and no pass/fail reporting. The two variables are the whole feature; what the harness does with them is up to it.
 
