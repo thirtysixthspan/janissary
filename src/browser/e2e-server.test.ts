@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync } from 'node:fs';
+import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 import { startE2EBrowserServer } from './e2e-server.js';
 
 // The lifecycle, with the guard, the child process, and the workspace all stubbed — no real
@@ -79,6 +80,13 @@ describe('startE2EBrowserServer environment', () => {
     // `makeToken()` is 24 random bytes base64url-encoded, so both are long and opaque.
     expect(call.wsPath.length).toBeGreaterThan(24);
     expect(call.upstreamPath.length).toBeGreaterThan(24);
+  });
+
+  // One address across the guard's bind, its upstream dial, the browser's listener, and this
+  // endpoint — so none of them can drift onto a family the others are not on.
+  it('names the shared loopback address in the endpoint it hands the agent', () => {
+    const endpoint = start().env.JANISSARY_BROWSER_WS_ENDPOINT ?? '';
+    expect(endpoint.startsWith(`ws://${E2E_LOOPBACK_HOST}:`)).toBe(true);
   });
 
   it('resolves JANISSARY_PLAYWRIGHT to the package entry the server is running', () => {

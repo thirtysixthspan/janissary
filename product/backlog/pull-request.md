@@ -48,17 +48,6 @@ Proposal Risk: 2/10 - Other protocol bypass classes remain, but parser-aligned s
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human validation work in src/browser/e2e-frame-filter.ts. schemeOf treats a string containing an embedded tab between fi and le as a different scheme, whereas the [URL parser standard](https://url.spec.whatwg.org/#concept-basic-url-parser) removes ASCII tabs and newlines throughout the input before parsing. Use parser-aligned normalization, preserving the existing treatment of ordinary text and non-file schemes. Add escaped tab, carriage-return, and newline cases inside the scheme to src/browser/e2e-frame-filter.test.ts and actual relay-blocking cases to src/browser/e2e-guard.test.ts. Do not treat the inbound navigation-result check as proof that the outbound operation never occurred; it is a later layer and does not restore the promised pre-navigation rejection.
 
 
-* Handle hosts whose localhost address resolves to IPv6.
-
-Existing Issue: The child leaves Playwright's host at its localhost default while the guard always connects to 127.0.0.1. Severity: 7/10
-
-Existing Risk: 6/10 - The browser can start successfully on IPv6 loopback while every guard connection fails against IPv4, leaving the feature unusable without a browser-exited notification.
-
-Proposal Risk: 2/10 - A host that lacks the selected loopback family could still fail, but explicit matching listener and connector configuration removes resolver disagreement.
-
-Proposal: Use ai/tasks/work-an-issue.md to make the listener in src/browser/e2e-child.ts and upstream URL in src/browser/e2e-guard.ts use the same explicit loopback address, preferably 127.0.0.1 to match the existing published endpoint. The [pinned Playwright listener](https://raw.githubusercontent.com/microsoft/playwright/v1.61.1/packages/utils/wsServer.ts) defaults hostname to localhost and advertises the bound address precisely to avoid address-family disagreement, but this implementation discards that endpoint and reconstructs an IPv4 URL. Add a launch-options assertion for host and a connection case covering IPv6-first localhost resolution. src/browser/e2e-guard.test.ts currently binds its stub upstream explicitly to IPv4, masking the mismatch. Retain loopback-only binding.
-
-
 * Release browser resources when startup fails or the browser exits unexpectedly.
 
 Existing Issue: Browser failure callbacks only notify, leaving the guard and scratch directories alive until tab disposal, and a later PTY-spawn exception can strand the browser before any runtime owns its handle. Severity: 6/10

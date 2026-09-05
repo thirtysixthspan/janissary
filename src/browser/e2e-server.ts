@@ -5,6 +5,7 @@ import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { resolveChildLaunch } from './e2e-child-command.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
+import { loopbackWsUrl } from './e2e-loopback.js';
 import { allocateBrowserScratch, type BrowserScratch } from './e2e-scratch.js';
 import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js';
 
@@ -79,7 +80,7 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
 
   return {
     env: {
-      JANISSARY_BROWSER_WS_ENDPOINT: `ws://127.0.0.1:${guardPort}${publishedPath}`,
+      JANISSARY_BROWSER_WS_ENDPOINT: loopbackWsUrl(guardPort, publishedPath),
       JANISSARY_PLAYWRIGHT: playwrightPackagePaths().entry,
     },
     handle: closeHandle(state, guard, child, scratch),

@@ -1,5 +1,6 @@
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { inspectClientFrame, inspectServerFrame, type FrameVerdict } from './e2e-frame-filter.js';
+import { E2E_LOOPBACK_HOST, loopbackWsUrl } from './e2e-loopback.js';
 
 // The protocol filter that sits between a sandboxed agent and the browser server it drives. It is
 // the only endpoint the agent is ever given (`startE2EBrowserServer` publishes this one and keeps
@@ -79,13 +80,14 @@ function bridge(client: WebSocket, upstreamUrl: string): void {
 }
 
 /**
- * Start the guard. It binds `127.0.0.1` only and accepts upgrades on `wsPath` alone — `ws` answers
- * any other path with a 400, so the internal path behind it is not reachable by guessing even by a
- * client that already holds the published port.
+ * Start the guard. It binds the shared loopback address only and accepts upgrades on `wsPath` alone
+ * — `ws` answers any other path with a 400, so the internal path behind it is not reachable by
+ * guessing even by a client that already holds the published port. It dials upstream at that same
+ * address, which is the one the browser server is told to listen on (see `e2e-loopback.ts`).
  */
 export function startE2EGuard(options: E2EGuardOptions): E2EGuardHandle {
-  const upstreamUrl = `ws://127.0.0.1:${options.upstreamPort}${options.upstreamPath}`;
-  const server = new WebSocketServer({ host: '127.0.0.1', port: options.port, path: options.wsPath });
+  const upstreamUrl = loopbackWsUrl(options.upstreamPort, options.upstreamPath);
+  const server = new WebSocketServer({ host: E2E_LOOPBACK_HOST, port: options.port, path: options.wsPath });
   let closed = false;
 
   server.on('connection', (client: WebSocket) => { bridge(client, upstreamUrl); });

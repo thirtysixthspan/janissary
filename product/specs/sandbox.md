@@ -269,6 +269,12 @@ a `file:` URL written with JSON escapes is caught. Ordinary page content that me
 `file://` relays through untouched. The guard listens on loopback only and accepts connections on
 one unguessable path; the browser's own address behind it never leaves the Janissary process.
 
+Both ends of that private hop are pinned to one loopback address rather than resolved by name, and
+the endpoint the harness receives names the same one. A host that answers `localhost` with an IPv6
+address first therefore cannot leave the browser listening on one loopback family while the guard
+dials the other — a split that would present as a browser that starts, stays alive, reports no
+failure, and is unreachable.
+
 What the guard does not see is a server-initiated redirect that lands on a `file:` URL. That gap is
 what the second layer exists to make harmless.
 

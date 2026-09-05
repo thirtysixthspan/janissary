@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
 // The `janus e2e-browser` subcommand: the browser server itself, run as its own process so
 // `sandboxSpawn` can confine it. `launchServer()` runs inside whatever process calls it, and the
@@ -43,10 +44,17 @@ export function parseE2EBrowserArgs(argv: string[]): E2EChildArgs | { error: str
  *
  * The directory is created empty by the caller and is never a git clone, so a `file://` read that
  * got past the protocol guard finds nothing worth having.
+ *
+ * `host` is passed explicitly rather than left at Playwright's `localhost` default: the guard on the
+ * other end of this hop dials an address, not a name, and a host whose resolver answers `localhost`
+ * with `::1` first would otherwise leave the two halves listening and dialling on different families
+ * (see `e2e-loopback.ts`). Still loopback only — now on one family rather than whichever the
+ * resolver happens to pick.
  */
 export async function runE2EBrowser(args: E2EChildArgs): Promise<void> {
   const server = await chromium.launchServer({
     port: args.port,
+    host: E2E_LOOPBACK_HOST,
     wsPath: args.wsPath,
     headless: true,
     executablePath: chromium.executablePath(),

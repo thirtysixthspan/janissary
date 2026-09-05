@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { WebSocket, WebSocketServer } from 'ws';
+import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
 
 // The guard against a stub upstream `ws` server. This is the layer that most needs pinning: it is
@@ -27,8 +28,10 @@ afterEach(() => {
   for (const cleanup of pending) cleanup();
 });
 
-async function startUpstream(): Promise<Upstream> {
-  const server = new WebSocketServer({ host: '127.0.0.1', port: 0, path: UPSTREAM_PATH });
+// `host` is a parameter so one case can put the stub where an IPv6-first resolver would have put the
+// real browser. Every other case binds the address the guard dials, as they always did.
+async function startUpstream(host: string = E2E_LOOPBACK_HOST): Promise<Upstream> {
+  const server = new WebSocketServer({ host, port: 0, path: UPSTREAM_PATH });
   await new Promise<void>((resolve) => server.on('listening', resolve));
   const address = server.address();
   const port = typeof address === 'object' && address !== null ? address.port : 0;
@@ -66,10 +69,26 @@ async function startGuard(upstream: Upstream): Promise<number> {
 }
 
 function connect(port: number, path = PUBLISHED_PATH): WebSocket {
-  const socket = new WebSocket(`ws://127.0.0.1:${port}${path}`);
+  const socket = new WebSocket(`ws://${E2E_LOOPBACK_HOST}:${port}${path}`);
   cleanups.push(() => socket.terminate());
   return socket;
 }
+
+// Whether this host can bind IPv6 loopback at all. Probed once, at module load, so the case below
+// can be skipped rather than failing for the wrong reason on a host with IPv6 switched off.
+const ipv6Loopback = await (async (): Promise<boolean> => {
+  try {
+    const probe = new WebSocketServer({ host: '::1', port: 0 });
+    await new Promise<void>((resolve, reject) => {
+      probe.on('listening', resolve);
+      probe.on('error', reject);
+    });
+    await new Promise<void>((resolve) => probe.close(() => resolve()));
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 async function opened(socket: WebSocket): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -183,5 +202,20 @@ describe('startE2EGuard', () => {
     const port = await startGuard(upstream);
     const client = connect(port, UPSTREAM_PATH);
     await expect(opened(client)).rejects.toThrow();
+  });
+});
+
+// The disagreement this suite used to hide by binding its stub to the address the guard dials. A
+// browser that came up on IPv6 loopback is where a `localhost` default would have put it on a host
+// that resolves the name that way; the guard is pinned to one address, and so now is the browser,
+// so the pair cannot end up split across families.
+describe.skipIf(!ipv6Loopback)('startE2EGuard against an IPv6-only listener', () => {
+  it('does not reach it, and ends the client session rather than holding it half open', async () => {
+    const upstream = await startUpstream('::1');
+    const port = await startGuard(upstream);
+    const client = connect(port);
+    await opened(client);
+    await new Promise<void>((resolve) => client.on('close', () => resolve()));
+    expect(upstream.received).toEqual([]);
   });
 });
