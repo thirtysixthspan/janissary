@@ -192,7 +192,8 @@ flag is rejected.
 When the browser is gone — a launch that failed, a browser that exited, or a guard that died — a line
 appears in the notifications tab naming the tab it belonged to. Nothing restarts it; a later attempt
 to connect simply fails. As with every notification, a user with the notifications tab closed sees
-nothing. Closing a `-b` tab stops its browser and removes its scratch directory.
+nothing. Closing a `-b` tab stops its browser and removes its scratch directory — only that
+browser's own directory, which no tab and no other browser shares.
 
 The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
 checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.

@@ -287,6 +287,12 @@ project, and is removed when the tab closes. It holds the browser's profile and 
 `file:` read that got past the guard finds a disposable directory with nothing in it — and cannot
 reach the code under test, which the browser has no reason to read.
 
+Each browser's directory belongs to that browser alone. It is allocated by creating it, so a
+directory that already exists is never taken over, and it is never a workspace a tab could also be
+using: two tabs, two browsers, or two sessions sharing one name still get separate directories, and
+closing any one of them removes only the directory it created. A tab label decorates the name so a
+directory listing says which tab a browser belongs to; it does not decide the location.
+
 Chromium refuses to initialize its own internal sandbox inside an outer one, so a confined Chromium
 runs with that internal sandbox off. This costs nothing that was not already given up: Playwright
 defaults it off, and every Chromium Janissary launches today already runs that way with nothing

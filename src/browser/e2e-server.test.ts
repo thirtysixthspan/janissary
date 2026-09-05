@@ -9,27 +9,20 @@ const mocks = vi.hoisted(() => ({
   spawn: vi.fn(),
   startE2EGuard: vi.fn(),
   sandboxSpawn: vi.fn(),
-  mkdirSync: vi.fn(),
-  removeWorkspace: vi.fn(),
-  ensureWorkspaceDir: vi.fn(),
+  allocateBrowserScratch: vi.fn(),
+  scratchRemove: vi.fn(),
   chromiumBundleDir: vi.fn(() => '/pw/Chrome.app'),
   playwrightPackagePaths: vi.fn(() => ({ entry: '/app/node_modules/playwright/index.js', dirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'] })),
 }));
 
 vi.mock('node:child_process', () => ({ spawn: mocks.spawn }));
-vi.mock('node:fs', () => ({ mkdirSync: mocks.mkdirSync }));
 vi.mock('./e2e-guard.js', () => ({ startE2EGuard: mocks.startE2EGuard }));
 vi.mock('../sandbox/index.js', () => ({ sandboxSpawn: mocks.sandboxSpawn }));
 vi.mock('./playwright-paths.js', () => ({
   chromiumBundleDir: mocks.chromiumBundleDir,
   playwrightPackagePaths: mocks.playwrightPackagePaths,
 }));
-vi.mock('../workspace/index.js', () => ({
-  workspacePath: (name: string) => `/ws/${name}`,
-  workspaceTempPath: (name: string) => `/ws/${name}.tmp`,
-  removeWorkspace: mocks.removeWorkspace,
-  ensureWorkspaceDir: mocks.ensureWorkspaceDir,
-}));
+vi.mock('./e2e-scratch.js', () => ({ allocateBrowserScratch: mocks.allocateBrowserScratch }));
 
 type ChildStub = { on: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn>; handlers: Map<string, (arg?: unknown) => void> };
 
@@ -51,6 +44,9 @@ beforeEach(() => {
   guardClose = vi.fn();
   mocks.spawn.mockReturnValue(child);
   mocks.startE2EGuard.mockReturnValue({ close: guardClose });
+  mocks.allocateBrowserScratch.mockReturnValue({
+    dir: '/ws/browsers/bot-token', tempDir: '/ws/browsers/bot-token.tmp', remove: mocks.scratchRemove,
+  });
   mocks.sandboxSpawn.mockImplementation((_options: unknown, command: string, args: string[]) => ({
     command, args, env: { TMPDIR: '/scrubbed' },
   }));
@@ -102,23 +98,23 @@ describe('startE2EBrowserServer environment', () => {
 });
 
 describe('startE2EBrowserServer workspace', () => {
-  it('creates the browser workspace and its temp sibling', () => {
+  it('allocates its scratch directory rather than deriving one from the label', () => {
     start();
-    expect(mocks.mkdirSync).toHaveBeenCalledWith('/ws/bot.browser', { recursive: true });
-    expect(mocks.mkdirSync).toHaveBeenCalledWith('/ws/bot.browser.tmp', { recursive: true });
+    expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(1);
+    expect(mocks.allocateBrowserScratch).toHaveBeenCalledWith('bot');
   });
 
   it('confines the child with the browser profile against that workspace', () => {
     start();
     const [options] = mocks.sandboxSpawn.mock.calls[0] as [{ workspaceDir: string; browser: { chromiumDir: string } }];
-    expect(options.workspaceDir).toBe('/ws/bot.browser');
+    expect(options.workspaceDir).toBe('/ws/browsers/bot-token');
     expect(options.browser.chromiumDir).toBe('/pw/Chrome.app');
   });
 
-  it('points the child\'s TMPDIR at the workspace\'s temp sibling', () => {
+  it('points the child\'s TMPDIR at the allocated temp sibling', () => {
     start();
     const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2];
-    expect(spawnOptions.env.TMPDIR).toBe('/ws/bot.browser.tmp');
+    expect(spawnOptions.env.TMPDIR).toBe('/ws/browsers/bot-token.tmp');
   });
 
   it('passes the child the internal port and path, not the published ones', () => {
@@ -128,17 +124,19 @@ describe('startE2EBrowserServer workspace', () => {
     expect(args).toContain('e2e-browser');
     expect(args[args.indexOf('--port') + 1]).toBe(String(guardCall.upstreamPort));
     expect(args[args.indexOf('--ws-path') + 1]).toBe(guardCall.upstreamPath);
-    expect(args[args.indexOf('--dir') + 1]).toBe('/ws/bot.browser');
+    expect(args[args.indexOf('--dir') + 1]).toBe('/ws/browsers/bot-token');
   });
 });
 
 describe('startE2EBrowserServer close', () => {
-  it('stops the guard, kills the child, and removes the workspace', () => {
+  // Removal goes through the allocation's own handle, so it can only reach the two paths this
+  // launch created — never a path recomputed from a label at close time.
+  it('stops the guard, kills the child, and removes its own scratch allocation', () => {
     const { handle } = start();
     handle.close();
     expect(guardClose).toHaveBeenCalledTimes(1);
     expect(child.kill).toHaveBeenCalledTimes(1);
-    expect(mocks.removeWorkspace).toHaveBeenCalledWith('/ws/bot.browser');
+    expect(mocks.scratchRemove).toHaveBeenCalledTimes(1);
   });
 
   it('is idempotent', () => {
@@ -148,7 +146,7 @@ describe('startE2EBrowserServer close', () => {
     handle.close();
     expect(guardClose).toHaveBeenCalledTimes(1);
     expect(child.kill).toHaveBeenCalledTimes(1);
-    expect(mocks.removeWorkspace).toHaveBeenCalledTimes(1);
+    expect(mocks.scratchRemove).toHaveBeenCalledTimes(1);
   });
 
   // A `-b` tab that is closed kills its PTY, which disposes the runtime, which closes this — and the

@@ -26,17 +26,6 @@ Proposal Risk: 3/10 - A reduced runtime allowlist can still miss a required depe
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human review of the appDir binding in src/browser/e2e-server.ts and the recursive app carve-in in src/sandbox/browser-profile.ts. src/project-tokens.ts stores credentials beneath the project's .janissary directory, and bin/janus.mjs writes the live server URL to that directory's log; these are not merely application code when appDir is the project checkout. Carve in only the runtime entry points and dependency directories the child requires, with explicit exclusions for project state, credentials, and unrelated clones. Extend src/sandbox/browser-profile.test.ts beyond checking that credential names are absent from the template: bind a checkout-shaped installation and verify that representative state files remain denied. Reconcile product/specs/harness.md, product/specs/sandbox.md, and both changed user documentation pages with the resulting boundary; their claim that a bypass can reach only an empty scratch directory is stronger than the current rules.
 
 
-* Prevent the security and data-loss hazard from reusing browser scratch paths.
-
-Existing Issue: Browser directories reuse the ordinary workspace namespace without exclusive allocation, and every browser on a shared remote channel receives the same directory label. Severity: 9/10
-
-Existing Risk: 8/10 - Closing one browser can recursively delete another live browser's files or an unrelated harness clone, including uncommitted work.
-
-Proposal Risk: 2/10 - Cleanup could leave an orphan after a crash, but uniquely owned directories prevent it from deleting another session's data.
-
-Proposal: Use ai/tasks/work-an-issue.md to replace browserWorkspace in src/browser/e2e-server.ts with exclusive per-launch scratch allocation in a namespace that cannot collide with tab labels, and retain the exact allocated paths on the owning handle. Today a workspaced tab named bot.browser can already occupy the directory subsequently reused by a browser for bot; recursive mkdir accepts it, and closeHandle passes it to removeWorkspace for deletion. src/remote/serve-processes.ts also passes this.label for every session, so two browser-enabled sessions on one channel share scratch files despite separate handles. Include session identity where useful for display, but rely on exclusive allocation for ownership, and reject path traversal in any user-derived component. Extend src/browser/e2e-server.test.ts and src/remote/serve-processes.test.ts with pre-existing clone, repeated-label, and two-live-session cases; closing either session must leave every other directory untouched. Preserve startup sweeping through src/workspace/index.ts without broadening deletion targets.
-
-
 * Scrub browser credentials on the unconfined security fallback as well as on macOS.
 
 Existing Issue: sandboxSpawn returns the inherited server environment before reaching the browser-specific scrub when sandboxing is unavailable or disabled. Severity: 7/10

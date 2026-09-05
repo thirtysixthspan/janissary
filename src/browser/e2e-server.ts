@@ -1,11 +1,10 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
 import { randomInt } from 'node:crypto';
 import path from 'node:path';
 import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
-import { workspacePath, workspaceTempPath, removeWorkspace, ensureWorkspaceDir } from '../workspace/index.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
+import { allocateBrowserScratch, type BrowserScratch } from './e2e-scratch.js';
 import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js';
 
 // Lifecycle orchestration for one harness tab's e2e browser: the guard, the confined child behind
@@ -27,7 +26,8 @@ export type E2EBrowserServer = {
 };
 
 export type E2EBrowserOptions = {
-  // The tab's label; the browser workspace is `<label>.browser` beside it.
+  // The tab's label. It names the scratch directory for a human reading a directory listing and
+  // nothing more — the directory itself is allocated exclusively (see `e2e-scratch.ts`).
   label: string;
   // Invoked once when the browser is gone for a reason the user did not ask for: a child that
   // exits, a child that never starts, or a guard that cannot listen. Never invoked after `close()`.
@@ -61,7 +61,7 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
   const publishedPath = `/${makeToken()}`;
   const internalPath = `/${makeToken()}`;
 
-  const dir = browserWorkspace(options.label);
+  const scratch = allocateBrowserScratch(options.label);
   const state = { closed: false, fired: false };
   const gone = (message: string): void => {
     if (state.closed || state.fired) return;
@@ -74,27 +74,15 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
     upstreamPort: browserPort, upstreamPath: internalPath,
     onError: gone,
   });
-  const child = spawnBrowserChild(dir, browserPort, internalPath, gone);
+  const child = spawnBrowserChild(scratch, browserPort, internalPath, gone);
 
   return {
     env: {
       JANISSARY_BROWSER_WS_ENDPOINT: `ws://127.0.0.1:${guardPort}${publishedPath}`,
       JANISSARY_PLAYWRIGHT: playwrightPackagePaths().entry,
     },
-    handle: closeHandle(state, guard, child, dir),
+    handle: closeHandle(state, guard, child, scratch),
   };
-}
-
-// A fresh, empty directory of the browser's own beside the harness workspaces — never a git clone.
-// The browser has no reason to read the code under test, and giving it none means a `file://` read
-// that gets past the guard sees an empty scratch directory. It also means `-b` works with
-// `--no-workspace`, where the tab has no workspace to share.
-function browserWorkspace(label: string): string {
-  ensureWorkspaceDir();
-  const dir = workspacePath(`${label}.browser`);
-  mkdirSync(dir, { recursive: true });
-  mkdirSync(workspaceTempPath(`${label}.browser`), { recursive: true });
-  return dir;
 }
 
 // Spawn `janus e2e-browser` through `sandboxSpawn`, which wraps it in the minimal browser profile
@@ -102,18 +90,18 @@ function browserWorkspace(label: string): string {
 // unchanged on one that cannot. `TMPDIR` is set either way, so Playwright's own profile directory
 // lands inside the browser's temp sibling rather than in shared `/tmp` even unconfined.
 function spawnBrowserChild(
-  dir: string, port: number, wsPath: string, gone: (message: string) => void,
+  scratch: BrowserScratch, port: number, wsPath: string, gone: (message: string) => void,
 ): ChildProcess | undefined {
   const entry = path.join(import.meta.dirname, '..', 'main.js');
-  const args = ['e2e-browser', '--port', String(port), '--ws-path', wsPath, '--dir', dir];
+  const args = ['e2e-browser', '--port', String(port), '--ws-path', wsPath, '--dir', scratch.dir];
   // Janissary's installation root, two levels up from `src/browser/` — the profile carves it in so
   // the child can read the entry point above and the dependencies it pulls in.
   const appDir = path.join(import.meta.dirname, '..', '..');
   const wrapped = sandboxSpawn(
-    { workspaceDir: dir, browser: { chromiumDir: chromiumBundleDir(), appDir } },
+    { workspaceDir: scratch.dir, browser: { chromiumDir: chromiumBundleDir(), appDir } },
     process.execPath, [entry, ...args],
   );
-  const env = { ...wrapped.env, TMPDIR: `${dir}.tmp` };
+  const env = { ...wrapped.env, TMPDIR: scratch.tempDir };
   try {
     const child = spawn(wrapped.command, wrapped.args, { stdio: 'ignore', env });
     child.on('error', (error) => gone(`e2e browser failed to start: ${error.message}`));
@@ -126,7 +114,8 @@ function spawnBrowserChild(
 }
 
 function closeHandle(
-  state: { closed: boolean }, guard: E2EGuardHandle, child: ChildProcess | undefined, dir: string,
+  state: { closed: boolean }, guard: E2EGuardHandle, child: ChildProcess | undefined,
+  scratch: BrowserScratch,
 ): E2EBrowserHandle {
   return {
     close: () => {
@@ -134,7 +123,7 @@ function closeHandle(
       state.closed = true;
       guard.close();
       try { child?.kill(); } catch { /* already gone */ }
-      removeWorkspace(dir);
+      scratch.remove();
     },
   };
 }

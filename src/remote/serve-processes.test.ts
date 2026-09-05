@@ -173,3 +173,65 @@ describe('RemoteProcesses e2e browser', () => {
     expect(send).toHaveBeenCalledWith({ type: 'browser-exited', id: 'r1' });
   });
 });
+
+// Two browser-enabled sessions on one channel. They share the channel's label, which is what used
+// to hand them one scratch directory between them, so the thing worth pinning is that each session
+// owns its own browser end to end: its own start, and a teardown that reaches only its own.
+describe('RemoteProcesses with two live browser sessions', () => {
+  let closes: ReturnType<typeof vi.fn>[];
+  let exits: ((id: string, code: number) => void)[];
+
+  beforeEach(() => {
+    closes = [];
+    exits = [];
+    vi.mocked(spawnPty).mockReset().mockImplementation((..._args: unknown[]) => {
+      const handlers = _args[3] as { onExit: (id: string, code: number) => void };
+      exits.push(handlers.onExit);
+      return { id: 'pty', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn() };
+    });
+    vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
+    vi.mocked(harnessSpawnEnv).mockReset().mockImplementation(() => {
+      const close = vi.fn();
+      closes.push(close);
+      return { env: BROWSER_ENV, handle: { close } };
+    });
+  });
+
+  function spawnTwo() {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
+    for (const id of ['r1', 'r2']) {
+      processes.spawn({
+        type: 'spawn', id, program: 'claude', command: 'claude', mode: 'pty',
+        harness: 'claude', cols: 80, rows: 24, browser: true,
+      });
+    }
+    return processes;
+  }
+
+  it('starts a separate browser for each, under the one channel label', () => {
+    spawnTwo();
+    expect(closes).toHaveLength(2);
+    const labels = vi.mocked(harnessSpawnEnv).mock.calls.map(([options]) => options.label);
+    expect(labels).toEqual(['claude', 'claude']);
+  });
+
+  it('closes only the killed session\'s browser', () => {
+    const processes = spawnTwo();
+    processes.kill('r1');
+    expect(closes[0]).toHaveBeenCalledTimes(1);
+    expect(closes[1]).not.toHaveBeenCalled();
+  });
+
+  it('closes only the exiting session\'s browser', () => {
+    spawnTwo();
+    exits[1]('r2', 0);
+    expect(closes[1]).toHaveBeenCalledTimes(1);
+    expect(closes[0]).not.toHaveBeenCalled();
+  });
+
+  it('closes both when the server tears every session down', () => {
+    spawnTwo().killAll();
+    expect(closes[0]).toHaveBeenCalledTimes(1);
+    expect(closes[1]).toHaveBeenCalledTimes(1);
+  });
+});
