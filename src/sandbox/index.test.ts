@@ -254,6 +254,19 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  // Confinement for the browser is decided from the browser's own scratch directory, which is always
+  // set, and never from the workspace of the tab that asked for it. So a `--no-workspace` harness on
+  // a confining host still gets a fully confined browser — what it loses is the harness-side port
+  // deny, since the harness itself is not wrapped. The specification says so; this is what pins it.
+  it('wraps a browser spawn on a confining host with no harness workspace in play', () => {
+    if (!sandboxAvailable()) return;
+    const scratchDir = mkdtempSync(path.join(tmpdir(), 'sandbox-browser-scratch-'));
+    const result = sandboxSpawn({ workspaceDir: scratchDir, browser: BROWSER_PATHS }, 'node', ['main.js']);
+    expect(result.command).toBe('sandbox-exec');
+    expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
+    rmSync(scratchDir, { recursive: true, force: true });
+  });
+
   // The browser child authenticates to nothing and pushes nowhere, so none of the credential
   // injection a harness spawn gets applies to it.
   it('injects no credentials into a browser spawn', () => {

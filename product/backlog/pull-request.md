@@ -4,17 +4,6 @@
 
 ## development
 
-* Correct the sandbox specification's claim that an e2e browser started without a workspace runs unconfined.
-
-Existing Issue: `product/specs/sandbox.md` lists a `--no-workspace` launch beside a host without Seatbelt as a case where the browser starts unconfined, and the harness user-documentation page repeats it, while confinement for the browser child is decided from the browser's own scratch directory rather than from the harness's workspace — so a `--no-workspace` browser tab on macOS with workspace isolation on still runs under the full browser profile. Severity: 4/10
-
-Existing Risk: 4/10 - The specification is the document the next change to this boundary is read against, so a reader either avoids the flag combination believing the browser is loose when it is not, or later "fixes" the code to agree with the specification and removes kernel confinement that is genuinely present.
-
-Proposal Risk: 2/10 - The specification and the code agree on what a workspace-less launch loses, which is the harness-side port deny alone, and the remaining single-layer cases stay stated as limits rather than being quietly narrowed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: correct the specification's claim that a --no-workspace e2e browser runs unconfined". `browserSpawn` in `src/sandbox/browser-spawn.ts` is reached from `sandboxSpawn` in `src/sandbox/index.ts` with the browser's own scratch directory as `workspaceDir`, and `confinable` is computed from that directory, so the browser child is wrapped in `sandbox-exec` whenever the host can confine anything at all — independently of whether the harness tab that asked for it has a workspace. Rewrite the "Where confinement does not apply" paragraph of the End-to-end browser section in `product/specs/sandbox.md` so that a host without Seatbelt and `sandboxWorkspaces` switched off remain listed as cases where the browser itself is unconfined, while `--no-workspace` is listed separately as the case where only the harness-side port deny is absent because there is no confined harness to apply it to. Make the matching correction to the containment warning in `documentation/user-documentation/advanced-agents/harness.md`, which currently groups `--no-workspace` with the other two under "those two sandbox boundaries don't apply", and check the neighbouring claim in `documentation/user-documentation/advanced-agents/workspacing.md` for the same grouping. Add a case to `src/sandbox/index.test.ts` beside the existing browser spawn tests pinning that a browser spawn is wrapped in `sandbox-exec` on a confining host regardless of any harness workspace, so the sentence the specification will then carry has a test behind it. No behaviour changes; the existing browser spawn tests must keep passing untouched.
-
-
 * Replace the raw NUL character in the frame filter's test data with its escape so the guard's rule tests stop being a binary file to git.
 
 Existing Issue: `src/browser/e2e-frame-filter.test.ts` carries a literal U+0000 byte inside one of the string entries in its `isFileUrl` table, where the two-character escape was clearly intended, so git classifies the whole file as binary and renders every change to it as a byte-count line instead of a diff. Severity: 5/10

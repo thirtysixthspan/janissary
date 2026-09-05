@@ -340,14 +340,22 @@ runs with that internal sandbox off. This costs nothing that was not already giv
 defaults it off, and every Chromium Janissary launches today already runs that way with nothing
 around it. The outer profile is a strict improvement on that.
 
-**Where confinement does not apply.** On a host without Seatbelt, with `sandboxWorkspaces` off, or
-for a `--no-workspace` launch, the browser starts unconfined and no policy prevents the harness from
-reaching its private port. Janissary still hands out only the guard endpoint, but a process that
-scans loopback can ask Playwright for its private path and bypass the guard. The scratch directory
-is still created and the browser still receives its minimal environment, so writes stay tidy and
-server credentials stay withheld. This is the same host asymmetry a workspaced tab already has on
-a non-macOS host, now stated as a limit of the browser boundary rather than a guarantee the guard
-cannot enforce by itself.
+**Where confinement does not apply.** On a host without Seatbelt, or with `sandboxWorkspaces` off,
+the browser itself starts unconfined and no policy prevents any harness from reaching its private
+port. Janissary still hands out only the guard endpoint, but a process that scans loopback can ask
+Playwright for its private path and bypass the guard.
+
+A `--no-workspace` launch is a different and narrower case. Whether the browser is confined is
+decided from the browser's own scratch directory, not from the workspace of the tab that asked for
+it, so on a host that can confine anything the browser still runs under its full profile even when
+the harness has no workspace. What is missing there is the harness-side deny: a harness without a
+workspace is not wrapped at all, so the port-band rule never applies to it and it can reach every
+browser on the machine, its own and every other tab's.
+
+In all three cases the scratch directory is still created and the browser still receives its minimal
+environment, so writes stay tidy and server credentials stay withheld. This is the same host
+asymmetry a workspaced tab already has on a non-macOS host, now stated as a limit of the browser
+boundary rather than a guarantee the guard cannot enforce by itself.
 
 An operator wanting a third layer can apply Chromium's enterprise `URLBlocklist` policy with
 `file://*` on the host. It is the only control that lives inside the browser process where a client
