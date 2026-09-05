@@ -1,17 +1,5 @@
 # pull-request
 
-* Deliver the plan's launch-dialog documentation update by refreshing the screenshot and its alternative text for the E2E browser control.
-
-Existing Issue: The harness documentation describes the new E2E browser checkbox directly above an unchanged screenshot and alternative text that omit that control. Severity: 3/10
-
-Existing Risk: 3/10 - Users see a documented field missing from the page's only visual reference and cannot tell whether the screenshot or their installed UI is current.
-
-Proposal Risk: 1/10 - The screenshot may drift after a later dialog change, but field-enumerating alternative text makes that mismatch visible in source review.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: refresh the launch-dialog screenshot for the E2E browser checkbox". Retake `documentation/public/screenshots/harness-launch-dialog.png` from the branch's current `web/src/harness/HarnessLaunchDialog.tsx`, showing the E2E browser checkbox between Offline and Auto-approve in the ordering specified by `product/specs/harness.md`. Update the image alternative text in `documentation/user-documentation/advanced-agents/harness.md` to include E2E browser, check all references to that screenshot under `documentation/`, and verify the rendered documentation uses the replacement asset rather than the stale built copy under `documentation/.vitepress/dist/`.
-
-
-
 * Keep the browser follow-up artifacts text-reviewable and remove the stale claim that ports are probed.
 
 Existing Issue: The completed plan that replaces a raw NUL in the frame-filter test contains a raw NUL itself and is classified as binary by Git, while the browser-server test still calls the allocator's documented choose-then-bind race a port-probe race even though no probe exists. Severity: 3/10

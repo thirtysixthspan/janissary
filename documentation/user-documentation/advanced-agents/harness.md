@@ -39,7 +39,7 @@ harness opencode as quality        → tab "quality-2"
 
 Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for claude and codex and disabled for opencode. **E2E browser** starts unchecked and stays available for every harness.
 
-![The New harness dialog, with fields for harness, label, workspace, offline, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
+![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
 
 **Auto-approve** stays disabled unless you've picked claude or codex — the dialog only ever builds a command that's actually valid. Switching between claude and codex keeps your Auto-approve choice; switching to opencode clears and disables it. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
