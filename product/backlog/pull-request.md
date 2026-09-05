@@ -15,17 +15,6 @@ Proposal Risk: 3/10 - Browser RPC remains a powerful capability, but an independ
 Proposal: Route this through ai/tasks/hygiene/improve-security.md for human security remediation of src/browser/e2e-child.ts and src/browser/e2e-server.ts. The pinned Playwright 1.61.1 server returns wsEndpointPath from GET /json without requiring the secret path; see the [versioned server implementation](https://raw.githubusercontent.com/microsoft/playwright/v1.61.1/packages/playwright-core/src/remote/playwrightServer.ts). A client with loopback access can discover that listener within the selected port range and use the returned path directly. Replace the assumption that an unpublished TCP address is private with a transport or authentication boundary the harness cannot access independently; suppressing discovery alone is insufficient while the secret is also supplied in child command-line arguments. Keep the public guard's path checks and add coverage that exercises the actual upstream HTTP discovery and direct-connection surfaces, which src/browser/e2e-guard.test.ts currently replaces with a generic WebSocket stub. Verify the boundary on both confined and unconfined hosts before updating the containment claims in product/specs/sandbox.md.
 
 
-* Narrow the security carve-in that exposes the installation's project credentials and other workspaces.
-
-Existing Issue: The browser profile grants recursive reads of the entire Janissary installation root, including project state and credential files when Janissary runs from its own checkout. Severity: 9/10
-
-Existing Risk: 8/10 - A browser operation that bypasses URL filtering can read project tokens, server logs, or sibling workspace contents that the harness's own sandbox denies.
-
-Proposal Risk: 3/10 - A reduced runtime allowlist can still miss a required dependency, but startup checks and explicit forbidden-file probes would expose that regression.
-
-Proposal: Route through ai/tasks/hygiene/improve-security.md for human review of the appDir binding in src/browser/e2e-server.ts and the recursive app carve-in in src/sandbox/browser-profile.ts. src/project-tokens.ts stores credentials beneath the project's .janissary directory, and bin/janus.mjs writes the live server URL to that directory's log; these are not merely application code when appDir is the project checkout. Carve in only the runtime entry points and dependency directories the child requires, with explicit exclusions for project state, credentials, and unrelated clones. Extend src/sandbox/browser-profile.test.ts beyond checking that credential names are absent from the template: bind a checkout-shaped installation and verify that representative state files remain denied. Reconcile product/specs/harness.md, product/specs/sandbox.md, and both changed user documentation pages with the resulting boundary; their claim that a bypass can reach only an empty scratch directory is stronger than the current rules.
-
-
 * Keep review-time security instructions separate from the pull request's verification examples.
 
 Existing Issue: The PR description directs its reviewer to run test commands and host-shell checks, and the carried plan and operating guide direct dependency installation and command execution despite the review task treating this material solely as data. Severity: 4/10

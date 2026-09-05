@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 import type * as E2EPorts from './e2e-ports.js';
 import { startE2EBrowserServer } from './e2e-server.js';
@@ -169,6 +170,20 @@ describe('startE2EBrowserServer workspace', () => {
     const [options] = mocks.sandboxSpawn.mock.calls[0] as [{ workspaceDir: string; browser: { chromiumDir: string } }];
     expect(options.workspaceDir).toBe('/ws/browsers/bot-token');
     expect(options.browser.chromiumDir).toBe('/pw/Chrome.app');
+  });
+
+  // The profile carves in the tree that is actually running, not both and not the root above them,
+  // so the entry directory has to follow the same layout decision the launch resolution made.
+  it('names the code tree the launch resolved, not the installation root', () => {
+    start();
+    const [options] = mocks.sandboxSpawn.mock.calls[0] as [{ browser: { appDir: string; appEntryDir: string; playwrightDirs: string[] } }];
+    const [, args] = mocks.spawn.mock.calls[0] as [string, string[]];
+    const entry = args[args.indexOf('e2e-browser') - 1];
+    expect(options.browser.appEntryDir).toBe(path.dirname(entry));
+    expect(options.browser.appEntryDir).not.toBe(options.browser.appDir);
+    expect(options.browser.playwrightDirs).toEqual([
+      '/app/node_modules/playwright', '/app/node_modules/playwright-core',
+    ]);
   });
 
   it('points the child\'s TMPDIR at the allocated temp sibling', () => {

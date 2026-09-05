@@ -1,14 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
+import { resolvePath, darwinUserCacheDir } from './resolve.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
-import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './browser-profile.js';
+import { browserSpawn, type BrowserSpawnOptions } from './browser-spawn.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
-  ENV_SCRUB_PATTERNS, BROWSER_ENV_ALLOW,
+  ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
@@ -32,12 +32,12 @@ export type SandboxOptions = {
   // harness authenticated and its pushes credentialed.
   tokens?: ProjectTokens;
   // Set only for the e2e browser child (`src/browser/e2e-server.ts`): confine it with the minimal
-  // browser profile instead of the harness one, carving in the named Chromium app bundle and
-  // janissary's own installation root (the child runs `janus e2e-browser`, so it reads janissary's
-  // entry point and dependencies). The harness profile's read carve-ins — Keychains, `.claude`,
-  // `.codex`, opencode's state directory — are close to an inventory of what an escape would want,
-  // and a browser needs none of them.
-  browser?: { chromiumDir: string; appDir: string };
+  // browser profile instead of the harness one. The harness profile's read carve-ins — Keychains,
+  // `.claude`, `.codex`, opencode's state directory — are close to an inventory of what an escape
+  // would want, and a browser needs none of them.
+  //
+  // See `browser-spawn.ts` for what each path is and why the installation root is not among them.
+  browser?: BrowserSpawnOptions;
 };
 
 export type SandboxResult = {
@@ -171,21 +171,6 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
   return args;
 }
 
-// The browser child's environment, built by naming what it may have rather than by filtering what
-// the server happens to hold (see `BROWSER_ENV_ALLOW`). Neither of the two environments below is
-// right for it: `withWorkspaceCredentials` hands a workspaced spawn the project's tokens, and
-// `scrubEnv` deliberately keeps the LLM provider keys a harness needs. A browser authenticates to
-// nothing and pushes nowhere, so it gets neither.
-function browserEnv(env: NodeJS.ProcessEnv, tmpDir: string | undefined): NodeJS.ProcessEnv {
-  const allowed: NodeJS.ProcessEnv = {};
-  for (const name of BROWSER_ENV_ALLOW) {
-    const value = env[name];
-    if (value !== undefined) allowed[name] = value;
-  }
-  if (tmpDir) allowed.TMPDIR = tmpDir;
-  return allowed;
-}
-
 // Every credential this spawn is deliberately handed: each configured token under every variable its
 // row in `PROJECT_TOKENS` names. Most rows name one; the gemini row names two, because opencode
 // detects its Google provider from one variable and loads the key from another. `GH_TOKEN` is the
@@ -238,36 +223,6 @@ function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOption
   return Object.keys(added).length === 0 ? env : { ...env, ...added };
 }
 
-// The browser child, on both kinds of host. Its environment is the same either way — the allowlist,
-// with no project credentials and no git identity — and only the command differs: wrapped in the
-// minimal browser profile where Seatbelt is available, handed back bare where it is not. That
-// asymmetry is the documented one (`product/specs/sandbox.md`), and it is about confinement alone;
-// an unconfined browser is not a reason to also give it the server's secrets.
-function browserSpawn(
-  options: SandboxOptions,
-  command: string,
-  args: string[],
-  env: NodeJS.ProcessEnv,
-  confinable: boolean,
-): SandboxResult {
-  const dir = options.workspaceDir;
-  const tmpDir = dir ? resolvePath(`${dir}.tmp`) : undefined;
-  const childEnv = browserEnv(env, tmpDir);
-  if (!dir || !confinable || !options.browser) return { command, args, env: childEnv };
-  const params = browserProfileParams({
-    workspace: resolvePath(dir), tmp: tmpDir ?? '', home: resolvePath(homedir()),
-    cache: darwinUserCacheDir(),
-    chromium: dualPath(options.browser.chromiumDir),
-    node: dualPath(path.dirname(process.execPath)),
-    app: dualPath(options.browser.appDir),
-  });
-  return {
-    command: 'sandbox-exec',
-    args: ['-p', BROWSER_SANDBOX_PROFILE, ...params, '--', command, ...args],
-    env: childEnv,
-  };
-}
-
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
 // `spawn` take) for a workspaced tab. Returns the command and args unchanged when there's nothing
 // to sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
@@ -287,7 +242,7 @@ export function sandboxSpawn(
   // from what the browser is; the host only decides whether there is a profile around it. Deciding
   // it the other way round handed the whole server environment to a browser on precisely the hosts
   // with no kernel confinement behind it.
-  if (options.browser) return browserSpawn(options, command, args, env, confinable);
+  if (options.browser) return browserSpawn(options.browser, dir, command, args, env, confinable);
   if (!dir || !confinable) return { command, args, env: withWorkspaceCredentials(env, options) };
 
   const workspaceDir = resolvePath(dir);

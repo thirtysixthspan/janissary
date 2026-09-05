@@ -285,8 +285,16 @@ what the second layer exists to make harmless.
 not the harness profile, whose carve-ins (`~/Library/Keychains`, `~/.claude`, `~/.codex`, opencode's
 state directory) are close to an inventory of what an escape would want. A browser needs none of
 them. Its profile denies everything by default, allows reads broadly outside `$HOME`, denies `$HOME`'s
-contents, and carves back in exactly three paths: the Chromium application bundle, the Node binary's
-directory, and Janissary's own installation root — the three the process cannot start without. It may
+contents, and carves back in only what the process cannot start without: the Chromium application
+bundle, the Node binary's directory, and Janissary's own runtime — its dependencies, the code tree
+being run, its Playwright packages, and its manifest and compiler configuration as individual files.
+Janissary's installation directory is deliberately *not* carved in as a whole, because in a
+development install that directory is the project itself. Inside those carve-ins the project's own
+state directory is denied again: its stored provider tokens, the server log carrying the running
+instance's URL and session token, and every other tab's workspace clone. That denial is a rule of its
+own rather than merely an absent carve-in, so it holds for an installation outside `$HOME`, where
+reads are otherwise broadly allowed. The browser's own scratch directory is allowed back after it,
+since it lives inside the denied directory. It may
 write only inside its own scratch directory, that directory's temp sibling, and the Darwin per-user
 cache. Networking, POSIX shared memory, IOKit property reads, and `sysctl-read` are allowed, since
 Chromium fails to start rather than degrading without them.

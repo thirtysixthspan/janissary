@@ -93,12 +93,20 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
     moduleFile: import.meta.filename, execPath: process.execPath, execArgv: process.execArgv,
   });
   const args = ['e2e-browser', '--port', String(port), '--ws-path', wsPath, '--dir', scratch.dir];
-  // Janissary's installation root, two levels up from `src/browser/` — the profile carves it in so
-  // the child can read the entry point above and the dependencies it pulls in, the loader among
-  // them.
+  // Janissary's installation root, two levels up from `src/browser/`, and the tree this process is
+  // actually running — `src/` or `dist/`, the same one the entry above came from. The profile takes
+  // the runtime pieces it needs from these rather than carving in the root, which in a development
+  // install is the project directory.
   const appDir = path.join(import.meta.dirname, '..', '..');
+  const appEntryDir = path.dirname(launch.args.at(-1) ?? import.meta.dirname);
   const wrapped = sandboxSpawn(
-    { workspaceDir: scratch.dir, browser: { chromiumDir: chromiumBundleDir(), appDir } },
+    {
+      workspaceDir: scratch.dir,
+      browser: {
+        chromiumDir: chromiumBundleDir(), appDir, appEntryDir,
+        playwrightDirs: playwrightPackagePaths().dirs,
+      },
+    },
     launch.command, [...launch.args, ...args],
   );
   const env = { ...wrapped.env, TMPDIR: scratch.tempDir };

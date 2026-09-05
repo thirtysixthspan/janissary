@@ -35,6 +35,15 @@ const PROJECT_CREDENTIALS = {
   github: 'scoped-github', claude: 'scoped-claude', opencode: 'scoped-opencode', gemini: 'scoped-gemini',
 };
 
+// Janissary's runtime, named piece by piece. The installation root is passed so the profile can
+// derive what it denies inside it, never so it can be carved in whole.
+const BROWSER_PATHS = {
+  chromiumDir: '/pw/Chrome.app',
+  appDir: '/app',
+  appEntryDir: '/app/src',
+  playwrightDirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'],
+};
+
 // Which sentinels survived, found by value rather than by name — a credential arriving under a
 // variable nobody thought to check is the failure worth catching. The git identity counts too: it is
 // the user's real name and address, and the browser has no use for it.
@@ -194,7 +203,7 @@ describe('sandboxSpawn', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn(
-      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' } }, 'node', ['main.js'],
+      { workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js'],
     );
     expect(result.args[0]).toBe('-p');
     expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
@@ -214,7 +223,7 @@ describe('sandboxSpawn', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn(
-      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: { github: 'scoped-token' } },
+      { workspaceDir, browser: BROWSER_PATHS, tokens: { github: 'scoped-token' } },
       'node', ['main.js'], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' },
     );
     expect(result.env.GH_TOKEN).toBeUndefined();
@@ -232,7 +241,7 @@ describe('sandboxSpawn', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
     const result = sandboxSpawn(
-      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: PROJECT_CREDENTIALS },
+      { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
       'node', ['main.js'], AMBIENT_SECRETS,
     );
     // Asserted over the values, not by naming keys: a credential that arrives under a variable
@@ -255,7 +264,7 @@ describe('sandboxSpawn', () => {
     configureUnconfined();
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn(
-      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' } }, 'node', ['main.js'],
+      { workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js'],
       { ...AMBIENT_SECRETS, PLAYWRIGHT_BROWSERS_PATH: '/custom/browsers', NODE_OPTIONS: '--require=/tmp/evil.js' },
     );
     expect(result.command).toBe('node');
@@ -277,7 +286,7 @@ describe('sandboxSpawn', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
     const result = sandboxSpawn(
-      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: PROJECT_CREDENTIALS },
+      { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
       'node', ['main.js'], AMBIENT_SECRETS,
     );
     expect(secretsIn(result.env)).toEqual([]);
