@@ -3,6 +3,7 @@ import path from 'node:path';
 import { errorText } from '../error-text.js';
 import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
+import { WS_PATH_ENV } from './e2e-child.js';
 import { resolveChildLaunch } from './e2e-child-command.js';
 import { startE2EGuard } from './e2e-guard.js';
 import { loopbackWsUrl } from './e2e-loopback.js';
@@ -92,7 +93,11 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
   const launch = resolveChildLaunch({
     moduleFile: import.meta.filename, execPath: process.execPath, execArgv: process.execArgv,
   });
-  const args = ['e2e-browser', '--port', String(port), '--ws-path', wsPath, '--dir', scratch.dir];
+  // The ws path is deliberately not here: an argument vector is readable through `ps` by any user on
+  // a macOS host, and this token plus the port is a complete bypass of the guard. It travels in the
+  // child's environment instead (see `WS_PATH_ENV`), which narrows the disclosure without making the
+  // path private — that is the deferred transport-boundary work.
+  const args = ['e2e-browser', '--port', String(port), '--dir', scratch.dir];
   // Janissary's installation root, two levels up from `src/browser/`, and the tree this process is
   // actually running — `src/` or `dist/`, the same one the entry above came from. The profile takes
   // the runtime pieces it needs from these rather than carving in the root, which in a development
@@ -109,7 +114,8 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
     },
     launch.command, [...launch.args, ...args],
   );
-  const env = { ...wrapped.env, TMPDIR: scratch.tempDir };
+  // Set here rather than inherited, so the browser environment allowlist does not filter it out.
+  const env = { ...wrapped.env, TMPDIR: scratch.tempDir, [WS_PATH_ENV]: wsPath };
   // A throw here is caught by the caller's rollback, which produces the same message these handlers
   // do — so there is no second `catch` and no second wording for the same failure.
   const child = spawn(wrapped.command, wrapped.args, { stdio: 'ignore', env });

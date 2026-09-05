@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
-import { runE2EBrowser } from './e2e-child.js';
+import { parseE2EBrowserArgs, runE2EBrowser, WS_PATH_ENV } from './e2e-child.js';
 
 // `playwright` is stubbed: no Chromium starts in this suite, for the same reason none starts in
 // `e2e-server.test.ts`. What a real browser proves is in the plan's manual checks.
@@ -23,6 +23,44 @@ async function launchOptions(): Promise<Record<string, unknown>> {
   await runE2EBrowser({ port: 51_234, wsPath: '/internal-token', dir: '/ws/browsers/bot-token' });
   return mocks.launchServer.mock.calls[0][0] as Record<string, unknown>;
 }
+
+// The secret path travels in the environment, not the argument vector: `ps` publishes an argument
+// vector to every user on a macOS host, and this token plus the port skips the guard entirely.
+describe('parseE2EBrowserArgs', () => {
+  const ARGV = ['--port', '51234', '--dir', '/ws/browsers/bot-token'];
+
+  it('reads the ws path from the environment', () => {
+    expect(parseE2EBrowserArgs(ARGV, { [WS_PATH_ENV]: '/internal-token' }))
+      .toEqual({ port: 51_234, wsPath: '/internal-token', dir: '/ws/browsers/bot-token' });
+  });
+
+  it('fails, naming the variable, when it is absent', () => {
+    const parsed = parseE2EBrowserArgs(ARGV, {});
+    expect(parsed).toMatchObject({ error: expect.stringContaining(WS_PATH_ENV) });
+  });
+
+  // The old channel must not quietly keep working, or the disclosure comes back the moment a caller
+  // is written against the previous shape.
+  it('does not honour a --ws-path argument', () => {
+    const parsed = parseE2EBrowserArgs([...ARGV, '--ws-path', '/from-argv'], {});
+    expect(parsed).toMatchObject({ error: expect.stringContaining(WS_PATH_ENV) });
+  });
+
+  it('still reads the port and directory from the argument vector', () => {
+    const parsed = parseE2EBrowserArgs(['--port', '1', '--dir', '/d'], { [WS_PATH_ENV]: '/p' });
+    expect(parsed).toMatchObject({ port: 1, dir: '/d' });
+  });
+
+  it.each([['--port', '0'], ['--port', 'abc'], ['--port', '70000']])('rejects %s %s', (flag, value) => {
+    const parsed = parseE2EBrowserArgs([flag, value, '--dir', '/d'], { [WS_PATH_ENV]: '/p' });
+    expect(parsed).toMatchObject({ error: expect.stringContaining('--port') });
+  });
+
+  it('fails when the directory is missing', () => {
+    const parsed = parseE2EBrowserArgs(['--port', '51234'], { [WS_PATH_ENV]: '/p' });
+    expect(parsed).toMatchObject({ error: expect.stringContaining('--dir') });
+  });
+});
 
 describe('runE2EBrowser listener address', () => {
   // Playwright's `host` defaults to the *name* `localhost`. The guard dials an address, so a host

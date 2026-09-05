@@ -11,10 +11,23 @@ import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
 export type E2EChildArgs = { port: number; wsPath: string; dir: string };
 
-// `--port <n> --ws-path <token> --dir <path>`, parsed by hand rather than through `parseArgs`: this
-// is spawned only by `startE2EBrowserServer`, never typed by a user, so the useful failure is a
-// clear throw on a malformed invocation rather than a usage string.
-export function parseE2EBrowserArgs(argv: string[]): E2EChildArgs | { error: string } {
+// The variable carrying the browser server's secret path. It is *not* an argument, and that is the
+// point: on macOS a process's argument vector is readable through `ps` by any user on the machine,
+// so a token on the command line is published to every account on the host for as long as the tab is
+// open — and holding it, with the port, is a complete bypass of the protocol guard.
+//
+// This narrows who can reach that disclosure; it does not make the path private. The same user can
+// still read another process's environment, and Playwright's own server serves this very path from
+// an unauthenticated `GET /json` to anything that can reach the port. See
+// `product/plans/deferred/browser-private-transport-boundary.md`.
+export const WS_PATH_ENV = 'JANISSARY_E2E_WS_PATH';
+
+// `--port <n> --dir <path>` plus `JANISSARY_E2E_WS_PATH`, parsed by hand rather than through
+// `parseArgs`: this is spawned only by `startE2EBrowserServer`, never typed by a user, so the useful
+// failure is a clear throw on a malformed invocation rather than a usage string. The port and the
+// directory stay on the command line — neither is a credential, and the port is discoverable by
+// scanning whatever we do with it.
+export function parseE2EBrowserArgs(argv: string[], env: NodeJS.ProcessEnv): E2EChildArgs | { error: string } {
   const value = (flag: string): string | undefined => {
     const index = argv.indexOf(flag);
     return index === -1 ? undefined : argv[index + 1];
@@ -24,9 +37,10 @@ export function parseE2EBrowserArgs(argv: string[]): E2EChildArgs | { error: str
   if (!rawPort || !Number.isSafeInteger(port) || port < 1 || port > 65_535) {
     return { error: `e2e-browser: invalid --port value: ${String(rawPort)}` };
   }
-  const wsPath = value('--ws-path');
+  const wsPath = env[WS_PATH_ENV];
+  if (!wsPath) return { error: `e2e-browser: ${WS_PATH_ENV} is required` };
   const dir = value('--dir');
-  if (!wsPath || !dir) return { error: 'e2e-browser: --ws-path and --dir are required' };
+  if (!dir) return { error: 'e2e-browser: --dir is required' };
   return { port, wsPath, dir };
 }
 

@@ -174,7 +174,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   // long-lived child of a janissary server rather than a server itself, so it takes no lock, opens
   // no window, and returns before the boot below. It runs until killed.
   if (args.e2eBrowser) {
-    const parsed = parseE2EBrowserArgs(args.e2eBrowserArgs);
+    const parsed = parseE2EBrowserArgs(args.e2eBrowserArgs, process.env);
     if ('error' in parsed) throw new CliUsageError(parsed.error);
     await runE2EBrowser(parsed);
     return;

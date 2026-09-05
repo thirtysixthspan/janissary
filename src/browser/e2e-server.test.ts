@@ -192,14 +192,30 @@ describe('startE2EBrowserServer workspace', () => {
     expect(spawnOptions.env.TMPDIR).toBe('/ws/browsers/bot-token.tmp');
   });
 
-  it('passes the child the internal port and path, not the published ones', () => {
+  it('passes the child the internal port and directory, not the published ones', () => {
     start();
     const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPort: number; upstreamPath: string };
     const [, args] = mocks.spawn.mock.calls[0] as [string, string[]];
     expect(args).toContain('e2e-browser');
     expect(args[args.indexOf('--port') + 1]).toBe(String(guardCall.upstreamPort));
-    expect(args[args.indexOf('--ws-path') + 1]).toBe(guardCall.upstreamPath);
     expect(args[args.indexOf('--dir') + 1]).toBe('/ws/browsers/bot-token');
+  });
+
+  // An argument vector is readable through `ps` by any user on a macOS host, and this token plus the
+  // port is a complete bypass of the guard. Asserted against the whole joined command line rather
+  // than a named flag, so reintroducing it under any other flag fails too.
+  it('keeps the internal path out of the child\'s argument vector', () => {
+    start();
+    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPath: string };
+    const [command, args] = mocks.spawn.mock.calls[0] as [string, string[]];
+    expect([command, ...args].join(' ')).not.toContain(guardCall.upstreamPath);
+  });
+
+  it('hands the internal path to the child in its environment instead', () => {
+    start();
+    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPath: string };
+    const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2];
+    expect(spawnOptions.env.JANISSARY_E2E_WS_PATH).toBe(guardCall.upstreamPath);
   });
 });
 
