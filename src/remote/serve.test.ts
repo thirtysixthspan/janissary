@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -51,7 +51,7 @@ let plainDir: string;
 let originlessDir: string;
 
 beforeAll(() => {
-  tmpDir = mkdtempSync(path.join(tmpdir(), 'remote-serve-test-'));
+  tmpDir = realpathSync(mkdtempSync(path.join(tmpdir(), 'remote-serve-test-')));
   const originDir = path.join(tmpDir, 'origin.git');
   mkdirSync(originDir, { recursive: true });
   execSync('git init --bare', { cwd: originDir, stdio: 'pipe' });
