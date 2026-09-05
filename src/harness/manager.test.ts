@@ -12,28 +12,16 @@ vi.mock('./capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
 
-// Stands in for the real merge (covered on its own in `scratch-dir.test.ts`), so the manager's own
-// wiring can be asserted without starting a browser: `browser` adds the two variables and hands back
-// a closable handle, and its absence returns exactly what `harnessEnv` would.
-const browserMock = vi.hoisted(() => ({ handles: [] as { close: ReturnType<typeof vi.fn> }[], onGone: [] as ((m: string) => void)[] }));
 vi.mock('./scratch-dir.js', () => ({
   claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
   harnessEnv: vi.fn((name: string, cwd: string) => (name === 'claude'
     ? { CLAUDE_CODE_TMPDIR: `${cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
     : undefined)),
-  harnessSpawnEnv: vi.fn((options: { name: string; cwd: string; browser: boolean; onBrowserGone: (m: string) => void }) => {
-    const base = options.name === 'claude'
+  harnessSpawnEnv: vi.fn((options: { name: string; cwd: string }) => ({
+    env: options.name === 'claude'
       ? { CLAUDE_CODE_TMPDIR: `${options.cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
-      : undefined;
-    if (!options.browser) return { env: base };
-    browserMock.onGone.push(options.onBrowserGone);
-    const handle = { close: vi.fn() };
-    browserMock.handles.push(handle);
-    return {
-      env: { ...base, JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok', JANISSARY_PLAYWRIGHT: '/pw/index.js' },
-      handle,
-    };
-  }),
+      : undefined,
+  })),
 }));
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
@@ -1104,148 +1092,4 @@ describe('HarnessManager remote launch', () => {
     )).toContain('devbox;id');
   });
 
-  // The remote builds its own guard, child, and workspace from this flag: the endpoint names ports
-  // on that host, so it could not have been computed here and shipped over.
-  it('starts nothing locally for a remote -b launch and sets browser on the remote spawn', async () => {
-    const { managers, ready, registerRemotePty } = remoteLaunch();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude on devbox -b')).toBeUndefined();
-
-    ready('/srv/ws');
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({
-      browser: true,
-    }));
-    expect(browserMock.handles).toHaveLength(0);
-  });
-
-  it('sets browser false on the remote spawn options without -b', async () => {
-    const { managers, ready, registerRemotePty } = remoteLaunch();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude on devbox')).toBeUndefined();
-
-    ready('/srv/ws');
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({
-      browser: false,
-    }));
-  });
-});
-
-describe('HarnessManager e2e browser', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    browserMock.handles.length = 0;
-    browserMock.onGone.length = 0;
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
-    vi.clearAllMocks();
-  });
-
-  // The guarded endpoint is the only thing a `-b` launch adds to the spawn. The browser's own port
-  // is not passed along at all: the Seatbelt profile denies the whole reserved band statically.
-  it('reaches the PTY spawn with the guarded environment and nothing else for a -b launch', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace --no-auto-approve -b')).toBeUndefined();
-    expect(managers.pty.spawn).toHaveBeenCalledWith(
-      'claude', 'claude', 'claude', '/project', undefined, false,
-      {
-        CLAUDE_CODE_TMPDIR: '/project/.janissary/temp',
-        DISABLE_AUTOUPDATER: '1',
-        JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok',
-        JANISSARY_PLAYWRIGHT: '/pw/index.js',
-      },
-    );
-  });
-
-  it('sets neither variable without -b', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
-    const spawnArgs = (managers.pty.spawn as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
-    expect(spawnArgs[6]).toEqual({ CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' });
-    expect(browserMock.handles).toHaveLength(0);
-  });
-
-  it('records the flag on the tab so profile save can read it back', () => {
-    const { managers, tabs } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-    expect(tabs.at(-1)).toMatchObject({ browser: true });
-  });
-
-  // Closing a `-b` tab kills its PTY, which fires the exit event, which disposes the runtime, which
-  // stops the guard, kills the child, and removes the browser workspace. No new label-keyed map and
-  // no new line in `src/tab/cleanup.ts`.
-  it('closes the browser when the runtime is disposed on PTY exit', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-    expect(browserMock.handles).toHaveLength(1);
-
-    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
-
-    expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
-    void manager;
-  });
-
-  it('does not close the browser twice when disposed again', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-
-    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
-    manager.dispose();
-
-    expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes the browser on manager shutdown even without a PTY exit', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-
-    manager.dispose();
-
-    expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
-  });
-
-  it('notifies against the tab when the browser reports it is gone', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-
-    browserMock.onGone[0]('e2e browser exited');
-
-    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited');
-    void manager;
-  });
-
-  // The browser is started before the PTY, and only the runtime that comes after the PTY owns it.
-  // A throw in between would otherwise leave a started browser that nothing will ever close.
-  it('closes the browser when the PTY spawn throws before the runtime owns it', () => {
-    const { managers } = makeManagers();
-    (managers.pty.spawn as unknown as { mockImplementation: (f: () => never) => void })
-      .mockImplementation(() => { throw new Error('pty refused'); });
-    const manager = new HarnessManager(managers);
-
-    expect(() => manager.run('harness claude --no-workspace -b')).toThrow('pty refused');
-
-    expect(browserMock.handles).toHaveLength(1);
-    expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
-  });
-
-  it('leaves the browser open when the PTY spawn succeeds', () => {
-    const { managers } = makeManagers();
-    const manager = new HarnessManager(managers);
-    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
-
-    expect(browserMock.handles[0].close).not.toHaveBeenCalled();
-    void manager;
-  });
 });

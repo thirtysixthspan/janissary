@@ -1,15 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git-identity.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
-import {
-  BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST,
-} from './browser-ports.js';
-import { BROWSER_SANDBOX_PROFILE } from './browser-profile.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
 // remote takes, reachable from any platform the suite runs on.
@@ -18,46 +14,6 @@ function configureUnconfined(): void {
   mkdirSync(path.join(dir, '.janissary'), { recursive: true });
   writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify({ sandboxWorkspaces: false }));
   loadConfig(dir);
-}
-
-// Sentinel values, one per class of secret a browser must never inherit: an ambient registry token,
-// a cloud key, an agent socket, and the LLM provider keys `scrubEnv` deliberately exempts for the
-// harnesses. Every value is distinctive enough to search the whole environment for.
-const AMBIENT_SECRETS = {
-  PATH: '/usr/bin',
-  HOME: '/home/ada',
-  NPM_TOKEN: 'sentinel-npm',
-  AWS_SECRET_ACCESS_KEY: 'sentinel-aws',
-  SSH_AUTH_SOCK: 'sentinel-ssh-agent',
-  ANTHROPIC_API_KEY: 'sentinel-anthropic',
-  OPENAI_API_KEY: 'sentinel-openai',
-  GEMINI_API_KEY: 'sentinel-gemini',
-};
-
-const PROJECT_CREDENTIALS = {
-  github: 'scoped-github', claude: 'scoped-claude', opencode: 'scoped-opencode', gemini: 'scoped-gemini',
-};
-
-// Janissary's runtime, named piece by piece. The installation root is passed so the profile can
-// derive what it denies inside it, never so it can be carved in whole.
-const BROWSER_PATHS = {
-  chromiumDir: '/pw/Chrome.app',
-  appDir: '/app',
-  appEntryDir: '/app/src',
-  playwrightDirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'],
-};
-
-// Which sentinels survived, found by value rather than by name — a credential arriving under a
-// variable nobody thought to check is the failure worth catching. The git identity counts too: it is
-// the user's real name and address, and the browser has no use for it.
-function secretsIn(env: NodeJS.ProcessEnv): string[] {
-  const forbidden = [
-    ...Object.values(AMBIENT_SECRETS).filter((value) => value.startsWith('sentinel-')),
-    ...Object.values(PROJECT_CREDENTIALS),
-    'ada@example.com',
-  ];
-  const present = new Set(Object.values(env));
-  return forbidden.filter((value) => present.has(value));
 }
 
 function parenDepth(text: string): number {
@@ -78,22 +34,6 @@ describe('sandbox-profile constants', () => {
     expect(SANDBOX_PROFILE).toContain('(allow network*)');
     expect(SANDBOX_PROFILE).not.toContain('(deny network*)');
     expect(SANDBOX_PROFILE_OFFLINE).toContain('(deny network*)');
-  });
-
-  // The deny names the band statically because a Seatbelt profile is fixed for the life of the
-  // process it wraps: a port bound at spawn time could only ever have covered that one launch's own
-  // browser, never one started afterwards and never another tab's.
-  it('denies the whole browser port band, in both profiles, after the general network rule', () => {
-    for (const port of [BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST]) {
-      expect(SANDBOX_PROFILE).toContain(`(remote ip "localhost:${port}")`);
-      expect(SANDBOX_PROFILE_OFFLINE).toContain(`(remote ip "localhost:${port}")`);
-    }
-    expect(SANDBOX_PROFILE).not.toContain(`(remote ip "localhost:${BROWSER_PORT_BAND_FIRST - 1}")`);
-    expect(SANDBOX_PROFILE.match(/\(remote ip "localhost:\d+"\)/g)).toHaveLength(BROWSER_PORT_BAND_COUNT);
-    expect(SANDBOX_PROFILE.indexOf('(deny network-outbound'))
-      .toBeGreaterThan(SANDBOX_PROFILE.indexOf('(allow network*)'));
-    expect(SANDBOX_PROFILE_OFFLINE.indexOf('(deny network-outbound'))
-      .toBeGreaterThan(SANDBOX_PROFILE_OFFLINE.indexOf('(deny network*)'));
   });
 
   it('allows only UUID-shaped temporary siblings for atomic Claude configuration writes', () => {
@@ -192,155 +132,6 @@ describe('sandboxSpawn', () => {
     for (const required of ['WORKSPACE', 'TMPDIR', 'HOME', 'GIT_OBJECTS']) {
       expect(dNames).toContain(required);
     }
-    expect(dNames).not.toContain('BROWSER_ENDPOINT');
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  // The band deny reaches a harness that never asked for a browser, which is the half of the
-  // boundary a per-launch parameter could never cover: such a harness used to get a profile with no
-  // deny at all and could reach every browser on the host.
-  it('gives a spawn with no browser the same band-denying profile as any other', () => {
-    if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const plain = sandboxSpawn({ workspaceDir }, 'bash', []);
-    const offline = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
-    expect(plain.args[1]).toBe(SANDBOX_PROFILE);
-    expect(offline.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
-    for (const result of [plain, offline]) {
-      expect(result.args[1]).toContain(`(remote ip "localhost:${BROWSER_PORT_BAND_FIRST}")`);
-      expect(result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]))
-        .not.toContain('BROWSER_ENDPOINT');
-    }
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  // The Playwright carve-in is unconditional rather than gated on `-b`: gating it would mean
-  // threading a field through SandboxOptions, spawnPty, and the remote's spawn path to withhold read
-  // access to two directories of janissary's own dependency tree that hold no user data.
-  it('binds the Playwright params to real directories for every sandboxed spawn, -b or not', () => {
-    if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
-    const dValues = new Map(result.args
-      .filter((_, i) => result.args[i - 1] === '-D')
-      .map((v) => [v.slice(0, v.indexOf('=')), v.slice(v.indexOf('=') + 1)]));
-    for (const param of ['PLAYWRIGHT_DIR', 'PLAYWRIGHT_CORE_DIR']) {
-      const value = dValues.get(param);
-      expect(value).toBeTruthy();
-      expect(existsSync(value ?? '')).toBe(true);
-    }
-    // Resolved separately, not assumed nested: in a hoisted layout playwright-core is a sibling.
-    expect(dValues.get('PLAYWRIGHT_DIR')).not.toBe(dValues.get('PLAYWRIGHT_CORE_DIR'));
-    expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_DIR"))');
-    expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_CORE_DIR"))');
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  it('selects the browser profile, and its own short param list, for a browser spawn', () => {
-    if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn(
-      { workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js'],
-    );
-    expect(result.args[0]).toBe('-p');
-    expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
-    expect(result.args[1]).not.toBe(SANDBOX_PROFILE);
-    const dNames = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]);
-    // The harness spawn's tables never reach the browser profile — it does not name them and must
-    // not learn about them.
-    expect(dNames).not.toContain('GIT_OBJECTS');
-    expect(dNames).not.toContain('SELF_DIR_L');
-    expect(dNames).not.toContain('PLAYWRIGHT_DIR');
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  // Confinement for the browser is decided from the browser's own scratch directory, which is always
-  // set, and never from the workspace of the tab that asked for it. So a `--no-workspace` harness on
-  // a confining host still gets a fully confined browser — what it loses is the harness-side port
-  // deny, since the harness itself is not wrapped. The specification says so; this is what pins it.
-  it('wraps a browser spawn on a confining host with no harness workspace in play', () => {
-    if (!sandboxAvailable()) return;
-    const scratchDir = mkdtempSync(path.join(tmpdir(), 'sandbox-browser-scratch-'));
-    const result = sandboxSpawn({ workspaceDir: scratchDir, browser: BROWSER_PATHS }, 'node', ['main.js']);
-    expect(result.command).toBe('sandbox-exec');
-    expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
-    rmSync(scratchDir, { recursive: true, force: true });
-  });
-
-  // The browser child authenticates to nothing and pushes nowhere, so none of the credential
-  // injection a harness spawn gets applies to it.
-  it('injects no credentials into a browser spawn', () => {
-    if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn(
-      { workspaceDir, browser: BROWSER_PATHS, tokens: { github: 'scoped-token' } },
-      'node', ['main.js'], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' },
-    );
-    expect(result.env.GH_TOKEN).toBeUndefined();
-    expect(result.env.NPM_TOKEN).toBeUndefined();
-    expect(result.env.TMPDIR).toBeTruthy();
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  // The unconfined fallback — a non-darwin remote, or `sandboxWorkspaces` off. This is the case
-  // that had no coverage at all: the browser branch used to sit *inside* the confined path, so the
-  // browser was handed the server's whole environment on exactly the hosts with no Seatbelt behind
-  // it, and the test above skips there.
-  it('hands a browser no credentials when the host cannot confine it', () => {
-    configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
-    const result = sandboxSpawn(
-      { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
-      'node', ['main.js'], AMBIENT_SECRETS,
-    );
-    // Asserted over the values, not by naming keys: a credential that arrives under a variable
-    // nobody thought to check is exactly the failure this is meant to catch.
-    expect(secretsIn(result.env)).toEqual([]);
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  it('gives an unconfined harness its credentials, so it is the browser and not the host that decides', () => {
-    configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn(
-      { workspaceDir, tokens: PROJECT_CREDENTIALS }, 'bash', ['-lc', 'git push'], AMBIENT_SECRETS,
-    );
-    expect(result.env.GH_TOKEN).toBe('scoped-github');
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  it('keeps a browser usable while unconfined, and returns its command unwrapped', () => {
-    configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const result = sandboxSpawn(
-      { workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js'],
-      { ...AMBIENT_SECRETS, PLAYWRIGHT_BROWSERS_PATH: '/custom/browsers', NODE_OPTIONS: '--require=/tmp/evil.js' },
-    );
-    expect(result.command).toBe('node');
-    expect(result.args).toEqual(['main.js']);
-    expect(result.env.PATH).toBe('/usr/bin');
-    expect(result.env.HOME).toBe('/home/ada');
-    expect(result.env.TMPDIR).toBeTruthy();
-    // Needed, or `executablePath()` cannot find a relocated bundle.
-    expect(result.env.PLAYWRIGHT_BROWSERS_PATH).toBe('/custom/browsers');
-    // Not needed, and it would let ambient configuration inject a module into the child.
-    expect(result.env.NODE_OPTIONS).toBeUndefined();
-    rmSync(workspaceDir, { recursive: true, force: true });
-  });
-
-  // The confined path inherited provider keys too: `scrubEnv` is a denylist that deliberately
-  // exempts them, because a harness needs its own credentials. A browser does not.
-  it('hands a confined browser no provider keys either', () => {
-    if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
-    const result = sandboxSpawn(
-      { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
-      'node', ['main.js'], AMBIENT_SECRETS,
-    );
-    expect(secretsIn(result.env)).toEqual([]);
-    expect(result.env.TMPDIR).toBeTruthy();
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 

@@ -1,17 +1,5 @@
 # pull-request
 
-* Decompose the browser test coverage into focused modules instead of extending and creating test monoliths beyond the repository's line limit.
-
-Existing Issue: The feature adds a 329-code-line browser-server test, pushes the remote-process test from under the limit to 225 code lines, and adds large browser-specific blocks to already oversized sandbox and harness-manager suites rather than grouping the feature's tests in focused files. Severity: 5/10
-
-Existing Risk: 5/10 - Browser lifecycle, sandbox, and remote ownership cases become expensive to navigate and increasingly share mutable mocks, making later security-boundary changes harder to review and more likely to couple unrelated tests.
-
-Proposal Risk: 2/10 - Splitting Vitest files can change module-mock isolation if fixtures are moved carelessly, but retaining the existing assertions and running each extracted suite alone will expose that mistake.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: split the browser test monoliths into focused suites". Decompose `src/browser/e2e-server.test.ts` by separating environment and launch-contract coverage from lifecycle and failure-cleanup coverage, extract the browser-specific `RemoteProcesses` cases from `src/remote/serve-processes.test.ts`, and move the browser-specific additions in `src/sandbox/index.test.ts` and `src/harness/manager.test.ts` into focused colocated suites or shared fixture modules so each new or expanded file complies with `ai/guidelines/code-guidelines.md`. Preserve Vitest hoisting and module-reset behavior, keep every existing assertion about credentials, confinement, ownership, cleanup, and notifications, and verify each extracted file passes both alone and in the complete server suite.
-
-
-
 * Make the new browser tests release every temporary resource on both success and skip paths.
 
 Existing Issue: The scratch allocator suite creates a new temporary root before every case but removes only the last one after the suite, and the real Seatbelt port test tries to close non-listening servers after returning early when a reserved port is occupied. Severity: 4/10
