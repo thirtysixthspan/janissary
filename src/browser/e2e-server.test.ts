@@ -328,8 +328,8 @@ describe('startE2EBrowserServer failure reporting', () => {
     expect(onGone).toHaveBeenCalledWith(expect.stringContaining('ENOENT'));
   });
 
-  // The port probe's race: another process took the port between it being picked and bound. Losing
-  // it is not silent.
+  // The choose-then-bind race: another process took the unreserved candidate before it was bound.
+  // Losing it is not silent.
   it('fires onGone when the guard cannot listen', () => {
     const { onGone } = start();
     const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as { onError: (m: string) => void };

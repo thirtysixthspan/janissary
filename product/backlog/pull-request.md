@@ -1,17 +1,5 @@
 # pull-request
 
-* Keep the browser follow-up artifacts text-reviewable and remove the stale claim that ports are probed.
-
-Existing Issue: The completed plan that replaces a raw NUL in the frame-filter test contains a raw NUL itself and is classified as binary by Git, while the browser-server test still calls the allocator's documented choose-then-bind race a port-probe race even though no probe exists. Severity: 3/10
-
-Existing Risk: 3/10 - Reviewers cannot inspect the completed plan through an ordinary diff and future maintainers can reintroduce a probing design that the allocator and its rationale explicitly reject.
-
-Proposal Risk: 1/10 - Both artifacts become ordinary searchable text, and a byte scan plus a terminology search will expose a recurrence.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: remove the binary plan byte and stale port-probe wording". Replace the literal NUL in `product/plans/complete/browser-frame-filter-test-not-binary.md` with the textual `\0` escape without changing the plan's meaning, then confirm Git renders that plan as text and a control-byte scan finds no remaining raw NUL. In `src/browser/e2e-server.test.ts`, rewrite the failure-reporting comment that says `port probe` to describe the actual race between choosing an unreserved candidate and binding it, matching `src/browser/e2e-ports.ts`, `product/plans/complete/browser-port-allocation.md`, and `ai/guidelines/sandbox-e2e-browser.md`; change no assertions or production behavior.
-
-
-
 * Decompose the browser test coverage into focused modules instead of extending and creating test monoliths beyond the repository's line limit.
 
 Existing Issue: The feature adds a 329-code-line browser-server test, pushes the remote-process test from under the limit to 225 code lines, and adds large browser-specific blocks to already oversized sandbox and harness-manager suites rather than grouping the feature's tests in focused files. Severity: 5/10
