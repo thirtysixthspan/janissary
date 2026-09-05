@@ -4,17 +4,6 @@
 
 ## development
 
-* Replace the raw NUL character in the frame filter's test data with its escape so the guard's rule tests stop being a binary file to git.
-
-Existing Issue: `src/browser/e2e-frame-filter.test.ts` carries a literal U+0000 byte inside one of the string entries in its `isFileUrl` table, where the two-character escape was clearly intended, so git classifies the whole file as binary and renders every change to it as a byte-count line instead of a diff. Severity: 5/10
-
-Existing Risk: 5/10 - Every future change to the tests that pin the protocol guard's matching rules — the layer that is the only containment on a host without Seatbelt — reaches a reviewer as an unreadable blob, so a weakened, inverted, or deleted case lands with nothing to see it.
-
-Proposal Risk: 1/10 - The file diffs normally again and the case it was testing is unchanged; if the escape were somehow not equivalent, the surrounding table's assertion that a leading control character is stripped before the scheme is read would fail immediately.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: remove the literal NUL byte that makes the e2e frame filter's test file binary". In `src/browser/e2e-frame-filter.test.ts`, the third padded-scheme entry of the first `isFileUrl` table reads as a bare `file:///etc/passwd` string but begins with a raw NUL byte rather than the `\0` escape — `git diff` reports the file as `Bin 0 -> 5722 bytes`, and `file` reports it as data. Replace that byte with the two-character escape so the source is ASCII, and confirm with `git diff` that the file now diffs as text and with `git show :src/browser/e2e-frame-filter.test.ts` that nothing else in it carries a control byte. The case is testing that `schemeOf` in `src/browser/e2e-frame-filter.ts` skips leading code points at or below 0x20 before reading the scheme, so the escape is behaviourally identical and the table's assertion must keep passing unchanged. While the file is open, check the other control-character entries in both tables — the tab, carriage-return, and line-feed cases — are written as escapes too, since one raw byte among them would have the same effect.
-
-
 * Correct the in-repo documentation the browser follow-up fixes left behind, which still describes the browser's secret path as a command-line argument.
 
 Existing Issue: `src/cli-args.ts` documents the subcommand as taking `--ws-path <token>` and names that flag among the ones handed on verbatim, the implementation plan of record repeats it, `src/browser/e2e-child.ts` and one completed follow-up plan both cite a deferred plan path that no longer resolves, and `src/sandbox/browser-profile.ts` opens by saying the profile carves in exactly three paths — where it now carves in ten — and describes the browser workspace as the child's user-data directory, a flag the child deliberately does not pass. Severity: 3/10
