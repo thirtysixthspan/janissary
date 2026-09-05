@@ -1,5 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import type { E2EGuardHandle } from './e2e-guard.js';
+import type { BrowserPorts } from './e2e-ports.js';
 import type { BrowserScratch } from './e2e-scratch.js';
 
 // What one e2e browser launch acquired, and the single way any of it is released.
@@ -20,6 +21,7 @@ export type E2ESession = {
   guard?: E2EGuardHandle;
   child?: ChildProcess;
   scratch?: BrowserScratch;
+  ports?: BrowserPorts;
 };
 
 export function newSession(onGone: (message: string) => void): E2ESession {
@@ -30,6 +32,7 @@ function release(session: E2ESession): void {
   session.guard?.close();
   try { session.child?.kill(); } catch { /* already gone */ }
   session.scratch?.remove();
+  session.ports?.release();
 }
 
 /**

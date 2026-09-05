@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { existsSync } from 'node:fs';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
+import type * as E2EPorts from './e2e-ports.js';
 import { startE2EBrowserServer } from './e2e-server.js';
 
 // The lifecycle, with the guard, the child process, and the workspace all stubbed — no real
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   sandboxSpawn: vi.fn(),
   allocateBrowserScratch: vi.fn(),
   scratchRemove: vi.fn(),
+  releasedPorts: [] as number[],
   chromiumBundleDir: vi.fn(() => '/pw/Chrome.app'),
   playwrightPackagePaths: vi.fn(() => ({ entry: '/app/node_modules/playwright/index.js', dirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'] })),
 }));
@@ -25,6 +27,23 @@ vi.mock('./playwright-paths.js', () => ({
   playwrightPackagePaths: mocks.playwrightPackagePaths,
 }));
 vi.mock('./e2e-scratch.js', () => ({ allocateBrowserScratch: mocks.allocateBrowserScratch }));
+// The real allocator, so the reservation it maintains is what the port cases below assert against —
+// wrapped only to record which ports each launch gave back.
+vi.mock('./e2e-ports.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof E2EPorts>();
+  return {
+    allocateBrowserPorts: () => {
+      const ports = actual.allocateBrowserPorts();
+      return {
+        ...ports,
+        release: () => {
+          mocks.releasedPorts.push(ports.guardPort, ports.browserPort);
+          ports.release();
+        },
+      };
+    },
+  };
+});
 
 type ChildStub = { on: ReturnType<typeof vi.fn>; kill: ReturnType<typeof vi.fn>; handlers: Map<string, (arg?: unknown) => void> };
 
@@ -42,6 +61,7 @@ let guardClose: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.releasedPorts.length = 0;
   child = makeChild();
   guardClose = vi.fn();
   mocks.spawn.mockReturnValue(child);
@@ -70,13 +90,10 @@ describe('startE2EBrowserServer environment', () => {
     expect(endpoint).not.toContain(String(guardCall.upstreamPort));
   });
 
-  it('mints two distinct unguessable paths and two distinct ports', () => {
+  it('mints two distinct unguessable paths', () => {
     start();
-    const call = mocks.startE2EGuard.mock.calls[0][0] as {
-      port: number; wsPath: string; upstreamPort: number; upstreamPath: string;
-    };
+    const call = mocks.startE2EGuard.mock.calls[0][0] as { wsPath: string; upstreamPath: string };
     expect(call.wsPath).not.toBe(call.upstreamPath);
-    expect(call.port).not.toBe(call.upstreamPort);
     // `makeToken()` is 24 random bytes base64url-encoded, so both are long and opaque.
     expect(call.wsPath.length).toBeGreaterThan(24);
     expect(call.upstreamPath.length).toBeGreaterThan(24);
@@ -103,6 +120,40 @@ describe('startE2EBrowserServer environment', () => {
   it('returns synchronously, before the child can have started', () => {
     const { env } = start();
     expect(env.JANISSARY_BROWSER_WS_ENDPOINT).toBeTruthy();
+  });
+});
+
+// Ports come from the allocator, which reserves them, so these are guarantees rather than draws
+// that happened to differ (see `e2e-ports.test.ts`).
+describe('startE2EBrowserServer ports', () => {
+  function guardCall(index: number) {
+    return mocks.startE2EGuard.mock.calls[index][0] as { port: number; upstreamPort: number };
+  }
+
+  it('never points the guard at its own listening port', () => {
+    start();
+    expect(guardCall(0).port).not.toBe(guardCall(0).upstreamPort);
+  });
+
+  it('gives two live browsers four distinct ports', () => {
+    const first = start();
+    const second = start();
+    const ports = [guardCall(0).port, guardCall(0).upstreamPort, guardCall(1).port, guardCall(1).upstreamPort];
+    expect(new Set(ports).size).toBe(4);
+    first.handle.close();
+    second.handle.close();
+  });
+
+  it('frees only the closed browser\'s ports', () => {
+    const first = start();
+    const second = start();
+    first.handle.close();
+    const third = start();
+    const stillLive = [guardCall(1).port, guardCall(1).upstreamPort];
+    expect(stillLive).not.toContain(guardCall(2).port);
+    expect(stillLive).not.toContain(guardCall(2).upstreamPort);
+    second.handle.close();
+    third.handle.close();
   });
 });
 
@@ -248,11 +299,16 @@ describe('startE2EBrowserServer failure cleanup', () => {
     };
   }
 
+  // The lost-race path end to end: another process took the port between it being chosen and being
+  // bound, and everything that launch acquired — its ports included — goes back.
   it('releases everything when the guard cannot listen', () => {
     start();
-    const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as { onError: (m: string) => void };
+    const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as {
+      port: number; upstreamPort: number; onError: (m: string) => void;
+    };
     guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
     expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(mocks.releasedPorts).toEqual([guardOptions.port, guardOptions.upstreamPort]);
   });
 
   it('releases everything when the child exits unexpectedly', () => {

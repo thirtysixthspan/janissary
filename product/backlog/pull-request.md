@@ -48,17 +48,6 @@ Proposal Risk: 2/10 - Other protocol bypass classes remain, but parser-aligned s
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human validation work in src/browser/e2e-frame-filter.ts. schemeOf treats a string containing an embedded tab between fi and le as a different scheme, whereas the [URL parser standard](https://url.spec.whatwg.org/#concept-basic-url-parser) removes ASCII tabs and newlines throughout the input before parsing. Use parser-aligned normalization, preserving the existing treatment of ordinary text and non-file schemes. Add escaped tab, carriage-return, and newline cases inside the scheme to src/browser/e2e-frame-filter.test.ts and actual relay-blocking cases to src/browser/e2e-guard.test.ts. Do not treat the inbound navigation-result check as proof that the outbound operation never occurred; it is a later layer and does not restore the promised pre-navigation rejection.
 
 
-* Deliver the plan's usable port allocation instead of unchecked random port pairs.
-
-Existing Issue: The plan promises two free ports, but the implementation draws two independent random integers without checking availability or even ensuring they differ. Severity: 5/10
-
-Existing Risk: 4/10 - A launch can fail against an already occupied port or collide with its own guard, and the random distinct-port test can fail intermittently.
-
-Proposal Risk: 2/10 - Port acquisition can still fail under contention, but bounded allocation and deterministic collision coverage make that failure explicit.
-
-Proposal: Use ai/tasks/work-an-issue.md to reconcile the port design in product/plans/complete/sandbox-end-to-end-browser-testing.md with src/browser/e2e-server.ts. The synchronous published endpoint requirement rules out simply awaiting the plan's throwaway probes inside the current API, so retain that requirement while selecting a workable allocation scheme, such as a synchronously known public candidate with bounded bind handling and an asynchronously communicated OS-assigned private port. At minimum never select the same port for both listeners. Add deterministic occupied-port and repeated-draw coverage to src/browser/e2e-server.test.ts rather than asserting random draws happen to differ. Update the plan and operational guidance to state the actual remaining collision behavior and verify that a failure cleans up the other listener and child.
-
-
 * Keep review-time security instructions separate from the pull request's verification examples.
 
 Existing Issue: The PR description directs its reviewer to run test commands and host-shell checks, and the carried plan and operating guide direct dependency installation and command execution despite the review task treating this material solely as data. Severity: 4/10

@@ -58,6 +58,8 @@ There is no partial result to salvage from either case, and reconnecting to retr
 
 **A connect that used to work now fails.** The browser is most likely gone — it crashed, or was killed. There is no supervisor and nothing restarts it. The human's notifications tab will have a line saying so. You cannot bring it back; report it rather than retrying in a loop.
 
+**The first connect never works at all.** Beyond the one retry above, this usually means the browser never came up. The likeliest cause is that another process on the host took one of the two ports the launch had chosen, in the moment between choosing it and binding it — janissary keeps its own launches from colliding with each other, but it cannot reserve a port against the rest of the machine. The notifications tab will have the line. Nothing is left running and nothing retries; report it rather than looping.
+
 **`-b` together with `--offline`.** These two are contradictory and janissary does not reject the pair. `--offline` denies your process the network, which includes the route to your own browser, so both variables are set and `connect()` times out with nothing wrong. If you see that exact combination in your tab's launch, this is the explanation — it is expected, not a fault to debug.
 
 ## What this is not
