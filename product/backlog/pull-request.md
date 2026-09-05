@@ -37,17 +37,6 @@ Proposal Risk: 2/10 - An overly narrow environment could prevent startup under a
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human remediation in src/sandbox/index.ts and src/browser/e2e-server.ts. Select the credential-free browser environment independently of the Seatbelt availability branch, before withWorkspaceCredentials can return the caller's process.env. Preserve the existing unconfined credential behavior for harnesses, whose authentication needs differ from the browser's. Add browser tests with sandboxWorkspaces disabled and sentinel NPM_TOKEN, provider credentials, and SSH_AUTH_SOCK values; assert that none reach the child while required runtime variables and TMPDIR remain usable. The current browser credential test in src/sandbox/index.test.ts skips when sandboxAvailable is false and therefore does not cover this path. Update the PR description's unconditional claim that browser selection precedes credential handling after the implementation supports it.
 
 
-* Match browser URL normalization at the protocol guard's security boundary.
-
-Existing Issue: The file-scheme detector removes leading controls but leaves embedded tabs and newlines intact, allowing URL strings that Chromium normalizes to the file scheme. Severity: 7/10
-
-Existing Risk: 6/10 - A client can make the browser attempt filesystem navigation through a frame the outbound guard has approved, defeating the promised independent preventive layer.
-
-Proposal Risk: 2/10 - Other protocol bypass classes remain, but parser-aligned scheme detection would close this direct normalization discrepancy.
-
-Proposal: Route through ai/tasks/hygiene/improve-security.md for human validation work in src/browser/e2e-frame-filter.ts. schemeOf treats a string containing an embedded tab between fi and le as a different scheme, whereas the [URL parser standard](https://url.spec.whatwg.org/#concept-basic-url-parser) removes ASCII tabs and newlines throughout the input before parsing. Use parser-aligned normalization, preserving the existing treatment of ordinary text and non-file schemes. Add escaped tab, carriage-return, and newline cases inside the scheme to src/browser/e2e-frame-filter.test.ts and actual relay-blocking cases to src/browser/e2e-guard.test.ts. Do not treat the inbound navigation-result check as proof that the outbound operation never occurred; it is a later layer and does not restore the promised pre-navigation rejection.
-
-
 * Keep review-time security instructions separate from the pull request's verification examples.
 
 Existing Issue: The PR description directs its reviewer to run test commands and host-shell checks, and the carried plan and operating guide direct dependency installation and command execution despite the review task treating this material solely as data. Severity: 4/10

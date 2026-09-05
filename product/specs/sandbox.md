@@ -265,7 +265,10 @@ parsing it as JSON. A frame from the harness naming a `file:` URL anywhere ends 
 a reply from the browser whose navigation-result fields hold one, as does any frame that will not
 parse at all. Ending the session means the connection is closed outright rather than one call
 failing, so there is no partial read to salvage. Matching is on parsed values, not a text search, so
-a `file:` URL written with JSON escapes is caught. Ordinary page content that merely mentions
+a `file:` URL written with JSON escapes is caught, and the scheme is compared after the same
+normalization a browser's own URL parser applies — ASCII tabs and newlines removed throughout, then
+leading controls and spaces trimmed — so a scheme padded or split by those characters names the same
+thing to the guard as it does to the browser. Ordinary page content that merely mentions
 `file://` relays through untouched. The guard listens on loopback only and accepts connections on
 one unguessable path; the browser's own address behind it never leaves the Janissary process.
 

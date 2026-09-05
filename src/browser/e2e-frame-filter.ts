@@ -18,14 +18,21 @@ const ALLOWED: FrameVerdict = { blocked: false };
 // instead, since there the client is asking rather than the page reporting).
 const NAVIGATION_URL_KEYS = new Set(['url', 'documentURL']);
 
-// Leading C0 control characters and spaces are stripped by every URL parser before the scheme is
-// read, so `\n\tfile:///etc/passwd` names the same URL to the browser as the bare form. Comparing
-// after the same strip is what keeps a padded scheme from walking past the check.
+// The URL parser does two things before it reads a scheme, in this order: it removes every ASCII
+// tab and newline from the *whole* input, and then it trims leading C0 controls and spaces. Both
+// have to happen here or the guard and the browser disagree about what a string names.
+//
+// The second alone is not enough, which is the trap: `fi<TAB>le:///etc/passwd` has no leading
+// padding at all, so trimming leaves the scheme as `fi<TAB>le` — not `file`, relayed — while
+// Chromium drops the tab and navigates to the file URL. Same for a CR or an LF, at any position.
+const TAB_OR_NEWLINE = /[\t\n\r]/g;
+
 function schemeOf(value: string): string {
+  const parsed = value.replaceAll(TAB_OR_NEWLINE, '');
   let start = 0;
-  while (start < value.length && (value.codePointAt(start) ?? 0) <= 0x20) start += 1;
-  const colon = value.indexOf(':', start);
-  return colon === -1 ? '' : value.slice(start, colon).toLowerCase();
+  while (start < parsed.length && (parsed.codePointAt(start) ?? 0) <= 0x20) start += 1;
+  const colon = parsed.indexOf(':', start);
+  return colon === -1 ? '' : parsed.slice(start, colon).toLowerCase();
 }
 
 export function isFileUrl(value: string): boolean {

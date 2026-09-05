@@ -150,6 +150,23 @@ describe('startE2EGuard', () => {
     expect(upstream.received).toEqual([]);
   });
 
+  // The scheme with an ASCII tab inside it. Chromium removes tabs and newlines from a URL before it
+  // parses, so this reaches the browser as `file:///etc/passwd` — and the guard used to relay it,
+  // because trimming leading padding leaves `fi<TAB>le` as the scheme. Asserting the upstream
+  // received nothing is the whole point: this layer refuses *before* the navigation, and a check on
+  // the close code alone would still pass if the frame had been forwarded first.
+  it('catches a file: URL whose scheme is split by a tab, before it reaches the browser', async () => {
+    const upstream = await startUpstream();
+    const port = await startGuard(upstream);
+    const client = connect(port);
+    await opened(client);
+    const code = closeCode(client);
+    client.send(JSON.stringify({ id: 4, method: 'Page.navigate', params: { url: 'fi\tle:///etc/passwd' } }));
+    expect(await code).toBe(1008);
+    await settle();
+    expect(upstream.received).toEqual([]);
+  });
+
   it('catches a file: URL in a binary frame rather than exempting it from inspection', async () => {
     const upstream = await startUpstream();
     const port = await startGuard(upstream);
