@@ -18,8 +18,11 @@ export type E2EChildArgs = { port: number; wsPath: string; dir: string };
 //
 // This narrows who can reach that disclosure; it does not make the path private. The same user can
 // still read another process's environment, and Playwright's own server serves this very path from
-// an unauthenticated `GET /json` to anything that can reach the port. See
-// `product/plans/deferred/browser-private-transport-boundary.md`.
+// an unauthenticated `GET /json` to anything that can reach the port. What closed the route rather
+// than narrowing it is the Seatbelt deny on the whole browser port band, so a confined harness
+// cannot reach any browser's port to ask — which is a kernel boundary and therefore does nothing on
+// a host without one. See `product/plans/complete/browser-private-transport-boundary.md` and
+// `product/plans/complete/browser-port-band-denied-to-every-harness.md`.
 export const WS_PATH_ENV = 'JANISSARY_E2E_WS_PATH';
 
 // `--port <n> --dir <path>` plus `JANISSARY_E2E_WS_PATH`, parsed by hand rather than through

@@ -1,6 +1,6 @@
 # Plan: Keep the browser's internal path out of the process listing
 
-**Complexity: 2/10** — one argument becomes one environment variable, and its parser reads it from there. It is a narrowing of who can reach the disclosure, not a fix for the underlying one; see `product/plans/deferred/browser-private-transport-boundary.md` for what remains.
+**Complexity: 2/10** — one argument becomes one environment variable, and its parser reads it from there. It is a narrowing of who can reach the disclosure, not a fix for the underlying one; see `product/plans/complete/browser-private-transport-boundary.md` for what remains.
 
 ## Goal
 
@@ -38,5 +38,5 @@ None. `product/specs/sandbox.md` says the browser's own address never leaves the
 
 ## Out of scope
 
-- Everything in `product/plans/deferred/browser-private-transport-boundary.md`: the unauthenticated `GET /json` disclosure, and the fact that a same-user process can defeat any secret passed to a child by any means.
+- Everything in `product/plans/complete/browser-private-transport-boundary.md`: the unauthenticated `GET /json` disclosure, and the fact that a same-user process can defeat any secret passed to a child by any means.
 - The `--port` and `--dir` arguments, neither of which is a credential.

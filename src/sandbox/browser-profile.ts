@@ -1,9 +1,14 @@
 // The Seatbelt profile the e2e browser child runs under — deliberately *not* the harness profile.
 // Reusing `SANDBOX_PROFILE` would be actively wrong: its read carve-ins include `Library/Keychains`,
 // `.claude`, `.codex`, and opencode's state directory (see `paths.ts`), which is close to an
-// inventory of what an escape would want. A browser needs none of it, so this profile carves in
-// exactly three paths: the Chromium app bundle it executes, the browser's own scratch workspace, and
-// that workspace's temp sibling.
+// inventory of what an escape would want. A browser needs none of it, so this profile names only
+// what the child cannot start without. For reads that is the six subpaths bound through
+// `BROWSER_READ_PARAMS` — the Chromium app bundle it executes, the Node binary's directory, and
+// janissary's runtime as four separate pieces — plus the two exact files in `BROWSER_FILE_PARAMS`,
+// with the project's own state directory denied back out inside them through `BROWSER_DENY_PARAMS`.
+// For writes it is the browser's own scratch workspace and that workspace's temp sibling. Those
+// three tables are the inventory; a count written here would be wrong the next time one of them
+// gains an entry, which is how the sentence this replaced came to say three.
 //
 // Built the same way `profile.ts` is: a static string with `-D` parameters, never string
 // interpolation, so this module has no injection surface and stays a plain constant. Rule ordering
@@ -82,9 +87,12 @@ export const BROWSER_SANDBOX_PROFILE = String.raw`(version 1)
 (allow process-fork)
 (allow process-exec)
 
-; Writes: denied by default. Allowed only inside the browser's own workspace and its temp sibling —
-; which are also its --user-data-dir and downloadsPath, so everything Chromium persists lands there
-; — plus DARWIN_USER_CACHE_DIR (the real per-user /var/folders/<hash>/C/ macOS confstr(3) hands out,
+; Writes: denied by default. Allowed only inside the browser's own workspace and its temp sibling,
+; which together hold everything Chromium persists: downloads are pointed at the workspace
+; explicitly, and Playwright's own profile directory lands in the temp sibling because the caller
+; points TMPDIR there. The user data directory is not passed as an argument at all — Playwright owns
+; that flag and rejects an invocation supplying its own (see src/browser/e2e-child.ts).
+; Also allowed: DARWIN_USER_CACHE_DIR (the real per-user /var/folders/<hash>/C/ macOS confstr(3) hands out,
 ; which system frameworks write lock/cache files into regardless of any TMPDIR override) and
 ; /dev/null.
 (allow file-write*
@@ -95,7 +103,8 @@ export const BROWSER_SANDBOX_PROFILE = String.raw`(version 1)
   (literal "/dev/null"))
 
 ; Reads: allowed everywhere by default (system frameworks, /usr, /System, the dynamic linker cache),
-; then $HOME's *contents* are denied, then exactly three paths are carved back in. Metadata (stat)
+; then $HOME's *contents* are denied, then the six subpaths and two exact files the tables above name
+; are carved back in, and the project's state directory is denied inside them. Metadata (stat)
 ; stays allowed through all of $HOME for the same reason the harness profile allows it: resolving any
 ; path requires traversing every ancestor directory, and Seatbelt checks each component individually.
 (allow file-read*)

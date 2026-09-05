@@ -19,17 +19,20 @@ export interface CliArgs {
   // workspace-failed frame, not as a CLI usage error.
   remoteServe: boolean;
   remoteServePath: string | undefined;
-  // `janus e2e-browser --port <n> --ws-path <token> --dir <path>`: run as the confined browser
-  // server behind a `-b` harness tab's protocol guard (see product/specs/harness.md). Its own flags
-  // are parsed by `parseE2EBrowserArgs` from the raw argv rather than here, since they are never
-  // typed by a user — `startE2EBrowserServer` is the only caller.
+  // `janus e2e-browser --port <n> --dir <path>`, plus the browser server's secret path in
+  // `JANISSARY_E2E_WS_PATH`: run as the confined browser server behind a `-b` harness tab's protocol
+  // guard (see product/specs/harness.md). The path travels in the environment and not as a flag on
+  // purpose — a macOS argument vector is readable through `ps` by any user on the machine, and that
+  // path with the port is a complete bypass of the guard (see `src/browser/e2e-child.ts`). Its own
+  // flags are parsed by `parseE2EBrowserArgs` from the raw argv rather than here, since they are
+  // never typed by a user — `startE2EBrowserServer` is the only caller.
   e2eBrowser: boolean;
   e2eBrowserArgs: string[];
   port: number | undefined;
   projectDir: string | undefined;
 }
 
-// The `e2e-browser` subcommand's own args (`--ws-path`, `--dir`) are not declared to `parseArgs`, so
+// The `e2e-browser` subcommand's own args (`--port`, `--dir`) are not declared to `parseArgs`, so
 // strict mode would reject them as unknown options. It is recognized before any option parsing and
 // its arguments are handed on verbatim for `parseE2EBrowserArgs` to read.
 function e2eBrowserCommand(rest: string[]): CliArgs {
