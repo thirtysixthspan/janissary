@@ -1,12 +1,14 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomInt } from 'node:crypto';
 import path from 'node:path';
+import { errorText } from '../error-text.js';
 import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { resolveChildLaunch } from './e2e-child-command.js';
-import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
+import { startE2EGuard } from './e2e-guard.js';
 import { loopbackWsUrl } from './e2e-loopback.js';
-import { allocateBrowserScratch, type BrowserScratch } from './e2e-scratch.js';
+import { allocateBrowserScratch } from './e2e-scratch.js';
+import { newSession, stopSession, type E2ESession } from './e2e-session.js';
 import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js';
 
 // Lifecycle orchestration for one harness tab's e2e browser: the guard, the confined child behind
@@ -16,7 +18,8 @@ import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js
 
 export type E2EBrowserHandle = {
   // Idempotent, and safe before the child has finished starting. Stops the guard, kills the child,
-  // and removes the browser workspace and its temp sibling.
+  // and removes the browser workspace and its temp sibling. A browser that already ended on its own
+  // has released all of that at that moment, so this is then a no-op.
   close: () => void;
 };
 
@@ -32,7 +35,8 @@ export type E2EBrowserOptions = {
   // nothing more — the directory itself is allocated exclusively (see `e2e-scratch.ts`).
   label: string;
   // Invoked once when the browser is gone for a reason the user did not ask for: a child that
-  // exits, a child that never starts, or a guard that cannot listen. Never invoked after `close()`.
+  // exits, a child that never starts, or a guard that cannot listen. Never invoked after `close()`,
+  // and never before everything that launch acquired has been released.
   onGone: (message: string) => void;
 };
 
@@ -54,6 +58,10 @@ function pickPort(): number {
  * waiting for anything. A script that connects within the first fraction of a second may need one
  * retry; a launch that fails outright is reported through `onGone` after the fact rather than as a
  * notice on the tab's first frame, since the variable is already set by then.
+ *
+ * It never throws. The caller is part-way through building a tab, and a browser that could not be
+ * acquired is a notification, not a failed tab — so a throw anywhere in the sequence below is
+ * reported through `onGone` and rolled back against whatever had already been acquired.
  */
 export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserServer {
   const guardPort = pickPort();
@@ -63,27 +71,25 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
   const publishedPath = `/${makeToken()}`;
   const internalPath = `/${makeToken()}`;
 
-  const scratch = allocateBrowserScratch(options.label);
-  const state = { closed: false, fired: false };
-  const gone = (message: string): void => {
-    if (state.closed || state.fired) return;
-    state.fired = true;
-    options.onGone(message);
-  };
-
-  const guard = startE2EGuard({
-    port: guardPort, wsPath: publishedPath,
-    upstreamPort: browserPort, upstreamPath: internalPath,
-    onError: gone,
-  });
-  const child = spawnBrowserChild(scratch, browserPort, internalPath, gone);
+  const session = newSession(options.onGone);
+  try {
+    session.scratch = allocateBrowserScratch(options.label);
+    session.guard = startE2EGuard({
+      port: guardPort, wsPath: publishedPath,
+      upstreamPort: browserPort, upstreamPath: internalPath,
+      onError: (message) => stopSession(session, message),
+    });
+    session.child = spawnBrowserChild(session, browserPort, internalPath);
+  } catch (error) {
+    stopSession(session, `e2e browser failed to start: ${errorText(error)}`);
+  }
 
   return {
     env: {
       JANISSARY_BROWSER_WS_ENDPOINT: loopbackWsUrl(guardPort, publishedPath),
       JANISSARY_PLAYWRIGHT: playwrightPackagePaths().entry,
     },
-    handle: closeHandle(state, guard, child, scratch),
+    handle: { close: () => stopSession(session) },
   };
 }
 
@@ -91,9 +97,9 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
 // (see `src/sandbox/browser-profile.ts`) on a host that can confine it and hands the command back
 // unchanged on one that cannot. `TMPDIR` is set either way, so Playwright's own profile directory
 // lands inside the browser's temp sibling rather than in shared `/tmp` even unconfined.
-function spawnBrowserChild(
-  scratch: BrowserScratch, port: number, wsPath: string, gone: (message: string) => void,
-): ChildProcess | undefined {
+function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): ChildProcess {
+  const scratch = session.scratch;
+  if (!scratch) throw new Error('no scratch directory was allocated');
   // The entry and the interpreter both come from whichever tree this process is running (see
   // `e2e-child-command.ts`); a source run cannot reach `main.js` beside `src/`.
   const launch = resolveChildLaunch({
@@ -109,28 +115,10 @@ function spawnBrowserChild(
     launch.command, [...launch.args, ...args],
   );
   const env = { ...wrapped.env, TMPDIR: scratch.tempDir };
-  try {
-    const child = spawn(wrapped.command, wrapped.args, { stdio: 'ignore', env });
-    child.on('error', (error) => gone(`e2e browser failed to start: ${error.message}`));
-    child.on('exit', () => gone('e2e browser exited'));
-    return child;
-  } catch (error) {
-    gone(`e2e browser failed to start: ${error instanceof Error ? error.message : String(error)}`);
-    return undefined;
-  }
-}
-
-function closeHandle(
-  state: { closed: boolean }, guard: E2EGuardHandle, child: ChildProcess | undefined,
-  scratch: BrowserScratch,
-): E2EBrowserHandle {
-  return {
-    close: () => {
-      if (state.closed) return;
-      state.closed = true;
-      guard.close();
-      try { child?.kill(); } catch { /* already gone */ }
-      scratch.remove();
-    },
-  };
+  // A throw here is caught by the caller's rollback, which produces the same message these handlers
+  // do — so there is no second `catch` and no second wording for the same failure.
+  const child = spawn(wrapped.command, wrapped.args, { stdio: 'ignore', env });
+  child.on('error', (error) => stopSession(session, `e2e browser failed to start: ${error.message}`));
+  child.on('exit', () => stopSession(session, 'e2e browser exited'));
+  return child;
 }

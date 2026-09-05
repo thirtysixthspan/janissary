@@ -235,3 +235,72 @@ describe('startE2EBrowserServer failure reporting', () => {
     expect(() => handle.close()).not.toThrow();
   });
 });
+
+// Every way the browser can end releases everything that launch acquired, at the moment it ends —
+// not when the tab is eventually disposed. A guard left listening in front of a dead browser, or a
+// Chromium left running with no route to it, is the failure this covers.
+describe('startE2EBrowserServer failure cleanup', () => {
+  function released() {
+    return {
+      guard: guardClose.mock.calls.length,
+      child: child.kill.mock.calls.length,
+      scratch: mocks.scratchRemove.mock.calls.length,
+    };
+  }
+
+  it('releases everything when the guard cannot listen', () => {
+    start();
+    const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as { onError: (m: string) => void };
+    guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+  });
+
+  it('releases everything when the child exits unexpectedly', () => {
+    start();
+    child.handlers.get('exit')?.();
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+  });
+
+  it('releases everything when the child never starts', () => {
+    start();
+    child.handlers.get('error')?.(new Error('ENOENT'));
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+  });
+
+  // Partway through setup: the scratch directory and the guard were acquired, the spawn was not.
+  it('rolls back what it already acquired when the spawn throws', () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    start();
+    expect(guardClose).toHaveBeenCalledTimes(1);
+    expect(mocks.scratchRemove).toHaveBeenCalledTimes(1);
+  });
+
+  // Nothing had been acquired yet, so there is nothing to give back — but the caller is mid-way
+  // through building a tab and must not be handed an exception for it.
+  it('reports a scratch allocation that fails instead of throwing at its caller', () => {
+    mocks.allocateBrowserScratch.mockImplementation(() => { throw new Error('EACCES'); });
+    const { onGone, handle } = start();
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('EACCES'));
+    expect(mocks.startE2EGuard).not.toHaveBeenCalled();
+    expect(mocks.spawn).not.toHaveBeenCalled();
+    expect(() => handle.close()).not.toThrow();
+  });
+
+  // Killing the child provokes its own exit event. That must not re-enter the teardown or report a
+  // second time.
+  it('releases once across a failure followed by a close', () => {
+    const { onGone, handle } = start();
+    child.handlers.get('exit')?.();
+    handle.close();
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(onGone).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases once across a close followed by the child\'s exit', () => {
+    const { onGone, handle } = start();
+    handle.close();
+    child.handlers.get('exit')?.();
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(onGone).not.toHaveBeenCalled();
+  });
+});

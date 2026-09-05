@@ -195,6 +195,12 @@ to connect simply fails. As with every notification, a user with the notificatio
 nothing. Closing a `-b` tab stops its browser and removes its scratch directory — only that
 browser's own directory, which no tab and no other browser shares.
 
+A browser that ends on its own releases the same things at the moment it ends, rather than holding
+them until its tab closes: the endpoint stops accepting connections, the browser process is gone,
+and the scratch directory is removed. That holds for a launch that never got that far too — whatever
+part of it had started is undone. The notification arrives once, after the release, and never for a
+browser the user closed themselves.
+
 The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
 checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.
 

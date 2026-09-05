@@ -135,7 +135,9 @@ acts on rather than an endpoint computed here and shipped over, since the endpoi
 the machine the browser actually runs on. In the other direction a new frame reports that the
 remote's browser is gone, which the local side surfaces as the same notifications line a local
 browser's death produces, named against the tab that owns that session rather than the channel,
-since joined tabs share one. An installation predating the flag ignores it and spawns the harness
+since joined tabs share one. A remote session that cannot be started at all releases the browser it
+had already started for it on that host, so a failed spawn leaves nothing running there either. An
+installation predating the flag ignores it and spawns the harness
 with no browser variables at all, leaving a tab that comes up looking healthy in which every attempt
 to connect to a browser fails with nothing to point at — so a stale remote is refused at the
 handshake, as with every other field of this kind.

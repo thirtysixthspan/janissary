@@ -235,3 +235,35 @@ describe('RemoteProcesses with two live browser sessions', () => {
     expect(closes[1]).toHaveBeenCalledTimes(1);
   });
 });
+
+// The browser is recorded against the session id before the PTY exists. A throw from the PTY leaves
+// `spawn` before the entry is in the table, so neither `kill` nor the exit path would ever reach it.
+describe('RemoteProcesses when the PTY fails to start', () => {
+  let close: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    close = vi.fn();
+    vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
+    vi.mocked(spawnPty).mockReset().mockImplementation(() => { throw new Error('pty refused'); });
+    vi.mocked(harnessSpawnEnv).mockReset().mockReturnValue({ env: BROWSER_ENV, handle: { close } });
+  });
+
+  function spawnFailing() {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
+    expect(() => processes.spawn({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, browser: true,
+    })).toThrow('pty refused');
+    return processes;
+  }
+
+  it('closes the browser it had already started', () => {
+    spawnFailing();
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('forgets it, so a later kill for that id does not close it twice', () => {
+    spawnFailing().kill('r1');
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});

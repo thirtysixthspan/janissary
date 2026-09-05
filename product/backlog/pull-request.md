@@ -48,17 +48,6 @@ Proposal Risk: 2/10 - Other protocol bypass classes remain, but parser-aligned s
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human validation work in src/browser/e2e-frame-filter.ts. schemeOf treats a string containing an embedded tab between fi and le as a different scheme, whereas the [URL parser standard](https://url.spec.whatwg.org/#concept-basic-url-parser) removes ASCII tabs and newlines throughout the input before parsing. Use parser-aligned normalization, preserving the existing treatment of ordinary text and non-file schemes. Add escaped tab, carriage-return, and newline cases inside the scheme to src/browser/e2e-frame-filter.test.ts and actual relay-blocking cases to src/browser/e2e-guard.test.ts. Do not treat the inbound navigation-result check as proof that the outbound operation never occurred; it is a later layer and does not restore the promised pre-navigation rejection.
 
 
-* Release browser resources when startup fails or the browser exits unexpectedly.
-
-Existing Issue: Browser failure callbacks only notify, leaving the guard and scratch directories alive until tab disposal, and a later PTY-spawn exception can strand the browser before any runtime owns its handle. Severity: 6/10
-
-Existing Risk: 5/10 - Failed launches retain listeners or Chromium processes for the lifetime of a tab or server, accumulating resources and leaving unusable endpoints active.
-
-Proposal Risk: 2/10 - Cleanup ordering can still race process exit, but one idempotent owner with explicit rollback can make those transitions observable and bounded.
-
-Proposal: Use ai/tasks/work-an-issue.md to give src/browser/e2e-server.ts a single cleanup path for guard failure, child error, unexpected child exit, and explicit close, while preserving exactly-once notifications and suppression after user disposal. A guard bind failure must stop its child, and child failure must stop the guard and remove its scratch allocation. Ensure partial synchronous setup failures roll back resources already acquired. In src/harness/manager.ts and src/remote/serve-processes.ts, close the returned handle if PTY creation or runtime setup throws before ownership is established. Extend src/browser/e2e-server.test.ts, src/harness/manager.test.ts, and src/remote/serve-processes.test.ts with these failure transitions; existing tests assert notification calls but do not assert failure cleanup. Keep browser restart out of scope.
-
-
 * Deliver the plan's usable port allocation instead of unchecked random port pairs.
 
 Existing Issue: The plan promises two free ports, but the implementation draws two independent random integers without checking availability or even ensuring they differ. Severity: 5/10

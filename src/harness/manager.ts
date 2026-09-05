@@ -218,19 +218,31 @@ export class HarnessManager {
     const spawnEnv = channel
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({ name, cwd, label, browser, onBrowserGone: (message) => notify(this.managers, 'e2e-browser-gone', label, message) });
-    const id = channel
-      ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser })
-      : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
-    this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
-    const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (liveTab?.harness) {
-      liveTab.harness.ptyId = id;
-      liveTab.harness.status = 'running';
+    // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
+    // spawn or the runtime construction would otherwise strand a fully started browser.
+    try {
+      const id = channel
+        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser })
+        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
+      this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
+      this.markRunning(label, id);
+    } catch (error) {
+      spawnEnv.handle?.close();
+      throw error;
     }
     if (remote) this.managers.tab.setCwd(label, cwd);
     const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove));
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Point the live tab at the PTY it just got. Inside `finishSpawn`'s ownership block, so a tab is
+  // never left claiming to run a PTY whose runtime construction threw.
+  private markRunning(label: string, id: string): void {
+    const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (!liveTab?.harness) return;
+    liveTab.harness.ptyId = id;
+    liveTab.harness.status = 'running';
   }
 
   // A `-w` launch's workspace clone failed after the placeholder tab was already created: surface

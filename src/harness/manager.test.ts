@@ -1223,4 +1223,27 @@ describe('HarnessManager e2e browser', () => {
     expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited');
     void manager;
   });
+
+  // The browser is started before the PTY, and only the runtime that comes after the PTY owns it.
+  // A throw in between would otherwise leave a started browser that nothing will ever close.
+  it('closes the browser when the PTY spawn throws before the runtime owns it', () => {
+    const { managers } = makeManagers();
+    (managers.pty.spawn as unknown as { mockImplementation: (f: () => never) => void })
+      .mockImplementation(() => { throw new Error('pty refused'); });
+    const manager = new HarnessManager(managers);
+
+    expect(() => manager.run('harness claude --no-workspace -b')).toThrow('pty refused');
+
+    expect(browserMock.handles).toHaveLength(1);
+    expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the browser open when the PTY spawn succeeds', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+
+    expect(browserMock.handles[0].close).not.toHaveBeenCalled();
+    void manager;
+  });
 });

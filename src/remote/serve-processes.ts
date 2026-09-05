@@ -61,19 +61,27 @@ export class RemoteProcesses {
         onBrowserGone: () => this.send({ type: 'browser-exited', id: frame.id }),
       });
     this.browsers.set(frame.id, spawnEnv.handle);
-    const session = spawnPty(
-      frame.program,
-      frame.command,
-      this.workspaceDir,
-      {
-        onData: (_id, data) => this.send({ type: 'output', id: frame.id, data }),
-        onExit: (_id, exitCode) => this.finish(frame.id, exitCode),
-      },
-      frame.cols,
-      frame.rows,
-      { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
-      spawnEnv.env,
-    );
+    // A throw here leaves before `spawn` records the entry, so neither `kill` nor `finish` will ever
+    // reach the browser recorded a line above. Give it back here or nothing will.
+    let session;
+    try {
+      session = spawnPty(
+        frame.program,
+        frame.command,
+        this.workspaceDir,
+        {
+          onData: (_id, data) => this.send({ type: 'output', id: frame.id, data }),
+          onExit: (_id, exitCode) => this.finish(frame.id, exitCode),
+        },
+        frame.cols,
+        frame.rows,
+        { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
+        spawnEnv.env,
+      );
+    } catch (error) {
+      this.closeBrowser(frame.id);
+      throw error;
+    }
     this.writers.set(frame.id, (data) => session.write(data));
     this.resizers.set(frame.id, (cols, rows) => session.resize(cols, rows));
     return { kill: () => { this.closeBrowser(frame.id); session.kill(); } };
