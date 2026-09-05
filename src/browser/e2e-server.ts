@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import path from 'node:path';
 import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
+import { resolveChildLaunch } from './e2e-child-command.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
 import { allocateBrowserScratch, type BrowserScratch } from './e2e-scratch.js';
 import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js';
@@ -92,14 +93,19 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
 function spawnBrowserChild(
   scratch: BrowserScratch, port: number, wsPath: string, gone: (message: string) => void,
 ): ChildProcess | undefined {
-  const entry = path.join(import.meta.dirname, '..', 'main.js');
+  // The entry and the interpreter both come from whichever tree this process is running (see
+  // `e2e-child-command.ts`); a source run cannot reach `main.js` beside `src/`.
+  const launch = resolveChildLaunch({
+    moduleFile: import.meta.filename, execPath: process.execPath, execArgv: process.execArgv,
+  });
   const args = ['e2e-browser', '--port', String(port), '--ws-path', wsPath, '--dir', scratch.dir];
   // Janissary's installation root, two levels up from `src/browser/` — the profile carves it in so
-  // the child can read the entry point above and the dependencies it pulls in.
+  // the child can read the entry point above and the dependencies it pulls in, the loader among
+  // them.
   const appDir = path.join(import.meta.dirname, '..', '..');
   const wrapped = sandboxSpawn(
     { workspaceDir: scratch.dir, browser: { chromiumDir: chromiumBundleDir(), appDir } },
-    process.execPath, [entry, ...args],
+    launch.command, [...launch.args, ...args],
   );
   const env = { ...wrapped.env, TMPDIR: scratch.tempDir };
   try {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { existsSync } from 'node:fs';
 import { startE2EBrowserServer } from './e2e-server.js';
 
 // The lifecycle, with the guard, the child process, and the workspace all stubbed — no real
@@ -125,6 +126,41 @@ describe('startE2EBrowserServer workspace', () => {
     expect(args[args.indexOf('--port') + 1]).toBe(String(guardCall.upstreamPort));
     expect(args[args.indexOf('--ws-path') + 1]).toBe(guardCall.upstreamPath);
     expect(args[args.indexOf('--dir') + 1]).toBe('/ws/browsers/bot-token');
+  });
+});
+
+// `node:fs` is deliberately not stubbed in this suite, so a child entry that names nothing cannot
+// satisfy the launch: a mocked `spawn` accepts any string, and only the disk says otherwise.
+describe('startE2EBrowserServer child launch', () => {
+  function spawnCall() {
+    return mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }];
+  }
+
+  it('runs the server\'s own interpreter', () => {
+    start();
+    expect(spawnCall()[0]).toBe(process.execPath);
+  });
+
+  it('gives it a child entry that exists in the tree this process is running', () => {
+    start();
+    const [, args] = spawnCall();
+    const entry = args[args.indexOf('e2e-browser') - 1];
+    expect(existsSync(entry)).toBe(true);
+  });
+
+  // Whatever the loader chain adds sits ahead of the entry, never between it and the subcommand.
+  it('keeps the subcommand and its arguments after the entry', () => {
+    start();
+    const [, args] = spawnCall();
+    expect(args.slice(args.indexOf('e2e-browser'), args.indexOf('e2e-browser') + 2)).toEqual(['e2e-browser', '--port']);
+  });
+
+  it('confines the launch it actually spawns', () => {
+    start();
+    const [command, args] = spawnCall();
+    const [, sandboxedCommand, sandboxedArgs] = mocks.sandboxSpawn.mock.calls[0] as [unknown, string, string[]];
+    expect(sandboxedCommand).toBe(command);
+    expect(sandboxedArgs).toEqual(args);
   });
 });
 

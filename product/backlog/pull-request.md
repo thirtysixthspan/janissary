@@ -48,17 +48,6 @@ Proposal Risk: 2/10 - Other protocol bypass classes remain, but parser-aligned s
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human validation work in src/browser/e2e-frame-filter.ts. schemeOf treats a string containing an embedded tab between fi and le as a different scheme, whereas the [URL parser standard](https://url.spec.whatwg.org/#concept-basic-url-parser) removes ASCII tabs and newlines throughout the input before parsing. Use parser-aligned normalization, preserving the existing treatment of ordinary text and non-file schemes. Add escaped tab, carriage-return, and newline cases inside the scheme to src/browser/e2e-frame-filter.test.ts and actual relay-blocking cases to src/browser/e2e-guard.test.ts. Do not treat the inbound navigation-result check as proof that the outbound operation never occurred; it is a later layer and does not restore the promised pre-navigation rejection.
 
 
-* Handle browser launches from the supported TypeScript source runtime.
-
-Existing Issue: The child launch always invokes a sibling main.js with plain Node even when the parent is running src/main.ts through tsx. Severity: 8/10
-
-Existing Risk: 7/10 - Every browser-enabled launch from npm start or dev:server exits without a browser because src/main.js does not exist.
-
-Proposal Risk: 2/10 - Source and compiled startup could diverge again, but assertions for both resolved launch commands would catch that boundary.
-
-Proposal: Use ai/tasks/work-an-issue.md to make spawnBrowserChild in src/browser/e2e-server.ts select a valid child entry and interpreter for both supported layouts. package.json runs npm start and dev:server through tsx, while tsconfig.json emits JavaScript under dist rather than beside src; bin/janus.mjs already distinguishes source and compiled installations. Reuse or extract that launch-resolution behavior without depending on a stale compiled build when the parent is running source. Preserve confinement and the private scratch environment. Extend src/browser/e2e-server.test.ts to assert executable entry paths and loader arguments for both layouts, and add child-entry coverage so a mocked spawn accepting a nonexistent file cannot satisfy the launch contract.
-
-
 * Handle hosts whose localhost address resolves to IPv6.
 
 Existing Issue: The child leaves Playwright's host at its localhost default while the guard always connects to 127.0.0.1. Severity: 7/10
