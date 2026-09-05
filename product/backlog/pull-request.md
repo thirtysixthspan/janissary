@@ -1,17 +1,5 @@
 # pull-request
 
-* Remove reviewer-directed commands from the pull request material instead of trying to override an automated reviewer's active task from inside the branch.
-
-Existing Issue: The PR body, the completed feature plan, and the browser operating guide directly address automated reviewers and tell them what they may execute and which task takes precedence, so the reviewed branch still contains instructions aimed at the process reviewing it despite the added defensive wording. Severity: 6/10
-
-Existing Risk: 7/10 - Treating defensive prompt text as trustworthy establishes the same branch-controlled instruction channel a malicious change would use to redirect an unattended reviewer onto commands or host-shell actions.
-
-Proposal Risk: 2/10 - The documents can retain useful verification examples and a clearly named audience without speaking to the reviewer or asserting authority over the review task.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: remove reviewer-directed instructions from reviewed material". Rewrite the audience notes in `ai/guidelines/sandbox-e2e-browser.md`, `product/plans/complete/sandbox-end-to-end-browser-testing.md`, and PR #975's `How to verify` section as third-person descriptions of their intended runtime or human audience. Remove clauses beginning from the premise that the reader is an automated reviewer, commands to carry on with another task, and statements deciding which task or instruction takes precedence; preserve the operational examples as inert claims a human can evaluate and keep the runtime guide useful to an agent that receives it only after the change is trusted and installed. Verify the diff contains no branch-authored text directly instructing a reviewer to execute, avoid, or prioritize actions.
-
-
-
 * Correct the security documentation that calls the guarded browser endpoint non-credential data and treats non-injection as proof that the live Janissary session is unreachable.
 
 Existing Issue: The sandbox specification says the unguessable endpoint is not a credential even though it is a bearer capability for browser control, while the PR body, harness specification, and operating documentation infer that withholding the live app URL and token prevents access even in configurations where the harness is explicitly unconfined and can discover the server log or listening service itself. Severity: 6/10

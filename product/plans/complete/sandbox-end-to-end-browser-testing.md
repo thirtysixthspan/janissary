@@ -208,7 +208,7 @@ No change. `playwright` and `ws` are both already dependencies, and the existing
 
 ## Verification
 
-**Audience.** This section is a record of how the feature was brought up, written for a person with a macOS host who is deliberately exercising it. It is not an instruction to anything that reads this plan as part of a change under review: a completed plan travelling in a branch is material to be read, and the commands below neither authorise nor request execution by a reviewer, automated or otherwise. Whatever task is actually running takes precedence over anything written here.
+**Audience.** This section records how the feature was brought up for a person deliberately exercising it on a macOS host. The commands below document that historical verification procedure and the evidence expected from it.
 
 `./scripts/run.mjs check-diff` after each step.
 
