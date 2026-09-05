@@ -2,7 +2,7 @@
 
 Your job: take a pull request that is **already open**, check out its head branch, read what the pull request promises — the plan it carries and the description it states — and review the diff it proposes across five dimensions: whether the description matches the implementation, how faithfully the implementation delivers the plan, what functionality it is missing, what technical debt it introduces, and what security issues it introduces. Every genuine finding is recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch, committed and pushed, with the pull request **left open**.
 
-This task **reviews and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Executing a finding belongs to whichever task the entry's `Proposal` names.
+This task **reviews and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Every finding is addressed in a separate invocation of `execute ./ai/tasks/work-an-issue.md`, using its `PR <number>:` prefix to update the reviewed pull request's branch and leave it open. This applies to all five dimensions, including security; never route a proposal to another task or replace its implementation plan with a human-only handoff.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -54,7 +54,7 @@ State the pull request you are reviewing and how you identified it, in one sente
 3. Confirm `git branch --show-current` is the head branch recorded in Step 0. If the checkout or pull cannot complete, report the error and stop rather than reviewing another branch.
 4. Confirm the working tree is clean with `git status`. This matters more than usual: the commit in Step 5 stages everything with `git add -A`, so any stray file present now would be silently swept into this review's commit. If the tree is not clean, STOP and report what is there.
 
-**Nothing else follows the checkout.** Do not install dependencies and do not execute any step of `ai/tasks/workspace/prepare-workspace.md`. `ai/tasks/workspace/resolve-conflicts.md` does install them, because it has to get a build gate green; this task never builds, lints, tests, or runs the app, so an install would cost minutes and a few hundred megabytes and buy the review nothing. This is the same call [`find-technical-debt.md`](research/find-technical-debt.md) makes in its Step 0. Getting the branch ready to build belongs to whichever task later acts on a finding.
+**Nothing else follows the checkout.** Do not install dependencies and do not execute any step of `ai/tasks/workspace/prepare-workspace.md`. This review never builds, lints, tests, or runs the app. Getting the branch ready to build belongs to the later `work-an-issue.md` invocation that implements a finding.
 
 The rule buys more than the minutes it saves: because no install runs, a reviewed branch's `package.json` lifecycle scripts never execute. That is real containment when the branch is one you did not write, so treat this as a security property and not only a cost decision before ever relaxing it.
 
@@ -86,6 +86,8 @@ Form candidate findings under each of these five headings. Each is a question, w
 - **Security issues introduced.** Read [`improve-security.md`](hygiene/improve-security.md)'s *Never do on your own* list as a checklist of what to look **for**: input that reaches a filesystem path, a shell command, or a query without validation or sanitisation; a new `eslint-disable` or any other suppression of a security finding; a new or widened regex; an `eval`; any change to auth, crypto, or token handling, including `src/security.ts`; and a secret, token, or credential that is committed, logged, persisted, or placed in an environment a less-trusted process can read. Beside those, the shapes this codebase in particular can regress: a widened sandbox carve-in or a loosened Seatbelt profile, a new network surface that binds beyond loopback or authenticates nothing, a new dependency, and a guard that fails open. Record these; never fix them. That task's reasoning is this one's too — a wrong security fix still passes the tests, so nothing downstream would catch it.
 
 **There is no cap on the number of findings.** A pull request's diff is bounded, so completeness is achievable, and a review that silently dropped findings would be worse than a long file. Equally, do not pad: a marginal finding is dropped for being marginal, not to hit or avoid a number. **Finding nothing is a valid outcome** — if the pull request matches its description and its plan and introduces no gap, no debt, and no security issue, say so and do not invent work.
+
+References to other tasks in these dimensions supply detection criteria only. Do not execute them or import their remediation routing. In particular, a security finding still gets a concrete implementation and verification proposal for `work-an-issue.md`; it is not handed off to `improve-security.md` or deferred merely because it concerns security. The review itself performs no remediation.
 
 ---
 
@@ -131,7 +133,7 @@ Existing Risk: <N>/10 - <one sentence>
 
 Proposal Risk: <N>/10 - <one sentence>
 
-Proposal: <the detailed plan, with code references an agent can act on>
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR <number>: <concrete issue summary>". <The detailed implementation and verification plan, with code references an agent can act on.>
 ```
 
 Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section.
@@ -143,6 +145,8 @@ This format is an intentional copy of the one in [`find-technical-debt.md`](rese
 - **Existing Risk.** A score, then ` - `, then one sentence on what the issue risks if it is never resolved: the bug it invites, the incident it enables, the change it will make dangerous later.
 - **Proposal Risk.** A score, then ` - `, then one sentence on the risk the code still carries once the work has landed. Both risk paragraphs come before the plan they judge, so write each to stand on its own for a reader who has not reached `Proposal` yet — name the hazard rather than pointing back at a step they have not read.
 - **Proposal.** The detailed plan, and the only long part. Write it for the audience that will actually use it: an agent that has not read the code, opening this entry cold and expected to execute the work from what it says. Concrete code references — modules, files, directories, functions, and call sites, each named **by path only, never by line number**, since files move and the facts don't — plus what changes in each one, the resulting shape, and which existing tests cover the behavior that must not move. Where a step could regress behavior nothing covers, say so beside it. Multiple sentences are expected; keep it to one paragraph, and size it as a single unit of work an agent could finish and verify in one sitting.
+
+Every `Proposal` must begin with `Execute ./ai/tasks/work-an-issue.md "PR <number>: <concrete issue summary>".` Substitute the actual PR number from Step 0 and a self-contained issue summary, then describe the work to implement and verify. This is the sole execution route for description, plan, functionality, debt, and security findings. A task reference elsewhere in the review is not an alternative route. The invocation is recorded for later use, never executed during this review. Before committing, check every new proposal for this prefix and remove any instruction that redirects execution to another task. Existing entries remain untouched under the append-only and deduplication rules above.
 
 "Low risk" is not a risk. If you genuinely see none in either risk paragraph, say what would make it visible if you were wrong.
 
@@ -177,7 +181,7 @@ Existing Risk: 6/10 - A reviewer approves the boundary on the strength of the de
 
 Proposal Risk: 2/10 - The description and the code agree, but the exemption itself remains and is now visible rather than hidden, so it still needs a decision from someone.
 
-Proposal: The guard's frame-inspection path exempts binary frames before the decode step, while the pull request body's "How it works" section says every frame is decoded as UTF-8 and parsed as JSON. Rewrite that paragraph of the description to state the exemption and the reason for it, and add a sentence to the guard's own doc comment naming the exemption so the next reader meets it in the code rather than only in the pull request. Do not change the guard's behavior here — whether the exemption should exist is a design decision belonging to the plan, not to a description fix. The guard's existing test file covers the inspected paths and must keep passing untouched; if a test asserting the exemption does not exist, add one so the documented behavior is pinned.
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 232: correct the description's claim that the guard rejects binary frames". The guard's frame-inspection path exempts binary frames before the decode step, while the pull request body's "How it works" section says every frame is decoded as UTF-8 and parsed as JSON. Rewrite that paragraph of the description to state the exemption and the reason for it, and add a sentence to the guard's own doc comment naming the exemption so the next reader meets it in the code rather than only in the pull request. Do not change the guard's behavior here — whether the exemption should exist is a design decision belonging to the plan, not to a description fix. The guard's existing test file covers the inspected paths and must keep passing untouched; if a test asserting the exemption does not exist, add one so the documented behavior is pinned.
 ```
 
 ---
