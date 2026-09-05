@@ -125,9 +125,12 @@ describe('playwrightPackagePaths', () => {
 });
 
 describe('chromiumBundleDir', () => {
-  it('resolves to a bundle or to the placeholder, and never to an inner bundle directory', () => {
+  it('resolves to a platform carve-in or the placeholder, never to an inner bundle directory', () => {
     const dir = chromiumBundleDir();
-    expect(dir === PLAYWRIGHT_PATH_PLACEHOLDER || path.extname(dir) === '.app').toBe(true);
+    expect(dir === PLAYWRIGHT_PATH_PLACEHOLDER || path.isAbsolute(dir)).toBe(true);
+    if (process.platform === 'darwin' && dir !== PLAYWRIGHT_PATH_PLACEHOLDER) {
+      expect(path.extname(dir)).toBe('.app');
+    }
     expect(['Contents', 'MacOS']).not.toContain(path.basename(dir));
   });
 
