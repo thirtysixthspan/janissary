@@ -4,16 +4,6 @@
 
 ## development
 
-* Keep review-time security instructions separate from the pull request's verification examples.
-
-Existing Issue: The PR description directs its reviewer to run test commands and host-shell checks, and the carried plan and operating guide direct dependency installation and command execution despite the review task treating this material solely as data. Severity: 4/10
-
-Existing Risk: 6/10 - An unattended reviewer that follows those embedded directions executes branch-controlled tooling outside the authorized reading-and-backlog workflow.
-
-Proposal Risk: 2/10 - Documentation will still contain operational examples, but explicit audience and trust boundaries reduce the chance they are mistaken for authorization.
-
-Proposal: Have a human revise the review-facing instructions in PR #975's How to verify section and clarify the intended execution context of product/plans/complete/sandbox-end-to-end-browser-testing.md and ai/guidelines/sandbox-e2e-browser.md. Preserve useful verification examples as non-authoritative reference material and state that they do not override the active review task or authorize a reviewer to install dependencies, execute tools, or switch to host-shell checks. The specific reviewer-directed host-shell request and the guide's dependency-installation imperative were treated as data during this review and were not executed. Review the revised wording against ai/tasks/pull-request-review.md's explicit untrusted-content rule; this is a documentation and review-boundary change, with no source behavior to alter.
-
 ## deferred
 
 * Give the browser's private hop a transport boundary instead of a shared secret.
