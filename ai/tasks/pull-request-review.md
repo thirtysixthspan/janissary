@@ -20,7 +20,7 @@ This task **reviews and records**. It never fixes what it finds, never edits sou
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git status`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to its `## development` section. Commit and push that one file to the pull request's own head branch.
+Read any file in the repo. Check out the pull request's head branch. Run read-only `git` and `gh` commands (`git diff`, `git log`, `git status`, `gh pr view`, `gh pr diff`) and plain navigation commands (`ls`, `wc -l`, `grep`). Create `./product/backlog/pull-request.md` and append entries to the end of it. Commit and push that one file to the pull request's own head branch.
 
 ### Forbidden — no exceptions
 
@@ -93,30 +93,24 @@ References to other tasks in these dimensions supply detection criteria only. Do
 
 ## Step 4 — Write the findings
 
-1. **Dedupe first, before touching any file.** Read `./product/backlog/pull-request.md` if it exists and collect every entry from **every** section — `## ready`, `## development`, `## deferred`, and `## declined` — into one dedupe set, identifying each by its lead `*` bullet. Entries carried in from an earlier review, including one that merged and reached `master`, count exactly like the rest. Drop every candidate the set already covers, even when worded differently.
-2. **If no candidate survives, stop here.** Create nothing, write nothing, and go to Step 7's report. Creating the file first and finding nothing second would leave a diff whose only content is four empty headings. Which outcome you report depends on *why* nothing survived, because the two are not the same thing:
+1. **Dedupe first, before touching any file.** Read `./product/backlog/pull-request.md` if it exists and collect **every** entry in it into one dedupe set, identifying each by its lead `*` bullet. The file is one flat list, so every entry counts — including ones carried in from an earlier review, and ones that merged and reached `master`. Drop every candidate the set already covers, even when worded differently.
+2. **If no candidate survives, stop here.** Create nothing, write nothing, and go to Step 7's report. Creating the file first and finding nothing second would leave a diff whose only content is a bare heading. Which outcome you report depends on *why* nothing survived, because the two are not the same thing:
    - **Step 3 formed no candidates at all** — the pull request genuinely has nothing wrong. Report the clean variant.
    - **Candidates were formed and the dedupe set absorbed every one** — the pull request's problems are real and already on file. Report the all-duplicates variant, with the count. Calling this "clean" would tell a reader the review found nothing when it found nothing *new*.
 
    Either way nothing is created, nothing is written, and Step 5 is skipped.
-3. **Otherwise write the file.** If it does not exist, create it with exactly this skeleton — the same one every other backlog file in `./product/backlog/` carries:
+3. **Otherwise write the file.** If it does not exist, create it with exactly this skeleton — one heading, and nothing else:
 
 ```
 # pull-request
-
-## ready
-
-## development
-
-## deferred
-
-## declined
 ```
 
-4. Append each surviving finding to the **end of the `## development` section only**. Leave `## ready`, `## deferred`, and `## declined` — and every entry already in `## development` — byte-for-byte untouched. Never clear, truncate, reorder, or reformat the file, and never scope an entry to one pull request with a heading of its own: this is an accumulating backlog like its six siblings, drained by the tasks that consume it.
+   **No status sections, deliberately.** The six sibling files in `./product/backlog/` group their entries under `## ready`, `## development`, `## deferred`, and `## declined` because they accumulate across the whole project and need triage. This one belongs to a single branch, is written by this task and drained by [`work-an-issue.md`](work-an-issue.md), and is deleted from the branch the moment it empties. So every entry in it is **ready**, its order is its priority, and a human who decides a finding is not worth doing deletes the entry. Do not add the headings back to make this file match its siblings.
+
+4. Append each surviving finding to the **end of the file**. Leave every entry already there byte-for-byte untouched. Never clear, truncate, reorder, or reformat the file, and never scope an entry to one pull request with a heading of its own: this is an accumulating backlog, drained by the task that consumes it.
 5. **Verify before moving on.** `git status --porcelain` names `./product/backlog/pull-request.md` and **nothing else**. How you then verify the contents depends on the status marker that same line carries, because `git diff` only sees tracked files:
-   - **`??` — the file is new**, which is the usual case on a branch's first review. `git diff` shows nothing at all for it, so verify by reading the file back and confirming it carries the four standard `##` headings plus the entries you just wrote, and nothing else.
-   - **A modification marker** — the file was already tracked, so `git diff` is the right check and must show only appended lines inside `## development`.
+   - **`??` — the file is new**, which is the usual case on a branch's first review. `git diff` shows nothing at all for it, so verify by reading the file back and confirming it carries the `# pull-request` heading plus the entries you just wrote, and nothing else.
+   - **A modification marker** — the file was already tracked, so `git diff` is the right check and must show only lines appended to the end.
 
    Revert anything else the status names, matching the remedy to its state: `git checkout -- <file>` for a tracked file that was modified, and deleting the file for an untracked stray, which `git checkout --` cannot remove. This matters because Step 5 stages with `git add -A`: anything still in the working tree rides along in the review's commit, which the tenth forbidden rule prohibits.
 
