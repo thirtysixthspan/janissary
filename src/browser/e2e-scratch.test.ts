@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -16,7 +16,7 @@ beforeEach(() => {
   initWorkspaceDir(root, path.join(root, '.claude.json'));
 });
 
-afterAll(() => {
+afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 

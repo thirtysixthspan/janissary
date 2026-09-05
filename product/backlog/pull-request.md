@@ -1,17 +1,5 @@
 # pull-request
 
-* Make the new browser tests release every temporary resource on both success and skip paths.
-
-Existing Issue: The scratch allocator suite creates a new temporary root before every case but removes only the last one after the suite, and the real Seatbelt port test tries to close non-listening servers after returning early when a reserved port is occupied. Severity: 4/10
-
-Existing Risk: 4/10 - Repeated test runs leak workspace trees, while an ordinary port collision turns an intended skip into an `ERR_SERVER_NOT_RUNNING` cleanup failure and makes the sandbox suite flaky on shared hosts.
-
-Proposal Risk: 1/10 - Cleanup becomes conditional and per-case; leaked roots or close errors remain directly visible if the ownership bookkeeping is wrong.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: make browser test cleanup safe on every path". In `src/browser/e2e-scratch.test.ts`, replace the single `afterAll` cleanup of the most recently assigned root with per-case cleanup or an accumulated-root teardown that removes every directory created by `beforeEach`. In `src/sandbox/browser-port.sandbox.test.ts`, close only servers whose `listening` state is true and mark the case skipped through Vitest's test context when any required band port cannot bind instead of returning into teardown with non-listening servers. Add or preserve assertions that cleanup itself does not throw, and verify repeated isolated runs leave no `e2e-scratch-*`, `sandbox-cfg-*`, or `sandbox-browser-port-*` directories created by these suites.
-
-
-
 * Remove reviewer-directed commands from the pull request material instead of trying to override an automated reviewer's active task from inside the branch.
 
 Existing Issue: The PR body, the completed feature plan, and the browser operating guide directly address automated reviewers and tell them what they may execute and which task takes precedence, so the reviewed branch still contains instructions aimed at the process reviewing it despite the added defensive wording. Severity: 6/10

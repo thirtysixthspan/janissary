@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -33,8 +33,16 @@ const BROWSER_PATHS = {
   playwrightDirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'],
 };
 
+let temporaryRoots: string[];
+
+function temporaryRoot(prefix: string): string {
+  const root = mkdtempSync(path.join(tmpdir(), prefix));
+  temporaryRoots.push(root);
+  return root;
+}
+
 function configureUnconfined(): void {
-  const dir = mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-off-'));
+  const dir = temporaryRoot('sandbox-cfg-off-');
   mkdirSync(path.join(dir, '.janissary'), { recursive: true });
   writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify({ sandboxWorkspaces: false }));
   loadConfig(dir);
@@ -52,8 +60,13 @@ function secretsIn(env: NodeJS.ProcessEnv): string[] {
 
 describe('sandbox browser spawning', () => {
   beforeEach(() => {
-    loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
+    temporaryRoots = [];
+    loadConfig(temporaryRoot('sandbox-cfg-'));
     setGitIdentity({});
+  });
+
+  afterEach(() => {
+    for (const root of temporaryRoots) rmSync(root, { recursive: true, force: true });
   });
 
   it('denies the whole browser port band after the general network rule', () => {
@@ -71,7 +84,7 @@ describe('sandbox browser spawning', () => {
 
   it('gives a spawn with no browser the same band-denying profile as any other', () => {
     if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const plain = sandboxSpawn({ workspaceDir }, 'bash', []);
     const offline = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
     expect(plain.args[1]).toBe(SANDBOX_PROFILE);
@@ -81,12 +94,11 @@ describe('sandbox browser spawning', () => {
       expect(result.args.filter((_, index) => result.args[index - 1] === '-D').map((value) => value.split('=', 1)[0]))
         .not.toContain('BROWSER_ENDPOINT');
     }
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('binds the Playwright params to real directories for every sandboxed spawn', () => {
     if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dValues = new Map(result.args
       .filter((_, index) => result.args[index - 1] === '-D')
@@ -99,12 +111,11 @@ describe('sandbox browser spawning', () => {
     expect(dValues.get('PLAYWRIGHT_DIR')).not.toBe(dValues.get('PLAYWRIGHT_CORE_DIR'));
     expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_DIR"))');
     expect(SANDBOX_PROFILE).toContain('(subpath (param "PLAYWRIGHT_CORE_DIR"))');
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('selects the browser profile and its own short param list', () => {
     if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const result = sandboxSpawn({ workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js']);
     expect(result.args[0]).toBe('-p');
     expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
@@ -114,21 +125,19 @@ describe('sandbox browser spawning', () => {
     expect(dNames).not.toContain('GIT_OBJECTS');
     expect(dNames).not.toContain('SELF_DIR_L');
     expect(dNames).not.toContain('PLAYWRIGHT_DIR');
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('wraps a browser spawn when no harness workspace is in play', () => {
     if (!sandboxAvailable()) return;
-    const scratchDir = mkdtempSync(path.join(tmpdir(), 'sandbox-browser-scratch-'));
+    const scratchDir = temporaryRoot('sandbox-browser-scratch-');
     const result = sandboxSpawn({ workspaceDir: scratchDir, browser: BROWSER_PATHS }, 'node', ['main.js']);
     expect(result.command).toBe('sandbox-exec');
     expect(result.args[1]).toBe(BROWSER_SANDBOX_PROFILE);
-    rmSync(scratchDir, { recursive: true, force: true });
   });
 
   it('injects no credentials into a browser spawn', () => {
     if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const result = sandboxSpawn(
       { workspaceDir, browser: BROWSER_PATHS, tokens: { github: 'scoped-token' } },
       'node', ['main.js'], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' },
@@ -136,34 +145,31 @@ describe('sandbox browser spawning', () => {
     expect(result.env.GH_TOKEN).toBeUndefined();
     expect(result.env.NPM_TOKEN).toBeUndefined();
     expect(result.env.TMPDIR).toBeTruthy();
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('hands a browser no credentials when the host cannot confine it', () => {
     configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
     const result = sandboxSpawn(
       { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
       'node', ['main.js'], AMBIENT_SECRETS,
     );
     expect(secretsIn(result.env)).toEqual([]);
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('gives an unconfined harness its credentials instead', () => {
     configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const result = sandboxSpawn(
       { workspaceDir, tokens: PROJECT_CREDENTIALS }, 'bash', ['-lc', 'git push'], AMBIENT_SECRETS,
     );
     expect(result.env.GH_TOKEN).toBe('scoped-github');
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('keeps a browser usable while unconfined and returns its command unwrapped', () => {
     configureUnconfined();
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     const result = sandboxSpawn(
       { workspaceDir, browser: BROWSER_PATHS }, 'node', ['main.js'],
       { ...AMBIENT_SECRETS, PLAYWRIGHT_BROWSERS_PATH: '/custom/browsers', NODE_OPTIONS: '--require=/tmp/evil.js' },
@@ -175,12 +181,11 @@ describe('sandbox browser spawning', () => {
     expect(result.env.TMPDIR).toBeTruthy();
     expect(result.env.PLAYWRIGHT_BROWSERS_PATH).toBe('/custom/browsers');
     expect(result.env.NODE_OPTIONS).toBeUndefined();
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 
   it('hands a confined browser no provider keys either', () => {
     if (!sandboxAvailable()) return;
-    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const workspaceDir = temporaryRoot('sandbox-ws-');
     setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
     const result = sandboxSpawn(
       { workspaceDir, browser: BROWSER_PATHS, tokens: PROJECT_CREDENTIALS },
@@ -188,6 +193,5 @@ describe('sandbox browser spawning', () => {
     );
     expect(secretsIn(result.env)).toEqual([]);
     expect(result.env.TMPDIR).toBeTruthy();
-    rmSync(workspaceDir, { recursive: true, force: true });
   });
 });
