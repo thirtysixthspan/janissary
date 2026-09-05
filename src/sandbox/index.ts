@@ -1,14 +1,14 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './browser-profile.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
-  ENV_SCRUB_PATTERNS,
+  ENV_SCRUB_PATTERNS, BROWSER_ENV_ALLOW,
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
@@ -63,42 +63,6 @@ export function sandboxNotice(): string | undefined {
   if (!getConfig().sandboxWorkspaces) return 'workspace isolation off: sandboxWorkspaces disabled in config';
   if (!sandboxAvailable()) return 'workspace isolation off: sandbox-exec unavailable';
   return undefined;
-}
-
-// Resolve a path through any symlinks (macOS's `/tmp` → `/private/tmp` being the common case) —
-// Seatbelt's `subpath` rules match against the resolved path, so an unresolved path silently
-// fails to carve in. Falls back to the input path if it doesn't exist (yet).
-function resolvePath(p: string): string {
-  try { return realpathSync(p); } catch { return p; }
-}
-
-// One path in both the forms a Seatbelt carve-in needs — see `dualParams` in paths.ts for why a
-// rule that names only one of them leaves the other operation denied.
-function dualPath(p: string): { literal: string; real: string } {
-  return { literal: p, real: resolvePath(p) };
-}
-
-let cachedDarwinUserCacheDir: string | undefined;
-
-// The real per-user `/var/folders/<xx>/<hash>/C/` cache directory macOS's `confstr(3)` hands out —
-// NOT the same as `$TMPDIR`, which `sandboxSpawn` overrides to a workspace-local path below, and
-// NOT its `.../T/` (temp) sibling, which stays denied (that's where `os.tmpdir()`-based scratch
-// dirs land — carving it in too would let a sandboxed process write anywhere a plain `mktemp`
-// call resolves to, defeating the outside-the-workspace write deny). System frameworks look the
-// cache path up directly via `confstr`, bypassing our `TMPDIR` override entirely, and write
-// lock/cache files into it regardless (e.g. Security.framework's legacy MDS subsystem locks
-// `.../C/mds/mds.lock` on every `SecItemCopyMatching` call — denied, the call silently fails
-// rather than erroring, so a sandboxed harness reads back "not logged in" even with a valid
-// Keychain item). Cached: it's fixed for the life of the host process.
-function darwinUserCacheDir(): string {
-  if (cachedDarwinUserCacheDir) return cachedDarwinUserCacheDir;
-  try {
-    const cacheDir = execFileSync('getconf', ['DARWIN_USER_CACHE_DIR']).toString().trim();
-    cachedDarwinUserCacheDir = resolvePath(cacheDir);
-  } catch {
-    cachedDarwinUserCacheDir = '/nonexistent-janissary-darwin-user-cache-dir-placeholder';
-  }
-  return cachedDarwinUserCacheDir;
 }
 
 let cachedClaudeScratchDir: string | undefined;
@@ -207,6 +171,21 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
   return args;
 }
 
+// The browser child's environment, built by naming what it may have rather than by filtering what
+// the server happens to hold (see `BROWSER_ENV_ALLOW`). Neither of the two environments below is
+// right for it: `withWorkspaceCredentials` hands a workspaced spawn the project's tokens, and
+// `scrubEnv` deliberately keeps the LLM provider keys a harness needs. A browser authenticates to
+// nothing and pushes nowhere, so it gets neither.
+function browserEnv(env: NodeJS.ProcessEnv, tmpDir: string | undefined): NodeJS.ProcessEnv {
+  const allowed: NodeJS.ProcessEnv = {};
+  for (const name of BROWSER_ENV_ALLOW) {
+    const value = env[name];
+    if (value !== undefined) allowed[name] = value;
+  }
+  if (tmpDir) allowed.TMPDIR = tmpDir;
+  return allowed;
+}
+
 // Every credential this spawn is deliberately handed: each configured token under every variable its
 // row in `PROJECT_TOKENS` names. Most rows name one; the gemini row names two, because opencode
 // detects its Google provider from one variable and loads the key from another. `GH_TOKEN` is the
@@ -259,6 +238,36 @@ function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOption
   return Object.keys(added).length === 0 ? env : { ...env, ...added };
 }
 
+// The browser child, on both kinds of host. Its environment is the same either way — the allowlist,
+// with no project credentials and no git identity — and only the command differs: wrapped in the
+// minimal browser profile where Seatbelt is available, handed back bare where it is not. That
+// asymmetry is the documented one (`product/specs/sandbox.md`), and it is about confinement alone;
+// an unconfined browser is not a reason to also give it the server's secrets.
+function browserSpawn(
+  options: SandboxOptions,
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  confinable: boolean,
+): SandboxResult {
+  const dir = options.workspaceDir;
+  const tmpDir = dir ? resolvePath(`${dir}.tmp`) : undefined;
+  const childEnv = browserEnv(env, tmpDir);
+  if (!dir || !confinable || !options.browser) return { command, args, env: childEnv };
+  const params = browserProfileParams({
+    workspace: resolvePath(dir), tmp: tmpDir ?? '', home: resolvePath(homedir()),
+    cache: darwinUserCacheDir(),
+    chromium: dualPath(options.browser.chromiumDir),
+    node: dualPath(path.dirname(process.execPath)),
+    app: dualPath(options.browser.appDir),
+  });
+  return {
+    command: 'sandbox-exec',
+    args: ['-p', BROWSER_SANDBOX_PROFILE, ...params, '--', command, ...args],
+    env: childEnv,
+  };
+}
+
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
 // `spawn` take) for a workspaced tab. Returns the command and args unchanged when there's nothing
 // to sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
@@ -272,30 +281,23 @@ export function sandboxSpawn(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): SandboxResult {
-  if (!options.workspaceDir || !getConfig().sandboxWorkspaces || !sandboxAvailable()) {
-    return { command, args, env: withWorkspaceCredentials(env, options) };
-  }
+  const dir = options.workspaceDir;
+  const confinable = Boolean(dir) && getConfig().sandboxWorkspaces && sandboxAvailable();
+  // Answered before the confinement test, not inside it. What environment the browser gets follows
+  // from what the browser is; the host only decides whether there is a profile around it. Deciding
+  // it the other way round handed the whole server environment to a browser on precisely the hosts
+  // with no kernel confinement behind it.
+  if (options.browser) return browserSpawn(options, command, args, env, confinable);
+  if (!dir || !confinable) return { command, args, env: withWorkspaceCredentials(env, options) };
 
-  const workspaceDir = resolvePath(options.workspaceDir);
-  const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
+  const workspaceDir = resolvePath(dir);
+  const tmpDir = resolvePath(`${dir}.tmp`);
   const home = resolvePath(homedir());
   const darwinCacheDir = darwinUserCacheDir();
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
 
-  // The browser child gets its own profile and its own short parameter list, and none of the
-  // credential injection below: it authenticates to nothing and pushes nowhere.
-  if (options.browser) {
-    const params = browserProfileParams({
-      workspace: workspaceDir, tmp: tmpDir, home, cache: darwinCacheDir,
-      chromium: dualPath(options.browser.chromiumDir),
-      node: dualPath(path.dirname(process.execPath)),
-      app: dualPath(options.browser.appDir),
-    });
-    return { command: 'sandbox-exec', args: ['-p', BROWSER_SANDBOX_PROFILE, ...params, '--', command, ...args], env: scrubbed };
-  }
-
-  const gitObjects = parentGitObjectsDir(options.workspaceDir);
+  const gitObjects = parentGitObjectsDir(dir);
   const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
   const scratchDir = claudeScratchDir();
   const serverNodeDir = serverNodeDirs();

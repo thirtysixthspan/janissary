@@ -187,6 +187,30 @@ export const ENV_SCRUB_PATTERNS: RegExp[] = [
   /^GIT_ASKPASS$/, /^GIT_CREDENTIAL_HELPER$/, /^KRB5CCNAME$/,
 ];
 
+// The e2e browser child's entire environment, by name — an allowlist, where every other spawn here
+// gets the denylist above. Two reasons it has to be the other instrument. A denylist has to
+// anticipate each new credential variable, and this one deliberately exempts a whole class: the LLM
+// provider keys, which a harness genuinely needs and a browser has no use for at all. And the
+// browser is the one spawn that authenticates to nothing and pushes nowhere, so naming what it may
+// have costs nothing and fails closed — a credential nobody thought of is absent because it was
+// never listed.
+//
+// Each entry earns its place. `PATH` and `HOME` are read by both Chromium and Playwright; `TMPDIR`
+// is the scratch temp sibling; `PLAYWRIGHT_BROWSERS_PATH` is how `executablePath()` finds a
+// relocated bundle, so omitting it would break a custom installation. The locale and user names are
+// not credentials and keep rendering and process naming ordinary. The Windows four are here so a
+// non-POSIX host is not broken by omission rather than by intent.
+//
+// `NODE_OPTIONS` is deliberately absent: it would let ambient configuration inject a module into the
+// child, and the loader arguments this child needs are passed explicitly (see `e2e-child-command.ts`).
+export const BROWSER_ENV_ALLOW: string[] = [
+  'PATH', 'HOME', 'TMPDIR',
+  'PLAYWRIGHT_BROWSERS_PATH',
+  'LANG', 'LC_ALL', 'LC_CTYPE',
+  'USER', 'LOGNAME',
+  'SystemRoot', 'SYSTEMROOT', 'TEMP', 'TMP',
+];
+
 function paramName(prefix: string, index: number): string {
   return `${prefix}${index}`;
 }

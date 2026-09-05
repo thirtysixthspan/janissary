@@ -17,6 +17,37 @@ function configureUnconfined(): void {
   loadConfig(dir);
 }
 
+// Sentinel values, one per class of secret a browser must never inherit: an ambient registry token,
+// a cloud key, an agent socket, and the LLM provider keys `scrubEnv` deliberately exempts for the
+// harnesses. Every value is distinctive enough to search the whole environment for.
+const AMBIENT_SECRETS = {
+  PATH: '/usr/bin',
+  HOME: '/home/ada',
+  NPM_TOKEN: 'sentinel-npm',
+  AWS_SECRET_ACCESS_KEY: 'sentinel-aws',
+  SSH_AUTH_SOCK: 'sentinel-ssh-agent',
+  ANTHROPIC_API_KEY: 'sentinel-anthropic',
+  OPENAI_API_KEY: 'sentinel-openai',
+  GEMINI_API_KEY: 'sentinel-gemini',
+};
+
+const PROJECT_CREDENTIALS = {
+  github: 'scoped-github', claude: 'scoped-claude', opencode: 'scoped-opencode', gemini: 'scoped-gemini',
+};
+
+// Which sentinels survived, found by value rather than by name — a credential arriving under a
+// variable nobody thought to check is the failure worth catching. The git identity counts too: it is
+// the user's real name and address, and the browser has no use for it.
+function secretsIn(env: NodeJS.ProcessEnv): string[] {
+  const forbidden = [
+    ...Object.values(AMBIENT_SECRETS).filter((value) => value.startsWith('sentinel-')),
+    ...Object.values(PROJECT_CREDENTIALS),
+    'ada@example.com',
+  ];
+  const present = new Set(Object.values(env));
+  return forbidden.filter((value) => present.has(value));
+}
+
 function parenDepth(text: string): number {
   let depth = 0;
   for (const ch of text) {
@@ -188,6 +219,68 @@ describe('sandboxSpawn', () => {
     );
     expect(result.env.GH_TOKEN).toBeUndefined();
     expect(result.env.NPM_TOKEN).toBeUndefined();
+    expect(result.env.TMPDIR).toBeTruthy();
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The unconfined fallback — a non-darwin remote, or `sandboxWorkspaces` off. This is the case
+  // that had no coverage at all: the browser branch used to sit *inside* the confined path, so the
+  // browser was handed the server's whole environment on exactly the hosts with no Seatbelt behind
+  // it, and the test above skips there.
+  it('hands a browser no credentials when the host cannot confine it', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
+    const result = sandboxSpawn(
+      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: PROJECT_CREDENTIALS },
+      'node', ['main.js'], AMBIENT_SECRETS,
+    );
+    // Asserted over the values, not by naming keys: a credential that arrives under a variable
+    // nobody thought to check is exactly the failure this is meant to catch.
+    expect(secretsIn(result.env)).toEqual([]);
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('gives an unconfined harness its credentials, so it is the browser and not the host that decides', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn(
+      { workspaceDir, tokens: PROJECT_CREDENTIALS }, 'bash', ['-lc', 'git push'], AMBIENT_SECRETS,
+    );
+    expect(result.env.GH_TOKEN).toBe('scoped-github');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('keeps a browser usable while unconfined, and returns its command unwrapped', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn(
+      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' } }, 'node', ['main.js'],
+      { ...AMBIENT_SECRETS, PLAYWRIGHT_BROWSERS_PATH: '/custom/browsers', NODE_OPTIONS: '--require=/tmp/evil.js' },
+    );
+    expect(result.command).toBe('node');
+    expect(result.args).toEqual(['main.js']);
+    expect(result.env.PATH).toBe('/usr/bin');
+    expect(result.env.HOME).toBe('/home/ada');
+    expect(result.env.TMPDIR).toBeTruthy();
+    // Needed, or `executablePath()` cannot find a relocated bundle.
+    expect(result.env.PLAYWRIGHT_BROWSERS_PATH).toBe('/custom/browsers');
+    // Not needed, and it would let ambient configuration inject a module into the child.
+    expect(result.env.NODE_OPTIONS).toBeUndefined();
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The confined path inherited provider keys too: `scrubEnv` is a denylist that deliberately
+  // exempts them, because a harness needs its own credentials. A browser does not.
+  it('hands a confined browser no provider keys either', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    setGitIdentity({ name: 'Ada', email: 'ada@example.com' });
+    const result = sandboxSpawn(
+      { workspaceDir, browser: { chromiumDir: '/pw/Chrome.app', appDir: '/app' }, tokens: PROJECT_CREDENTIALS },
+      'node', ['main.js'], AMBIENT_SECRETS,
+    );
+    expect(secretsIn(result.env)).toEqual([]);
     expect(result.env.TMPDIR).toBeTruthy();
     rmSync(workspaceDir, { recursive: true, force: true });
   });

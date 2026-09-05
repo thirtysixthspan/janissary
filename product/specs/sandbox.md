@@ -296,6 +296,14 @@ project, and is removed when the tab closes. It holds the browser's profile and 
 `file:` read that got past the guard finds a disposable directory with nothing in it — and cannot
 reach the code under test, which the browser has no reason to read.
 
+**What the browser is given.** The browser process does not inherit a filtered copy of the Janissary
+server's environment the way a harness does. It is given a named, minimal set of variables — enough
+to start and to find its own browser binary, its scratch temp directory, and the locale — and
+nothing else crosses. It receives none of the project's configured credentials, none of the ambient
+provider keys a harness is deliberately allowed to keep, no agent socket, and not the user's git
+identity. Unlike the confinement below, this holds on every host: a machine that cannot sandbox the
+browser is a reason to give it less, not more.
+
 Each browser's directory belongs to that browser alone. It is allocated by creating it, so a
 directory that already exists is never taken over, and it is never a workspace a tab could also be
 using: two tabs, two browsers, or two sessions sharing one name still get separate directories, and

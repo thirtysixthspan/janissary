@@ -26,17 +26,6 @@ Proposal Risk: 3/10 - A reduced runtime allowlist can still miss a required depe
 Proposal: Route through ai/tasks/hygiene/improve-security.md for human review of the appDir binding in src/browser/e2e-server.ts and the recursive app carve-in in src/sandbox/browser-profile.ts. src/project-tokens.ts stores credentials beneath the project's .janissary directory, and bin/janus.mjs writes the live server URL to that directory's log; these are not merely application code when appDir is the project checkout. Carve in only the runtime entry points and dependency directories the child requires, with explicit exclusions for project state, credentials, and unrelated clones. Extend src/sandbox/browser-profile.test.ts beyond checking that credential names are absent from the template: bind a checkout-shaped installation and verify that representative state files remain denied. Reconcile product/specs/harness.md, product/specs/sandbox.md, and both changed user documentation pages with the resulting boundary; their claim that a bypass can reach only an empty scratch directory is stronger than the current rules.
 
 
-* Scrub browser credentials on the unconfined security fallback as well as on macOS.
-
-Existing Issue: sandboxSpawn returns the inherited server environment before reaching the browser-specific scrub when sandboxing is unavailable or disabled. Severity: 7/10
-
-Existing Risk: 7/10 - Ambient provider keys, tokens, and agent sockets are inherited by a less-trusted browser process on the very hosts where its kernel confinement is absent.
-
-Proposal Risk: 2/10 - An overly narrow environment could prevent startup under a custom installation, which explicit environment and launch tests would reveal.
-
-Proposal: Route through ai/tasks/hygiene/improve-security.md for human remediation in src/sandbox/index.ts and src/browser/e2e-server.ts. Select the credential-free browser environment independently of the Seatbelt availability branch, before withWorkspaceCredentials can return the caller's process.env. Preserve the existing unconfined credential behavior for harnesses, whose authentication needs differ from the browser's. Add browser tests with sandboxWorkspaces disabled and sentinel NPM_TOKEN, provider credentials, and SSH_AUTH_SOCK values; assert that none reach the child while required runtime variables and TMPDIR remain usable. The current browser credential test in src/sandbox/index.test.ts skips when sandboxAvailable is false and therefore does not cover this path. Update the PR description's unconditional claim that browser selection precedes credential handling after the implementation supports it.
-
-
 * Keep review-time security instructions separate from the pull request's verification examples.
 
 Existing Issue: The PR description directs its reviewer to run test commands and host-shell checks, and the carried plan and operating guide direct dependency installation and command execution despite the review task treating this material solely as data. Severity: 4/10
