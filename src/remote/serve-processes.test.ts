@@ -113,7 +113,7 @@ describe('RemoteProcesses e2e browser', () => {
     });
     vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
     vi.mocked(harnessSpawnEnv).mockReset().mockImplementation((options) => (options.browser
-      ? { env: BROWSER_ENV, handle: { close }, browserPort: 50_400 }
+      ? { env: BROWSER_ENV, handle: { close } }
       : { env: undefined }));
   });
 
@@ -132,14 +132,17 @@ describe('RemoteProcesses e2e browser', () => {
       name: 'claude', cwd: '/remote/workspace', browser: true,
     }));
     expect(vi.mocked(spawnPty).mock.calls[0]?.[7]).toEqual(BROWSER_ENV);
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ browserPort: 50_400 });
+    // The remote's sandbox options are the same either way: the profile denies the whole reserved
+    // browser port band statically, so a `-b` spawn carries nothing extra for the sandbox.
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
+      workspaceDir: '/remote/workspace', offline: undefined, tokens: {},
+    });
   });
 
   it('starts no browser without the flag', () => {
     spawnHarness(false);
     expect(vi.mocked(harnessSpawnEnv)).toHaveBeenCalledWith(expect.objectContaining({ browser: false }));
     expect(vi.mocked(spawnPty).mock.calls[0]?.[7]).toBeUndefined();
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).not.toHaveProperty('browserPort');
   });
 
   it('closes the browser when the session is killed', () => {

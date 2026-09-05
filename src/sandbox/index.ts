@@ -2,10 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { resolvePath, darwinUserCacheDir } from './resolve.js';
-import {
-  SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE,
-  SANDBOX_PROFILE_WITH_BROWSER, SANDBOX_PROFILE_OFFLINE_WITH_BROWSER,
-} from './profile.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 import { browserSpawn, type BrowserSpawnOptions } from './browser-spawn.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
@@ -34,9 +31,6 @@ export type SandboxOptions = {
   // actually confine the process, because a host that cannot confine anything still needs its
   // harness authenticated and its pushes credentialed.
   tokens?: ProjectTokens;
-  // The private Playwright server port owned by this harness, when it has an e2e browser. The
-  // harness profile denies this one loopback destination so browser traffic must cross the guard.
-  browserPort?: number;
   // Set only for the e2e browser child (`src/browser/e2e-server.ts`): confine it with the minimal
   // browser profile instead of the harness one. The harness profile's read carve-ins — Keychains,
   // `.claude`, `.codex`, opencode's state directory — are close to an inventory of what an escape
@@ -267,10 +261,7 @@ export function sandboxSpawn(
   scrubbed.JANISSARY_NODE = process.execPath;
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
-  let profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
-  if (options.browserPort !== undefined) {
-    profile = options.offline ? SANDBOX_PROFILE_OFFLINE_WITH_BROWSER : SANDBOX_PROFILE_WITH_BROWSER;
-  }
+  const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
     '-D', `WORKSPACE=${workspaceDir}`,
     '-D', `TMPDIR=${tmpDir}`,
@@ -284,7 +275,6 @@ export function sandboxSpawn(
     '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
     '-D', `PLAYWRIGHT_DIR=${playwright.dirs[0]}`,
     '-D', `PLAYWRIGHT_CORE_DIR=${playwright.dirs[1]}`,
-    ...(options.browserPort === undefined ? [] : ['-D', `BROWSER_ENDPOINT=localhost:${options.browserPort}`]),
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

@@ -17,7 +17,7 @@ const BROWSER_ENV = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() }, browserPort: 50_400 });
+  startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() } });
 });
 
 function spawnEnv(name: string, browser: boolean) {
@@ -60,14 +60,16 @@ describe('harnessSpawnEnv with a browser', () => {
 
   it('hands back the handle so the caller can own its disposal', () => {
     const handle = { close: vi.fn() };
-    startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle, browserPort: 50_400 });
+    startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle });
     expect(spawnEnv('claude', true).handle).toBe(handle);
   });
 
-  it('returns the private browser port without adding it to the harness environment', () => {
+  // The browser's own port is not spawn metadata any more: the Seatbelt profile denies the whole
+  // reserved band statically, so nothing has to be threaded through to the spawn to deny one port.
+  it('carries the guarded endpoint and no private port at all', () => {
     const result = spawnEnv('claude', true);
-    expect(result.browserPort).toBe(50_400);
-    expect(Object.values(result.env ?? {})).not.toContain('50400');
+    expect(result).not.toHaveProperty('browserPort');
+    expect(result.env?.JANISSARY_BROWSER_WS_ENDPOINT).toBe(BROWSER_ENV.JANISSARY_BROWSER_WS_ENDPOINT);
   });
 
   it('starts the browser under the tab\'s label, so its workspace is named for the tab', () => {

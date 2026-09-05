@@ -26,12 +26,10 @@ export type E2EBrowserHandle = {
 
 export type E2EBrowserServer = {
   // `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT`, merged into the harness's spawn
-  // environment by the caller.
+  // environment by the caller. Empty when no browser could be started at all, so the harness
+  // launches without one rather than with an endpoint naming nothing.
   env: NodeJS.ProcessEnv;
   handle: E2EBrowserHandle;
-  // Kept out of `env`: the harness needs the guarded endpoint, while its Seatbelt wrapper alone
-  // needs the browser server's private port so it can deny a direct connection to it.
-  browserPort: number;
 };
 
 export type E2EBrowserOptions = {
@@ -55,7 +53,17 @@ export type E2EBrowserOptions = {
  * reported through `onGone` and rolled back against whatever had already been acquired.
  */
 export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserServer {
-  const ports = allocateBrowserPorts();
+  // The one failure that happens before anything is acquired: the browser port band is full, so this
+  // host is already running as many browsers as it can. There is no session to tear down and no
+  // endpoint to hand back, so the notification goes straight to `onGone` rather than through
+  // `stopSession`, and the harness launches with no browser variables at all.
+  let ports;
+  try {
+    ports = allocateBrowserPorts();
+  } catch (error) {
+    options.onGone(`e2e browser failed to start: ${errorText(error)}`);
+    return { env: {}, handle: { close: () => {} } };
+  }
   // Two unguessable paths, not one: the agent is given the first and the second never leaves this
   // process, so holding the published endpoint does not reveal a route around the guard.
   const publishedPath = `/${makeToken()}`;
@@ -81,7 +89,6 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
       JANISSARY_PLAYWRIGHT: playwrightPackagePaths().entry,
     },
     handle: { close: () => stopSession(session) },
-    browserPort: ports.browserPort,
   };
 }
 

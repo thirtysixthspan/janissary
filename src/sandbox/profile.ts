@@ -8,6 +8,7 @@
 // read/write allow → `$HOME` read-deny → carve-in allows → secret denies last (so a secret path
 // stays denied even inside a carve-in).
 
+import { BROWSER_PORT_BAND_DENY } from './browser-ports.js';
 import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
   clausesFor, literalClausesFor, prefixClausesFor,
@@ -43,7 +44,7 @@ const keychainWriteClause =
 const claudeConfigWriteClause =
   String.raw`  (require-all (subpath (param "HOME")) (regex #"/\.claude\.json\.[0-9a-f-]+\.tmp$"))`;
 
-function buildProfile(networkClause: string, browserClause = ''): string {
+function buildProfile(networkClause: string): string {
   return String.raw`(version 1)
 (deny default)
 (allow process-fork)
@@ -208,19 +209,14 @@ ${secretDenyClauses})
 (allow signal (target children))
 
 ${networkClause}
-${browserClause}
+${BROWSER_PORT_BAND_DENY}
 `;
 }
 
-const BROWSER_NETWORK_DENY = `; A browser-enabled harness receives only the guard
-; endpoint, but Playwright also serves its own private websocket path from an unauthenticated
-; discovery route on the browser port. Deny that one loopback destination last so the harness
-; cannot bypass the guard.
-(deny network-outbound (remote ip (param "BROWSER_ENDPOINT")))`;
-
-// Network allowed by default; `--offline` swaps in the deny-network variant. Browser launches use
-// parallel static variants so an ordinary spawn neither references nor binds a placeholder port.
+// Network allowed by default; `--offline` swaps in the deny-network variant. The browser port band
+// is denied in both: the offline profile's `(deny network*)` already covers it, and repeating it
+// keeps the two structurally identical below the network line, so a later change to the offline
+// clause cannot silently drop the boundary. There is no browser-specific variant — the band is
+// known statically, so nothing about a particular launch reaches the profile (see browser-ports.ts).
 export const SANDBOX_PROFILE = buildProfile('(allow network*)');
 export const SANDBOX_PROFILE_OFFLINE = buildProfile('(deny network*)');
-export const SANDBOX_PROFILE_WITH_BROWSER = buildProfile('(allow network*)', BROWSER_NETWORK_DENY);
-export const SANDBOX_PROFILE_OFFLINE_WITH_BROWSER = buildProfile('(deny network*)', BROWSER_NETWORK_DENY);

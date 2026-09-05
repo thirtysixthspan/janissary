@@ -273,12 +273,21 @@ thing to the guard as it does to the browser. Ordinary page content that merely 
 one unguessable path; the browser's own address behind it is not handed to the harness.
 
 Playwright also publishes its own WebSocket path through an unauthenticated discovery route on the
-browser's private loopback port. For a workspaced harness that Seatbelt actually confines, the
-harness profile denies outbound connections to that specific port after its general network rule,
-so the guard is the only transport route to the browser. The private port travels as Janissary-only
-spawn metadata, never as an environment variable the harness can read. Spawns without a browser
-use the original static profile, which has no private-port deny or parameter. The guard's port and
-every other destination allowed by the workspace policy stay reachable.
+browser's private loopback port. Every browser binds that port inside one small reserved band at the
+top of the dynamic port range, and the harness profile denies outbound connections to the whole band
+after its general network rule. So for a workspaced harness that Seatbelt actually confines, the
+guard is the only transport route to a browser — not just to its own tab's browser, but to every
+browser on the machine. The deny applies to every confined workspaced spawn, whether or not that tab
+asked for a browser at all, since a harness without one would otherwise be free to reach every
+browser the others own. It names the band rather than any particular port, so it also covers a
+browser started after that harness was already running. The guard's port is drawn from outside the
+band and stays reachable, as does every other destination the workspace policy allows.
+
+The band is what makes that boundary static, and it costs two things. It caps how many browsers can
+run at once: a launch that finds no free port in it fails and is reported on the tab rather than
+quietly binding a port outside the band. And a loopback service a harness starts on a port inside the
+band is unreachable from that harness, which is why the band sits at the very top of the range,
+clear of the ports local development servers conventionally use.
 
 Both ends of that private hop are pinned to one loopback address rather than resolved by name, and
 the endpoint the harness receives names the same one. A host that answers `localhost` with an IPv6

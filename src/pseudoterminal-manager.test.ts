@@ -52,13 +52,17 @@ describe('PseudoterminalManager', () => {
     );
   });
 
-  it('puts the private browser port in the PTY sandbox options', () => {
+  // The sandbox options carry no browser field at all: the profile denies the whole reserved port
+  // band statically, so a `-b` spawn and a plain one are confined identically.
+  it('builds the PTY sandbox options without any browser field', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const manager = new PseudoterminalManager(managers);
 
-    manager.spawn('main', 'claude', 'claude', '/repo', '/workspace', false, undefined, 50_400);
+    manager.spawn('main', 'claude', 'claude', '/repo', '/workspace', false, undefined);
 
-    expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toMatchObject({ browserPort: 50_400 });
+    const options = vi.mocked(spawnPty).mock.calls[0]?.[6];
+    expect(options).toMatchObject({ workspaceDir: '/workspace', offline: false });
+    expect(options).not.toHaveProperty('browserPort');
   });
 
   it('resize changes the dimensions used for subsequently spawned PTYs', () => {

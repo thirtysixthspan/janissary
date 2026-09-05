@@ -97,7 +97,7 @@ There's no test runner here and no pass/fail reporting. The two variables are th
 The browser is always headless, each `-b` tab gets its own, and the flag works for every harness, with or without a workspace. Combine it with the other options in any order.
 
 ::: warning A browser endpoint is powerful, so this one is contained
-Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. When macOS workspace isolation is active, the harness is also blocked from connecting to the browser's private port, so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
+Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
 
 On a machine without macOS sandboxing, with workspace isolation switched off, or with `--no-workspace`, those two sandbox boundaries don't apply. Janissary still hands the harness the guarded address and withholds credentials from the browser, but another process running as you could find the browser on loopback and connect to it directly. Use `-b` only on a host you trust in that configuration. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
 :::

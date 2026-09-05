@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   allocateBrowserScratch: vi.fn(),
   scratchRemove: vi.fn(),
   releasedPorts: [] as number[],
+  // Set by the band-exhaustion case below to make the allocator refuse, which is the one failure
+  // that happens before this module has acquired anything at all.
+  portsThrow: '',
   chromiumBundleDir: vi.fn(() => '/pw/Chrome.app'),
   playwrightPackagePaths: vi.fn(() => ({ entry: '/app/node_modules/playwright/index.js', dirs: ['/app/node_modules/playwright', '/app/node_modules/playwright-core'] })),
 }));
@@ -34,6 +37,7 @@ vi.mock('./e2e-ports.js', async (importOriginal) => {
   const actual = await importOriginal<typeof E2EPorts>();
   return {
     allocateBrowserPorts: () => {
+      if (mocks.portsThrow) throw new Error(mocks.portsThrow);
       const ports = actual.allocateBrowserPorts();
       return {
         ...ports,
@@ -63,6 +67,7 @@ let guardClose: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.releasedPorts.length = 0;
+  mocks.portsThrow = '';
   child = makeChild();
   guardClose = vi.fn();
   mocks.spawn.mockReturnValue(child);
@@ -136,10 +141,27 @@ describe('startE2EBrowserServer ports', () => {
     expect(guardCall(0).port).not.toBe(guardCall(0).upstreamPort);
   });
 
-  it('returns the private browser port as Janissary-only metadata', () => {
+  // The browser's own port is not returned to anyone any more — the Seatbelt profile denies the
+  // whole band statically, so nothing outside this module needs to know it. What still matters is
+  // that it never reaches the harness's environment.
+  it('keeps the private browser port out of the harness environment', () => {
     const server = start();
-    expect(server.browserPort).toBe(guardCall(0).upstreamPort);
-    expect(Object.values(server.env)).not.toContain(String(server.browserPort));
+    expect(Object.values(server.env)).not.toContain(String(guardCall(0).upstreamPort));
+    expect(server).not.toHaveProperty('browserPort');
+  });
+
+  // Every browser port has to come from the denied band, so a full band is a refusal rather than a
+  // port drawn from outside it. Nothing has been acquired at that point, so the harness simply
+  // launches without a browser and is told why.
+  it('reports a full band through onGone and hands back no browser variables', () => {
+    mocks.portsThrow = 'no free e2e browser port between 65280 and 65535';
+    const server = start();
+    expect(server.onGone).toHaveBeenCalledTimes(1);
+    expect(String(server.onGone.mock.calls[0][0])).toContain('no free e2e browser port');
+    expect(server.env).toEqual({});
+    expect(mocks.startE2EGuard).not.toHaveBeenCalled();
+    expect(mocks.spawn).not.toHaveBeenCalled();
+    expect(() => server.handle.close()).not.toThrow();
   });
 
   it('gives two live browsers four distinct ports', () => {

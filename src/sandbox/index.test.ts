@@ -5,10 +5,10 @@ import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git-identity.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 import {
-  SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE,
-  SANDBOX_PROFILE_WITH_BROWSER, SANDBOX_PROFILE_OFFLINE_WITH_BROWSER,
-} from './profile.js';
+  BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST,
+} from './browser-ports.js';
 import { BROWSER_SANDBOX_PROFILE } from './browser-profile.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
@@ -71,26 +71,29 @@ function parenDepth(text: string): number {
 
 describe('sandbox-profile constants', () => {
   it('all harness profiles have balanced parentheses', () => {
-    for (const profile of [
-      SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE,
-      SANDBOX_PROFILE_WITH_BROWSER, SANDBOX_PROFILE_OFFLINE_WITH_BROWSER,
-    ]) expect(parenDepth(profile)).toBe(0);
+    for (const profile of [SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE]) expect(parenDepth(profile)).toBe(0);
   });
 
   it('the offline variant denies network, the default variant allows it', () => {
     expect(SANDBOX_PROFILE).toContain('(allow network*)');
     expect(SANDBOX_PROFILE).not.toContain('(deny network*)');
     expect(SANDBOX_PROFILE_OFFLINE).toContain('(deny network*)');
-    expect(SANDBOX_PROFILE_OFFLINE_WITH_BROWSER).toContain('(deny network*)');
   });
 
-  it('only browser variants deny their parameterized endpoint after the general network rule', () => {
-    const deny = '(deny network-outbound (remote ip (param "BROWSER_ENDPOINT")))';
-    expect(SANDBOX_PROFILE).not.toContain(deny);
-    expect(SANDBOX_PROFILE_OFFLINE).not.toContain(deny);
-    expect(SANDBOX_PROFILE_WITH_BROWSER.indexOf(deny))
-      .toBeGreaterThan(SANDBOX_PROFILE_WITH_BROWSER.indexOf('(allow network*)'));
-    expect(SANDBOX_PROFILE_OFFLINE_WITH_BROWSER).toContain(deny);
+  // The deny names the band statically because a Seatbelt profile is fixed for the life of the
+  // process it wraps: a port bound at spawn time could only ever have covered that one launch's own
+  // browser, never one started afterwards and never another tab's.
+  it('denies the whole browser port band, in both profiles, after the general network rule', () => {
+    for (const port of [BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST]) {
+      expect(SANDBOX_PROFILE).toContain(`(remote ip "localhost:${port}")`);
+      expect(SANDBOX_PROFILE_OFFLINE).toContain(`(remote ip "localhost:${port}")`);
+    }
+    expect(SANDBOX_PROFILE).not.toContain(`(remote ip "localhost:${BROWSER_PORT_BAND_FIRST - 1}")`);
+    expect(SANDBOX_PROFILE.match(/\(remote ip "localhost:\d+"\)/g)).toHaveLength(BROWSER_PORT_BAND_COUNT);
+    expect(SANDBOX_PROFILE.indexOf('(deny network-outbound'))
+      .toBeGreaterThan(SANDBOX_PROFILE.indexOf('(allow network*)'));
+    expect(SANDBOX_PROFILE_OFFLINE.indexOf('(deny network-outbound'))
+      .toBeGreaterThan(SANDBOX_PROFILE_OFFLINE.indexOf('(deny network*)'));
   });
 
   it('allows only UUID-shaped temporary siblings for atomic Claude configuration writes', () => {
@@ -193,18 +196,21 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('selects and binds the browser profile only when a private port exists', () => {
+  // The band deny reaches a harness that never asked for a browser, which is the half of the
+  // boundary a per-launch parameter could never cover: such a harness used to get a profile with no
+  // deny at all and could reach every browser on the host.
+  it('gives a spawn with no browser the same band-denying profile as any other', () => {
     if (!sandboxAvailable()) return;
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
-    const dValue = (args: string[]) => args
-      .find((value, index) => args[index - 1] === '-D' && value.startsWith('BROWSER_ENDPOINT='))
-      ?.slice('BROWSER_ENDPOINT='.length);
-    const withBrowser = sandboxSpawn({ workspaceDir, browserPort: 50_400 }, 'bash', []);
-    const withoutBrowser = sandboxSpawn({ workspaceDir }, 'bash', []);
-    expect(withBrowser.args[1]).toBe(SANDBOX_PROFILE_WITH_BROWSER);
-    expect(dValue(withBrowser.args)).toBe('localhost:50400');
-    expect(withoutBrowser.args[1]).toBe(SANDBOX_PROFILE);
-    expect(dValue(withoutBrowser.args)).toBeUndefined();
+    const plain = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const offline = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
+    expect(plain.args[1]).toBe(SANDBOX_PROFILE);
+    expect(offline.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
+    for (const result of [plain, offline]) {
+      expect(result.args[1]).toContain(`(remote ip "localhost:${BROWSER_PORT_BAND_FIRST}")`);
+      expect(result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]))
+        .not.toContain('BROWSER_ENDPOINT');
+    }
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
