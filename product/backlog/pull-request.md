@@ -1,17 +1,5 @@
 # pull-request
 
-* Correct the pull request description's stale account of completed and outstanding review follow-ups.
-
-Existing Issue: The description still says twelve fixes have landed and six findings remain in the branch backlog, while later commits completed several of those findings and deleted the backlog, and its follow-up table and inventories omit those final changes. Severity: 5/10
-
-Existing Risk: 5/10 - A merger treats the pull request body as the branch's current review state and overlooks both completed follow-up work and findings that were removed without being implemented.
-
-Proposal Risk: 2/10 - The body can drift again as findings are worked, but avoiding volatile arithmetic and deriving its inventory from the final branch makes the next mismatch conspicuous.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 975: correct the description's stale review follow-up account". Reconcile PR #975's `Review follow-ups`, `Files changed`, and `Tests` sections against `git log origin/master..HEAD`, every `product/plans/complete/browser-*.md` file, the current `product/backlog/pull-request.md`, and the authoritative three-dot diff. Remove the stale claim that six findings remain after `product/backlog/pull-request.md` was deleted, add the completed no-workspace documentation correction, frame-filter source cleanup, stale-comment cleanup, and Playwright-path coverage to the follow-up account and inventories, and avoid a hard-coded remaining-finding count that becomes false as this backlog is drained. Preserve the description's behavioral claims and verification caveats that still match the implementation, and verify every named file and test count against the final branch before updating the PR body.
-
-
-
 * Deliver the plan's launch-dialog documentation update by refreshing the screenshot and its alternative text for the E2E browser control.
 
 Existing Issue: The harness documentation describes the new E2E browser checkbox directly above an unchanged screenshot and alternative text that omit that control. Severity: 3/10
