@@ -106,11 +106,13 @@ On a machine without macOS sandboxing, or with workspace isolation switched off,
 
 `-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
 
-If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, so the row never claims a browser that isn't there. The harness keeps running — only its browser is gone.
+If the browser dies, Janissary starts another one on the same address and says nothing. The harness keeps the endpoint it was given at launch, so its next connection reaches the replacement; only a connection that was open at that moment is lost, along with its pages. Each tab gets three replacements. That's what keeps one bad moment — a crash, an accidental teardown — from costing the tab its browser for the rest of the session.
 
-The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
+When the browser can't be replaced, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, so the row never claims a browser that isn't there. The harness keeps running — only its browser is gone.
 
-Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
+The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind, and a line for each replacement that was tried. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
+
+At that point nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
 
 ## Knowing when a harness needs you
 

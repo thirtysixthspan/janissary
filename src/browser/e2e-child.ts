@@ -1,5 +1,7 @@
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { chromium } from 'playwright';
+import { superviseBrowserServer, type SupervisedServer } from './e2e-child-supervisor.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
 // The `janus e2e-browser` subcommand: the browser server itself, run as its own process so
@@ -69,9 +71,14 @@ export function parseE2EBrowserArgs(argv: string[], env: NodeJS.ProcessEnv): E2E
  * with `::1` first would otherwise leave the two halves listening and dialling on different families
  * (see `e2e-loopback.ts`). Still loopback only — now on one family rather than whichever the
  * resolver happens to pick.
+ *
+ * The first launch is awaited here and its failure is left to the caller: a browser that never
+ * started at all is the parent's rollback path, not something to replace. Everything after that is
+ * the supervisor's, which relaunches with these same options — same port, same secret path — so the
+ * endpoint the tab is advertising keeps working across a browser that dies.
  */
 export async function runE2EBrowser(args: E2EChildArgs): Promise<void> {
-  const server = await chromium.launchServer({
+  const launch = (): Promise<SupervisedServer> => chromium.launchServer({
     port: args.port,
     host: E2E_LOOPBACK_HOST,
     wsPath: args.wsPath,
@@ -79,7 +86,14 @@ export async function runE2EBrowser(args: E2EChildArgs): Promise<void> {
     executablePath: chromium.executablePath(),
     downloadsPath: path.join(args.dir, 'downloads'),
   });
-  // Exit as soon as the browser is gone rather than lingering as a process with nothing behind it:
-  // the parent watches this process's exit to decide the browser has died and to notify the user.
-  server.on('close', () => process.exit(0));
+  superviseBrowserServer({
+    server: await launch(),
+    launch,
+    delay: (ms) => sleep(ms),
+    report: (line) => { process.stderr.write(`${line}\n`); },
+    // Exit rather than linger as a process with nothing behind it: the parent watches this process's
+    // exit to decide the browser has died and to notify the user. From the write's own callback, so
+    // the reason is flushed down the pipe the parent is tailing instead of racing the exit.
+    giveUp: (reason) => { process.stderr.write(`${reason}\n`, () => process.exit(0)); },
+  });
 }
