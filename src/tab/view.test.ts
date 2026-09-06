@@ -72,6 +72,24 @@ describe('buildTabView', () => {
     expect(view.flags).toContain('autoApprove');
   });
 
+  it('includes \'browser\' in flags when the tab has a browser attached', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.browser = true;
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(view.flags).toContain('browser');
+  });
+
+  // `tab.browser` stays set for `profile save` after the browser dies, so the flag is derived from
+  // the harness view's gone-browser report as well — the row must not claim a browser that is gone.
+  it('drops \'browser\' from flags once the harness reports its browser gone', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.browser = true;
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' };
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toContain('browser');
+    tab.harness.browserError = 'e2e browser exited';
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).not.toContain('browser');
+  });
+
   it('produces an empty flags array when neither workspaceDir nor autoApprove is set', () => {
     const tab = makeTab('agent-1', '#fff');
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
@@ -84,6 +102,15 @@ describe('buildTabView', () => {
     tab.autoApprove = true;
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
     expect(view.flags).toEqual(['workspaced', 'autoApprove']);
+  });
+
+  it('orders every active identifier workspaced, autoApprove, browser', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    tab.autoApprove = true;
+    tab.browser = true;
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(view.flags).toEqual(['workspaced', 'autoApprove', 'browser']);
   });
 
   it('abbreviates cwd using the given shorten callback rather than the raw value', () => {

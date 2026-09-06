@@ -130,10 +130,18 @@ selection is preserved so the selected text can be copied.
 The tab strip's own labels are not selectable with the mouse — clicking and dragging across a
 tab's name behaves like clicking any other UI control rather than highlighting text.
 
-Today there are two possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
-git clone (including a remote tab, whose clone lives on the other host), and **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
-only — see Auto-approve permissions in `harness.md`). Hovering a flag's icon shows a tooltip naming
-it ("Workspaced", "Auto-permitting"). More flags of the same kind are expected in the future.
+Today there are three possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
+git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
+only — see Auto-approve permissions in `harness.md`), and **E2E browser** (a globe icon), shown while
+the tab has a headless browser attached (harness tabs only — see End-to-end browser in `harness.md`).
+They appear in that order, so the browser icon sits to the right of the other two. Hovering a flag's
+icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
+same kind are expected in the future.
+
+The browser flag reports the browser the tab has, not the flag it was launched with. A `-b` tab whose
+browser is gone loses the icon at the moment it gains the gone-browser band described in `harness.md`,
+because there is no longer a browser to connect to. Nothing brings either back, since nothing restarts
+the browser.
 
 Agent tabs and harness tabs also show a file-navigator button (a folder icon) in an action group at
 the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the

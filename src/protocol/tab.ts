@@ -43,8 +43,8 @@ export type TabView = {
   // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.
   hasUnread: boolean;
   cwd: string;
-  // Identifiers of this tab's currently-active flags (e.g. 'workspaced', 'autoApprove'), for the
-  // metadata row's flag-emoji display. Empty when none are active.
+  // Identifiers of this tab's currently-active flags ('workspaced', 'autoApprove', 'browser'), for
+  // the metadata row's flag-emoji display. Empty when none are active.
   flags?: string[];
   // Set when this tab's process runs on another host: the metadata row's leading host chip.
   remote?: RemoteTarget;

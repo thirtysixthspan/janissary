@@ -48,9 +48,14 @@ export function buildTabView(
     cwd: shorten(cwd),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone.
+    // The browser flag means the tab *has* a browser, not that it was launched with `-b`: a browser
+    // that is gone leaves `tab.browser` set (`profile save` reads it) while `browserError` records
+    // that nothing is there to connect to any more, so the flag drops with the same broadcast that
+    // raises the tab's gone-browser band.
     flags: [
       ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
       ...(tab.autoApprove ? ['autoApprove'] : []),
+      ...(tab.browser && !tab.harness?.browserError ? ['browser'] : []),
     ],
     remote: tab.remote,
     acp,
