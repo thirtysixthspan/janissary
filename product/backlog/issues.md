@@ -4,7 +4,6 @@
 
 * An e2e browser that dies unexpectedly has its scratch directory deleted before anyone can examine it. `stopSession` calls `release()`, which calls `session.scratch?.remove()` (`src/browser/e2e-session.ts`), on every teardown path — the user closing the tab and the browser dying on its own are treated identically. Chromium's user data directory, its temp sibling, and any crash dump it managed to write all live inside that pair, so they are `rmSync`'d milliseconds after the death. Keeping the directory on the unexpected-death path, and removing it only on a teardown the user asked for, would leave a post-mortem to read.
 
-* `scripts/docs-screenshots/browser.mjs` still claims janissary replaces a browser that a screenshot run closes. The comment above `openAttached` reads "janissary would replace the browser anyway if it did land", which was true only between #987 and its revert in #989. Nothing restarts a dead browser now, so the comment offers a safety net that does not exist to whoever next edits that function.
 
 ## development
 
