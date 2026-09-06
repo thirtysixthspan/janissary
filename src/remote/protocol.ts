@@ -43,7 +43,14 @@
 // the harness with no browser variables at all, so a `harness … on <host> -b` tab would come up
 // looking healthy while every `chromium.connect` inside it failed with nothing to point at — the
 // same failure the check exists for.
-export const REMOTE_PROTOCOL_VERSION = 12;
+// Version 13 adds `log` to `browser-exited`: everything the remote's browser said on its way out,
+// where the frame's `message` carries only the bounded tail of it. The local side writes it to a
+// log file and links that file from the notification, so a remote browser's death is as readable as
+// a local one — and a Chromium stack trace, which is longer than the tail by an order of magnitude,
+// survives the crossing. A version-12 remote fills in nothing: every remote browser death would
+// report with no log and no link while both ends looked healthy, which is the carries-not-shape
+// distinction this check exists for.
+export const REMOTE_PROTOCOL_VERSION = 13;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -140,7 +147,12 @@ export type ServerFrame =
   // `message` is what the far side composed, the confined browser's own output included. It is
   // optional because only that host can say anything useful about a host the local side never sees;
   // absent, the local side falls back to naming the remote and nothing more.
-  | { type: 'browser-exited'; id: string; message?: string }
+  //
+  // `log` is that same account with the browser's output kept whole, where `message` holds only the
+  // last ten lines of it. It travels so the local side can write it to a file and link that file
+  // from the notification, which is the only way the frames naming where a remote Chromium faulted
+  // reach the machine the user is reading. Absent when the browser said nothing to keep.
+  | { type: 'browser-exited'; id: string; message?: string; log?: string }
   | { type: 'transcript'; blocks: string[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }

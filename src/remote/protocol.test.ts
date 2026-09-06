@@ -142,6 +142,8 @@ describe('frame codec', () => {
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
     ['browser-exited with a non-string message', { type: 'browser-exited', id: 'r1', message: 7 }],
+    ['browser-exited with an empty log', { type: 'browser-exited', id: 'r1', message: 'gone', log: '' }],
+    ['browser-exited with a non-string log', { type: 'browser-exited', id: 'r1', message: 'gone', log: [] }],
     ['input without string data', { type: 'input', id: 'r1', data: 1 }],
     ['resize with a zero column count', { type: 'resize', id: 'r1', cols: 0, rows: 24 }],
     ['resize with a fractional row count', { type: 'resize', id: 'r1', cols: 80, rows: 2.5 }],
@@ -215,6 +217,21 @@ describe('frame codec', () => {
     const encoded = encodeFrame({ type: 'browser-exited', id: 'r1', message });
     expect(encoded).not.toContain('\n');
     expect(decodeFrame(encoded)).toEqual({ type: 'browser-exited', id: 'r1', message });
+  });
+
+  // The log is the whole of what a dying browser said — longer than the message and just as full of
+  // newlines. It crosses on the same terms, and only when the browser left something to carry.
+  it('round-trips a browser-exited frame carrying a multi-line log beside the message', () => {
+    const message = 'e2e browser exited (signal SIGSEGV)';
+    const log = `${message}\nReceived signal 11 SEGV_MAPERR\n#0 0x0001 chrome::Frame0()\n#1 0x0002 chrome::Frame1()`;
+    const encoded = encodeFrame({ type: 'browser-exited', id: 'r1', message, log });
+    expect(encoded).not.toContain('\n');
+    expect(decodeFrame(encoded)).toEqual({ type: 'browser-exited', id: 'r1', message, log });
+  });
+
+  it('round-trips a browser-exited frame with a message and no log', () => {
+    expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1', message: 'gone' })))
+      .toEqual({ type: 'browser-exited', id: 'r1', message: 'gone' });
   });
 
   it('drops undeclared filesystem arguments after validating the operation', () => {

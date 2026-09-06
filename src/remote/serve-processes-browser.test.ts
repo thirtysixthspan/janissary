@@ -105,6 +105,26 @@ describe('RemoteProcesses e2e browser', () => {
       type: 'browser-exited', id: 'r1', message: 'e2e browser exited\nlaunch failed: no such executable',
     });
   });
+
+  // The message is the bounded tail; a crash trace does not fit in it. The whole of what the browser
+  // said travels beside it or it stays on this host, where nothing ever reads it.
+  it('carries the full log beside the bounded message', () => {
+    const { send } = spawnHarness(true);
+    vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone(
+      'e2e browser exited (signal SIGSEGV)', 'e2e browser exited (signal SIGSEGV)\n#0 chrome::Frame0()',
+    );
+    expect(send).toHaveBeenCalledWith({
+      type: 'browser-exited', id: 'r1',
+      message: 'e2e browser exited (signal SIGSEGV)',
+      log: 'e2e browser exited (signal SIGSEGV)\n#0 chrome::Frame0()',
+    } satisfies ServerFrame);
+  });
+
+  it('sends no log field for a browser that said nothing', () => {
+    const { send } = spawnHarness(true);
+    vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone('e2e browser exited');
+    expect(send).toHaveBeenCalledWith({ type: 'browser-exited', id: 'r1', message: 'e2e browser exited' });
+  });
 });
 
 describe('RemoteProcesses with two live browser sessions', () => {
