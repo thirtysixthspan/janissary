@@ -146,16 +146,6 @@ with no browser variables at all, leaving a tab that comes up looking healthy in
 to connect to a browser fails with nothing to point at — so a stale remote is refused at the
 handshake, as with every other field of this kind.
 
-Carrying the browser's full account across that frame moves the version once more. The message is
-bounded to what fits on a notification line, which is far shorter than the stack trace a browser
-killed by a signal prints, so the frame carries the complete output alongside it. The local side
-writes that to its own log file and links it from the notification exactly as it does for a browser
-that died on this host — the file is written **here**, under the local tab's own name, because the
-link opens an editor tab on this machine and nothing on the far side could serve it. A browser that
-said nothing sends no such field and its line carries no link. An installation predating it reports
-every remote browser death with no log and no link while both ends look healthy, so it is refused at
-the handshake like every other field one end fills in and the other must honor.
-
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
 optional flags must use their declared values; exit codes must be integers; transcript blocks must
@@ -168,8 +158,8 @@ string, its argument list an array of strings (possibly empty), and its environm
 object of string values — an array or a null is refused. A reply chunk may be empty, since an agent
 can legitimately stream one; a stop reason and an error message may not. An error frame's fatal flag
 is required rather than optional, because an absent flag would default a dead session to recoverable.
-A browser-exit frame's message and log are both optional but, when present, must each be a nonempty
-string; both carry newlines, which JSON escaping keeps from being read as the end of a frame.
+A browser-exit frame's message is optional but, when present, must be a nonempty string; it carries
+newlines, which JSON escaping keeps from being read as the end of a frame.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.
