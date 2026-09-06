@@ -133,9 +133,13 @@ whether the tab was started with `-b`/`--browser`, and the remote acts on that b
 protocol guard, its own confined browser, and its own scratch directory on its own host — a fact it
 acts on rather than an endpoint computed here and shipped over, since the endpoint names ports on
 the machine the browser actually runs on. In the other direction a new frame reports that the
-remote's browser is gone, which the local side surfaces as the same notifications line a local
-browser's death produces, named against the tab that owns that session rather than the channel,
-since joined tabs share one. A remote session that cannot be started at all releases the browser it
+remote's browser is gone, which the local side surfaces the same way a local browser's death is
+surfaced — a notifications line and a band on the tab above its terminal — named against the tab that
+owns that session rather than the channel, since joined tabs share one. That frame carries the
+message the remote composed, the confined browser's own output included: only that host saw it, and
+the tab that needs it is on this side of the channel. The message is optional, and a frame without
+one is reported as `e2e browser stopped on the remote host` and nothing more. A remote session that
+cannot be started at all releases the browser it
 had already started for it on that host, so a failed spawn leaves nothing running there either. An
 installation predating the flag ignores it and spawns the harness
 with no browser variables at all, leaving a tab that comes up looking healthy in which every attempt
@@ -154,6 +158,8 @@ string, its argument list an array of strings (possibly empty), and its environm
 object of string values — an array or a null is refused. A reply chunk may be empty, since an agent
 can legitimately stream one; a stop reason and an error message may not. An error frame's fatal flag
 is required rather than optional, because an absent flag would default a dead session to recoverable.
+A browser-exit frame's message is optional but, when present, must be a nonempty string; it carries
+newlines, which JSON escaping keeps from being read as the end of a frame.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.

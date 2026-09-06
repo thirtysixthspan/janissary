@@ -63,6 +63,63 @@ describe('startE2EBrowserServer failure reporting', () => {
   });
 });
 
+// A discarded stdio made every one of these failures the same bare "exited". The reason a browser
+// died is the browser's to give, and it only ever gives it on its own streams.
+describe('startE2EBrowserServer reporting what the child said', () => {
+  it('carries the child\'s output into the exit message', () => {
+    const { onGone } = start();
+    child.say('browserType.launchServer: Executable doesn\'t exist at /pw/Chrome.app\n');
+    child.handlers.get('exit')?.();
+    expect(onGone).toHaveBeenCalledWith(
+      'e2e browser exited\nbrowserType.launchServer: Executable doesn\'t exist at /pw/Chrome.app',
+    );
+  });
+
+  it('leaves the message alone when the child said nothing', () => {
+    const { onGone } = start();
+    child.handlers.get('exit')?.();
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited');
+  });
+
+  it('carries it into a failed start too', () => {
+    const { onGone } = start();
+    child.say('sandbox-exec: profile could not be compiled\n');
+    child.handlers.get('error')?.(new Error('ENOENT'));
+    expect(onGone).toHaveBeenCalledWith(
+      'e2e browser failed to start: ENOENT\nsandbox-exec: profile could not be compiled',
+    );
+  });
+
+  // The guard dying is not the child's fault, but whatever the child managed to say is still the
+  // best evidence available about the state everything was in.
+  it('carries it when the guard is what failed', () => {
+    const { onGone } = start();
+    child.say('chromium: crashed on startup\n');
+    const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as { onError: (message: string) => void };
+    guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
+    expect(onGone).toHaveBeenCalledWith(
+      'e2e browser guard failed to listen: EADDRINUSE\nchromium: crashed on startup',
+    );
+  });
+
+  // Read before the release kills the child, or the message would describe a browser it had already
+  // taken the evidence away from.
+  it('reads the child\'s output before killing it', () => {
+    const { onGone } = start();
+    child.say('last words\n');
+    child.handlers.get('exit')?.();
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('last words'));
+  });
+
+  it('says nothing extra for a browser the user closed', () => {
+    const { onGone, handle } = start();
+    child.say('shutting down\n');
+    handle.close();
+    expect(onGone).not.toHaveBeenCalled();
+  });
+});
+
 describe('startE2EBrowserServer failure cleanup', () => {
   function released() {
     return {

@@ -105,6 +105,7 @@ describe('RemoteManager shared channels', () => {
 function browserHarness(tabs: Tab[]) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const closeTab = vi.fn();
+  const append = vi.fn();
   const managers = {
     pty: {
       spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
@@ -113,7 +114,7 @@ function browserHarness(tabs: Tab[]) {
       }),
       reassignTransports: vi.fn(),
     },
-    tab: { findIndex: vi.fn(() => -1), closeTab, tabs, cur: () => ({ label: 'creator' }) },
+    tab: { findIndex: vi.fn(() => -1), closeTab, append, tabs, cur: () => ({ label: 'creator' }) },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   remote.open('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
@@ -121,7 +122,10 @@ function browserHarness(tabs: Tab[]) {
   return {
     managers,
     closeTab,
-    send: (id: string) => transport?.onData(`${encodeFrame({ type: 'browser-exited', id })}\n`),
+    append,
+    send: (id: string, message?: string) => transport?.onData(
+      `${encodeFrame({ type: 'browser-exited', id, ...(message !== undefined && { message }) })}\n`,
+    ),
   };
 }
 
@@ -157,5 +161,37 @@ describe('RemoteManager browser-exited frames', () => {
     const h = browserHarness([harnessTab('creator', 'rpty1')]);
     h.send('rpty1');
     expect(h.closeTab).not.toHaveBeenCalled();
+  });
+
+  // Only the far side saw the browser's own output, so what it composed is what the tab is told —
+  // the fixed string is a fallback for a frame that carries nothing, not a replacement for one.
+  it('reports the message the remote composed', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1')]);
+    h.send('rpty1', 'e2e browser exited\nlaunch failed: no such executable');
+    expect(notify).toHaveBeenCalledWith(
+      h.managers, 'e2e-browser-gone', 'creator', 'e2e browser exited\nlaunch failed: no such executable',
+    );
+  });
+
+  // A harness tab's body is its PTY and nothing renders its log, so the report rides the harness
+  // view the way a failed workspace clone does — not the transcript the notifications feed uses.
+  it('puts the report on the tab itself, not only in the notifications feed', () => {
+    const tab = harnessTab('creator', 'rpty1');
+    const h = browserHarness([tab]);
+    h.send('rpty1', 'e2e browser exited\nlaunch failed');
+    expect(tab.harness?.browserError).toBe('e2e browser exited\nlaunch failed');
+    expect(h.append).not.toHaveBeenCalled();
+  });
+
+  it('falls back to naming the remote when the frame carries no message', () => {
+    const tab = harnessTab('creator', 'rpty1');
+    browserHarness([tab]).send('rpty1');
+    expect(tab.harness?.browserError).toBe('e2e browser stopped on the remote host');
+  });
+
+  it('reports nothing on a tab the frame does not name', () => {
+    const tab = harnessTab('creator', 'rpty1');
+    browserHarness([tab]).send('gone-session', 'e2e browser exited');
+    expect(tab.harness?.browserError).toBeUndefined();
   });
 });

@@ -107,6 +107,13 @@ function handle(message) {
   write({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });
   // Walks off after answering, standing in for an agent that crashes mid-session.
   if (mode === 'exit') setTimeout(() => process.exit(0), 10);
+  // The same crash, but saying why on the way out — an agent whose session has expired and that
+  // wants the user to do something about it. A pipe write is synchronous on POSIX, so the message
+  // is in the pipe before the exit. No backticks in here: this whole script is a template literal.
+  if (mode === 'stderr') setTimeout(() => {
+    process.stderr.write('opencode: session expired\nRun "opencode auth login", then start a new session.\n');
+    process.exit(1);
+  }, 10);
 }
 
 process.stdin.on('data', (data) => {
@@ -241,6 +248,22 @@ describe('connectAcp — the agent process ending', () => {
     await new Promise((r) => setTimeout(r, 150));
 
     expect(errors).toEqual([]);
+  });
+
+  // The agent's stdout is the ACP transport, so stderr is the only place it can say why it went.
+  // Nobody read it before, which left the tab holding "ACP agent exited." and nothing else — and
+  // the useful half is exactly the part that says what to do next.
+  it('carries the agent\'s stderr into the exit report', async () => {
+    const { session, errors } = connect('stderr');
+    await prompt(session, 'hi');
+
+    for (let i = 0; i < 100 && errors.length === 0; i++) await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('ACP agent exited.');
+    expect(errors[0]).toContain('opencode: session expired');
+    expect(errors[0]).toContain('Run "opencode auth login", then start a new session.');
   });
 });
 

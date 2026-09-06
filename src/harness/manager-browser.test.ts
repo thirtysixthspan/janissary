@@ -84,6 +84,42 @@ describe('HarnessManager e2e browser', () => {
     expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited');
   });
 
+  // The notifications tab is opt-in, and a user who keeps it closed saw nothing at all. A harness
+  // tab's body is its PTY and nothing renders its log, so the report rides the harness view — where
+  // a failed workspace clone already reports itself — rather than being appended to that log.
+  it('puts the report on the tab itself as well', () => {
+    const { managers, tabs } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+
+    browserMock.onGone[0]('e2e browser exited\nlaunch failed: no such executable');
+
+    expect(tabs.at(-1)?.harness?.browserError).toBe('e2e browser exited\nlaunch failed: no such executable');
+    expect(managers.tab.append).not.toHaveBeenCalledWith(
+      'claude', { input: '', output: 'e2e browser exited\nlaunch failed: no such executable' },
+    );
+  });
+
+  // The harness itself is unaffected — only its browser is gone — so the tab keeps running, unlike
+  // the provisioning failure that shares this corner of the view.
+  it('leaves the tab running and open', () => {
+    const { managers, tabs } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+
+    browserMock.onGone[0]('e2e browser exited');
+
+    expect(tabs.at(-1)?.harness?.status).toBe('running');
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+  });
+
+  it('says nothing on the tab until the browser is actually gone', () => {
+    const { managers, tabs } = makeBrowserManagers();
+    expect(createHarnessManager(managers).run('harness claude --no-workspace -b')).toBeUndefined();
+
+    expect(tabs.at(-1)?.harness?.browserError).toBeUndefined();
+  });
+
   it('closes the browser when PTY spawn throws before runtime ownership', () => {
     const { managers } = makeBrowserManagers();
     (managers.pty.spawn as unknown as { mockImplementation: (callback: () => never) => void })

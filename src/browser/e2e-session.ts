@@ -1,4 +1,5 @@
 import type { ChildProcess } from 'node:child_process';
+import { childOutputTail, withChildOutput, type ChildOutputTail } from '../child-output.js';
 import type { E2EGuardHandle } from './e2e-guard.js';
 import type { BrowserPorts } from './e2e-ports.js';
 import type { BrowserScratch } from './e2e-scratch.js';
@@ -18,6 +19,11 @@ export type E2ESession = {
   closed: boolean;
   fired: boolean;
   onGone: (message: string) => void;
+  // What the confined child said before it went. Held here rather than beside the spawn because
+  // `stopSession` is the one place every message passes through, so composing it here covers the
+  // child that exits, the child that never starts, and the guard that dies, without three call
+  // sites repeating it.
+  output: ChildOutputTail;
   guard?: E2EGuardHandle;
   child?: ChildProcess;
   scratch?: BrowserScratch;
@@ -25,7 +31,7 @@ export type E2ESession = {
 };
 
 export function newSession(onGone: (message: string) => void): E2ESession {
-  return { closed: false, fired: false, onGone };
+  return { closed: false, fired: false, onGone, output: childOutputTail() };
 }
 
 function release(session: E2ESession): void {
@@ -44,12 +50,16 @@ function release(session: E2ESession): void {
  * so a failure still reports. The session is marked down before anything is released, so the exit
  * that killing the child provokes is suppressed rather than re-entering this. And the notification
  * is last, so what it describes is already gone by the time the user reads it.
+ *
+ * The child's own output is read out before the release kills it, so what the message carries is
+ * everything the browser managed to say rather than everything it said before the kill.
  */
 export function stopSession(session: E2ESession, message?: string): void {
   const wasDown = session.closed;
   const notifying = message !== undefined && !wasDown && !session.fired;
   if (notifying) session.fired = true;
   session.closed = true;
+  const reported = notifying && message !== undefined ? withChildOutput(message, session.output.text()) : undefined;
   if (!wasDown) release(session);
-  if (notifying && message !== undefined) session.onGone(message);
+  if (reported !== undefined) session.onGone(reported);
 }

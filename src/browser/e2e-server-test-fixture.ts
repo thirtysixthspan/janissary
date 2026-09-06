@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import { PassThrough } from 'node:stream';
 import type * as E2EPorts from './e2e-ports.js';
 import { startE2EBrowserServer } from './e2e-server.js';
 
@@ -50,12 +51,22 @@ export type ChildStub = {
   on: ReturnType<typeof vi.fn>;
   kill: ReturnType<typeof vi.fn>;
   handlers: Map<string, (arg?: unknown) => void>;
+  // Real streams rather than mocks, so the tail the session keeps is read through the same
+  // `setEncoding`/`readable`/`read()` path a spawned child's pipes go through.
+  stdout: PassThrough;
+  stderr: PassThrough;
+  // Write to the child's stderr the way a browser that is about to die would.
+  say: (text: string) => void;
 };
 
 function makeChild(): ChildStub {
   const handlers = new Map<string, (arg?: unknown) => void>();
+  const stderr = new PassThrough();
   return {
     handlers,
+    stdout: new PassThrough(),
+    stderr,
+    say: (text: string) => { stderr.write(text); },
     kill: vi.fn(),
     on: vi.fn((event: string, handler: (arg?: unknown) => void) => { handlers.set(event, handler); }),
   };

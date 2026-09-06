@@ -11,6 +11,7 @@ import { sandboxSpawn } from '../sandbox/index.js';
 import { getProjectTokens } from '../project-tokens.js';
 import { decidePermission } from './tools.js';
 import { errorText } from '../error-text.js';
+import { childOutputTail, withChildOutput } from '../child-output.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -42,11 +43,16 @@ export function connectAcp(options: AcpOptions): AcpSession {
   });
   // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
   let killed = false;
-  proc.on('error', (error) => options.onError(`failed to start ACP agent: ${error.message}`));
+  // The agent's stdout is the ACP transport, so stderr is where it says anything a human needs —
+  // a failed authentication, a version it will not speak, what to run to restart the session. Nobody
+  // read it before, so all of that was discarded and the tab was told only that the agent had gone.
+  const stderr = childOutputTail();
+  stderr.watch(proc.stderr);
+  proc.on('error', (error) => options.onError(withChildOutput(`failed to start ACP agent: ${error.message}`, stderr.text())));
   // Without this, an agent that dies after a successful spawn leaves a session whose next prompt
   // writes into a closed stdin and never returns. The connection-level channel already means "this
   // session is gone", so the caller can drop it and start a fresh one.
-  proc.on('exit', () => { if (!killed) options.onError('ACP agent exited.'); });
+  proc.on('exit', () => { if (!killed) options.onError(withChildOutput('ACP agent exited.', stderr.text())); });
 
   // The current in-flight prompt's handlers; session updates are routed here.
   let current: PromptHandlers | undefined;
