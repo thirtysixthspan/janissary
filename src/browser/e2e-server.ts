@@ -3,7 +3,7 @@ import path from 'node:path';
 import { errorText } from '../error-text.js';
 import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
-import { BROWSER_LOG_NAMESPACE, WS_PATH_ENV } from './e2e-child.js';
+import { WS_PATH_ENV } from './e2e-child.js';
 import { resolveChildLaunch } from './e2e-child-command.js';
 import { withEndDetail } from './e2e-exit.js';
 import { startE2EGuard } from './e2e-guard.js';
@@ -141,17 +141,11 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
   // ("Failed to create socket directory."). With it, everything Chromium builds in its temp dir — the
   // ProcessSingleton socket directory included — lands inside the sibling the profile allows writes
   // to and close() removes.
-  //
-  // `DEBUG` is set for the same reason and set here for the same reason. It is what makes the child
-  // relay what Chromium said rather than swallowing it (see `BROWSER_LOG_NAMESPACE`), and every line
-  // it produces lands on the stderr read below — so the log file written for a dead browser holds
-  // the browser's own account of its death and not just janissary's two lines about it.
   const env = {
     ...wrapped.env,
     TMPDIR: scratch.tempDir,
     MAC_CHROMIUM_TMPDIR: scratch.tempDir,
     [WS_PATH_ENV]: wsPath,
-    DEBUG: BROWSER_LOG_NAMESPACE,
   };
   // A throw here is caught by the caller's rollback, which produces the same message these handlers
   // do — so there is no second `catch` and no second wording for the same failure.

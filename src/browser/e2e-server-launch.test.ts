@@ -160,27 +160,6 @@ describe('startE2EBrowserServer workspace', () => {
   });
 });
 
-describe('startE2EBrowserServer browser output', () => {
-  function childEnv(): NodeJS.ProcessEnv {
-    return (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2].env;
-  }
-
-  // Playwright reads Chromium's own streams into this logger and exposes them nowhere else, so
-  // without it a dead browser's log holds janissary's status lines and not one word of the browser's.
-  it('enables Playwright\'s browser logger so the child relays what Chromium said', () => {
-    start();
-    expect(childEnv().DEBUG).toBe('pw:browser');
-  });
-
-  // Narrow on purpose: `pw:protocol` carries page content, and this output is written to a file in
-  // the project directory.
-  it('does not enable the protocol logger with it', () => {
-    start();
-    expect(childEnv().DEBUG).not.toContain('protocol');
-    expect(childEnv().DEBUG).not.toContain('*');
-  });
-});
-
 describe('startE2EBrowserServer child launch', () => {
   function spawnCall() {
     return mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv; stdio: unknown }];

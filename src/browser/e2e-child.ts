@@ -27,18 +27,6 @@ export type E2EChildArgs = { port: number; wsPath: string; dir: string };
 // `product/plans/complete/browser-port-band-denied-to-every-harness.md`.
 export const WS_PATH_ENV = 'JANISSARY_E2E_WS_PATH';
 
-// What `DEBUG` is set to in this child's environment, which is how Chromium's own output reaches
-// anyone. `launchServer` spawns Chromium with pipes of Playwright's own and reads both streams into
-// this namespace's logger. A launch that fails carries those lines out in its error, and that is the
-// only route out of Playwright there is: `BrowserServer` exposes nothing, so a browser that came up
-// and died later took every line it had printed with it. Enabled, `debug` writes them to this
-// process's stderr as they arrive, which the parent is already reading (see `e2e-server.ts`).
-//
-// Exactly this namespace and no wider one. `pw:protocol` carries every CDP message — the content of
-// every page and everything typed into one among them — and this output ends up in a file under the
-// project directory. `pw:*` would turn it on.
-export const BROWSER_LOG_NAMESPACE = 'pw:browser';
-
 // `--port <n> --dir <path>` plus `JANISSARY_E2E_WS_PATH`, parsed by hand rather than through
 // `parseArgs`: this is spawned only by `startE2EBrowserServer`, never typed by a user, so the useful
 // failure is a clear throw on a malformed invocation rather than a usage string. The port and the
