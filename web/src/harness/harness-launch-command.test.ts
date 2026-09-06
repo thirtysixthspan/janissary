@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
 
 function fields(overrides: Partial<HarnessLaunchFields> = {}): HarnessLaunchFields {
-  return { name: 'claude', label: '', workspace: true, offline: false, autoApprove: true, model: '', effort: '', ...overrides };
+  return {
+    name: 'claude', label: '', workspace: true, offline: false, browser: false,
+    autoApprove: true, model: '', effort: '', ...overrides,
+  };
 }
 
 describe('buildHarnessLaunchCommand', () => {
@@ -30,6 +33,14 @@ describe('buildHarnessLaunchCommand', () => {
     expect(buildHarnessLaunchCommand(fields({ autoApprove: false }))).toBe('harness claude --no-auto-approve');
   });
 
+  it('adds -b for the e2e browser', () => {
+    expect(buildHarnessLaunchCommand(fields({ browser: true }))).toBe('harness claude -b');
+  });
+
+  it('appends nothing for the e2e browser when it is off', () => {
+    expect(buildHarnessLaunchCommand(fields({ browser: false }))).toBe('harness claude');
+  });
+
   it('adds --model with the value verbatim (not quoted, so it round-trips through the parser)', () => {
     expect(buildHarnessLaunchCommand(fields({ name: 'opencode', model: 'opencode-go/glm-5.2' }))).toBe('harness opencode --model opencode-go/glm-5.2');
   });
@@ -40,9 +51,10 @@ describe('buildHarnessLaunchCommand', () => {
 
   it('assembles every flag in a fixed order', () => {
     const command = buildHarnessLaunchCommand(fields({
-      name: 'claude', label: 'quality', workspace: true, offline: true, autoApprove: true, model: '', effort: 'high',
+      name: 'claude', label: 'quality', workspace: true, offline: true, browser: true,
+      autoApprove: true, model: '', effort: 'high',
     }));
-    expect(command).toBe('harness claude as quality --offline --effort high');
+    expect(command).toBe('harness claude as quality --offline -b --effort high');
   });
 
   it('combines both opt-outs in the fixed flag order', () => {

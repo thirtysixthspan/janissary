@@ -41,9 +41,11 @@ export type AcpSessionListener = {
   onError: (message: string, fatal: boolean) => void;
 };
 
-// The frames that are not addressed to a single process: the provisioning answer and the transcript
-// pushes. Everything else inbound is routed to a `SessionListener` instead.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' }>;
+// The frames that belong to the tab rather than to one process's I/O: the provisioning answer, the
+// transcript pushes, and the browser-gone report. Everything else inbound is routed to a
+// `SessionListener` instead. `browser-exited` carries a session id but is not that session's
+// output — the tab it names is resolved by the manager, since joined tabs share a channel.
+export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' }>;
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.
@@ -183,6 +185,7 @@ export class RemoteChannel {
     switch (frame.type) {
     case 'workspace-ready':
     case 'workspace-failed':
+    case 'browser-exited':
     case 'transcript': { this.handlers.onFrame(frame); return; }
     default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
     }

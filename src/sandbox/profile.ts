@@ -8,6 +8,7 @@
 // read/write allow → `$HOME` read-deny → carve-in allows → secret denies last (so a secret path
 // stays denied even inside a carve-in).
 
+import { BROWSER_PORT_BAND_DENY } from './browser-ports.js';
 import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
   clausesFor, literalClausesFor, prefixClausesFor,
@@ -136,6 +137,16 @@ ${secretDenyClauses})
 ; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
 ; node at JANISSARY_NODE (see index.ts) instead of relying on PATH resolution inside the
 ; sandboxed process, which doesn't always find a working node first.
+; PLAYWRIGHT_DIR/PLAYWRIGHT_CORE_DIR are janissary's own copy of the Playwright client, which a
+; harness launched with -b imports from JANISSARY_PLAYWRIGHT to drive the e2e browser (see
+; src/browser/e2e-server.ts). Client and server must be the same version to connect, and a fresh
+; workspace clone has no node_modules until the AI installs them, so the project's own copy cannot
+; be relied on. playwright-core is carved in separately because it is playwright's only runtime
+; dependency and in a hoisted layout sits as a sibling rather than nested, so the parent alone
+; leaves every internal require denied. Unconditional rather than gated on -b: gating it would
+; mean threading a field through SandboxOptions, spawnPty, PseudoterminalManager.spawn, and the
+; remote's spawn path to withhold read access to two directories of janissary's own dependency tree
+; that hold no user data.
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
@@ -144,6 +155,8 @@ ${secretDenyClauses})
   (subpath (param "SELF_DIR_R"))
   (subpath (param "SERVER_NODE_DIR_L"))
   (subpath (param "SERVER_NODE_DIR_R"))
+  (subpath (param "PLAYWRIGHT_DIR"))
+  (subpath (param "PLAYWRIGHT_CORE_DIR"))
 ${readCarveClauses}
 ${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The
@@ -196,9 +209,14 @@ ${secretDenyClauses})
 (allow signal (target children))
 
 ${networkClause}
+${BROWSER_PORT_BAND_DENY}
 `;
 }
 
-// Network allowed by default; `--offline` swaps in the deny-network variant.
+// Network allowed by default; `--offline` swaps in the deny-network variant. The browser port band
+// is denied in both: the offline profile's `(deny network*)` already covers it, and repeating it
+// keeps the two structurally identical below the network line, so a later change to the offline
+// clause cannot silently drop the boundary. There is no browser-specific variant — the band is
+// known statically, so nothing about a particular launch reaches the profile (see browser-ports.ts).
 export const SANDBOX_PROFILE = buildProfile('(allow network*)');
 export const SANDBOX_PROFILE_OFFLINE = buildProfile('(deny network*)');

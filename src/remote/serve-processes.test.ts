@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { spawnPty } from '../pty.js';
 import { spawnShell } from '../shell.js';
 import { RemoteProcesses } from './serve-processes.js';
 
 vi.mock('../pty.js');
 vi.mock('../shell.js');
+vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: vi.fn() }));
 
 const TOKEN = 'github_pat_forwarded';
 const CLAUDE_TOKEN = 'sk-ant-oat01-forwarded';
@@ -30,6 +32,7 @@ describe('RemoteProcesses forwarded credentials', () => {
       id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
     });
     vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
+    vi.mocked(harnessSpawnEnv).mockReset().mockReturnValue({ env: undefined });
   });
 
   it('passes every forwarded token to a remote PTY workspace', () => {

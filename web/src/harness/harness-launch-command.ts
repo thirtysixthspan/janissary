@@ -5,6 +5,9 @@ export type HarnessLaunchFields = {
   workspace: boolean;
   offline: boolean;
   autoApprove: boolean;
+  // `-b`: start a headless browser for the tab and inject the endpoint the harness drives it
+  // through. Accepted for every harness, so unlike auto-approve there is no per-harness disabling.
+  browser: boolean;
   model: string;
   effort: string;
 };
@@ -23,6 +26,7 @@ export function buildHarnessLaunchCommand(fields: HarnessLaunchFields): string {
   if (label) parts.push('as', label);
   if (!fields.workspace) parts.push('--no-workspace');
   if (fields.offline) parts.push('--offline');
+  if (fields.browser) parts.push('-b');
   if (!fields.autoApprove) parts.push('--no-auto-approve');
   if (fields.model) parts.push('--model', fields.model);
   const effort = fields.effort.trim();

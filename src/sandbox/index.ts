@@ -1,8 +1,10 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { resolvePath, darwinUserCacheDir } from './resolve.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { browserSpawn, type BrowserSpawnOptions } from './browser-spawn.js';
+import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
@@ -29,6 +31,13 @@ export type SandboxOptions = {
   // actually confine the process, because a host that cannot confine anything still needs its
   // harness authenticated and its pushes credentialed.
   tokens?: ProjectTokens;
+  // Set only for the e2e browser child (`src/browser/e2e-server.ts`): confine it with the minimal
+  // browser profile instead of the harness one. The harness profile's read carve-ins — Keychains,
+  // `.claude`, `.codex`, opencode's state directory — are close to an inventory of what an escape
+  // would want, and a browser needs none of them.
+  //
+  // See `browser-spawn.ts` for what each path is and why the installation root is not among them.
+  browser?: BrowserSpawnOptions;
 };
 
 export type SandboxResult = {
@@ -54,36 +63,6 @@ export function sandboxNotice(): string | undefined {
   if (!getConfig().sandboxWorkspaces) return 'workspace isolation off: sandboxWorkspaces disabled in config';
   if (!sandboxAvailable()) return 'workspace isolation off: sandbox-exec unavailable';
   return undefined;
-}
-
-// Resolve a path through any symlinks (macOS's `/tmp` → `/private/tmp` being the common case) —
-// Seatbelt's `subpath` rules match against the resolved path, so an unresolved path silently
-// fails to carve in. Falls back to the input path if it doesn't exist (yet).
-function resolvePath(p: string): string {
-  try { return realpathSync(p); } catch { return p; }
-}
-
-let cachedDarwinUserCacheDir: string | undefined;
-
-// The real per-user `/var/folders/<xx>/<hash>/C/` cache directory macOS's `confstr(3)` hands out —
-// NOT the same as `$TMPDIR`, which `sandboxSpawn` overrides to a workspace-local path below, and
-// NOT its `.../T/` (temp) sibling, which stays denied (that's where `os.tmpdir()`-based scratch
-// dirs land — carving it in too would let a sandboxed process write anywhere a plain `mktemp`
-// call resolves to, defeating the outside-the-workspace write deny). System frameworks look the
-// cache path up directly via `confstr`, bypassing our `TMPDIR` override entirely, and write
-// lock/cache files into it regardless (e.g. Security.framework's legacy MDS subsystem locks
-// `.../C/mds/mds.lock` on every `SecItemCopyMatching` call — denied, the call silently fails
-// rather than erroring, so a sandboxed harness reads back "not logged in" even with a valid
-// Keychain item). Cached: it's fixed for the life of the host process.
-function darwinUserCacheDir(): string {
-  if (cachedDarwinUserCacheDir) return cachedDarwinUserCacheDir;
-  try {
-    const cacheDir = execFileSync('getconf', ['DARWIN_USER_CACHE_DIR']).toString().trim();
-    cachedDarwinUserCacheDir = resolvePath(cacheDir);
-  } catch {
-    cachedDarwinUserCacheDir = '/nonexistent-janissary-darwin-user-cache-dir-placeholder';
-  }
-  return cachedDarwinUserCacheDir;
 }
 
 let cachedClaudeScratchDir: string | undefined;
@@ -257,21 +236,28 @@ export function sandboxSpawn(
   args: string[],
   env: NodeJS.ProcessEnv = process.env,
 ): SandboxResult {
-  if (!options.workspaceDir || !getConfig().sandboxWorkspaces || !sandboxAvailable()) {
-    return { command, args, env: withWorkspaceCredentials(env, options) };
-  }
+  const dir = options.workspaceDir;
+  const confinable = Boolean(dir) && getConfig().sandboxWorkspaces && sandboxAvailable();
+  // Answered before the confinement test, not inside it. What environment the browser gets follows
+  // from what the browser is; the host only decides whether there is a profile around it. Deciding
+  // it the other way round handed the whole server environment to a browser on precisely the hosts
+  // with no kernel confinement behind it.
+  if (options.browser) return browserSpawn(options.browser, dir, command, args, env, confinable);
+  if (!dir || !confinable) return { command, args, env: withWorkspaceCredentials(env, options) };
 
-  const workspaceDir = resolvePath(options.workspaceDir);
-  const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
+  const workspaceDir = resolvePath(dir);
+  const tmpDir = resolvePath(`${dir}.tmp`);
   const home = resolvePath(homedir());
-  const gitObjects = parentGitObjectsDir(options.workspaceDir);
-  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
   const darwinCacheDir = darwinUserCacheDir();
-  const scratchDir = claudeScratchDir();
-  const serverNodeDir = serverNodeDirs();
-
   const scrubbed = scrubEnv(env);
   scrubbed.TMPDIR = tmpDir;
+
+  const gitObjects = parentGitObjectsDir(dir);
+  const selfDirs = resolveExecutableDirs(options.selfBinaryHint ?? command);
+  const scratchDir = claudeScratchDir();
+  const serverNodeDir = serverNodeDirs();
+  const playwright = playwrightPackagePaths();
+
   scrubbed.JANISSARY_NODE = process.execPath;
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
@@ -287,6 +273,8 @@ export function sandboxSpawn(
     '-D', `CLAUDE_SCRATCH_DIR=${scratchDir}`,
     '-D', `SERVER_NODE_DIR_L=${serverNodeDir.literal}`,
     '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
+    '-D', `PLAYWRIGHT_DIR=${playwright.dirs[0]}`,
+    '-D', `PLAYWRIGHT_CORE_DIR=${playwright.dirs[1]}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

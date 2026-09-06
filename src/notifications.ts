@@ -14,8 +14,10 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 // reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
 // `plugin-note` is a line a tab plugin reported through
 // its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
-// `plugin-failure`, which the host reports when a plugin breaks. Explicit events are always
-// eligible and bypass focus suppression.
+// `plugin-failure`, which the host reports when a plugin breaks. `e2e-browser-gone` reports that a
+// `-b` tab's browser is no longer there — a failed launch, a browser that exited, or a guard that
+// died are one event to the user, since the consequence is the same: `connect()` now fails.
+// Explicit events are always eligible and bypass focus suppression.
 export type NotificationEventType =
   | 'state-change'
   | 'incoming-message'
@@ -29,6 +31,7 @@ export type NotificationEventType =
   | 'transcript-unavailable'
   | 'ssh-recording-failed'
   | 'harness-recording-failed'
+  | 'e2e-browser-gone'
   | 'file-operation'
   | 'plugin-failure'
   | 'plugin-note';
@@ -37,10 +40,10 @@ export type NotificationEventType =
 // tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
 // suppression (the active tab never notifies about its own activity) apply; `manual`,
 // `auto-approve`, `editor-suggest`, and `question` bypass both — an explicit trigger always fires (subject
-// only to the tab being open, enforced in `notify`). `ssh-recording-failed` and
-// `harness-recording-failed` bypass them for the same reason `plugin-note` does: the tab whose
-// recording just failed is very often the tab the user is watching, which is exactly the case focus
-// suppression would discard.
+// only to the tab being open, enforced in `notify`). `ssh-recording-failed`,
+// `harness-recording-failed`, and `e2e-browser-gone` bypass them for the same reason `plugin-note`
+// does: the tab whose recording or browser just died is very often the tab the user is watching,
+// which is exactly the case focus suppression would discard.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
@@ -56,6 +59,7 @@ export function shouldNotify(
     case 'transcript-unavailable':
     case 'ssh-recording-failed':
     case 'harness-recording-failed':
+    case 'e2e-browser-gone':
     case 'file-operation': { return true; }
     // `plugin-note` is explicit rather than ambient so focus suppression cannot swallow it: the
     // case that matters most — a plugin reporting on the very tab the user is watching — is the one
@@ -108,6 +112,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'transcript-unavailable': { return 'no harness transcript found'; }
     case 'ssh-recording-failed': { return 'ssh recording failed'; }
     case 'harness-recording-failed': { return 'harness recording failed'; }
+    case 'e2e-browser-gone': { return detail ?? 'e2e browser stopped'; }
   }
 }
 

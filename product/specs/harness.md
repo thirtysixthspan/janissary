@@ -9,7 +9,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [on <address>] [-w] [-y] [--model <name>] [--effort <level>] [with <prompt>]
+harness <name> [as <label>] [on <address>] [-w] [-y] [-b] [--model <name>] [--effort <level>] [with <prompt>]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
@@ -30,12 +30,13 @@ Typing `harness` with no arguments — from a tab that has a command line — op
 dialog over the command bar instead of returning a usage error. The dialog is a small form for
 choosing the harness and its launch flags with controls rather than typing the command by hand. It
 offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
-**Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **Auto-approve** toggle (`-y`),
-a **Model** dropdown, and an **Effort** dropdown.
+**Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **E2E browser** toggle (`-b`),
+an **Auto-approve** toggle (`-y`), a **Model** dropdown, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
 disabled unless the selected harness is claude or codex — switching between those two keeps its
-checked state, while switching to opencode clears and disables it — and the **Model** dropdown lists
+checked state, while switching to opencode clears and disables it — while **E2E browser** stays
+enabled for every harness, since none rejects it. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
 `high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
@@ -151,6 +152,61 @@ When that overlay is live, the app injects a single Enter to accept the highligh
 selected-row Enter contract as claude, not a literal `y` — and records the same `Auto-approved a
 permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
 codex's live input composer is treated as stale and not answered.
+
+### End-to-end browser (`-b` / `--browser`)
+
+A sandboxed harness cannot launch a browser of its own — the sandbox denies reads of the directory
+Playwright keeps its Chromium in — so an AI working in a workspace has no way to see what a user
+would see. `-b`/`--browser` closes that gap: Janissary starts a headless Chromium for the tab, on
+whichever host the harness runs on, and gives the harness two environment variables:
+
+- `JANISSARY_BROWSER_WS_ENDPOINT` — the endpoint to connect a Playwright client to.
+- `JANISSARY_PLAYWRIGHT` — the path to Janissary's own Playwright client, so the client and server
+  versions match by construction and a project that does not itself depend on Playwright can still
+  drive the browser.
+
+The AI writes its own script, connects to the endpoint, and drives a real browser against a real
+page. What it points that browser at is its own work: it starts the workspace clone's build inside
+the sandbox and navigates to that server. Janissary does not inject the live application's URL or
+session token, and active workspace confinement blocks the normal route through the project's state
+directory where those values are recorded. This reduces disclosure; it does not prove the live
+session unreachable when Seatbelt is unavailable, `sandboxWorkspaces` is off, or the harness uses
+`--no-workspace`. In those configurations the harness is not confined from discovering same-user
+process, file, or listener state by other means. See Sandbox, especially "Where confinement does not
+apply." The intended target remains the server built from the harness's own workspace. There is no
+test runner and no pass/fail reporting — the two variables are the whole surface.
+
+The browser is always headless, since the AI never needs to look at a window. Each `-b` tab gets its
+own browser; browsers are never shared or pooled between tabs. The flag is accepted for every
+harness, with or without a workspace, and combines with the other options in any order.
+
+Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,
+so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
+the browser-control protocol and refuses `file:` URLs, ending the session rather than failing one
+call. Behind that guard the browser itself runs in a fresh, empty scratch directory of its own — never
+a copy of the project — and on macOS it is sandboxed to that directory, so a `file:` read that got
+past the guard finds nothing worth having. On a host without macOS sandboxing, or with workspace
+isolation switched off, the guard is the only layer that applies. See Sandbox for what each layer
+allows.
+
+`-b` with `--offline` is left contradictory on purpose: both flags apply, so the variables are set
+and the offline profile then denies the harness any network route to reach its own browser. Neither
+flag is rejected.
+
+When the browser is gone — a launch that failed, a browser that exited, or a guard that died — a line
+appears in the notifications tab naming the tab it belonged to. Nothing restarts it; a later attempt
+to connect simply fails. As with every notification, a user with the notifications tab closed sees
+nothing. Closing a `-b` tab stops its browser and removes its scratch directory — only that
+browser's own directory, which no tab and no other browser shares.
+
+A browser that ends on its own releases the same things at the moment it ends, rather than holding
+them until its tab closes: the endpoint stops accepting connections, the browser process is gone,
+and the scratch directory is removed. That holds for a launch that never got that far too — whatever
+part of it had started is undone. The notification arrives once, after the release, and never for a
+browser the user closed themselves.
+
+The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
+checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.
 
 ### Launch prompt (`with <prompt>`)
 

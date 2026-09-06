@@ -26,9 +26,8 @@ function parenDepth(text: string): number {
 }
 
 describe('sandbox-profile constants', () => {
-  it('SANDBOX_PROFILE and SANDBOX_PROFILE_OFFLINE have balanced parentheses', () => {
-    expect(parenDepth(SANDBOX_PROFILE)).toBe(0);
-    expect(parenDepth(SANDBOX_PROFILE_OFFLINE)).toBe(0);
+  it('all harness profiles have balanced parentheses', () => {
+    for (const profile of [SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE]) expect(parenDepth(profile)).toBe(0);
   });
 
   it('the offline variant denies network, the default variant allows it', () => {

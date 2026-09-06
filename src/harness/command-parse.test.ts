@@ -11,6 +11,7 @@ describe('parseHarnessCommand — launch form', () => {
       workspace: true,
       offline: false,
       autoApprove: true,
+      browser: false,
     });
   });
 
@@ -60,14 +61,63 @@ describe('parseHarnessCommand — launch form', () => {
   });
 
   it('parses every option together, in any order', () => {
-    expect(parseHarnessCommand('harness codex --effort low as bot -y --offline --model gpt-5 -w')).toEqual({
+    expect(parseHarnessCommand('harness codex --effort low as bot -y --offline -b --model gpt-5 -w')).toEqual({
       name: 'codex',
       workspace: true,
       offline: true,
       autoApprove: true,
+      browser: true,
       model: 'gpt-5',
       effort: 'low',
       label: 'bot',
+    });
+  });
+});
+
+describe('parseHarnessCommand — -b/--browser', () => {
+  it('defaults to false', () => {
+    expect(parseHarnessCommand('harness claude')).toMatchObject({ browser: false });
+  });
+
+  it('accepts both spellings', () => {
+    expect(parseHarnessCommand('harness claude -b')).toMatchObject({ browser: true });
+    expect(parseHarnessCommand('harness claude --browser')).toMatchObject({ browser: true });
+    expect(parseHarnessCommand('harness claude --BROWSER')).toMatchObject({ browser: true });
+  });
+
+  // Unlike -y, nothing here is harness-specific: every harness gets the same two variables, so there
+  // is no rejection branch to exercise.
+  it('is accepted for every harness with no rejection case', () => {
+    for (const name of ['claude', 'codex', 'opencode']) {
+      expect(parseHarnessCommand(`harness ${name} -b --no-auto-approve`)).toMatchObject({ name, browser: true });
+    }
+  });
+
+  it('works with or without a workspace', () => {
+    expect(parseHarnessCommand('harness claude -b --no-workspace')).toMatchObject({ browser: true, workspace: false });
+    expect(parseHarnessCommand('harness claude -b -w')).toMatchObject({ browser: true, workspace: true });
+  });
+
+  // Deliberately contradictory and deliberately not rejected: both flags apply, and the offline
+  // profile then denies the harness the network route to its own browser (see the plan's decision
+  // 18 and `ai/guidelines/sandbox-e2e-browser.md`).
+  it('parses cleanly alongside --offline', () => {
+    expect(parseHarnessCommand('harness claude -b --offline')).toMatchObject({ browser: true, offline: true });
+  });
+
+  it('combines with the other flags and clauses in any order', () => {
+    expect(parseHarnessCommand('harness claude -b on devbox as bot --model opus')).toMatchObject({
+      browser: true, label: 'bot', model: 'opus', workspace: true,
+    });
+    expect(parseHarnessCommand('harness claude as bot --model opus -b')).toMatchObject({
+      browser: true, label: 'bot', model: 'opus',
+    });
+  });
+
+  // `-b` inside the prompt is prompt text: the clause is split off before any option scanning.
+  it('is not scanned inside a with <prompt> clause', () => {
+    expect(parseHarnessCommand('harness claude with try -b now')).toMatchObject({
+      browser: false, prompt: 'try -b now',
     });
   });
 });
@@ -125,7 +175,7 @@ describe('parseHarnessCommand — on <address> clause', () => {
   // is never read as a clause.
   it('leaves an on inside a with <prompt> clause as prompt text', () => {
     expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
-      name: 'claude', workspace: true, offline: false, autoApprove: true,
+      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: false,
       prompt: 'turn it on devbox',
     });
   });
@@ -144,6 +194,7 @@ describe('parseHarnessCommand — with <prompt> clause', () => {
       workspace: true,
       offline: false,
       autoApprove: true,
+      browser: false,
       prompt: 'fix the -w flag',
     });
   });

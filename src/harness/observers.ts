@@ -7,6 +7,7 @@ import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';
 import { notify } from '../notifications.js';
 import type { RemoteChannel } from '../remote/channel.js';
+import type { E2EBrowserHandle } from '../browser/e2e-server.js';
 import type { Managers } from '../managers.js';
 
 // Which observers hang off one PTY, and how they are wired together. Split out of `HarnessManager`
@@ -22,6 +23,9 @@ export type HarnessObserverOptions = {
   cwd: string;
   autoApprove: boolean;
   channel: RemoteChannel | undefined;
+  // The tab's e2e browser, for a `-b` launch. Not an observer, but a per-PTY resource the runtime
+  // owns and disposes on the same path — see the comment on `HarnessRuntime`.
+  browser?: E2EBrowserHandle;
 };
 
 // The full observer set for a named harness tab: capture wiring (auto-approve plus busy status), a
@@ -42,7 +46,7 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
     : undefined;
-  return new HarnessRuntime(reader, recorder, tailer, capture.autoApprover);
+  return new HarnessRuntime(reader, recorder, tailer, capture.autoApprover, options.browser);
 }
 
 // The observer pair for an ssh tab: a screen reader (no capture handler — auto-approve and busy

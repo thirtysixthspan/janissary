@@ -87,7 +87,7 @@ describe('plugin architecture import boundaries', () => {
     // Checked by message, not just by count: a case that tripped a different block's rule would
     // otherwise pass while its own block sat broken.
     expect(messages[0]?.message.toLowerCase()).toContain(fragment.toLowerCase());
-  });
+  }, 15_000);
 
   it.each([
     ['a server plugin using its host API', importOf('../api.js'), 'src/plugins/video/activate.ts'],

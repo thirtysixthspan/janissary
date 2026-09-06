@@ -128,6 +128,20 @@ attributes every commit made in it to whatever account the ssh destination resol
 bug the field exists to fix, still present and now harder to notice. It is therefore refused at the
 handshake like every other field one end fills in and the other must honor.
 
+The end-to-end browser moves it once more, carrying two changes at once. A launch frame now says
+whether the tab was started with `-b`/`--browser`, and the remote acts on that by starting its own
+protocol guard, its own confined browser, and its own scratch directory on its own host — a fact it
+acts on rather than an endpoint computed here and shipped over, since the endpoint names ports on
+the machine the browser actually runs on. In the other direction a new frame reports that the
+remote's browser is gone, which the local side surfaces as the same notifications line a local
+browser's death produces, named against the tab that owns that session rather than the channel,
+since joined tabs share one. A remote session that cannot be started at all releases the browser it
+had already started for it on that host, so a failed spawn leaves nothing running there either. An
+installation predating the flag ignores it and spawns the harness
+with no browser variables at all, leaving a tab that comes up looking healthy in which every attempt
+to connect to a browser fails with nothing to point at — so a stale remote is refused at the
+handshake, as with every other field of this kind.
+
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
 optional flags must use their declared values; exit codes must be integers; transcript blocks must

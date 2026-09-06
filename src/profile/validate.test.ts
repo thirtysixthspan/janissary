@@ -62,6 +62,24 @@ describe('validateProfile', () => {
     expect(problems).toContain('layout.window: width must be a number');
   });
 
+  it('reports a non-boolean browser flag on a harness entry', () => {
+    writeJson('bad-browser', {
+      tabs: [
+        { type: 'harness', name: 'a', tool: 'claude', browser: 'yes' },
+        { type: 'harness', name: 'b', tool: 'claude', browser: 1 },
+      ],
+    });
+    const problems = validateProfile('bad-browser');
+    expect(problems).toContain('tabs[0]: browser must be a boolean');
+    expect(problems).toContain('tabs[1]: browser must be a boolean');
+  });
+
+  // Unlike autoApprove, no harness rejects it, so a valid entry is valid for every tool.
+  it.each(['claude', 'opencode', 'codex'])('accepts browser: true for the %s harness', (tool) => {
+    writeJson('ok-browser', { tabs: [{ type: 'harness', name: 'a', tool, browser: true }] });
+    expect(validateProfile('ok-browser')).toEqual([]);
+  });
+
   it('reports a missing or unrecognized tab type, naming every valid one', () => {
     writeJson('bad-type', { tabs: [{ name: 'a' }, { type: 'terminal' }] });
     const problems = validateProfile('bad-type');

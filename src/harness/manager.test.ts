@@ -17,6 +17,11 @@ vi.mock('./scratch-dir.js', () => ({
   harnessEnv: vi.fn((name: string, cwd: string) => (name === 'claude'
     ? { CLAUDE_CODE_TMPDIR: `${cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
     : undefined)),
+  harnessSpawnEnv: vi.fn((options: { name: string; cwd: string }) => ({
+    env: options.name === 'claude'
+      ? { CLAUDE_CODE_TMPDIR: `${options.cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
+      : undefined,
+  })),
 }));
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
@@ -1086,4 +1091,5 @@ describe('HarnessManager remote launch', () => {
       { name: 'claude', tool: 'claude', remote: 'devbox;id' }, 'claude', 2, '#fff',
     )).toContain('devbox;id');
   });
+
 });

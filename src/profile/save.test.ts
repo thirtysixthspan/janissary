@@ -146,9 +146,23 @@ describe('saveProfile', () => {
 
     expect(load('demo').entries).toEqual([{
       name: 'claude', tool: 'claude', model: 'sonnet', effort: 'high', workspace: false,
-      offline: true, autoApprove: true, dotColor: '#ccc', cwd: '/work/claude',
+      offline: true, autoApprove: true, browser: undefined, dotColor: '#ccc', cwd: '/work/claude',
       number: 1, group: 1, groupColor: '#ccc', focus: undefined, pane: 'left',
     }]);
+  });
+
+  // A `-b` tab's flag survives a save the way `offline`/`autoApprove` do, so relaunching the profile
+  // brings the browser back with it.
+  it('writes a -b harness tab\'s browser flag', async () => {
+    const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', {
+      name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running',
+    });
+    claude.browser = true;
+    const managers = makeManagers([claude], { claude: '/work/claude' });
+
+    await saveProfile('demo', managers);
+
+    expect(load('demo').entries[0]).toMatchObject({ name: 'claude', tool: 'claude', browser: true });
   });
 
   it('writes focus only on the active main-area tab', async () => {

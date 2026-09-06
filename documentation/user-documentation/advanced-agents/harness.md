@@ -37,9 +37,9 @@ harness opencode as quality        → tab "quality-2"
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace** and **Offline** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for claude and codex and disabled for opencode.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for claude and codex and disabled for opencode. **E2E browser** starts unchecked and stays available for every harness.
 
-![The New harness dialog, with fields for harness, label, workspace, offline, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
+![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
 
 **Auto-approve** stays disabled unless you've picked claude or codex — the dialog only ever builds a command that's actually valid. Switching between claude and codex keeps your Auto-approve choice; switching to opencode clears and disables it. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
@@ -79,6 +79,32 @@ Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--y
 Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
 A harness with auto-approval active shows the auto-permitting flag icon in its metadata row.
+
+## Giving a harness a browser
+
+A harness working inside a workspace can't launch a browser of its own — the sandbox blocks it — so it has no way to see what you'd see. `-b`/`--browser` fixes that:
+
+```
+harness claude -b
+```
+
+Janissary starts a headless Chromium for that tab and hands the harness two environment variables: `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
+
+What it points that browser at is its own work: it starts the workspace clone's build and navigates to that. Janissary doesn't hand the harness the address or session token of the window you're working in, and active workspace confinement blocks the normal route through project state where those values are recorded. That reduces disclosure; it doesn't by itself prove the live session unreachable when the harness is unconfined. The warning below covers those configurations. The browser should still test the code in its own workspace rather than the code you're running.
+
+There's no test runner here and no pass/fail reporting. The two variables are the whole feature; what the harness does with them is up to it.
+
+The browser is always headless, each `-b` tab gets its own, and the flag works for every harness, with or without a workspace. Combine it with the other options in any order.
+
+::: warning A browser endpoint is powerful, so this one is contained
+Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
+
+On a machine without macOS sandboxing, or with workspace isolation switched off, neither of those boundaries applies: the browser runs loose and only the guard is left. With `--no-workspace` on a machine that can sandbox, the browser is still boxed into its scratch directory — that's decided by the browser's own directory, not by whether your harness has a workspace — but the harness isn't wrapped, so nothing stops it reaching a browser's port directly. In all three cases Janissary still hands the harness the guarded address and withholds credentials from the browser, but another process running as you could find a browser on loopback and connect to it. Use `-b` only on a host you trust in those configurations. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
+:::
+
+`-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
+
+If the browser dies, a line appears in your notifications tab naming the tab it belonged to. Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
 
 ## Knowing when a harness needs you
 

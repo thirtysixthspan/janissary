@@ -62,16 +62,18 @@ function decodeProvision(record: Record<string, unknown>): DecodeResult {
 }
 
 function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser } = record;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
     || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
     || !positiveInteger(cols) || !positiveInteger(rows)
     || !(offline === undefined || typeof offline === 'boolean')
+    || !(browser === undefined || typeof browser === 'boolean')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
     ...(harness !== undefined && { harness }),
     ...(offline !== undefined && { offline }),
+    ...(browser !== undefined && { browser }),
     ...(agentName !== undefined && { agentName }),
   };
 }
@@ -90,6 +92,10 @@ function decodeResize(record: Record<string, unknown>): DecodeResult {
 
 function decodeKill(record: Record<string, unknown>): DecodeResult {
   return nonEmptyString(record.id) ? { type: 'kill', id: record.id } : malformed('kill');
+}
+
+function decodeBrowserExited(record: Record<string, unknown>): DecodeResult {
+  return nonEmptyString(record.id) ? { type: 'browser-exited', id: record.id } : malformed('browser-exited');
 }
 
 function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
@@ -190,6 +196,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'workspace-failed': { return decodeWorkspaceFailed(record); }
   case 'output': { return decodeAddressedData(type, record); }
   case 'exit': { return decodeExit(record); }
+  case 'browser-exited': { return decodeBrowserExited(record); }
   case 'transcript': { return decodeTranscript(record); }
   case 'filesystem-open':
   case 'filesystem-close':

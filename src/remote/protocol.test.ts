@@ -137,6 +137,9 @@ describe('frame codec', () => {
     ['spawn with a non-string command', { type: 'spawn', id: 'r1', program: 'bash', command: 1, mode: 'pty', cols: 80, rows: 24 }],
     ['spawn with an unknown mode', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'tty', cols: 80, rows: 24 }],
     ['spawn with a non-boolean offline flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, offline: 'yes' }],
+    ['spawn with a non-boolean browser flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, browser: 'yes' }],
+    ['browser-exited without an id', { type: 'browser-exited' }],
+    ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['input without string data', { type: 'input', id: 'r1', data: 1 }],
     ['resize with a zero column count', { type: 'resize', id: 'r1', cols: 0, rows: 24 }],
     ['resize with a fractional row count', { type: 'resize', id: 'r1', cols: 80, rows: 2.5 }],
@@ -186,6 +189,23 @@ describe('frame codec', () => {
     });
   });
 
+  it('round-trips a spawn frame carrying the browser flag', () => {
+    const encoded = encodeFrame({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, browser: true,
+    });
+    expect(decodeFrame(encoded)).toEqual({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty',
+      harness: 'claude', cols: 80, rows: 24, browser: true,
+    });
+  });
+
+  it('round-trips a browser-exited frame', () => {
+    expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1' }))).toEqual({
+      type: 'browser-exited', id: 'r1',
+    });
+  });
+
   it('drops undeclared filesystem arguments after validating the operation', () => {
     expect(decodeFrame(JSON.stringify({
       type: 'filesystem-request', session: 'files1', request: 'q1',
@@ -230,7 +250,7 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready',
+      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'browser-exited',
       'exit', 'filesystem-event', 'filesystem-reply', 'output',
       'transcript', 'workspace-failed', 'workspace-ready',
     ]);
@@ -283,7 +303,10 @@ describe('handshake', () => {
   // Version 9 does not know `provision`'s `identity`, and is the quietest failure of the set: it
   // provisions a workspace that looks entirely healthy and attributes every commit made in it to the
   // ssh destination's own account rather than to the user who opened janissary.
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])('rejects a remote speaking older protocol version %i', (version) => {
+  // Version 10 answers a `git-pull` with no result. Version 11 ignores `spawn`'s `browser` flag: a
+  // `-b` tab on that host comes up looking healthy with no browser variables set at all, so every
+  // `chromium.connect` inside it fails with nothing to point at.
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])('rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));

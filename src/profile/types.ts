@@ -39,6 +39,10 @@ export type ProfileHarnessEntry = ProfileTabRuntime & {
   // `--offline`: adds a network-deny rule to the tab's sandbox profile (only meaningful with
   // `workspace`).
   offline?: boolean;
+  // `-b`/`--browser`: start a headless Chromium for this tab and inject the two variables the
+  // harness drives it through. Accepted for every harness, with or without `workspace` — unlike
+  // `autoApprove`, there is no unsupported-harness case to report and skip on.
+  browser?: boolean;
   // `on <address>`: run this harness on another host. A remote entry omits `cwd` — a remote
   // workspace path is neither under the local root nor meaningful on this machine — and always
   // implies `workspace`, so the remote server resolves the clone afresh at launch.

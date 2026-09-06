@@ -1,0 +1,52 @@
+# Take the raw NUL byte out of the frame filter's test data
+
+**Complexity: 1/10** — one byte in one test file. No behaviour, no production code, no specification claim. The only care needed is confirming the escape is exactly equivalent and that nothing else in the file carries a raw control byte.
+
+## Goal
+
+`src/browser/e2e-frame-filter.test.ts` should be an ASCII source file that git diffs as text. It currently carries a literal U+0000 byte inside one of the string entries in its first `isFileUrl` table, where the two-character escape was clearly intended — every other control-character case in both tables is written as `\n`, `\t`, or `\r`. One raw byte is enough for git to classify the whole file as binary, so `git diff` renders every change to it as `Bin 0 -> 5722 bytes` and `file` reports it as `data`.
+
+## Approach
+
+Replace the byte with `\0`. `schemeOf` in `src/browser/e2e-frame-filter.ts` skips leading code points at or below `0x20` before it reads the scheme, so a NUL written as an escape and a NUL written as a byte are the same input to the function under test and the table's assertion is unchanged.
+
+The byte is located by scanning the file rather than by eye, since a NUL is invisible in every editor and in the diff. One scan before the change confirms there is exactly one; the same scan after confirms there are none, which is also the check that no other entry in either table was hiding the same problem.
+
+Because the file is binary to git today, the edit is made as a byte replacement rather than through a text edit — a text tool cannot reliably match a string containing a NUL.
+
+## Design decisions
+
+1. **The textual `\0` escape rather than a literal NUL.** It is the shorter form, it matches how the neighbouring entries spell their control characters, and it is unambiguous here: `\0` is an octal escape only when a digit follows it, and the next character is `f`.
+
+2. **The comment above the entry is left alone.** It already says leading control characters are stripped by every URL parser before the scheme is read, which is exactly what this case tests. Nothing about the change makes that description less accurate.
+
+3. **The verification is that git diffs the file as text, not that the test passes.** The test passed before and passes after — it was never broken. What was broken is reviewability, so the check has to be on the diff.
+
+## Implementation steps
+
+1. Scan `src/browser/e2e-frame-filter.test.ts` for bytes below `0x20` other than tab and newline, and confirm there is exactly one: `0x00`, in the third padded-scheme entry of the first `isFileUrl` table.
+
+2. Replace that byte with the two characters `\0`, leaving the rest of the line and the file untouched.
+
+3. Re-run the scan and confirm no control byte remains, which covers the other entries in both tables as well as the one being fixed.
+
+4. Confirm `git diff` now renders the file as text and `file` reports it as ASCII text rather than `data`.
+
+## Tests
+
+No new tests. The case that carried the byte is unchanged in what it asserts, and it must keep passing: `npx vitest run --project server src/browser/e2e-frame-filter.test.ts`, 42 cases.
+
+If the escape were somehow not equivalent, that suite would fail immediately — the surrounding table asserts that a leading control character is stripped before the scheme is read, so a value that stopped being a padded `file:` URL would stop being matched.
+
+## Out of scope
+
+- The matching rules themselves, in `src/browser/e2e-frame-filter.ts`.
+- The other control-character entries, which are already escapes (step 3 is what confirms that rather than assuming it).
+- Any specification or documentation change. Nothing user-visible moves, and no document describes this file.
+- Adding a lint rule or a check that would catch a raw control byte in a source file in future. That is a repository-wide concern and belongs in its own item, not in a one-byte fix.
+
+## Verification
+
+`./scripts/run.mjs check-diff` — lint, typecheck, and the server suite, with the frame filter's 42 cases passing unchanged.
+
+`git diff --stat` names the file with line counts rather than a byte count, and `git diff` shows a readable one-line change. `file src/browser/e2e-frame-filter.test.ts` reports ASCII text. A byte scan of the file reports no control characters other than tab and newline.

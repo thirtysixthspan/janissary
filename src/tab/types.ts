@@ -253,6 +253,10 @@ export type Tab = {
   // Whether harness auto-permitting (auto-approving the harness's own permission prompts) is
   // enabled on this tab. Harness-only; set once at spawn time.
   autoApprove?: boolean;
+  // `-b`/`--browser` on the tab's creating `harness` command: a headless Chromium was started for
+  // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
+  // spawn time, and kept so `profile save` can write it back.
+  browser?: boolean;
   // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
   // only (like scrollOffset) — not persisted to agent state.

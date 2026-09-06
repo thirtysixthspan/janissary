@@ -89,6 +89,7 @@ export function writeHarnessEntry(tab: Tab, managers: Managers): ProfileHarnessT
     workspace: tab.workspaceDir !== undefined || tab.remote !== undefined,
     offline: tab.offline,
     autoApprove: tab.autoApprove,
+    browser: tab.browser,
     cwd: entryCwd(tab, managers),
     ...presentation(tab, managers),
   };
