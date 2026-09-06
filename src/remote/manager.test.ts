@@ -3,12 +3,10 @@ import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications.js';
-import { writeBrowserLog } from '../browser/browser-log.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
-vi.mock('../browser/browser-log.js', () => ({ writeBrowserLog: vi.fn(() => '/local/.janissary/browser-logs/creator-now.log') }));
 
 function address(token: string): RemoteAddress {
   const parsed = parseRemoteAddress(token);
@@ -125,12 +123,8 @@ function browserHarness(tabs: Tab[]) {
     managers,
     closeTab,
     append,
-    send: (id: string, message?: string, log?: string) => transport?.onData(
-      `${encodeFrame({
-        type: 'browser-exited', id,
-        ...(message !== undefined && { message }),
-        ...(log !== undefined && { log }),
-      })}\n`,
+    send: (id: string, message?: string) => transport?.onData(
+      `${encodeFrame({ type: 'browser-exited', id, ...(message !== undefined && { message }) })}\n`,
     ),
   };
 }
@@ -145,18 +139,14 @@ describe('RemoteManager browser-exited frames', () => {
   it('notifies against the tab owning that session id', () => {
     const h = browserHarness([harnessTab('creator', 'rpty1')]);
     h.send('rpty1');
-    expect(notify).toHaveBeenCalledWith(
-      h.managers, 'e2e-browser-gone', 'creator', expect.stringContaining('remote'), undefined,
-    );
+    expect(notify).toHaveBeenCalledWith(h.managers, 'e2e-browser-gone', 'creator', expect.stringContaining('remote'));
   });
 
   // The channel label is `creator`; naming the tab from it would report the wrong tab entirely.
   it('names the joined tab that owns the session, not the channel\'s own label', () => {
     const h = browserHarness([harnessTab('creator', 'rpty1'), harnessTab('joined', 'rpty2')]);
     h.send('rpty2');
-    expect(notify).toHaveBeenCalledWith(
-      h.managers, 'e2e-browser-gone', 'joined', expect.any(String), undefined,
-    );
+    expect(notify).toHaveBeenCalledWith(h.managers, 'e2e-browser-gone', 'joined', expect.any(String));
   });
 
   it('drops a frame for an already-closed tab', () => {
@@ -179,52 +169,7 @@ describe('RemoteManager browser-exited frames', () => {
     const h = browserHarness([harnessTab('creator', 'rpty1')]);
     h.send('rpty1', 'e2e browser exited\nlaunch failed: no such executable');
     expect(notify).toHaveBeenCalledWith(
-      h.managers, 'e2e-browser-gone', 'creator', 'e2e browser exited\nlaunch failed: no such executable', undefined,
-    );
-  });
-
-  // The far side is where the browser died, but the link on the notification opens an editor tab
-  // here — so the file it points at has to be written on this machine, from what the frame carried.
-  it('writes the log the frame carried and links it from the notification', () => {
-    const h = browserHarness([harnessTab('creator', 'rpty1')]);
-
-    h.send('rpty1', 'e2e browser exited (signal SIGSEGV)', 'e2e browser exited (signal SIGSEGV)\n#0 frame');
-
-    expect(writeBrowserLog).toHaveBeenCalledWith(
-      'creator', expect.any(Number), 'e2e browser exited (signal SIGSEGV)\n#0 frame',
-    );
-    expect(notify).toHaveBeenCalledWith(
-      h.managers, 'e2e-browser-gone', 'creator', 'e2e browser exited (signal SIGSEGV)',
-      '/local/.janissary/browser-logs/creator-now.log',
-    );
-  });
-
-  // Named for the tab that owns the session, like the notification itself — a joined tab's log must
-  // not land under the channel's label.
-  it('names the log for the tab that owns the session', () => {
-    const h = browserHarness([harnessTab('creator', 'rpty1'), harnessTab('joined', 'rpty2')]);
-
-    h.send('rpty2', 'e2e browser exited', 'e2e browser exited\n#0 frame');
-
-    expect(writeBrowserLog).toHaveBeenCalledWith('joined', expect.any(Number), expect.any(String));
-  });
-
-  it('writes no log for a frame that carried none', () => {
-    const h = browserHarness([harnessTab('creator', 'rpty1')]);
-
-    h.send('rpty1', 'e2e browser exited');
-
-    expect(writeBrowserLog).not.toHaveBeenCalled();
-  });
-
-  it('still notifies when the log could not be written', () => {
-    const h = browserHarness([harnessTab('creator', 'rpty1')]);
-    vi.mocked(writeBrowserLog).mockReturnValueOnce(undefined);
-
-    h.send('rpty1', 'e2e browser exited', 'e2e browser exited\n#0 frame');
-
-    expect(notify).toHaveBeenCalledWith(
-      h.managers, 'e2e-browser-gone', 'creator', 'e2e browser exited', undefined,
+      h.managers, 'e2e-browser-gone', 'creator', 'e2e browser exited\nlaunch failed: no such executable',
     );
   });
 

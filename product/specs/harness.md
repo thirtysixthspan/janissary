@@ -224,11 +224,6 @@ notification line carries a link to it: one click opens the whole account in an 
 way the line for an auto-approved permission prompt opens the screen behind it. A browser that said
 nothing writes no file and its line carries no link.
 
-A `-b` tab launched on a remote host gets the same file and the same link. Only that host saw what
-its browser said, so the full account travels back on the frame that reports the death, and this
-side writes it — under the local tab's name, into the local project's log directory, since the link
-opens an editor tab on this machine.
-
 The log is written whether or not the notifications tab is open, unlike the screen capture behind an
 auto-approved prompt, which is written only for an open feed. Approvals are routine and would pile up
 unread; a browser dying is rare and its evidence is the point — the same reasoning that keeps the

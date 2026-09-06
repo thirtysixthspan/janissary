@@ -7,7 +7,6 @@ import type { RemoteAddress } from './address.js';
 import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
 import { notify } from '../notifications.js';
-import { writeBrowserLog } from '../browser/browser-log.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
@@ -99,7 +98,7 @@ export class RemoteManager {
             handlers.onFailed(frame.message);
             break;
           }
-          case 'browser-exited': { this.notifyBrowserGone(frame.id, frame.message, frame.log); break; }
+          case 'browser-exited': { this.notifyBrowserGone(frame.id, frame.message); break; }
           default: { transcript.push(frame.blocks); }
           }
         },
@@ -199,17 +198,11 @@ export class RemoteManager {
   // Delivered onto the tab as well as into the notifications tab, for the same reason the local
   // path does it: the agent whose next `connect()` is about to fail is working in that tab, and a
   // notification is worth nothing to a user who keeps the feed closed.
-  //
-  // The browser's full account, when the frame carried one, is written here rather than left on the
-  // host it came from: the notification's link opens an editor tab on this machine, so the file has
-  // to exist on this machine's filesystem. That also puts it in the same directory a local
-  // browser's log goes to, under the local tab's own name, and hands it to the same startup sweep.
-  private notifyBrowserGone(sessionId: string, message?: string, log?: string): void {
+  private notifyBrowserGone(sessionId: string, message?: string): void {
     const tab = this.managers.tab.tabs.find((t) => t.harness?.ptyId === sessionId);
     if (!tab?.harness) return;
     const text = message ?? 'e2e browser stopped on the remote host';
-    const logFile = log ? writeBrowserLog(tab.label, Date.now(), log) : undefined;
-    notify(this.managers, 'e2e-browser-gone', tab.label, text, logFile);
+    notify(this.managers, 'e2e-browser-gone', tab.label, text);
     tab.harness.browserError = text;
     messageBus.emit('state', { type: 'dirty' });
   }

@@ -95,14 +95,10 @@ function decodeKill(record: Record<string, unknown>): DecodeResult {
 }
 
 function decodeBrowserExited(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !optionalNonEmptyString(record.message)
-    || !optionalNonEmptyString(record.log)) return malformed('browser-exited');
-  return {
-    type: 'browser-exited',
-    id: record.id,
-    ...(record.message !== undefined && { message: record.message }),
-    ...(record.log !== undefined && { log: record.log }),
-  };
+  if (!nonEmptyString(record.id) || !optionalNonEmptyString(record.message)) return malformed('browser-exited');
+  return record.message === undefined
+    ? { type: 'browser-exited', id: record.id }
+    : { type: 'browser-exited', id: record.id, message: record.message };
 }
 
 function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
