@@ -274,6 +274,16 @@ thing to the guard as it does to the browser. Ordinary page content that merely 
 `file://` relays through untouched. The guard listens on loopback only and accepts connections on
 one unguessable path; the browser's own address behind it is not handed to the harness.
 
+A frame from the harness asking the browser itself to close, or to be killed, ends the session the
+same way. The browser belongs to the tab rather than to the guest driving it, and it is the only one
+that tab will ever get, so a teardown request is refused in front of it rather than passed to it. The
+request is identified by the object it names, not by the word: closing a page or a browser context is
+ordinary work and relays through untouched. The refusal reaches the client as a closed connection,
+which is what a client library already turns a browser close into over this kind of endpoint, so a
+script that asks for one ends its own session and leaves the tab's browser running. The browser's own
+close event travels the other way and is never refused — a client is always told when its browser has
+actually died.
+
 Playwright also publishes its own WebSocket path through an unauthenticated discovery route on the
 browser's private loopback port. Every browser binds that port inside one small reserved band at the
 top of the dynamic port range, and the harness profile denies outbound connections to the whole band

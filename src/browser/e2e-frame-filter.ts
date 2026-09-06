@@ -87,12 +87,35 @@ function parseFrame(text: string): unknown | undefined {
 
 const UNREADABLE: FrameVerdict = { blocked: true, reason: 'unreadable protocol frame' };
 
-// Client → browser. Any string anywhere in the message that names a `file:` URL blocks it: on this
-// side the client is asking the browser to do something, and there is no field where a `file:` URL
-// is a legitimate request from a sandboxed agent.
+// Which object a frame addresses is readable from the frame alone, with no session state to keep:
+// Playwright builds every dispatcher guid from a type prefix, so the browser is `browser@<hex>` and
+// nothing else is. A context is `browser-context@<hex>` and a browser type is `browser-type@<hex>`,
+// neither of which carries this prefix, so a context teardown — ordinary work every script does — is
+// not caught by it.
+const BROWSER_GUID_PREFIX = 'browser@';
+
+// The two methods on that object that end the tab's browser rather than the client's own use of it.
+const TEARDOWN_METHODS = new Set(['close', 'killForTests']);
+
+// The browser belongs to the tab, not to the guest driving it, and it is the only one that tab will
+// ever get. Playwright's own client never sends either of these — `connect()` turns `Browser.close()`
+// into a disconnect — and a `launchServer` dispatcher discards them if something else does. Both are
+// Playwright's choices rather than this repo's, which is the reason to hold the position here too.
+function isBrowserTeardown(frame: unknown): boolean {
+  const { guid, method } = frame as { guid?: unknown; method?: unknown };
+  return typeof guid === 'string' && guid.startsWith(BROWSER_GUID_PREFIX)
+    && typeof method === 'string' && TEARDOWN_METHODS.has(method);
+}
+
+// Client → browser. Two ways to block. A frame asking the browser to close or be killed is refused,
+// so the tab keeps its browser through whatever a script does to its own connection. And any string
+// anywhere in the message that names a `file:` URL blocks it: on this side the client is asking the
+// browser to do something, and there is no field where a `file:` URL is a legitimate request from a
+// sandboxed agent.
 export function inspectClientFrame(text: string): FrameVerdict {
   const frame = parseFrame(text);
   if (frame === undefined) return UNREADABLE;
+  if (isBrowserTeardown(frame)) return { blocked: true, reason: 'browser teardown blocked' };
   return anyString(frame, (_key, value) => isFileUrl(value))
     ? { blocked: true, reason: 'file: URL blocked' }
     : ALLOWED;
@@ -100,7 +123,9 @@ export function inspectClientFrame(text: string): FrameVerdict {
 
 // Browser → client. Only the navigation-result fields are checked, so ordinary page content that
 // happens to mention `file://` relays through untouched while a navigation that actually landed on
-// one does not.
+// one does not. The teardown rule is deliberately not applied on this side: the browser reports its
+// own death as a `close` event under the very same guid and method, and a client that is never told
+// its browser died is worse off than one that is.
 export function inspectServerFrame(text: string): FrameVerdict {
   const frame = parseFrame(text);
   if (frame === undefined) return UNREADABLE;
