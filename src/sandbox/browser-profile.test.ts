@@ -28,6 +28,8 @@ const PATHS = {
   playwrightCore: dual(`${ROOT}/node_modules/playwright-core`),
   appManifest: dual(`${ROOT}/package.json`),
   appTsconfig: dual(`${ROOT}/tsconfig.json`),
+  appAgentNames: dual(`${ROOT}/agent-names.json`),
+  appHarnessModels: dual(`${ROOT}/harness-models.json`),
   appState: dual(STATE),
 };
 
@@ -136,9 +138,11 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
   });
 
   // Files, not directories: carved in by exact path so the root holding them stays narrowed away.
-  it('carves in the manifest and tsconfig as exact paths, not as a directory', () => {
+  it('carves in the loader\'s root files as exact paths, not as a directory', () => {
     expect(readable(PATHS.appManifest.literal)).toBe(true);
     expect(readable(PATHS.appTsconfig.literal)).toBe(true);
+    expect(readable(PATHS.appAgentNames.literal)).toBe(true);
+    expect(readable(PATHS.appHarnessModels.literal)).toBe(true);
     expect(readable(`${ROOT}/README.md`)).toBe(false);
   });
 
@@ -199,6 +203,15 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
     for (const operation of ['(allow ipc-posix-shm)', '(allow iokit-open)', '(allow sysctl-read)', '(allow mach-lookup)']) {
       expect(RULES).toContain(operation);
     }
+  });
+
+  // The mach-port rendezvous check-in Chromium's browser process performs during startup, and its
+  // helpers dial — allowed, but only by the exact per-pid service name the bundled Chrome for
+  // Testing publishes. An unqualified mach-register would let this process impersonate any service
+  // in the same bootstrap namespace, which is the route the pboard deny beside it closes.
+  it('narrows the rendezvous check-in to the service name the bundled Chromium publishes', () => {
+    const rule = String.raw`(allow mach-register (global-name-regex #"^com\.google\.chrome\.for\.testing\.MachPortRendezvousServer\."))`;
+    expect(RULES).toContain(rule);
   });
 
   it('allows the network, since what the browser may navigate to is the guard\'s job', () => {

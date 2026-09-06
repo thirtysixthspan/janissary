@@ -121,10 +121,19 @@ describe('startE2EBrowserServer workspace', () => {
     ]);
   });
 
-  it('points the child\'s TMPDIR at the allocated temp sibling', () => {
+  it('points the child\'s temp variables at the allocated temp sibling', () => {
     start();
     const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2];
+    // TMPDIR for Playwright's own temp dirs, MAC_CHROMIUM_TMPDIR because Chromium's macOS temp
+    // resolution ignores TMPDIR entirely — see the env construction in e2e-server.ts.
     expect(spawnOptions.env.TMPDIR).toBe('/ws/browsers/bot-token.tmp');
+    expect(spawnOptions.env.MAC_CHROMIUM_TMPDIR).toBe('/ws/browsers/bot-token.tmp');
+  });
+
+  it('starts the child inside its readable scratch directory', () => {
+    start();
+    const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { cwd: string }])[2];
+    expect(spawnOptions.cwd).toBe('/ws/browsers/bot-token');
   });
 
   it('passes the child the internal port and directory, not the published ones', () => {

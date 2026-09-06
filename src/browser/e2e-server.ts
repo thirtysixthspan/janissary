@@ -94,8 +94,9 @@ export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserSer
 
 // Spawn `janus e2e-browser` through `sandboxSpawn`, which wraps it in the minimal browser profile
 // (see `src/sandbox/browser-profile.ts`) on a host that can confine it and hands the command back
-// unchanged on one that cannot. `TMPDIR` is set either way, so Playwright's own profile directory
-// lands inside the browser's temp sibling rather than in shared `/tmp` even unconfined.
+// unchanged on one that cannot. `TMPDIR` and `MAC_CHROMIUM_TMPDIR` are set either way, so
+// Playwright's own profile directory and Chromium's own temp directories both land inside the
+// browser's temp sibling rather than in shared `/tmp` even unconfined.
 function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): ChildProcess {
   const scratch = session.scratch;
   if (!scratch) throw new Error('no scratch directory was allocated');
@@ -126,7 +127,20 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
     launch.command, [...launch.args, ...args],
   );
   // Set here rather than inherited, so the browser environment allowlist does not filter it out.
-  const env = { ...wrapped.env, TMPDIR: scratch.tempDir, [WS_PATH_ENV]: wsPath };
+  // Both temp variables point at the same sibling because Chromium's macOS temp-dir resolution
+  // ignores `TMPDIR` entirely: base::GetTempDir() reads `MAC_CHROMIUM_TMPDIR` first and otherwise
+  // falls back to NSTemporaryDirectory(), which resolves to the real per-user /var/folders/<hash>/T/
+  // the browser profile deliberately denies. Without the second variable Chromium's ProcessSingleton
+  // tries to create its socket directory there, is denied, and the browser aborts at startup
+  // ("Failed to create socket directory."). With it, everything Chromium builds in its temp dir — the
+  // ProcessSingleton socket directory included — lands inside the sibling the profile allows writes
+  // to and close() removes.
+  const env = {
+    ...wrapped.env,
+    TMPDIR: scratch.tempDir,
+    MAC_CHROMIUM_TMPDIR: scratch.tempDir,
+    [WS_PATH_ENV]: wsPath,
+  };
   // A throw here is caught by the caller's rollback, which produces the same message these handlers
   // do — so there is no second `catch` and no second wording for the same failure.
   //
@@ -134,7 +148,9 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
   // Playwright's launch error, a `sandbox-exec` profile that would not compile, a port that would
   // not bind. Discarded output made every one of those the same bare "exited". The session reads
   // both streams, which is also what keeps a full pipe from blocking the child.
-  const child = spawn(wrapped.command, wrapped.args, { stdio: ['ignore', 'pipe', 'pipe'], env });
+  const child = spawn(wrapped.command, wrapped.args, {
+    cwd: scratch.dir, stdio: ['ignore', 'pipe', 'pipe'], env,
+  });
   session.output.watch(child.stdout);
   session.output.watch(child.stderr);
   child.on('error', (error) => stopSession(session, `e2e browser failed to start: ${error.message}`));

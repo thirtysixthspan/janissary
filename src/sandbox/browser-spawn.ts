@@ -67,6 +67,8 @@ export function browserSpawn(
     playwrightCore: dualPath(browser.playwrightDirs[1] ?? browser.playwrightDirs[0] ?? browser.appDir),
     appManifest: dualPath(path.join(browser.appDir, 'package.json')),
     appTsconfig: dualPath(path.join(browser.appDir, 'tsconfig.json')),
+    appAgentNames: dualPath(path.join(browser.appDir, 'agent-names.json')),
+    appHarnessModels: dualPath(path.join(browser.appDir, 'harness-models.json')),
     appState: dualPath(path.join(browser.appDir, '.janissary')),
   });
   return {
