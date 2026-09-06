@@ -1,5 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import { childOutputTail, withChildOutput, type ChildOutputTail } from '../child-output.js';
+import { withoutChromiumEndLine } from './e2e-exit.js';
 import type { E2EGuardHandle } from './e2e-guard.js';
 import type { BrowserPorts } from './e2e-ports.js';
 import type { BrowserScratch } from './e2e-scratch.js';
@@ -74,18 +75,22 @@ function release(session: E2ESession, keepScratch: boolean): void {
  * The child's own output is read out before the release kills it, so what the message carries is
  * everything the browser managed to say rather than everything it said before the kill.
  *
- * It is read out twice, into the two things a death is worth reporting as. The message keeps the
- * bounded tail it always carried — it has to stay readable on a notification line and in the band
- * above the tab's terminal — and the log beside it is the same account with nothing dropped, for a
- * caller that can put it somewhere a stack trace fits (see `src/browser/browser-log.ts`). A browser
- * that said nothing has no log, so a silent death is reported exactly as it was before this existed.
+ * It is read out twice, into the two things a death is worth reporting as. The message keeps a
+ * bounded tail — it has to stay readable on a notification line and in the band above the tab's
+ * terminal — with the child's own end report dropped from it, since `message` already carries the
+ * status of the process that wrote that line. The log beside it is the same account with nothing
+ * dropped, that report included, for a caller that can put it somewhere a stack trace fits (see
+ * `src/browser/browser-log.ts`). A browser that said nothing has no log, so a silent death is
+ * reported exactly as it was before this existed.
  */
 export function stopSession(session: E2ESession, message?: string): void {
   const wasDown = session.closed;
   const notifying = message !== undefined && !wasDown && !session.fired;
   if (notifying) session.fired = true;
   session.closed = true;
-  const reported = notifying && message !== undefined ? withChildOutput(message, session.output.text()) : undefined;
+  const reported = notifying && message !== undefined
+    ? withChildOutput(message, withoutChromiumEndLine(session.output.text()))
+    : undefined;
   const captured = notifying ? session.output.full() : '';
   const log = captured && message !== undefined ? `${message}\n${captured}` : undefined;
   if (!wasDown) release(session, message !== undefined);

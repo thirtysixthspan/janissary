@@ -230,13 +230,20 @@ unread; a browser dying is rare and its evidence is the point — the same reaso
 scratch directory below. These files live under the project's `.janissary/` directory and are cleared
 when janissary next starts, along with every other artifact directory there.
 
-The report also names how each of the two processes behind a browser ended, since a browser can die
-without saying anything at all. The message itself carries the exit status of the process janissary
-launched — `e2e browser exited (code 1)`, or `(signal SIGKILL)` for one the operating system killed —
-and that process in turn reports the browser's own status on the line below, in the same form. A
-graceful shutdown is therefore positively identifiable as one rather than being indistinguishable
-from a crash, and a process that ended with no status the platform could report says nothing extra:
-the message is then exactly `e2e browser exited`.
+The report also names how a browser ended, since a browser can die without saying anything at all.
+The message carries the exit status of the process janissary launched — `e2e browser exited (code
+1)`, or `(signal SIGKILL)` for one the operating system killed. A graceful shutdown is therefore
+positively identifiable as one rather than being indistinguishable from a crash, and a process that
+ended with no status the platform could report says nothing extra: the message is then exactly `e2e
+browser exited`.
+
+That process in turn reports Chromium's own status in the same form, and that line is kept out of
+the message. It restates a death the message has already announced, one process further down, so on
+a notification line and in the band above the terminal it reads as the same news twice. It is kept
+in the log file instead, on the line below the report the log opens with — Chromium's status is the
+half of the account janissary cannot observe for itself, which is exactly what the file is read for.
+Everything else the browser said stays on the message as before; only the browser's restatement of
+its own ending comes off it.
 
 A browser that ends on its own releases what it held at the moment it ends, rather than holding it
 until its tab closes: the endpoint stops accepting connections, the browser process is gone, and the

@@ -4,6 +4,11 @@
 // each is the only one that can see the status of the one it watches. They report on separate lines
 // of the same message, so they format identically here rather than each inventing a wording.
 
+// The `janus e2e-browser` child's own end report, written to its stderr when Chromium goes. Shared
+// so the child that composes the line and the report that drops it cannot drift apart on its
+// wording.
+export const CHROMIUM_END_MESSAGE = 'chromium exited';
+
 // Node hands a code and a signal in three shapes across the two APIs this covers: `ChildProcess`
 // exposes `exitCode`/`signalCode` as `number | null`, an `exit` handler is passed the same pair, and
 // a process observed before it has ended has neither. All three arrive here as this.
@@ -44,4 +49,33 @@ export function withEndDetail(message: string, end: ProcessEnd): string {
  */
 export function endedCleanly(end: ProcessEnd): boolean {
   return !end.signal && end.code === 0;
+}
+
+// Whether a line is the child's own end report rather than something the browser said: the bare
+// message, or the message with a parenthesized status after it. Matched by shape rather than by
+// pattern — `security/detect-unsafe-regex` covers `src/`, and the three forms this line takes are
+// clearer as a pair of edge checks than as an expression.
+function isChromiumEndLine(line: string): boolean {
+  const text = line.trim();
+  if (text === CHROMIUM_END_MESSAGE) return true;
+  return text.startsWith(`${CHROMIUM_END_MESSAGE} (`) && text.endsWith(')');
+}
+
+/**
+ * `tail` without the child's own end report, for a message that already carries the status of the
+ * process that wrote it. The child watches Chromium and janissary watches the child, so a death
+ * reported by both reads as two lines saying the same thing — and only one of them is a line the
+ * browser itself produced.
+ *
+ * The tail kept for the log goes through this untouched: Chromium's status is the half of the
+ * account janissary cannot observe directly, so it is exactly what a post-mortem is read for. This
+ * drops it from the report, not from the record.
+ *
+ * An empty string when the end report was the whole tail, which `withChildOutput` already reads as
+ * a child that said nothing — so such a death reports as the bare message it did before the child
+ * said anything at all.
+ */
+export function withoutChromiumEndLine(tail: string): string {
+  if (!tail) return '';
+  return tail.split('\n').filter((line) => !isChromiumEndLine(line)).join('\n').trim();
 }
