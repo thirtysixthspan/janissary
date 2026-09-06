@@ -1,18 +1,11 @@
-// Drives one manifest entry against a freshly launched app: types the setup commands into the
+// Drives one manifest entry against the run's shared page: types the setup commands into the
 // command bar, performs the staged actions, waits for the shot to stabilize, and saves the PNG.
-const VIEWPORT = { width: 768, height: 768 };
-const DEFAULT_SETTLE_MS = 800;
-// 2x (retina) scale, applied to every shot, so doc pages stay crisp without oversized PNGs.
-const SCALE = 2;
-const CHILD_CROP_PAD = 12;
+// The page arrives at its launch state — `reset.mjs` puts it there between shots — and the context
+// it belongs to is opened once per run in `session.mjs`, not once per shot.
+import { typeCommand } from './command-bar.mjs';
 
-async function typeCommand(page, text) {
-  const input = page.locator('.command textarea');
-  await input.waitFor({ state: 'visible' });
-  await input.click();
-  await page.keyboard.type(text);
-  await page.keyboard.press('Enter');
-}
+const DEFAULT_SETTLE_MS = 800;
+const CHILD_CROP_PAD = 12;
 
 async function runActions(page, actions) {
   for (const action of actions) {
@@ -57,26 +50,18 @@ async function elementClip(page, entry) {
   return { x: box.x, y: box.y, width, height };
 }
 
-export async function captureShot(browser, url, entry, outputPath) {
-  const context = await browser.newContext({ viewport: VIEWPORT, deviceScaleFactor: SCALE });
-  try {
-    const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'networkidle' });
-    await page.locator('.command textarea').waitFor({ state: 'visible' });
-    const setupCommands = entry.setup ?? [];
-    for (const command of setupCommands) {
-      await typeCommand(page, command);
-      await page.waitForTimeout(entry.settle ?? DEFAULT_SETTLE_MS);
-    }
-    await runActions(page, entry.actions ?? []);
-    if (entry.actions?.length) await page.waitForTimeout(400);
-    await stabilize(page, entry.stabilize);
-    if (entry.target === 'page') {
-      await page.screenshot({ path: outputPath });
-      return;
-    }
-    await page.screenshot({ path: outputPath, clip: await elementClip(page, entry) });
-  } finally {
-    await context.close();
+export async function captureShot(page, entry, outputPath) {
+  const setupCommands = entry.setup ?? [];
+  for (const command of setupCommands) {
+    await typeCommand(page, command);
+    await page.waitForTimeout(entry.settle ?? DEFAULT_SETTLE_MS);
   }
+  await runActions(page, entry.actions ?? []);
+  if (entry.actions?.length) await page.waitForTimeout(400);
+  await stabilize(page, entry.stabilize);
+  if (entry.target === 'page') {
+    await page.screenshot({ path: outputPath });
+    return;
+  }
+  await page.screenshot({ path: outputPath, clip: await elementClip(page, entry) });
 }

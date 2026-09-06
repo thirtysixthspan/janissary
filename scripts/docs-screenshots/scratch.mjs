@@ -40,6 +40,15 @@ export function destroyScratch(scratch) {
   rmSync(scratch.root, { recursive: true, force: true });
 }
 
+// Puts the work directory back to the fixture commit between shots — a shot that created files
+// (the task picker seeds `ai/tasks/`) must not leave them in the next shot's file tree. `.janissary`
+// is left alone: the one janissary instance the run keeps alive is using it for its lock, log,
+// state, database files and workspace clones, and this is not the place to delete those.
+export function restoreWorkDirectory(scratch) {
+  git(scratch.work, 'checkout', '--quiet', '--', '.');
+  git(scratch.work, 'clean', '-fdq', '-e', '.janissary');
+}
+
 // A tiny local server for the embedded-web-page shot, so capture never depends on the network
 // or an external site staying up and stable.
 export async function startPageServer(fixturesDirectory) {
