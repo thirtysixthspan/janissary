@@ -158,33 +158,33 @@ describe('startE2EBrowserServer failure cleanup', () => {
     };
   }
 
-  it('releases everything when the guard cannot listen', () => {
+  it('releases everything but the scratch directory when the guard cannot listen', () => {
     start();
     const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as {
       port: number; upstreamPort: number; onError: (message: string) => void;
     };
     guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
-    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 0 });
     expect(mocks.releasedPorts).toEqual([guardOptions.port, guardOptions.upstreamPort]);
   });
 
-  it('releases everything when the child exits unexpectedly', () => {
+  it('releases everything but the scratch directory when the child exits unexpectedly', () => {
     start();
     child.handlers.get('exit')?.();
-    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 0 });
   });
 
-  it('releases everything when the child never starts', () => {
+  it('releases everything but the scratch directory when the child never starts', () => {
     start();
     child.handlers.get('error')?.(new Error('ENOENT'));
-    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 0 });
   });
 
-  it('rolls back what it already acquired when the spawn throws', () => {
+  it('rolls back what it already acquired when the spawn throws, keeping the directory', () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
     start();
     expect(guardClose).toHaveBeenCalledTimes(1);
-    expect(mocks.scratchRemove).toHaveBeenCalledTimes(1);
+    expect(mocks.scratchRemove).not.toHaveBeenCalled();
   });
 
   it('reports a scratch allocation that fails instead of throwing at its caller', () => {
@@ -196,11 +196,13 @@ describe('startE2EBrowserServer failure cleanup', () => {
     expect(() => handle.close()).not.toThrow();
   });
 
-  it('releases once across a failure followed by a close', () => {
+  // Closing the tab is the first thing a user does after being told the browser is gone. If that
+  // removed the directory, the post-mortem would go with the reflex that follows reading about it.
+  it('releases once across a failure followed by a close, and still keeps the directory', () => {
     const { onGone, handle } = start();
     child.handlers.get('exit')?.();
     handle.close();
-    expect(released()).toEqual({ guard: 1, child: 1, scratch: 1 });
+    expect(released()).toEqual({ guard: 1, child: 1, scratch: 0 });
     expect(onGone).toHaveBeenCalledTimes(1);
   });
 

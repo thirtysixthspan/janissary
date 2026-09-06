@@ -2,8 +2,6 @@
 
 ## ready
 
-* An e2e browser that dies unexpectedly has its scratch directory deleted before anyone can examine it. `stopSession` calls `release()`, which calls `session.scratch?.remove()` (`src/browser/e2e-session.ts`), on every teardown path — the user closing the tab and the browser dying on its own are treated identically. Chromium's user data directory, its temp sibling, and any crash dump it managed to write all live inside that pair, so they are `rmSync`'d milliseconds after the death. Keeping the directory on the unexpected-death path, and removing it only on a teardown the user asked for, would leave a post-mortem to read.
-
 
 ## development
 
