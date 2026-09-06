@@ -110,6 +110,8 @@ If the browser dies, you get the news in two places: a line in your [notificatio
 
 The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
 
+What the report shows is the last ten lines of it, which is as much as fits on a notification line. When Chromium goes down under a signal it prints a stack trace much longer than that, and the frames naming where it crashed are the first thing to be cut. So the full text is saved to its own log file under `.janissary/browser-logs/`, named after the tab and the moment the browser died, and the notification line carries a link to it — click it and the whole thing opens in an editor tab, the same as the link on an auto-approved permission prompt. A browser that said nothing writes no file, so that line has no link. These logs are saved whether or not your notifications tab is open, and clear the next time janissary starts.
+
 It also tells you how the browser went, which is what you get when it said nothing: the message ends in the exit status, as `e2e browser exited (code 1)` or `(signal SIGKILL)` for one something killed, and the line below it reports Chromium's own status the same way. So `(code 0)` on both lines is a browser that shut down gracefully, and a signal on either is one that didn't.
 
 Nothing restarts it, and a later connection attempt simply fails. Closing a tab whose browser is still running stops it and removes its scratch directory.

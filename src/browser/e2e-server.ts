@@ -41,7 +41,11 @@ export type E2EBrowserOptions = {
   // Invoked once when the browser is gone for a reason the user did not ask for: a child that
   // exits, a child that never starts, or a guard that cannot listen. Never invoked after `close()`,
   // and never before everything that launch acquired has been released.
-  onGone: (message: string) => void;
+  //
+  // `message` is the report, bounded to stay readable where it is displayed. `log` is the same
+  // account with the browser's output kept whole, for a caller that persists it; it is undefined
+  // when the browser said nothing at all, and so is nothing to keep.
+  onGone: (message: string, log?: string) => void;
 };
 
 /**

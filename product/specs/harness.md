@@ -215,6 +215,21 @@ nothing to act on. A browser that said nothing produces the message alone. What 
 the last 2000 characters and the last 10 lines of them, and it is read out before the browser is torn
 down, so the report describes what the browser actually said rather than what survived the teardown.
 
+That tail is what fits on a notification line, and it is not the whole of what a dying browser says.
+A browser killed by a signal — a segfault being the case this was built for — writes a stack trace
+far longer than ten lines, and the frames naming where it faulted are the first thing the tail drops.
+So the complete output is also written to its own log file under `.janissary/browser-logs/`, named
+for the tab and the moment the browser ended, and led by the same report the message opens with. The
+notification line carries a link to it: one click opens the whole account in an editor tab, the same
+way the line for an auto-approved permission prompt opens the screen behind it. A browser that said
+nothing writes no file and its line carries no link.
+
+The log is written whether or not the notifications tab is open, unlike the screen capture behind an
+auto-approved prompt, which is written only for an open feed. Approvals are routine and would pile up
+unread; a browser dying is rare and its evidence is the point — the same reasoning that keeps the
+scratch directory below. These files live under the project's `.janissary/` directory and are cleared
+when janissary next starts, along with every other artifact directory there.
+
 The report also names how each of the two processes behind a browser ended, since a browser can die
 without saying anything at all. The message itself carries the exit status of the process janissary
 launched — `e2e browser exited (code 1)`, or `(signal SIGKILL)` for one the operating system killed —

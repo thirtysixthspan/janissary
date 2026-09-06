@@ -126,6 +126,64 @@ describe('childOutputTail', () => {
   });
 });
 
+// The tail is sized to stay readable where it is displayed, which is exactly the size that drops
+// the frames naming where a browser faulted. `full()` is the same capture with nothing dropped.
+describe('childOutputTail full', () => {
+  it('keeps what the reported tail drops', () => {
+    const tail = childOutputTail();
+    const output = stream();
+    tail.watch(output);
+
+    for (let line = 1; line <= 30; line++) output.write(`line ${line}\n`);
+
+    expect(tail.text()).not.toContain('line 1\n');
+    const lines = tail.full().split('\n');
+    expect(lines).toHaveLength(30);
+    expect(lines[0]).toBe('line 1');
+    expect(lines.at(-1)).toBe('line 30');
+  });
+
+  it('agrees with the tail for a child that said less than the tail bound', () => {
+    const tail = childOutputTail();
+    const output = stream();
+    tail.watch(output);
+
+    output.write('launch failed: no such executable\n');
+
+    expect(tail.full()).toBe(tail.text());
+  });
+
+  it('bounds what it keeps for a child that spews past the log bound', () => {
+    const tail = childOutputTail();
+    const output = stream();
+    tail.watch(output);
+
+    output.write('a'.repeat(150_000));
+    output.write('tail-marker');
+
+    const text = tail.full();
+    expect(text.length).toBeLessThanOrEqual(100_000);
+    expect(text.endsWith('tail-marker')).toBe(true);
+  });
+
+  it('returns nothing for a child that said nothing', () => {
+    const tail = childOutputTail();
+    tail.watch(stream());
+
+    expect(tail.full()).toBe('');
+  });
+
+  it('takes output written in the same tick as the read', () => {
+    const tail = childOutputTail();
+    const output = stream();
+    tail.watch(output);
+
+    output.write('written and read without yielding\n');
+
+    expect(tail.full()).toBe('written and read without yielding');
+  });
+});
+
 describe('withChildOutput', () => {
   it('leaves the message alone when the child said nothing', () => {
     expect(withChildOutput('e2e browser exited', '')).toBe('e2e browser exited');
