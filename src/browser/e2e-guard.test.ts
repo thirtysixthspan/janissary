@@ -109,6 +109,8 @@ async function settle(): Promise<void> {
 
 const GOTO_HTTPS = JSON.stringify({ id: 1, method: 'Page.navigate', params: { url: 'https://example.com/' } });
 const GOTO_FILE = JSON.stringify({ id: 2, method: 'Page.navigate', params: { url: 'file:///etc/passwd' } });
+const CLOSE_BROWSER = JSON.stringify({ id: 5, guid: 'browser@3f2a91c4', method: 'close', params: {} });
+const CLOSE_CONTEXT = JSON.stringify({ id: 6, guid: 'browser-context@3f2a91c4', method: 'close', params: {} });
 
 describe('startE2EGuard', () => {
   it('relays a navigation to an https: URL through to the browser', async () => {
@@ -212,6 +214,31 @@ describe('startE2EGuard', () => {
     const relayed = new Promise<string>((resolve) => client.on('message', (data: Buffer) => resolve(data.toString('utf8'))));
     upstream.sockets[0].send(body);
     expect(await relayed).toBe(body);
+  });
+
+  // The browser is the tab's, not the guest's. Asserting the upstream received nothing is the point:
+  // the refusal has to happen in front of the browser, and a check on the close code alone would
+  // still pass if the frame had been relayed first.
+  it('ends the session on a request to close the browser, without relaying it', async () => {
+    const upstream = await startUpstream();
+    const port = await startGuard(upstream);
+    const client = connect(port);
+    await opened(client);
+    const code = closeCode(client);
+    client.send(CLOSE_BROWSER);
+    expect(await code).toBe(1008);
+    await upstream.closed();
+    expect(upstream.received).toEqual([]);
+  });
+
+  it('relays a request to close a browser context through to the browser', async () => {
+    const upstream = await startUpstream();
+    const port = await startGuard(upstream);
+    const client = connect(port);
+    await opened(client);
+    client.send(CLOSE_CONTEXT);
+    await settle();
+    expect(upstream.received).toEqual([CLOSE_CONTEXT]);
   });
 
   it('refuses an upgrade on any path other than the published one', async () => {

@@ -183,7 +183,11 @@ harness, with or without a workspace, and combines with the other options in any
 Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,
 so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
 the browser-control protocol and refuses `file:` URLs, ending the session rather than failing one
-call. Behind that guard the browser itself runs in a fresh, empty scratch directory of its own — never
+call. It refuses one more thing: a request to close or kill the browser itself. The browser is the
+tab's, not the guest's, and it is the only one that tab will ever get, so no script can spend it —
+asking ends that script's own session and leaves the browser running for the next connection. Closing
+a page or a context is ordinary work and is untouched. Behind that guard the browser itself runs in a
+fresh, empty scratch directory of its own — never
 a copy of the project — and on macOS it is sandboxed to that directory, so a `file:` read that got
 past the guard finds nothing worth having. On a host without macOS sandboxing, or with workspace
 isolation switched off, the guard is the only layer that applies. See Sandbox for what each layer

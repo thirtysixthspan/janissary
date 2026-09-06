@@ -63,8 +63,9 @@ The endpoint you hold belongs to a guard that filters the protocol, not directly
 
 - **You navigate to a `file:` URL.** Any `file:` URL, anywhere in a frame you send. This is on purpose: an endpoint that could read `file:///Users/…/.ssh/id_rsa` would be a way out of the sandbox. Do not try to reach the filesystem through the browser, and do not treat the closed session as a transient error to retry through. Read files with your ordinary tools instead — you already have workspace access.
 - **You send a frame the guard cannot parse.** Every frame is decoded as UTF-8 and parsed as JSON; one that will not parse ends the session the same way a blocked URL does.
+- **You ask for the browser itself to be closed or killed.** The browser belongs to the tab, not to your script, and it is the only one this tab will ever get, so the guard refuses the request rather than passing it on. Closing a page or a context is ordinary work and is untouched — this is the browser object alone. `browser.close()` through the Playwright client does not reach the guard at all: over this kind of endpoint it is a local disconnect, not a request. **The browser survives either way.** If your connection ends this way, the browser is still running; connect again rather than reporting a lost browser.
 
-There is no partial result to salvage from either case, and reconnecting to retry the same navigation will end the new session the same way.
+There is no partial result to salvage from any of these, and reconnecting to retry the same navigation will end the new session the same way.
 
 ## When it stops working
 

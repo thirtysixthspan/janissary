@@ -92,6 +92,45 @@ describe('inspectClientFrame', () => {
   });
 });
 
+// The browser belongs to the tab, and the guest driving it does not get to end it. Playwright's own
+// guids are type-prefixed, which is what makes the object a frame addresses readable from the frame
+// alone — `browser@` is the browser and nothing else wears that prefix.
+describe('inspectClientFrame on a teardown request', () => {
+  it.each(['close', 'killForTests'])('blocks %s addressed to the browser', (method) => {
+    const frame = JSON.stringify({ id: 7, guid: 'browser@3f2a91c4', method, params: {} });
+    expect(inspectClientFrame(frame)).toMatchObject({ blocked: true, reason: 'browser teardown blocked' });
+  });
+
+  // Closing a context is ordinary work — every script does it between shots — and its guid shares
+  // the first seven characters with the browser's. This is the case a prefix match gets wrong.
+  it('allows close addressed to a browser context', () => {
+    const frame = JSON.stringify({ id: 8, guid: 'browser-context@3f2a91c4', method: 'close', params: {} });
+    expect(inspectClientFrame(frame)).toEqual({ blocked: false });
+  });
+
+  it.each(['page@3f2a91c4', 'frame@3f2a91c4', 'browser-type@3f2a91c4'])('allows close addressed to %s', (guid) => {
+    const frame = JSON.stringify({ id: 9, guid, method: 'close', params: {} });
+    expect(inspectClientFrame(frame)).toEqual({ blocked: false });
+  });
+
+  it('allows every other method on the browser itself', () => {
+    for (const method of ['newContext', 'newPage', 'version', 'newBrowserCDPSession']) {
+      const frame = JSON.stringify({ id: 10, guid: 'browser@3f2a91c4', method, params: {} });
+      expect(inspectClientFrame(frame)).toEqual({ blocked: false });
+    }
+  });
+
+  // The rule fires on an attributed request, not on the word `close` appearing in a frame.
+  it('allows a close method on a frame that names no object', () => {
+    expect(inspectClientFrame(JSON.stringify({ id: 11, method: 'close' }))).toEqual({ blocked: false });
+  });
+
+  it('still blocks a file: URL carried on a browser frame that is not a teardown', () => {
+    const frame = JSON.stringify({ guid: 'browser@3f2a91c4', method: 'newPage', params: { url: 'file:///etc/passwd' } });
+    expect(inspectClientFrame(frame)).toMatchObject({ blocked: true, reason: 'file: URL blocked' });
+  });
+});
+
 describe('inspectServerFrame', () => {
   it('allows page content that merely mentions file://', () => {
     const frame = JSON.stringify({ id: 1, result: { value: 'see file:///etc/hosts for details' } });
@@ -122,6 +161,14 @@ describe('inspectServerFrame', () => {
 
   it('allows an ordinary navigation result', () => {
     const frame = JSON.stringify({ id: 1, result: { url: 'https://example.com/', documentURL: 'https://example.com/' } });
+    expect(inspectServerFrame(frame)).toEqual({ blocked: false });
+  });
+
+  // The browser reports its own death as a `close` event under the same guid and method a teardown
+  // request uses, so the rule is one-directional on purpose. A client that is never told its browser
+  // died is worse off than one that is.
+  it('relays the browser\'s own close event back to the client', () => {
+    const frame = JSON.stringify({ guid: 'browser@3f2a91c4', method: 'close', params: {} });
     expect(inspectServerFrame(frame)).toEqual({ blocked: false });
   });
 });
