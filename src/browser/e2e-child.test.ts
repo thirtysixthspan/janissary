@@ -14,6 +14,18 @@ vi.mock('playwright', () => ({
   chromium: { launchServer: mocks.launchServer, executablePath: mocks.executablePath },
 }));
 
+// The supervisor's own retry delay would otherwise make every replacement test wait on a real timer.
+vi.mock('node:timers/promises', () => ({ setTimeout: vi.fn(async () => {}) }));
+
+// A launched server, with the close listener the supervisor registers held so a test can fire it.
+function serverStub(): { on: ReturnType<typeof vi.fn>; die: () => void } {
+  const listeners: (() => void)[] = [];
+  return {
+    on: vi.fn((_event: string, listener: () => void) => { listeners.push(listener); }),
+    die: () => { for (const listener of listeners) listener(); },
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.launchServer.mockResolvedValue({ on: vi.fn() });
@@ -90,5 +102,32 @@ describe('runE2EBrowser launch options', () => {
     expect(options.headless).toBe(true);
     expect(options.executablePath).toBe('/pw/chrome-mac/Chromium');
     expect(options.downloadsPath).toBe('/ws/browsers/bot-token/downloads');
+  });
+});
+
+// A browser that dies used to take the child with it, and the tab kept advertising an endpoint that
+// nothing answered for the rest of its life.
+describe('runE2EBrowser replacing a browser that died', () => {
+  async function run(): Promise<{ on: ReturnType<typeof vi.fn>; die: () => void }> {
+    const first = serverStub();
+    mocks.launchServer.mockResolvedValueOnce(first).mockResolvedValue(serverStub());
+    await runE2EBrowser({ port: 51_234, wsPath: '/internal-token', dir: '/ws/browsers/bot-token' });
+    return first;
+  }
+
+  it('launches again rather than letting the first close be the end of it', async () => {
+    const first = await run();
+    expect(mocks.launchServer).toHaveBeenCalledTimes(1);
+    first.die();
+    await vi.waitFor(() => { expect(mocks.launchServer).toHaveBeenCalledTimes(2); });
+  });
+
+  // The endpoint and the internal path were handed out once and cannot be reissued to a harness that
+  // is already running, so the replacement has to land on exactly the same address.
+  it('relaunches on the same port, path, host, and downloads directory', async () => {
+    const first = await run();
+    first.die();
+    await vi.waitFor(() => { expect(mocks.launchServer).toHaveBeenCalledTimes(2); });
+    expect(mocks.launchServer.mock.calls[1][0]).toEqual(mocks.launchServer.mock.calls[0][0]);
   });
 });
