@@ -86,13 +86,24 @@ describe('RemoteProcesses e2e browser', () => {
   it('sends browser-exited when the remote\'s browser is gone', () => {
     const { send } = spawnHarness(true);
     vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone('e2e browser exited');
-    expect(send).toHaveBeenCalledWith({ type: 'browser-exited', id: 'r1' } satisfies ServerFrame);
+    expect(send).toHaveBeenCalledWith(
+      { type: 'browser-exited', id: 'r1', message: 'e2e browser exited' } satisfies ServerFrame,
+    );
   });
 
   it('sends browser-exited when the remote\'s browser fails to start at all', () => {
     const { send } = spawnHarness(true);
     vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone('e2e browser failed to start: ENOENT');
-    expect(send).toHaveBeenCalledWith({ type: 'browser-exited', id: 'r1' });
+    expect(send).toHaveBeenCalledWith({ type: 'browser-exited', id: 'r1', message: 'e2e browser failed to start: ENOENT' });
+  });
+
+  // Only this host sees what the confined browser said, so the frame is where that has to travel.
+  it('carries the browser\'s own output on the frame', () => {
+    const { send } = spawnHarness(true);
+    vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone('e2e browser exited\nlaunch failed: no such executable');
+    expect(send).toHaveBeenCalledWith({
+      type: 'browser-exited', id: 'r1', message: 'e2e browser exited\nlaunch failed: no such executable',
+    });
   });
 });
 

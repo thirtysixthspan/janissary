@@ -221,6 +221,44 @@ describe('HarnessTab', () => {
     expect(getByText('Failed to create workspace: no origin remote')).toBeInTheDocument();
   });
 
+  // The whole point of putting this on the view: a harness tab's body is its PTY, so a line written
+  // into the tab's log would never be drawn, and one written into the terminal would be painted over
+  // by the harness's next repaint.
+  it('shows the browser-gone report above the terminal', () => {
+    const { getByText } = render(
+      <HarnessTab
+        harness={makeHarness({ browserError: 'e2e browser exited\nlaunch failed: no such executable' })}
+        client={mockClient}
+        label="claude"
+      />,
+    );
+    expect(getByText(/launch failed: no such executable/)).toBeInTheDocument();
+  });
+
+  it('keeps the report\'s own line breaks rather than reflowing them', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness({ browserError: 'e2e browser exited\nlaunch failed' })} client={mockClient} label="claude" />,
+    );
+    expect(container.querySelector('.harness-browser-gone')).toHaveTextContent(
+      'e2e browser exited\nlaunch failed', { normalizeWhitespace: false },
+    );
+  });
+
+  it('shows the report alongside the terminal, not in place of it', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness({ browserError: 'e2e browser exited' })} client={mockClient} label="claude" />,
+    );
+    expect(container.querySelector('.harness-browser-gone')).toBeInTheDocument();
+    expect(container.querySelector('.harness-body')).toBeInTheDocument();
+  });
+
+  it('shows nothing while the browser is fine', () => {
+    const { container } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+    );
+    expect(container.querySelector('.harness-browser-gone')).not.toBeInTheDocument();
+  });
+
   it('shows the given cwd in the metadata row', () => {
     const { getByText } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" cwd="~/project" />,

@@ -193,11 +193,23 @@ allows.
 and the offline profile then denies the harness any network route to reach its own browser. Neither
 flag is rejected.
 
-When the browser is gone — a launch that failed, a browser that exited, or a guard that died — a line
-appears in the notifications tab naming the tab it belonged to. Nothing restarts it; a later attempt
-to connect simply fails. As with every notification, a user with the notifications tab closed sees
-nothing. Closing a `-b` tab stops its browser and removes its scratch directory — only that
+When the browser is gone — a launch that failed, a browser that exited, or a guard that died — the
+report is delivered twice: a line in the notifications tab naming the tab it belonged to, and the
+same text on the `-b` tab itself, in a band above its terminal where a failed workspace clone already
+reports itself. The notifications tab is opt-in, and the agent whose next connection attempt is about
+to fail is working in the `-b` tab, so neither delivery covers the other. The band rather than the
+tab's transcript, because a harness tab's body is its terminal and nothing renders that transcript;
+and rather than a line written into the terminal, because the harness's next repaint would paint over
+it. The tab keeps running — only its browser is gone. Nothing restarts it; a later attempt to connect
+simply fails. Closing a `-b` tab stops its browser and removes its scratch directory — only that
 browser's own directory, which no tab and no other browser shares.
+
+The report carries whatever the browser said on its own output before it went, on the lines below the
+message: Playwright's launch error, a sandbox profile that would not compile, a port that would not
+bind. Without it every one of those failures reads as the same `e2e browser exited` and there is
+nothing to act on. A browser that said nothing produces the message alone. What is kept is bounded to
+the last 2000 characters and the last 10 lines of them, and it is read out before the browser is torn
+down, so the report describes what the browser actually said rather than what survived the teardown.
 
 A browser that ends on its own releases the same things at the moment it ends, rather than holding
 them until its tab closes: the endpoint stops accepting connections, the browser process is gone,

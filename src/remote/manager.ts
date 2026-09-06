@@ -98,7 +98,7 @@ export class RemoteManager {
             handlers.onFailed(frame.message);
             break;
           }
-          case 'browser-exited': { this.notifyBrowserGone(frame.id); break; }
+          case 'browser-exited': { this.notifyBrowserGone(frame.id, frame.message); break; }
           default: { transcript.push(frame.blocks); }
           }
         },
@@ -194,10 +194,17 @@ export class RemoteManager {
   // A remote `-b` tab's browser is gone. The tab is resolved from the frame's session id rather than
   // from the channel's label, because joined tabs share a channel and the channel label would name
   // the wrong one. A frame for an already-closed tab is dropped.
-  private notifyBrowserGone(sessionId: string): void {
+  //
+  // Delivered onto the tab as well as into the notifications tab, for the same reason the local
+  // path does it: the agent whose next `connect()` is about to fail is working in that tab, and a
+  // notification is worth nothing to a user who keeps the feed closed.
+  private notifyBrowserGone(sessionId: string, message?: string): void {
     const tab = this.managers.tab.tabs.find((t) => t.harness?.ptyId === sessionId);
-    if (!tab) return;
-    notify(this.managers, 'e2e-browser-gone', tab.label, 'e2e browser stopped on the remote host');
+    if (!tab?.harness) return;
+    const text = message ?? 'e2e browser stopped on the remote host';
+    notify(this.managers, 'e2e-browser-gone', tab.label, text);
+    tab.harness.browserError = text;
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   private channelClosed(anyLabel: string): void {

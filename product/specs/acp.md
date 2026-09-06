@@ -12,6 +12,8 @@ Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns t
 
 If the agent process dies — a failed spawn, a missing binary, or a crash mid-session — the session no longer exists, so it is reported as an `ACP: <message>` line in the tab and forgotten. The tab stays open and the next `acp <prompt>` starts a fresh session rather than writing into a dead one. A prompt that merely *fails* is different: a rate-limited reply reports itself and leaves the session alone, so the accumulated conversation is not thrown away for a condition that clears on its own.
 
+The report carries whatever the agent said on its own standard error, on the line below the message. The agent's standard output is the protocol transport, so standard error is the only place it can explain itself — an authentication that expired, a version it will not speak, what to run to start a new session. When it said nothing, the line is the message alone: `ACP: ACP agent exited.` What it kept is bounded to the last 2000 characters and the last 10 lines of them, so an agent that spews before dying cannot flood the transcript. See [[transcript]].
+
 The `acp` command's per-tab session and a [[conversations]] session are separate uses of the same protocol channel. A conversation session is tool-less, runs in the conversation's own workspace, and sends a plain text query directly; it does not enter the `acp` command's database/browser tool loop.
 
 ### Reply streaming

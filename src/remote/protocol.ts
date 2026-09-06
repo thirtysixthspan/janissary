@@ -136,7 +136,11 @@ export type ServerFrame =
   // a guard that died. The local side raises the same notification it would for a local one. No
   // supervisor and no restart on either side: once it is gone, `connect()` fails with a plain
   // connection error.
-  | { type: 'browser-exited'; id: string }
+  //
+  // `message` is what the far side composed, the confined browser's own output included. It is
+  // optional because only that host can say anything useful about a host the local side never sees;
+  // absent, the local side falls back to naming the remote and nothing more.
+  | { type: 'browser-exited'; id: string; message?: string }
   | { type: 'transcript'; blocks: string[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }

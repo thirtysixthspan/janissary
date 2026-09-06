@@ -1,6 +1,7 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
 import { harnessSpawnEnv } from './scratch-dir.js';
+import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
@@ -17,7 +18,6 @@ import { notify } from '../notifications.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
-import type { ProvisioningWorkspace } from '../workspace/manager.js';
 import { startRemoteTab } from './remote-launch.js';
 import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 import type { Managers } from '../managers.js';
@@ -120,7 +120,7 @@ export class HarnessManager {
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
     const fallbackCwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
 
-    const dir = this.parseDir(this.resolveCwd(workspace && !remote, label, fallbackCwd));
+    const dir = resolveLaunchDir(this.managers, workspace && !remote, label, fallbackCwd);
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
@@ -140,7 +140,7 @@ export class HarnessManager {
     const unique = uniqueLabel(this.managers.tab.tabs, label);
     const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
     if (remote && 'error' in remote) return remote.error;
-    const dir = this.parseDir(this.resolveCwd((entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd()));
+    const dir = resolveLaunchDir(this.managers, (entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd());
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
@@ -217,7 +217,7 @@ export class HarnessManager {
     // the far side from the `browser` flag on the spawn frame.
     const spawnEnv = channel
       ? { env: undefined, handle: undefined }
-      : harnessSpawnEnv({ name, cwd, label, browser, onBrowserGone: (message) => notify(this.managers, 'e2e-browser-gone', label, message) });
+      : harnessSpawnEnv({ name, cwd, label, browser, onBrowserGone: (message) => this.browserGone(label, message) });
     // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
@@ -233,6 +233,17 @@ export class HarnessManager {
     if (remote) this.managers.tab.setCwd(label, cwd);
     const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove));
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // The tab's browser is gone, delivered twice. The notifications tab carries it as before, and the
+  // tab itself now carries it too, above its terminal, the way a failed workspace clone does. A
+  // notification is worth nothing to a user who keeps that feed closed, and the agent whose next
+  // `connect()` is about to fail is working in this tab.
+  private browserGone(label: string, message: string): void {
+    notify(this.managers, 'e2e-browser-gone', label, message);
+    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    if (tab?.harness) tab.harness.browserError = message;
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -256,31 +267,5 @@ export class HarnessManager {
       const index = this.managers.tab.findIndex(label);
       if (index !== -1) this.managers.tab.closeTab(index);
     }, PROVISION_FAILURE_CLOSE_DELAY_MS);
-  }
-
-  // Parse `resolveCwd`'s result into a clean `{ cwd, workspaceDir, ready }` or return the error
-  // string. `ready` is only set for a workspace clone still in flight — its `cwd` is already the
-  // clone's target directory (known synchronously, see `WorkspaceManager.create`), so the tab and
-  // its cwd can be set up immediately without waiting for `ready` to resolve.
-  private parseDir(
-    resolved: string | ProvisioningWorkspace | { error: string },
-  ): string | { cwd: string; workspaceDir: string | undefined; ready: Promise<void> | undefined } {
-    if (typeof resolved !== 'string' && 'error' in resolved) return resolved.error;
-    return {
-      cwd: typeof resolved === 'string' ? resolved : resolved.dir,
-      workspaceDir: typeof resolved === 'string' ? undefined : resolved.dir,
-      ready: typeof resolved === 'string' ? undefined : resolved.ready,
-    };
-  }
-
-  // The harness's starting directory: a new workspace clone (with `workspace`) or `fallbackCwd`.
-  // Returns the directory, or an `{ error }` to surface when there's no repo or the remote can't
-  // be read (both fail synchronously, before anything is cloned — see `WorkspaceManager.create`).
-  // A workspace clone is returned as `{ dir, ready }` (not a bare string) so the caller can tell it
-  // apart from the fallback cwd, record it on the tab for cleanup on close, and defer the PTY spawn
-  // until `ready` resolves.
-  private resolveCwd(workspace: boolean, label: string, fallbackCwd: string): string | ProvisioningWorkspace | { error: string } {
-    if (!workspace) return fallbackCwd;
-    return this.managers.workspace.create(label);
   }
 }

@@ -140,6 +140,8 @@ describe('frame codec', () => {
     ['spawn with a non-boolean browser flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, browser: 'yes' }],
     ['browser-exited without an id', { type: 'browser-exited' }],
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
+    ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
+    ['browser-exited with a non-string message', { type: 'browser-exited', id: 'r1', message: 7 }],
     ['input without string data', { type: 'input', id: 'r1', data: 1 }],
     ['resize with a zero column count', { type: 'resize', id: 'r1', cols: 0, rows: 24 }],
     ['resize with a fractional row count', { type: 'resize', id: 'r1', cols: 80, rows: 2.5 }],
@@ -204,6 +206,15 @@ describe('frame codec', () => {
     expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1' }))).toEqual({
       type: 'browser-exited', id: 'r1',
     });
+  });
+
+  // The message is the confined browser's own output, so it carries newlines. JSON escaping is what
+  // keeps that from being read as the end of a frame.
+  it('round-trips a browser-exited frame carrying a multi-line message', () => {
+    const message = 'e2e browser exited\nbrowserType.launchServer: Executable doesn\'t exist';
+    const encoded = encodeFrame({ type: 'browser-exited', id: 'r1', message });
+    expect(encoded).not.toContain('\n');
+    expect(decodeFrame(encoded)).toEqual({ type: 'browser-exited', id: 'r1', message });
   });
 
   it('drops undeclared filesystem arguments after validating the operation', () => {

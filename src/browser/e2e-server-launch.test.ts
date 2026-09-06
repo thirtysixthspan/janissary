@@ -153,8 +153,15 @@ describe('startE2EBrowserServer workspace', () => {
 
 describe('startE2EBrowserServer child launch', () => {
   function spawnCall() {
-    return mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }];
+    return mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv; stdio: unknown }];
   }
+
+  // Both output slots piped, not ignored: what the browser says on its way out is the only account
+  // of why it went, and an unread pipe would block the child once its buffer filled.
+  it('pipes the child\'s output rather than discarding it', () => {
+    start();
+    expect(spawnCall()[2].stdio).toEqual(['ignore', 'pipe', 'pipe']);
+  });
 
   it('runs the server\'s own interpreter', () => {
     start();

@@ -104,7 +104,11 @@ On a machine without macOS sandboxing, or with workspace isolation switched off,
 
 `-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
 
-If the browser dies, a line appears in your notifications tab naming the tab it belonged to. Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
+If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The harness keeps running — only its browser is gone.
+
+The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
+
+Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
 
 ## Knowing when a harness needs you
 

@@ -58,7 +58,9 @@ export class RemoteProcesses {
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({
         name: frame.harness, cwd: this.workspaceDir, label: this.label, browser: frame.browser ?? false,
-        onBrowserGone: () => this.send({ type: 'browser-exited', id: frame.id }),
+        // The message travels with the frame: only this host saw the browser's own output, and the
+        // tab that needs it is on the other side of the ssh transport.
+        onBrowserGone: (message) => this.send({ type: 'browser-exited', id: frame.id, message }),
       });
     this.browsers.set(frame.id, spawnEnv.handle);
     // A throw here leaves before `spawn` records the entry, so neither `kill` nor `finish` will ever
