@@ -110,6 +110,8 @@ If the browser dies, you get the news in two places: a line in your [notificatio
 
 The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
 
+It also tells you how the browser went, which is what you get when it said nothing: the message ends in the exit status, as `e2e browser exited (code 1)` or `(signal SIGKILL)` for one something killed, and the line below it reports Chromium's own status the same way. So `(code 0)` on both lines is a browser that shut down gracefully, and a signal on either is one that didn't.
+
 Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
 
 ## Knowing when a harness needs you

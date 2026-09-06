@@ -50,7 +50,7 @@ vi.mock('./e2e-ports.js', async (importOriginal) => {
 export type ChildStub = {
   on: ReturnType<typeof vi.fn>;
   kill: ReturnType<typeof vi.fn>;
-  handlers: Map<string, (arg?: unknown) => void>;
+  handlers: Map<string, (...args: unknown[]) => void>;
   // Real streams rather than mocks, so the tail the session keeps is read through the same
   // `setEncoding`/`readable`/`read()` path a spawned child's pipes go through.
   stdout: PassThrough;
@@ -60,7 +60,7 @@ export type ChildStub = {
 };
 
 function makeChild(): ChildStub {
-  const handlers = new Map<string, (arg?: unknown) => void>();
+  const handlers = new Map<string, (...args: unknown[]) => void>();
   const stderr = new PassThrough();
   return {
     handlers,
@@ -68,7 +68,7 @@ function makeChild(): ChildStub {
     stderr,
     say: (text: string) => { stderr.write(text); },
     kill: vi.fn(),
-    on: vi.fn((event: string, handler: (arg?: unknown) => void) => { handlers.set(event, handler); }),
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => { handlers.set(event, handler); }),
   };
 }
 
