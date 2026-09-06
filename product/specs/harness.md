@@ -215,16 +215,9 @@ nothing to act on. A browser that said nothing produces the message alone. What 
 the last 2000 characters and the last 10 lines of them, and it is read out before the browser is torn
 down, so the report describes what the browser actually said rather than what survived the teardown.
 
-What the browser says is Chromium's own output, and it reaches janissary only because the process
-that launched it relays it. Playwright reads the browser's two streams into a logger of its own and
-otherwise drops every line, attaching them to a launch that failed and to nothing else. So a browser
-that came up and died later used to leave behind janissary's two status lines about the death and
-not one word from the browser itself — nothing it printed while it ran, nothing it managed to say as
-it went. Those lines are carried through now, as the browser produces them. What a fatal signal
-still does not add is a stack trace: crash reporting is off in the browser Playwright ships, so a
-segfault ends the process on the spot rather than dumping the frames that named where it faulted.
-
 That tail is what fits on a notification line, and it is not the whole of what a dying browser says.
+A browser killed by a signal — a segfault being the case this was built for — writes a stack trace
+far longer than ten lines, and the frames naming where it faulted are the first thing the tail drops.
 So the complete output is also written to its own log file under `.janissary/browser-logs/`, named
 for the tab and the moment the browser ended, and led by the same report the message opens with. The
 notification line carries a link to it: one click opens the whole account in an editor tab, the same
