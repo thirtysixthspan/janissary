@@ -54,10 +54,12 @@ export function parseE2EBrowserArgs(argv: string[], env: NodeJS.ProcessEnv): E2E
  * launching, which `executablePath()` gives it and a channel selection does not.
  *
  * Everything Chromium persists lands inside `dir`, which is what the browser profile's `WORKSPACE`
- * parameter names: downloads go to `dir` explicitly, and the browser profile lands in `dir`'s temp
- * sibling because the caller points `TMPDIR` there and Playwright creates its own profile directory
- * under `os.tmpdir()`. The user data directory is deliberately NOT passed as a Chromium argument —
- * Playwright owns that flag and rejects an invocation that supplies its own.
+ * parameter names: downloads go to `dir` explicitly, and the browser profile and Chromium's own temp
+ * directories (the ProcessSingleton socket directory among them) land in `dir`'s temp sibling
+ * because the caller points both `TMPDIR` and `MAC_CHROMIUM_TMPDIR` there — Playwright creates its
+ * own profile directory under `os.tmpdir()`, while Chromium's macOS temp resolution ignores `TMPDIR`
+ * and reads the second variable instead. The user data directory is deliberately NOT passed as a
+ * Chromium argument — Playwright owns that flag and rejects an invocation that supplies its own.
  *
  * The directory is created empty by the caller and is never a git clone, so a `file://` read that
  * got past the protocol guard finds nothing worth having.

@@ -316,21 +316,30 @@ reads are otherwise broadly allowed. The browser's own scratch directory is allo
 since it lives inside the denied directory. It may
 write only inside its own scratch directory, that directory's temp sibling, and the Darwin per-user
 cache. Networking, POSIX shared memory, IOKit property reads, and `sysctl-read` are allowed, since
-Chromium fails to start rather than degrading without them.
+Chromium fails to start rather than degrading without them. The browser process also checks one
+bootstrap service in — Chromium's per-pid mach-port rendezvous endpoint, which its helper processes
+dial during startup — and that registration is narrowed by name to the service the bundled Chrome for
+Testing publishes, because an unqualified registration right would let the process impersonate any
+service in the same bootstrap namespace.
 
 That scratch directory is created fresh and empty for each `-b` tab, is never a clone of the
 project, and is removed when the tab closes. The browser child uses it as its working directory, so
 runtime startup never depends on read access to the Janissary server's working directory. The
 minimal browser profile grants exact-file reads to the bundled agent-name and harness-model
 catalogs loaded by Janissary's source entry, without granting the installation root. The scratch
-directory holds the browser's profile and downloads, so a `file:` read that got past the guard
-finds a disposable directory with nothing in it — and cannot reach the code under test, which the
-browser has no reason to read.
+directory holds the browser's profile and downloads — the profile and Chromium's own temp
+directories, its ProcessSingleton socket directory included, in the temp sibling — so a `file:` read
+that got past the guard finds a disposable directory with nothing in it — and cannot reach the code
+under test, which the browser has no reason to read.
 
 **What the browser is given.** The browser process does not inherit a filtered copy of the Janissary
 server's environment the way a harness does. It is given a named, minimal set of variables — enough
 to start and to find its own browser binary, its scratch temp directory, and the locale — and
-nothing else crosses. It receives none of the project's configured credentials, none of the ambient
+nothing else crosses. The temp directory is named twice: `TMPDIR` for the Playwright side, which
+creates the browser profile under it, and `MAC_CHROMIUM_TMPDIR` for Chromium's own temp
+directories, because Chromium's macOS temp-dir resolution ignores `TMPDIR` entirely and would
+otherwise fall back to the real per-user temp directory the sandbox denies. It receives none of the
+project's configured credentials, none of the ambient
 provider keys a harness is deliberately allowed to keep, no agent socket, and not the user's git
 identity. Unlike the confinement below, this holds on every host: a machine that cannot sandbox the
 browser is a reason to give it less, not more.

@@ -205,6 +205,15 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
     }
   });
 
+  // The mach-port rendezvous check-in Chromium's browser process performs during startup, and its
+  // helpers dial — allowed, but only by the exact per-pid service name the bundled Chrome for
+  // Testing publishes. An unqualified mach-register would let this process impersonate any service
+  // in the same bootstrap namespace, which is the route the pboard deny beside it closes.
+  it('narrows the rendezvous check-in to the service name the bundled Chromium publishes', () => {
+    const rule = String.raw`(allow mach-register (global-name-regex #"^com\.google\.chrome\.for\.testing\.MachPortRendezvousServer\."))`;
+    expect(RULES).toContain(rule);
+  });
+
   it('allows the network, since what the browser may navigate to is the guard\'s job', () => {
     expect(RULES).toContain('(allow network*)');
   });

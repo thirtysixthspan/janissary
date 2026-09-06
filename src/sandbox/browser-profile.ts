@@ -157,6 +157,15 @@ ${stateDenyClauses})
 (allow mach-lookup)
 (deny mach-lookup (global-name-regex #"^com\.apple\.pboard"))
 
+; Mach-port rendezvous: Chromium's multi-process startup hands each helper the mach ports it needs
+; through a bootstrap service the browser process checks in under a name derived from its bundle id
+; plus its own pid, and the helpers look up. A check-in is a registration, denied by the default
+; above, and named here — narrowed to that one name, because an unqualified mach-register would let
+; this process impersonate any service in the same bootstrap namespace (which is exactly what the
+; pboard deny beside it exists to prevent reaching). The name is stable: the e2e child launches
+; Playwright's Chrome for Testing bundle and nothing else (see src/browser/e2e-child.ts).
+(allow mach-register (global-name-regex #"^com\.google\.chrome\.for\.testing\.MachPortRendezvousServer\."))
+
 ; POSIX shared memory: Chromium's multi-process architecture moves rendered frames and IPC buffers
 ; between its browser, renderer, and GPU processes through shm segments, and it aborts at startup
 ; rather than degrading if it cannot create them.
