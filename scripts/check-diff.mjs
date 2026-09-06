@@ -24,6 +24,9 @@ const hasLintable = files.some((f) => {
 });
 const touchesSrc = files.some((f) => f.startsWith('src/'));
 const touchesWeb = files.some((f) => f.startsWith('web/'));
+// The server project also carries the tests for scripts/ (see vitest.config.ts), which have no
+// TypeScript project of their own to typecheck.
+const touchesScripts = files.some((f) => f.startsWith('scripts/'));
 
 // Tools to run with timing
 const tools = [];
@@ -42,7 +45,7 @@ if (touchesSrc || touchesWeb) {
   });
 }
 
-if (touchesSrc) {
+if (touchesSrc || touchesScripts) {
   tools.push({
     name: 'test:server',
     run: () => execFileSync('npm', ['run', 'test:diff:server'], { stdio: 'pipe', encoding: 'utf8' }),

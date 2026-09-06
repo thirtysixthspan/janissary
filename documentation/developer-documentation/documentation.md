@@ -18,4 +18,6 @@ npm run playwright:install-chromium    # one-time, if Chromium isn't installed y
 ./scripts/run.mjs docs-screenshots     # regenerate every shot (or pass specific shot names)
 ```
 
-The script is host-only (sandboxed workspaces can't reach Playwright's browser cache). When a UI change alters what a screenshot shows, regenerate and commit the PNGs in the same PR — same rule as any other doc change. Shots that need a harness binary (e.g. `claude`) are skipped with a warning when it isn't on `PATH`.
+The run drives whichever browser it can reach. On a host that is a Chromium it launches itself, which is what `playwright:install-chromium` provides. Inside a sandboxed workspace it is the browser janissary attached to the tab, named by `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` — a tab launched without `-b` has neither, and there capture still fails on the missing Chromium, because the sandbox denies reading Playwright's browser cache.
+
+When a UI change alters what a screenshot shows, regenerate and commit the PNGs in the same PR — same rule as any other doc change. Shots that need a harness binary (e.g. `claude`) are skipped with a warning when it isn't on `PATH`.

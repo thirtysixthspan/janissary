@@ -11,7 +11,7 @@ export default defineConfig({
         test: {
           name: 'server',
           environment: 'node',
-          include: ['src/**/*.test.{ts,tsx}'],
+          include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
           exclude: [
             ...configDefaults.exclude,
             '**/*.browser.test.{ts,tsx}', '**/*.sandbox.test.{ts,tsx}', '**/*.unsandboxed.test.{ts,tsx}',
