@@ -125,6 +125,21 @@ describe('AgentTabMeta', () => {
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
   });
 
+  it('renders the browser flag as a globe icon with its accessible label', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['browser']} />);
+    const flag = getByRole('img', { name: 'E2E browser' });
+    expect(flag).toHaveAttribute('title', 'E2E browser');
+    expect(flag.querySelector('svg[data-icon="globe"]')).not.toBeNull();
+  });
+
+  it('renders all three flag icons together in the order the server sent them', () => {
+    const { container } = render(
+      <AgentTabMeta cwd="~/project" flags={['workspaced', 'autoApprove', 'browser']} />,
+    );
+    const icons = [...container.querySelectorAll<SVGElement>(':scope .tab-flag svg')].map((svg) => svg.dataset.icon);
+    expect(icons).toEqual(['box', 'bolt', 'globe']);
+  });
+
   it('renders an active connections button with hover and click handlers wired', () => {
     const onEnter = vi.fn();
     const onLeave = vi.fn();

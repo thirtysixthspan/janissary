@@ -5,6 +5,7 @@ export {
   faPlus as newTabIcon,
   faBox as workspacedIcon,
   faBolt as autoPermitIcon,
+  faGlobe as browserIcon,
   faThumbsUp as approveIcon,
   faThumbsDown as rejectIcon,
   faClipboard as snapshotIcon,

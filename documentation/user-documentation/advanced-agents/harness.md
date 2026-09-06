@@ -96,6 +96,8 @@ There's no test runner here and no pass/fail reporting. The two variables are th
 
 The browser is always headless, each `-b` tab gets its own, and the flag works for every harness, with or without a workspace. Combine it with the other options in any order.
 
+A tab with a browser shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". That's how you tell at a glance which of your harnesses has one.
+
 ::: warning A browser endpoint is powerful, so this one is contained
 Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
 
@@ -104,7 +106,7 @@ On a machine without macOS sandboxing, or with workspace isolation switched off,
 
 `-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
 
-If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The harness keeps running — only its browser is gone.
+If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, so the row never claims a browser that isn't there. The harness keeps running — only its browser is gone.
 
 The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
 

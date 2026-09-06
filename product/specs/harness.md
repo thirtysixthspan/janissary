@@ -217,6 +217,11 @@ and the scratch directory is removed. That holds for a launch that never got tha
 part of it had started is undone. The notification arrives once, after the release, and never for a
 browser the user closed themselves.
 
+A `-b` tab says so in its metadata row: a globe icon among the row's flag icons, to the right of the
+workspaced and auto-permitting ones, with "E2E browser" as its tooltip (see Metadata row in
+`tabs.md`). The icon tracks the browser rather than the launch flag, so it disappears on the same
+update that raises the gone-browser band above the terminal.
+
 The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
 checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.
 
