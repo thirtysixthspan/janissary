@@ -12,6 +12,7 @@ import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project-init.js';
 import { runRemoteServer } from './remote/serve.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
+import { initBrowserLogDirectory, clearBrowserLogDirectory } from './browser/browser-log.js';
 import { initGlobalHistory } from './global-history.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
@@ -194,6 +195,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   initHarnessCaptureDirectory(cwd);
   initHarnessRecordingDirectory(cwd);
   initHarnessTranscriptDirectory(cwd);
+  initBrowserLogDirectory(cwd);
   initGlobalHistory();
   initDbDir(cwd);
   initProfileDir(cwd, path.join(import.meta.dirname, '..'));
@@ -208,7 +210,7 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadProjectTokens(cwd);
   loadGitIdentity(cwd);
   clearRemoteFileCache();
-  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); }
+  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); clearBrowserLogDirectory(); }
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {

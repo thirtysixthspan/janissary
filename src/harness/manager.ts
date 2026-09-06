@@ -1,6 +1,7 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
 import { harnessSpawnEnv } from './scratch-dir.js';
+import { writeBrowserLog } from '../browser/browser-log.js';
 import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
@@ -217,7 +218,10 @@ export class HarnessManager {
     // the far side from the `browser` flag on the spawn frame.
     const spawnEnv = channel
       ? { env: undefined, handle: undefined }
-      : harnessSpawnEnv({ name, cwd, label, browser, onBrowserGone: (message) => this.browserGone(label, message) });
+      : harnessSpawnEnv({
+        name, cwd, label, browser,
+        onBrowserGone: (message, log) => this.browserGone(label, message, log),
+      });
     // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
@@ -240,8 +244,15 @@ export class HarnessManager {
   // tab itself now carries it too, above its terminal, the way a failed workspace clone does. A
   // notification is worth nothing to a user who keeps that feed closed, and the agent whose next
   // `connect()` is about to fail is working in this tab.
-  private browserGone(label: string, message: string): void {
-    notify(this.managers, 'e2e-browser-gone', label, message);
+  //
+  // Everything the browser said is kept beside those two reports, in a file the notification line
+  // links, because the reports themselves are bounded to a readable tail and a crash trace is
+  // longer than that bound. Written whether or not the feed is open — unlike an auto-approve
+  // capture, which is written per approval and would otherwise pile up unread. A death is rare and
+  // its evidence is the point, the same reasoning that keeps the dead browser's scratch directory.
+  private browserGone(label: string, message: string, log?: string): void {
+    const logFile = log ? writeBrowserLog(label, Date.now(), log) : undefined;
+    notify(this.managers, 'e2e-browser-gone', label, message, logFile);
     const tab = this.managers.tab.tabs.find((t) => t.label === label);
     if (tab?.harness) tab.harness.browserError = message;
     messageBus.emit('state', { type: 'dirty' });

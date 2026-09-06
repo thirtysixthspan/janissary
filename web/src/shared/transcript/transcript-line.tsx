@@ -87,15 +87,17 @@ function hitForLine(highlight: LineHighlight | undefined, index: number): { hit:
   return { hit, props: hit ? { 'data-search-hit': true } : {} };
 }
 
-// A clickable "view capture" affordance on a notification line: opens the captured file in an
-// editor tab, mirroring the file-link click path.
+// A clickable affordance on a notification line: opens the file the line was recorded with in an
+// editor tab, mirroring the file-link click path. The artifact varies with the event — the screen
+// behind an auto-approved permission prompt, the full output of a browser that died — so the link
+// names the action rather than any one of them.
 function OpenFileLink({ path, onEditFile }: { path: string; onEditFile: (target: string) => void }) {
   return (
     <span
       className="file-link"
       role="link"
-      aria-label="View capture"
-      title="Open the captured screen in an editor tab"
+      aria-label="View linked file"
+      title="Open the linked file in an editor tab"
       onClick={() => onEditFile(path)}
     >
       <FontAwesomeIcon icon={viewCaptureIcon} />{' '}

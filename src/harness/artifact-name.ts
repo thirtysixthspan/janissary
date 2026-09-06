@@ -1,5 +1,6 @@
-// The filename shape every per-tab harness artifact under `.janissary/` shares: a screen capture
-// (`.txt`), an asciicast recording (`.cast`), and a session transcript (`.txt`). The label is
+// The filename shape every per-tab artifact under `.janissary/` shares: a screen capture (`.txt`),
+// an asciicast recording (`.cast`), a session transcript (`.txt`), and the post-mortem of a `-b`
+// tab's dead browser (`.log`, see `src/browser/browser-log.ts`). The label is
 // sanitized rather than rejected — the tab exists, so its label is legitimate even when it holds
 // filename-hostile characters (`/`, `.`) — and the ISO timestamp's `:`/`.` are replaced with `-`
 // so the name is portable across filesystems.

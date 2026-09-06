@@ -5,9 +5,10 @@ import type { Tab } from '../tab/types.js';
 
 const browserMock = vi.hoisted(() => ({
   handles: [] as { close: ReturnType<typeof vi.fn> }[],
-  onGone: [] as ((message: string) => void)[],
+  onGone: [] as ((message: string, log?: string) => void)[],
 }));
 const notificationMock = vi.hoisted(() => vi.fn());
+const browserLogMock = vi.hoisted(() => vi.fn(() => '/project/.janissary/browser-logs/claude-now.log'));
 
 vi.mock('./scratch-dir.js', () => ({
   claudeTmpDir: vi.fn((cwd: string) => `${cwd}/.janissary/temp`),
@@ -15,7 +16,7 @@ vi.mock('./scratch-dir.js', () => ({
     ? { CLAUDE_CODE_TMPDIR: `${cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
     : undefined)),
   harnessSpawnEnv: vi.fn((options: {
-    name: string; cwd: string; browser: boolean; onBrowserGone: (message: string) => void;
+    name: string; cwd: string; browser: boolean; onBrowserGone: (message: string, log?: string) => void;
   }) => {
     const base = options.name === 'claude'
       ? { CLAUDE_CODE_TMPDIR: `${options.cwd}/.janissary/temp`, DISABLE_AUTOUPDATER: '1' }
@@ -35,6 +36,7 @@ vi.mock('./scratch-dir.js', () => ({
   }),
 }));
 vi.mock('../notifications.js', () => ({ notify: notificationMock }));
+vi.mock('../browser/browser-log.js', () => ({ writeBrowserLog: browserLogMock }));
 vi.mock('./recorder.js', () => ({
   HarnessRecorder: vi.fn(function () { return { dispose: vi.fn() }; }),
 }));
@@ -56,10 +58,15 @@ export function browserNotificationMock() {
   return notificationMock;
 }
 
+export function browserLogWriteMock() {
+  return browserLogMock;
+}
+
 export function resetHarnessBrowserFixture(): void {
   browserMock.handles.length = 0;
   browserMock.onGone.length = 0;
   vi.clearAllMocks();
+  browserLogMock.mockReturnValue('/project/.janissary/browser-logs/claude-now.log');
 }
 
 export function makeBrowserManagers(): { managers: Managers; tabs: Tab[] } {

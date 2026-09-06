@@ -206,8 +206,19 @@ describe('renderLine — message openFile link', () => {
     const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     const link = container.querySelector('.file-link[role="link"]')!;
-    expect(link).toHaveAttribute('aria-label', 'View capture');
-    expect(link.textContent?.trim()).not.toMatch(/view capture/i);
+    expect(link).toHaveAttribute('aria-label', 'View linked file');
+    expect(link.textContent?.trim()).not.toMatch(/view linked file/i);
+  });
+
+  // The same link carries a dead browser's log, so its wording cannot name the capture behind an
+  // auto-approved prompt as though that were the only thing it opens.
+  it('opens a browser death log through the same link', async () => {
+    const intents = fakeIntents();
+    const line: BufferLine = { type: 'message', text: 'e2e browser exited (signal SIGSEGV)', from: '8:32pm claude', openFile: '/browser-logs/claude-now.log' };
+    const { container } = render(<>{renderLine(line, 0, intents, noop, vi.fn())}</>);
+    const link = container.querySelector('.file-link[role="link"]')!;
+    await userEvent.click(link);
+    expect(intents.onEditFile).toHaveBeenCalledWith('/browser-logs/claude-now.log');
   });
 
   it('renders the capture link as a clipboard icon', () => {

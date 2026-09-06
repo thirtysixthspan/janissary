@@ -36,7 +36,10 @@ export type HarnessSpawnEnv = {
  * non-`-b` path is byte-for-byte what it was before this existed.
  */
 export function harnessSpawnEnv(
-  options: { name: string; cwd: string; label: string; browser: boolean; onBrowserGone: (message: string) => void },
+  options: {
+    name: string; cwd: string; label: string; browser: boolean;
+    onBrowserGone: (message: string, log?: string) => void;
+  },
 ): HarnessSpawnEnv {
   const base = harnessEnv(options.name, options.cwd);
   if (!options.browser) return { env: base };

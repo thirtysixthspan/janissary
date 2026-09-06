@@ -46,7 +46,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-Twelve event types can produce a notification line:
+These event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
@@ -80,6 +80,13 @@ Twelve event types can produce a notification line:
 - **`harness-recording-failed`** — the same event for a harness tab, on the same terms: the line
   reads `harness recording failed`, is recorded once per tab and never repeated, fires even while
   that tab is the active one, and leaves the harness session itself unaffected.
+- **`e2e-browser-gone`** — a `-b` tab's browser is no longer there: a launch that failed, a browser
+  that exited, or a guard that died (see `harness.md`). The line names the tab it belonged to and
+  carries the browser's own last words beneath the message. When the browser said anything at all,
+  the line also carries a link that opens the full account in an editor tab — the message is held to
+  a readable tail, and a crash trace is longer than that tail. Like the explicit events it fires even
+  while that tab is the active one, since the agent whose next connection is about to fail is working
+  in it.
 - **`file-operation`** — a file navigator copy, cut/paste, move, delete, or undo/redo replay fails
   for one or more of the items it acted on (see `file-navigator-tab.md`). The line reads
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection
@@ -97,15 +104,15 @@ Twelve event types can produce a notification line:
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
-`editor-suggest`, `question`, `transcript-unavailable`, `file-operation`, and `plugin-note` events
-have no toggle. A `question` event fires only for a background tab.
+`editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, and
+`plugin-note` events have no toggle. A `question` event fires only for a background tab.
 
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
-`transcript-unavailable`, `file-operation`, and `plugin-note` events **bypass focus suppression**: they still
+`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, and `plugin-note` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is

@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
 import {
-  browserNotificationMock, createHarnessManager, harnessBrowserMocks, makeBrowserManagers,
-  resetHarnessBrowserFixture,
+  browserLogWriteMock, browserNotificationMock, createHarnessManager, harnessBrowserMocks,
+  makeBrowserManagers, resetHarnessBrowserFixture,
 } from './manager-browser-test-fixture.js';
 
 const browserMock = harnessBrowserMocks();
 const notify = browserNotificationMock();
+const writeBrowserLog = browserLogWriteMock();
 
 describe('HarnessManager e2e browser', () => {
   beforeEach(() => {
@@ -81,7 +82,7 @@ describe('HarnessManager e2e browser', () => {
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
     browserMock.onGone[0]('e2e browser exited');
-    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited');
+    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', undefined);
   });
 
   // The notifications tab is opt-in, and a user who keeps it closed saw nothing at all. A harness
@@ -98,6 +99,47 @@ describe('HarnessManager e2e browser', () => {
     expect(managers.tab.append).not.toHaveBeenCalledWith(
       'claude', { input: '', output: 'e2e browser exited\nlaunch failed: no such executable' },
     );
+  });
+
+  // The message is bounded to a readable tail, so the whole of what the browser said goes to a file
+  // and the notification links it — one click away from the frames the tail dropped.
+  it('writes the browser\'s full account to a log and links it from the notification', () => {
+    const { managers } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+
+    browserMock.onGone[0]('e2e browser exited (signal SIGSEGV)', 'e2e browser exited (signal SIGSEGV)\n#0 frame');
+
+    expect(writeBrowserLog).toHaveBeenCalledWith(
+      'claude', expect.any(Number), 'e2e browser exited (signal SIGSEGV)\n#0 frame',
+    );
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'e2e-browser-gone', 'claude', 'e2e browser exited (signal SIGSEGV)',
+      '/project/.janissary/browser-logs/claude-now.log',
+    );
+  });
+
+  it('writes no log for a browser that said nothing', () => {
+    const { managers } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+
+    browserMock.onGone[0]('e2e browser exited');
+
+    expect(writeBrowserLog).not.toHaveBeenCalled();
+  });
+
+  // The log is a convenience on a path that is already reporting a failure; losing it costs the
+  // link, never the report.
+  it('still notifies when the log could not be written', () => {
+    const { managers } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
+    writeBrowserLog.mockReturnValue(undefined as unknown as string);
+
+    browserMock.onGone[0]('e2e browser exited', 'e2e browser exited\n#0 frame');
+
+    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', undefined);
   });
 
   // The harness itself is unaffected — only its browser is gone — so the tab keeps running, unlike

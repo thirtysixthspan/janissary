@@ -39,7 +39,7 @@ describe('startE2EBrowserServer failure reporting', () => {
     child.handlers.get('exit')?.();
     child.handlers.get('exit')?.();
     expect(onGone).toHaveBeenCalledTimes(1);
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('exited'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('exited'), undefined);
   });
 
   // A child killed outright says nothing on its way out, so its own exit status is the only account
@@ -47,38 +47,38 @@ describe('startE2EBrowserServer failure reporting', () => {
   it('names the signal that killed the child', () => {
     const { onGone } = start();
     child.handlers.get('exit')?.(null, 'SIGKILL');
-    expect(onGone).toHaveBeenCalledWith('e2e browser exited (signal SIGKILL)');
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (signal SIGKILL)', undefined);
   });
 
   it('names a non-zero exit code', () => {
     const { onGone } = start();
     child.handlers.get('exit')?.(1, null);
-    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 1)');
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 1)', undefined);
   });
 
   it('names a clean exit as one, rather than leaving it indistinguishable from a death', () => {
     const { onGone } = start();
     child.handlers.get('exit')?.(0, null);
-    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 0)');
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 0)', undefined);
   });
 
   it('fires onGone for a child that never starts', () => {
     const { onGone } = start();
     child.handlers.get('error')?.(new Error('ENOENT'));
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('ENOENT'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('ENOENT'), undefined);
   });
 
   it('fires onGone when the guard cannot listen', () => {
     const { onGone } = start();
     const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as { onError: (message: string) => void };
     guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('EADDRINUSE'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('EADDRINUSE'), undefined);
   });
 
   it('fires onGone when the spawn itself throws', () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
     const { onGone, handle } = start();
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('spawn refused'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('spawn refused'), undefined);
     expect(() => handle.close()).not.toThrow();
   });
 });
@@ -92,13 +92,14 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     child.handlers.get('exit')?.();
     expect(onGone).toHaveBeenCalledWith(
       'e2e browser exited\nbrowserType.launchServer: Executable doesn\'t exist at /pw/Chrome.app',
+      expect.any(String),
     );
   });
 
   it('leaves the message alone when the child said nothing', () => {
     const { onGone } = start();
     child.handlers.get('exit')?.();
-    expect(onGone).toHaveBeenCalledWith('e2e browser exited');
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited', undefined);
   });
 
   it('carries both the child\'s status and the browser\'s own words', () => {
@@ -107,6 +108,7 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     child.handlers.get('exit')?.(1, null);
     expect(onGone).toHaveBeenCalledWith(
       'e2e browser exited (code 1)\nchromium exited (signal SIGKILL)',
+      expect.any(String),
     );
   });
 
@@ -116,6 +118,7 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     child.handlers.get('error')?.(new Error('ENOENT'));
     expect(onGone).toHaveBeenCalledWith(
       'e2e browser failed to start: ENOENT\nsandbox-exec: profile could not be compiled',
+      expect.any(String),
     );
   });
 
@@ -128,6 +131,7 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
     expect(onGone).toHaveBeenCalledWith(
       'e2e browser guard failed to listen: EADDRINUSE\nchromium: crashed on startup',
+      expect.any(String),
     );
   });
 
@@ -138,7 +142,7 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     child.say('last words\n');
     child.handlers.get('exit')?.();
     expect(child.kill).toHaveBeenCalledTimes(1);
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('last words'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('last words'), expect.any(String));
   });
 
   it('says nothing extra for a browser the user closed', () => {
@@ -146,6 +150,45 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     child.say('shutting down\n');
     handle.close();
     expect(onGone).not.toHaveBeenCalled();
+  });
+});
+
+// A crash trace is longer than the tail the message is held to, so the frames naming where the
+// browser faulted are exactly the ones the message drops. The log beside it is the same account
+// with nothing dropped, for a caller that can put it where the whole of it fits.
+describe('startE2EBrowserServer keeping the whole account', () => {
+  function crashTrace(): string {
+    const frames = Array.from({ length: 40 }, (_, index) => `#${index} 0x00000001 chrome::Frame${index}()`);
+    return `Received signal 11 SEGV_MAPERR\n${frames.join('\n')}\n`;
+  }
+
+  it('keeps the frames the message\'s tail drops', () => {
+    const { onGone } = start();
+    child.say(crashTrace());
+    child.handlers.get('exit')?.(null, 'SIGSEGV');
+
+    const [message, log] = onGone.mock.calls[0] as [string, string];
+    expect(message).not.toContain('Received signal 11 SEGV_MAPERR');
+    expect(message).not.toContain('chrome::Frame0()');
+    expect(log).toContain('Received signal 11 SEGV_MAPERR');
+    expect(log).toContain('chrome::Frame0()');
+    expect(log).toContain('chrome::Frame39()');
+  });
+
+  it('leads the log with the same report the message opens with', () => {
+    const { onGone } = start();
+    child.say(crashTrace());
+    child.handlers.get('exit')?.(null, 'SIGSEGV');
+
+    const [, log] = onGone.mock.calls[0] as [string, string];
+    expect(log.startsWith('e2e browser exited (signal SIGSEGV)\n')).toBe(true);
+  });
+
+  it('writes no log for a browser that said nothing', () => {
+    const { onGone } = start();
+    child.handlers.get('exit')?.(null, 'SIGSEGV');
+
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (signal SIGSEGV)', undefined);
   });
 });
 
@@ -190,7 +233,7 @@ describe('startE2EBrowserServer failure cleanup', () => {
   it('reports a scratch allocation that fails instead of throwing at its caller', () => {
     mocks.allocateBrowserScratch.mockImplementation(() => { throw new Error('EACCES'); });
     const { onGone, handle } = start();
-    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('EACCES'));
+    expect(onGone).toHaveBeenCalledWith(expect.stringContaining('EACCES'), undefined);
     expect(mocks.startE2EGuard).not.toHaveBeenCalled();
     expect(mocks.spawn).not.toHaveBeenCalled();
     expect(() => handle.close()).not.toThrow();
