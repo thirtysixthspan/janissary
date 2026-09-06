@@ -42,6 +42,26 @@ describe('startE2EBrowserServer failure reporting', () => {
     expect(onGone).toHaveBeenCalledWith(expect.stringContaining('exited'));
   });
 
+  // A child killed outright says nothing on its way out, so its own exit status is the only account
+  // of the death there is. Without it every one of these reads as the same bare "exited".
+  it('names the signal that killed the child', () => {
+    const { onGone } = start();
+    child.handlers.get('exit')?.(null, 'SIGKILL');
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (signal SIGKILL)');
+  });
+
+  it('names a non-zero exit code', () => {
+    const { onGone } = start();
+    child.handlers.get('exit')?.(1, null);
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 1)');
+  });
+
+  it('names a clean exit as one, rather than leaving it indistinguishable from a death', () => {
+    const { onGone } = start();
+    child.handlers.get('exit')?.(0, null);
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 0)');
+  });
+
   it('fires onGone for a child that never starts', () => {
     const { onGone } = start();
     child.handlers.get('error')?.(new Error('ENOENT'));
@@ -79,6 +99,15 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     const { onGone } = start();
     child.handlers.get('exit')?.();
     expect(onGone).toHaveBeenCalledWith('e2e browser exited');
+  });
+
+  it('carries both the child\'s status and the browser\'s own words', () => {
+    const { onGone } = start();
+    child.say('chromium exited (signal SIGKILL)\n');
+    child.handlers.get('exit')?.(1, null);
+    expect(onGone).toHaveBeenCalledWith(
+      'e2e browser exited (code 1)\nchromium exited (signal SIGKILL)',
+    );
   });
 
   it('carries it into a failed start too', () => {

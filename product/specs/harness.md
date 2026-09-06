@@ -215,6 +215,14 @@ nothing to act on. A browser that said nothing produces the message alone. What 
 the last 2000 characters and the last 10 lines of them, and it is read out before the browser is torn
 down, so the report describes what the browser actually said rather than what survived the teardown.
 
+The report also names how each of the two processes behind a browser ended, since a browser can die
+without saying anything at all. The message itself carries the exit status of the process janissary
+launched — `e2e browser exited (code 1)`, or `(signal SIGKILL)` for one the operating system killed —
+and that process in turn reports the browser's own status on the line below, in the same form. A
+graceful shutdown is therefore positively identifiable as one rather than being indistinguishable
+from a crash, and a process that ended with no status the platform could report says nothing extra:
+the message is then exactly `e2e browser exited`.
+
 A browser that ends on its own releases the same things at the moment it ends, rather than holding
 them until its tab closes: the endpoint stops accepting connections, the browser process is gone,
 and the scratch directory is removed. That holds for a launch that never got that far too — whatever

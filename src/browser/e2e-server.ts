@@ -5,6 +5,7 @@ import { makeToken } from '../security.js';
 import { sandboxSpawn } from '../sandbox/index.js';
 import { WS_PATH_ENV } from './e2e-child.js';
 import { resolveChildLaunch } from './e2e-child-command.js';
+import { withEndDetail } from './e2e-exit.js';
 import { startE2EGuard } from './e2e-guard.js';
 import { loopbackWsUrl } from './e2e-loopback.js';
 import { allocateBrowserPorts } from './e2e-ports.js';
@@ -154,6 +155,12 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
   session.output.watch(child.stdout);
   session.output.watch(child.stderr);
   child.on('error', (error) => stopSession(session, `e2e browser failed to start: ${error.message}`));
-  child.on('exit', () => stopSession(session, 'e2e browser exited'));
+  // The code and signal Node passes here are the second half of the account, and the half that
+  // survives a child too abrupt to say anything: the child reports Chromium's status on its stderr,
+  // this reports the child's own. A child killed by the OS says nothing and still names its signal
+  // here. When neither is known the message is the bare `e2e browser exited` it always was.
+  child.on('exit', (code, signal) => {
+    stopSession(session, withEndDetail('e2e browser exited', { code, signal }));
+  });
   return child;
 }

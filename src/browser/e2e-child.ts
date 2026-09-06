@@ -1,5 +1,7 @@
+import { writeSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import { endedCleanly, withEndDetail } from './e2e-exit.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
 // The `janus e2e-browser` subcommand: the browser server itself, run as its own process so
@@ -81,5 +83,27 @@ export async function runE2EBrowser(args: E2EChildArgs): Promise<void> {
   });
   // Exit as soon as the browser is gone rather than lingering as a process with nothing behind it:
   // the parent watches this process's exit to decide the browser has died and to notify the user.
-  server.on('close', () => process.exit(0));
+  // What it exits *with* is the only account anyone gets of why the browser went, so it reports
+  // Chromium's own status both ways — as a line the parent reads off this process's stderr, and as
+  // the exit code the parent's own `exit` handler is passed.
+  const browser = server.process();
+  server.on('close', () => reportBrowserEnd(browser));
+}
+
+/**
+ * Say how Chromium ended and exit accordingly. Called only from the close handler, where the browser
+ * process has already gone and its status is therefore final.
+ *
+ * `writeSync` on fd 2 rather than `process.stderr.write`, because a write to a pipe is asynchronous
+ * on macOS: the bytes would still be queued when `process.exit` took the process down, and this line
+ * is the entire point of the path. The blocking write puts them in the pipe the parent is reading
+ * before anything else happens.
+ *
+ * Exiting zero only for a clean Chromium exit, where the previous unconditional `exit(0)` said every
+ * death was a graceful shutdown. The parent notifies either way; the code is what tells it which.
+ */
+function reportBrowserEnd(browser: { exitCode: number | null; signalCode: NodeJS.Signals | null }): void {
+  const end = { code: browser.exitCode, signal: browser.signalCode };
+  writeSync(2, `${withEndDetail('chromium exited', end)}\n`);
+  process.exit(endedCleanly(end) ? 0 : 1);
 }
