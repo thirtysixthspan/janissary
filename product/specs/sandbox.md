@@ -319,7 +319,8 @@ cache. Networking, POSIX shared memory, IOKit property reads, and `sysctl-read` 
 Chromium fails to start rather than degrading without them.
 
 That scratch directory is created fresh and empty for each `-b` tab, is never a clone of the
-project, and is removed when the tab closes. It holds the browser's profile and downloads, so a
+project, and is removed when the tab closes. The browser child uses it as its working directory, so
+runtime startup never depends on read access to the Janissary server's working directory. It holds the browser's profile and downloads, so a
 `file:` read that got past the guard finds a disposable directory with nothing in it — and cannot
 reach the code under test, which the browser has no reason to read.
 

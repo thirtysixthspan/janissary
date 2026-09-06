@@ -134,7 +134,9 @@ function spawnBrowserChild(session: E2ESession, port: number, wsPath: string): C
   // Playwright's launch error, a `sandbox-exec` profile that would not compile, a port that would
   // not bind. Discarded output made every one of those the same bare "exited". The session reads
   // both streams, which is also what keeps a full pipe from blocking the child.
-  const child = spawn(wrapped.command, wrapped.args, { stdio: ['ignore', 'pipe', 'pipe'], env });
+  const child = spawn(wrapped.command, wrapped.args, {
+    cwd: scratch.dir, stdio: ['ignore', 'pipe', 'pipe'], env,
+  });
   session.output.watch(child.stdout);
   session.output.watch(child.stderr);
   child.on('error', (error) => stopSession(session, `e2e browser failed to start: ${error.message}`));

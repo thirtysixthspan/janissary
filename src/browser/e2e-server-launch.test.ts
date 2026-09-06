@@ -127,6 +127,12 @@ describe('startE2EBrowserServer workspace', () => {
     expect(spawnOptions.env.TMPDIR).toBe('/ws/browsers/bot-token.tmp');
   });
 
+  it('starts the child inside its readable scratch directory', () => {
+    start();
+    const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { cwd: string }])[2];
+    expect(spawnOptions.cwd).toBe('/ws/browsers/bot-token');
+  });
+
   it('passes the child the internal port and directory, not the published ones', () => {
     start();
     const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPort: number; upstreamPath: string };
