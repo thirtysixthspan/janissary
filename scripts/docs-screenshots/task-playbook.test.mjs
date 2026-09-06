@@ -35,6 +35,7 @@ const OUTCOME_LINES = [
 const BUNDLE_MISSING = 'Web bundle missing — run `npm run build:web` first (screenshots capture the built UI).';
 const NO_MATCHING_ENTRIES = 'No manifest entries match: ';
 const NO_BROWSER = 'No browser to drive: ';
+const NO_JANUS = 'No janissary to drive: ';
 const SKIP_SUFFIX = '" on PATH; capture it manually and commit the PNG.';
 const OUTPUT_DIRECTORY = 'documentation/public/screenshots/';
 
@@ -64,6 +65,13 @@ describe('take-documentation-screenshots playbook', () => {
   it('quotes the unacquirable-browser stop verbatim', () => {
     expect(runner).toContain(NO_BROWSER);
     expect(playbook).toContain(NO_BROWSER);
+  });
+
+  // The whole run rests on one instance now, so an app that never came up captures nothing at all —
+  // a stop the playbook has to recognize as distinct from a browser it could not reach.
+  it('quotes the app-did-not-start stop verbatim', () => {
+    expect(runner).toContain(NO_JANUS);
+    expect(playbook).toContain(NO_JANUS);
   });
 
   // The playbook calls a skip a success to be carried into the report, which is only safe advice

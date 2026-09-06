@@ -1,6 +1,6 @@
 # Take Documentation Screenshots
 
-Your job: regenerate the screenshots the pages under `documentation/user-documentation/` reference, using the browser janissary attached to this tab, and ship the PNGs. The capture pipeline starts a fresh janissary for every shot, drives it, and shuts it down again, so this task runs one command and spends the rest of its effort on the decisions around it: confirming there is a browser to drive, building the bundle the captures photograph, reading the run's outcome correctly, and committing the generated images and nothing else. You change files under `documentation/public/screenshots/` and nothing else in the repository.
+Your job: regenerate the screenshots the pages under `documentation/user-documentation/` reference, using the browser janissary attached to this tab, and ship the PNGs. The capture pipeline starts one janissary, holds it and one browser page open for every shot, and tears both down at the end, so this task runs one command and spends the rest of its effort on the decisions around it: confirming there is a browser to drive, building the bundle the captures photograph, reading the run's outcome correctly, and committing the generated images and nothing else. You change files under `documentation/public/screenshots/` and nothing else in the repository.
 
 **Project directory.** Every path in this task refers to the current working directory — the project being worked on — never to the Janissary codebase's own tree, even when this task file was launched from an absolute path inside the Janissary installation.
 
@@ -50,7 +50,7 @@ node -e "console.log(!!process.env.JANISSARY_BROWSER_WS_ENDPOINT, !!process.env.
 
 Both must print `true`. If either is `false`, **stop** and report that the tab needs relaunching with `-b` (`harness <name> -b`, or the **E2E browser** toggle in the New harness dialog). Do not continue on the pipeline's fallback path: it launches a Chromium of its own, and inside a workspace that always fails, because the sandbox denies reading Playwright's browser cache under `$HOME`. Starting the run anyway spends a bundle build to arrive at `No browser to drive:` several minutes later.
 
-**Never close that browser.** The endpoint is a client connection to janissary's own browser server, and this run is a guest on it. The capture closes each shot's context and lets the connection go when the process exits, which is the whole of the cleanup it owes. Tidying up further would take the tab's browser with it.
+**Never close that browser.** The endpoint is a client connection to janissary's own browser server, and this run is a guest on it. The capture closes the one context it opened and lets the connection go when the process exits, which is the whole of the cleanup it owes. Tidying up further would take the tab's browser with it.
 
 ---
 
@@ -86,7 +86,7 @@ When names were given, read `scripts/docs-screenshots/manifest.mjs` and confirm 
 ./scripts/run.mjs docs-screenshots
 ```
 
-Append the shot names when Step 3 chose a subset. The pipeline gives every shot its own scratch directory and its own app process: it seeds the directory from the fixtures, makes it a git repository with a local `origin` so workspaced shots can clone, points `HOME` at a scratch directory so the app's homedir state never touches the real one, starts a fixture web server for the shots that need a page, and kills the app and removes the directory when the shot is done. You do not start or stop janissary yourself, and you do not clean up after a shot.
+Append the shot names when Step 3 chose a subset. The pipeline sets the run up once and keeps it: it seeds one scratch directory from the fixtures, makes it a git repository with a local `origin` so workspaced shots can clone, points `HOME` at a scratch directory so the app's homedir state never touches the real one, starts a fixture web server for the shots that need a page, launches one janissary into that directory, and drives every shot through one browser page. Between shots it puts the app back into its launch state — one `janus` tab, empty — and the working directory back to the fixture commit. At the end it closes the page, kills the app, lets the browser go, and removes the directory. You do not start or stop janissary yourself, and you do not clean up after a shot.
 
 The run reports itself in lines you must read:
 
@@ -98,6 +98,8 @@ The run reports itself in lines you must read:
 | `FAIL <name>: <reason>` | That shot did not capture | The rest still run. Collect the names; the run ends non-zero with `Failed: <names>`. Go to Step 5. |
 
 A `No browser to drive: <reason>` stop here means the browser went away between Step 1 and now. `connect ECONNREFUSED` is the usual reason. Janissary replaces a browser that dies, so retry the command once; if the second attempt reports the same thing, **stop** and report that the tab's browser could not be reached.
+
+A `No janissary to drive: <reason>` stop means the app itself never came up — the whole run rests on one instance now, so nothing is captured. The usual reasons are another process holding one of the ports it chose, or a directory lock. Retry the command once; if the second attempt reports the same thing, **stop** and report the reason it gave.
 
 ---
 
@@ -121,13 +123,13 @@ git status --short
 
 1. Every changed or added path must be under `documentation/public/screenshots/` and end in `.png`. Anything else is not this run's output — revert a tracked file with `git checkout -- <path>` and remove an untracked one with `git clean -f -- <path>` before going on. Nothing under `documentation/public/agents/` may appear; that directory is gitignored build output.
 2. Count the changed PNGs and note it for the report. A full run rewriting most of them is ordinary — they are generated images and small rendering differences are expected — and saying the number is what tells a reviewer the diff size was the run rather than a bug.
-3. Confirm no scratch directory survived a shot that crashed. The pipeline removes each one in a `finally`, so a leftover means the run itself was killed part-way:
+3. Confirm the run's scratch directory did not survive it. The pipeline removes it in a `finally`, so a leftover means the run itself was killed part-way:
 
    ```bash
    node -e "const {readdirSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),p=require('node:path');const t=tmpdir();const l=readdirSync(t).filter(n=>n.startsWith('janus-docs-'));for(const n of l)rmSync(p.join(t,n),{recursive:true,force:true});console.log('removed',l.length,'leftover scratch directories')"
    ```
 
-   A run killed mid-shot can also leave a janissary process behind. This task does not go looking for one: process inspection is not pre-approved in this repo, so the command would sit waiting on an approval that an unattended run never gets. If you killed a capture yourself, say so in the report and let the human clear it.
+   A run killed mid-shot can also leave the janissary process behind. This task does not go looking for one: process inspection is not pre-approved in this repo, so the command would sit waiting on an approval that an unattended run never gets. If you killed a capture yourself, say so in the report and let the human clear it.
 4. If no PNG changed at all, there is nothing to ship. Skip Step 7 and report the run as a no-op.
 
 ---
