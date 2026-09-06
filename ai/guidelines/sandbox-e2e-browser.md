@@ -68,9 +68,7 @@ There is no partial result to salvage from either case, and reconnecting to retr
 
 ## When it stops working
 
-**A connect that used to work now fails.** A browser that crashed or was killed is replaced automatically, on the same endpoint, up to three times per tab. So retry once, the same way you would on the first connect — the failure you are looking at is most likely the moment between the old browser going and the replacement binding, and your next attempt reaches the new one. Anything open at that moment is gone with it: connections, pages, state. Start over rather than trying to salvage.
-
-Past the third replacement, or when a replacement cannot start, the browser is gone for good. The human's notifications tab will have a line saying so. You cannot bring it back; report it rather than retrying in a loop.
+**A connect that used to work now fails.** The browser is most likely gone — it crashed, or was killed. There is no supervisor and nothing restarts it. The human's notifications tab will have a line saying so. You cannot bring it back; report it rather than retrying in a loop.
 
 **The first connect never works at all.** Beyond the one retry above, this usually means the browser never came up. The likeliest cause is that another process on the host took one of the two ports the launch had chosen, in the moment between choosing it and binding it — janissary keeps its own launches from colliding with each other, but it cannot reserve a port against the rest of the machine. The notifications tab will have the line. Nothing is left running and nothing retries; report it rather than looping.
 
