@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Captures the screenshots referenced by documentation/user-documentation/ pages, by launching the real app
 // against fixture data and driving it with Playwright. Run via `./scripts/run.mjs docs-screenshots`
-// (optionally passing shot names to capture a subset). Host-only: sandboxed workspaces install
-// with --ignore-scripts and cannot reach Playwright's browser cache, so regenerate on the host.
+// (optionally passing shot names to capture a subset). The browser comes from browser.mjs: the one
+// janissary attached to this tab inside a workspace, or a locally launched Chromium on a host.
 //
 // Each shot gets a fresh scratch directory (cwd and HOME both scratch-scoped — see scratch.mjs)
 // and its own app process, so captures are deterministic and independent of shot order.
@@ -10,8 +10,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 import manifest from './docs-screenshots/manifest.mjs';
+import { openBrowser } from './docs-screenshots/browser.mjs';
 import { captureShot } from './docs-screenshots/capture.mjs';
 import { killJanus, spawnJanus } from './docs-screenshots/janus.mjs';
 import { createScratch, destroyScratch, startPageServer } from './docs-screenshots/scratch.mjs';
@@ -23,6 +23,19 @@ const outputDirectory = path.join(repoRoot, 'documentation', 'public', 'screensh
 function fail(message) {
   console.error(message);
   process.exit(1);
+}
+
+// A browser that cannot be acquired is a reason, not a crash: an attached browser that has died
+// (nothing restarts one) and a host with no Chromium installed are both ordinary states to be told
+// about, and neither is worth a stack trace. The page server is already listening by this point, so
+// it is closed here rather than left holding a port behind the exit.
+async function openBrowserOrFail(closeServer) {
+  try {
+    return await openBrowser();
+  } catch (error) {
+    closeServer();
+    fail(`No browser to drive: ${error.message}`);
+  }
 }
 
 function binaryOnPath(binary) {
@@ -37,10 +50,6 @@ function binaryOnPath(binary) {
 if (!existsSync(path.join(repoRoot, 'web', 'dist', 'index.html'))) {
   fail('Web bundle missing — run `npm run build:web` first (screenshots capture the built UI).');
 }
-const chromiumPath = chromium.executablePath();
-if (!chromiumPath || !existsSync(chromiumPath)) {
-  fail('Playwright Chromium is not installed — run `npm run playwright:install-chromium` first.');
-}
 
 const only = new Set(process.argv.slice(2));
 const entries = manifest.filter((entry) => only.size === 0 || only.has(entry.name));
@@ -48,7 +57,8 @@ if (entries.length === 0) fail(`No manifest entries match: ${[...only].join(', '
 
 mkdirSync(outputDirectory, { recursive: true });
 const pageServer = await startPageServer(fixturesDirectory);
-const browser = await chromium.launch();
+const { browser, release, source } = await openBrowserOrFail(pageServer.close);
+console.log(`Driving ${source}`);
 const failures = [];
 const skipped = [];
 
@@ -77,7 +87,7 @@ try {
     }
   }
 } finally {
-  await browser.close();
+  await release();
   pageServer.close();
 }
 
