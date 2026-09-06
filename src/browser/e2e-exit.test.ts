@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { endedCleanly, processEndDetail, withEndDetail } from './e2e-exit.js';
+import { endedCleanly, processEndDetail, withEndDetail, withoutChromiumEndLine } from './e2e-exit.js';
 
 describe('processEndDetail', () => {
   // A process killed by a signal is reported with a code as well, and the code is the uninteresting
@@ -58,5 +58,34 @@ describe('endedCleanly', () => {
   // An end nobody can account for is not evidence of a graceful one.
   it('is false when the platform reported no status at all', () => {
     expect(endedCleanly({ code: null, signal: null })).toBe(false);
+  });
+});
+
+describe('withoutChromiumEndLine', () => {
+  it('drops the end report in each form it takes', () => {
+    expect(withoutChromiumEndLine('chromium exited (signal SIGSEGV)')).toBe('');
+    expect(withoutChromiumEndLine('chromium exited (code 1)')).toBe('');
+    expect(withoutChromiumEndLine('chromium exited')).toBe('');
+  });
+
+  it('keeps what the browser said above it, with no blank line left behind', () => {
+    expect(withoutChromiumEndLine('Received signal 11 SEGV_MAPERR\nchromium exited (signal SIGSEGV)'))
+      .toBe('Received signal 11 SEGV_MAPERR');
+  });
+
+  it('drops the report from between two things the browser said', () => {
+    expect(withoutChromiumEndLine('first\nchromium exited (code 1)\nsecond')).toBe('first\nsecond');
+  });
+
+  // Only the child's own report goes. A line that happens to name chromium is the browser talking,
+  // which is the whole of what the tail exists to carry.
+  it('leaves a line that merely mentions chromium alone', () => {
+    expect(withoutChromiumEndLine('chromium exited unexpectedly, restarting'))
+      .toBe('chromium exited unexpectedly, restarting');
+    expect(withoutChromiumEndLine('chromium: crashed on startup')).toBe('chromium: crashed on startup');
+  });
+
+  it('has nothing to do with an empty tail', () => {
+    expect(withoutChromiumEndLine('')).toBe('');
   });
 });

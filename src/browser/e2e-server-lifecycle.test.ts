@@ -102,12 +102,24 @@ describe('startE2EBrowserServer reporting what the child said', () => {
     expect(onGone).toHaveBeenCalledWith('e2e browser exited', undefined);
   });
 
-  it('carries both the child\'s status and the browser\'s own words', () => {
+  // The child's own end report restates the death the message already announces, one process down.
+  // It stays in the log, where the status janissary cannot observe for itself is what a post-mortem
+  // is read for, and comes off the line the user is shown.
+  it('reports the child\'s status without the browser\'s restatement of it', () => {
     const { onGone } = start();
     child.say('chromium exited (signal SIGKILL)\n');
     child.handlers.get('exit')?.(1, null);
+    const [message, log] = onGone.mock.calls[0] as [string, string];
+    expect(message).toBe('e2e browser exited (code 1)');
+    expect(log).toBe('e2e browser exited (code 1)\nchromium exited (signal SIGKILL)');
+  });
+
+  it('keeps what the browser said above its end report', () => {
+    const { onGone } = start();
+    child.say('sandbox-exec: profile could not be compiled\nchromium exited (code 1)\n');
+    child.handlers.get('exit')?.(1, null);
     expect(onGone).toHaveBeenCalledWith(
-      'e2e browser exited (code 1)\nchromium exited (signal SIGKILL)',
+      'e2e browser exited (code 1)\nsandbox-exec: profile could not be compiled',
       expect.any(String),
     );
   });
@@ -189,6 +201,19 @@ describe('startE2EBrowserServer keeping the whole account', () => {
     child.handlers.get('exit')?.(null, 'SIGSEGV');
 
     expect(onGone).toHaveBeenCalledWith('e2e browser exited (signal SIGSEGV)', undefined);
+  });
+
+  // The trace is the evidence and the end report beneath it is not, so the line that comes off the
+  // message is the second one — and the log still holds both.
+  it('reports a crash trace and not the end report below it', () => {
+    const { onGone } = start();
+    child.say(`${crashTrace()}chromium exited (signal SIGSEGV)\n`);
+    child.handlers.get('exit')?.(1, null);
+
+    const [message, log] = onGone.mock.calls[0] as [string, string];
+    expect(message).toContain('chrome::Frame39()');
+    expect(message).not.toContain('chromium exited (signal SIGSEGV)');
+    expect(log).toContain('chromium exited (signal SIGSEGV)');
   });
 });
 

@@ -1,7 +1,7 @@
 import { writeSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { endedCleanly, withEndDetail } from './e2e-exit.js';
+import { CHROMIUM_END_MESSAGE, endedCleanly, withEndDetail } from './e2e-exit.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
 // The `janus e2e-browser` subcommand: the browser server itself, run as its own process so
@@ -104,6 +104,6 @@ export async function runE2EBrowser(args: E2EChildArgs): Promise<void> {
  */
 function reportBrowserEnd(browser: { exitCode: number | null; signalCode: NodeJS.Signals | null }): void {
   const end = { code: browser.exitCode, signal: browser.signalCode };
-  writeSync(2, `${withEndDetail('chromium exited', end)}\n`);
+  writeSync(2, `${withEndDetail(CHROMIUM_END_MESSAGE, end)}\n`);
   process.exit(endedCleanly(end) ? 0 : 1);
 }
