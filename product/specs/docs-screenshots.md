@@ -30,9 +30,15 @@ Either way, a run that cannot acquire a browser stops before it captures anythin
 No browser to drive: <reason>
 ```
 
-An attached browser that has died reads there as `connect ECONNREFUSED` on the endpoint the tab still advertises. Nothing restarts one, so a run that hits it is waiting on a tab relaunched with `-b`, not on a retry.
+An attached browser that has died reads there as `connect ECONNREFUSED` on the endpoint the tab still advertises. Janissary replaces a browser that dies (see [[harness]]), so a run that hits it is worth starting again once; a second identical failure means the browser is gone for good and the tab needs relaunching with `-b`.
 
 A run never closes an attached browser. Closing it would close the browser at the far end of the connection and leave the tab advertising an endpoint that refuses every later connect; the per-shot contexts are closed instead, and the connection itself ends with the run. A browser the run launched is closed when the run finishes.
+
+### Regenerating from a task
+
+`ai/tasks/take-documentation-screenshots.md` is the unattended version of a capture run: it prepares the workspace, builds the bundle, captures, checks what changed, and ships the images through the ordinary merge workflow. Unlike a run started by hand it requires an attached browser and stops when the tab was not launched with `-b`, rather than falling back to launching one — inside a workspace that fallback can never work, and stopping before the build costs nothing.
+
+The task ships PNGs and nothing else. It writes no documentation prose and adds no manifest entry; declaring a new shot belongs to the documentation-writing task that needs it. A skipped shot is a success it reports and continues past, a failed shot earns one retry, and a run that changed no bytes ships nothing at all.
 
 ### Shots that cannot be captured
 

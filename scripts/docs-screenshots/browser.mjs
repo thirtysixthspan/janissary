@@ -40,11 +40,12 @@ export async function connectAttached(client, endpoint, options = {}) {
 async function openAttached(attached) {
   const client = require_(attached.clientPath).chromium;
   const browser = await connectAttached(client, attached.endpoint);
-  // Deliberately not `browser.close()`. This connection is a client of janissary's own
-  // `chromium.launchServer()` child, so closing the browser closes the *remote* one, the child exits
-  // on its server's close event, and the tab is left advertising an endpoint that refuses every
-  // later connect. Each shot's context is already closed in capture.mjs; the connection itself goes
-  // when this process does.
+  // Deliberately not `browser.close()`. This browser belongs to the tab, not to this run, and a
+  // guest does not decide when it ends. Playwright happens to make the call harmless — `connect()`
+  // turns `close()` into a disconnect that never reaches the browser — and janissary would replace
+  // the browser anyway if it did land, but neither is a reason to ask for a teardown this process
+  // has no business asking for. Each shot's context is already closed in capture.mjs; the connection
+  // itself goes when this process does.
   return { browser, release: () => {}, source: `attached janissary browser at ${attached.endpoint}` };
 }
 
