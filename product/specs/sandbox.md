@@ -320,9 +320,12 @@ Chromium fails to start rather than degrading without them.
 
 That scratch directory is created fresh and empty for each `-b` tab, is never a clone of the
 project, and is removed when the tab closes. The browser child uses it as its working directory, so
-runtime startup never depends on read access to the Janissary server's working directory. It holds the browser's profile and downloads, so a
-`file:` read that got past the guard finds a disposable directory with nothing in it — and cannot
-reach the code under test, which the browser has no reason to read.
+runtime startup never depends on read access to the Janissary server's working directory. The
+minimal browser profile grants exact-file reads to the bundled agent-name and harness-model
+catalogs loaded by Janissary's source entry, without granting the installation root. The scratch
+directory holds the browser's profile and downloads, so a `file:` read that got past the guard
+finds a disposable directory with nothing in it — and cannot reach the code under test, which the
+browser has no reason to read.
 
 **What the browser is given.** The browser process does not inherit a filtered copy of the Janissary
 server's environment the way a harness does. It is given a named, minimal set of variables — enough

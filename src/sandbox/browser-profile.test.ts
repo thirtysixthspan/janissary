@@ -28,6 +28,8 @@ const PATHS = {
   playwrightCore: dual(`${ROOT}/node_modules/playwright-core`),
   appManifest: dual(`${ROOT}/package.json`),
   appTsconfig: dual(`${ROOT}/tsconfig.json`),
+  appAgentNames: dual(`${ROOT}/agent-names.json`),
+  appHarnessModels: dual(`${ROOT}/harness-models.json`),
   appState: dual(STATE),
 };
 
@@ -136,9 +138,11 @@ describe('BROWSER_SANDBOX_PROFILE', () => {
   });
 
   // Files, not directories: carved in by exact path so the root holding them stays narrowed away.
-  it('carves in the manifest and tsconfig as exact paths, not as a directory', () => {
+  it('carves in the loader\'s root files as exact paths, not as a directory', () => {
     expect(readable(PATHS.appManifest.literal)).toBe(true);
     expect(readable(PATHS.appTsconfig.literal)).toBe(true);
+    expect(readable(PATHS.appAgentNames.literal)).toBe(true);
+    expect(readable(PATHS.appHarnessModels.literal)).toBe(true);
     expect(readable(`${ROOT}/README.md`)).toBe(false);
   });
 

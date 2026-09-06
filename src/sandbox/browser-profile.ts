@@ -4,7 +4,7 @@
 // inventory of what an escape would want. A browser needs none of it, so this profile names only
 // what the child cannot start without. For reads that is the six subpaths bound through
 // `BROWSER_READ_PARAMS` — the Chromium app bundle it executes, the Node binary's directory, and
-// janissary's runtime as four separate pieces — plus the two exact files in `BROWSER_FILE_PARAMS`,
+// janissary's runtime as four separate pieces — plus the exact files in `BROWSER_FILE_PARAMS`,
 // with the project's own state directory denied back out inside them through `BROWSER_DENY_PARAMS`.
 // For writes it is the browser's own scratch workspace and that workspace's temp sibling. Those
 // three tables are the inventory; a count written here would be wrong the next time one of them
@@ -50,11 +50,13 @@ export type BrowserProfilePaths = {
   // inside its `node_modules`, where `appModules` would not reach them.
   playwright: DualPath;
   playwrightCore: DualPath;
-  // The two root files Node and tsx read: the manifest for its `type` field, and the tsconfig for
-  // compiler options. Carved in as exact paths, not subpaths — they are files, and the directory
-  // holding them is the one being narrowed away.
+  // The root files Node and tsx read: the manifest for its `type` field, the tsconfig for compiler
+  // options, and the two bundled catalogs imported while the main entry loads. Carved in as exact
+  // paths, not subpaths — they are files, and the directory holding them is narrowed away.
   appManifest: DualPath;
   appTsconfig: DualPath;
+  appAgentNames: DualPath;
+  appHarnessModels: DualPath;
   // `<root>/.janissary`, denied rather than allowed. Not redundant with the `$HOME` deny: reads
   // outside `$HOME` are never denied by this profile at all, so an installation at `/opt/janissary`
   // or on a remote host outside the home directory would otherwise expose all of it.
@@ -66,8 +68,8 @@ export type BrowserProfilePaths = {
 // the two Playwright packages.
 export const BROWSER_READ_PARAMS = dualParams('B', 6);
 
-// The exact-path read carve-ins: the manifest and the tsconfig.
-export const BROWSER_FILE_PARAMS = dualParams('F', 2);
+// The exact-path read carve-ins: the manifest, tsconfig, and two bundled catalogs.
+export const BROWSER_FILE_PARAMS = dualParams('F', 4);
 
 // The one subpath denied back out after the carve-ins: the project's own state directory.
 export const BROWSER_DENY_PARAMS = dualParams('X', 1);
@@ -118,7 +120,8 @@ export const BROWSER_SANDBOX_PROFILE = String.raw`(version 1)
 ; its own interpreter. Then janissary's runtime, named piece by piece rather than by its installation
 ; root: the dependencies, the code tree actually being run (src/ under tsx, dist/ under a build), the
 ; two Playwright packages (resolved separately, since a hoisted layout puts them beside the
-; installation rather than inside its node_modules), and the manifest and tsconfig as exact files.
+; installation rather than inside its node_modules), and the manifest, tsconfig, agent-name
+; catalog, and harness-model catalog as exact files.
 ;
 ; Piece by piece and not the root, because in a development install that root IS the project
 ; directory. Nothing else under $HOME is readable either: no Keychains, no .claude, no .codex, no
@@ -188,7 +191,9 @@ export function browserProfileParams(paths: BrowserProfilePaths): string[] {
   const reads = [
     paths.chromium, paths.node, paths.appModules, paths.appEntry, paths.playwright, paths.playwrightCore,
   ];
-  const files = [paths.appManifest, paths.appTsconfig];
+  const files = [
+    paths.appManifest, paths.appTsconfig, paths.appAgentNames, paths.appHarnessModels,
+  ];
   const denies = [paths.appState];
   return [
     '-D', `WORKSPACE=${paths.workspace}`,
