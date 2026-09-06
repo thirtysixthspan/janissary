@@ -21,7 +21,8 @@ import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js
 export type E2EBrowserHandle = {
   // Idempotent, and safe before the child has finished starting. Stops the guard, kills the child,
   // and removes the browser workspace and its temp sibling. A browser that already ended on its own
-  // has released all of that at that moment, so this is then a no-op.
+  // has released everything but that pair at the moment it ended, so this is then a no-op — the
+  // directory it died in is deliberately kept to be read, and the next start sweeps it.
   close: () => void;
 };
 

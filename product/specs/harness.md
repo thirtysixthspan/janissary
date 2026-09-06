@@ -205,8 +205,8 @@ to fail is working in the `-b` tab, so neither delivery covers the other. The ba
 tab's transcript, because a harness tab's body is its terminal and nothing renders that transcript;
 and rather than a line written into the terminal, because the harness's next repaint would paint over
 it. The tab keeps running — only its browser is gone. Nothing restarts it; a later attempt to connect
-simply fails. Closing a `-b` tab stops its browser and removes its scratch directory — only that
-browser's own directory, which no tab and no other browser shares.
+simply fails. Closing a `-b` tab whose browser is still running stops it and removes its scratch
+directory — only that browser's own directory, which no tab and no other browser shares.
 
 The report carries whatever the browser said on its own output before it went, on the lines below the
 message: Playwright's launch error, a sandbox profile that would not compile, a port that would not
@@ -223,11 +223,19 @@ graceful shutdown is therefore positively identifiable as one rather than being 
 from a crash, and a process that ended with no status the platform could report says nothing extra:
 the message is then exactly `e2e browser exited`.
 
-A browser that ends on its own releases the same things at the moment it ends, rather than holding
-them until its tab closes: the endpoint stops accepting connections, the browser process is gone,
-and the scratch directory is removed. That holds for a launch that never got that far too — whatever
-part of it had started is undone. The notification arrives once, after the release, and never for a
-browser the user closed themselves.
+A browser that ends on its own releases what it held at the moment it ends, rather than holding it
+until its tab closes: the endpoint stops accepting connections, the browser process is gone, and the
+ports it took go back. That holds for a launch that never got that far too — whatever part of it had
+started is undone. The notification arrives once, after the release, and never for a browser the user
+closed themselves.
+
+The one thing an ending the user did not ask for keeps is the browser's scratch directory. Everything
+the browser wrote is inside it, and a browser that died is the case where that is worth reading, so
+the directory and its temp sibling stay exactly as the browser left them. Closing the tab afterwards
+does not remove them either — that is the first thing a user does after being told the browser is
+gone, and the evidence would go with it. They live until janissary next starts, which clears the
+whole workspace directory. A close the user asked for, of a browser that was still running, removes
+them as it always did.
 
 A `-b` tab says so in its metadata row: a globe icon among the row's flag icons, to the right of the
 workspaced and auto-permitting ones, with "E2E browser" as its tooltip (see Metadata row in

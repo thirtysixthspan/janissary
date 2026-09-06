@@ -112,7 +112,9 @@ The report carries whatever the browser said on its way out, underneath the mess
 
 It also tells you how the browser went, which is what you get when it said nothing: the message ends in the exit status, as `e2e browser exited (code 1)` or `(signal SIGKILL)` for one something killed, and the line below it reports Chromium's own status the same way. So `(code 0)` on both lines is a browser that shut down gracefully, and a signal on either is one that didn't.
 
-Nothing restarts it, and a later connection attempt simply fails. Closing the tab stops the browser and removes its scratch directory.
+Nothing restarts it, and a later connection attempt simply fails. Closing a tab whose browser is still running stops it and removes its scratch directory.
+
+A browser that died keeps its scratch directory instead, so there's something left to look at. It's under `.janissary/workspace/browsers/` in the project directory, named after the tab it belonged to, and it holds Chromium's profile, its temp files, and any crash dump it managed to write — exactly as the browser left them. Closing the dead tab doesn't clear it, since that's the first thing you're likely to do after reading the report. Janissary clears the whole workspace directory the next time it starts, so copy anything you want to keep before then.
 
 ## Knowing when a harness needs you
 
