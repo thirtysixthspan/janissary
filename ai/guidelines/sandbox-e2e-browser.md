@@ -19,7 +19,7 @@ If they are unset, you have no browser and no way to get one. Say so rather than
 
 ## Connecting
 
-Import the client from `JANISSARY_PLAYWRIGHT`, **not** from the project's own `node_modules`. Playwright's client and server must be the same version to connect at all, and a fresh workspace clone has no `node_modules` until you install them. Run your script under `JANISSARY_NODE`, which names a known-good node binary — a bare `node` on the sandboxed `PATH` does not always resolve to one.
+Import the client from `JANISSARY_PLAYWRIGHT`, **not** from the project's own `node_modules`. Playwright's client and server must be the same version to connect at all, and a fresh workspace clone has no `node_modules` until you install them. Run your script under `JANISSARY_NODE`, which names a known-good node binary — a bare `node` on the sandboxed `PATH` does not always resolve to one. `JANISSARY_NODE` can also be unset. If it is, check what a bare `node` resolves to (`node --version`) before trusting your scripts to it, and use it if it is a current node.
 
 The package is CommonJS, so a dynamic `import()` puts it under `.default`:
 
@@ -46,6 +46,16 @@ It is `chromium.connect(endpoint)`, not `connectOverCDP`. The endpoint speaks Pl
 **Your own server, which you start yourself.** Install the workspace clone's dependencies, start its build inside the sandbox, read the URL and token out of that server's own output, and navigate there. The browser runs on the same host as your server in both the local and remote case, so a `127.0.0.1` URL resolves either way.
 
 Janissary does not give you the URL or session token for the live janissary window the human is using. Active workspace confinement blocks the normal route through project state where those values are recorded. This reduces disclosure; it is not proof that the live session is unreachable when Seatbelt is unavailable, `sandboxWorkspaces` is off, or the harness was launched with `--no-workspace`. In those configurations an unconfined same-user process may discover services through accessible file, process, or listener state; the browser security warning in the harness documentation describes the resulting trust requirement. In every configuration, test the server built from your own workspace rather than the code the human is running.
+
+Start the session with the repo's own launcher: `node bin/janus.mjs --no-open <project-dir>`. `--no-open` stops janissary from opening an app window on the host, and the token-gated URL arrives on stdout (also recorded as a `__JANUS_URL__` line in `<project-dir>/.janissary/log/server.log`). One instance runs per directory — a lock under `.janissary/` enforces it, and the likeliest holder is the human's live session on the workspace itself. When the error says so, point your instance at a scratch directory instead; never delete the lock to get around a live instance.
+
+## Keeping it alive
+
+The server's lifetime follows its websocket clients, deliberately: when the last client disconnects, janissary shuts itself down cleanly about a second later, so a browser history restore can reconnect without losing the session. The UI page you navigate to is one of those clients, and a page your script created is destroyed when your script's connection to the browser ends. The obvious shape — connect, open a page, navigate, exit — therefore takes the whole session down with it moments after your script returns.
+
+The symptom is a server that answered requests one moment and refuses connections the next, with nothing in its log. It reads like something external killed the process; it is janissary's own clean `exit(0)`. Do not go hunting for a reaper, and do not build on racing a reconnect into the one-second grace window — a connection that happens to cancel the pending shutdown is luck, not a design.
+
+Hold a connection open for as long as the session should live. If your script must return while the session stays up, spawn a holder: a script that connects, opens the page, navigates, and then idles indefinitely, run the way background processes survive in your runtime (under a persistent shell, `nohup … & disown`). Killing the holder is also the clean way to end the session — the page closes, the websocket drops, and the server quits itself.
 
 ## What will end your session
 
