@@ -36,14 +36,60 @@ export type NotificationEventType =
   | 'plugin-failure'
   | 'plugin-note';
 
+// A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
+// active tab never notifies about its own activity) apply to these five.
+export type AmbientNotificationEvent =
+  | 'state-change'
+  | 'incoming-message'
+  | 'schedule-fire'
+  | 'agent-start'
+  | 'rate-limited';
+
+// Everything else, derived rather than restated: a new member of `NotificationEventType` lands here
+// automatically and then fails `EXPLICIT_EVENTS` below until it is classified.
+export type ExplicitNotificationEvent = Exclude<NotificationEventType, AmbientNotificationEvent>;
+
+// Each ambient event and the config toggle that opts into it. Keyed by the union, and valued by a
+// key of the config, so neither a new ambient event nor a renamed toggle can slip through — the
+// same reason `CLIENT_FRAME_TYPES` and `CAPABILITIES` are keyed by their unions.
+export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof NotificationConfig['events']> = {
+  'state-change': 'stateChange',
+  'incoming-message': 'incomingMessage',
+  'schedule-fire': 'scheduleFire',
+  'agent-start': 'agentStart',
+  'rate-limited': 'rateLimited',
+};
+
+// The events that are always eligible and bypass focus suppression. `manual` is an explicit
+// `notify`, `auto-approve` an auto-approved permission gate, `editor-suggest` a persona query's
+// failure, `question` an agent waiting on a human. The rest — a lost transcript, an abandoned
+// recording, a dead browser, a failed file operation, a plugin's own note or breakage — bypass it
+// for one shared reason: the tab it happened to is very often the tab the user is watching, which
+// is exactly the case focus suppression would discard.
+//
+// Keyed by the union so a seventeenth event stops compiling here until it is classified, rather
+// than falling through a `default` arm to `false` and never reaching the feed.
+export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
+  manual: true,
+  'auto-approve': true,
+  'editor-suggest': true,
+  question: true,
+  'transcript-unavailable': true,
+  'ssh-recording-failed': true,
+  'harness-recording-failed': true,
+  'e2e-browser-gone': true,
+  'file-operation': true,
+  'plugin-failure': true,
+  'plugin-note': true,
+};
+
+function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {
+  return Object.hasOwn(AMBIENT_EVENTS, event);
+}
+
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
-// tab feeding itself. For the five ambient events, both the per-event opt-in toggle and focus
-// suppression (the active tab never notifies about its own activity) apply; `manual`,
-// `auto-approve`, `editor-suggest`, and `question` bypass both — an explicit trigger always fires (subject
-// only to the tab being open, enforced in `notify`). `ssh-recording-failed`,
-// `harness-recording-failed`, and `e2e-browser-gone` bypass them for the same reason `plugin-note`
-// does: the tab whose recording or browser just died is very often the tab the user is watching,
-// which is exactly the case focus suppression would discard.
+// tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
+// in `notify`); an ambient one is subject to its toggle and to focus suppression.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
@@ -51,33 +97,10 @@ export function shouldNotify(
   activeLabel: string,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
-  switch (event) {
-    case 'manual':
-    case 'auto-approve':
-    case 'editor-suggest':
-    case 'question':
-    case 'transcript-unavailable':
-    case 'ssh-recording-failed':
-    case 'harness-recording-failed':
-    case 'e2e-browser-gone':
-    case 'file-operation': { return true; }
-    // `plugin-note` is explicit rather than ambient so focus suppression cannot swallow it: the
-    // case that matters most — a plugin reporting on the very tab the user is watching — is the one
-    // the ambient rule would have discarded.
-    case 'plugin-failure':
-    case 'plugin-note': { return true; }
-    default: { break; }
-  }
+  if (!isAmbient(event)) return EXPLICIT_EVENTS[event];
   if (tabLabel === activeLabel) return false;
   if (!config) return false;
-  switch (event) {
-    case 'state-change': { return config.events.stateChange; }
-    case 'incoming-message': { return config.events.incomingMessage; }
-    case 'schedule-fire': { return config.events.scheduleFire; }
-    case 'agent-start': { return config.events.agentStart; }
-    case 'rate-limited': { return config.events.rateLimited; }
-    default: { return false; }
-  }
+  return config.events[AMBIENT_EVENTS[event]];
 }
 
 // A compact 12-hour clock time (e.g. `8:32pm`) — hour without a leading zero, two-digit minutes,
