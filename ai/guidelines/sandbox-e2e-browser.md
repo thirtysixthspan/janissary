@@ -6,6 +6,10 @@ You are reading this because you may be running inside a janissary workspace wit
 
 Inside a workspace you **cannot launch your own browser**. Playwright keeps its Chromium under `$HOME`, which the sandbox denies reading, so `chromium.launch()` fails on a permission error. That is the sandbox working as designed, not a bug to route around — do not go looking for another copy of Chromium, and do not try to install one. When a browser is available to you, janissary has already started it and handed you the way in.
 
+## Testing Janissary from an existing sandbox
+
+When a test already runs inside a macOS Seatbelt sandbox, run Janissary with its workspace sandbox disabled (`sandboxWorkspaces: false`). Seatbelt does not allow a confined process to apply another sandbox profile: attempting to start Janissary's inner `sandbox-exec` fails with `sandbox_apply: Operation not permitted`. The outer test sandbox remains the isolation boundary; disabling the inner one only avoids that unsupported nested launch.
+
 ## Telling whether you have one
 
 Two environment variables, both set only when the tab was launched with `-b`/`--browser`:
