@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { command } from './schedule.js';
 import type { ScheduleEntry } from '../schedule/types.js';
 import type { LogEntry } from '../tab/types.js';
@@ -41,6 +41,7 @@ describe('schedule command run', () => {
       schedule: {
         get: (label: string) => schedules.get(label),
         set: (label: string, next: ScheduleEntry[]) => { schedules.set(label, next); },
+        openScheduleLaunch: vi.fn(),
       },
       tab: {
         tabs,
@@ -53,6 +54,12 @@ describe('schedule command run', () => {
   });
 
   const run = (command_: string) => command.run!(command_, tab, managers as never);
+
+  it('opens the launch dialog for the bare token and records nothing', () => {
+    run('schedule');
+    expect((managers as typeof managers & { schedule: { openScheduleLaunch: ReturnType<typeof vi.fn> } }).schedule.openScheduleLaunch).toHaveBeenCalledTimes(1);
+    expect(outputs).toEqual([]);
+  });
 
   it('adds a named entry and records it', () => {
     run('schedule fetch every 5m echo hi');

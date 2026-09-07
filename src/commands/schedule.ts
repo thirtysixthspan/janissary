@@ -43,6 +43,7 @@ export const command: Command = {
   name: 'schedule',
   match: (command_) => /^schedule\b/i.test(command_),
   run: (command_, tab, managers) => {
+    if (command_.trim().toLowerCase() === 'schedule') { managers.schedule.openScheduleLaunch(); return; }
     const parsed = parseScheduleCommand(command_.replace(/^schedule\b\s*/i, ''), new Date());
     const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     if ('error' in parsed) { append(parsed.error); return; }
