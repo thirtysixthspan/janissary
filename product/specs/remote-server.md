@@ -201,6 +201,19 @@ writes, and every mutation execute on the remote against the provisioned workspa
 path is resolved within that workspace; an escaping path is refused. Remote file content travels to
 the local cache for ordinary openers, and editor saves travel back over the same channel.
 
+An operation that can report per-path failure — a write, a move, a rename, a delete, a paste, an
+undo or redo replay, singly or in batch — reports it that way whatever went wrong, including a
+connection that ended before the reply arrived and an error the remote replied with. The user sees
+the same per-path outcome a local tree gives for the same action, rather than the operation failing
+silently as a transport error with nothing to show. An operation that returns data with nowhere to
+put a reason — a listing, stats, a watch, git metadata, a pull, a search, a file read — fails
+outright instead, since there is no result for it to report into.
+
+A reply lost to a dropped connection is reported as failed, and nothing is retried. Whether the
+remote had already carried out the work before the connection ended cannot be known from the local
+side, and repeating a mutation that may have run would be worse than reporting one that may have
+succeeded.
+
 A remote agent tab's `acp` agent is a further exception, and it splits three ways. The **agent
 process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
 remote hosts the ACP client too, so what crosses the channel is prompt text and reply chunks rather
