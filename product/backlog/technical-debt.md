@@ -3,17 +3,6 @@
 ## ready
 
 
-* Bind shared remote-channel teardown to the channel entry throughout its lifetime.
-
-Existing Debt: Remote channel callbacks recover their shared entry through the creator's removable tab label even though joined tabs can outlive that creator. Severity: 7/10
-
-Existing Risk: 7/10 - Releasing the creator before the transport exits makes teardown return without removing surviving aliases or notifying their owners, leaving joined tabs attached to a dead channel.
-
-Proposal Risk: 2/10 - Entry-owned teardown reaches surviving aliases after creator release, while duplicate exit delivery and callbacks that close tabs still require idempotent cleanup.
-
-Proposal: In `src/remote/manager.ts`, `open` captures `label` in `onClose`, which calls `channelClosed(label)`, but `release(label)` deletes that lookup while deliberately keeping the channel alive for joined tabs. Capture a stable entry reference for channel lifecycle callbacks and make `channelClosed` consume that entry directly; remove only aliases still pointing to that entry, clear its cache and handler ownership once, and invoke the surviving handlers after detaching the entry. Audit the readiness and error callbacks in the same `open` closure so they cannot resolve a later entry that reuses the creator label. Preserve last-owner transport shutdown and reassignment in `release`. `src/remote/manager.test.ts` separately covers creator release and transport exit but never combines them; add attach, release-creator, transport-exit coverage asserting surviving lookups disappear and their close handlers run once, plus creator-label reuse and repeated-exit cases. Keep the exactly-once channel notification behavior in `src/remote/channel.ts` and its coverage in `src/remote/channel.test.ts` intact.
-
-
 * Re-arm editor file watchers when an atomic save replaces the watched file.
 
 Existing Debt: The editor's save path replaces a file through rename but updates only its watcher's timestamp baseline, leaving watcher ownership tied to the pre-save file. Severity: 6/10

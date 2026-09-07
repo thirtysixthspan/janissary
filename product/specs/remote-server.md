@@ -177,6 +177,10 @@ after the last reference is released. If the ssh session drops for any reason, e
 navigator using it closes and the notifications feed reports the ended connection once. There is no
 reconnect, no resume, and no reattach; a new launch starts a fresh session.
 
+This disconnect cleanup still applies after the launching tab closes. Reusing its name for a new
+launch does not let the earlier session's readiness, errors, or disconnect close or change the new
+session. Each surviving tab is closed once when its own shared session ends.
+
 On the remote side the workspace clone is removed when `remote-serve` exits — including on the
 hangup it receives when the channel drops — so a dropped connection never leaves a clone behind.
 Closing the last user locally ends the session and triggers the same cleanup. Explicitly closing its

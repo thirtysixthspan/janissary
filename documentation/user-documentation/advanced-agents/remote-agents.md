@@ -103,7 +103,7 @@ You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git rep
 
 ## Lifecycle
 
-A remote workspace and its SSH session last until their final user closes. The launching tab, agents joined with ➕, and its file navigator can all share that session. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. If the connection itself drops or you explicitly close `ssh:<address>`, every tab and navigator using it closes. There's no reconnect and no reattach, so a new launch starts a fresh session.
+A remote workspace and its SSH session last until their final user closes. The launching tab, agents joined with ➕, and its file navigator can all share that session. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. If the connection itself drops or you explicitly close `ssh:<address>`, every tab and navigator using it closes, even if the launching tab has already closed. A new session using the launching tab's old name is unaffected. There's no reconnect and no reattach, so a new launch starts a fresh session.
 
 The remote deletes its workspace clone when the session's last user closes, including when the connection drops, so a lost connection never leaves a clone behind. Remote files opened for viewing or editing are cached locally only for that session and cleared at startup or when its last user closes.
 

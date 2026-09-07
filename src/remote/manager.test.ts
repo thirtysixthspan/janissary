@@ -5,8 +5,10 @@ import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 function address(token: string): RemoteAddress {
   const parsed = parseRemoteAddress(token);
@@ -43,7 +45,7 @@ describe('remoteServeCommand', () => {
   });
 });
 
-function managerHarness() {
+function managerHarness(ready = true) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
   const reassignTransports = vi.fn();
@@ -61,11 +63,84 @@ function managerHarness() {
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
   remote.open('creator', address('devbox'), '/local', handlers);
-  transport?.onData(`${encodeHandshake('/remote')}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  transport?.onData(`${encodeHandshake('/remote')}\n`);
+  if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, reassignTransports, closeTab, transport: () => transport };
 }
 
 describe('RemoteManager shared channels', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('detaches survivors before callbacks after creator release and repeated exit', () => {
+    const h = managerHarness();
+    const onClosed = vi.fn(() => {
+      expect(h.remote.get('joined')).toBeUndefined();
+      expect(h.remote.release('joined')).toBe(false);
+      h.transport()?.onExit();
+    });
+    h.remote.attach('joined', 'creator', { onReady: vi.fn(), onFailed: vi.fn(), onClosed });
+    h.remote.release('creator');
+    h.transport()?.onExit();
+    h.transport()?.onExit();
+    expect(onClosed).toHaveBeenCalledOnce();
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+    expect(h.remote.readyOf('joined')).toBeUndefined();
+    expect(h.remote.addressOf('joined')).toBeUndefined();
+    expect(h.remote.transcriptSource('joined')).toBeUndefined();
+    expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith('devbox', 'creator');
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'manual', 'joined', expect.any(String));
+  });
+
+  it('keeps readiness and teardown on the old entry after creator-label reuse', async () => {
+    const h = managerHarness(false);
+    const oldTransport = h.transport();
+    h.remote.attach('joined', 'creator');
+    const oldReady = h.remote.readyOf('joined');
+    h.remote.release('creator');
+    const replacementHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+    const replacement = h.remote.open('creator', address('otherhost'), '/local', replacementHandlers);
+    oldTransport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/old/ws' })}\n`);
+    await expect(oldReady).resolves.toBe('/old/ws');
+    expect(h.remote.workspaceOf('creator')).toBeUndefined();
+    expect(h.handlers.onReady).not.toHaveBeenCalled();
+    oldTransport?.onExit();
+    oldTransport?.onExit();
+    expect(h.remote.get('joined')).toBeUndefined();
+    expect(h.remote.get('creator')).toBe(replacement);
+    expect(replacementHandlers.onClosed).not.toHaveBeenCalled();
+    h.transport()?.onData(`${encodeHandshake('/new')}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
+    await expect(h.remote.readyOf('creator')).resolves.toBe('/new/ws');
+  });
+
+  it.each(['workspace failure', 'protocol error'])('isolates %s after creator-label reuse', async (failure) => {
+    const h = managerHarness(false);
+    const oldTransport = h.transport();
+    h.remote.attach('joined', 'creator');
+    const oldReady = h.remote.readyOf('joined');
+    h.remote.release('creator');
+    const replacementHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+    h.remote.open('creator', address('otherhost'), '/local', replacementHandlers);
+    oldTransport?.onData(failure === 'workspace failure'
+      ? `${encodeFrame({ type: 'workspace-failed', message: 'provision failed' })}\n`
+      : 'invalid-frame\n');
+    await expect(oldReady).rejects.toThrow();
+    expect(h.handlers.onFailed).not.toHaveBeenCalled();
+    expect(replacementHandlers.onFailed).not.toHaveBeenCalled();
+    h.transport()?.onData(`${encodeHandshake('/new')}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
+    await expect(h.remote.readyOf('creator')).resolves.toBe('/new/ws');
+  });
+
+  it('settles readiness and clears the cache once on final-owner release', async () => {
+    const h = managerHarness(false);
+    const ready = h.remote.readyOf('creator');
+    h.remote.release('creator');
+    await expect(ready).rejects.toThrow('ended before its workspace was ready');
+    h.transport()?.onExit();
+    expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+  });
+
   it('aliases a joined tab onto the existing channel and readiness', async () => {
     const h = managerHarness();
     expect(h.remote.attach('joined', 'creator')).toBe(true);
