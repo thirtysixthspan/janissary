@@ -8,7 +8,7 @@ import type { ServerEvent } from './protocol.js';
 import { handle } from './message-handler.js';
 import { buildStateEvent } from './state-event.js';
 import { clientParamsProblem, isClientMessage } from './client-message.js';
-import { serveOpenFile } from './open-route.js';
+import { serveOpenFile } from './open/route.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { pluginContentTypes } from './plugins/opener-adapter.js';
 import { pluginOpeners } from './openers/index.js';

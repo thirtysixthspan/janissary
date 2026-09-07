@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { expandGlob } from './open-glob.js';
+import { expandGlob } from './glob.js';
 
 describe('expandGlob', () => {
   let root: string;

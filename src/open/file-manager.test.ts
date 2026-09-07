@@ -2,18 +2,18 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import path from 'node:path';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { OpenFileManager } from './open-file-manager.js';
-import type { Managers } from './managers.js';
-import { TabPluginHost } from './plugins/host.js';
-import { openerForExtension } from './openers/index.js';
-import { EDITOR_MAX_BYTES } from './openers/editor.js';
+import { OpenFileManager } from './file-manager.js';
+import type { Managers } from '../managers.js';
+import { TabPluginHost } from '../plugins/host.js';
+import { openerForExtension } from '../openers/index.js';
+import { EDITOR_MAX_BYTES } from '../openers/editor.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 
-vi.mock('./config.js', () => ({
+vi.mock('../config.js', () => ({
   getConfig: () => ({ syncPaths: ['synced/'], externalViewers: { video: 'QuickTime Player' } }),
 }));
-vi.mock('./openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
+vi.mock('../openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
 
 describe('OpenFileManager.edit', () => {
   it('opens the editor for a new file that does not exist on disk', () => {
