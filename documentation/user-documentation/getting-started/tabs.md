@@ -148,8 +148,6 @@ bottom automatically.
 
 Shell output keeps its color, whether you ran the command yourself or an agent did: a test suite's colored pass/fail summary, for example, renders with the same colors it would in a real terminal.
 
-![Shell output in the transcript: a grep match highlighted in the shell's color, with the file path and line number rendered as an underlined, clickable link.](/screenshots/transcript-file-link.png)
-
 Besides the keys in [Keyboard shortcuts](/user-documentation/getting-started/keyboard), the mouse wheel scrolls the transcript one line per tick. Once you've scrolled up from the bottom, a scrollbar with a percentage appears in the command bar, showing how far back you are.
 
 ## Agent tool steps fold up

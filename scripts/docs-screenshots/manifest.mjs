@@ -36,23 +36,6 @@ export default [
     cropToChildren: '.tab',
   },
 
-  // Command bar.
-  { name: 'tab-completion', actions: [{ type: 'open sa' }, { press: 'Tab' }], target: 'command-bar' },
-  { name: 'shell-output', setup: ['shell ls -la'], settle: 1200, target: 'transcript', clipHeight: 400 },
-  {
-    name: 'transcript-file-link',
-    setup: ['shell grep -Hn --color=always harbor-gazette src/app.ts'],
-    settle: 1200,
-    target: 'transcript',
-    clipHeight: 100,
-  },
-  {
-    name: 'browser-output',
-    setup: ['browser goto {{PAGE_URL}}', 'browser content'],
-    settle: 2000,
-    target: 'transcript',
-    clipHeight: 400,
-  },
   {
     name: 'db-output',
     setup: ['db sqlite create demo', 'db sqlite query demo CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)', 'db sqlite query demo SELECT * FROM items'],
@@ -66,11 +49,6 @@ export default [
     settle: 1500,
     target: 'transcript',
     clipHeight: 400,
-  },
-  {
-    name: 'connection-window',
-    setup: ['shell ls -la'],
-    target: 'status-panels',
   },
   {
     name: 'history-picker',
@@ -97,13 +75,6 @@ export default [
     target: 'task-overlay',
   },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },
-  {
-    name: 'tab-navigator',
-    setup: ['shell ls -la', 'shell git status'],
-    actions: [{ press: 'Control+g' }, { type: 'shell' }],
-    target: 'tab-nav-overlay',
-  },
-
   // View tabs.
   { name: 'image-tab', setup: ['open ./sample.png'], actions: [{ press: 'PageUp' }], target: 'image-view' },
   { name: 'markdown-tab', setup: ['open ./sample.md'], target: 'markdown-view' },

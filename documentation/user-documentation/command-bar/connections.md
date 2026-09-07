@@ -47,8 +47,6 @@ A floating `connections` panel lists the active tab's live connections: its shel
 
 Over an ssh tab, the panel shows only that tab's own `ssh:<destination>` row. A harness tab that isn't ssh has no connections button at all, since its terminal already is the connection.
 
-![The connections panel floating above a tab, listing its open shell and other live connections.](/screenshots/connection-window.png)
-
 In the web app, a plug icon in the tab's metadata bar opens this panel: it lights up whenever the tab has a live connection, and stays dark and unclickable with an explanatory tooltip when it doesn't. Hovering the lit icon shows the panel; moving away hides it again. Clicking pins the panel open until you click a second time. Switching to a tab with live connections auto-shows its panel for five seconds before fading; moving the pointer onto the icon or panel during that window cancels the fade and hands off to normal hover behavior.
 
 ## Read what an agent session has said

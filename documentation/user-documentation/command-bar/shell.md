@@ -10,8 +10,6 @@ npm test
 
 Output streams into the transcript line by line as it's produced, with ANSI colors and styling intact — a test suite's colored pass/fail summary looks the way it should. `file.ts:42`-style paths in the output are clickable and open the file in an [editor tab](/user-documentation/tab-types/editor) at that line.
 
-![Shell command output rendered in the transcript beneath its prompt line.](/screenshots/shell-output.png)
-
 Plain commands like these are recognized as shell input automatically. When a line could be read more than one way — a shell command, a SQL query, a prompt for the agent — the app asks instead of guessing, floating a chooser above the command bar; pick a route with `↑`/`↓` and `Return`, or `Escape` to cancel. To skip recognition entirely, prefix the line with `shell `:
 
 ```
