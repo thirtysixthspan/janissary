@@ -2,9 +2,6 @@
 
 ## ready
 
-
-## development
-
 * Finish the tab-lookup migration so feature managers stop reaching into the raw tabs array with hand-written label scans.
 
 Existing Debt: TabManager exposes `byLabel` and five guard-typed payload accessors as the intended lookup surface, but production code still hand-scans the raw `tabs` array at roughly fifty-five call sites across some thirty files, leaving two idioms for the same lookup and keeping the array itself a de facto public API. Severity: 5/10
