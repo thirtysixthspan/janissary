@@ -7,7 +7,7 @@ import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatche
 import type { ServerEvent } from './protocol.js';
 import { handle } from './message-handler.js';
 import { buildStateEvent } from './state-event.js';
-import { isClientMessage } from './client-message.js';
+import { clientParamsProblem, isClientMessage } from './client-message.js';
 import { serveOpenFile } from './open-route.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { pluginContentTypes } from './plugins/opener-adapter.js';
@@ -117,6 +117,11 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       let message: unknown;
       try { message = JSON.parse(raw.toString()) as unknown; } catch { return; }
       if (!isClientMessage(message)) return;
+      const problem = clientParamsProblem(message);
+      if (problem !== undefined) {
+        ws.send(JSON.stringify({ t: 'rpc-reply', id: message.id, error: problem }));
+        return;
+      }
       try {
         handle(controller, message, (event) => ws.send(JSON.stringify(event)));
       } catch (error) {

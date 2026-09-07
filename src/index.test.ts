@@ -70,6 +70,25 @@ describe('startServer (WS + RPC + security)', () => {
     ws.close();
   });
 
+  // A recognized method whose params do not decode is answered rather than dropped: three methods
+  // already got a named error from inside the dispatcher, and a deferred method's caller would
+  // otherwise wait for a reply that never comes.
+  it('answers a recognized method carrying malformed params with an error naming it', async () => {
+    server = await startServer({ webDir: tmpdir() });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    const events: ServerEvent[] = [];
+    ws.on('message', (data) => { events.push(JSON.parse(data.toString())); });
+    await new Promise((resolve, reject) => { ws.on('open', resolve); ws.on('error', reject); });
+
+    ws.send(JSON.stringify({
+      t: 'rpc', id: 65, method: 'reportLayout', params: { sidebarLeft: '240', sidebarRight: 300, tabAreaPct: 62 },
+    }));
+
+    await waitFor(() => events.some((event) => event.t === 'rpc-reply' && event.id === 65));
+    expect(events).toContainEqual({ t: 'rpc-reply', id: 65, error: 'Invalid reportLayout params' });
+    ws.close();
+  });
+
   it('serves security headers on HTTP responses', async () => {
     server = await startServer({ webDir });
     const headers = await new Promise<http.IncomingMessage['headers']>((res, rej) => {
