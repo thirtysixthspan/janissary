@@ -13,8 +13,8 @@ export async function resyncEditorTab(managers: Managers, url: string): Promise<
   tab.editor = { ...tab.editor, sync: 'syncing' };
   messageBus.emit('state', { type: 'dirty' });
   const result = await managers.gitSync.openSync();
-  const freshTab = managers.tab.tabs.find((t) => t.label === tab.label);
-  if (!freshTab?.editor) return;
+  const freshTab = managers.tab.editorTab(tab.label);
+  if (!freshTab) return;
   freshTab.editor = { ...freshTab.editor, sync: 'error' in result ? 'error' : 'synced' };
   if (!('error' in result)) managers.editorWatch.refresh(freshTab.label);
   messageBus.emit('state', { type: 'dirty' });

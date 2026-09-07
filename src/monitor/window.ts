@@ -56,8 +56,8 @@ export function pushSuggestion(
 // Update a persona's reporting tab with its monitor's current targets and running
 // context-byte total. A no-op if the tab or its monitor payload is gone.
 export function updateMonitorMeta(managers: Managers, name: string, targets: string, contextBytes: number): void {
-  const tab = monitorTabs(managers).find((t) => t.label === name);
-  if (!tab?.monitor) return;
+  const tab = managers.tab.monitorTab(name);
+  if (!tab) return;
   tab.monitor.targets = targets;
   tab.monitor.contextBytes = contextBytes;
   messageBus.emit('state', { type: 'dirty' });
@@ -66,6 +66,7 @@ export function updateMonitorMeta(managers: Managers, name: string, targets: str
 // Close a persona's reporting tab (used when the last monitor feeding it goes away
 // with its owning agent tab).
 export function closeMonitorTab(managers: Managers, name: string): void {
-  const index = managers.tab.tabs.findIndex((t) => t.view === 'monitor' && t.label === name);
+  if (!managers.tab.monitorTab(name)) return;
+  const index = managers.tab.findIndex(name);
   if (index !== -1) managers.tab.closeTab(index);
 }

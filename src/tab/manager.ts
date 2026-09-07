@@ -7,16 +7,15 @@ import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
 import { TabOpeningState } from './opening-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
-import { recordLeavingActiveTab, popFocusHistory, mostRecentFileNavigatorLabel } from './focus-history.js';
 import { FileRegistry } from './file-registry.js';
-import { markUnreadTab } from './transcript-events.js';
-import { repairPaneSelections, placeProfileTabSelection } from './split-selection.js';
+import { placeProfileTabSelection } from './split-selection.js';
 import * as tabOperations from './operations.js';
 import { tabRuntime } from './runtime.js';
+import * as lookup from './lookup.js';
 import * as runtimeOperations from './runtime-operations.js';
+import * as selectionOperations from './selection-operations.js';
 import * as transcriptOperations from './transcript-operations.js';
 import * as viewOperations from './view-operations.js';
-import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { AgentStatePersistence } from './persistence.js';
@@ -94,6 +93,27 @@ export class TabManager extends TabOpeningState {
     return this.tabs.findIndex((t) => t.label === label);
   }
 
+  // By-label lookups (see `./lookup.ts`). The guard-typed five return a narrowed tab, so a caller
+  // gets a non-optional payload rather than a `Tab` plus its own optional-chained check.
+  byLabel(label: string): Tab | undefined {
+    return lookup.byLabel(this.tabs, label);
+  }
+  harnessTab(label: string) {
+    return lookup.harnessTab(this.tabs, label);
+  }
+  editorTab(label: string) {
+    return lookup.editorTab(this.tabs, label);
+  }
+  filesTab(label: string) {
+    return lookup.filesTab(this.tabs, label);
+  }
+  pluginTab(label: string) {
+    return lookup.pluginTab(this.tabs, label);
+  }
+  monitorTab(label: string) {
+    return lookup.monitorTab(this.tabs, label);
+  }
+
   // The single write path into the state directory: a remote agent tab is live and in-memory, and a
   // closed one no longer exists, so both are refused here rather than filtered at each call site.
   // See `persistAgentState`.
@@ -108,35 +128,21 @@ export class TabManager extends TabOpeningState {
     );
   }
 
-  markUnread(label: string): void {
-    markUnreadTab(this.tabs, label, this.tabs[this.activeTab]?.label, this.secondaryTabLabel);
-  }
+  // Selection and focus history (see `./selection-operations.ts`).
+  markUnread(label: string): void { selectionOperations.markUnread(this, label); }
 
-  recordLeavingActiveTab(newIndex: number): void {
-    this.focusHistory = recordLeavingActiveTab(this.tabs, this.activeTab, this.focusHistory, newIndex);
-  }
+  recordLeavingActiveTab(newIndex: number): void { selectionOperations.recordLeavingActiveTab(this, newIndex); }
+
   popFocusHistory(eligible?: (tab: Tab) => boolean): number | undefined {
-    const { index, history } = popFocusHistory(this.tabs, this.focusHistory, eligible);
-    this.focusHistory = history;
-    return index;
+    return selectionOperations.popFocusHistory(this, eligible);
   }
 
-  repairSelections(): void {
-    const selection = repairPaneSelections(this.tabs, this.activeTab, this.secondaryTabLabel);
-    this.activeTab = selection.activeTab;
-    this.secondaryTabLabel = selection.secondaryTabLabel;
-  }
+  repairSelections(): void { selectionOperations.repairSelections(this); }
 
-  mostRecentFileNavigatorLabel(): string | undefined {
-    return mostRecentFileNavigatorLabel(this.tabs, this.focusHistory);
-  }
+  mostRecentFileNavigatorLabel(): string | undefined { return selectionOperations.mostRecentFileNavigatorLabel(this); }
 
   applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void {
-    const next = applyOpenResultOp(this.tabs, this.activeTab, this.secondaryTabLabel, this.focusHistory, result);
-    this.tabs = next.tabs;
-    this.activeTab = next.activeTab;
-    this.secondaryTabLabel = next.secondaryTabLabel;
-    this.focusHistory = next.focusHistory;
+    selectionOperations.applyOpenResult(this, result);
   }
 
   setActiveTab(index: number): void { tabOperations.setActiveTab(this, index); }

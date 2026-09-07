@@ -89,8 +89,8 @@ async function saveRemote(
 
 async function syncAfterSave(managers: Managers, label: string, filename: string): Promise<void> {
   const result = await managers.gitSync.saveSync(filename);
-  const tab = managers.tab.tabs.find((t) => t.label === label);
-  if (!tab?.editor) return;
+  const tab = managers.tab.editorTab(label);
+  if (!tab) return;
   tab.editor = { ...tab.editor, sync: 'error' in result ? 'error' : 'synced' };
   messageBus.emit('state', { type: 'dirty' });
 }

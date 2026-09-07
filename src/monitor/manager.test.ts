@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { LogEntry, Tab } from '../tab/types.js';
+import { monitorTab } from '../tab/lookup.js';
 import type { Managers } from '../managers.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -49,6 +50,10 @@ function makeFakeManagers(tabs: Tab[]) {
     startRunning: () => {},
     finishRunning: (label: string, output: string) => { finished.push({ label, output }); },
     openFilePath: (id: string) => openFiles.get(id),
+    // Delegates to the real lookup over the live array rather than re-implementing the scan, so
+    // the fake cannot answer differently from the manager it stands in for.
+    monitorTab: (label: string) => monitorTab(fakeTab.tabs, label),
+    findIndex: (label: string) => fakeTab.tabs.findIndex((t) => t.label === label),
     // openMonitorTab reassigns `tabs`, so splice the live array, not the closure's original.
     closeTab: (index: number) => { fakeTab.tabs.splice(index, 1); },
   };

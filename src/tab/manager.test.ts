@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TabManager } from './manager.js';
+import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import * as agentState from '../agent/state.js';
@@ -30,6 +31,40 @@ function makeTabManager(): TabManager {
   Object.assign(managers, makeManagers());
   return managers.tab;
 }
+
+// Callers used to scan the public `tabs` array themselves and then check the returned record's
+// view payload — fifty-two times across thirty-one modules. These route the same question through
+// the manager; `lookup.test.ts` covers what the accessors answer.
+describe('TabManager by-label lookups', () => {
+  it('byLabel answers for the manager\'s own tabs', () => {
+    const tm = makeTabManager();
+    expect(tm.byLabel(tm.tabs[0].label)).toBe(tm.tabs[0]);
+    expect(tm.byLabel('ghost')).toBeUndefined();
+  });
+
+  it('the guard-typed accessors narrow a tab of their kind and refuse the others', () => {
+    const tm = makeTabManager();
+    const harness = {
+      ...makeTab('claude', '#aaa'), view: 'harness' as const,
+      harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' as const },
+    };
+    tm.tabs.push(harness);
+
+    expect(tm.harnessTab('claude')).toBe(harness);
+    expect(tm.harnessTab(tm.tabs[0].label)).toBeUndefined();
+    expect(tm.editorTab('claude')).toBeUndefined();
+    expect(tm.filesTab('claude')).toBeUndefined();
+    expect(tm.pluginTab('claude')).toBeUndefined();
+    expect(tm.monitorTab('claude')).toBeUndefined();
+  });
+
+  it('tracks the live array rather than a snapshot taken at construction', () => {
+    const tm = makeTabManager();
+    expect(tm.byLabel('later')).toBeUndefined();
+    tm.tabs.push(makeTab('later', '#bbb'));
+    expect(tm.byLabel('later')?.label).toBe('later');
+  });
+});
 
 describe('TabManager queue', () => {
   it('deleteBusy invokes the drain hook (microtask-deferred) only when the queue is non-empty', async () => {
