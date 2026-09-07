@@ -75,6 +75,8 @@ export class ScheduleManager {
     this.announceChange();
   }
 
+  closeTab(label: string): void { this.delete(label); }
+
   // Remove one entry from a tab's schedule by id, after the client has confirmed the deletion.
   // Persists the reduced list for non-harness tabs and re-emits state so every schedule surface
   // refreshes. Returns false (no persist, no emit) when the tab has no matching entry.

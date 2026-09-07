@@ -58,6 +58,8 @@ export class DatabaseManager {
     this.tabConns.delete(label);
   }
 
+  closeTab(label: string): void { this.forgetTab(label); }
+
   // Close every globally open SQLite connection and forget all per-tab attribution (last tab closed
   // / app shutdown) — connections are global, so they're closed only when no tab remains.
   closeAll(): void {

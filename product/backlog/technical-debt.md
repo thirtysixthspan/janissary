@@ -5,17 +5,6 @@
 
 ## development
 
-* Give every manager a closeTab method and let the tab-close path walk the dispose registry instead of a hand-maintained teardown checklist.
-
-Existing Debt: The tab cleanup module releases each of a tab's resources by calling a different manager by hand in a fixed sixteen-line sequence, and its signature still carries test-era scaffolding — a map-or-number union parameter, an optional queue map, and a legacy tab-count parameter the one production caller never passes — so a new per-tab resource is a line someone must remember, exactly the hand-maintained-checklist shape the lifecycle principle says to retire. Severity: 6/10
-
-Existing Risk: 5/10 - The next per-tab resource added to a manager and forgotten in the checklist leaks a watcher, a process, or a map entry per closed tab, and a release that gains an ordering constraint has nowhere to state it except a comment.
-
-Proposal Risk: 3/10 - The deliberate exceptions must survive the registry walk — the workspace release deferred off the close path, the remote release only when the closing tab owns the channel, the database-wide close when the last tab closes, and the forget-persisted-before-delete ordering — so the risk moves into encoding those few cases correctly rather than into remembering every line.
-
-Proposal: Add an optional `closeTab(label)` to `ManagerLifecycle` in src/managers.ts, move each manager's existing per-tab release into that method (src/pseudoterminal-manager.ts, src/shell-manager.ts, src/acp/manager.ts, src/editor/acp-manager.ts, src/browser/tab.ts, src/remote/manager.ts, src/file-navigator/manager.ts, src/editor/watch-manager.ts, src/schedule/manager.ts, src/questions.ts, and src/database/manager.ts already hold the logic), and rewrite `closeTabResources` in src/tab/cleanup.ts to walk `MANAGER_DISPOSE_ORDER` calling `closeTab` where defined — keeping the special cases explicit around the walk: the deferred workspace release, the conditional remote release, `forgetPersisted` before `deleteAgentState`, the last-tab database close, and the transcript `tab:removed` emit. Delete the queue and legacy tab-count parameters and the union signature, passing the single non-docked count src/tab/close.ts supplies. Migrate src/tab/cleanup.test.ts's cases onto the per-manager methods and add one test that a manager defining `closeTab` is reached for every closed tab — the guarantee the checklist can only promise by review.
-
-
 * Pair each state-directory subsystem's init and clear in one registry so boot stops sequencing nineteen unconnected module calls by hand.
 
 Existing Debt: The boot sequence in src/main.ts calls eleven per-subsystem init functions and, on a non-relaunch start, eight per-subsystem clear functions as two flat, order-sensitive lists with no structural tie between an init and its clear — the same hand-maintained-checklist shape the lifecycle principle retires elsewhere. Severity: 4/10
