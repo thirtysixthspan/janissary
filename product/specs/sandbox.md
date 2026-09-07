@@ -92,9 +92,10 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   leaves every internal import denied. The carve-in applies to every sandboxed spawn, not only a
   `-b` one — it grants read access to two directories of Janissary's own dependency tree, which hold
   no user data, and gating it would thread a flag through every spawn path to no benefit.
-- `/dev/null` and tty/pty devices get their own narrow read/write/ioctl allow, independent of the
-  workspace/`$HOME` rules — a PTY-backed tab needs `ioctl` (raw-mode termios, window size) on its
-  controlling terminal, which is a distinct Seatbelt operation from `file-read*`/`file-write*`.
+- `/dev/null`, the PTY master multiplexer (`/dev/ptmx`), and tty/pty devices get their own narrow
+  read/write/ioctl allow, independent of the workspace/`$HOME` rules. `/dev/ptmx` lets a
+  sandboxed Janissary process allocate a PTY; its terminal slave needs `ioctl` for raw-mode termios
+  and window size, which is a distinct Seatbelt operation from `file-read*`/`file-write*`.
 - `/tmp` and `/private/tmp` are explicitly denied for `process-exec` — a script copied there can't
   be run, even though the directory itself is readable/writable by everything.
 
