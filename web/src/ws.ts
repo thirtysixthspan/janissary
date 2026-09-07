@@ -18,6 +18,10 @@ export type LayoutListener = (event: {
   focusRight?: 'files' | 'notifications';
 }) => void;
 
+// What a request is answered with when its connection ends before the reply does. Nonempty, because
+// `saveFile`'s caller displays it and an empty string reads there as success.
+const CONNECTION_ENDED = 'connection closed';
+
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
 export class JanusClient {
@@ -36,6 +40,41 @@ export class JanusClient {
     this.ws = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
     this.ws.addEventListener('message', (event) => this.onEvent(JSON.parse(event.data) as ServerEvent));
     this.ws.addEventListener('open', () => this.send({ method: 'init', params: {} }));
+    this.ws.addEventListener('close', () => { this.drainPending(); });
+  }
+
+  // Invoke a pending request's callback once and drop it. Every way a request can finish — its
+  // reply, the connection ending, a send that threw — goes through here, so an id is answered at
+  // most once and a late reply for an already-settled id finds nothing and is dropped.
+  private settle(id: number, result: unknown, error?: string): void {
+    const callback = this.pending.get(id);
+    if (!callback) return;
+    this.pending.delete(id);
+    callback(result, error);
+  }
+
+  // Answer everything still waiting with a connection failure. A closed socket will never deliver
+  // those replies, and a promise left pending strands the dialog or busy indicator built on it.
+  // The map is swapped out before any callback runs, so this is idempotent — the close listener and
+  // `dispose` can both call it, and `dispose` does both, since closing the socket fires the close
+  // event in its own turn.
+  //
+  // Nothing is resent. A request whose reply was lost may still have been carried out by the server,
+  // so replaying a mutating call could apply it twice.
+  private drainPending(): void {
+    const outstanding = this.pending;
+    this.pending = new Map();
+    for (const callback of outstanding.values()) callback(undefined, CONNECTION_ENDED);
+  }
+
+  // Hand a registered request to the socket. A `send` that throws settles it here rather than
+  // leaving its callback in the map waiting for a reply nothing ever asked for.
+  private dispatch(id: number, payload: string): void {
+    try {
+      this.ws.send(payload);
+    } catch {
+      this.settle(id, undefined, CONNECTION_ENDED);
+    }
   }
 
   private onEvent(event: ServerEvent): void {
@@ -93,9 +132,8 @@ export class JanusClient {
     break;
     }
     case 'rpc-reply': {
-      const callback = this.pending.get(event.id);
-      if (callback) { this.pending.delete(event.id); callback(event.result, event.error); }
-    
+      this.settle(event.id, event.result, event.error);
+
     break;
     }
     // No default
@@ -112,7 +150,7 @@ export class JanusClient {
     return new Promise<T>((resolve) => {
       if (this.ws.readyState !== WebSocket.OPEN) { resolve(undefined as T); return; }
       this.pending.set(id, (r) => resolve(r as T));
-      this.ws.send(JSON.stringify({ t: 'rpc', id, ...call }));
+      this.dispatch(id, JSON.stringify({ t: 'rpc', id, ...call }));
     });
   }
 
@@ -139,7 +177,7 @@ export class JanusClient {
     return new Promise((resolve) => {
       if (this.ws.readyState !== WebSocket.OPEN) { resolve('not connected'); return; }
       this.pending.set(id, (_result, error) => resolve(error));
-      this.ws.send(JSON.stringify({ t: 'rpc', id, method: 'saveFile', params: { url, content } }));
+      this.dispatch(id, JSON.stringify({ t: 'rpc', id, method: 'saveFile', params: { url, content } }));
     });
   }
 
@@ -182,8 +220,10 @@ export class JanusClient {
   }
 
   // Release everything the constructor and the subscription methods acquired. In-flight
-  // `request()`/`saveFile()` promises are abandoned rather than settled: every caller is an effect
-  // on a page that is going away, so there is nobody left to observe a resolution.
+  // `request()`/`saveFile()` promises are settled as connection failures rather than dropped: the
+  // page is usually going away, but a client can also be disposed while its window lives on — a
+  // back/forward-cache restore replaces one — and a promise nobody ever settles keeps whatever was
+  // waiting on it waiting.
   dispose(): void {
     this.ws.close();
     this.stateListeners.clear();
@@ -191,7 +231,7 @@ export class JanusClient {
     this.layoutListeners.clear();
     this.ptyHandlers.clear();
     this.ptyBuffers.clear();
-    this.pending.clear();
+    this.drainPending();
     this.stateCollectors = {};
   }
 }
