@@ -52,7 +52,8 @@ describe('reportOperationFailure', () => {
   function makeManagers(append: ReturnType<typeof vi.fn>): Managers {
     const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
     const active = { label: 'agent', log: [] };
-    return { tab: { tabs: [active, notif], cur: () => active, append } } as unknown as Managers;
+    const tabs = [active, notif];
+    return { tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append } } as unknown as Managers;
   }
 
   it('posts no notification when there are no failures', () => {

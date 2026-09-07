@@ -94,7 +94,8 @@ export class TabManager extends TabOpeningState {
   }
 
   // By-label lookups (see `./lookup.ts`). The guard-typed five return a narrowed tab, so a caller
-  // gets a non-optional payload rather than a `Tab` plus its own optional-chained check.
+  // gets a non-optional payload rather than a `Tab` plus its own optional-chained check; the
+  // keyed four cover the navigation keys that are not labels.
   byLabel(label: string): Tab | undefined {
     return lookup.byLabel(this.tabs, label);
   }
@@ -112,6 +113,18 @@ export class TabManager extends TabOpeningState {
   }
   monitorTab(label: string) {
     return lookup.monitorTab(this.tabs, label);
+  }
+  harnessTabByPtyId(ptyId: string) {
+    return lookup.harnessTabByPtyId(this.tabs, ptyId);
+  }
+  editorTabByUrl(url: string) {
+    return lookup.editorTabByUrl(this.tabs, url);
+  }
+  pluginTabByInstanceKey(id: string, instanceKey: string) {
+    return lookup.pluginTabByInstanceKey(this.tabs, id, instanceKey);
+  }
+  filesTabByRoot(root: string) {
+    return lookup.filesTabByRoot(this.tabs, root);
   }
 
   // The single write path into the state directory: a remote agent tab is live and in-memory, and a
@@ -228,26 +241,12 @@ export class TabManager extends TabOpeningState {
     return this.fileRegistry.get(id);
   }
 
-  view(
-    connectionsFor: (label: string) => ConnectionView[],
-    acpLabel: (label: string) => string | undefined,
-    scheduleView: (label: string) => ScheduleView[],
-  ): TabView[] {
-    return viewOperations.viewTabs(
-      this.tabs, this.managers,
-      connectionsFor, acpLabel, scheduleView,
-      (p: string) => this.shorten(p),
-    );
+  view(connectionsFor: (label: string) => ConnectionView[], acpLabel: (label: string) => string | undefined, scheduleView: (label: string) => ScheduleView[]): TabView[] {
+    return viewOperations.managerView({ tabs: this.tabs, managers: this.managers, shorten: (p: string) => this.shorten(p) }, connectionsFor, acpLabel, scheduleView);
   }
 
-  rehydrate(
-    loadTranscript: (name: string) => LogEntry[] | undefined,
-    onState: (state: AgentState) => void,
-  ): void {
-    this.tabs = viewOperations.rehydrateTabs(
-      this.tabs, loadTranscript, onState,
-      (log) => this.capToConfiguredMax(log),
-    );
+  rehydrate(loadTranscript: (name: string) => LogEntry[] | undefined, onState: (state: AgentState) => void): void {
+    this.tabs = viewOperations.rehydrateTabViews(this.tabs, loadTranscript, onState, (log) => this.capToConfiguredMax(log));
     this.activeTab = 0;
     this.secondaryTabLabel = undefined;
   }

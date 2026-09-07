@@ -26,10 +26,10 @@ export class AgentCommunicationManager {
   }
 
   private handle(message: Message, done: () => void): void {
-    const agentColor = (label: string) => this.managers.tab.tabs.find((t) => t.label === label)?.dotColor ?? '#e4e5e7';
+    const agentColor = (label: string) => this.managers.tab.byLabel(label)?.dotColor ?? '#e4e5e7';
     const appendContext = (label: string, text: string) => {
       this.managers.tab.appendContext(label, text);
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      const tab = this.managers.tab.byLabel(label);
       if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.managers.schedule.get(tab.label) }));
     };
 

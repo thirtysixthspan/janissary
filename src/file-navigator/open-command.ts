@@ -185,7 +185,7 @@ export function openFilesCommand(
   try { stat = statSync(root); } catch { stat = undefined; exists = false; }
   if (exists && !stat?.isDirectory()) { out(`files: ${root}: not a directory`); return undefined; }
 
-  const existing = managers.tab.tabs.find((t) => t.files?.root === root);
+  const existing = managers.tab.filesTabByRoot(root);
   if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
 
   const state = freshState(root, details ?? 'name');

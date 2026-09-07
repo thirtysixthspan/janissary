@@ -11,7 +11,7 @@ import { writeCaptureFile } from './capture-file.js';
 // transcript. Shared by every subcommand below so their missing-label and wrong-tab-kind wording
 // stays identical.
 function resolveHarnessTab(managers: Managers, label: string): { error: string } | { ok: true } {
-  const tab = managers.tab.tabs.find((t) => t.label === label);
+  const tab = managers.tab.byLabel(label);
   if (!tab) return { error: `No tab labeled "${label}".` };
   if (!tab.harness) return { error: `"${label}" is not a harness tab.` };
   return { ok: true };

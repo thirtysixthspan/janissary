@@ -43,6 +43,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     tab: {
       get tabs() { return tabs; },
       set tabs(value: Tab[]) { tabs = value; },
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
       closeTab: vi.fn(),
       setCwd: vi.fn(),

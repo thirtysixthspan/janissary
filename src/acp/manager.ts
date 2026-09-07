@@ -89,7 +89,7 @@ export class AcpManager {
     if (!session) {
       const info = parseModel(model);
       const launch = acpLaunchFor(acpHarnessFor(model));
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      const tab = this.managers.tab.byLabel(label);
       const connect: ConnectHooks = {
         onError: hooks.onError,
         onConnect: () => { this.info.set(label, info); hooks.onConnect(); },
@@ -134,7 +134,7 @@ export class AcpManager {
   // A remote tab whose ssh channel has not finished authenticating yet. Its channel entry exists
   // well before the handshake lands, so a prompt sent now would be dropped on the floor.
   private stillConnecting(label: string): boolean {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     if (!tab?.remote) return false;
     const channel = this.managers.remote.get(label);
     return channel !== undefined && !channel.attached;

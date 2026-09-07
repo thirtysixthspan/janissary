@@ -29,6 +29,7 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
     tab: {
       allLabels: () => [tab.label],
       tabs: [tab],
+      byLabel: (label: string) => (label === tab.label ? tab : undefined),
       append: () => {},
       persist: () => {},
       buildAgentState: () => ({}),
@@ -235,7 +236,11 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
 describe('ScheduleManager schedule launch dialog', () => {
   function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
     const managers = {
-      tab: { tabs, cur: () => tabs.find((t) => t.label === activeLabel) },
+      tab: {
+        tabs,
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
+        cur: () => tabs.find((t) => t.label === activeLabel),
+      },
     } as unknown as Managers;
     return new ScheduleManager(managers);
   }
@@ -325,7 +330,12 @@ describe('ScheduleManager clearAll', () => {
   function makeMgr(tabs: Partial<Tab>[]): { mgr: ScheduleManager; persist: ReturnType<typeof vi.fn> } {
     const persist = vi.fn();
     const managers = {
-      tab: { tabs, persist, buildAgentState: () => ({}) },
+      tab: {
+        tabs,
+        byLabel: (l: string) => tabs.find((t) => t.label === l),
+        persist,
+        buildAgentState: () => ({}),
+      },
     } as unknown as Managers;
     return { mgr: new ScheduleManager(managers), persist };
   }
@@ -376,7 +386,10 @@ describe('ScheduleManager clearAll', () => {
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {
-      tab: { tabs: labels.map((label) => ({ label })) },
+      tab: {
+        tabs: labels.map((label) => ({ label })),
+        byLabel: (label: string) => ({ label }),
+      },
     } as unknown as Managers;
     return new ScheduleManager(managers);
   }

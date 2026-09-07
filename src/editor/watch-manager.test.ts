@@ -43,7 +43,13 @@ describe('EditorWatchManager', () => {
       return { close };
     });
     tabs = [makeTab('notes', { name: 'notes.txt', path: file, size: '5 B', url: '/open/1' })];
-    managers = { tab: { get tabs() { return tabs; } } };
+    managers = {
+      tab: {
+        get tabs() { return tabs; },
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
+        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
+      },
+    };
   });
 
   afterEach(() => {
@@ -59,8 +65,13 @@ describe('EditorWatchManager', () => {
       manager.watch('notes', file);
       const oldEvent = watchMock.mock.calls[0][1] as () => void;
       oldEvent();
-      const saveManagers = {
-        tab: { tabs, openFilePath: () => file }, editorWatch: manager,
+      const       saveManagers = {
+        tab: {
+          tabs,
+          byLabel: (label: string) => tabs.find((t) => t.label === label),
+          editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
+          openFilePath: () => file,
+        }, editorWatch: manager,
       } as unknown as Managers;
 
       saveFile(saveManagers, '/open/1', 'saved atomically');

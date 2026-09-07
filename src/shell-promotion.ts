@@ -44,7 +44,7 @@ export function createShellPromotion(
     const ptyId = ptyIdOf();
     if (promoted || !ptyId) return;
     promoted = true;
-    const tab = managers.tab.tabs.find((t) => t.label === label);
+    const tab = managers.tab.byLabel(label);
     if (tab) tab.activePty = ptyId;
     const replay = latest.length > REPLAY_MAX_BYTES ? latest.slice(-REPLAY_MAX_BYTES) : latest;
     emitted = latest.length;
@@ -74,7 +74,7 @@ export function createShellPromotion(
     // program that took the screen, so its exit is never the signal to come back.
     finish: () => {
       if (!promoted) return;
-      const tab = managers.tab.tabs.find((t) => t.label === label);
+      const tab = managers.tab.byLabel(label);
       if (tab) tab.activePty = undefined;
       messageBus.emit('state', { type: 'dirty' });
     },

@@ -9,7 +9,7 @@ vi.mock('../harness/capture-file.js', () => ({
 
 function makeManagers(tabs: { label: string; log: { input: string; output: string }[] }[], edit = vi.fn()) {
   return {
-    tab: { tabs },
+    tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l) },
     openFile: { edit },
   } as unknown as Managers;
 }
@@ -22,8 +22,9 @@ function makeAcpManagers(overrides: {
   curLabel?: string;
 } = {}) {
   const edit = overrides.edit ?? vi.fn();
+  const tabs = overrides.tabs ?? [];
   return {
-    tab: { tabs: overrides.tabs ?? [], cur: () => ({ label: overrides.curLabel ?? 'active' }) },
+    tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => ({ label: overrides.curLabel ?? 'active' }) },
     monitor: { transcript: overrides.transcript ?? vi.fn(() => '') },
     editorAcp: { transcript: overrides.editorTranscript ?? vi.fn(() => '') },
     openFile: { edit },

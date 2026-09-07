@@ -13,7 +13,7 @@ export function findOpenFilesTab(
   managers: Managers, tabs: Map<string, FilesTabState>, label: string,
 ): { state: FilesTabState; tab: Tab } | undefined {
   return withFilesState(tabs, label, undefined, (state) => {
-    const tab = managers.tab.tabs.find((candidate) => candidate.label === label);
+    const tab = managers.tab.byLabel(label);
     return tab?.files ? { state, tab } : undefined;
   });
 }

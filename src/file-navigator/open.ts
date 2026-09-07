@@ -22,7 +22,7 @@ function freshState(
 // The metadata-row folder button preserves the existing fresh-open/most-recent-retarget rule. A
 // remote source swaps in a channel-backed port and ties the navigator to that source tab.
 export function openOrRetarget(port: OpenPort, label: string): void {
-  const source = port.managers.tab.tabs.find((tab) => tab.label === label);
+  const source = port.managers.tab.byLabel(label);
   if (!source) return;
   const cwd = port.managers.tab.cwdOf(label) ?? process.cwd();
   const existing = port.managers.tab.mostRecentFileNavigatorLabel();

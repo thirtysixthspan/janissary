@@ -140,8 +140,10 @@ describe('endsWithRecap', () => {
 describe('busyStatusHandler debounce', () => {
   function make(name: string) {
     const busy = new Set<string>();
+    const tabList = [{ label: name, hasUnread: false }];
     const tab = {
-      tabs: [{ label: name, hasUnread: false }],
+      tabs: tabList,
+      byLabel: (label: string) => tabList.find((t) => t.label === label),
       isBusy: (label: string) => busy.has(label),
       addBusy: vi.fn((label: string) => { busy.add(label); }),
       deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
@@ -224,6 +226,7 @@ describe('busyStatusHandler state push', () => {
     const tabs = [{ label: name, hasUnread: false }];
     const tab = {
       tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
       isBusy: (label: string) => busy.has(label),
       addBusy: (label: string) => { busy.add(label); },
       deleteBusy: (label: string) => { busy.delete(label); },

@@ -39,10 +39,10 @@ export class CaptureManager {
   ): Promise<void> {
     if (c.name === 'acp') { this.managers.acp.run(label, trimmed, callback); return; }
     if (c.name === 'browser') { this.managers.browser.runInteractive(trimmed, label, callback); return; }
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     const before = tab?.log.length ?? 0;
     await this.managers.command.executeCommand(c.name, trimmed, label, index);
-    const after = this.managers.tab.tabs.find((t) => t.label === label)?.log.length ?? 0;
-    callback(after > before ? this.managers.tab.tabs.find((t) => t.label === label)!.log[after - 1].output : '');
+    const after = tab?.log.length ?? 0;
+    callback(after > before ? tab!.log[after - 1].output : '');
   }
 }

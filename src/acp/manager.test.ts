@@ -39,9 +39,11 @@ const setup = () => {
   const addBusy = vi.fn();
   const deleteBusy = vi.fn();
   const registerQuestion = vi.fn(async () => 'Production');
+  const tabs: { label: string }[] = [];
   const managers = {
     tab: {
-      tabs: [],
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
       append,
       cwdOf: vi.fn().mockReturnValue('/cwd'),
       addBusy,

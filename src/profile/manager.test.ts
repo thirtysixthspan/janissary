@@ -22,6 +22,7 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
   const managers = {
     tab: {
       tabs,
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
       allLabels: () => tabs.map((t) => t.label),
       cur: () => creator,
@@ -347,8 +348,10 @@ describe('ProfileManager.newAgentAt', () => {
     return {
       tab: {
         tabs,
+        byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
         allLabels: () => tabs.map((t) => t.label),
         cwdOf: (label: string) => cwdByLabel[label],
+
         insertTabInGroup: vi.fn((tab: Tab) => { tabs.push(tab); }),
         setCwd: vi.fn(),
         setActiveTab: vi.fn(),

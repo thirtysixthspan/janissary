@@ -83,7 +83,7 @@ export class ScheduleManager {
     const next = current.filter((e) => e.id !== id);
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
     this.announceChange();
@@ -95,7 +95,7 @@ export class ScheduleManager {
     for (const [label, entries] of this.schedules) {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      const tab = this.managers.tab.byLabel(label);
       if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
     }
@@ -121,7 +121,7 @@ export class ScheduleManager {
     const now = Date.now();
     let changed = false;
     for (const label of this.managers.tab.allLabels()) {
-      const tab = this.managers.tab.tabs.find((t) => t.label === label);
+      const tab = this.managers.tab.byLabel(label);
       const sched = this.schedules.get(label);
       if (!tab || !sched || sched.length === 0) continue;
       const remaining = this.fireDue(tab, sched, now);

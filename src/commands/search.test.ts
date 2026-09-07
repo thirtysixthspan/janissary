@@ -36,6 +36,7 @@ describe('search command run', () => {
       tab: {
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
         tabs: [{ label: 'janus', log }],
+        byLabel: (label: string) => [{ label: 'janus', log }].find((t) => t.label === label),
       },
     };
   });

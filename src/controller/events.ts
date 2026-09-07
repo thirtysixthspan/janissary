@@ -28,10 +28,10 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('pty', ['data', 'exit'], (event) => {
     if (event.type === 'data') { sinks.sendPty(event.id, event.data); return; }
     if (event.type !== 'exit') return;
-    const harnessIndex = managers.tab.tabs.findIndex((tab) => tab.harness?.ptyId === event.id);
-    if (harnessIndex !== -1) {
+    const harnessTab = managers.tab.harnessTabByPtyId(event.id);
+    if (harnessTab) {
       sinks.sendPtyExit(event.id, event.exitCode);
-      managers.tab.closeTab(harnessIndex);
+      managers.tab.closeTab(managers.tab.tabs.indexOf(harnessTab));
       return;
     }
     sinks.sendPtyExit(event.id, event.exitCode);

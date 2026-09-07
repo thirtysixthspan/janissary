@@ -13,6 +13,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; persist: ReturnType<ty
   const managers = {
     tab: {
       tabs,
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       cwdOf: vi.fn(() => '/repo'),
       persist,
       buildAgentState: vi.fn((tab: Tab) => ({ name: tab.label, dotColor: tab.dotColor, active: true })),

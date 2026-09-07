@@ -10,13 +10,16 @@ function makeManagers(options: { notifications?: boolean } = {}) {
   const active = { label: 'janus', dotColor: '#def', log: [] };
   const notifications = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
   const append = vi.fn();
+  const tabs = [
+    editorTab,
+    active,
+    ...(options.notifications === false ? [] : [notifications]),
+  ];
   const managers = {
     tab: {
-      tabs: [
-        editorTab,
-        active,
-        ...(options.notifications === false ? [] : [notifications]),
-      ],
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
+      editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
       append,
       cur: () => active,
       openNotificationsTab: vi.fn(),

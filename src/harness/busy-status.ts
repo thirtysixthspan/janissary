@@ -10,7 +10,7 @@ export { classifyBusy, type BusyState } from './busy-classify.js';
 // unread badge. `state: dirty` must fire only when one of them actually flips — captures land
 // every ~1s while a harness is active, and most of them re-affirm the same state.
 function dotSnapshot(managers: Managers, label: string): string {
-  const unread = managers.tab.tabs.find((t) => t.label === label)?.hasUnread ?? false;
+  const unread = managers.tab.byLabel(label)?.hasUnread ?? false;
   return `${managers.tab.isBusy(label)}:${unread}`;
 }
 

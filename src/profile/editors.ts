@@ -31,7 +31,7 @@ export function openProfileEditors(
     const result = managers.openFile.edit(`edit ${entry.path}`, entry.path, label, entry.line);
     if (!result) continue;
     const targetGroup = entry.group ?? defaultGroup;
-    const editor = managers.tab.tabs.find((tab) => tab.label === result.label);
+    const editor = managers.tab.byLabel(result.label);
     const dotColor = editor?.dotColor ?? '';
     if (editor && editor.group !== targetGroup) {
       managers.tab.setActiveTab(managers.tab.findIndex(result.label));

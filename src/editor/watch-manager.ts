@@ -81,7 +81,7 @@ export class EditorWatchManager {
     try { mtimeMs = statSync(state.filePath).mtimeMs; } catch { return; }
     if (mtimeMs === state.baselineMtimeMs) return;
     state.baselineMtimeMs = mtimeMs;
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     if (!tab?.editor) return;
     tab.editor = { ...tab.editor, mtimeMs };
     messageBus.emit('state', { type: 'dirty' });

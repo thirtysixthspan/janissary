@@ -10,6 +10,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[] } {
   const managers = {
     tab: {
       tabs,
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       cur: () => creator,
       cwdOf: () => '/work',
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },

@@ -14,7 +14,7 @@ function makeManagers(tabs: Tab[], terminals: string[] = []): Managers {
     browser: { info: vi.fn() },
     pty: { terminalsFor: vi.fn(() => terminals) },
     database: { listOpen: vi.fn(() => []), openDbs: vi.fn(() => []) },
-    tab: { tabs, shorten: (p: string) => p, cwdOf: () => '/repo' },
+    tab: { tabs, byLabel: (label: string) => tabs.find((t) => t.label === label), shorten: (p: string) => p, cwdOf: () => '/repo' },
   } as unknown as Managers;
 }
 

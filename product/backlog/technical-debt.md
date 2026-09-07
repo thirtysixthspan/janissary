@@ -2,16 +2,8 @@
 
 ## ready
 
-* Finish the tab-lookup migration so feature managers stop reaching into the raw tabs array with hand-written label scans.
 
-Existing Debt: TabManager exposes `byLabel` and five guard-typed payload accessors as the intended lookup surface, but production code still hand-scans the raw `tabs` array at roughly fifty-five call sites across some thirty files, leaving two idioms for the same lookup and keeping the array itself a de facto public API. Severity: 5/10
-
-Existing Risk: 4/10 - Any future change to how tabs are stored or indexed — the direction the architecture's own per-agent-owner rule pushes — must chase dozens of scattered scans, each a chance to reintroduce the non-null assertions and unguarded payload reads the accessors were written to end.
-
-Proposal Risk: 2/10 - The scans with genuinely different predicates (by editor url, by harness pty id, by files root, by plugin instance key) still need named homes, so the lookup surface ends up a handful of well-named helpers rather than one function.
-
-Proposal: Sweep the plain `label ===` scans to `managers.tab.byLabel(label)` across src/shell-manager.ts, src/capture/manager.ts, src/schedule/manager.ts, src/connection/manager.ts, src/notifications.ts, src/agent/communication-manager.ts, src/agent/message-queue.ts, src/pseudoterminal-manager.ts, src/controller/transcript.ts, src/harness/busy-status.ts, src/harness/subcommands.ts, src/harness/remote-launch.ts, src/shell-promotion.ts, src/profile/manager.ts, src/profile/remote-agent.ts, src/profile/editors.ts, src/acp/manager.ts, src/acp/runner.ts, src/editor/watch-manager.ts, src/ssh-manager.ts, src/file-navigator/manager-state.ts, src/file-navigator/open.ts, src/commands/schedule.ts, src/commands/search.ts, and src/commands/resolve-target.ts. Replace payload-predicated scans with the guard-typed accessors where one matches (src/editor/save.ts, src/editor/sync.ts, src/editor/resync.ts, and src/editor-suggest/handler.ts for editor-by-url; src/remote/manager.ts and src/controller/events.ts for harness-by-pty-id) and add the remaining distinct predicates as named TabManager helpers beside src/tab/lookup.ts — a by-pty-id harness lookup, a by-url editor lookup, a by-instance-key plugin lookup, a by-root files lookup — so nothing new reaches for `tabs.find` again. Keep `tabs` itself for genuine iteration; the sweep is about lookup-by-identity. src/tab/lookup.test.ts, src/managers.test.ts, and src/controller.test.ts pin current behavior and must keep passing.
-
+## development
 
 * Give every manager a closeTab method and let the tab-close path walk the dispose registry instead of a hand-maintained teardown checklist.
 

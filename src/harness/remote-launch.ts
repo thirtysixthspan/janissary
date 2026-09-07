@@ -82,7 +82,7 @@ export function startRemoteTab(
 ): void {
   const { label, cwd } = options;
   const launch = startRemoteLaunch(managers, label, remote, cwd);
-  const liveTab = managers.tab.tabs.find((t) => t.label === label);
+  const liveTab = managers.tab.byLabel(label);
   if (liveTab?.harness) liveTab.harness.ptyId = launch.ptyId;
   messageBus.emit('state', { type: 'dirty' });
   wireProvisioning(

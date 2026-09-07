@@ -154,7 +154,7 @@ export function notify(
   if (!notificationsTab(managers)) return;
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
-  const fromColor = managers.tab.tabs.find((t) => t.label === tabLabel)?.dotColor;
+  const fromColor = managers.tab.byLabel(tabLabel)?.dotColor;
   // The dot label is the notification's provenance header — when, then who — so the line reads
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
   const from = `${formatTimestamp(new Date())} ${tabLabel}`;

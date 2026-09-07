@@ -12,7 +12,7 @@ export type EditorSuggestResult = { hunks: SuggestHunk[] };
 // `url` the same way saveFile/syncEditorBuffer match their tab, falling back to the active tab
 // when the editor tab has already closed mid-query.
 export function ownerLabel(managers: Managers, url: string): string {
-  return managers.tab.tabs.find((t) => t.editor?.url === url)?.label ?? managers.tab.cur().label;
+  return managers.tab.editorTabByUrl(url)?.label ?? managers.tab.cur().label;
 }
 
 // Fire an in-editor persona-suggestion query (the `editorSuggest` RPC): validate the persona, get

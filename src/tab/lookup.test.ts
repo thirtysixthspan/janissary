@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeTab } from './index.js';
-import { byLabel, editorTab, filesTab, harnessTab, monitorTab, pluginTab } from './lookup.js';
+import { byLabel, editorTab, filesTab, harnessTab, monitorTab, pluginTab, editorTabByUrl, filesTabByRoot, harnessTabByPtyId, pluginTabByInstanceKey } from './lookup.js';
 import type { Tab } from './types.js';
 
 const withView = (label: string, view: Tab['view'], payload: Partial<Tab>): Tab =>
@@ -9,7 +9,7 @@ const withView = (label: string, view: Tab['view'], payload: Partial<Tab>): Tab 
 const HARNESS = withView('h', 'harness', { harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } });
 const EDITOR = withView('e', 'editor', { editor: { name: 'a.txt', url: '/open/1', path: '/a.txt', size: '1 B' } as Tab['editor'] });
 const FILES = withView('f', 'files', { files: { root: '/', rows: [], expanded: [] } as unknown as Tab['files'] });
-const PLUGIN = withView('p', 'plugin', { plugin: { id: 'video', schemaVersion: 1, payload: {} } as unknown as Tab['plugin'] });
+const PLUGIN = withView('p', 'plugin', { plugin: { id: 'video', schemaVersion: 1, instanceKey: 'k1', payload: {} } as unknown as Tab['plugin'] });
 const MONITOR = withView('m', 'monitor', {
   monitor: { suggestions: [], name: 'm', persona: 'reviewer', targets: '', contextBytes: 0 },
 });
@@ -66,5 +66,51 @@ describe('the guard-typed accessors', () => {
 
   it.each(ACCESSORS)('%s is undefined for a plain agent tab', (_name, accessor) => {
     expect(accessor(TABS, 'plain')).toBeUndefined();
+  });
+});
+
+const KEYED = [
+  ['harnessTabByPtyId', harnessTabByPtyId, HARNESS],
+  ['editorTabByUrl', editorTabByUrl, EDITOR],
+  ['pluginTabByInstanceKey', pluginTabByInstanceKey, PLUGIN],
+  ['filesTabByRoot', filesTabByRoot, FILES],
+] as const;
+
+function keyOf(tab: Tab): [string, string] {
+  if (tab.harness) return [tab.harness.ptyId, ''];
+  if (tab.editor) return [tab.editor.url, ''];
+  if (tab.files) return [tab.files.root, ''];
+  return [tab.plugin?.id ?? '', tab.plugin?.instanceKey ?? ''];
+}
+
+describe('the keyed lookup helpers', () => {
+  it.each(KEYED)('%s answers with its own tab', (_name, helper, tab) => {
+    const [id, key] = keyOf(tab);
+    expect(helper(TABS, id, key)).toBe(tab);
+  });
+
+  it.each(KEYED)('%s is undefined for a key nothing carries', (_name, helper) => {
+    expect(helper(TABS, 'no-key', 'no-key')).toBeUndefined();
+  });
+
+  it.each(KEYED)('%s is undefined when the view names the kind but the payload is absent', (_name, helper, tab) => {
+    const hollow = { ...makeTab('hollow', '#ccc'), view: tab.view } as Tab;
+    const [id, key] = keyOf(tab);
+    expect(hollow.files === undefined && hollow.editor === undefined).toBe(true);
+    expect(helper([hollow], id, key)).toBeUndefined();
+  });
+
+  it.each(KEYED)('%s is undefined for a tab with the payload data but no view discriminant', (_name, helper, tab) => {
+    const [id, key] = keyOf(tab);
+    const bare = { ...makeTab('bare', '#ccc'), ...tab } as Tab & { view?: string };
+    delete bare.view;
+    expect(helper([bare], id, key)).toBeUndefined();
+  });
+
+  // The first match wins, as the scans these replace did.
+  it.each(KEYED)('%s returns the first of two matching tabs', (_name, helper, tab) => {
+    const clone = { ...tab, label: `${tab.label}-2` };
+    const [id, key] = keyOf(tab);
+    expect(helper([clone, tab], id, key)).toBe(clone);
   });
 });

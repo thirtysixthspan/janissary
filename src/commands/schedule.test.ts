@@ -32,18 +32,20 @@ describe('schedule command run', () => {
     schedules = new Map();
     outputs = [];
     tab = { label: 'janus', index: 0 };
+    const tabs: { label: string; view?: string; harness?: unknown }[] = [
+      { label: 'janus' },
+      { label: 'claude', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
+      { label: 'notes', view: 'markdown' },
+    ];
     managers = {
       schedule: {
         get: (label: string) => schedules.get(label),
         set: (label: string, next: ScheduleEntry[]) => { schedules.set(label, next); },
       },
       tab: {
+        tabs,
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
-        tabs: [
-          { label: 'janus' },
-          { label: 'claude', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
-          { label: 'notes', view: 'markdown' },
-        ],
         persist: () => {},
         buildAgentState: () => ({}),
       },
