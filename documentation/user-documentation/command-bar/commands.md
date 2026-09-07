@@ -8,6 +8,8 @@ These commands manage the app itself — the current tab's transcript and name, 
 |---|---|
 | `help` | List the available commands and key bindings |
 | `state` | Show the current agent's saved state fields (long values truncated) |
+| `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
+| `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |

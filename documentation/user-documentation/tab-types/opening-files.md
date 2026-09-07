@@ -46,6 +46,23 @@ edit notes.md:42                  the plain-text editor, cursor on line 42
 
 Images are the one file type with an editor of their own — everything else, including Markdown, opens as text. That does mean `edit diagram.png` can't show you a PNG's raw bytes; there's no way to ask for that. A `:<line>` suffix is accepted anywhere and ignored where it makes no sense.
 
+## Create a file or directory
+
+```
+newfile meeting notes.md
+newdir draft notes
+```
+
+`newfile <file>` opens an empty, unsaved plain-text editor for the requested name. It always creates a text buffer, even for an image extension such as `.png`. The file is written only when you use **Save**.
+
+`newdir <directory>` creates the directory immediately. Its parent directory must already exist; the command doesn't create missing ancestors.
+
+Relative paths use the issuing tab's working directory. The remaining text is one path, including spaces, so type `newfile meeting notes.md` without quotes. Leading and trailing spaces are trimmed. These commands don't expand wildcards; `*` is a literal part of the requested name.
+
+If the name already exists, a numeric suffix selects the next free name, such as `meeting notes-2.md`. For the navigator buttons, naming, and first-save collision handling, see [Creating files and directories](/user-documentation/tab-types/file-navigator#creating-files-and-directories).
+
+Bare `newfile` reports `Usage: newfile <file>`. Bare `newdir` reports `Usage: newdir <directory>`.
+
 ## Wildcards
 
 <img class="agent-float left" src="/agents/ahmed-south-east.png" alt="" />
