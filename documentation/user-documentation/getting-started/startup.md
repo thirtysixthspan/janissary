@@ -60,7 +60,7 @@ janus --relaunch
 ```
 
 
-`--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs, and workspace clones — those are live views and processes, not saved state.
+`--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs, and workspace clones — those are live views and processes, not saved state — and any tab you closed, which stays closed. Quitting closes nothing, so everything still open at the time is restored.
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 

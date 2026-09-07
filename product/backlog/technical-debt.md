@@ -2,17 +2,6 @@
 
 ## ready
 
-* Remove a tab's persisted state when the tab is closed, so a relaunch restores what was open rather than everything that ever was.
-
-Existing Debt: The agent-state and transcript stores offer a whole-directory clear and a per-tab write but no per-tab delete, and tab teardown — which releases fifteen other kinds of resource — has nothing to call. Severity: 7/10
-
-Existing Risk: 8/10 - Every tab the user closes stays on disk and comes back on the next `--relaunch`, so a session's deliberately-closed agents accumulate silently and reappear together, and a shell command finishing after its tab closed rewrites that file to make the resurrection certain.
-
-Proposal Risk: 3/10 - A closed tab stops being restored, though a tab closed while a command is still in flight depends on the write and the delete not racing, which is what the new teardown ordering has to get right.
-
-Proposal: `src/agent/state.ts` exports `saveAgentState`, `loadAgentState`, `listAgentStates`, and `clearStateDirectory` — the last removing the entire `.janissary/state` directory, which `src/main.ts` calls once at startup and only when `--relaunch` was not passed. `TranscriptStore` in `src/transcript/store.ts` is the same shape: `save`, `load`, a `clearTab` that writes `[]` rather than removing the file, and a static whole-directory `clear`. `closeTabResources` in `src/tab/cleanup.ts` releases the workspace clone, shell, ACP, editor watch, browser, remote channel, PTY, navigator, schedule, questions, and database bindings, and touches neither store, while `rehydrateTabState` in `src/tab/rehydrate.ts` rebuilds the tab list from every `<name>.json` `listAgentStates` finds. Add `deleteAgentState(name)` beside `saveAgentState`, reusing the `agentStatePath` name guard so an invalid label cannot address a file outside the directory, add the matching per-label removal to `TranscriptStore`, and call both from `closeTabResources`. Two write paths can land after the delete and must be handled beside it: the `update` closure in `ShellManager.run` (`src/shell-manager.ts`) persists the `tab` object it captured at dispatch, so a command completing after the close rewrites the file, and `ScheduleManager.tick` in `src/schedule/manager.ts` persists per tab on its one-second loop — have `AgentStatePersistence` in `src/tab/persistence.ts` hold the set of closed labels and refuse a write for one, the way it already refuses a remote tab's. Quitting must keep persisting everything still open, so the delete belongs to `closeTabResources` alone and not to the shutdown path in `Controller.shutdown`. `src/tab/cleanup.test.ts` covers what teardown releases today and is where the removal cases belong; `src/tab/manager.test.ts` covers rehydration from a stubbed `listAgentStates` and pins the restore behaviour that must not change for tabs that were still open.
-
-
 * Drive the command bar's modal overlays from one ordered registry instead of nine parallel prop groups threaded through four layers.
 
 Existing Debt: Each of the nine mutually-exclusive overlays contributes its own open flag, index, setters, and handlers as flat props, and the question "which overlay is open" is answered independently in three places that have already stopped agreeing. Severity: 7/10

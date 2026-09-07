@@ -45,6 +45,15 @@ export function saveAgentState(state: AgentState): void {
   atomicWriteFile(agentStatePath(state.name), JSON.stringify(state, null, 2) + '\n');
 }
 
+// Remove one agent's state file, so a tab the user closed is not rebuilt on the next `--relaunch`.
+// Goes through the same `agentStatePath` name guard `saveAgentState` uses, so an invalid label
+// cannot address a file outside the state directory — it throws, and is caught here as nothing to
+// remove, which is also what an already-absent file is.
+export function deleteAgentState(name: string): void {
+  if (!stateDirectory) return;
+  try { rmSync(agentStatePath(name), { force: true }); } catch { /* nothing to remove */ }
+}
+
 export function clearStateDirectory(): void {
   if (!stateDirectory) return;
   try { rmSync(stateDirectory, { recursive: true, force: true }); } catch { /* ignore */ }

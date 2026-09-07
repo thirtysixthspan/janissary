@@ -10,8 +10,10 @@ const VALID_NAME = /^[\w-]+$/;
 let transcriptDir = '';
 
 // Subscribes to the bus and persists transcript files whenever entries are appended or a tab is
-// cleared. tab:removed keeps the file for history. In-place edits (streaming, runShell completion)
-// are persisted by direct calls to save() from the controller since there is no bus event for them.
+// cleared. In-place edits (streaming, runShell completion) are persisted by direct calls to save()
+// from the controller since there is no bus event for them. A closed tab's file is removed by tab
+// teardown through `remove`, not from the bus, so the removal is ordered with the rest of the
+// teardown rather than racing it.
 export class TranscriptStore {
   private static failed = new Set<string>();
 
@@ -37,6 +39,16 @@ export class TranscriptStore {
 
   static clearTab(label: string): void {
     this.persist(label, '[]');
+  }
+
+  // Remove one tab's transcript file, rather than `clearTab`'s empty-array rewrite. Used when a tab
+  // is closed for good: a file left behind would be handed to whichever new tab next draws that name
+  // from the pool. The same label guard as every other path here, so an invalid label removes
+  // nothing rather than reaching outside the transcript directory.
+  static remove(label: string): void {
+    if (!transcriptDir) return;
+    try { rmSync(this.path(label), { force: true }); } catch { /* nothing to remove */ }
+    this.failed.delete(label);
   }
 
   private static persist(label: string, content: string): void {

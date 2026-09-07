@@ -4,6 +4,10 @@ Agent state is stored in `.janissary/state/`. Each agent has one JSON file named
 
 On a normal `janus` launch the state directory and workspace directory are recursively deleted before rendering. On `janus --relaunch` the directories are preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
 
+Closing a tab removes its agent-state file and its transcript record, so what `--relaunch` restores is the set of tabs that were open — not every tab that ever existed in the session. A tab closed deliberately stays closed. Quitting is different: it closes nothing, so every tab still open is persisted and comes back.
+
+Work that finishes after its tab has closed — a shell command completing, a scheduled command firing — does not write that tab's state back. The tab is gone, and recreating its file would bring it back on the next relaunch. A tab name returned to the pool and reused by a new tab persists normally again.
+
 The latest transcript for each tab is also maintained as a separate relaunch record. Each update
 atomically replaces that record, so an interrupted or failed write leaves the previous valid
 transcript intact. Persistence failures are reported as warnings, with repeated failures for the
