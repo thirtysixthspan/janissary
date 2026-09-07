@@ -37,8 +37,8 @@ vi.mock('./sandbox/index.js', () => ({
   sandboxSpawn: vi.fn((_options, command, args, env) => ({ command, args, env })),
 }));
 
-import { spawnShell, executeShellCmd, queryShellPwd, shellCommandInput } from './shell.js';
-import { shellStartupArgs } from './shell-startup.js';
+import { spawnShell, executeShellCmd, queryShellPwd, shellCommandInput } from './index.js';
+import { shellStartupArgs } from './startup.js';
 
 beforeEach(() => {
   mockSpawn.mockReset();

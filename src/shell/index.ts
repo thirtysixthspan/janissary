@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
-import { shellStartupArgs } from './shell-startup.js';
+import { sandboxSpawn, type SandboxOptions } from '../sandbox/index.js';
+import { shellStartupArgs } from './startup.js';
 
 // The subset of `ChildProcess` that shell execution actually touches: `stdin`'s writability and
 // `write`, `stdout`/`stderr` as `'data'` emitters, and `kill()`. Narrow enough that a process

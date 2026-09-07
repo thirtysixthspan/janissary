@@ -1,12 +1,12 @@
-import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './shell.js';
-import { createRemoteShell } from './remote/shell-session.js';
-import { createPtyShell, ptyShellArgs } from './shell-pty-session.js';
-import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './shell-promotion.js';
-import { getConfig } from './config.js';
-import { getProjectTokens } from './project-tokens.js';
-import { messageBus } from './bus.js';
-import type { SandboxOptions } from './sandbox/index.js';
-import type { Managers } from './managers.js';
+import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
+import { createRemoteShell } from '../remote/shell-session.js';
+import { createPtyShell, ptyShellArgs } from './pty-session.js';
+import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
+import { getConfig } from '../config.js';
+import { getProjectTokens } from '../project-tokens.js';
+import { messageBus } from '../bus.js';
+import type { SandboxOptions } from '../sandbox/index.js';
+import type { Managers } from '../managers.js';
 
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
 // label the `shell:<name>` connection in the panel/completion.

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRemoteShell } from './shell-session.js';
 import { RemoteChannel, type ChannelTransport } from './channel.js';
 import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame } from './protocol.js';
-import { executeShellCmd, queryShellPwd } from '../shell.js';
+import { executeShellCmd, queryShellPwd } from '../shell/index.js';
 
 // An attached channel over a fake ssh PTY, plus a helper to answer as the remote shell would.
 function attachedChannel() {

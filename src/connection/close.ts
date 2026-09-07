@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import { SHELL_NAME } from '../shell-manager.js';
+import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
 
 // Match `<id>` against a remote tab's label first, then against the address it was launched with —

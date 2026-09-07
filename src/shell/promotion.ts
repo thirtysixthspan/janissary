@@ -1,7 +1,7 @@
-import { messageBus } from './bus.js';
-import { showsTerminalTakeover } from './interactive-signals.js';
-import { recordLearnedCommand } from './interactive-learned.js';
-import type { Managers } from './managers.js';
+import { messageBus } from '../bus.js';
+import { showsTerminalTakeover } from '../interactive-signals.js';
+import { recordLearnedCommand } from '../interactive-learned.js';
+import type { Managers } from '../managers.js';
 
 // What a promoted command's transcript entry ends up reading. The bytes captured before the takeover
 // are the torn first fragment of a full-screen repaint, so they are dropped rather than shown — the

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { spawnPty } from '../pty.js';
-import { spawnShell } from '../shell.js';
+import { spawnShell } from '../shell/index.js';
 import type { ServerFrame } from './protocol.js';
 import { RemoteProcesses } from './serve-processes.js';
 
 vi.mock('../pty.js');
-vi.mock('../shell.js');
+vi.mock('../shell/index.js');
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: vi.fn() }));
 
 const BROWSER_ENV = {

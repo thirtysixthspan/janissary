@@ -1,5 +1,5 @@
 import { PassThrough, Writable } from 'node:stream';
-import type { ShellProcess } from '../shell.js';
+import type { ShellProcess } from '../shell/index.js';
 import type { RemoteChannel } from './channel.js';
 
 /**
