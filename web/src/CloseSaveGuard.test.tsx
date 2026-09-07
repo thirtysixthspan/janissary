@@ -24,6 +24,90 @@ function makeGuardRef() {
 }
 
 describe('CloseSaveGuard', () => {
+  function pendingSave() {
+    let resolve = () => {};
+    let reject = (_error: Error) => {};
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the client targets ES2023
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+    const deferred = { promise, resolve, reject };
+    const first = { isDirty: () => true, save: vi.fn(() => deferred.promise), focus: vi.fn() };
+    const second = { isDirty: () => true, save: vi.fn().mockResolvedValue(undefined), focus: vi.fn() };
+    const tabHandles = makeHandlesWith('first', first);
+    tabHandles.current.set('second', second);
+    const guardRef = makeGuardRef();
+    const client = { send: vi.fn() };
+    const view = render(<CloseSaveGuard tabs={[makeTab('first'), makeTab('second')]}
+      tabHandles={tabHandles} guardRef={guardRef} client={client as never} />);
+    act(() => { guardRef.current!(0); });
+    fireEvent.click(view.getByText('Save (y)'));
+    return { ...view, deferred, first, second, guardRef, client };
+  }
+
+  it('does not close a tab when a cancelled save completes', async () => {
+    const h = pendingSave();
+    fireEvent.click(h.getByText('Cancel (Esc)'));
+    await act(async () => { h.deferred.resolve(); });
+    expect(h.client.send).not.toHaveBeenCalled();
+    expect(h.first.focus).toHaveBeenCalledOnce();
+    expect(h.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it.each(['resolve', 'reject'])('ignores stale %s after cancel and another prompt', async (outcome) => {
+    const h = pendingSave();
+    fireEvent.click(h.getByText('Cancel (Esc)'));
+    act(() => { h.guardRef.current!(1); });
+    await act(async () => {
+      if (outcome === 'resolve') h.deferred.resolve();
+      else h.deferred.reject(new Error('late failure'));
+    });
+    expect(h.client.send).not.toHaveBeenCalled();
+    expect(h.first.focus).toHaveBeenCalledOnce();
+    expect(h.second.focus).not.toHaveBeenCalled();
+    expect(h.getByRole('alertdialog')).toBeInTheDocument();
+    await act(async () => { fireEvent.click(h.getByText('Save (y)')); });
+    expect(h.second.save).toHaveBeenCalledOnce();
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 1 } });
+  });
+
+  it('lets a replacement prompt save before the old save completes', async () => {
+    const h = pendingSave();
+    act(() => { h.guardRef.current!(1); });
+    await act(async () => { fireEvent.click(h.getByText('Save (y)')); });
+    await act(async () => { h.deferred.resolve(); });
+    expect(h.second.save).toHaveBeenCalledOnce();
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 1 } });
+  });
+
+  it('submits only one save across repeated button and keyboard actions', async () => {
+    const h = pendingSave();
+    fireEvent.click(h.getByText('Save (y)'));
+    fireEvent.keyDown(document, { key: 'y' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(h.first.save).toHaveBeenCalledOnce();
+    expect(h.getByText('Save (y)')).toBeDisabled();
+    await act(async () => { h.deferred.resolve(); });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it('invalidates a pending save when discarded', async () => {
+    const h = pendingSave();
+    fireEvent.click(h.getByText("Don't Save (n)"));
+    await act(async () => { h.deferred.resolve(); });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it.each(['resolve', 'reject'])('ignores %s after unmount', async (outcome) => {
+    const h = pendingSave();
+    h.unmount();
+    await act(async () => {
+      if (outcome === 'resolve') h.deferred.resolve();
+      else h.deferred.reject(new Error('late failure'));
+    });
+    expect(h.client.send).not.toHaveBeenCalled();
+    expect(h.first.focus).not.toHaveBeenCalled();
+    expect(h.guardRef.current).toBeNull();
+  });
+
   it('renders nothing when no save dialog is needed', () => {
     const guardRef = makeGuardRef();
     const tabHandles = makeHandles();

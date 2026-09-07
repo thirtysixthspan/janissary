@@ -3,17 +3,6 @@
 ## ready
 
 
-* Give each save-before-close attempt a stable target and cancellable completion.
-
-Existing Debt: The save confirmation tracks one mutable target label without an operation identity or pending-save guard, so awaited callbacks retain authority after their dialog is cancelled or replaced. Severity: 7/10
-
-Existing Risk: 8/10 - Cancelling a slow save and opening another tab's close prompt lets the first save's completion close the second dirty tab without saving it.
-
-Proposal Risk: 2/10 - Attempt-scoped completion prevents a cancelled or superseded save from closing a tab, although cancellation cannot undo a write already sent to the server.
-
-Proposal: In `web/src/CloseSaveGuard.tsx`, `onSave` captures a handle before awaiting but calls `closeTarget` afterward, and `closeTarget` reads the current `labelRef` from `web/src/SaveChangesDialog/useSaveConfirm.ts`; `web/src/SaveChangesDialog/SaveChangesDialog.tsx` continues accepting Save, Discard, and Cancel during that await. Capture both label and an attempt generation before starting the save, invalidate the generation on cancellation, discard, replacement, and unmount, and allow only the current attempt to dismiss, focus, or close its captured target. Prevent repeated Save submissions while one attempt is pending through both button and keyboard paths, while preserving cancellation and resolving the captured label's current index immediately before sending `closeTab`. Extend `web/src/CloseSaveGuard.test.tsx` with deferred saves covering cancel then completion, cancel then a different tab's prompt, stale rejection, and repeated Save; retain its existing insertion/removal and failure-focus cases. Extend `web/src/SaveChangesDialog/SaveChangesDialog.test.tsx` for pending-state keyboard and button behavior. The existing tests exercise individual actions and changing tab positions but do not cover cancellation or replacement while a save is unresolved.
-
-
 * Pass named state snapshots through the websocket client subscription boundary.
 
 Existing Debt: The client converts the shared state event into sixteen positional arguments and redeclares their types and optionality, making every snapshot field change require synchronized edits across a second contract. Severity: 6/10

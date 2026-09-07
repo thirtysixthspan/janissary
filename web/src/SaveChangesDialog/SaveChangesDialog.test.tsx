@@ -5,6 +5,34 @@ import { describe, expect, it, vi } from 'vitest';
 import { SaveChangesDialog } from './SaveChangesDialog';
 
 describe('SaveChangesDialog', () => {
+  it('disables Save through its button and keyboard while pending', () => {
+    const onSave = vi.fn();
+    const view = render(<SaveChangesDialog saving onSave={onSave} onDiscard={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Save (y)' })).toBeDisabled();
+    fireEvent.click(screen.getByText('Save (y)'));
+    for (const key of ['y', 'Y', 'Enter']) fireEvent.keyDown(document, { key });
+    expect(onSave).not.toHaveBeenCalled();
+    view.rerender(<SaveChangesDialog saving={false} onSave={onSave} onDiscard={vi.fn()} onCancel={vi.fn()} />);
+    fireEvent.keyDown(document, { key: 'y' });
+    expect(onSave).toHaveBeenCalledOnce();
+  });
+
+  it('keeps Discard and Cancel available through buttons and keyboard while pending', () => {
+    const onDiscard = vi.fn();
+    const onCancel = vi.fn();
+    render(<SaveChangesDialog saving onSave={vi.fn()} onDiscard={onDiscard} onCancel={onCancel} />);
+    fireEvent.click(screen.getByText("Don't Save (n)"));
+    fireEvent.keyDown(document, { key: 'n' });
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onDiscard).toHaveBeenCalledTimes(3);
+    fireEvent.click(screen.getByText('Cancel (Esc)'));
+    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(document, { key: 'ArrowRight' });
+    fireEvent.keyDown(document, { key: 'Enter' });
+    expect(onCancel).toHaveBeenCalledTimes(3);
+  });
+
   it('renders the title and three buttons', () => {
     render(<SaveChangesDialog onSave={vi.fn()} onDiscard={vi.fn()} onCancel={vi.fn()} />);
     expect(screen.getByText('Do you want to save changes to this file?')).toBeInTheDocument();

@@ -4,17 +4,18 @@ import { ModalDialog } from '../ModalDialog';
 
 type Action = 'save' | 'discard' | 'cancel';
 
-type Properties = { onSave: () => void; onDiscard: () => void; onCancel: () => void };
+type Properties = { onSave: () => void; onDiscard: () => void; onCancel: () => void; saving?: boolean };
 
-export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
+export function SaveChangesDialog({ onSave, onDiscard, onCancel, saving = false }: Properties) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Action>('save');
+  const save = () => { if (!saving) onSave(); };
 
   useDialogKeyboard(dialogRef, {
-    y: onSave,
+    y: save,
     n: onDiscard,
     enter: () => {
-      if (selected === 'save') onSave();
+      if (selected === 'save') save();
       else if (selected === 'discard') onDiscard();
       else onCancel();
     },
@@ -26,7 +27,7 @@ export function SaveChangesDialog({ onSave, onDiscard, onCancel }: Properties) {
   return (
     <ModalDialog dialogRef={dialogRef} title="Do you want to save changes to this file?">
       <div className="modal-actions">
-        <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={onSave}>
+        <button className={`modal-button${selected === 'save' ? ' selected' : ''}`} onClick={save} disabled={saving}>
           Save (y)
         </button>
         <button className={`modal-button${selected === 'discard' ? ' selected' : ''}`} onClick={onDiscard}>
