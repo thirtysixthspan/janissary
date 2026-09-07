@@ -9,6 +9,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     tab: {
       findIndex: vi.fn((label: string) => (label === 'main' ? 0 : -1)),
       tabs: [tab],
+      byLabel: (label: string) => (label === 'main' ? tab : undefined),
     },
     shell: { run: vi.fn() },
     acp: { run: vi.fn() },
@@ -107,6 +108,7 @@ describe('CaptureManager.run', () => {
       tab: {
         findIndex: vi.fn(() => 0),
         tabs: [tab],
+        byLabel: () => tab,
       },
       command: {
         executeCommand: vi.fn(() => new Promise<void>((resolve) => {

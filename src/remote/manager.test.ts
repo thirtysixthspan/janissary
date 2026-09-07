@@ -58,7 +58,13 @@ function managerHarness(ready = true) {
       }),
       reassignTransports,
     },
-    tab: { findIndex: vi.fn(() => -1), closeTab, tabs: [], cur: () => ({ label: 'creator' }) },
+    tab: {
+      findIndex: vi.fn(() => -1),
+      closeTab,
+      tabs: [],
+      byLabel: vi.fn(),
+      cur: () => ({ label: 'creator' }),
+    },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
@@ -189,7 +195,15 @@ function browserHarness(tabs: Tab[]) {
       }),
       reassignTransports: vi.fn(),
     },
-    tab: { findIndex: vi.fn(() => -1), closeTab, append, tabs, cur: () => ({ label: 'creator' }) },
+    tab: {
+      findIndex: vi.fn(() => -1),
+      closeTab,
+      append,
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
+      harnessTabByPtyId: (ptyId: string) => tabs.find((t) => t.harness?.ptyId === ptyId),
+      cur: () => ({ label: 'creator' }),
+    },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   remote.open('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });

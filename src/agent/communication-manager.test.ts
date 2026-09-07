@@ -16,7 +16,7 @@ const setup = () => {
   const captureRun = vi.fn((_label: string, _text: string, onResult: (o: string) => void) => onResult('out:about'));
   const tabs: Tab[] = [makeTab('aslan', '#ff0000'), makeTab('bilal', '#00ff00')];
   const managers = {
-    tab: { tabs, append, appendContext, persist, buildAgentState },
+    tab: { tabs, byLabel: (label: string) => tabs.find((t) => t.label === label), append, appendContext, persist, buildAgentState },
     schedule: { get: vi.fn() },
     capture: { run: captureRun },
   } as never;
@@ -57,7 +57,7 @@ describe('AgentCommunicationManager', () => {
     const append = vi.fn();
     const tabs: Tab[] = [makeTab('aslan', '#ff0000'), makeTab('bilal', '#00ff00', 'reviewer')];
     const managers = {
-      tab: { tabs, append, appendContext: vi.fn(), persist: vi.fn(), buildAgentState: vi.fn() },
+      tab: { tabs, byLabel: (label: string) => tabs.find((t) => t.label === label), append, appendContext: vi.fn(), persist: vi.fn(), buildAgentState: vi.fn() },
       schedule: { get: vi.fn() },
       capture: { run: vi.fn() },
     } as never;

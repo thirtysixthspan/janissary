@@ -6,6 +6,6 @@ import type { Managers } from '../managers.js';
 // the in-memory `editorDraft`. An unresolvable `url` (e.g. a tab closed mid-debounce) is a no-op,
 // never an error.
 export function syncEditorBuffer(managers: Managers, url: string, content: string): void {
-  const tab = managers.tab.tabs.find((t) => t.editor?.url === url);
+  const tab = managers.tab.editorTabByUrl(url);
   if (tab) tab.editorDraft = { content, updatedAt: Date.now() };
 }

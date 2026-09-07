@@ -292,8 +292,9 @@ describe('notify — line composition', () => {
   function makeManagers(append: ReturnType<typeof vi.fn>): Managers {
     const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
     const janus = { label: 'janus', dotColor: '#abc', log: [] };
+    const tabs = [notif, janus];
     return {
-      tab: { tabs: [notif, janus], cur: () => notif, append },
+      tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => notif, append },
     } as unknown as Managers;
   }
 
@@ -335,7 +336,7 @@ describe('notify — line composition', () => {
   it('drops a plugin note entirely when no notifications feed is open', () => {
     const append = vi.fn();
     const janus = { label: 'janus', dotColor: '#abc', log: [] };
-    const managers = { tab: { tabs: [janus], cur: () => janus, append } } as unknown as Managers;
+    const managers = { tab: { tabs: [janus], byLabel: (l: string) => (l === 'janus' ? janus : undefined), cur: () => janus, append } } as unknown as Managers;
 
     notify(managers, 'plugin-note', 'janus', 'Dropped a.mp3 — it could not be played.');
 

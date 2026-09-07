@@ -91,7 +91,7 @@ export class ProfileManager {
   // workspace-clone error or its ready confirmation) reaches the notifications feed rather than a
   // transcript, since the source tab may be a harness with no transcript to print into.
   newAgentAt(label: string): void {
-    const creator = this.managers.tab.tabs.find((t) => t.label === label);
+    const creator = this.managers.tab.byLabel(label);
     if (!creator) return;
     const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
     if (resolved === null) { notify(this.managers, 'manual', label, 'All agent names are in use.'); return; }
@@ -126,7 +126,7 @@ export class ProfileManager {
   }
 
   newAgentInWorkspace(label: string, workspaceDir: string): void {
-    const creator = this.managers.tab.tabs.find((tab) => tab.label === label);
+    const creator = this.managers.tab.byLabel(label);
     if (!creator) return;
     const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
     if (resolved === null) {

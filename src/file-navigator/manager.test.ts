@@ -73,6 +73,9 @@ describe('FileNavigatorManager', () => {
     managers = {
       tab: {
         get tabs() { return tabs; },
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
+        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
+        filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
         cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),

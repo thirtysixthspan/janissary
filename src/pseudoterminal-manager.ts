@@ -122,7 +122,7 @@ export class PseudoterminalManager {
   // confinement decision belongs to the machine the process runs on.
   openInlinePty(label: string, command: string, program: string): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     const id = channel
       ? this.registerRemotePty(label, channel, { program, command })

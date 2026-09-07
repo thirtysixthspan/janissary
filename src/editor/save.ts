@@ -18,7 +18,7 @@ export function saveFile(managers: Managers, url: string, content: string): Mayb
   const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
   const filePath = id ? managers.tab.openFilePath(id) : undefined;
   if (!filePath) throw new Error(`saveFile: unknown file ref "${url}"`);
-  const tab = managers.tab.tabs.find((t) => t.editor?.url === url);
+  const tab = managers.tab.editorTabByUrl(url);
   const wasNewFile = !!tab?.editor?.newFile;
 
   // A new-file editor's first save silently auto-suffixes instead of overwriting a same-named
@@ -38,7 +38,7 @@ export function saveFile(managers: Managers, url: string, content: string): Mayb
 function finishSave(
   managers: Managers, url: string, targetPath: string, filePath: string, wasNewFile: boolean,
 ): void {
-  const tab = managers.tab.tabs.find((item) => item.editor?.url === url);
+  const tab = managers.tab.editorTabByUrl(url);
   // Refresh the owning tab's displayed size from the file's new on-disk size.
   const stat = statSync(targetPath);
   if (tab?.editor) {

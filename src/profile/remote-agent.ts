@@ -62,6 +62,6 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
 }
 
 function setActivePty(managers: Managers, label: string, id: string | undefined): void {
-  const tab = managers.tab.tabs.find((t) => t.label === label);
+  const tab = managers.tab.byLabel(label);
   if (tab) tab.activePty = id;
 }

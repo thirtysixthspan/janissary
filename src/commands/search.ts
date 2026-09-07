@@ -14,7 +14,7 @@ export const command: Command = {
     const pattern = command_.replace(/^search\s+transcript\b\s*/i, '').trim();
     const append = (output: string) => managers.tab.append(tab.label, { input: command_, output });
     if (!pattern || !compilePattern(pattern)) { append(SEARCH_USAGE); return; }
-    const target = managers.tab.tabs.find((t) => t.label === tab.label);
+    const target = managers.tab.byLabel(tab.label);
     const lines = flattenBuffer(target?.log ?? []);
     const matches = findMatches(lines, pattern);
     if (matches.length === 0) { append('No matches found in the transcript.'); return; }

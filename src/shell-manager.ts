@@ -73,7 +73,7 @@ export class ShellManager {
   // takes over the screen can be spotted and promoted mid-command; with it off, the shell is piped
   // exactly as before. Remote tabs stay piped either way.
   private spawnFor(label: string, cwd: string | undefined): ShellProcess {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
       return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
@@ -114,7 +114,7 @@ export class ShellManager {
   run(label: string, command: string, options?: { onComplete?: (out: string) => void; detect?: boolean }): void {
     const index = Math.max(0, this.managers.tab.findIndex(label));
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     if (!tab) { options?.onComplete?.(''); return; }
 
     const before = tab.log.length;

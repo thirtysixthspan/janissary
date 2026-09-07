@@ -10,7 +10,13 @@ function makeManagers(): { managers: Managers; edit: ReturnType<typeof vi.fn> } 
   const edit = vi.fn(() => ({ label: 'editor' }));
   const managers = {
     openFile: { edit },
-    tab: { tabs: [{ label: 'editor', group: 1, dotColor: 'green' }], activeTab: 0, setActiveTab: vi.fn(), findIndex: vi.fn() },
+    tab: {
+      tabs: [{ label: 'editor', group: 1, dotColor: 'green' }],
+      byLabel: (label: string) => (label === 'editor' ? { label: 'editor', group: 1, dotColor: 'green' } : undefined),
+      activeTab: 0,
+      setActiveTab: vi.fn(),
+      findIndex: vi.fn(),
+    },
   } as unknown as Managers;
   return { managers, edit };
 }
@@ -32,6 +38,7 @@ function makeMutableManagers(tabs: Tab[]): { managers: Managers; edit: ReturnTyp
     tab: {
       get tabs() { return tabs; },
       set tabs(value: Tab[]) { tabs = value; },
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       get activeTab() { return activeTab; },
       setActiveTab: vi.fn((index: number) => { activeTab = index; }),
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),

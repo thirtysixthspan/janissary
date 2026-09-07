@@ -18,7 +18,7 @@ export class ConnectionManager {
     rows.push(...this.managers.monitor.connectionsFor(label), ...this.managers.editorAcp.connectionsFor(label));
     const b = this.managers.browser.info(label);
     if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
+    const tab = this.managers.tab.byLabel(label);
     if (tab?.harness?.name === 'ssh' && tab.harness.destination) {
       rows.push({ text: `ssh:${tab.harness.destination}`, kind: 'ssh' });
     } else {

@@ -23,9 +23,12 @@ function makeSession(): { session: AcpSession; prompt: ReturnType<typeof vi.fn>;
 }
 
 function makeManagers(session: ReturnType<typeof vi.fn>, record: ReturnType<typeof vi.fn> = vi.fn()): Managers {
+  const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
   return {
     tab: {
-      tabs: [{ label: 'notes', editor: { url: '/open/1' } }],
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
+      editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
       cur: () => ({ label: 'notes' }),
       cwdOf: () => '/repo',
     },
@@ -81,8 +84,15 @@ describe('editorSuggest', () => {
     const { session, prompt } = makeSession();
     mocks.spawnMonitorSession.mockReturnValue(session);
     const editorAcp = new EditorAcpManager({} as unknown as Managers);
+    const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
     const managers = {
-      tab: { tabs: [{ label: 'notes', editor: { url: '/open/1' } }], cur: () => ({ label: 'notes' }), cwdOf: () => '/repo' },
+      tab: {
+        tabs,
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
+        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
+        cur: () => ({ label: 'notes' }),
+        cwdOf: () => '/repo',
+      },
       editorAcp,
     } as unknown as Managers;
 
@@ -121,8 +131,15 @@ describe('editorSuggest', () => {
     const hasSession = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
     const sessionFn = vi.fn(() => session);
     const record = vi.fn();
+    const tabs = [{ label: 'notes', editor: { url: '/open/1' } }];
     const managers = {
-      tab: { tabs: [{ label: 'notes', editor: { url: '/open/1' } }], cur: () => ({ label: 'notes' }), cwdOf: () => '/repo' },
+      tab: {
+        tabs,
+        byLabel: (label: string) => tabs.find((t) => t.label === label),
+        editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
+        cur: () => ({ label: 'notes' }),
+        cwdOf: () => '/repo',
+      },
       editorAcp: { session: sessionFn, record, hasSession },
     } as unknown as Managers;
 

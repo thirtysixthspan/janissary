@@ -133,10 +133,7 @@ export function createPluginContext(
     // writing it neither marks the view dirty nor sends anything to a client.
     snapshotTab: (instanceKey, text) => {
       if (!isEnabled()) return;
-      const tab = managers.tab.tabs.find(
-        (candidate) => candidate.plugin?.id === declaration.id
-          && candidate.plugin.instanceKey === instanceKey,
-      );
+      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
       if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
     },
     openClaimedFiles: (target) => {

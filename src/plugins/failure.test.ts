@@ -19,6 +19,7 @@ function makeManagers(options: { origin?: boolean; notifications?: boolean } = {
   const managers = {
     tab: {
       tabs,
+      byLabel: (label: string) => tabs.find((t: { label: string }) => t.label === label),
       append,
       cur: () => origin,
       openNotificationsTab,

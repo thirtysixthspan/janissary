@@ -8,7 +8,7 @@ import { parseScheduleCommand, formatSchedule } from '../schedule/index.js';
 // cannot run commands, so scheduling into them is rejected.
 function resolveTargetTab(target: string | undefined, own: string, managers: CommandManagers): Tab | { error: string } {
   const label = target ?? own;
-  const tab = managers.tab.tabs.find((t) => t.label === label);
+  const tab = managers.tab.byLabel(label);
   if (!tab) return { error: `No tab named "${label}".` };
   if (tab.view !== undefined && tab.view !== 'agent' && tab.view !== 'harness') {
     return { error: `Tab "${label}" cannot run scheduled commands.` };

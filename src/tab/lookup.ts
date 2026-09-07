@@ -48,3 +48,26 @@ export function monitorTab(tabs: Tab[], label: string): MonitorTab | undefined {
   const tab = byLabel(tabs, label);
   return tab && isMonitorTab(tab) ? tab : undefined;
 }
+
+// The keyed lookup helpers below cover the navigation keys that are not labels: the transport
+// id of a running harness, an editor's connection URL, a plugin record's instance key, and a
+// file-navigator tree root. Each is the one named home for that key.
+export function harnessTabByPtyId(tabs: Tab[], ptyId: string): HarnessTab | undefined {
+  const tab = tabs.find((t) => t.harness?.ptyId === ptyId);
+  return tab && isHarnessTab(tab) ? tab : undefined;
+}
+
+export function editorTabByUrl(tabs: Tab[], url: string): EditorTab | undefined {
+  const tab = tabs.find((t) => t.editor?.url === url);
+  return tab && isEditorTab(tab) ? tab : undefined;
+}
+
+export function pluginTabByInstanceKey(tabs: Tab[], id: string, instanceKey: string): PluginTab | undefined {
+  const tab = tabs.find((t) => t.plugin?.id === id && t.plugin.instanceKey === instanceKey);
+  return tab && isPluginTab(tab) ? tab : undefined;
+}
+
+export function filesTabByRoot(tabs: Tab[], root: string): FilesTab | undefined {
+  const tab = tabs.find((t) => t.files?.root === root);
+  return tab && isFilesTab(tab) ? tab : undefined;
+}

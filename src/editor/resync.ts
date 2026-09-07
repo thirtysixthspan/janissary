@@ -7,7 +7,7 @@ import type { Managers } from '../managers.js';
 // than waiting on an `fs.watch` event a git-driven replace may not deliver — its conflict-vs-clean-
 // reload handling (`useEditorWatchReload` on the client) then runs exactly like an external edit.
 export async function resyncEditorTab(managers: Managers, url: string): Promise<void> {
-  const tab = managers.tab.tabs.find((t) => t.editor?.url === url);
+  const tab = managers.tab.editorTabByUrl(url);
   const sync = tab?.editor?.sync;
   if (!tab?.editor || !sync || sync === 'provisioning' || sync === 'syncing') return;
   tab.editor = { ...tab.editor, sync: 'syncing' };

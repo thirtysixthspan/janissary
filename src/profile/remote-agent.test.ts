@@ -35,6 +35,7 @@ function makeManagers(): {
   const managers = {
     tab: {
       tabs,
+      byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       cur: () => tabs[0],
       allLabels: () => tabs.map((t) => t.label),
       cwdOf: () => '/proj',

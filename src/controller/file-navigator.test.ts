@@ -35,8 +35,9 @@ function makeManagersWithNotifications(
 ) {
   const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
   const active = { label, log: [] };
+  const tabs = [active, notif];
   return {
-    tab: { tabs: [active, notif], cur: () => active, append },
+    tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append },
     fileNavigator,
   } as unknown as Managers;
 }

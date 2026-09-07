@@ -198,7 +198,7 @@ export class RemoteManager {
   // path does it: the agent whose next `connect()` is about to fail is working in that tab, and a
   // notification is worth nothing to a user who keeps the feed closed.
   private notifyBrowserGone(sessionId: string, message?: string): void {
-    const tab = this.managers.tab.tabs.find((t) => t.harness?.ptyId === sessionId);
+    const tab = this.managers.tab.harnessTabByPtyId(sessionId);
     if (!tab?.harness) return;
     const text = message ?? 'e2e browser stopped on the remote host';
     notify(this.managers, 'e2e-browser-gone', tab.label, text);

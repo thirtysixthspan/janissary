@@ -12,7 +12,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     browser: { info: vi.fn(() => { /* no browser connection */ }), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
     database: { openDbs: vi.fn(() => []) },
-    tab: { tabs: [], shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), startRunning: vi.fn(), finishRunning: vi.fn() },
+    tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), startRunning: vi.fn(), finishRunning: vi.fn() },
     ...overrides,
   } as unknown as Managers;
 }
@@ -64,7 +64,7 @@ describe('ConnectionManager', () => {
       const finishRunning = vi.fn();
       const managers = makeManagers({
         browser: { info: vi.fn(() => { /* no browser connection */ }), run: browserRun },
-        tab: { tabs: [], shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), startRunning: vi.fn(), finishRunning },
+        tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), startRunning: vi.fn(), finishRunning },
       } as unknown as Partial<Managers>);
       const manager = new ConnectionManager(managers);
 
