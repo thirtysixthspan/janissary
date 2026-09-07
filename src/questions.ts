@@ -62,6 +62,8 @@ export class Questions {
     if (entry) this.finish(entry, QUESTION_CANCELLED);
   }
 
+  closeTab(tab: string): void { this.cancelTab(tab); }
+
   closeAll(): void {
     const tabs = new Set([...this.active.keys(), ...this.queued.keys()]);
     for (const tab of tabs) this.cancelTab(tab);

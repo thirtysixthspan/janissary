@@ -120,6 +120,8 @@ export class AcpManager {
     return true;
   }
 
+  closeTab(label: string): void { this.close(label); }
+
   // Kill every session and forget all info (app shutdown).
   closeAll(): void {
     for (const [, session] of this.sessions) session.kill();

@@ -28,6 +28,13 @@ export type ManagerLifecycle = {
   dispose?(): void;
 };
 
+// The per-tab release method the tab-close walk reads (`src/tab/cleanup.ts`). It sits on its own
+// type rather than on `ManagerLifecycle`: `TabManager` already owns `closeTab(index)` as the
+// orchestrating entry point, and a `label`-keyed method on the manager intersection would not type.
+export type TabReleasingManager = {
+  closeTab?(label: string): void;
+};
+
 type ManagerRegistry = {
   tab: TabManager;
   shell: ShellManager;

@@ -177,6 +177,8 @@ export class RemoteManager {
     this.entries.clear();
   }
 
+  closeTab(label: string): void { this.release(label); }
+
   dispose(): void { this.closeAll(); }
 
   private joinedHandlers(label: string): RemoteLaunchHandlers {

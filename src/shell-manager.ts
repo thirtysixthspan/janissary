@@ -206,6 +206,8 @@ export class ShellManager {
     return true;
   }
 
+  closeTab(label: string): void { this.close(label); }
+
   // Kill every shell (app shutdown).
   closeAll(): void {
     for (const [, shell] of this.shells) shell.kill();
