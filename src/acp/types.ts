@@ -1,4 +1,4 @@
-import type { ProjectTokens } from '../project-tokens.js';
+import type { ProjectTokens } from '../project/tokens.js';
 
 export type PromptHandlers = {
   onChunk: (text: string) => void;

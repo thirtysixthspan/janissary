@@ -18,7 +18,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-vi.mock('../project-tokens.js', () => ({ getProjectTokens: () => ({ github: 'test-token' }) }));
+vi.mock('../project/tokens.js', () => ({ getProjectTokens: () => ({ github: 'test-token' }) }));
 vi.mock('../workspace/index.js', () => ({ workspacePath: (name: string) => `/repo/.janissary/workspace/${name}` }));
 
 const { GitSync, SYNC_WORKSPACE_NAME } = await import('./sync.js');

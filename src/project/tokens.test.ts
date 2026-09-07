@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { PROJECT_TOKENS, loadProjectTokens, getProjectTokens } from './project-tokens.js';
+import { PROJECT_TOKENS, loadProjectTokens, getProjectTokens } from './tokens.js';
 
 function project(): string {
   const dir = mkdtempSync(path.join(tmpdir(), 'project-tokens-'));

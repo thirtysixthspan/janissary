@@ -8,7 +8,7 @@ import {
 } from '@agentclientprotocol/sdk';
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from '../sandbox/index.js';
-import { getProjectTokens } from '../project-tokens.js';
+import { getProjectTokens } from '../project/tokens.js';
 import { decidePermission } from './tools.js';
 import { errorText } from '../error-text.js';
 import { childOutputTail, withChildOutput } from '../child-output.js';

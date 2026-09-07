@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { connectAcp } from './index.js';
-import { getProjectTokens } from '../project-tokens.js';
+import { getProjectTokens } from '../project/tokens.js';
 import type * as SandboxModule from '../sandbox/index.js';
 import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';

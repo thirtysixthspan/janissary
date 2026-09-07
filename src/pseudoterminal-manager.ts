@@ -1,7 +1,7 @@
 import { spawnPty, type PtySession } from './pty.js';
 import type { SandboxOptions } from './sandbox/index.js';
 import { messageBus } from './bus.js';
-import { getProjectTokens } from './project-tokens.js';
+import { getProjectTokens } from './project/tokens.js';
 import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
 import type { RemoteChannel } from './remote/channel.js';
 import type { Managers } from './managers.js';

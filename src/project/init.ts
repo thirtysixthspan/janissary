@@ -54,7 +54,7 @@ export function scaffoldProject(projectDir: string): string[] {
   }
   for (const configDir of CONFIG_DIRS) {
     installConfigDirectory(
-      path.join(import.meta.dirname, '..', configDir),
+      path.join(import.meta.dirname, '../..', configDir),
       path.join(projectDir, configDir),
     );
   }

@@ -74,7 +74,7 @@ export type RemoteFilesystemArguments = {
   skipConflicts?: boolean;
 };
 
-import type { ProjectTokens } from '../project-tokens.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import { decodeKnownFrame } from './frame-decode.js';
 

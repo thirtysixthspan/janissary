@@ -1,4 +1,4 @@
-import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
+import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RemoteFrame } from './protocol.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';

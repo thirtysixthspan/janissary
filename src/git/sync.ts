@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 import path from 'node:path';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import { workspacePath } from '../workspace/index.js';
-import { getProjectTokens } from '../project-tokens.js';
+import { getProjectTokens } from '../project/tokens.js';
 import { errorText } from '../error-text.js';
 
 const execFileAsync = promisify(execFile);

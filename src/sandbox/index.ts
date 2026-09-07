@@ -11,7 +11,7 @@ import {
   ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
-import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
+import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
 
 export type SandboxOptions = {
