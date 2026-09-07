@@ -7,10 +7,6 @@
 
 ## deferred
 
-
-
-* Coalesce and incrementally invalidate the per-mutation state broadcast so one keystroke stops re-flattening and re-serializing every open tab's whole transcript. — deferred: complexity 8/10, a cross-cutting performance architecture change spanning the broadcast pipeline (src/index.ts, src/controller/events.ts, src/state-event.ts, src/tab/view.ts), the wire protocol, and the client, with concurrency-sensitive coalescing semantics.
-
 ## declined
 
 * Protect user edits made after a copy-paste before undo deletes its destination in `src/file-navigator/moves.ts`: `undoCopyPaste` records only absolute source and destination paths and unconditionally removes each destination, so editing or replacing a copied file before pressing undo silently deletes the newer content. Record enough identity or content metadata with each copy history entry to detect divergence and surface a conflict instead of removing a changed destination. Severity: **high**. — deferred: complexity 8/10, requires recursive destination identity tracking plus new undo conflict semantics across server history and client conflict handling.
