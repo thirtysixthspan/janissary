@@ -30,6 +30,7 @@ type Entry = {
   rejectReady: (error: Error) => void;
   workspaceDir?: string;
   settled: boolean;
+  closed: boolean;
   workspaceLabel: string;
 };
 
@@ -87,15 +88,13 @@ export class RemoteManager {
         onFrame: (frame) => {
           switch (frame.type) {
           case 'workspace-ready': {
-            const entry = this.entries.get(label);
-            if (entry) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
-            handlers.onReady(frame.dir, frame.notice);
+            if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
+            entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
             break;
           }
           case 'workspace-failed': {
-            const entry = this.entries.get(label);
-            if (entry) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
-            handlers.onFailed(frame.message);
+            if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
+            entry.handlers.get(label)?.onFailed(frame.message);
             break;
           }
           case 'browser-exited': { this.notifyBrowserGone(frame.id, frame.message); break; }
@@ -103,19 +102,19 @@ export class RemoteManager {
           }
         },
         onError: (message) => {
-          const entry = this.entries.get(label);
-          if (entry && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
-          handlers.onFailed(message);
+          if (!entry.closed && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
+          entry.handlers.get(label)?.onFailed(message);
         },
-        onClose: () => this.channelClosed(label),
+        onClose: () => this.channelClosed(entry),
       },
     );
     deferred.channel = channel;
 
-    this.entries.set(label, {
+    const entry: Entry = {
       channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
-      ready, resolveReady, rejectReady, settled: false, workspaceLabel: label,
-    });
+      ready, resolveReady, rejectReady, settled: false, closed: false, workspaceLabel: label,
+    };
+    this.entries.set(label, entry);
     deferred.session = this.managers.pty.spawnTransport(label, 'ssh', remoteServeCommand(address), cwd, {
       onData: (data) => channel.receive(data),
       onExit: () => channel.closed(),
@@ -166,7 +165,7 @@ export class RemoteManager {
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
     else {
-      clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
+      this.channelClosed(entry);
       entry.channel.close();
     }
     return true;
@@ -207,17 +206,19 @@ export class RemoteManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  private channelClosed(anyLabel: string): void {
-    const entry = this.entries.get(anyLabel);
-    if (!entry) return;
+  private channelClosed(entry: Entry): void {
+    if (entry.closed) return;
+    entry.closed = true;
     if (!entry.settled) {
       entry.settled = true;
       entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
     } else if (entry.workspaceDir && entry.labels.size > 0) {
-      notify(this.managers, 'manual', anyLabel, `Remote connection to ${entry.address.host} ended.`);
+      notify(this.managers, 'manual', entry.labels.values().next().value!, `Remote connection to ${entry.address.host} ended.`);
     }
     clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
-    for (const label of entry.labels) this.entries.delete(label);
+    for (const label of entry.labels) {
+      if (this.entries.get(label) === entry) this.entries.delete(label);
+    }
     const handlers = [...entry.handlers.values()];
     entry.labels.clear();
     entry.handlers.clear();
