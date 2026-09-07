@@ -3,23 +3,12 @@ import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
-import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
-import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture-file.js';
-import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
-import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
+import { initStateDirectories, clearStateDirectories } from './state-dirs.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project-init.js';
 import { runRemoteServer } from './remote/serve.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
-import { initBrowserLogDirectory, clearBrowserLogDirectory } from './browser/browser-log.js';
-import { initGlobalHistory } from './global-history.js';
-import { TranscriptLogger } from './transcript/logger.js';
-import { TranscriptStore } from './transcript/store.js';
-import { initDbDir } from './connections.js';
-import { initProfileDir } from './profiles.js';
-import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
-import { clearRemoteFileCache, initRemoteFileCache } from './file-navigator/remote-file-cache.js';
 import { loadConfig } from './config.js';
 import { loadLearnedCommands } from './interactive-learned.js';
 import { loadAgentNames } from './agent/names.js';
@@ -191,26 +180,14 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
 
   acquireLock(cwd);
   lockedDir = cwd;
-  initAgentStateDirectory(cwd);
-  initHarnessCaptureDirectory(cwd);
-  initHarnessRecordingDirectory(cwd);
-  initHarnessTranscriptDirectory(cwd);
-  initBrowserLogDirectory(cwd);
-  initGlobalHistory();
-  initDbDir(cwd);
-  initProfileDir(cwd, path.join(import.meta.dirname, '..'));
-  initWorkspaceDir(cwd);
-  initRemoteFileCache(cwd);
-  new TranscriptLogger(cwd); // append-only transcript log under .janissary/log/ (never cleared)
-  new TranscriptStore(cwd);
+  initStateDirectories({ projectDir: cwd, packageRoot: path.join(import.meta.dirname, '..') });
   loadConfig(cwd);
   loadLearnedCommands(cwd);
   loadAgentNames(cwd);
   loadHarnessModels(cwd);
   loadProjectTokens(cwd);
   loadGitIdentity(cwd);
-  clearRemoteFileCache();
-  if (!args.relaunch) { clearStateDirectory(); TranscriptStore.clear(); clearWorkspaceDir(); clearCaptureDirectory(); clearHarnessRecordingDirectory(); clearHarnessTranscriptDirectory(); clearBrowserLogDirectory(); }
+  clearStateDirectories(args.relaunch);
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {

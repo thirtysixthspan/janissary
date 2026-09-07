@@ -5,17 +5,6 @@
 
 ## development
 
-* Pair each state-directory subsystem's init and clear in one registry so boot stops sequencing nineteen unconnected module calls by hand.
-
-Existing Debt: The boot sequence in src/main.ts calls eleven per-subsystem init functions and, on a non-relaunch start, eight per-subsystem clear functions as two flat, order-sensitive lists with no structural tie between an init and its clear — the same hand-maintained-checklist shape the lifecycle principle retires elsewhere. Severity: 4/10
-
-Existing Risk: 4/10 - A new subsystem wired in with its init but not its clear leaks the previous session's data into a fresh session — the non-relaunch clearing exists precisely to prevent that — and a missed init surfaces only as a first-use crash on someone's machine.
-
-Proposal Risk: 2/10 - The registry must preserve the boot order (later inits and loads read earlier state) and keep clearing conditional on a non-relaunch start, so the risk is an ordering slip the fold-over makes visible rather than a forgotten line.
-
-Proposal: Add a module (for example src/state-dirs.ts) exporting an ordered array of init/clear pairs wrapping the existing functions from src/agent/state.ts, src/harness/capture-file.ts, src/harness/recording-file.ts, src/harness/transcript-file.ts, src/browser/browser-log.ts, src/global-history.ts, src/connections.ts, src/profiles.ts, src/workspace/index.ts, src/file-navigator/remote-file-cache.ts, and the transcript logger and store constructors in src/transcript/, with per-entry fields for the arguments that differ (the profiles init's package root, the store's cwd). Rewrite `boot()` in src/main.ts to fold over the array — init every entry, then clear every entry only when the launch is not a relaunch — and pin the pairing with a compile-time completeness check in the style of `MANAGER_DISPOSE_ORDER_IS_COMPLETE`. Add the test the current shape cannot have: a boot-path test asserting every entry's clear runs on a non-relaunch start and no entry's clear runs on a relaunch.
-
-
 * Fold the bare schedule command into its registry definition so the one branch still running ahead of the command resolver can be deleted.
 
 Existing Debt: The bare `schedule` token is intercepted in the command manager before the resolver and opens the launch dialog there, while the same name also has a registry Command that handles every argful form — two definitions of one command that the architecture's own one-definition rule calls an unfinished migration, papered over by a shadow list that keeps plugin claims off the name. Severity: 4/10
