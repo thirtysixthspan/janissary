@@ -6,6 +6,7 @@ import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey, type VisibleTaskRow } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey, type VisibleProfileRow } from './pickers/profile-picker-keys';
+import { firstOpenOverlay } from './pickers/overlay-registry';
 import type { TabNavEntry } from './tab-nav-match';
 
 export type StateSnapshot = {
@@ -74,44 +75,63 @@ export type Callbacks = {
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
-// of them has handled the key, so the caller stops there.
+// of them has claimed the key, so the caller stops there. Which one wins comes from the same ordered
+// registry the render chain reads (see `pickers/overlay-registry`), not from the order written here.
 function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
-  if (snap.route) {
-    handleRouteChooserKey(e, snap.route, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
+  switch (firstOpenOverlay({
+    route: snap.route !== null,
+    syntaxTheme: snap.themePickerOpen,
+    appTheme: snap.appThemePickerOpen,
+    quickOpen: snap.quickOpenOpen,
+    tabNav: snap.navOpen,
+    history: snap.pickerOpen,
+    queue: snap.queueOpen,
+    task: snap.taskPickerOpen,
+    profile: snap.profilePickerOpen,
+  })) {
+  // `snap.route` is what put this case in play, so it is non-null here; the compiler cannot see
+  // that across the registry lookup.
+  case 'route': {
+    handleRouteChooserKey(e, snap.route!, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
     return true;
   }
-  if (snap.themePickerOpen) {
+  case 'syntaxTheme': {
     handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
     return true;
   }
-  if (snap.appThemePickerOpen) {
+  case 'appTheme': {
     handlePickerKey(e, APP_THEMES, snap.appThemePickerIdx, cb.setAppThemePickerIndex, cb.pickAppTheme, cb.setAppThemePickerOpen);
     return true;
   }
-  if (snap.navOpen) {
+  // Quick open holds its own text input and stops propagation on it, so keys typed into it never
+  // reach this handler at all. Claiming the key here is for the ones that arrive when focus is
+  // elsewhere: they must not fall through to a chord or a tab shortcut underneath the overlay.
+  case 'quickOpen': { return true; }
+  case 'tabNav': {
     handleTabNavKey(e, snap.navTabs, snap.navIdx, cb.setNavIndex, cb.selectNavTab, cb.setNavOpen, snap.navQuery, cb.setNavQuery);
     return true;
   }
-  if (snap.pickerOpen) {
+  case 'history': {
     handlePickerKey(e, snap.recent, snap.pickerIdx, cb.setPickerIndex, cb.runCommand, cb.setPickerOpen);
     return true;
   }
-  if (snap.queueOpen) {
+  case 'queue': {
     handleQueueKey(e, snap.queueItems, snap.queueIdx, cb.setQueueIndex, cb.setQueueOpen);
     return true;
   }
-  if (snap.taskPickerOpen) {
+  case 'task': {
     dispatchTaskPickerKey(e, snap.visibleTasks, snap.taskPickerIdx, cb.setTaskPickerIndex, cb.toggleTaskDir, cb.pickTask, cb.setTaskPickerOpen);
     return true;
   }
-  if (snap.profilePickerOpen) {
+  case 'profile': {
     dispatchProfilePickerKey(
       e, snap.profiles, snap.profilePickerIdx,
       cb.setProfilePickerIndex, cb.pickProfile, cb.setProfilePickerOpen,
     );
     return true;
   }
-  return false;
+  default: { return false; }
+  }
 }
 
 // Ctrl/Shift+Arrow tab reorder/move shortcuts, Ctrl+T tool-step collapse, and Ctrl+O open-in-terminal
@@ -193,7 +213,9 @@ export function useWindowKeys(
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
       if (handleChordKeys(e, snap, cb)) return;
-      if (!snap.searchOpen && !snap.quickOpenOpen && handleScrollKey(e)) return;
+      // Quick open no longer needs naming here: `dispatchModalKey` claims its keys above, which is
+      // what this guard was patching around while it was missing from that chain.
+      if (!snap.searchOpen && handleScrollKey(e)) return;
       handleTabShortcuts(e, client);
     };
     globalThis.addEventListener('keydown', onKey);

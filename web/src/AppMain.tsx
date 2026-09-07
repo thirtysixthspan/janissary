@@ -11,6 +11,7 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
+import { commandBarSuppressed } from './pickers/overlay-registry';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
@@ -91,7 +92,11 @@ export function AppMain({
         current={current} client={client} lines={lines} runCommand={runCommand}
         transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
         pickerOverlays={pickerOverlays}
-        blockingOverlayOpen={pickerOpen || route !== null || themePickerOpen || appThemePickerOpen || navOpen || taskPickerOpen || profilePickerOpen}
+        blockingOverlayOpen={commandBarSuppressed({
+          route: route !== null, syntaxTheme: themePickerOpen, appTheme: appThemePickerOpen,
+          quickOpen: quickOpenOpen, tabNav: navOpen, history: pickerOpen, queue: queueOpen,
+          task: taskPickerOpen, profile: profilePickerOpen,
+        })}
         queueOpen={queueOpen}
         search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
         quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}

@@ -13,10 +13,12 @@ import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
 import { QuickOpen } from './QuickOpen';
+import { firstOpenOverlay } from './overlay-registry';
 import type { FuzzyMatchResult } from '../fuzzy-match';
 
-// The mutually-exclusive stack of modal overlays that can float above the command bar: route
-// chooser takes priority, then the syntax-theme picker, then whichever of `hist`/`nav` is open.
+// The mutually-exclusive stack of modal overlays that can float above the command bar. Which one
+// wins is not decided here: `firstOpenOverlay` answers that from the one ordered registry the
+// keyboard priority chain and the command-bar suppression flag also read (see `overlay-registry`).
 // Split out of App.tsx to keep it under the file-size limit.
 type Properties = {
   route: RouteChooserView | null;
@@ -74,14 +76,29 @@ export function PickerOverlays({
   quickOpenOpen, quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
   quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, commandInputRef,
 }: Properties) {
-  if (route) return <RouteChooser cmd={route.cmd} choices={route.choices} selected={routeIndex} onPick={onPickRoute} />;
-  if (themePickerOpen) {
+  switch (firstOpenOverlay({
+    route: route !== null,
+    syntaxTheme: themePickerOpen,
+    appTheme: appThemePickerOpen,
+    quickOpen: quickOpenOpen,
+    tabNav: navOpen,
+    history: pickerOpen,
+    queue: queueOpen,
+    task: taskPickerOpen,
+    profile: profilePickerOpen,
+  })) {
+  // `route` is what put this case in play, so it is non-null here; the compiler cannot see that
+  // across the registry lookup.
+  case 'route': {
+    return <RouteChooser cmd={route!.cmd} choices={route!.choices} selected={routeIndex} onPick={onPickRoute} />;
+  }
+  case 'syntaxTheme': {
     return <ThemePicker themes={SYNTAX_THEMES} active={syntaxTheme} selected={themePickerIndex} onPick={onPickTheme} />;
   }
-  if (appThemePickerOpen) {
+  case 'appTheme': {
     return <AppThemePicker themes={APP_THEMES} active={theme} selected={appThemePickerIndex} onPick={onPickAppTheme} />;
   }
-  if (quickOpenOpen) {
+  case 'quickOpen': {
     return (
       <QuickOpen
         query={quickOpenQuery} onChangeQuery={onChangeQuickOpenQuery} results={quickOpenResults}
@@ -90,10 +107,15 @@ export function PickerOverlays({
       />
     );
   }
-  if (navOpen) return <TabNavPicker tabs={tabs} query={navQuery} selected={navIndex} onPick={onPickTab} />;
-  if (pickerOpen) return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />;
-  if (queueOpen) return <QueuePicker items={queueItems} selected={queueIndex} onSelect={onSelectQueue} />;
-  if (taskPickerOpen) return <TaskPicker rows={taskRows} selected={taskPickerIndex} onPick={onPickTask} onToggleDir={onToggleTaskDir} />;
-  if (profilePickerOpen) return <ProfilePicker profiles={profiles} selected={profilePickerIndex} onPick={onPickProfile} />;
-  return null;
+  case 'tabNav': { return <TabNavPicker tabs={tabs} query={navQuery} selected={navIndex} onPick={onPickTab} />; }
+  case 'history': { return <HistoryPicker items={recent} selected={pickerIndex} onPick={onPickHistory} />; }
+  case 'queue': { return <QueuePicker items={queueItems} selected={queueIndex} onSelect={onSelectQueue} />; }
+  case 'task': {
+    return <TaskPicker rows={taskRows} selected={taskPickerIndex} onPick={onPickTask} onToggleDir={onToggleTaskDir} />;
+  }
+  case 'profile': {
+    return <ProfilePicker profiles={profiles} selected={profilePickerIndex} onPick={onPickProfile} />;
+  }
+  default: { return null; }
+  }
 }

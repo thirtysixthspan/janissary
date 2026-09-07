@@ -331,6 +331,31 @@ describe('useWindowKeys', () => {
     expect(sendMock).not.toHaveBeenCalled();
   });
 
+  // Quick open was the one overlay missing from the priority chain, which showed up as an ad-hoc
+  // `!quickOpenOpen` guard on the scroll line and nowhere else. It now claims the key like every
+  // other overlay, so nothing fires underneath it. Keys typed into its own input never reach here —
+  // it stops propagation — so this is about the ones that arrive when focus is elsewhere.
+  it('claims a keystroke while quick open is up, so nothing fires underneath it', () => {
+    const scrollFn = vi.fn(() => true);
+    const client = { send: vi.fn() };
+    render(React.createElement(TestComponent, { quickOpenOpen: true, handleScrollKey: scrollFn, client }));
+
+    dispatchKey('PageDown');
+    dispatchKey('ArrowLeft', { ctrlKey: true });
+
+    expect(scrollFn).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('lets a keystroke through once quick open is closed', () => {
+    const scrollFn = vi.fn(() => true);
+    render(React.createElement(TestComponent, { quickOpenOpen: false, handleScrollKey: scrollFn }));
+
+    dispatchKey('PageDown');
+
+    expect(scrollFn).toHaveBeenCalled();
+  });
+
   it('delegates to scroll handler when search is closed', () => {
     const scrollFn = vi.fn(() => true);
     render(React.createElement(TestComponent, { handleScrollKey: scrollFn }));

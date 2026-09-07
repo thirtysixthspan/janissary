@@ -43,3 +43,29 @@ A focused file navigator tab captures arrow keys, Home/End, PageUp/PageDown, Ent
 characters (type-ahead) for its own tree navigation instead of the bindings above — see File Navigator Tab.
 Shift+Tab is intercepted ahead of that file-navigator capture and ahead of a focused harness terminal, so
 section navigation still escapes them.
+
+### Overlay priority
+
+The modal overlays that float above the command bar are mutually exclusive: only one is ever on
+screen. When more than one could be open, one order decides which wins, and the same order decides
+which one keystrokes go to:
+
+1. route chooser
+2. syntax-theme picker
+3. application-theme picker
+4. Quick Open
+5. tab navigator
+6. command history picker
+7. command queue popup
+8. task picker
+9. profile picker
+
+While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
+switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it
+is dismissed. Quick Open holds its own text input and handles its own typing, arrows, Enter, and
+Escape there.
+
+The command queue popup is the one exception to an overlay taking the command bar's keys. Its
+selected command is edited **in** the command bar — typing there rewrites the queued entry — so the
+bar keeps working while it is open, with only Enter, the arrows, and Backspace/Delete on an empty
+line reserved by the popup itself.
