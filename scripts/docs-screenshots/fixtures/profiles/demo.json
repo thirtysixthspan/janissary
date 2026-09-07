@@ -1,0 +1,6 @@
+{
+  "tabs": [
+    { "type": "agent", "name": "writer", "number": 1, "group": 1, "color": "#5b9cff" },
+    { "type": "agent", "name": "editor", "number": 2, "group": 1, "color": "#ff9f43", "focus": true }
+  ]
+}
