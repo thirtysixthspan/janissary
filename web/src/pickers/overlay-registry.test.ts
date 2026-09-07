@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OVERLAYS, commandBarSuppressed, firstOpenOverlay,
-  type OverlayName, type OverlayOpenState,
+  OVERLAYS, buildOverlayOpenState, commandBarSuppressed, firstOpenOverlay,
+  type OverlayName, type OverlayOpenSources, type OverlayOpenState,
 } from './overlay-registry';
 
 const NONE: OverlayOpenState = {
@@ -27,6 +27,45 @@ describe('the overlay registry', () => {
   it('covers exactly the keys of the open state', () => {
     const byName = (a: string, b: string) => a.localeCompare(b);
     expect(OVERLAYS.map((overlay) => overlay.name).toSorted(byName)).toEqual(Object.keys(NONE).toSorted(byName));
+  });
+});
+
+const CLOSED: OverlayOpenSources = {
+  route: null, themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false,
+  navOpen: false, pickerOpen: false, queueOpen: false, taskPickerOpen: false, profilePickerOpen: false,
+};
+
+// Each app-level state name paired with the overlay it is supposed to open. The mapping used to be
+// spelled out at every site that asked the registry a question; this is the one that remains.
+const SOURCE_OF: ReadonlyArray<[keyof OverlayOpenSources, OverlayName]> = [
+  ['themePickerOpen', 'syntaxTheme'],
+  ['appThemePickerOpen', 'appTheme'],
+  ['quickOpenOpen', 'quickOpen'],
+  ['navOpen', 'tabNav'],
+  ['pickerOpen', 'history'],
+  ['queueOpen', 'queue'],
+  ['taskPickerOpen', 'task'],
+  ['profilePickerOpen', 'profile'],
+];
+
+describe('buildOverlayOpenState', () => {
+  it('reports every overlay closed when no picker state is set', () => {
+    expect(buildOverlayOpenState(CLOSED)).toEqual(NONE);
+  });
+
+  it.each(SOURCE_OF)('maps %s onto the %s overlay and nothing else', (source, name) => {
+    expect(buildOverlayOpenState({ ...CLOSED, [source]: true })).toEqual(opened(name));
+  });
+
+  it('treats a non-null route view as the route chooser being open', () => {
+    expect(buildOverlayOpenState({ ...CLOSED, route: { cmd: 'run', choices: ['shell'] } })).toEqual(opened('route'));
+  });
+
+  it('covers every overlay the registry lists', () => {
+    const byName = (a: string, b: string) => a.localeCompare(b);
+    expect([...SOURCE_OF.map(([, name]) => name), 'route'].toSorted(byName)).toEqual(
+      OVERLAYS.map((overlay) => overlay.name).toSorted(byName),
+    );
   });
 });
 

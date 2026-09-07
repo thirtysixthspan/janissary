@@ -281,6 +281,45 @@ describe('App closing the last tab', () => {
   }, 15_000);
 });
 
+// The chord used to consult a hand-ORed subset of the overlays rather than the registry, so it fell
+// through to closeTab for the syntax-theme picker, the app-theme picker, the tab navigator, and
+// quick open — tearing down the tab underneath whichever one was on screen.
+describe('App close-tab chord under an overlay', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  const openViaCommand = (text: string) => {
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: text } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+  };
+
+  it.each([['syntax theme'], ['theme'], ['nav']])(
+    'Cmd+W sends no closeTab while the %s overlay is open',
+    async (command) => {
+      const { App } = await import('./App');
+      render(<App client={client} />);
+      act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+      openViaCommand(command);
+      sendMock.mockClear();
+      fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
+      expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
+    },
+    15_000,
+  );
+
+  it('Cmd+W still closes the active tab when no overlay is open', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    sendMock.mockClear();
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  }, 15_000);
+});
+
 describe('App agent tab body click focuses command input', () => {
   beforeEach(() => {
     sendMock.mockClear();

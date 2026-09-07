@@ -13,7 +13,7 @@ import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
 import { QuickOpen } from './QuickOpen';
-import { firstOpenOverlay } from './overlay-registry';
+import { firstOpenOverlay, type OverlayOpenState } from './overlay-registry';
 import type { FuzzyMatchResult } from '../fuzzy-match';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar. Which one
@@ -21,40 +21,36 @@ import type { FuzzyMatchResult } from '../fuzzy-match';
 // keyboard priority chain and the command-bar suppression flag also read (see `overlay-registry`).
 // Split out of App.tsx to keep it under the file-size limit.
 type Properties = {
+  // Which overlays are up, built once by `buildOverlayOpenState` where the picker state lives.
+  overlays: OverlayOpenState;
+  // The route chooser renders from the view object rather than from `overlays.route`, so the view
+  // itself is still a prop of its own.
   route: RouteChooserView | null;
   routeIndex: number;
   onPickRoute: (index: number) => void;
   syntaxTheme: string;
-  themePickerOpen: boolean;
   themePickerIndex: number;
   onPickTheme: (name: string) => void;
   theme: string;
-  appThemePickerOpen: boolean;
   appThemePickerIndex: number;
   onPickAppTheme: (name: string) => void;
-  pickerOpen: boolean;
   recent: string[];
   pickerIndex: number;
   onPickHistory: (command: string) => void;
-  navOpen: boolean;
   navQuery: string;
   navIndex: number;
   tabs: TabView[];
   onPickTab: (index: number) => void;
-  queueOpen: boolean;
   queueItems: string[];
   queueIndex: number;
   onSelectQueue: (index: number) => void;
-  taskPickerOpen: boolean;
   taskRows: VisibleTaskRow[];
   taskPickerIndex: number;
   onPickTask: (path: string) => void;
   onToggleTaskDir: (path: string) => void;
-  profilePickerOpen: boolean;
   profiles: VisibleProfileRow[];
   profilePickerIndex: number;
   onPickProfile: (name: string) => void;
-  quickOpenOpen: boolean;
   quickOpenQuery: string;
   onChangeQuickOpenQuery: (query: string) => void;
   quickOpenResults: FuzzyMatchResult[];
@@ -67,26 +63,16 @@ type Properties = {
 };
 
 export function PickerOverlays({
-  route, routeIndex, onPickRoute, syntaxTheme, themePickerOpen, themePickerIndex, onPickTheme,
-  theme, appThemePickerOpen, appThemePickerIndex, onPickAppTheme,
-  pickerOpen, recent, pickerIndex, onPickHistory, navOpen, navQuery, navIndex, tabs, onPickTab,
-  queueOpen, queueItems, queueIndex, onSelectQueue,
-  taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
-  profilePickerOpen, profiles, profilePickerIndex, onPickProfile,
-  quickOpenOpen, quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
+  overlays, route, routeIndex, onPickRoute, syntaxTheme, themePickerIndex, onPickTheme,
+  theme, appThemePickerIndex, onPickAppTheme,
+  recent, pickerIndex, onPickHistory, navQuery, navIndex, tabs, onPickTab,
+  queueItems, queueIndex, onSelectQueue,
+  taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
+  profiles, profilePickerIndex, onPickProfile,
+  quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
   quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, commandInputRef,
 }: Properties) {
-  switch (firstOpenOverlay({
-    route: route !== null,
-    syntaxTheme: themePickerOpen,
-    appTheme: appThemePickerOpen,
-    quickOpen: quickOpenOpen,
-    tabNav: navOpen,
-    history: pickerOpen,
-    queue: queueOpen,
-    task: taskPickerOpen,
-    profile: profilePickerOpen,
-  })) {
+  switch (firstOpenOverlay(overlays)) {
   // `route` is what put this case in play, so it is non-null here; the compiler cannot see that
   // across the registry lookup.
   case 'route': {
