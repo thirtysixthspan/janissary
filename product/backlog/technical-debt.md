@@ -2,17 +2,6 @@
 
 ## ready
 
-* Keep close-dialog targets tied to tab identity while the tab list changes.
-
-Existing Debt: The close confirmation stores a mutable array index, uses it to select a handle from the latest tab list, and reuses that position for closing after an awaited save. Severity: 6/10
-
-Existing Risk: 7/10 - A tab insertion, removal, or reorder while confirmation is open or saving is pending can save, discard, close, or focus a different tab from the one the user selected.
-
-Proposal Risk: 3/10 - Resolving the captured tab identity against the latest snapshot prevents dialog-lifetime target drift, but the index-based wire command still leaves a smaller race between sending a close and server execution.
-
-Proposal: Change `web/src/SaveChangesDialog/useSaveConfirm.ts` to retain the selected tab label instead of `indexRef`, and capture that label when `web/src/CloseSaveGuard.tsx` first checks the dirty handle. Resolve the corresponding handle by label for Save and Cancel, and compute its current index immediately before sending the close command for Save or Discard, including a fresh lookup after the awaited save. If the original tab no longer exists, dismiss without closing another tab. Keep this increment confined to dialog targeting; `src/protocol/core-rpc.ts` still defines an index-based `closeTab`, and `src/tab/close.ts` resolves it against the server's current array, so a future wire-identity change remains separate work. Extend `web/src/CloseSaveGuard.test.tsx`, whose existing cases keep the tab list fixed, with rerenders that insert, remove, or reorder tabs before confirmation and while a deferred save is pending; assert that only the original label is acted on and disappearance sends no close.
-
-
 * Settle outstanding WebSocket requests when their connection ends.
 
 Existing Debt: The WebSocket client owns pending request callbacks but has no connection-close settlement path, and disposal clears those callbacks without completing their promises. Severity: 6/10

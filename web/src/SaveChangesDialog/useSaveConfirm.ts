@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 
+// Which tab the dialog is asking about, held as its label rather than its position. The tab list is
+// server-driven and replaced whole on every change, so a position captured when the dialog opened
+// can name a different tab by the time a button is pressed — a label cannot.
 export function useSaveConfirm() {
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
-  const indexRef = useRef(0);
+  const labelRef = useRef('');
 
-  const openSaveConfirm = useCallback((index: number) => {
-    indexRef.current = index;
+  const openSaveConfirm = useCallback((label: string) => {
+    labelRef.current = label;
     setSaveConfirmOpen(true);
   }, []);
 
@@ -13,5 +16,5 @@ export function useSaveConfirm() {
     setSaveConfirmOpen(false);
   }, []);
 
-  return { saveConfirmOpen, openSaveConfirm, closeSaveConfirm, indexRef };
+  return { saveConfirmOpen, openSaveConfirm, closeSaveConfirm, labelRef };
 }
