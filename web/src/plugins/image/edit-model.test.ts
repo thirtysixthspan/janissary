@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyOperation, canRedo, clampCrop, emptyEditModel, nudgeRect, outputSize, rectFromDrag,
-  redoOperation, undoOperation, type ImageOperation,
+  redoOperation, sameOperations, undoOperation, type ImageOperation,
 } from './edit-model';
 
 const SOURCE = { width: 400, height: 300 };
@@ -49,6 +49,34 @@ describe('the operation list and its cursor', () => {
 
     expect(next.operations).toEqual([ROTATE_RIGHT, { kind: 'flip', axis: 'vertical' }]);
     expect(canRedo(next)).toBe(false);
+  });
+});
+
+// What the tab compares against its last save, in place of the cursor position that could not tell
+// two different lists standing at the same number apart.
+describe('sameOperations', () => {
+  it('is true for equal lists, including two empty ones', () => {
+    expect(sameOperations([], [])).toBe(true);
+    expect(sameOperations([ROTATE_RIGHT, FLIP_HORIZONTAL], [ROTATE_RIGHT, FLIP_HORIZONTAL])).toBe(true);
+    expect(sameOperations(
+      [{ kind: 'crop', rect: { x: 1, y: 2, width: 3, height: 4 } }],
+      [{ kind: 'crop', rect: { x: 1, y: 2, width: 3, height: 4 } }],
+    )).toBe(true);
+  });
+
+  it('is false when the lists are different lengths', () => {
+    expect(sameOperations([ROTATE_RIGHT], [])).toBe(false);
+    expect(sameOperations([ROTATE_RIGHT], [ROTATE_RIGHT, FLIP_HORIZONTAL])).toBe(false);
+  });
+
+  it('is false when same-length lists differ in kind or in a field', () => {
+    expect(sameOperations([ROTATE_RIGHT], [FLIP_HORIZONTAL])).toBe(false);
+    expect(sameOperations([ROTATE_RIGHT], [{ kind: 'rotate', direction: 'left' }])).toBe(false);
+    expect(sameOperations([FLIP_HORIZONTAL], [{ kind: 'flip', axis: 'vertical' }])).toBe(false);
+    expect(sameOperations(
+      [{ kind: 'crop', rect: { x: 1, y: 2, width: 3, height: 4 } }],
+      [{ kind: 'crop', rect: { x: 1, y: 2, width: 3, height: 5 } }],
+    )).toBe(false);
   });
 });
 

@@ -2,17 +2,6 @@
 
 ## ready
 
-* Track the saved image operation history independently of its undo cursor.
-
-Existing Debt: The image editor records its saved state as a cursor number even though editing after undo replaces the history at that same position. Severity: 6/10
-
-Existing Risk: 8/10 - Saving a rotation, undoing it, and applying a flip returns to the saved cursor with different pixels, disabling Save and allowing the unsaved image changes to be closed without a prompt.
-
-Proposal Risk: 2/10 - Comparing the saved operation history preserves dirty tracking across branches, although equivalent pixel results reached through different operations may conservatively remain dirty.
-
-Proposal: Replace `savedCursor` in `web/src/plugins/image/useImageEdit.ts` with a snapshot of the active operation sequence captured for the actual save request, and compare the current active sequence against that snapshot using a pure helper in `web/src/plugins/image/edit-model.ts`. Preserve the ability to undo or redo back to the saved sequence and become clean; a replacement operation at the same cursor must remain dirty. When an asynchronous save completes, record the sequence sent with that request rather than the latest model, so edits made while it was pending remain unsaved. `web/src/plugins/image/edit-model.test.ts` already pins truncation of redo history, and `web/src/plugins/image/ImageEditor.test.tsx` covers successful saves, button enablement, and dirty-handle registration, but neither combines a saved checkpoint with a history branch. Add the save-rotate, undo, flip sequence plus an edit-during-save case, asserting both Save availability and the dirty handle used by the host close guard.
-
-
 * Keep close-dialog targets tied to tab identity while the tab list changes.
 
 Existing Debt: The close confirmation stores a mutable array index, uses it to select a handle from the latest tab list, and reuses that position for closing after an awaited save. Severity: 6/10

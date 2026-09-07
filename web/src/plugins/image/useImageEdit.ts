@@ -3,7 +3,7 @@ import { isSaveEditResult } from '@shared/plugins/image/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import {
   activeOperations, applyOperation, emptyEditModel, outputSize,
-  redoOperation, undoOperation, type ImageOperation, type Size,
+  redoOperation, sameOperations, undoOperation, type ImageOperation, type Size,
 } from './edit-model';
 import { flattenToPng, renderOperations } from './edit-render';
 
@@ -20,13 +20,16 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   const [sourceSize, setSourceSize] = useState<Size | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Where the cursor stood when this tab last wrote a file. Dirty is the distance from there, not
-  // from the original: a save leaves the edits on the canvas but settles the unsaved question, and
-  // undoing back to the saved position makes the tab clean again.
-  const [savedCursor, setSavedCursor] = useState(0);
+  // The operations this tab last wrote, not the cursor position they stood at. Dirty is the distance
+  // from that sequence, not from the original: a save leaves the edits on the canvas but settles the
+  // unsaved question, and undoing back to the saved sequence makes the tab clean again. A cursor
+  // number cannot stand in for the sequence — editing after an undo rewrites the list beneath the
+  // same position, which is how a flip applied over an undone save used to read as saved.
+  const [savedOperations, setSavedOperations] = useState<readonly ImageOperation[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirty = model.cursor !== savedCursor;
-  const dimensions = sourceSize ? outputSize(sourceSize, activeOperations(model)) : null;
+  const active = activeOperations(model);
+  const dirty = !sameOperations(active, savedOperations);
+  const dimensions = sourceSize ? outputSize(sourceSize, active) : null;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -59,7 +62,9 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   const save = useCallback(async () => {
     const rendered = compose();
     if (!rendered) throw new Error('No rendered image to save');
-    const cursor = model.cursor;
+    // The sequence this request carries, captured before the await. Recording the latest model on
+    // completion instead would mark an edit made while the save was in flight as saved.
+    const sent = activeOperations(model);
     setBusy(true);
     try {
       const result = await capabilities.intent<unknown>('save-edit', { dataUrl: flattenToPng(rendered) });
@@ -69,14 +74,14 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
       }
       // The edits stay live and the tab keeps the original's identity, so the user can keep working
       // and save again as the next number — names never chain into `photo.edit-1.edit-1.png`.
-      setSavedCursor(cursor);
+      setSavedOperations(sent);
       setSaved(result.name);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => { setSaved(null); }, CONFIRMATION_MS);
     } finally {
       setBusy(false);
     }
-  }, [capabilities, compose, model.cursor]);
+  }, [capabilities, compose, model]);
 
   // A plugin tab stays mounted while hidden, so the undo chords consult the host's `active` flag
   // rather than assuming this editor is the one on screen.
