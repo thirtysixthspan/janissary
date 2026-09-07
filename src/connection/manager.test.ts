@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ConnectionManager } from './manager.js';
-import { SHELL_NAME } from '../shell-manager.js';
+import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(overrides: Partial<Managers> = {}): Managers {

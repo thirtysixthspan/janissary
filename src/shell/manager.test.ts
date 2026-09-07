@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { TabManager } from './tab/manager.js';
-import { ShellManager } from './shell-manager.js';
-import { loadConfig } from './config.js';
-import { loadLearnedCommands, learnedCommands } from './interactive-learned.js';
-import { messageBus, type Subscription } from './bus.js';
-import type { Managers } from './managers.js';
+import { TabManager } from '../tab/manager.js';
+import { ShellManager } from './manager.js';
+import { loadConfig } from '../config.js';
+import { loadLearnedCommands, learnedCommands } from '../interactive-learned.js';
+import { messageBus, type Subscription } from '../bus.js';
+import type { Managers } from '../managers.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -15,11 +15,11 @@ const spawnShellMock = vi.fn();
 const spawnTransportMock = vi.fn();
 const createRemoteShellMock = vi.fn();
 
-vi.mock('./remote/shell-session.js', () => ({
+vi.mock('../remote/shell-session.js', () => ({
   createRemoteShell: (...args: unknown[]) => createRemoteShellMock(...args),
 }));
 
-vi.mock('./shell.js', () => ({
+vi.mock('./index.js', () => ({
   spawnShell: (...args: unknown[]) => spawnShellMock(...args),
   executeShellCmd: (...args: unknown[]) => executeShellCmdMock(...args),
   queryShellPwd: (...args: unknown[]) => queryShellPwdMock(...args),

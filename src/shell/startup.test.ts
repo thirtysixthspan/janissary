@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { shellStartupArgs } from './shell-startup.js';
+import { shellStartupArgs } from './startup.js';
 
 describe('shellStartupArgs', () => {
   it('gives bash its own rc and profile flags', () => {

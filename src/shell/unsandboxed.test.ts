@@ -8,8 +8,8 @@ import type { ChildProcess } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { shellStartupArgs } from './shell-startup.js';
-import { executeShellCmd } from './shell.js';
+import { shellStartupArgs } from './startup.js';
+import { executeShellCmd } from './index.js';
 
 // Drives the real `executeShellCmd` rather than re-implementing what it writes, so the format the
 // shell actually receives is the one under test.

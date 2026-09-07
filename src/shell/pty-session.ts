@@ -1,7 +1,7 @@
 import { PassThrough, Writable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
-import type { ShellProcess } from './shell.js';
-import { shellStartupArgs } from './shell-startup.js';
+import type { ShellProcess } from './index.js';
+import { shellStartupArgs } from './startup.js';
 
 // A tab's persistent shell, running inside a pseudo-terminal instead of behind pipes, wearing the
 // same shape `ShellManager` and `executeShellCmd` already consume.

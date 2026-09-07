@@ -1,4 +1,4 @@
-import { SHELL_NAME } from '../shell-manager.js';
+import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
 
 // Read-only connection-string aggregation across managers, split out of manager.ts: a distinct

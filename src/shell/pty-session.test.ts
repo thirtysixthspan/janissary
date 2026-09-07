@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createPtyShell, ptyShellArgs } from './shell-pty-session.js';
-import { executeShellCmd } from './shell.js';
+import { createPtyShell, ptyShellArgs } from './pty-session.js';
+import { executeShellCmd } from './index.js';
 
 // Stands in for the pseudo-terminal: records what was written to the shell and lets a test push
 // bytes back as the shell would, including the echo a real tty produces.
