@@ -5,17 +5,6 @@
 
 ## development
 
-* Fix the handful of comments that actively mislead: two citing a plan path that moved and one describing a client sync method that does not exist.
-
-Existing Debt: Three comments describe things that are no longer there — two cite the editor-persona-connections plan under `product/plans/ready/` after it moved to `product/plans/complete/`, and one in the websocket client describes a fire-and-forget page-snapshot sync method that no longer follows it — the doc-rot the project's own principle calls bugs to fix on sight. Severity: 3/10
-
-Existing Risk: 3/10 - A reader tracing page-snapshot flow looks for the documented sync method in the websocket client and finds nothing (page snapshots cross the wire through the plugin intent path instead), and the stale plan path sends contributors to a file that does not exist.
-
-Proposal Risk: 1/10 - Comment-only changes touch no behavior; the only residual risk is a stale reference missed in the same sweep.
-
-Proposal: In web/src/ws.ts, delete the orphaned page-snapshot comment sitting above the save-file method and state where page snapshots actually cross the wire today — the snapshot capability carried by the plugin intent request (see src/plugins/context.ts and src/plugins/page/activate.ts). In src/editor/acp-manager.ts and web/src/editor/useEditorConnections.ts, correct the plan path to product/plans/complete/editor-tab-persona-connections.md, matching the citation style already used in src/editor-suggest/handler.ts. Finish with a grep for `plans/ready/` across src/ and web/src/ confirming no comment cites a path that is not on disk.
-
-
 * Consolidate the picker state plumbing that the app shell threads through a near-eighty-prop component and restates again in the keyboard layer's snapshot and callback bags.
 
 Existing Debt: Each picker's open/index/setter/opener quartet is threaded by hand through three parallel structures — the app shell's individual useState hooks fanned into a near-eighty-prop main component, and the window-key handler's snapshot and callback records restating every picker's fields again — so a new picker touches all three plus the overlay registry's mapping. Severity: 5/10

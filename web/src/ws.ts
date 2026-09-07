@@ -161,7 +161,9 @@ export class JanusClient {
   }
 
   // Sync a page tab's currently visible text (from the extension content script) to the server as
-  // transient snapshot state. Fire-and-forget, same as editorSync.
+  // transient snapshot state. Fire-and-forget, same as editorSync. (Page snapshots reach the
+  // server's plugin context through the plugin intent path — see src/plugins/context.ts and
+  // src/plugins/page/activate.ts — not through a sync call here.)
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).
