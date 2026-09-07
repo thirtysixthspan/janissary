@@ -7,6 +7,7 @@ import { notify } from '../notifications.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { harnessTab } from '../tab/lookup.js';
 
 vi.mock('./capture-file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
@@ -67,6 +68,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
       markUnread: vi.fn(),
       findIndex: () => tabs.length - 1,
+      // Delegates to the real lookup over the same array rather than re-implementing the scan, so
+      // the fake cannot answer differently from the manager it stands in for.
+      harnessTab: (label: string) => harnessTab(tabs, label),
       setActiveTab: vi.fn((index: number) => { managers.tab.activeTab = index; }),
       append: () => {},
       activeTab: 0,
@@ -373,7 +377,11 @@ describe('HarnessManager.registerSshObservers', () => {
   it('lets latestScreenText read a PTY not spawned via run/spawnTab (the ssh case)', async () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
-    tabs.push({ label: 'ssh', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' } } as unknown as Tab);
+    // `view` is what `SshManager.open` actually builds (through `makeHarnessTab`); the fixture used
+    // to omit it, which the old payload-only `tab?.harness` check tolerated.
+    tabs.push({
+      label: 'ssh', view: 'harness', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-1', status: 'running' },
+    } as unknown as Tab);
     manager.registerSshObservers('pty-1', 'ssh', 'ssh host');
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: 'ssh screen' });
     await vi.advanceTimersByTimeAsync(1001);

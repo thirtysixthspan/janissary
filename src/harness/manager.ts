@@ -50,8 +50,8 @@ export class HarnessManager {
   // missing, is not a harness tab, or has no capture yet. Exposes the screen reader's rendered
   // text (the coherent, de-ANSI'd form) to monitors without exposing the reader map.
   latestScreenText(label: string): ScreenCapture | undefined {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab?.harness) return undefined;
+    const tab = this.managers.tab.harnessTab(label);
+    if (!tab) return undefined;
     return this.runtimes.get(tab.harness.ptyId)?.reader.latestCapture();
   }
 
@@ -60,8 +60,8 @@ export class HarnessManager {
   // tab apart from an ssh tab — which carries the same harness-view shape and a `ptyId`, but runs no
   // harness binary and has no dot directory. Callers ask the tailer itself for entries or its file.
   transcriptTailer(label: string): HarnessTranscriptTailer | undefined {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!tab?.harness) return undefined;
+    const tab = this.managers.tab.harnessTab(label);
+    if (!tab) return undefined;
     return this.runtimes.get(tab.harness.ptyId)?.tailer;
   }
 
@@ -253,16 +253,16 @@ export class HarnessManager {
   private browserGone(label: string, message: string, log?: string): void {
     const logFile = log ? writeBrowserLog(label, Date.now(), log) : undefined;
     notify(this.managers, 'e2e-browser-gone', label, message, logFile);
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (tab?.harness) tab.harness.browserError = message;
+    const tab = this.managers.tab.harnessTab(label);
+    if (tab) tab.harness.browserError = message;
     messageBus.emit('state', { type: 'dirty' });
   }
 
   // Point the live tab at the PTY it just got. Inside `finishSpawn`'s ownership block, so a tab is
   // never left claiming to run a PTY whose runtime construction threw.
   private markRunning(label: string, id: string): void {
-    const liveTab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (!liveTab?.harness) return;
+    const liveTab = this.managers.tab.harnessTab(label);
+    if (!liveTab) return;
     liveTab.harness.ptyId = id;
     liveTab.harness.status = 'running';
   }
@@ -271,8 +271,8 @@ export class HarnessManager {
   // the error in place of the empty placeholder, then close the tab shortly after so nothing is
   // left open in a broken state.
   private failSpawn(label: string, message: string): void {
-    const tab = this.managers.tab.tabs.find((t) => t.label === label);
-    if (tab?.harness) tab.harness.provisionError = message;
+    const tab = this.managers.tab.harnessTab(label);
+    if (tab) tab.harness.provisionError = message;
     messageBus.emit('state', { type: 'dirty' });
     setTimeout(() => {
       const index = this.managers.tab.findIndex(label);

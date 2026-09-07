@@ -13,6 +13,7 @@ import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { MonitorSuggestion, Tab } from '../tab/types.js';
+import { monitorTab } from '../tab/lookup.js';
 
 function makeSuggestion(id: string): MonitorSuggestion {
   return { id, text: 'looks off', timestamp: Date.now(), persona: 'reviewer', about: 'main' };
@@ -23,6 +24,10 @@ function makeManagers(tabs: Tab[] = []): { managers: Managers; dispatchTo: Retur
   const managers = {
     tab: {
       tabs,
+      // Delegates to the real lookup over the manager's live array rather than re-implementing the
+      // scan, so the fake cannot answer differently from the manager it stands in for.
+      monitorTab: (label: string) => monitorTab(managers.tab.tabs, label),
+      findIndex: (label: string) => managers.tab.tabs.findIndex((t: Tab) => t.label === label),
       closeTab: vi.fn((index: number) => { managers.tab.tabs = managers.tab.tabs.toSpliced(index, 1); }),
     },
     command: { dispatchTo },

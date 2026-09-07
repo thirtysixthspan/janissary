@@ -2,16 +2,6 @@
 
 ## ready
 
-* Give the tab manager a lookup for finding a tab by its label, so the modules around it stop hand-rolling the same linear scan over its public array and reaching straight into the record it returns.
-
-Existing Debt: The tab manager exposes its tab array as a public, mutable field and offers only an index lookup, so fifty-two call sites across thirty-one modules repeat the same scan for a label and then read or write the returned record's view payload directly — the shape the architecture principles say nothing outside the owner should reach for. Severity: 4/10
-
-Existing Risk: 3/10 - The scan and the payload check are re-derived at each site, so one site's `if (tab?.harness)` guard omitted or written against the wrong payload field mutates or reads a tab the discriminant says has no such view, and only that one code path is affected.
-
-Proposal Risk: 3/10 - Lookups would run through one method that can gain a map or a guard behind it, but the array itself stays public and directly mutable, so a caller can still bypass the accessor and edit a record in place.
-
-Proposal: `TabManager` in `src/tab/manager.ts` declares `tabs: Tab[]` as a public field and provides `findIndex(label)` (an index) and `cur()`, but no by-label lookup, so callers write `this.managers.tab.tabs.find((t) => t.label === label)` — fifty-two occurrences across thirty-one non-test modules, including `src/harness/manager.ts` (five, in `latestScreenText`, `transcriptTailer`, `browserGone`, `markRunning`, and `failSpawn`, four of which follow the scan with a `tab?.harness` check and an in-place mutation), `src/editor/save.ts`, `src/notifications.ts`, `src/capture/manager.ts`, `src/plugins/host.ts`, `src/schedule/manager.ts`, and `src/monitor/manager.ts`. Add `byLabel(label: string): Tab | undefined` to `TabManager` alongside `findIndex`, plus guard-typed accessors built on the predicates already in `src/tab/view-guards.ts` — `harnessTab(label): HarnessTab | undefined`, `editorTab(label)`, `filesTab(label)`, `pluginTab(label)`, `monitorTab(label)` — each returning the narrowed type so a caller gets a non-optional payload or nothing, rather than a `Tab` plus its own optional-chained check. `src/tab/manager.ts` is near the size limit, so put the accessors in a new `src/tab/lookup.ts` and have the manager delegate, matching how `runtime-operations.ts` and `transcript-operations.ts` are already reached. Then migrate the scan-then-check-payload sites first, since those are the ones the guards actually improve — `src/harness/manager.ts`, `src/editor/save.ts` (`finishSave`), `src/editor/resync.ts`, `src/editor/sync.ts`, and `src/monitor/window.ts` — and leave the plain scan-for-a-tab sites for a follow-up rather than sweeping all fifty-two in one change. Behavior must not move: `byLabel` returns the first match exactly as `find` does. `src/tab/manager.test.ts`, `src/harness/manager.test.ts`, `src/editor/save.test.ts`, and `src/editor/resync.test.ts` cover the migrated paths and must keep passing unchanged; several of them reach a tab's payload with a non-null assertion, which is test-side and can stay.
-
 ## development
 
 ## deferred
