@@ -6,6 +6,8 @@
 
 * when pasting text into an editor tab, the keyboard caret should be positioned at the beginning of the pasted text, and the scrolled window view should not change from that position it was in before the paste was executed.
 
+* copy and paste do not work reliably from harness tabs. 
+
 ## development
 
 ## deferred
