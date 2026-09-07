@@ -1,10 +1,10 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import path from 'node:path';
-import type { WorkspaceManager } from './workspace/manager.js';
-import { workspacePath } from './workspace/index.js';
-import { getProjectTokens } from './project-tokens.js';
-import { errorText } from './error-text.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
+import { workspacePath } from '../workspace/index.js';
+import { getProjectTokens } from '../project-tokens.js';
+import { errorText } from '../error-text.js';
 
 const execFileAsync = promisify(execFile);
 

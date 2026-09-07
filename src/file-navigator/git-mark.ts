@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '../tab/types.js';
-import type { GitFileStatus } from '../git-status.js';
+import type { GitFileStatus } from '../git/status.js';
 
 // Row git-status annotation, split out of index.ts: a distinct concern from the tree-building
 // functions (readDirSorted, buildRows, etc.) that remain there.

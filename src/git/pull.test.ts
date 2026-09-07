@@ -17,7 +17,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-const { pullRoot, pullSummary } = await import('./git-pull.js');
+const { pullRoot, pullSummary } = await import('./pull.js');
 
 beforeEach(() => {
   calls = [];

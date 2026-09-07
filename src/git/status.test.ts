@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { changedPaths, currentBranch, remoteUrl } from './git-status.js';
+import { changedPaths, currentBranch, remoteUrl } from './status.js';
 
 // The initial branch name comes from the machine's `init.defaultBranch`, so a test that checks a
 // branch out by name can only rely on one the repo was told to create.
