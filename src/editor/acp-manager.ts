@@ -12,7 +12,7 @@ const key = (label: string, persona: string): string => `${label}:${persona}`;
 // Owns the persistent, multi-turn ACP sessions an editor tab's in-editor persona suggestions open,
 // keyed by `${label}:${persona}`. A session connects lazily on the first suggestion request for a
 // persona in a tab and is reused (never respawned) for every later request to that same persona in
-// that tab — see product/plans/ready/editor-tab-persona-connections.md.
+// that tab — see product/plans/complete/editor-tab-persona-connections.md.
 export class EditorAcpManager {
   private sessions = new Map<string, AcpSession>();
   private personas = new Map<string, string>();
