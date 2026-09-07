@@ -10,6 +10,7 @@ import { useQuickOpen } from './pickers/useQuickOpen';
 import { useQueuePicker } from './pickers/useQueuePicker';
 import { usePopulatePickers } from './pickers/usePopulatePickers';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
+import { useCommandDrafts } from './agent-tabs/command-input/useCommandDrafts';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
@@ -67,6 +68,9 @@ export function App({ client }: { client: JanusClient }) {
   const windowFocused = useWindowFocus();
 
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
+  // The command bar a tab switch tears down or hands to another tab; its unexecuted text is kept
+  // here, per tab, so returning to a tab shows what was left in its bar.
+  const commandDrafts = useCommandDrafts(tabs);
   const {
     sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
     focusLeft, focusRight,
@@ -201,7 +205,8 @@ export function App({ client }: { client: JanusClient }) {
       quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
       quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
       quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
-      search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
+      search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
+      onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
       recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
       dropRef={dropReference}

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
+import { useCommandDraft, type CommandDrafts } from './useCommandDrafts';
 import { spliceIntoTextarea } from '../../shared/command-bar/textarea-splice';
 import { useCommandBarKeys } from '../../shared/command-bar/useCommandBarKeys';
 import { CommandBarShell } from '../../shared/command-bar/CommandBarShell';
@@ -8,6 +9,11 @@ import type { CommandInputDropHandle } from '../../drop-handles';
 
 export type CommandInputProperties = {
   dotColor: string;
+  // The tab whose unexecuted text this bar shows, and the store holding every tab's. The bar is
+  // reused across agent tabs and unmounts whenever a view tab is focused, so the draft it is
+  // editing belongs to the app shell rather than to the component (see `useCommandDrafts`).
+  draftKey: string;
+  drafts: CommandDrafts;
   history: string[];
   ghostHistory: string[];
   onSubmit: (text: string) => void;
@@ -32,10 +38,10 @@ export type CommandInputProperties = {
 // target. Every baseline key belongs to `useCommandBarKeys`, which this handler calls at the two
 // points where it should take over.
 export function CommandInput({
-  dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
+  dotColor, draftKey, drafts, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
   autoFocus = true, queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
 }: CommandInputProperties) {
-  const [value, setValue] = useState('');
+  const { value, setValue } = useCommandDraft(draftKey, drafts);
   const [completions, setCompletions] = useState<string[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
 

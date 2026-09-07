@@ -12,8 +12,8 @@ type Properties = {
 // Replaces the command bar with the search bar while search mode is open — visually, the
 // command bar "becomes" the search bar rather than something appearing alongside it.
 export function CommandArea({
-  search, lines, dotColor, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
-  queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
+  search, lines, dotColor, draftKey, drafts, history, ghostHistory, onSubmit, inputRef, complete,
+  pickerOpen, busy, queueOpen, recallRef, onEditQueued, onDeleteQueued, dropRef,
 }: Properties) {
   if (search.searchOpen) {
     return (
@@ -33,6 +33,8 @@ export function CommandArea({
   return (
     <CommandInput
       dotColor={dotColor}
+      draftKey={draftKey}
+      drafts={drafts}
       history={history}
       ghostHistory={ghostHistory}
       onSubmit={onSubmit}

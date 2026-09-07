@@ -4,6 +4,7 @@ import type { JanusClient } from '../ws';
 import { Transcript } from '../shared/transcript/Transcript';
 import { StatusPanels } from '../StatusPanels';
 import { CommandArea } from './command-input/CommandArea';
+import type { CommandDrafts } from './command-input/useCommandDrafts';
 import type { CommandInputDropHandle } from '../drop-handles';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
@@ -25,6 +26,8 @@ type Properties = {
   queueOpen: boolean;
   search: ReturnType<typeof useViewSearchState>['search'];
   globalHistory: string[];
+  // Every tab's unexecuted command text; this body's bar reads and writes its own tab's entry.
+  commandDrafts: CommandDrafts;
   onCommandBarSubmit: React.ComponentProps<typeof CommandArea>['onSubmit'];
   quitConfirmOpen: boolean;
   unsavedQuitOpen: boolean;
@@ -40,7 +43,7 @@ type Properties = {
 export function AgentTabBody({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
   pickerOverlays, blockingOverlayOpen, queueOpen,
-  search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
+  search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
@@ -88,6 +91,8 @@ export function AgentTabBody({
         search={search}
         lines={lines}
         dotColor={current.dotColor}
+        draftKey={current.label}
+        drafts={commandDrafts}
         history={current.cmdHistory}
         ghostHistory={globalHistory}
         onSubmit={onCommandBarSubmit}

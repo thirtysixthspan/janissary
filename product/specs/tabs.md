@@ -177,6 +177,8 @@ button is a no-op when the harness has no session transcript available yet.
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.
 
+A command typed into a tab's command bar but not yet executed belongs to that tab in the same way. Focusing another tab — an agent tab, a view tab, or a tab in the other split pane — and later returning shows that text again, ready to edit or execute; the tab focused in between shows its own unexecuted text, or an empty bar when it has none. Executing the command clears it, so the tab is left with an empty bar. Unexecuted text is held in the browser only: it is not persisted to agent state, does not survive a page reload, and is discarded when its tab closes.
+
 ### Tab label length
 
 A tab name longer than its display limit is shortened with a trailing `…`. Inactive tabs use `tabNameMaxLength`, which defaults to 16 characters. The active tab uses `activeTabNameMaxLength`, which defaults to 50 characters, so focusing a tab reveals more of a long name. Each limit counts the ellipsis as one of its displayed characters.
