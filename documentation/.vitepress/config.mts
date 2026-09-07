@@ -102,6 +102,7 @@ export default defineConfig({
             { text: "Git-synced files", link: "/user-documentation/tab-types/editor-git-sync" },
             { text: "File navigator", link: "/user-documentation/tab-types/file-navigator" },
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
+            { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
           ],
         },
         {

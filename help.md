@@ -22,6 +22,7 @@
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
+| `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
@@ -61,6 +62,7 @@
 | `Ctrl+A` | Open the task picker (executable `ai/*.md` files); Return inserts it into the command line at the cursor without running |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Cmd+T` | Open a new agent tab (same as typing `agent`) |
+| `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
