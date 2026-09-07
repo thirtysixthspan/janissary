@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { routeUnknownCommand } from './router.js';
+import { unknownCommandMessage } from '../commands.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(openDbs: string[]): { managers: Managers; appended: unknown[] } {
@@ -43,7 +44,9 @@ describe('routeUnknownCommand', () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
-  it('falls back to an unknown-command message when nothing matches', () => {
+  // One spelling, built in one place. This tail used to construct its own shorter copy of the
+  // message, so a reword of the other one silently left the two disagreeing.
+  it('falls back to the one unknown-command message when nothing matches', () => {
     const { managers } = makeManagers([]);
     const run = vi.fn();
     const callback = vi.fn();
@@ -51,6 +54,18 @@ describe('routeUnknownCommand', () => {
     routeUnknownCommand('clear', 'clear', 'tab1', managers, run, callback);
 
     expect(run).not.toHaveBeenCalled();
-    expect(callback).toHaveBeenCalledWith('Unknown command: "clear".');
+    expect(callback).toHaveBeenCalledWith(unknownCommandMessage('clear'));
+    expect(callback).toHaveBeenCalledWith('Unknown command: "clear". Type "help" for available commands.');
+  });
+
+  // The empty string is why the `silent` arm survives: no registry predicate matches it, so it
+  // reaches here rather than being answered by a command.
+  it('answers an empty command the same way as an unrecognized one', () => {
+    const { managers } = makeManagers([]);
+    const callback = vi.fn();
+
+    routeUnknownCommand('', '', 'tab1', managers, vi.fn(), callback);
+
+    expect(callback).toHaveBeenCalledWith(unknownCommandMessage(''));
   });
 });

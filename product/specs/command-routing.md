@@ -79,3 +79,6 @@ can be aimed at a specific connection).
   sent to another agent's tab as a `command` message, or asked of it as a `request`. A command that
   launches an AI harness or an ssh session when typed does the same when it arrives from another
   agent, rather than being reported as unrecognized there.
+- A command that no built-in claims and no route fits is reported unrecognized in the same words on
+  every path, naming the command and pointing at `help`. A messaged command's sender is told exactly
+  what the user at the keyboard would have been told.

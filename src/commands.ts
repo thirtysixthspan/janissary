@@ -1,39 +1,24 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { tabPluginCatalog } from './plugins/catalog.js';
-import type { TabPluginDeclaration } from './plugins/api.js';
+import { commands } from './commands/index.js';
+import { RESERVED_NON_COMMAND_NAMES } from './commands/reserved.js';
 
-export const coreAvailableCommands = [
-  'help',
-  'state',
-  'clear',
-  'close',
-  'hist',
-  'quit',
-  'agent',
-  'msg',
-  'broadcast',
-  'acp',
-  'db',
-  'connection',
-  'harness',
-  'ssh',
-  'search',
-  'files',
-  'notifications',
-  'notify',
-  'syntax',
-];
+// What the classifier decided, rather than three meanings folded into `string | null` and told
+// apart by the leading words of a user-facing message. Two callers used to recover the third case
+// with their own `startsWith('Unknown command:')` test, which made rewording the message — a plain
+// copy edit — silently reclassify every unrecognized command as a known one carrying output.
+export type CommandOutput =
+  | { kind: 'output'; text: string }
+  | { kind: 'silent' }
+  | { kind: 'unknown'; text: string };
 
-// `plugins` is a core command; every other addition here is contributed by a bundled tab plugin, so
-// it comes from the catalog rather than a second hand-maintained list that could drift from it.
+// Derived from the registry rather than hand-listed beside it: the hand-written list had drifted,
+// omitting more than a dozen registered commands. `help` is the one built-in with no `Command`
+// entry, so it is the only name still supplied from outside the registry.
 export const availableCommands = [
-  ...coreAvailableCommands,
-  'plugins',
-  // Typed as the declaration rather than the catalog's literal union: a plugin that claims no
-  // command has no `command` property at all, which the union would otherwise make unreadable.
-  ...tabPluginCatalog.flatMap((plugin: TabPluginDeclaration) => plugin.command ?? []),
+  ...RESERVED_NON_COMMAND_NAMES,
+  ...commands.map((command) => command.name),
 ];
 
 let helpOutput: string | null = null;
@@ -48,24 +33,24 @@ function buildHelp(): string {
   }
 }
 
-export const getOutput = (command: string): string | null => {
+// The one place this message is built. It used to be spelled two different ways — this full form in
+// `getOutput`, and a shorter `Unknown command: "<x>".` at the tail of `capture/router.ts`.
+export function unknownCommandMessage(command: string): string {
+  return `Unknown command: "${command}". Type "help" for available commands.`;
+}
+
+// Only `help`, the empty string, and the unknown fallback are left. Every other name this used to
+// answer `null` for — `clear`, `state`, `hist`, `quit`/`exit`/`close`, `agent`, `msg`, `broadcast`,
+// `acp`, `db`, `connection`, `next` — is a `Command` now, and both callers loop the registry before
+// reaching here, so those branches were unreachable.
+export const getOutput = (command: string): CommandOutput => {
   const trimmed = command.trim().toLowerCase();
 
   if (trimmed === 'help') {
     if (!helpOutput) helpOutput = buildHelp();
-    return helpOutput;
+    return { kind: 'output', text: helpOutput };
   }
-  if (trimmed === 'clear') return null;
-  if (trimmed === 'state') return null;
-  if (trimmed === 'hist') return null;
-  if (['quit', 'exit', 'close'].includes(trimmed)) return null;
-  if (trimmed.startsWith('agent')) return null;
-  if (trimmed.startsWith('msg')) return null;
-  if (trimmed.startsWith('broadcast')) return null;
-  if (trimmed.startsWith('acp')) return null;
-  if (/^db\b/.test(trimmed)) return null;
-  if (/^connection\b/.test(trimmed)) return null;
-  if (trimmed === 'next') return null;
-  if (trimmed === '') return null;
-  return `Unknown command: "${trimmed}". Type "help" for available commands.`;
+  // Still reachable: an empty message passes through the capture path's registry loop unmatched.
+  if (trimmed === '') return { kind: 'silent' };
+  return { kind: 'unknown', text: unknownCommandMessage(trimmed) };
 };

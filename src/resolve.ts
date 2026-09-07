@@ -48,15 +48,11 @@ export function resolveCommand(raw: string): Resolution {
     }
   }
 
-  const output = getOutput(command);
-  if (output !== null) {
-    // `getOutput` returns the "Unknown command: ..." message for anything unrecognized; surface
-    // that as `unknown` so the interactive dispatcher can run command recognition on it.
-    const kind = output.startsWith('Unknown command:') ? 'unknown' : 'output';
-    return { kind, cmd: command, output };
-  }
-
+  // `getOutput` reports which of the three it decided, so the interactive dispatcher can run
+  // command recognition on an `unknown` without reading the message text to find out.
+  const result = getOutput(command);
   // Shell commands require the `shell` keyword (handled above); a bare non-built-in is
   // reported as unknown rather than auto-run in the shell.
-  return { kind: 'empty' };
+  if (result.kind === 'silent') return { kind: 'empty' };
+  return { kind: result.kind, cmd: command, output: result.text };
 }

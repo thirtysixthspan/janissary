@@ -1,4 +1,4 @@
-import { getOutput } from '../commands.js';
+import { getOutput, unknownCommandMessage } from '../commands.js';
 import { toPrefixedCommand } from '../recognizers/index.js';
 import { resolveRouteChoice } from '../route-choice.js';
 import type { Managers } from '../managers.js';
@@ -11,18 +11,20 @@ export function routeUnknownCommand(
   run: (label: string, text: string, callback: (out: string) => void) => void,
   callback: (out: string) => void,
 ): void {
-  const output = getOutput(trimmed);
-  if (output !== null && !output.startsWith('Unknown command:')) {
-    managers.tab.append(label, { input: text, output, markdown: trimmed === 'help' });
-    callback(output);
+  const result = getOutput(trimmed);
+  if (result.kind === 'output') {
+    managers.tab.append(label, { input: text, output: result.text, markdown: trimmed === 'help' });
+    callback(result.text);
     return;
   }
 
+  // `silent` and `unknown` are both answered the same way: try to recognize a route for the text,
+  // and report it unrecognized when none fits. The message comes from the one place that builds it.
   const openDbs = managers.database.openDbs(label);
   const choice = resolveRouteChoice(trimmed, openDbs);
   if (choice) {
     run(label, toPrefixedCommand(trimmed, choice), callback);
     return;
   }
-  callback(output ?? `Unknown command: "${trimmed}".`);
+  callback(unknownCommandMessage(trimmed));
 }
