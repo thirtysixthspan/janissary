@@ -55,7 +55,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab that collects background-tab events — an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn. Each event type is off until you turn it on in `.janissary/config.json`. `notifications left` or `notifications right` docks the feed into a sidebar. `notify <message>` posts your own line into that feed from any tab, which always shows (even from the focused tab) as long as the feed is open. If the feed isn't open, events and `notify` messages are simply dropped — nothing is queued up. The full page is [Notifications](/user-documentation/tab-types/notifications).
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. All five event types default off in `.janissary/config.json`; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. Every notification is dropped if the feed is closed. See [Notifications](/user-documentation/tab-types/notifications) for settings, navigation, and diagnostics.
 
 ## Command comments
 
