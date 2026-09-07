@@ -53,16 +53,19 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
   const undo = useCallback(() => { setModel(undoOperation); }, []);
   const redo = useCallback(() => { setModel(redoOperation); }, []);
 
+  // Throws on every outcome that leaves the edits unwritten. The host's close guard closes a tab on
+  // a resolved save (see `TabDirtyHandle`), so resolving after a failed write would discard the
+  // operation list the user was asked about.
   const save = useCallback(async () => {
     const rendered = compose();
-    if (!rendered) return;
+    if (!rendered) throw new Error('No rendered image to save');
     const cursor = model.cursor;
     setBusy(true);
     try {
       const result = await capabilities.intent<unknown>('save-edit', { dataUrl: flattenToPng(rendered) });
       if (!isSaveEditResult(result)) {
         capabilities.reportFailure('invalid save-edit result');
-        return;
+        throw new Error('invalid save-edit result');
       }
       // The edits stay live and the tab keeps the original's identity, so the user can keep working
       // and save again as the next number — names never chain into `photo.edit-1.edit-1.png`.
@@ -70,8 +73,6 @@ export function useImageEdit(capabilities: TabPluginClientCapabilities) {
       setSaved(result.name);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(() => { setSaved(null); }, CONFIRMATION_MS);
-    } catch {
-      // The server answered with a rejection or a write failure; it has already reported it.
     } finally {
       setBusy(false);
     }

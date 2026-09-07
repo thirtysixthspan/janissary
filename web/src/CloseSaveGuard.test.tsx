@@ -118,6 +118,37 @@ describe('CloseSaveGuard', () => {
     expect(queryByText('Do you want to save changes to this file?')).toBeNull();
   });
 
+  // A save that rejects means the buffer is still unwritten, so the tab has to survive the dialog —
+  // closing it here is what discarded the user's work.
+  it('onSave keeps the tab when the save rejects, and returns focus to it', async () => {
+    const guardRef = makeGuardRef();
+    const save = vi.fn().mockRejectedValue(new Error('permission denied'));
+    const focus = vi.fn();
+    const handle = { isDirty: () => true, save, focus } as unknown as DirtyTabHandle;
+    const tabHandles = makeHandlesWith('tab1', handle);
+    const client = { send: vi.fn() };
+    const { getByText, queryByText } = render(
+      React.createElement(CloseSaveGuard, {
+        tabs: [makeTab('tab1')],
+        tabHandles,
+        client: client as never,
+        guardRef,
+      }),
+    );
+    act(() => {
+      guardRef.current!(0);
+    });
+    await act(async () => {
+      fireEvent.click(getByText('Save (y)'));
+    });
+    expect(save).toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalled();
+    // Dismissed rather than held open: it is modal, and the error or overwrite prompt the surface
+    // raised in its place is only reachable once it is gone.
+    expect(queryByText('Do you want to save changes to this file?')).toBeNull();
+  });
+
   it('onDiscard button closes dialog and sends closeTab without saving', () => {
     const guardRef = makeGuardRef();
     const save = vi.fn();
@@ -202,6 +233,20 @@ describe('CloseSaveGuard over a plugin tab', () => {
 
     expect(save).toHaveBeenCalled();
     expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it('keeps a plugin tab whose save rejects', async () => {
+    const save = vi.fn().mockRejectedValue(new Error('write failed'));
+    const focus = vi.fn();
+    const handle = { isDirty: () => true, save, focus } as unknown as DirtyTabHandle;
+    const { getByText, client, guardRef } = renderGuard(handle);
+    act(() => { guardRef.current!(0); });
+
+    await act(async () => { fireEvent.click(getByText('Save (y)')); });
+
+    expect(save).toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalled();
   });
 
   it("Don't Save closes without saving and Cancel closes nothing", () => {

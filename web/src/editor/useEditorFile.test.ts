@@ -120,24 +120,49 @@ describe('useEditorFile — save', () => {
     expect(result.current.savedFlash).toBe(true);
   });
 
-  it('surfaces the server error when a save fails', async () => {
+  // The rejection is what the close guard reads: a save that resolved would let it close the tab
+  // over the very buffer the server refused to write.
+  it('surfaces the server error when a save fails, and rejects rather than reporting success', async () => {
     const client = makeClient({ saveFile: vi.fn().mockResolvedValue('permission denied') });
     const api = makeApi();
     const { result } = renderHook(() => useEditorFile(client, makeView(), api));
     await waitFor(() => expect(api.load).toHaveBeenCalled());
 
-    await act(async () => { await result.current.save(); });
+    await act(async () => {
+      await expect(result.current.save()).rejects.toThrow('permission denied');
+    });
 
     expect(result.current.saveError).toBe('permission denied');
     expect(result.current.savedFlash).toBe(false);
   });
 
-  it('does nothing when there is no buffer to save yet', async () => {
+  it('writes nothing and rejects when there is no buffer to save yet', async () => {
     const client = makeClient({ readFile: vi.fn(() => new Promise<string>(() => {})) });
     const { result } = renderHook(() => useEditorFile(client, makeView(), makeApi()));
 
-    await act(async () => { await result.current.save(); });
+    await act(async () => { await expect(result.current.save()).rejects.toThrow(); });
 
+    expect(client.saveFile).not.toHaveBeenCalled();
+  });
+
+  // Saving over an external change is a question, not a write: the prompt goes up and nothing
+  // reaches disk, so the save has to reject or the close guard would close the tab on the strength
+  // of a dialog the user has not answered yet.
+  it('raises the overwrite prompt and rejects when an external change is pending', async () => {
+    const client = makeClient();
+    const api = makeApi();
+    const { result, rerender } = renderHook(
+      ({ mtimeMs }: { mtimeMs: number }) => useEditorFile(client, makeView({ mtimeMs }), api),
+      { initialProps: { mtimeMs: 1000 } },
+    );
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+
+    act(() => { api.setState(fromText('line one\nedited')); });
+    rerender({ mtimeMs: 2000 });
+
+    await act(async () => { await expect(result.current.save()).rejects.toThrow(); });
+
+    expect(result.current.conflictOpen).toBe(true);
     expect(client.saveFile).not.toHaveBeenCalled();
   });
 

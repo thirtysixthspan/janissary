@@ -37,7 +37,9 @@ export function ImageTab({
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void save();
+        // `save` rejects when the write did not happen, and the server has already reported that
+        // failure through the host. Nothing is waiting on this one, so it is consumed here.
+        void save().catch(() => {});
       } else if (event.key === 'Escape') {
         event.preventDefault();
         setEditing(false);
@@ -60,7 +62,7 @@ export function ImageTab({
         <span className="plugin-actions">
           {editing ? (
             <>
-              <button type="button" disabled={edit.busy || !edit.dirty} onClick={() => { void edit.save(); }}>
+              <button type="button" disabled={edit.busy || !edit.dirty} onClick={() => { void edit.save().catch(() => {}); }}>
                 Save
               </button>
               <button type="button" onClick={() => { setEditing(false); }}>Done</button>

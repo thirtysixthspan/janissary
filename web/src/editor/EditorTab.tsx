@@ -38,7 +38,12 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // The save entry point lives on the file hook, which needs the editor state hook that in turn
   // takes the save callback — so both callbacks reach it through this ref, filled in below.
   const saveRef = useRef<() => Promise<void>>(async () => {});
-  const requestSave = () => { void saveRef.current(); };
+  // The save button, Ctrl+S, and the suggest panel all fire and forget. `save` rejects when the
+  // write did not happen, and each of those outcomes is already on screen — the error in the
+  // metadata row, the overwrite prompt over the body — so the rejection is consumed rather than
+  // left to surface as an unhandled one. The imperative handle below still propagates it, because
+  // the close guard is the caller that has to know.
+  const requestSave = () => { void saveRef.current().catch(() => {}); };
 
   const api = useEditor(requestSave);
   const { state } = api;
