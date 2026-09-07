@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { commands } from '../commands/index.js';
-import { coreAvailableCommands } from '../commands.js';
+import { RESERVED_NON_COMMAND_NAMES } from '../commands/reserved.js';
 import { openers } from '../openers/index.js';
 import type { Command } from '../commands/types.js';
 import type { Opener } from '../openers/types.js';
@@ -123,7 +123,7 @@ describe('tab plugin web claim', () => {
 describe('tab plugin command adapter', () => {
   it('refuses every production reserved name without contributing a command', () => {
     const reserved = new Set([
-      ...coreAvailableCommands,
+      ...RESERVED_NON_COMMAND_NAMES,
       ...commands.map((command) => command.name),
       'schedule', 'harness', 'ssh', 'shell',
     ]);

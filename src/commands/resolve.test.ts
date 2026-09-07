@@ -81,6 +81,15 @@ describe('resolveCommand', () => {
     expect(resolveCommand('/ssh build-box')).toEqual({ kind: 'app', name: 'ssh', cmd: 'ssh build-box' });
   });
 
+  // The classification comes from the classifier's own `kind` now, not from the leading words of
+  // the message it returns — so rewording that message cannot turn every unrecognized command into
+  // a known one carrying output, which is what would have stopped route recognition running.
+  it('classifies unknown by kind, independent of the message wording', () => {
+    const result = resolveCommand('zzz-not-a-command');
+    expect(result.kind).toBe('unknown');
+    if (result.kind === 'unknown') expect(result.output).not.toBe('');
+  });
+
   it('strips a leading slash to force the built-in dispatcher', () => {
     expect(resolveCommand('/clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
   });

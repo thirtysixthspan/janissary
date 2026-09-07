@@ -1,5 +1,5 @@
 import type { Command } from '../commands/types.js';
-import { coreAvailableCommands } from '../commands.js';
+import { RESERVED_NON_COMMAND_NAMES } from '../commands/reserved.js';
 import type { TabPluginDeclaration } from './api.js';
 import { rejectContribution } from './rejections.js';
 
@@ -22,7 +22,7 @@ export function createPluginCommands(
 ): Command[] {
   const reserved = new Set([
     ...coreCommands.map((command) => command.name.toLowerCase()),
-    ...coreAvailableCommands.map((command) => command.toLowerCase()),
+    ...RESERVED_NON_COMMAND_NAMES.map((command) => command.toLowerCase()),
     ...ROUTE_NAMES,
   ]);
   const claims = new Set<string>();
