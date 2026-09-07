@@ -13,14 +13,14 @@ import { isRateLimitError } from '../acp/rate-limit.js';
 export function askMonitor(
   reg: MonitorSub,
   owner: string,
-  personaName: string,
+  name: string,
   question: string,
   managers: Managers,
   onRespawn: () => void,
 ): void {
   reg.inFlight = true;
   let reply = '';
-  managers.tab.startRunning(owner, `monitor ask ${personaName} ${question}`);
+  managers.tab.startRunning(owner, `monitor ask ${name} ${question}`);
   const prompt = `[Question from the user]\n${question}\n\nAnswer directly; the suggestion format does not apply to this reply.`;
   recordContext(reg, prompt, 'input');
   reg.session.prompt(prompt, {
@@ -29,10 +29,10 @@ export function askMonitor(
       reg.inFlight = false;
       recordReply(reg, managers, reply);
       // The 💡 prefix keeps the reply out of monitor buffers (like inline suggestions).
-      managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${personaName}: ${reply.trim() || '(no reply)'}`);
+      managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${name}: ${reply.trim() || '(no reply)'}`);
     },
     onError: (message) => {
-      managers.tab.finishRunning(owner, `monitor ${personaName}: ${message} — restarting monitor session`);
+      managers.tab.finishRunning(owner, `monitor ${name}: ${message} — restarting monitor session`);
       if (isRateLimitError(message)) notify(managers, 'rate-limited', owner);
       onRespawn();
     },

@@ -10,15 +10,20 @@ function formatBytes(n: number): string {
   return `${(n / 1_000_000).toFixed(1)}mb`;
 }
 
-// Feed body of one monitor's reporting tab (`view === 'monitor'`): a metadata line (persona,
-// monitored tabs/groups, ACP context size) above the accumulated suggestions, newest at the
+// Feed body of one monitor's reporting tab (`view === 'monitor'`): a metadata line (the monitor's
+// name, the persona behind it when that is a different word, monitored tabs/groups, ACP context
+// size) above the accumulated suggestions, newest at the
 // top, new arrivals pushing older ones down. The scroll position rests at the top; scrolling
 // down walks back through the suggestion history. Suggestions flow as plain text; a suggestion
 // that carries a command shows it as a clickable line that triggers the run (executed
 // server-side in the tab the suggestion is about; the suggestion stays in the feed). Each
 // suggestion carries 👍/👎 rating buttons — both feed the rating back to the monitoring AI and
 // remove the suggestion from the feed (rating it means the user is done with it).
-export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun, onRate, onReset, onSnapshot }: {
+//
+// The name is what `unmonitor` and `monitor ask` address, so it leads. The persona is shown beside
+// it only when the two differ; for a monitor started by `monitor <persona>` they are the same word.
+export function MonitorTab({ name, persona, targets, contextBytes, suggestions, onRun, onRate, onReset, onSnapshot }: {
+  name: string;
   persona: string;
   targets: string;
   contextBytes: number;
@@ -31,7 +36,8 @@ export function MonitorTab({ persona, targets, contextBytes, suggestions, onRun,
   const header = (
     <div className="monitor-header">
       <div className="monitor-meta">
-        <span className="monitor-persona">{persona}</span>
+        <span className="monitor-name">{name}</span>
+        {persona !== name && <span className="monitor-persona">{persona}</span>}
         <span className="monitor-targets">{targets}</span>
         <span className="monitor-context">{formatBytes(contextBytes)}</span>
       </div>

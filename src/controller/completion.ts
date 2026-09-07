@@ -12,6 +12,6 @@ export function complete(managers: Managers, text: string, cursor: number): Comp
   const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
   return completeCommandLine(
     text, cursor, cwd, agents, managers.connection.completionConnections(tab.label),
-    { personas: listPersonas('monitor'), targets },
+    { personas: listPersonas('monitor'), names: managers.monitor.namesFor(tab.label), targets },
   );
 }

@@ -17,7 +17,7 @@ const HARNESS = { name: 'claude', ptyId: 'p1', status: 'running' } as NonNullabl
 const EDITOR = { name: 'a.txt', path: '/repo/a.txt', size: '1 B', url: '/open/1' } as NonNullable<TabView['editor']>;
 const FILES = { root: '/repo', rows: [] } as unknown as NonNullable<TabView['files']>;
 const PLUGIN = { id: 'image' } as unknown as NonNullable<TabView['plugin']>;
-const MONITOR = { suggestions: [], persona: 'security', targets: '', contextBytes: 0 };
+const MONITOR = { suggestions: [], name: 'security', persona: 'security', targets: '', contextBytes: 0 };
 
 describe.each([
   ['harness', isHarnessTabView, 'harness', { harness: HARNESS }] as const,

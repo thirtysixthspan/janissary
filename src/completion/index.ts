@@ -25,7 +25,7 @@ export function completeCommandLine(
   cwd: string,
   agents: string[] = [],
   connections: string[] = [],
-  monitor?: { personas: string[]; targets: string[] },
+  monitor?: { personas: string[]; names: string[]; targets: string[] },
 ): CompletionResult {
   const before = input.slice(0, cursor);
   const after = input.slice(cursor);

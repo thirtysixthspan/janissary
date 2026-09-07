@@ -20,11 +20,19 @@ Monitors are tool-less by default and receive no filesystem or terminal access. 
 
 A target is a tab label or `group:<n>`. A tab may also be named by its display alias (see [`rename`](/user-documentation/command-bar/commands)), matched case-insensitively; `unmonitor`'s target argument works the same way. Once the monitor's session connects, the owner tab's transcript shows a line naming the monitor, its model, and a one-sentence summary of the persona's role.
 
+## How a monitor is named
+
+Every monitor has a name, and that name is what you address it by — `unmonitor <name>`, `monitor ask <name>`, the reporting tab's label, the `monitors` listing, and the connections row all use it. Starting one with `monitor <persona>` names it after the persona, so the two are usually the same word and you never have to think about the difference. A [profile](/user-documentation/automation/profiles) can give a monitor a name of its own; then the name is what you type, and the persona is shown beside it where it helps.
+
+Names are unique per tab. Two monitors started from the same tab can share a persona as long as their names differ.
+
+`Tab` completion follows the same split: `monitor` completes persona names, while `unmonitor` and `monitor ask` complete the names of monitors actually running from the current tab.
+
 ## The reporting tab
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-A reporting-mode monitor's tab carries a metadata line above its suggestion feed: the persona name, the tab(s)/group(s) it watches, and the total size sent to and received from its session so far (shown in bytes/kilobytes/megabytes). Two buttons sit at the right of that line:
+A reporting-mode monitor's tab carries a metadata line above its suggestion feed: the monitor's name, its persona where that is a different word, the tab(s)/group(s) it watches, and the total size sent to and received from its session so far (shown in bytes/kilobytes/megabytes). Two buttons sit at the right of that line:
 
 The reporting tab gutter has an up/down-arrow button at the right. Drag it vertically to resize
 the reporting area: drag up for more reporting space, or down for more main-tab space.
@@ -62,7 +70,7 @@ In a reporting tab, a suggestion that carries a command shows it as a clickable 
 
 ## Asking a monitor directly
 
-`monitor ask <persona> <question>` sends a question straight to a running monitor's session, skipping the batch buffer. The reply lands in the owner tab's transcript.
+`monitor ask <name> <question>` sends a question straight to a running monitor's session, skipping the batch buffer. The reply lands in the owner tab's transcript.
 
 Only one direct question or scheduled flush can be in flight for a monitor at a time. If it is busy, wait and try again.
 
@@ -80,7 +88,7 @@ These are the only two tools a persona can ever request this way. No filesystem 
 ## Stopping a monitor
 
 ```
-unmonitor security          stop the "security" monitor started from this tab
+unmonitor security          stop the monitor named "security" started from this tab
 unmonitor --all             stop every monitor started from this tab
 monitors                    list active monitors with their targets and suggestion counts
 ```

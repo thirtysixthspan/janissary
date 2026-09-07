@@ -171,7 +171,7 @@ describe('App syntax theme picker', () => {
   it('renders a reporting section when a monitor tab is present', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [], persona: 'assistant', targets: '', contextBytes: 0 }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [], name: 'assistant', persona: 'assistant', targets: '', contextBytes: 0 }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByText('janus')).toBeTruthy();
   }, 15_000);
 });
@@ -563,6 +563,7 @@ describe('App reporting section callbacks', () => {
         persona: 'assistant',
         about: 'agent2',
       }],
+      name: 'assistant',
       persona: 'assistant',
       targets: 'agent2',
       contextBytes: 0,

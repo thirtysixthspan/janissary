@@ -131,7 +131,7 @@ describe('unmonitor command run', () => {
   it('reports a usage error for bare "unmonitor"', () => {
     run('unmonitor');
     expect(appended).toEqual([
-      { input: 'unmonitor', output: 'Usage: unmonitor <persona> [tab|group:<n>] | unmonitor --all' },
+      { input: 'unmonitor', output: 'Usage: unmonitor <name> [tab|group:<n>] | unmonitor --all' },
     ]);
   });
 

@@ -645,8 +645,8 @@ html, body, #root {
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
 .monitor-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; flex: 1; min-width: 0; }
-.monitor-persona { color: var(--fg); font-weight: 600; }
-.monitor-targets, .monitor-context { font-size: 12px; color: var(--muted); }
+.monitor-name { color: var(--fg); font-weight: 600; }
+.monitor-persona, .monitor-targets, .monitor-context { font-size: 12px; color: var(--muted); }
 .monitor-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .monitor-snapshot, .monitor-reset {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;

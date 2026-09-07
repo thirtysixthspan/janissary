@@ -867,4 +867,51 @@ describe('MonitorManager', () => {
       'assistant: group:2 ← janus (external, 0 suggestions)',
     ]);
   });
+
+  it('lists a profile-named monitor by its name, with the persona beside it', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
+
+    expect(manager.list()).toEqual([
+      'nightly-watch (persona: assistant): group:2 ← janus (external, 0 suggestions)',
+    ]);
+  });
+
+  // The row's text and the `acpRef` beside it address the same monitor; naming the persona in one
+  // and the runtime name in the other let them disagree.
+  it('names the runtime name in both the connections row text and its acpRef', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+
+    manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
+
+    expect(manager.connectionsFor('janus')).toEqual([
+      expect.objectContaining({
+        text: expect.stringContaining('monitor:nightly-watch') as string,
+        acpRef: { scope: 'monitor', name: 'nightly-watch' },
+      }),
+    ]);
+  });
+
+  // The failure the debt describes: a profile-launched monitor started under a name of its own
+  // could not be addressed at all, because `ask` keyed on the persona while `start` keyed on the
+  // name. Completion offers the same names.
+  it('stops and questions a profile-named monitor by that name', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'group', group: 2 }], 'nightly-watch');
+
+    expect(manager.namesFor('janus')).toEqual(['nightly-watch']);
+    expect(manager.ask('janus', 'assistant', 'anything?')).toMatch(/No "assistant" monitor/);
+    expect(manager.ask('janus', 'nightly-watch', 'anything?')).toBeNull();
+    sessions[0].reply('All quiet.');
+
+    expect(manager.stop('janus', 'nightly-watch')).toBe(true);
+    expect(manager.list()).toEqual([]);
+  });
 });

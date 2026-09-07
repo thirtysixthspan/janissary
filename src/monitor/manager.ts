@@ -11,7 +11,7 @@ import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
 import { generateSessionDelimiter, frameEntry } from './framing.js';
 import { recordContext, snapshotMonitorContext, formatContext, type MonitorContextEntry } from './context.js';
-import { listMonitors, monitorConnections } from './info.js';
+import { listMonitors, monitorConnections, monitorNames } from './info.js';
 import { askMonitor } from './ask.js';
 import { recordReply } from './reply.js';
 import type { ConnectionView } from '../protocol.js';
@@ -84,7 +84,9 @@ export class MonitorManager {
   // mode (watch the owner tab, report into its transcript).
   start(owner: string, personaName: string, targets: MonitorTarget[], name: string = personaName): string | null {
     const key = `${owner}:${name}`;
-    if (this.monitors.has(key)) return `Already monitoring with persona "${personaName}".`;
+    // The collision is on the name, which is the registry key. Two monitors may share a persona as
+    // long as their names differ.
+    if (this.monitors.has(key)) return `Already monitoring as "${name}".`;
     const inline = targets.length === 0;
     const resolved: MonitorTarget[] = inline
       ? [{ kind: 'tab', label: owner }]
@@ -113,7 +115,7 @@ export class MonitorManager {
     // External mode: open the reporting tab right away (empty feed) so starting the
     // monitor is visible immediately, not only when the first suggestion lands.
     if (!inline) {
-      openMonitorTab(this.managers, name, targetColor(this.managers.tab.tabs, resolved));
+      openMonitorTab(this.managers, name, persona.name, targetColor(this.managers.tab.tabs, resolved));
       updateMonitorMeta(this.managers, name, formatTargets(resolved), reg.contextBytes);
     }
     return null;
@@ -183,18 +185,20 @@ export class MonitorManager {
       this.managers.tab.append(reg.owner, { input: '', output: formatInlineSuggestion(reg.persona.name, suggestion) });
       return;
     }
-    pushSuggestion(this.managers, reg.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
+    pushSuggestion(this.managers, reg.name, reg.persona.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
   }
 
   // Query a running monitor's ACP session directly; the reply lands in the owner tab's
   // transcript. Shares the `inFlight` slot with flushes, so a question never interleaves
   // with a monitor-update prompt. Returns an error message, or null when the question is
   // on its way.
-  ask(owner: string, personaName: string, question: string): string | null {
-    const reg = this.monitors.get(`${owner}:${personaName}`);
-    if (!reg) return `No "${personaName}" monitor running from this tab.`;
-    if (reg.inFlight) return `The ${personaName} monitor is busy; try again in a moment.`;
-    askMonitor(reg, owner, personaName, question, this.managers, () => this.respawn(reg));
+  // Keyed on the runtime name, the same key `stop` uses and the same one `start` registered under —
+  // a monitor a profile named cannot otherwise be addressed at all.
+  ask(owner: string, name: string, question: string): string | null {
+    const reg = this.monitors.get(`${owner}:${name}`);
+    if (!reg) return `No "${name}" monitor running from this tab.`;
+    if (reg.inFlight) return `The ${name} monitor is busy; try again in a moment.`;
+    askMonitor(reg, owner, name, question, this.managers, () => this.respawn(reg));
     return null;
   }
 
@@ -243,6 +247,11 @@ export class MonitorManager {
   // Lines for the `monitors` command.
   list(): string[] {
     return listMonitors(this.monitors.values());
+  }
+
+  // Runtime names of a tab's monitors, for completing `unmonitor` and `monitor ask`.
+  namesFor(owner: string): string[] {
+    return monitorNames(this.monitors.values(), owner);
   }
 
   // One record per live monitor, for `profile save` to write into the `monitors` key. Distinct from

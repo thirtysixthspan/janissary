@@ -4,26 +4,28 @@ import { modelsFor } from '../harness/models.js';
 export { completeBrowserCommand } from './browser.js';
 export { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose } from './target-handlers.js';
 
-// Complete `monitor`/`unmonitor` arguments: the first argument is a persona name (or
-// `ask` / `--all`), later arguments are targets (tab labels or `group:<n>` tokens) —
-// except after `monitor ask`, where the persona comes second.
+// Complete `monitor`/`unmonitor` arguments. Which catalog an argument draws from follows what the
+// argument means: `monitor <persona>` chooses a persona to start, so it offers personas, while
+// `unmonitor <name>` and `monitor ask <name>` address a monitor that is already running, so they
+// offer the live monitor names — which are the persona names only until a profile gives one a name
+// of its own. Later arguments are targets (tab labels or `group:<n>` tokens).
 export function completeMonitorCommand(
   command: string,
   argumentIndex: number,
   preceding: string[],
   token: string,
-  monitor: { personas: string[]; targets: string[] } | undefined,
+  monitor: { personas: string[]; names: string[]; targets: string[] } | undefined,
   before: string,
   after: string,
   tokenStart: number,
 ): CompletionResult | null {
   if (!monitor || (command !== 'monitor' && command !== 'unmonitor')) return null;
   if (argumentIndex === 1) {
-    const extra = command === 'unmonitor' ? ['--all'] : ['ask'];
-    return completeWord(token, '', [...monitor.personas, ...extra], ' ', before, after, tokenStart);
+    const words = command === 'unmonitor' ? [...monitor.names, '--all'] : [...monitor.personas, 'ask'];
+    return completeWord(token, '', words, ' ', before, after, tokenStart);
   }
   if (argumentIndex === 2 && command === 'monitor' && preceding[1]?.toLowerCase() === 'ask') {
-    return completeWord(token, '', monitor.personas, ' ', before, after, tokenStart);
+    return completeWord(token, '', monitor.names, ' ', before, after, tokenStart);
   }
   if (argumentIndex >= 2 && preceding[1]?.toLowerCase() !== 'ask') {
     return completeWord(token, '', monitor.targets, ' ', before, after, tokenStart);

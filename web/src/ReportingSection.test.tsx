@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, within } from '@testing-library/react';
 import React, { useState } from 'react';
 import { ReportingSection, DEFAULT_PCT, type ReportingEntry } from './ReportingSection';
 
@@ -11,7 +11,14 @@ function ControlledReportingSection(props: Omit<React.ComponentProps<typeof Repo
   return React.createElement(ReportingSection, { ...props, heightPct, onHeightPctChange: setHeightPct });
 }
 
-function makeEntry(label: string, index: number, suggestions: { id: string; text: string; command?: string }[] = []): ReportingEntry {
+// A reporting tab's label is its monitor's runtime name, and the persona is the same word unless a
+// profile gave the monitor a name of its own — which `persona` models here.
+function makeEntry(
+  label: string,
+  index: number,
+  suggestions: { id: string; text: string; command?: string }[] = [],
+  persona: string = label,
+): ReportingEntry {
   return {
     tab: {
       label,
@@ -19,7 +26,11 @@ function makeEntry(label: string, index: number, suggestions: { id: string; text
       dotColor: '#ff0',
       groupColor: '#ccc',
       title: undefined as string | undefined,
-      monitor: { suggestions: suggestions.map((s) => ({ ...s, timestamp: 0, persona: '', about: '' })) },
+      monitor: {
+        suggestions: suggestions.map((s) => ({ ...s, timestamp: 0, persona: '', about: '' })),
+        name: label,
+        persona,
+      },
     } as never,
     index,
   };
@@ -34,14 +45,17 @@ describe('ReportingSection', () => {
   });
 
   it('renders tab labels for entries', () => {
-    const { getByText } = render(
+    const { container } = render(
       React.createElement(ReportingSection, {
         entries: [makeEntry('alerts', 0), makeEntry('log', 1)],
         onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
       }),
     );
-    expect(getByText('alerts')).toBeTruthy();
-    expect(getByText('log')).toBeTruthy();
+    // Scoped to the strip: the selected entry's header names the same monitor, so an unscoped
+    // lookup would match twice.
+    const strip = container.querySelector<HTMLElement>('.tabstrip')!;
+    expect(within(strip).getByText('alerts')).toBeTruthy();
+    expect(within(strip).getByText('log')).toBeTruthy();
   });
 
   it('renders the MonitorTab for the selected entry', () => {
@@ -52,6 +66,18 @@ describe('ReportingSection', () => {
       }),
     );
     expect(getByText('watch the builds')).toBeTruthy();
+  });
+
+  it('names the monitor in the header, with its persona beside it when they differ', () => {
+    const { container } = render(
+      React.createElement(ReportingSection, {
+        entries: [makeEntry('nightly-security', 0, [], 'security')],
+        onClose: vi.fn(), onRun: vi.fn(), onRate: vi.fn(), onReset: vi.fn(), onSnapshot: vi.fn(),
+      }),
+    );
+    const header = container.querySelector<HTMLElement>('.monitor-header')!;
+    expect(within(header).getByText('nightly-security')).toBeTruthy();
+    expect(within(header).getByText('security')).toBeTruthy();
   });
 
   it('reset button calls onReset with the current tab\'s label', () => {

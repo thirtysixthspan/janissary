@@ -230,10 +230,12 @@ export type Tab = {
   // has something to feed on. In-memory only; never sent to any client (not part of TabView) and
   // never read when building persisted AgentState.
   pageSnapshot?: { text: string; capturedAt: number };
-  // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed,
-  // the persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
-  // sent/received on the monitor's dedicated ACP session.
-  monitor?: { suggestions: MonitorSuggestion[]; persona: string; targets: string; contextBytes: number };
+  // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
+  // monitor's runtime name (which is also this tab's label and what `unmonitor` and `monitor ask`
+  // address), the persona it runs — the same word as the name unless a profile gave it one of its
+  // own — the monitored tabs/groups (pre-formatted), and the running total of bytes sent/received
+  // on the monitor's dedicated ACP session.
+  monitor?: { suggestions: MonitorSuggestion[]; name: string; persona: string; targets: string; contextBytes: number };
   // The file navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent

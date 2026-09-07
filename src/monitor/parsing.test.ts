@@ -3,12 +3,12 @@ import { parseMonitorCommand, parseUnmonitorCommand, parseSuggestion } from './p
 
 describe('parseMonitorCommand', () => {
   it('parses inline mode (persona only, no targets)', () => {
-    expect(parseMonitorCommand('monitor security')).toEqual({ persona: 'security', targets: [] });
+    expect(parseMonitorCommand('monitor security')).toEqual({ name: 'security', targets: [] });
   });
 
   it('parses tab and group targets', () => {
     expect(parseMonitorCommand('monitor assistant agent2 group:2')).toEqual({
-      persona: 'assistant',
+      name: 'assistant',
       targets: [{ kind: 'tab', label: 'agent2' }, { kind: 'group', group: 2 }],
     });
   });
@@ -23,7 +23,7 @@ describe('parseMonitorCommand', () => {
 
   it('parses ask with the question joined back together', () => {
     expect(parseMonitorCommand('monitor ask security what have you seen so far?')).toEqual({
-      ask: true, persona: 'security', question: 'what have you seen so far?',
+      ask: true, name: 'security', question: 'what have you seen so far?',
     });
   });
 
@@ -44,15 +44,21 @@ describe('parseUnmonitorCommand', () => {
     expect(parseUnmonitorCommand('unmonitor --all')).toEqual({ all: true });
   });
 
-  it('parses a persona alone', () => {
-    expect(parseUnmonitorCommand('unmonitor security')).toEqual({ persona: 'security' });
+  it('parses a monitor name alone', () => {
+    expect(parseUnmonitorCommand('unmonitor security')).toEqual({ name: 'security' });
   });
 
-  it('parses a persona plus one target', () => {
+  it('parses a monitor name plus one target', () => {
     expect(parseUnmonitorCommand('unmonitor assistant group:3')).toEqual({
-      persona: 'assistant',
+      name: 'assistant',
       target: { kind: 'group', group: 3 },
     });
+  });
+
+  // The argument addresses a running monitor, so it is that monitor's name — which is the persona
+  // name only until a profile gives one a name of its own.
+  it('parses a name a profile gave a monitor, distinct from any persona', () => {
+    expect(parseUnmonitorCommand('unmonitor nightly-security')).toEqual({ name: 'nightly-security' });
   });
 
   it('rejects a bare unmonitor', () => {

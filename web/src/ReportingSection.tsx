@@ -69,6 +69,7 @@ export function ReportingSection({
       {current.tab.view === 'monitor' && current.tab.monitor && (
         <div className="reporting-body" data-doc-shot="reporting-tab" tabIndex={0} style={{ borderLeft: `4px solid ${current.tab.dotColor}` }}>
           <MonitorTab
+            name={current.tab.monitor.name}
             persona={current.tab.monitor.persona}
             targets={current.tab.monitor.targets}
             contextBytes={current.tab.monitor.contextBytes}
