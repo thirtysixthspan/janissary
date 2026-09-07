@@ -4,7 +4,7 @@ import http from 'node:http';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseByteRange, serveOpenFile } from './open-route.js';
+import { parseByteRange, serveOpenFile } from './route.js';
 
 const dir = mkdtempSync(path.join(tmpdir(), 'janus-open-route-'));
 const file = path.join(dir, 'clip.mp4');

@@ -1,17 +1,17 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { openerForExtension, type OpenContext } from './openers/index.js';
-import { didOsOpen } from './openers/os-open.js';
-import { openInEditor } from './openers/editor.js';
-import { nextFreeName } from './editor/next-free-name.js';
-import { expandUserPath } from './paths.js';
-import { expandGlob } from './open-glob.js';
-import type { Managers } from './managers.js';
-import { runOpenCommand, pinnedOpenerRefusal } from './open-file-command.js';
-import { getConfig } from './config.js';
-import { humanSize } from './openers/size.js';
-import { messageBus } from './bus.js';
-import { isSyncedPath } from './sync-path-match.js';
+import { openerForExtension, type OpenContext } from '../openers/index.js';
+import { didOsOpen } from '../openers/os-open.js';
+import { openInEditor } from '../openers/editor.js';
+import { nextFreeName } from '../editor/next-free-name.js';
+import { expandUserPath } from '../paths.js';
+import { expandGlob } from './glob.js';
+import type { Managers } from '../managers.js';
+import { runOpenCommand, pinnedOpenerRefusal } from './file-command.js';
+import { getConfig } from '../config.js';
+import { humanSize } from '../openers/size.js';
+import { messageBus } from '../bus.js';
+import { isSyncedPath } from '../sync-path-match.js';
 
 export type EditResult = { label: string };
 

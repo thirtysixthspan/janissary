@@ -1,10 +1,10 @@
 import path from 'node:path';
-import { isGlobPattern, parseOpen } from './commands/open.js';
-import { expandUserPath } from './paths.js';
-import { webClaimPluginId } from './openers/index.js';
-import type { OpenContext } from './openers/index.js';
-import type { Managers } from './managers.js';
-import { TabManager } from './tab/manager.js';
+import { isGlobPattern, parseOpen } from '../commands/open.js';
+import { expandUserPath } from '../paths.js';
+import { webClaimPluginId } from '../openers/index.js';
+import type { OpenContext } from '../openers/index.js';
+import type { Managers } from '../managers.js';
+import { TabManager } from '../tab/manager.js';
 
 // OpenFileManager.run, extracted whole: resolves an `open <target>` command to a web URL, an
 // expanded glob, or a single path, and dispatches each to its opener. `expandGlob` — the one
