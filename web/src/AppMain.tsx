@@ -59,7 +59,7 @@ export function AppMain({
   profiles, profilePickerIndex, onPickProfile,
   quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
   quickOpenLoading, onPickQuickOpen, onCloseQuickOpen,
-  search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
+  search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
   tabNameMaxLength, activeTabNameMaxLength,
@@ -94,7 +94,8 @@ export function AppMain({
         pickerOverlays={pickerOverlays}
         blockingOverlayOpen={commandBarSuppressed(overlays)}
         queueOpen={overlays.queue}
-        search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
+        search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
+        onCommandBarSubmit={onCommandBarSubmit}
         quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
         recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
       dropRef={dropRef}
@@ -118,6 +119,7 @@ export function AppMain({
         onFocusCommandBar={() => inputReference.current?.focus()}
         onFocusEditor={(label) => tabHandles.current.get(label)?.focus()}
         windowFocused={windowFocused} current={current} focusedAgentBody={focusedAgentBody}
+        commandDrafts={commandDrafts}
         dirtyTabs={dirtyPluginTabs}
         shellProps={{
           onHandle: (id, handle) => {

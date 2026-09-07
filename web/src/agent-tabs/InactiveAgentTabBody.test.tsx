@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { InactiveAgentTabBody } from './InactiveAgentTabBody';
+import type { CommandDrafts } from './command-input/useCommandDrafts';
 
 vi.stubGlobal('ResizeObserver', class {
   observe() {}
@@ -20,13 +21,15 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
   };
 }
 
-function setup(tab: TabView = makeTab()) {
+function setup(tab: TabView = makeTab(), commandDrafts: CommandDrafts = new Map()) {
   const send = vi.fn();
   const request = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
   const onSplit = vi.fn();
   const client = { send, request } as unknown as JanusClient;
-  const result = render(<InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} />);
-  return { ...result, send, onSplit, request };
+  const result = render(
+    <InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} commandDrafts={commandDrafts} />,
+  );
+  return { ...result, send, onSplit, request, commandDrafts };
 }
 
 describe('InactiveAgentTabBody', () => {
@@ -89,6 +92,16 @@ describe('InactiveAgentTabBody', () => {
     fireEvent.change(input, { target: { value: 'fil' } });
     fireEvent.keyDown(input, { key: 'Tab' });
     expect(request).toHaveBeenCalledWith({ method: 'complete', params: { text: 'fil', cursor: 3 } });
+  });
+
+  it('shows the visible tab’s own unexecuted draft, and stores typing under that tab', () => {
+    const drafts: CommandDrafts = new Map([['agent2', 'half typed'], ['janus', 'other tab']]);
+    setup(makeTab(), drafts);
+    const input = screen.getByRole('textbox');
+    expect(input).toHaveValue('half typed');
+    fireEvent.change(input, { target: { value: 'half typed more' } });
+    expect(drafts.get('agent2')).toBe('half typed more');
+    expect(drafts.get('janus')).toBe('other tab');
   });
 
   it('opens the ACP transcript for a connection row carrying an acpRef', () => {

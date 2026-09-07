@@ -7,10 +7,13 @@ import { ViewTabBody } from './ViewTabBody';
 import { InactiveAgentTabBody } from './agent-tabs/InactiveAgentTabBody';
 import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
+import type { CommandDrafts } from './agent-tabs/command-input/useCommandDrafts';
 
 type Properties = BaseCenterActionAreaProps & {
   current: TabView;
   focusedAgentBody: React.ReactNode;
+  // Read by the split pane's own command bar; the focused pane's is inside `focusedAgentBody`.
+  commandDrafts: CommandDrafts;
   shellProps: Omit<React.ComponentProps<typeof ShellTabLayer>, 'tabs' | 'activeLabel' | 'visibleLabels' | 'client' | 'onSplit'>;
   mountedProps: Omit<React.ComponentProps<typeof MountedViewLayers>, 'tabs' | 'current' | 'visibleLabels' | 'client' | 'closeTab' | 'onSplit'>;
 };
@@ -18,7 +21,7 @@ type Properties = BaseCenterActionAreaProps & {
 export function AppCenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
   activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs, current,
-  focusedAgentBody, shellProps, mountedProps,
+  focusedAgentBody, commandDrafts, shellProps, mountedProps,
 }: Properties) {
   const splitTab = (index: number) => {
     client.send({ method: 'moveTabToOtherPane', params: { index } });
@@ -39,7 +42,7 @@ export function AppCenterActionArea({
     }
     return focused
       ? focusedAgentBody
-      : <InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} />;
+      : <InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} commandDrafts={commandDrafts} />;
   };
 
   return (

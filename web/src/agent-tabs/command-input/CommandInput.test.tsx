@@ -3,15 +3,19 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandInput } from './CommandInput';
+import type { CommandDrafts } from './useCommandDrafts';
 import type { CommandInputDropHandle } from '../../drop-handles';
 
 function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[]; busy?: boolean } = {}) {
   const inputRef = createRef<HTMLTextAreaElement>();
   const onSubmit = vi.fn();
   const complete = vi.fn().mockResolvedValue({ completions: [], cursor: 0 });
+  const drafts: CommandDrafts = new Map();
   render(
     <CommandInput
       dotColor="#fff"
+      draftKey="janus"
+      drafts={drafts}
       history={overrides.history ?? []}
       ghostHistory={overrides.ghostHistory ?? []}
       onSubmit={onSubmit}
@@ -21,7 +25,7 @@ function renderCommandInput(overrides: { history?: string[]; ghostHistory?: stri
       busy={overrides.busy ?? false}
     />,
   );
-  return { inputRef, onSubmit };
+  return { inputRef, onSubmit, drafts };
 }
 
 describe('CommandInput — recall', () => {
@@ -149,6 +153,8 @@ describe('CommandInput — queueOpen', () => {
     render(
       <CommandInput
         dotColor="#fff"
+        draftKey="janus"
+        drafts={new Map()}
         history={[]}
         ghostHistory={[]}
         onSubmit={onSubmit}
@@ -269,6 +275,8 @@ describe('CommandInput — multi-line', () => {
     render(
       <CommandInput
         dotColor="#fff"
+        draftKey="janus"
+        drafts={new Map()}
         history={[]}
         ghostHistory={[]}
         onSubmit={vi.fn()}
@@ -286,6 +294,68 @@ describe('CommandInput — multi-line', () => {
   });
 });
 
+describe('CommandInput — per-tab drafts', () => {
+  function bar(draftKey: string, drafts: CommandDrafts, onSubmit = vi.fn()) {
+    return (
+      <CommandInput
+        dotColor="#fff"
+        draftKey={draftKey}
+        drafts={drafts}
+        history={[]}
+        ghostHistory={[]}
+        onSubmit={onSubmit}
+        inputRef={createRef<HTMLTextAreaElement>()}
+        complete={vi.fn().mockResolvedValue({ completions: [], cursor: 0 })}
+        pickerOpen={false}
+        busy={false}
+      />
+    );
+  }
+
+  it('stores typed text under the tab it was typed into', async () => {
+    const drafts: CommandDrafts = new Map();
+    render(bar('willow', drafts));
+    await userEvent.type(screen.getByRole('textbox'), 'git status');
+    expect(drafts.get('willow')).toBe('git status');
+  });
+
+  it('shows the other tab’s draft when the tab changes, then restores the first', async () => {
+    const drafts: CommandDrafts = new Map([['cedar', 'ls -la']]);
+    const { rerender } = render(bar('willow', drafts));
+    await userEvent.type(screen.getByRole('textbox'), 'git status');
+    rerender(bar('cedar', drafts));
+    expect(screen.getByRole('textbox')).toHaveValue('ls -la');
+    rerender(bar('willow', drafts));
+    expect(screen.getByRole('textbox')).toHaveValue('git status');
+  });
+
+  it('shows an empty bar for a tab with no draft', async () => {
+    const drafts: CommandDrafts = new Map();
+    const { rerender } = render(bar('willow', drafts));
+    await userEvent.type(screen.getByRole('textbox'), 'git status');
+    rerender(bar('cedar', drafts));
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('restores the draft after the bar unmounts and remounts', async () => {
+    const drafts: CommandDrafts = new Map();
+    const { unmount } = render(bar('willow', drafts));
+    await userEvent.type(screen.getByRole('textbox'), 'git status');
+    unmount();
+    render(bar('willow', drafts));
+    expect(screen.getByRole('textbox')).toHaveValue('git status');
+  });
+
+  it('clears the stored draft once the command is submitted', async () => {
+    const drafts: CommandDrafts = new Map();
+    const onSubmit = vi.fn();
+    render(bar('willow', drafts, onSubmit));
+    await userEvent.type(screen.getByRole('textbox'), 'git status{Enter}');
+    expect(onSubmit).toHaveBeenCalledWith('git status');
+    expect(drafts.has('willow')).toBe(false);
+  });
+});
+
 describe('CommandInput — drop handle', () => {
   function renderWithDropRef() {
     const inputRef = createRef<HTMLTextAreaElement>();
@@ -293,6 +363,8 @@ describe('CommandInput — drop handle', () => {
     const { container } = render(
       <CommandInput
         dotColor="#fff"
+        draftKey="janus"
+        drafts={new Map()}
         history={['recalled']}
         ghostHistory={[]}
         onSubmit={vi.fn()}

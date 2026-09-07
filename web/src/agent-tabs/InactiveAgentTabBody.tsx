@@ -4,15 +4,22 @@ import type { JanusClient } from '../ws';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { Transcript } from '../shared/transcript/Transcript';
 import { CommandInput } from './command-input/CommandInput';
+import type { CommandDrafts } from './command-input/useCommandDrafts';
 import { StatusPanels } from '../StatusPanels';
 import { useStatusWindows } from '../useStatusWindows';
 import { statusButton } from '../status-button';
 import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 
-export function InactiveAgentTabBody({
-  tab, client, onSplit,
-}: { tab: TabView; client: JanusClient; onSplit: () => void }) {
+type Properties = {
+  tab: TabView;
+  client: JanusClient;
+  onSplit: () => void;
+  // The same store the focused pane's bar edits, so a draft follows its tab between the panes.
+  commandDrafts: CommandDrafts;
+};
+
+export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Properties) {
   const transcriptReference = useRef<HTMLDivElement>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const statusWindows = useStatusWindows(tab.label, tab.connections.length > 0, tab.schedule.length > 0);
@@ -54,6 +61,8 @@ export function InactiveAgentTabBody({
       </div>
       <CommandInput
         dotColor={tab.dotColor}
+        draftKey={tab.label}
+        drafts={commandDrafts}
         history={tab.cmdHistory}
         ghostHistory={[]}
         onSubmit={(text) => client.send({ method: 'command', params: { text } })}

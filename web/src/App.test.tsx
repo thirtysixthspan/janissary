@@ -373,6 +373,54 @@ describe('App agent tab body click focuses command input', () => {
   }, 15_000);
 });
 
+describe('App per-tab command drafts', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  const twoAgents = () => [makeTab(), makeTab({ label: 'willow', number: 2 })];
+
+  it('keeps an unexecuted command with its own tab across a switch to another agent tab', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!(twoAgents(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
+
+    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    expect(screen.getByRole('textbox')).toHaveValue('');
+
+    act(() => { stateListener!(twoAgents(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    const input = screen.getByRole('textbox');
+    expect(input).toHaveValue('git status');
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
+  }, 15_000);
+
+  it('keeps an unexecuted command across a switch to a tab with no command bar', async () => {
+    const { App } = await import('./App');
+    const tabs = () => [makeTab(), makeTab({ label: 'willow', number: 2, activePty: 'pty-1' })];
+    render(<App client={client} />);
+    act(() => { stateListener!(tabs(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
+
+    act(() => { stateListener!(tabs(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(tabs(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    expect(screen.getByRole('textbox')).toHaveValue('git status');
+  }, 15_000);
+
+  it('drops the draft of a tab that has closed', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
+
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  }, 15_000);
+});
+
 describe('App sidebar docking', () => {
   beforeEach(() => {
     sendMock.mockClear();
