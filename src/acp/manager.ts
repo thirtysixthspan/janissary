@@ -9,10 +9,13 @@ import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 import { acpLaunchFor, MARKDOWN_INSTRUCTION } from './launch.js';
+import { modelsFor } from '../harness/models.js';
+import type { PersonaHarness } from '../persona-parsing.js';
 
-// The ACP agent the manager connects to and the model it runs. Hardcoded for now (the only provider
-// wired up); the model string drives the `provider/model` label shown in the connections panel.
-const ACP_MODEL = 'google/gemini-3.1-flash-lite';
+// The model the agent tab's ACP session prefers. A preference, not a fixed choice: the pair is
+// resolved against the harness catalog the other three ACP entry points already read, so a project
+// that overrides `.janissary/harness-models.json` gets a model from its own list.
+const PREFERRED_ACP_MODEL = 'google/gemini-3.1-flash-lite';
 
 // Refused rather than queued: `RemoteChannel.send` silently drops every frame until ssh has
 // authenticated and the handshake has landed, so a prompt typed into a provisioning tab would hang
@@ -20,7 +23,19 @@ const ACP_MODEL = 'google/gemini-3.1-flash-lite';
 // a tab; `acp` is typed by a person, who can retype it.
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
-const ACP_HARNESS = { harness: 'opencode', model: ACP_MODEL, variant: 'default' } as const;
+// An override can leave nothing to run. Refused with a message rather than launched with a model the
+// catalog does not offer, which would fail later and less clearly.
+const NO_ACP_MODEL = 'ACP: no opencode model is available in the harness catalog.';
+
+// The opencode model to launch with: the preferred one while the catalog still lists it, the first
+// one it does offer otherwise, and nothing at all for an empty list.
+function resolveAcpModel(): string | undefined {
+  const available = modelsFor('opencode');
+  if (available.includes(PREFERRED_ACP_MODEL)) return PREFERRED_ACP_MODEL;
+  return available[0];
+}
+
+const acpHarnessFor = (model: string): PersonaHarness => ({ harness: 'opencode', model, variant: 'default' });
 
 // Split a `provider/model` config string into its parts; a bare `model` with no slash has no
 // provider. Drives the connections-panel label.
@@ -67,10 +82,14 @@ export class AcpManager {
   // agent runs in `cwd`; a remote tab's runs on the other machine, inside the workspace clone that
   // host provisioned, so `cwd` does not apply to it. `hooks.onConnect` fires after the handshake, by
   // which point the session's model info is recorded (so `label` resolves).
-  session(label: string, cwd: string, hooks: ConnectHooks): AcpSession {
+  //
+  // `model` is resolved by the caller, which is the only place that can report a catalog with
+  // nothing in it; what is recorded here is therefore the model the session actually launched with.
+  session(label: string, cwd: string, model: string, hooks: ConnectHooks): AcpSession {
     let session = this.sessions.get(label);
     if (!session) {
-      const info = parseModel(ACP_MODEL);
+      const info = parseModel(model);
+      const launch = acpLaunchFor(acpHarnessFor(model));
       const tab = this.managers.tab.tabs.find((t) => t.label === label);
       const connect: ConnectHooks = {
         onError: hooks.onError,
@@ -78,9 +97,9 @@ export class AcpManager {
       };
       const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
       session = channel
-        ? createRemoteAcpSession(channel, { ...acpLaunchFor(ACP_HARNESS), id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
+        ? createRemoteAcpSession(channel, { ...launch, id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
         : connectAcp({
-          ...acpLaunchFor(ACP_HARNESS), cwd,
+          ...launch, cwd,
           onError: connect.onError,
           onConnect: connect.onConnect,
           workspaceDir: tab?.workspaceDir,
@@ -130,8 +149,14 @@ export class AcpManager {
       onDone?.(STILL_CONNECTING);
       return;
     }
+    const model = resolveAcpModel();
+    if (!model) {
+      this.managers.tab.append(label, { input: command, output: NO_ACP_MODEL });
+      onDone?.(NO_ACP_MODEL);
+      return;
+    }
 
-    const session = this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), {
+    const session = this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), model, {
       // A connection-level error means the session no longer exists, so it is forgotten as well as
       // reported: the next `acp` prompt spawns a fresh one rather than writing into a corpse. The
       // loop's own prompt-level errors (a rate limit, most importantly) deliberately do not come

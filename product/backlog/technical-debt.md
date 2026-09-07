@@ -2,17 +2,6 @@
 
 ## ready
 
-* Resolve the agent tab's ACP model from the harness catalog every other ACP consumer already reads, instead of a constant in the manager.
-
-Existing Debt: Three of the four ACP entry points take their harness and model from something the user controls — a persona's front matter, a per-conversation selection — while the agent tab's holds a hardcoded pair whose "only provider wired up" justification stopped being true once the catalog and the conversation picker landed. Severity: 5/10
-
-Existing Risk: 4/10 - A project that overrides the model catalog still gets the built-in model on every `acp` prompt, and the connections panel reports that constant rather than what the session is running, so a user debugging a rate limit or a bad reply is looking at a label that cannot be wrong and cannot be right either.
-
-Proposal Risk: 2/10 - The model comes from the same catalog the rest of the app validates against, though a catalog whose opencode list is empty or missing the chosen entry needs a defined fallback rather than an unusable session.
-
-Proposal: `AcpManager` in `src/acp/manager.ts` defines `ACP_MODEL = 'google/gemini-3.1-flash-lite'` and `ACP_HARNESS = { harness: 'opencode', model: ACP_MODEL, variant: 'default' }`, passes the latter to `acpLaunchFor` from `src/acp/launch.ts`, and derives the connections-panel label by running `parseModel` over the same constant rather than over anything the session reported. The three siblings do it differently: `spawnMonitorSession` in `src/monitor/acp.ts` uses `persona.harness`, `ConversationSessions` in `src/conversations/sessions.ts` uses the pair the user picked through `availableConversationModels` in `src/conversations/view.ts`, and both reach the catalog through `modelsFor` in `src/harness/models.ts`, which honours a project's `.janissary/harness-models.json` override. Resolve the agent tab's pair the same way — read the opencode list through `modelsFor`, keep the current constant as the preferred entry and fall back to the list's first when it is absent, and refuse with a clear message when the list is empty — and record the resolved model on `this.info` at connect time so `label()` reports what actually launched. Keep the pair a manager-level decision for now; making it selectable per tab is separate work and would need a wire field and a picker. `src/acp/manager.test.ts` and `src/acp/launch.test.ts` pin the current launch arguments and the connections label, so both need updating to the resolved value; add a case with a catalog override that omits the preferred model, asserting the fallback launches and the label follows it.
-
-
 * Expand an `open` glob without shelling out through whatever login shell the user happens to run.
 
 Existing Debt: The glob branch of the `open` command builds a bash-shaped `for` loop as a string and runs it through the shell named by `$SHELL`, in a codebase that otherwise spawns with argument arrays and explicitly accommodates shells that spell things differently. Severity: 5/10
