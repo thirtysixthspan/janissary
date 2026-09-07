@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   CLIENT_METHOD_CONTRACTS,
+  clientParamsProblem,
   clientReplyMode,
   isClientMessage,
   isPluginFailedParams,
   isPluginIntentParams,
 } from './client-message.js';
+import type { ClientMessage } from './protocol.js';
 
 describe('isClientMessage', () => {
   it('accepts a recognized RPC envelope with object params', () => {
@@ -71,6 +73,38 @@ describe('isClientMessage', () => {
     ]);
     expect(clientReplyMode('command')).toBe('ack');
     expect(clientReplyMode('unknown')).toBeUndefined();
+  });
+});
+
+describe('clientParamsProblem', () => {
+  const message = (method: string, params: unknown) =>
+    ({ t: 'rpc', id: 1, method, params } as unknown as ClientMessage);
+
+  // The envelope check used to be the whole boundary: a known method name and an object for
+  // `params` was enough, and the dispatcher then read each field at its declared type.
+  it.each([
+    ['a string where reportLayout declares a number', 'reportLayout', { sidebarLeft: '240', sidebarRight: 300, tabAreaPct: 62 }],
+    ['a missing saveFile content', 'saveFile', { url: '/open/1' }],
+    ['a null editorSync url', 'editorSync', { url: null, content: 'x' }],
+    ['a string renameTab index', 'renameTab', { index: '0', title: 'one' }],
+    ['a dir outside moveTab\'s union', 'moveTab', { dir: 0 }],
+    ['a command params with no text', 'command', {}],
+  ])('names the method for %s', (_case, method, params) => {
+    expect(clientParamsProblem(message(method, params))).toBe(`Invalid ${method} params`);
+  });
+
+  it.each([
+    ['command', { text: 'help' }],
+    ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5 }],
+    ['init', {}],
+  ])('reports no problem for well-typed %s params', (method, params) => {
+    expect(clientParamsProblem(message(method, params))).toBeUndefined();
+  });
+
+  // The envelope and the params are separate failures with separate answers: one is dropped, the
+  // other is told what was wrong with it.
+  it('is asked only of envelopes that already passed the envelope check', () => {
+    expect(isClientMessage({ t: 'rpc', id: 1, method: 'command', params: { text: 7 } })).toBe(true);
   });
 });
 

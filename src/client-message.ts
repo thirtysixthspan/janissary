@@ -1,4 +1,12 @@
 import type { ClientMessage } from './protocol.js';
+import { clientParamsValid } from './client-params/index.js';
+import { isRecord } from './client-params/guards.js';
+
+// The dispatcher re-checks these three inside its own arms, so they stay exported predicates rather
+// than becoming anonymous entries in the decoder table. They live beside their domain's decoders and
+// are re-exported here so `./message-handler.js` keeps importing them from one place.
+export { isPluginIntentParams, isPluginFailedParams } from './client-params/plugin.js';
+export { isEditorPluginFailedParams } from './client-params/editor.js';
 
 export type ClientReplyMode = 'ack' | 'result' | 'deferred';
 
@@ -80,36 +88,6 @@ export function unhandledClientMethod(message: never): never {
   throw new Error(`Unhandled client RPC method: ${(message as ClientMessage).method}`);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function isPluginIntentParams(value: unknown): value is {
-  tab: string;
-  intent: string;
-  payload: unknown;
-} {
-  return isRecord(value)
-    && typeof value.tab === 'string'
-    && typeof value.intent === 'string'
-    && Object.hasOwn(value, 'payload');
-}
-
-export function isPluginFailedParams(value: unknown): value is { tab: string; reason: string } {
-  return isRecord(value)
-    && typeof value.tab === 'string'
-    && typeof value.reason === 'string';
-}
-
-export function isEditorPluginFailedParams(
-  value: unknown,
-): value is { url: string; plugin: string; reason: string } {
-  return isRecord(value)
-    && typeof value.url === 'string'
-    && typeof value.plugin === 'string'
-    && typeof value.reason === 'string';
-}
-
 export function clientReplyMode(value: unknown): ClientReplyMode | undefined {
   if (typeof value !== 'string' || !Object.hasOwn(CLIENT_METHOD_CONTRACTS, value)) return undefined;
   return CLIENT_METHOD_CONTRACTS[value as keyof typeof CLIENT_METHOD_CONTRACTS];
@@ -119,10 +97,21 @@ function isClientMethod(value: unknown): value is ClientMessage['method'] {
   return clientReplyMode(value) !== undefined;
 }
 
+// The envelope only. An unrecognized one is silently dropped by the caller in `./index.js`, which
+// is a deliberately different answer from the one a recognized method with malformed params gets —
+// see `clientParamsProblem`.
 export function isClientMessage(value: unknown): value is ClientMessage {
   return isRecord(value)
     && value.t === 'rpc'
     && typeof value.id === 'number'
     && isClientMethod(value.method)
     && isRecord(value.params);
+}
+
+// The params half, field by field, through the decoder the method names. Returns the error text to
+// answer with, or `undefined` when the params decode. Answering rather than dropping is what three
+// of these methods already did from inside the dispatcher; every method gets it now, and a deferred
+// method's caller sees an error instead of waiting for a reply that would never come.
+export function clientParamsProblem(message: ClientMessage): string | undefined {
+  return clientParamsValid(message.method, message.params) ? undefined : `Invalid ${message.method} params`;
 }

@@ -8,6 +8,8 @@ When the browser restores the app from its back/forward cache, the previously re
 
 Client requests are JSON objects with `t: "rpc"`, a numeric `id`, a recognized `method`, and an object-valued `params`. Methods with no arguments still send `params: {}`. Accepted requests are dispatched once, and replies that a method produces carry the request's `id`.
 
+Every field a method's `params` declares is checked at the boundary, before the request is dispatched, and every method is checked — not a chosen few. A field must be of the type the method declares for it: a number where a number is declared, a string where a string is, and one of the listed values where the method accepts a fixed set. Optional fields may be omitted but not sent at the wrong type. Extra keys the method does not declare are ignored rather than refused, so a client running ahead of the server still talks to it. Methods that take no arguments accept any object.
+
 ### Reply contracts
 
 Every recognized method has one reply mode. Acknowledgement methods reply with `"ok"` after their action runs. Result methods reply with the value their action produces. Deferred methods reply when their promise or callback settles. The dispatcher sends that one declared reply, so a method never receives both a result and a trailing acknowledgement.
@@ -29,6 +31,8 @@ An unavailable answer is also what a caller gets when the socket was never open,
 ### Invalid frames
 
 The server silently drops malformed JSON and JSON values that are not valid RPC envelopes. This includes unknown methods and requests with missing, null, array, or primitive `params`. Dropped frames are neither dispatched nor acknowledged, and they do not close the WebSocket; a later valid request on the same connection is handled normally.
+
+A recognized method whose `params` fail the field checks above is answered rather than dropped: the reply carries the request's `id` and `Invalid <method> params`, and the request is not dispatched. The two are deliberately different — a client sending an envelope the server does not recognize has nothing to be told, while a client sending a known request with a bad field is waiting for an answer, and a method that replies only when its work settles would otherwise leave that caller waiting for a reply that never comes.
 
 ### Dispatch errors
 
@@ -54,6 +58,6 @@ A plugin that refuses a request it considers malformed — an unrecognized inten
 {"t":"rpc","id":42,"method":"pluginFailed","params":{"tab":"video","reason":"chunk rejected"}}
 ```
 
-Both fields must be strings. A valid report is acknowledged with `"ok"`; the server disables the plugin found through its own tab record and performs normal plugin teardown. Method-specific malformed fields receive `Invalid pluginIntent params` or `Invalid pluginFailed params` and do not reach or disable a plugin.
+Both fields must be strings. A valid report is acknowledged with `"ok"`; the server disables the plugin found through its own tab record and performs normal plugin teardown. Malformed fields receive `Invalid pluginIntent params` or `Invalid pluginFailed params` — the same answer every method now gives for params that fail its field checks — and do not reach or disable a plugin.
 
 There is no video-specific frame-capture RPC. Video capture and external-open actions use `pluginIntent`.
