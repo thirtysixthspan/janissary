@@ -28,6 +28,7 @@ import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
+import { buildOverlayOpenState } from './pickers/overlay-registry';
 import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
 
 export function App({ client }: { client: JanusClient }) {
@@ -123,8 +124,14 @@ export function App({ client }: { client: JanusClient }) {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
+  // The one place the nine picker booleans become "which overlay is open". Every consumer below —
+  // the render chain, the command-bar suppression flag, and the close-tab chord — reads this object.
+  const overlays = buildOverlayOpenState({
+    route, themePickerOpen, appThemePickerOpen, quickOpenOpen, navOpen,
+    pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen,
+  });
   const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
-    activeTab, quitConfirmOpen, unsavedQuitOpen, pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen, route,
+    activeTab, quitConfirmOpen, unsavedQuitOpen, overlays, route,
   );
 
   const closeTab = useCallback((index: number) => {
@@ -183,15 +190,15 @@ export function App({ client }: { client: JanusClient }) {
     <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-      route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
-      syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
-      theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
-      pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
-      navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
-      queueOpen={queueOpen} queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
-      taskPickerOpen={taskPickerOpen} taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-      profilePickerOpen={profilePickerOpen} profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
-      quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
+      overlays={overlays} route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
+      syntaxTheme={syntaxTheme} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
+      theme={theme} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
+      recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
+      navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
+      queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
+      taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
+      profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
+      quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
       quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
       quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
       search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}

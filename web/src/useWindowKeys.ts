@@ -1,43 +1,36 @@
 import { useEffect } from 'react';
 import type { JanusClient } from './ws';
-import type { RouteChooserView } from '@shared/protocol';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey, type VisibleTaskRow } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey, type VisibleProfileRow } from './pickers/profile-picker-keys';
-import { firstOpenOverlay } from './pickers/overlay-registry';
+import { buildOverlayOpenState, firstOpenOverlay, type OverlayOpenSources } from './pickers/overlay-registry';
 import type { TabNavEntry } from './tab-nav-match';
 
-export type StateSnapshot = {
-  pickerOpen: boolean;
+// The nine open/closed values come from `OverlayOpenSources` rather than being restated here, so a
+// tenth overlay added to the registry stops this snapshot — and the app literal that fills it —
+// from compiling until the new state is threaded through.
+export type StateSnapshot = OverlayOpenSources & {
   pickerIdx: number;
   recent: string[];
-  route: RouteChooserView | null;
   routeIdx: number;
   // Whether the active tab shows the transcript body (Cmd+F is only meaningful there) and
   // whether search mode is currently open (gates scroll-key handling so Arrow keys reach the
   // search bar instead of scrolling the transcript underneath it).
   canSearch: boolean;
   searchOpen: boolean;
-  themePickerOpen: boolean;
   themePickerIdx: number;
-  appThemePickerOpen: boolean;
   appThemePickerIdx: number;
-  navOpen: boolean;
   navQuery: string;
   navIdx: number;
   navTabs: TabNavEntry[];
-  queueOpen: boolean;
   queueIdx: number;
   queueItems: string[];
-  taskPickerOpen: boolean;
   taskPickerIdx: number;
   visibleTasks: VisibleTaskRow[];
-  profilePickerOpen: boolean;
   profilePickerIdx: number;
   profiles: VisibleProfileRow[];
-  quickOpenOpen: boolean;
 };
 
 export type Callbacks = {
@@ -78,17 +71,7 @@ export type Callbacks = {
 // of them has claimed the key, so the caller stops there. Which one wins comes from the same ordered
 // registry the render chain reads (see `pickers/overlay-registry`), not from the order written here.
 function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
-  switch (firstOpenOverlay({
-    route: snap.route !== null,
-    syntaxTheme: snap.themePickerOpen,
-    appTheme: snap.appThemePickerOpen,
-    quickOpen: snap.quickOpenOpen,
-    tabNav: snap.navOpen,
-    history: snap.pickerOpen,
-    queue: snap.queueOpen,
-    task: snap.taskPickerOpen,
-    profile: snap.profilePickerOpen,
-  })) {
+  switch (firstOpenOverlay(buildOverlayOpenState(snap))) {
   // `snap.route` is what put this case in play, so it is non-null here; the compiler cannot see
   // that across the registry lookup.
   case 'route': {

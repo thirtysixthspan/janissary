@@ -21,7 +21,7 @@ type PickerProperties = Omit<React.ComponentProps<typeof PickerOverlays>, 'queue
 
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,
-  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen'
+  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'queueOpen'
 > & PickerProperties & LayoutState & {
   activeTab: number;
   secondaryTab?: number;
@@ -52,12 +52,12 @@ type AppMainProps = Omit<
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppMain({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  route, routeIndex, onPickRoute, syntaxTheme, themePickerOpen, themePickerIndex, onPickTheme,
-  theme, appThemePickerOpen, appThemePickerIndex, onPickAppTheme, pickerOpen, recent, pickerIndex, onPickHistory,
-  navOpen, navQuery, navIndex, tabs, onPickTab, queueOpen, queueIndex, onSelectQueue,
-  taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
-  profilePickerOpen, profiles, profilePickerIndex, onPickProfile,
-  quickOpenOpen, quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
+  overlays, route, routeIndex, onPickRoute, syntaxTheme, themePickerIndex, onPickTheme,
+  theme, appThemePickerIndex, onPickAppTheme, recent, pickerIndex, onPickHistory,
+  navQuery, navIndex, tabs, onPickTab, queueIndex, onSelectQueue,
+  taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
+  profiles, profilePickerIndex, onPickProfile,
+  quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
   quickOpenLoading, onPickQuickOpen, onCloseQuickOpen,
   search, globalHistory, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
@@ -72,16 +72,16 @@ export function AppMain({
 }: AppMainProps) {
   const pickerOverlays = (
     <PickerOverlays
-      route={route} routeIndex={routeIndex} onPickRoute={onPickRoute}
-      syntaxTheme={syntaxTheme} themePickerOpen={themePickerOpen} themePickerIndex={themePickerIndex} onPickTheme={onPickTheme}
-      theme={theme} appThemePickerOpen={appThemePickerOpen} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={onPickAppTheme}
-      pickerOpen={pickerOpen} recent={recent} pickerIndex={pickerIndex} onPickHistory={onPickHistory}
-      navOpen={navOpen} navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={onPickTab}
-      queueOpen={queueOpen} queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={onSelectQueue}
-      taskPickerOpen={taskPickerOpen} taskRows={taskRows} taskPickerIndex={taskPickerIndex}
+      overlays={overlays} route={route} routeIndex={routeIndex} onPickRoute={onPickRoute}
+      syntaxTheme={syntaxTheme} themePickerIndex={themePickerIndex} onPickTheme={onPickTheme}
+      theme={theme} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={onPickAppTheme}
+      recent={recent} pickerIndex={pickerIndex} onPickHistory={onPickHistory}
+      navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={onPickTab}
+      queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={onSelectQueue}
+      taskRows={taskRows} taskPickerIndex={taskPickerIndex}
       onPickTask={onPickTask} onToggleTaskDir={onToggleTaskDir}
-      profilePickerOpen={profilePickerOpen} profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={onPickProfile}
-      quickOpenOpen={quickOpenOpen} quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={onChangeQuickOpenQuery}
+      profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={onPickProfile}
+      quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={onChangeQuickOpenQuery}
       quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={onChangeQuickOpenIndex}
       quickOpenLoading={quickOpenLoading} onPickQuickOpen={onPickQuickOpen} onCloseQuickOpen={onCloseQuickOpen}
       commandInputRef={inputReference}
@@ -92,12 +92,8 @@ export function AppMain({
         current={current} client={client} lines={lines} runCommand={runCommand}
         transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
         pickerOverlays={pickerOverlays}
-        blockingOverlayOpen={commandBarSuppressed({
-          route: route !== null, syntaxTheme: themePickerOpen, appTheme: appThemePickerOpen,
-          quickOpen: quickOpenOpen, tabNav: navOpen, history: pickerOpen, queue: queueOpen,
-          task: taskPickerOpen, profile: profilePickerOpen,
-        })}
-        queueOpen={queueOpen}
+        blockingOverlayOpen={commandBarSuppressed(overlays)}
+        queueOpen={overlays.queue}
         search={search} globalHistory={globalHistory} onCommandBarSubmit={onCommandBarSubmit}
         quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
         recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
@@ -132,8 +128,8 @@ export function AppMain({
         mountedProps={{
           harnessHandles, tabHandles, editorDropRef: editorDropReference, questionPanelRef,
           onPluginDirty,
-          taskPickerOpen, taskRows, taskPickerIndex, onPickTask,
-          onToggleTaskDir, navOpen, navQuery, navIndex, onPickTab,
+          taskPickerOpen: overlays.task, taskRows, taskPickerIndex, onPickTask,
+          onToggleTaskDir, navOpen: overlays.tabNav, navQuery, navIndex, onPickTab,
         }}
       />
       <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}
