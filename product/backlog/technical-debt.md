@@ -5,6 +5,93 @@
 
 ## development
 
+* Coalesce and incrementally invalidate the per-mutation state broadcast so one keystroke stops re-flattening and re-serializing every open tab's whole transcript.
+
+Existing Debt: The server answers essentially every mutation by synchronously rebuilding the entire view — every tab re-flattened from its full log and the whole record re-serialized to every client — with no dirty-mark coalescing, no per-tab caching of the flattened buffer, and no sequence numbers, because nothing owns "what changed since the last broadcast" as a concept. Severity: 7/10
+
+Existing Risk: 6/10 - A long session's transcripts grow without bound while every shell-output chunk and every ACP chunk re-flattens and re-serializes all of them, so latency accrues run over run, and a slow or reconnected client has no way to detect that it missed a broadcast.
+
+Proposal Risk: 3/10 - Listeners that read manager state synchronously off the broadcast must keep seeing a fully updated view, so the coalescing flush has to run synchronously at flush time, and the wire shape still carries the whole world — payload cost is reduced, not eliminated.
+
+Proposal: Three contained steps across src/index.ts, src/controller/events.ts, src/state-event.ts, and src/tab/view.ts. First, coalesce: the `state: dirty` subscription in src/controller/events.ts calls the emit sink once per event; record a pending flag and flush at most once per macrotask (a short timer or setImmediate) so a burst of mutations in one tick broadcasts once, with the flush itself synchronous so existing listeners still see settled state; add a test that two mutations inside one tick produce one broadcast, which nothing covers today. Second, cache per tab: keep each tab's flattened `bufferLines` beside the tab record and invalidate it on the transcript bus events that already exist — `entry:appended`, `entries:trimmed`, `tab:cleared` in src/bus.ts — so the snapshot builder in src/state-event.ts re-flattens only tabs whose logs moved; `flattenBuffer` and `buildTabViews` in src/tab/view.ts remain the only producers of that shape. Third, sequence: add a monotonically increasing `seq` field to the state event in src/protocol.ts, stamp it in src/state-event.ts, and have the client note (not yet act on) a detected gap in web/src/ws.ts's state arm so the reconnection story has its hook. src/controller.test.ts, src/message-handler-exhaustive.test.ts, web/src/ws.test.ts, and web/src/useServerState.test.ts pin the current shapes and must keep passing; the `seq` field is additive, so clients that ignore it need no change.
+
+
+* Route the shell and ACP running-entry updates through the one transcript finalize choreography the tab module owns instead of three hand-rolled copies.
+
+Existing Debt: Three producers each re-implement "update the running transcript entry, finalize it, persist, and emit" with divergent rules — the shell manager matches the running entry by its command text, the ACP runner and the tab module match by the running flag alone, and busy clearing, unread marking, and the trailing appended-entry emit are owned differently in each copy — because no single operation owns the running-entry lifecycle for every producer. Severity: 5/10
+
+Existing Risk: 5/10 - On an agent tab running a shell command while an ACP prompt streams, the flag-only paths overwrite whatever entry happens to be last-running regardless of which producer owns it, and a fix to capping, unread marking, or busy clearing applied in one copy silently misses the other two.
+
+Proposal Risk: 2/10 - Each producer's deliberate differences (the shell's promoted-to-terminal note and its command-text matching, the ACP path's different unread handling) must survive as parameters to the shared operation, so the risk is a mis-merged parameter rather than the divergence being removed.
+
+Proposal: Make src/tab/transcript-events.ts the single owner: generalize its finalize operation into one `updateRunningEntry(tabs, label, match, output, running, hooks)` whose `match` selects the entry (by running flag, or by `input === command && running`) and whose hooks carry the busy/persist/unread steps each producer needs. Then delete the hand-rolled update closure inside `ShellManager.run` (src/shell-manager.ts) and `makeUpdateRunning` (src/acp/runner.ts), replacing both with calls through `Managers.tab` to that one operation. While there, align the match so the ACP and finalize paths discriminate by producer the way the shell already does, so an interleaved shell command's entry is no longer a clobber target — a behavior change nothing covers today, so say so beside the step and pin it with a new case in src/acp/runner.test.ts. src/shell-manager.test.ts, the busy and queue cases in src/controller.test.ts, src/tab/transcript-events.test.ts, and src/tab/transcript-log.test.ts pin the rest and must keep passing.
+
+
+* Finish the tab-lookup migration so feature managers stop reaching into the raw tabs array with hand-written label scans.
+
+Existing Debt: TabManager exposes `byLabel` and five guard-typed payload accessors as the intended lookup surface, but production code still hand-scans the raw `tabs` array at roughly fifty-five call sites across some thirty files, leaving two idioms for the same lookup and keeping the array itself a de facto public API. Severity: 5/10
+
+Existing Risk: 4/10 - Any future change to how tabs are stored or indexed — the direction the architecture's own per-agent-owner rule pushes — must chase dozens of scattered scans, each a chance to reintroduce the non-null assertions and unguarded payload reads the accessors were written to end.
+
+Proposal Risk: 2/10 - The scans with genuinely different predicates (by editor url, by harness pty id, by files root, by plugin instance key) still need named homes, so the lookup surface ends up a handful of well-named helpers rather than one function.
+
+Proposal: Sweep the plain `label ===` scans to `managers.tab.byLabel(label)` across src/shell-manager.ts, src/capture/manager.ts, src/schedule/manager.ts, src/connection/manager.ts, src/notifications.ts, src/agent/communication-manager.ts, src/agent/message-queue.ts, src/pseudoterminal-manager.ts, src/controller/transcript.ts, src/harness/busy-status.ts, src/harness/subcommands.ts, src/harness/remote-launch.ts, src/shell-promotion.ts, src/profile/manager.ts, src/profile/remote-agent.ts, src/profile/editors.ts, src/acp/manager.ts, src/acp/runner.ts, src/editor/watch-manager.ts, src/ssh-manager.ts, src/file-navigator/manager-state.ts, src/file-navigator/open.ts, src/commands/schedule.ts, src/commands/search.ts, and src/commands/resolve-target.ts. Replace payload-predicated scans with the guard-typed accessors where one matches (src/editor/save.ts, src/editor/sync.ts, src/editor/resync.ts, and src/editor-suggest/handler.ts for editor-by-url; src/remote/manager.ts and src/controller/events.ts for harness-by-pty-id) and add the remaining distinct predicates as named TabManager helpers beside src/tab/lookup.ts — a by-pty-id harness lookup, a by-url editor lookup, a by-instance-key plugin lookup, a by-root files lookup — so nothing new reaches for `tabs.find` again. Keep `tabs` itself for genuine iteration; the sweep is about lookup-by-identity. src/tab/lookup.test.ts, src/managers.test.ts, and src/controller.test.ts pin current behavior and must keep passing.
+
+
+* Give every manager a closeTab method and let the tab-close path walk the dispose registry instead of a hand-maintained teardown checklist.
+
+Existing Debt: The tab cleanup module releases each of a tab's resources by calling a different manager by hand in a fixed sixteen-line sequence, and its signature still carries test-era scaffolding — a map-or-number union parameter, an optional queue map, and a legacy tab-count parameter the one production caller never passes — so a new per-tab resource is a line someone must remember, exactly the hand-maintained-checklist shape the lifecycle principle says to retire. Severity: 6/10
+
+Existing Risk: 5/10 - The next per-tab resource added to a manager and forgotten in the checklist leaks a watcher, a process, or a map entry per closed tab, and a release that gains an ordering constraint has nowhere to state it except a comment.
+
+Proposal Risk: 3/10 - The deliberate exceptions must survive the registry walk — the workspace release deferred off the close path, the remote release only when the closing tab owns the channel, the database-wide close when the last tab closes, and the forget-persisted-before-delete ordering — so the risk moves into encoding those few cases correctly rather than into remembering every line.
+
+Proposal: Add an optional `closeTab(label)` to `ManagerLifecycle` in src/managers.ts, move each manager's existing per-tab release into that method (src/pseudoterminal-manager.ts, src/shell-manager.ts, src/acp/manager.ts, src/editor/acp-manager.ts, src/browser/tab.ts, src/remote/manager.ts, src/file-navigator/manager.ts, src/editor/watch-manager.ts, src/schedule/manager.ts, src/questions.ts, and src/database/manager.ts already hold the logic), and rewrite `closeTabResources` in src/tab/cleanup.ts to walk `MANAGER_DISPOSE_ORDER` calling `closeTab` where defined — keeping the special cases explicit around the walk: the deferred workspace release, the conditional remote release, `forgetPersisted` before `deleteAgentState`, the last-tab database close, and the transcript `tab:removed` emit. Delete the queue and legacy tab-count parameters and the union signature, passing the single non-docked count src/tab/close.ts supplies. Migrate src/tab/cleanup.test.ts's cases onto the per-manager methods and add one test that a manager defining `closeTab` is reached for every closed tab — the guarantee the checklist can only promise by review.
+
+
+* Pair each state-directory subsystem's init and clear in one registry so boot stops sequencing nineteen unconnected module calls by hand.
+
+Existing Debt: The boot sequence in src/main.ts calls eleven per-subsystem init functions and, on a non-relaunch start, eight per-subsystem clear functions as two flat, order-sensitive lists with no structural tie between an init and its clear — the same hand-maintained-checklist shape the lifecycle principle retires elsewhere. Severity: 4/10
+
+Existing Risk: 4/10 - A new subsystem wired in with its init but not its clear leaks the previous session's data into a fresh session — the non-relaunch clearing exists precisely to prevent that — and a missed init surfaces only as a first-use crash on someone's machine.
+
+Proposal Risk: 2/10 - The registry must preserve the boot order (later inits and loads read earlier state) and keep clearing conditional on a non-relaunch start, so the risk is an ordering slip the fold-over makes visible rather than a forgotten line.
+
+Proposal: Add a module (for example src/state-dirs.ts) exporting an ordered array of init/clear pairs wrapping the existing functions from src/agent/state.ts, src/harness/capture-file.ts, src/harness/recording-file.ts, src/harness/transcript-file.ts, src/browser/browser-log.ts, src/global-history.ts, src/connections.ts, src/profiles.ts, src/workspace/index.ts, src/file-navigator/remote-file-cache.ts, and the transcript logger and store constructors in src/transcript/, with per-entry fields for the arguments that differ (the profiles init's package root, the store's cwd). Rewrite `boot()` in src/main.ts to fold over the array — init every entry, then clear every entry only when the launch is not a relaunch — and pin the pairing with a compile-time completeness check in the style of `MANAGER_DISPOSE_ORDER_IS_COMPLETE`. Add the test the current shape cannot have: a boot-path test asserting every entry's clear runs on a non-relaunch start and no entry's clear runs on a relaunch.
+
+
+* Fold the bare schedule command into its registry definition so the one branch still running ahead of the command resolver can be deleted.
+
+Existing Debt: The bare `schedule` token is intercepted in the command manager before the resolver and opens the launch dialog there, while the same name also has a registry Command that handles every argful form — two definitions of one command that the architecture's own one-definition rule calls an unfinished migration, papered over by a shadow list that keeps plugin claims off the name. Severity: 4/10
+
+Existing Risk: 3/10 - The second path is kept safe only by prose: if a future edit drops `schedule` from the plugin adapter's shadow list, a plugin claiming the name registers successfully and is then silently unreachable for the bare form, with nothing failing loudly.
+
+Proposal Risk: 1/10 - The dialog open is one method call through the Managers registry the Command already receives, so the only real hazard is leaving the shadow-list entry behind with the branch, which the adapter's own comment names.
+
+Proposal: In src/commands/schedule.ts, extend the existing `schedule` Command's run so an empty remainder — the bare token — calls `managers.schedule.openScheduleLaunch()` and returns, exactly as the branch in src/command/manager.ts does today; leave the argful parsing untouched. Delete the pre-registry branch from `CommandManager.run` in src/command/manager.ts and remove `schedule` from `ROUTE_NAMES` in src/plugins/command-adapter.ts, leaving `shell` (stripped inside the resolver itself) as that list's only resident. The registry tests in src/commands.test.ts, the plugin claim tests under src/plugins/, and the command-manager tests pin the surrounding shapes and must keep passing; add one case that a bare `schedule` opens the dialog — a form only the branch covers today, so verify whether a test exists before relying on one.
+
+
+* Fix the handful of comments that actively mislead: two citing a plan path that moved and one describing a client sync method that does not exist.
+
+Existing Debt: Three comments describe things that are no longer there — two cite the editor-persona-connections plan under `product/plans/ready/` after it moved to `product/plans/complete/`, and one in the websocket client describes a fire-and-forget page-snapshot sync method that no longer follows it — the doc-rot the project's own principle calls bugs to fix on sight. Severity: 3/10
+
+Existing Risk: 3/10 - A reader tracing page-snapshot flow looks for the documented sync method in the websocket client and finds nothing (page snapshots cross the wire through the plugin intent path instead), and the stale plan path sends contributors to a file that does not exist.
+
+Proposal Risk: 1/10 - Comment-only changes touch no behavior; the only residual risk is a stale reference missed in the same sweep.
+
+Proposal: In web/src/ws.ts, delete the orphaned page-snapshot comment sitting above the save-file method and state where page snapshots actually cross the wire today — the snapshot capability carried by the plugin intent request (see src/plugins/context.ts and src/plugins/page/activate.ts). In src/editor/acp-manager.ts and web/src/editor/useEditorConnections.ts, correct the plan path to product/plans/complete/editor-tab-persona-connections.md, matching the citation style already used in src/editor-suggest/handler.ts. Finish with a grep for `plans/ready/` across src/ and web/src/ confirming no comment cites a path that is not on disk.
+
+
+* Consolidate the picker state plumbing that the app shell threads through a near-eighty-prop component and restates again in the keyboard layer's snapshot and callback bags.
+
+Existing Debt: Each picker's open/index/setter/opener quartet is threaded by hand through three parallel structures — the app shell's individual useState hooks fanned into a near-eighty-prop main component, and the window-key handler's snapshot and callback records restating every picker's fields again — so a new picker touches all three plus the overlay registry's mapping. Severity: 5/10
+
+Existing Risk: 4/10 - Every new overlay or picker re-implements the same four-field plumbing in three places; the overlay registry catches ordering drift, but a field wired into one structure and not the other fails only at runtime — a chord that cannot open its picker, an overlay that renders with a stale index.
+
+Proposal Risk: 3/10 - Consolidation must not trade the fan-out for one god context that re-renders the app on every keystroke, so the risk is relocation into a hook that still renders too much, and the keyboard layer's ref-based snapshot contract (it never re-registers on state change) must be preserved.
+
+Proposal: Introduce one `usePickerOverlays` hook in web/src/pickers/ that owns the nine open/index states (folding in the existing hooks — web/src/pickers/useHistPicker.ts, useThemePicker.ts, useAppThemePicker.ts, useQuickOpen.ts, useQueuePicker.ts, usePopulatePickers.ts, useTabNav.ts — plus the route-chooser state the app currently holds) and returns one object carrying both the state fields and the handlers. The app shell in web/src/App.tsx destructures that one object and passes it down as a single prop; web/src/AppMain.tsx and web/src/pickers/PickerOverlays.tsx take it whole instead of per-picker fields; web/src/useWindowKeys.ts's snapshot narrows to the fields the modal key chain actually reads, with handlers passed as the same object through a ref as today. The overlay registry in web/src/pickers/overlay-registry.ts keeps mapping the object to overlay-open state, so its compile-pinned completeness is unchanged. web/src/App.test.tsx, web/src/useWindowKeys.test.ts, and the picker tests under web/src/pickers/ pin behavior and must keep passing; typing the keyboard snapshot off the hook's return keeps a missing field a compile error rather than a runtime miss.
+
 ## deferred
 
 ## declined
