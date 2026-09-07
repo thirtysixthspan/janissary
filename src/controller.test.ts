@@ -256,6 +256,21 @@ describe('Controller', () => {
     expect(dispose).toHaveBeenCalledOnce();
   });
 
+  // Teardown follows the stated list, not the reverse of whatever order `createManagers` happened
+  // to assign in. `remote` is assigned before `profile`, `connection`, `communication`, `command`,
+  // `capture`, and `monitor`, so reverse-construction order would have disposed it ahead of `pty`.
+  it('shutdown disposes in the declared order rather than reverse construction order', () => {
+    const { c } = makeController();
+    const disposed: string[] = [];
+    for (const name of ['monitor', 'connection', 'pty', 'fileNavigator', 'acp', 'remote', 'tab'] as const) {
+      c.managers[name].dispose = () => { disposed.push(name); };
+    }
+
+    c.shutdown();
+
+    expect(disposed).toEqual(['monitor', 'connection', 'pty', 'fileNavigator', 'acp', 'remote', 'tab']);
+  });
+
   it('records an info message in the recipient context[] and persists it', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ctx-')));
     const { c } = makeController();

@@ -59,3 +59,55 @@ type ManagerRegistry = {
 export type Managers = {
   [Name in keyof ManagerRegistry]: ManagerRegistry[Name] & ManagerLifecycle;
 };
+
+// The order `Controller.shutdown` disposes managers in. Stated here rather than derived from the
+// assignment order in `controller/create-managers.ts`, which used to decide it by being reversed —
+// making JavaScript's property-insertion order the dependency graph, in a file whose own comment
+// invites reordering.
+//
+// Three groups, and the reason each sits where it does:
+//
+// 1. Session and process owners, first: they kill what they started while everything they need to
+//    do so is still up.
+// 2. `remote`, after every one of them. A remote PTY's `kill`, a remote ACP session's `acp-close`,
+//    and a remote navigator port's session close are all `channel.send(...)`, and `RemoteChannel.send`
+//    drops a frame silently once the channel is no longer attached — so closing the channels first
+//    means the processes on the far host are never told to stop. The transport outlives everything
+//    that speaks over it.
+// 3. `questions`, `tab`, and `database` last: they hold the state the managers above read while
+//    tearing down.
+export const MANAGER_DISPOSE_ORDER = [
+  'monitor',
+  'capture',
+  'command',
+  'communication',
+  'connection',
+  'profile',
+  'ssh',
+  'harness',
+  'shell',
+  'schedule',
+  'pty',
+  'editorAcp',
+  'editorWatch',
+  'fileNavigator',
+  'openFile',
+  'acp',
+  'browser',
+  'gitSync',
+  'workspace',
+  'plugins',
+  'conversations',
+  'remote',
+  'questions',
+  'tab',
+  'database',
+] as const satisfies readonly (keyof Managers)[];
+
+// A manager added to the registry without a position above fails this assignment, and the compiler
+// names the missing key in the error. `satisfies` above covers the other direction — a name that is
+// not a manager. A duplicate entry is the one thing types cannot see, so `managers.test.ts` pins it.
+type UnorderedManager = Exclude<keyof Managers, (typeof MANAGER_DISPOSE_ORDER)[number]>;
+export const MANAGER_DISPOSE_ORDER_IS_COMPLETE: [UnorderedManager] extends [never]
+  ? true
+  : UnorderedManager = true;

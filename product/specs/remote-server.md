@@ -183,6 +183,11 @@ Closing the last user locally ends the session and triggers the same cleanup. Ex
 `ssh:` connection is a force-close: it ends the shared channel and closes every tab and navigator
 using it.
 
+When the application itself quits, each remote process, ACP session, and navigator session is told
+to stop before the channel carrying that instruction is closed. Closing the channel first would
+leave those instructions undeliverable and the far-side processes running until `remote-serve`'s own
+hangup cleanup reached them.
+
 Nothing from the remote workspace is deleted locally when a remote tab closes. Files opened from a
 remote navigator are materialized in the local `.janissary/remote-files/` cache; that cache is
 cleared at launch and when the channel's last reference is released.
