@@ -9,6 +9,9 @@ type Point = { x: number; y: number };
 type Rect = Point & { centerX: number; centerY: number };
 type Drag = {
   from: number;
+  // The dragged tab's identity, so the drag can tell whether `from` still means the same tab. The
+  // index alone cannot: the list is server-driven and replaced whole.
+  label: string;
   to: number;
   origin: Point;
   pointer: Point;
@@ -60,6 +63,16 @@ function nearestSlot(rects: Rect[], pointer: Point, range: [number, number]): nu
   return nearest;
 }
 
+// Whether the strip this drag measured is still the strip on screen. The rectangles are captured
+// once, at the threshold crossing, while the tab list is server-driven and replaced whole — a tab
+// arriving or leaving mid-gesture (an agent opening one, a schedule firing, a monitor's reporting
+// tab) leaves the two describing different strips. Indexing the frozen rectangles with a slot
+// derived from the live list then reads past their end, and with no error boundary above the strip
+// that render throw blanks the window.
+function dragMatchesStrip(drag: Drag, tabs: TabView[]): boolean {
+  return tabs.length === drag.rects.length && tabs[drag.from]?.label === drag.label;
+}
+
 function previewOrder(size: number, from: number, to: number): number[] {
   const order = Array.from({ length: size }, (_, index) => index);
   const [moved] = order.splice(from, 1);
@@ -81,6 +94,10 @@ export function useTabReorder(
   const stripRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
+  // The drag callbacks outlive the render that created them, and reconciling against the list as it
+  // stood at `mousedown` would miss exactly the change this is here to catch.
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
   const callbackRef = useRef(onReorder);
   callbackRef.current = onReorder;
   const crossStripDropRef = useRef(crossStripDrop);
@@ -103,9 +120,11 @@ export function useTabReorder(
   }, [onKeyDown]);
 
   const begin = useCallback((from: number, down: React.MouseEvent) => {
-    if (!callbackRef.current || down.button !== 0) return;
+    const label = tabsRef.current[from]?.label;
+    if (!callbackRef.current || down.button !== 0 || label === undefined) return;
     const current: Drag = {
       from,
+      label,
       to: from,
       origin: { x: down.clientX, y: down.clientY },
       pointer: { x: down.clientX, y: down.clientY },
@@ -127,11 +146,14 @@ export function useTabReorder(
       }
       move.preventDefault();
       current.pointer = pointer;
-      current.to = nearestSlot(current.rects, pointer, allowedRange(tabs, from));
+      // Once the strip has changed underneath it the drag is finished; the preview has already
+      // unwound, and only the release still has to know not to act on it.
+      if (!dragMatchesStrip(current, tabsRef.current)) return;
+      current.to = nearestSlot(current.rects, pointer, allowedRange(tabsRef.current, current.from));
       setDrag({ ...current });
     }, (up) => {
       globalThis.removeEventListener('keydown', onKeyDown);
-      if (current.started && !current.cancelled) {
+      if (current.started && !current.cancelled && dragMatchesStrip(current, tabsRef.current)) {
         const crossDrop = crossStripDropRef.current;
         const strip = stripRef.current;
         if (crossDrop && strip && isOtherStripInZone(up, strip, crossDrop.zone)) {
@@ -143,10 +165,11 @@ export function useTabReorder(
       dragRef.current = null;
       setDrag(null);
     });
-  }, [onKeyDown, tabs]);
+  }, [onKeyDown]);
 
   const transformFor = (index: number): TabDragTransform | undefined => {
     if (!drag) return undefined;
+    if (!dragMatchesStrip(drag, tabs)) return undefined;
     if (index === drag.from) {
       return {
         x: drag.pointer.x - drag.origin.x,

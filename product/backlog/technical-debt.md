@@ -2,17 +2,6 @@
 
 ## ready
 
-* Reconcile a tab-strip drag against the tab list underneath it instead of trusting the geometry captured when the drag began.
-
-Existing Debt: The drag measures every tab's rectangle once at the threshold crossing and then indexes that frozen array with slots derived from the live, server-driven tab list, with nothing checking that the two still describe the same strip. Severity: 6/10
-
-Existing Risk: 8/10 - A tab appearing while a drag is in flight — an agent opening one through its plugin capability, a schedule firing, a monitor's reporting tab arriving — makes the preview transform read past the end of the captured rectangles, and there is no error boundary above the tab strip to keep that render throw from blanking the window until the user reloads.
-
-Proposal Risk: 3/10 - A drag whose strip changed underneath it ends without reordering rather than taking the page down, though a tab inserted just before the release can still shift which slot the drop resolves to.
-
-Proposal: `useTabReorder` in `web/src/useTabReorder.ts` fills `Drag.rects` from `measuredTabs(strip)` the first time the pointer passes `DRAG_THRESHOLD_PX` and never revisits it. `transformFor`, rebuilt on every render, then calls `previewOrder(tabs.length, …)` against the current `tabs` prop and indexes `drag.rects[slot]` and `drag.rects[index]` with the result, so any render where `tabs.length` exceeds `rects.length` dereferences `undefined`. The same gesture reads two different arrays as well: `allowedRange(tabs, from)` runs inside the `startDrag` move callback and sees the `tabs` captured when `begin` was created, while `transformFor` sees the latest one. Carry the dragged tab's `label` on the `Drag` record beside `from`, and add one reconciliation point: when `tabs.length !== drag.rects.length`, or `tabs[drag.from]?.label` is no longer that label, treat the drag as cancelled — return `undefined` from `transformFor`, and have the `mouseup` handler skip both `crossDrop.onDrop` and `callbackRef.current`. Re-measuring rather than cancelling is the larger change and can wait; cancelling is what stops the crash. `web/src/TabStrip.tsx` is the only caller and passes `tabs` straight through, so nothing else needs touching. `web/src/TabStrip.test.tsx` covers the threshold, Escape cancellation, release outside the strip, the cross-strip drop, and group clamping, but every one of them holds the tab list fixed for the whole gesture; add cases that rerender with a tab inserted and with the dragged tab removed between `mousedown` and `mouseup`, asserting no throw and no reorder message, while the existing unchanged-list cases still commit.
-
-
 * Address a monitor by its runtime name everywhere the user and the UI name one, not only inside the registry that keys on it.
 
 Existing Debt: A monitor's `name` became its runtime identity and its registry key, but the command grammar, the listing, the completion catalog, the connections rows, and the reporting tab's payload all still call that argument the persona, so the two spellings agree only while they happen to be equal. Severity: 7/10

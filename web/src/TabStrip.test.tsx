@@ -461,6 +461,75 @@ describe('TabStrip', () => {
     expect(onReorder).toHaveBeenCalledWith(0, 1);
   });
 
+  // Every drag case above holds the tab list fixed for the whole gesture. The list is server-driven,
+  // so it can change mid-drag — an agent opening a tab through its plugin capability, a schedule
+  // firing, a monitor's reporting tab arriving — while the rectangles were measured once, at the
+  // threshold crossing.
+  describe('a drag whose strip changes underneath it', () => {
+    const dragStrip = (tabs: TabView[], onReorder: () => void) => {
+      const properties = (current: TabView[]) => (
+        <TabStrip tabs={current} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()}
+          onRename={vi.fn()} onReorder={onReorder} tabNameMaxLength={100} />
+      );
+      const view = render(properties(tabs));
+      mockTabRects(view.container);
+      fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+      fireEvent.mouseMove(document, { clientX: 240 });
+      return { ...view, setTabs: (next: TabView[]) => { view.rerender(properties(next)); } };
+    };
+
+    it('renders without throwing when a tab appears mid-gesture, and reorders nothing', () => {
+      const onReorder = vi.fn();
+      const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
+      const { setTabs } = dragStrip(tabs, onReorder);
+
+      expect(() => { setTabs([...tabs, makeTab({ label: 'd' })]); }).not.toThrow();
+
+      fireEvent.mouseUp(document);
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('reorders nothing when the dragged tab is removed mid-gesture', () => {
+      const onReorder = vi.fn();
+      const tabs = [makeTab({ label: 'a' }), makeTab({ label: 'b' }), makeTab({ label: 'c' })];
+      const { setTabs } = dragStrip(tabs, onReorder);
+
+      setTabs([makeTab({ label: 'b' }), makeTab({ label: 'c' })]);
+      fireEvent.mouseUp(document);
+
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+
+    it('skips a cross-strip drop when the source strip gained a tab mid-gesture', () => {
+      const onCrossStripDrop = vi.fn();
+      const onReorder = vi.fn();
+      const source = (tabs: TabView[]) => (
+        <>
+          <TabStrip
+            tabs={tabs} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()}
+            onReorder={onReorder}
+            crossStripDrop={{ zone: 'center', onDrop: onCrossStripDrop }} tabNameMaxLength={100}
+          />
+          <TabStrip
+            tabs={[makeTab({ label: 'target' })]} activeTab={0} onSelect={vi.fn()}
+            onClose={vi.fn()} onRename={vi.fn()}
+            crossStripDrop={{ zone: 'center', onDrop: vi.fn() }} tabNameMaxLength={100}
+          />
+        </>
+      );
+      const { container, rerender } = render(source([makeTab({ label: 'a' })]));
+      mockTabRects(container);
+      fireEvent.mouseDown(screen.getByText('a'), { clientX: 40 });
+      fireEvent.mouseMove(document, { clientX: 140 });
+
+      rerender(source([makeTab({ label: 'a' }), makeTab({ label: 'late' })]));
+      fireEvent.mouseUp(screen.getByText('target'));
+
+      expect(onCrossStripDrop).not.toHaveBeenCalled();
+      expect(onReorder).not.toHaveBeenCalled();
+    });
+  });
+
   it('still renames after a press with no drag movement', async () => {
     const onReorder = vi.fn();
     render(
