@@ -89,6 +89,7 @@ ${keychainWriteClause})
 ${secretDenyClauses})
 (allow file-read-data file-write-data
   (literal "/dev/null")
+  (literal "/dev/ptmx")
   (regex #"^/dev/tty")
   (regex #"^/dev/pty"))
 ; Terminal ioctls (raw-mode/echo termios, window size) are a separate Seatbelt operation from
@@ -97,6 +98,7 @@ ${secretDenyClauses})
 ; of being consumed by the TUI (e.g. Enter never submits).
 (allow file-ioctl
   (literal "/dev/null")
+  (literal "/dev/ptmx")
   (regex #"^/dev/tty")
   (regex #"^/dev/pty"))
 
