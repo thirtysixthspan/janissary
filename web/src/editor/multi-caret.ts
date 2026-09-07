@@ -11,6 +11,10 @@ import { offsetToPos, posToOffset } from './offsets';
 
 export type MultiEditKind = 'insert' | 'deleteBackward' | 'deleteForward';
 
+// Where each caret lands relative to the text its selection received. Only an insert can tell the
+// two apart — a delete puts nothing in, so its start and end are the same offset.
+export type CaretPlacement = 'start' | 'end';
+
 // What one selection replaces: itself when it has one, and otherwise the character the equivalent
 // single-caret rule would have removed (./model.ts `deleteBackward`, `deleteForward`) — or nothing
 // at all, for an insert or at the document's edge.
@@ -30,7 +34,9 @@ function rangeFor(lines: readonly string[], sel: Selection, kind: MultiEditKind)
 
 // `textFor` is asked by document-order position, which is what makes distributing one clipboard
 // line per selection (see ./applyKeyAction.ts) mean what a reader expects it to mean.
-export function multiEdit(s: EditorState, kind: MultiEditKind, textFor: (index: number) => string): EditorState {
+export function multiEdit(
+  s: EditorState, kind: MultiEditKind, textFor: (index: number) => string, caret: CaretPlacement = 'end',
+): EditorState {
   const created = allSelections(s);
   const ordered = created
     .map((sel, index) => ({ sel, index }))
@@ -46,8 +52,10 @@ export function multiEdit(s: EditorState, kind: MultiEditKind, textFor: (index: 
   for (const [position, entry] of ordered.entries()) {
     const range = rangeFor(s.lines, entry.sel, kind);
     const [start, end] = [posToOffset(s.lines, range.start), posToOffset(s.lines, range.end)];
-    out += document.slice(read, start) + (kind === 'insert' ? textFor(position) : '');
-    cursors.push(out.length);
+    out += document.slice(read, start);
+    const inserted = out.length;
+    if (kind === 'insert') out += textFor(position);
+    cursors.push(caret === 'start' ? inserted : out.length);
     read = end;
   }
   out += document.slice(read);

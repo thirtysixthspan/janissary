@@ -13,6 +13,9 @@ export type KeyAction =
   | { kind: 'lineEdge'; edge: 'home' | 'end'; extend: boolean }
   | { kind: 'docEdge'; edge: 'start' | 'end'; extend: boolean }
   | { kind: 'insert'; text: string }
+  // No key binding produces this one: the hidden textarea's paste event does (see
+  // useEditorInteractions). It is an insert that leaves the caret where the text begins.
+  | { kind: 'paste'; text: string }
   | { kind: 'deleteBackward' }
   | { kind: 'deleteForward' }
   | { kind: 'kill' }

@@ -54,7 +54,7 @@ Put the caret inside a word and press `Cmd+D` to select it. Press `Cmd+D` again 
 
 Matching is case-sensitive and can find a selected fragment inside a longer word. It searches forward, wraps at the end of the file, and stops changing the selection once every occurrence is selected. You can also select text across several lines before pressing `Cmd+D`.
 
-Each selection has its own caret. Typing, `Backspace`, `Delete`, and paste apply at every caret as one undoable edit. Copy and cut join the selected texts with newlines in document order. If pasted text has one line per selection, each caret receives its corresponding line; otherwise every caret receives the full pasted text.
+Each selection has its own caret. Typing, `Backspace`, `Delete`, and paste apply at every caret as one undoable edit. Copy and cut join the selected texts with newlines in document order. If pasted text has one line per selection, each caret receives its corresponding line; otherwise every caret receives the full pasted text. Every caret ends at the start of what it received, the same as with a single caret.
 
 Press `Cmd+U` to drop the most recently added selection. Press `Escape` to collapse all of them to the most recent one. A click in the buffer, `Cmd+F`, saving, or an automatic reload also returns to one caret. Switching tabs and back keeps the selections. Arrow keys and selection-extension keys move every caret independently, though vertical movement uses whole document lines when several carets are active.
 
@@ -65,6 +65,8 @@ These editing shortcuts are bundled with the editor. If one fails, its attempted
 The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
 
 Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press.
+
+Pasting is the one edit that doesn't move the view. The clipboard text goes in at the caret and the caret stays at the start of it, so the pasted lines appear under the place you were working instead of the view chasing the caret to the end of a long paste. One `Cmd+Z` takes the whole paste back.
 
 Switching to another tab and back leaves your scroll position exactly where you left it, even if the cursor itself is out of view — only an actual cursor move while the tab is active pulls the view back to it.
 

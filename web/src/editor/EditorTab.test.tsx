@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, createEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './EditorTab';
@@ -103,6 +103,15 @@ function type(text: string) {
   const element = textarea() as HTMLTextAreaElement;
   element.value = text;
   fireEvent.input(element);
+}
+
+// A paste arrives as its own event carrying the clipboard, not as text the textarea already holds —
+// which is the whole point of the handler under test. The event is returned so a case can check
+// that the default (writing into the textarea) was cancelled.
+function paste(text: string) {
+  const event = createEvent.paste(textarea(), { clipboardData: { getData: () => text } });
+  fireEvent(textarea(), event);
+  return event;
 }
 
 beforeEach(() => {
@@ -1042,6 +1051,63 @@ describe('EditorTab', () => {
 
       expect(queryRowText(container)).toBe('> summarizer pasted text');
       expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('line one');
+    });
+
+    it('routes a real paste event into the query text, not the buffer, while the query line is active', async () => {
+      const { client } = makeClient();
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      fireEvent.keyDown(textarea(), { key: '>' });
+
+      paste(' summarizer pasted text');
+
+      expect(queryRowText(container)).toBe('> summarizer pasted text');
+      expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('line one');
+    });
+  });
+
+  describe('paste', () => {
+    const bufferTexts = (container: HTMLElement) =>
+      [...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content')].map((n) => n.textContent);
+
+    it('drops the clipboard text at the caret and leaves the caret where it begins', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      paste('alpha\nbeta');
+      expect(bufferTexts(container)).toEqual(['alpha', 'betaline one', 'line two']);
+      expect(container.querySelector(':scope .editor-row-current .editor-content')?.textContent).toBe('alpha');
+      expect(textBeforeCaret(container)).toBe('');
+    });
+
+    it('does not scroll the body, since the caret has not moved', async () => {
+      const { client } = makeClient();
+      await renderLoaded(client);
+      const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
+      scrollIntoView.mockClear();
+      paste('alpha\nbeta\ngamma');
+      expect(scrollIntoView).not.toHaveBeenCalled();
+    });
+
+    it('cancels the browser default so the text never reaches the hidden textarea', async () => {
+      const { client } = makeClient();
+      await renderLoaded(client);
+      expect(paste('alpha').defaultPrevented).toBe(true);
+      expect((textarea() as HTMLTextAreaElement).value).toBe('');
+    });
+
+    it('takes the whole paste back in one undo', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      paste('alpha\nbeta');
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      expect(bufferTexts(container)).toEqual(['line one', 'line two']);
+    });
+
+    it('inserts nothing when the clipboard holds no text', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      paste('');
+      expect(bufferTexts(container)).toEqual(['line one', 'line two']);
     });
   });
 
