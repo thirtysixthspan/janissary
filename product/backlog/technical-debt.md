@@ -2,9 +2,6 @@
 
 ## ready
 
-
-## development
-
 * Coalesce and incrementally invalidate the per-mutation state broadcast so one keystroke stops re-flattening and re-serializing every open tab's whole transcript.
 
 Existing Debt: The server answers essentially every mutation by synchronously rebuilding the entire view — every tab re-flattened from its full log and the whole record re-serialized to every client — with no dirty-mark coalescing, no per-tab caching of the flattened buffer, and no sequence numbers, because nothing owns "what changed since the last broadcast" as a concept. Severity: 7/10
@@ -101,6 +98,8 @@ Proposal: Introduce one `usePickerOverlays` hook in web/src/pickers/ that owns t
 * Move the three flat `src/project-*.ts` files into `src/project/`: `project-files.ts`, `project-init.ts`, and `project-tokens.ts` sit in the flat `src/` root with three colocated tests and no bare `src/project.ts` entry. They are one concern, what the launch directory provides: its gitignore-aware file list for quick open, the `ai/` and `product/` tree that `janus init` scaffolds, and the `.janissary/` credential registry that feeds sandboxed tabs. The tie is looser than in the other clusters logged here, since the three do quite different work, but each one reads or writes the project directory and nothing else does that job. Nineteen files import the group, most of them for `PROJECT_TOKENS`, so the move is a rename plus nineteen import path rewrites. `src/project/` does not exist yet and no config file names any of the three paths literally. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `project` prefix. Severity: **low**.
 
 * Move the stray `src/command-tokens.ts` into the `src/command/` directory that already exists, as `src/command/tokens.ts`: it is the only flat `command-*.ts` file left in `src/`, it has no colocated test, and there is no bare `src/command.ts` entry. `src/command/` already holds `manager.ts`, `queue.ts`, `router.ts`, and `manager.test.ts`, the pipeline that runs a tab's commands, and `command-tokens.ts` is the parser that reduces one command line to the program it actually runs, so it belongs beside them. Nothing in `src/command/` is named `tokens.ts`, so dropping the prefix collides with nothing. Only `src/interactive.ts` and `src/interactive-learned.ts` import it, so the move is a rename plus two import path rewrites. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `command` prefix. Severity: **low**.
+
+## development
 
 ## deferred
 
