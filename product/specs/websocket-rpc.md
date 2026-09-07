@@ -14,6 +14,12 @@ Every recognized method has one reply mode. Acknowledgement methods reply with `
 
 An action that throws or a deferred action that rejects replies with the request id and the error message. A method may deliberately replace a failure with a documented fallback result, as project-file and file-navigator searches do.
 
+### Requests outstanding when the connection ends
+
+A request still waiting for its reply when the connection ends is answered as a connection failure rather than left waiting. A closed socket delivers nothing further, and work built on a reply — a save the user is watching, a plugin action holding a busy indicator — has to be able to finish. Whatever a caller shows for an unavailable answer is what it shows here.
+
+Nothing is resent. A lost reply does not establish that the server never carried the request out, so replaying a mutating call could apply it twice. A reply that arrives after a connection has been given up on is ignored, exactly as a reply for an unrecognized request id is.
+
 ### Invalid frames
 
 The server silently drops malformed JSON and JSON values that are not valid RPC envelopes. This includes unknown methods and requests with missing, null, array, or primitive `params`. Dropped frames are neither dispatched nor acknowledged, and they do not close the WebSocket; a later valid request on the same connection is handled normally.

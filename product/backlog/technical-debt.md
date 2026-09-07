@@ -2,17 +2,6 @@
 
 ## ready
 
-* Settle outstanding WebSocket requests when their connection ends.
-
-Existing Debt: The WebSocket client owns pending request callbacks but has no connection-close settlement path, and disposal clears those callbacks without completing their promises. Severity: 6/10
-
-Existing Risk: 6/10 - A socket disconnect after sending a save or plugin intent leaves its promise pending indefinitely, so waiting dialogs and busy indicators cannot finish even though no reply can arrive.
-
-Proposal Risk: 2/10 - Connection termination produces a definite failure for waiting callers, although a lost reply still cannot establish whether the server completed the operation before disconnecting.
-
-Proposal: Add one idempotent pending-request drain in `web/src/ws.ts` and use it from the socket close handler and `JanusClient.dispose()` instead of silently clearing the map. Preserve existing caller conventions in this increment: generic `request()` resolves with its existing unavailable-result value and `saveFile()` resolves with a nonempty connection error, using the callback's existing error parameter; do not replay mutating requests automatically because a missing reply does not prove the operation failed. Handle a synchronous socket-send failure through the same request cleanup so its callback is not retained. `web/src/plugins/api.ts` already turns an undefined intent result into a rejection, and `web/src/editor/useEditorFile.ts` already displays a returned save error. `web/src/ws.test.ts` covers requests started on an already-closed socket, normal replies, and listener cleanup on disposal, but never terminates a connection with requests outstanding; extend its fake socket to dispatch close and assert settlement of multiple pending requests, harmless late replies, and idempotent close/dispose cleanup.
-
-
 * Reconcile a tab-strip drag against the tab list underneath it instead of trusting the geometry captured when the drag began.
 
 Existing Debt: The drag measures every tab's rectangle once at the threshold crossing and then indexes that frozen array with slots derived from the live, server-driven tab list, with nothing checking that the two still describe the same strip. Severity: 6/10

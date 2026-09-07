@@ -3,12 +3,19 @@ import { JanusClient } from './ws';
 
 describe('JanusClient', () => {
   let messageHandler: ((event: { data: string }) => void) | undefined;
+  // The socket ending is an event the client has to hear, so the fake records that handler too and
+  // the tests below fire it. `close()` on a real socket only requests the close; the event follows.
+  let closeHandler: (() => void) | undefined;
   const wsMockProps = () => ({
     readyState: 1,
     send: vi.fn(),
     addEventListener: vi.fn((_event: string, handler: (...args: unknown[]) => void) => {
-      if (_event === 'open') { /* stored but unused in tests */ }
-      else if (_event === 'message') messageHandler = handler as (event: { data: string }) => void;
+      switch (_event) {
+      case 'open': { /* stored but unused in tests */ break; }
+      case 'message': { messageHandler = handler as (event: { data: string }) => void; break; }
+      case 'close': { closeHandler = handler as () => void; break; }
+      // No default
+      }
     }),
     close: vi.fn(),
   });
@@ -16,6 +23,7 @@ describe('JanusClient', () => {
 
   beforeEach(() => {
     messageHandler = undefined;
+    closeHandler = undefined;
     inst = wsMockProps();
     const wsCtor = function () { return inst; } as unknown as typeof WebSocket;
     (wsCtor as unknown as Record<string, number>).OPEN = 1;
@@ -284,6 +292,67 @@ describe('JanusClient', () => {
     client.attachPty('tab-1', handler);
 
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  // A reply is the only thing that used to remove a pending request, so a connection ending with one
+  // outstanding left its promise pending for the life of the page — and whatever was waiting on it
+  // waiting with it.
+  describe('requests outstanding when the connection ends', () => {
+    it('settles every pending request when the socket closes', async () => {
+      const client = new JanusClient();
+      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      const save = client.saveFile('/file.txt', 'content');
+
+      closeHandler!();
+
+      await expect(completion).resolves.toBeUndefined();
+      await expect(save).resolves.toBe('connection closed');
+    });
+
+    it('drops a reply that arrives after the connection ended', async () => {
+      const client = new JanusClient();
+      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      closeHandler!();
+      await expect(completion).resolves.toBeUndefined();
+
+      expect(() => {
+        messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'late' }) });
+      }).not.toThrow();
+    });
+
+    it('is idempotent across a second close and a following dispose', async () => {
+      const client = new JanusClient();
+      const save = client.saveFile('/file.txt', 'content');
+
+      closeHandler!();
+      closeHandler!();
+      client.dispose();
+
+      await expect(save).resolves.toBe('connection closed');
+    });
+
+    it('settles a request outstanding at dispose rather than abandoning it', async () => {
+      const client = new JanusClient();
+      const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
+      const save = client.saveFile('/file.txt', 'content');
+
+      client.dispose();
+
+      await expect(completion).resolves.toBeUndefined();
+      await expect(save).resolves.toBe('connection closed');
+    });
+
+    it('settles a request whose send throws instead of retaining its callback', async () => {
+      const client = new JanusClient();
+      inst.send.mockImplementation(() => { throw new Error('InvalidStateError'); });
+
+      const save = client.saveFile('/file.txt', 'content');
+
+      await expect(save).resolves.toBe('connection closed');
+      expect(() => {
+        messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, error: 'late' }) });
+      }).not.toThrow();
+    });
   });
 
   it('registering the same collector name again replaces the previous collector', () => {
