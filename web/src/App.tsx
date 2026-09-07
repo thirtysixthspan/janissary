@@ -1,14 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JanusClient } from './ws';
-import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
+import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 import type { DirtyTabHandle } from './tab-handles';
 import { useTabHandles } from './useTabHandles';
-import { useTabNav } from './useTabNav';
-import { useQuickOpen } from './pickers/useQuickOpen';
-import { useQueuePicker } from './pickers/useQueuePicker';
-import { usePopulatePickers } from './pickers/usePopulatePickers';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
 import { useCommandDrafts } from './agent-tabs/command-input/useCommandDrafts';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
@@ -16,20 +12,16 @@ import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitc
 import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';
 import { useViewSearchState } from './useViewSearchState';
-import { getRecentHistory } from './history';
 import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
-import { useThemePicker } from './pickers/useThemePicker';
-import { useAppThemePicker } from './pickers/useAppThemePicker';
-import { useHistPicker } from './pickers/useHistPicker';
+import { usePickerOverlays } from './pickers/usePickerOverlays';
 import { useServerState, useTabNameLimits } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
-import { buildOverlayOpenState } from './pickers/overlay-registry';
 import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
 
 export function App({ client }: { client: JanusClient }) {
@@ -42,14 +34,10 @@ export function App({ client }: { client: JanusClient }) {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [janissaryTasksDir, setJanissaryTasksDir] = useState('');
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
-  // Server-driven route chooser (null when closed); `routeIdx` is the highlighted option.
-  const [route, setRoute] = useState<RouteChooserView | null>(null);
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
   // Server-driven "New schedule" dialog (null when closed).
   const [scheduleLaunch, setScheduleLaunch] = useState<ScheduleLaunchView | null>(null);
-  const [routeIndex, setRouteIndex] = useState(0);
-  const routeReference = useRef<RouteChooserView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
   // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
   // pickers so a selected row's text lands in the command line without submitting.
@@ -79,36 +67,17 @@ export function App({ client }: { client: JanusClient }) {
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
-  // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
-  const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
 
   const { canSearch, search, highlight } = useViewSearchState(current, lines);
 
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
-  const { themePickerOpen, themePickerIndex, setThemePickerIndex, setThemePickerOpen, openThemePicker, pickTheme } =
-    useThemePicker(syntaxTheme, runCommand);
-  const {
-    theme, setTheme, appThemePickerOpen, appThemePickerIndex, setAppThemePickerIndex, setAppThemePickerOpen, openAppThemePicker, pickAppTheme,
-  } = useAppThemePicker(runCommand);
-  const { pickerOpen, pickerIndex, setPickerIndex, setPickerOpen, openPicker, pick } = useHistPicker(recent, runCommand);
-  const {
-    navOpen, navQuery, navIndex, navTabs, setNavIndex, setNavQuery, setNavOpen, openTabNav, openTabNavWithQuery, selectNavTab,
-  } = useTabNav(client, tabs);
-  const {
-    quickOpenOpen, quickOpenQuery, quickOpenIndex, quickOpenLoading, quickOpenResults,
-    setQuickOpenQuery, setQuickOpenIndex, openQuickOpen, closeQuickOpen, pickQuickOpenFile,
-  } = useQuickOpen(client);
-
-  const {
-    queueOpen, queueIndex, setQueueIndex, setQueueOpen, openQueue, selectQueueIndex, onEditQueued, onDeleteQueued,
-  } = useQueuePicker(client, current, inputReference, recallReference);
-  const {
-    taskPickerOpen, taskPickerIndex, setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, visibleTasks, toggleTaskDir,
-    profilePickerOpen, profilePickerIndex, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile, visibleProfiles,
-  } = usePopulatePickers(
-    tasks, janissaryTasksDir, profiles, recallReference, inputReference, client,
-    current?.view === 'harness' ? current.harness?.ptyId : undefined, dropReference,
-  );
+  // Every modal overlay's state, under one owner. It hands out a bag per consumer — the render tree,
+  // the window key handler, the command bar's interception chain, the server state stream — so none
+  // of them restates the others' fields (see `pickers/usePickerOverlays`).
+  const pickers = usePickerOverlays({
+    client, current, tabs, syntaxTheme, tasks, janissaryTasksDir, profiles, runCommand,
+    inputRef: inputReference, recallRef: recallReference, dropRef: dropReference,
+  });
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
@@ -128,14 +97,8 @@ export function App({ client }: { client: JanusClient }) {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  // The one place the nine picker booleans become "which overlay is open". Every consumer below —
-  // the render chain, the command-bar suppression flag, and the close-tab chord — reads this object.
-  const overlays = buildOverlayOpenState({
-    route, themePickerOpen, appThemePickerOpen, quickOpenOpen, navOpen,
-    pickerOpen, queueOpen, taskPickerOpen, profilePickerOpen,
-  });
   const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
-    activeTab, quitConfirmOpen, unsavedQuitOpen, overlays, route,
+    activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays, pickers.route,
   );
 
   const closeTab = useCallback((index: number) => {
@@ -143,13 +106,11 @@ export function App({ client }: { client: JanusClient }) {
     if (guardRef.current?.(index)) return; client.send({ method: 'closeTab', params: { index } });
   }, [client, tabs, guardedOpenQuitConfirm]);
 
-  const chooseRoute = useCallback((index: number) => client.send({ method: 'chooseRoute', params: { index } }), [client]);
-
   useServerState(client, {
-    setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex,
-    routeRef: routeReference,
+    setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme,
+    setTasks, setJanissaryTasksDir, setProfiles,
+    ...pickers.serverState,
   });
 
   useEffect(() => { applySyntaxTheme(syntaxTheme); }, [syntaxTheme]);
@@ -167,25 +128,15 @@ export function App({ client }: { client: JanusClient }) {
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
-  // Live snapshot + callbacks read by the window key handler, so it never has to re-register.
+  // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
+  // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
   useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
-    pickerOpen, pickerIdx: pickerIndex, recent, route, routeIdx: routeIndex, canSearch, searchOpen: search.searchOpen,
-    themePickerOpen, themePickerIdx: themePickerIndex, appThemePickerOpen, appThemePickerIdx: appThemePickerIndex,
-    navOpen, navQuery, navIdx: navIndex, navTabs, queueOpen, queueIdx: queueIndex, queueItems: current?.commandQueue ?? [],
-    taskPickerOpen, taskPickerIdx: taskPickerIndex, visibleTasks,
-    profilePickerOpen, profilePickerIdx: profilePickerIndex, profiles: visibleProfiles,
-    quickOpenOpen,
-    setRouteIndex, chooseRoute, runCommand, setPickerIndex, setPickerOpen, openPicker, openSearch: () => search.open(''),
-    setThemePickerIndex, setThemePickerOpen, pickTheme, setAppThemePickerIndex, setAppThemePickerOpen, pickAppTheme,
-    setNavIndex, setNavQuery, selectNavTab, setNavOpen, openTabNav,
-    setQueueIndex, setQueueOpen, openQueue,
-    setTaskPickerIndex, setTaskPickerOpen, openTaskPicker, pickTask, toggleTaskDir, setProfilePickerIndex, setProfilePickerOpen, openProfilePicker, pickProfile,
-    openQuickOpen,
+    ...pickers.keys, canSearch, searchOpen: search.searchOpen, openSearch: () => search.open(''),
   });
 
   const onCommandBarSubmit = useCommandBarSubmit({
-    canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, navOpen, setNavOpen,
-    openTabNavWithQuery, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
+    ...pickers.commands,
+    canSearch, lines, search, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
@@ -194,21 +145,12 @@ export function App({ client }: { client: JanusClient }) {
     <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-      overlays={overlays} route={route} routeIndex={routeIndex} onPickRoute={chooseRoute}
-      syntaxTheme={syntaxTheme} themePickerIndex={themePickerIndex} onPickTheme={pickTheme}
-      theme={theme} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={pickAppTheme}
-      recent={recent} pickerIndex={pickerIndex} onPickHistory={pick}
-      navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={selectNavTab}
-      queueIndex={queueIndex} onSelectQueue={selectQueueIndex}
-      taskRows={visibleTasks} taskPickerIndex={taskPickerIndex} onPickTask={pickTask} onToggleTaskDir={toggleTaskDir}
-      profiles={visibleProfiles} profilePickerIndex={profilePickerIndex} onPickProfile={pickProfile}
-      quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={setQuickOpenQuery}
-      quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={setQuickOpenIndex}
-      quickOpenLoading={quickOpenLoading} onPickQuickOpen={pickQuickOpenFile} onCloseQuickOpen={closeQuickOpen}
+      pickers={pickers.view} tabs={tabs}
       search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
       onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-      recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+      recallReference={recallReference}
+      onEditQueued={pickers.onEditQueued} onDeleteQueued={pickers.onDeleteQueued}
       dropRef={dropReference}
       activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
       actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}

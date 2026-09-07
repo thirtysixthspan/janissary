@@ -5,8 +5,6 @@
 
 ## development
 
-* Consolidate the picker state plumbing that the app shell threads through a near-eighty-prop component and restates again in the keyboard layer's snapshot and callback bags. — deferred: complexity 8/10, a restructuring of the near-eighty-prop app shell, three parallel plumbing structures (App.tsx state fan-out, AppMain/PickerOverlays props, the keyboard layer's snapshot/callback bags), and the fold of seven existing hooks plus route-chooser state into one usePickerOverlays hook, with re-render-contract risks (the keyboard layer's ref-based snapshot must not trade into a god context).
-
 ## deferred
 
 

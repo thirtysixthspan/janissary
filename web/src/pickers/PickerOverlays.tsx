@@ -1,67 +1,25 @@
 import React from 'react';
-import type { RouteChooserView, TabView } from '@shared/protocol';
 import { HistoryPicker } from './HistoryPicker';
 import { ThemePicker } from './ThemePicker';
 import { RouteChooser } from './RouteChooser';
 import { TabNavPicker } from './TabNavPicker';
 import { QueuePicker } from './QueuePicker';
 import { TaskPicker } from './TaskPicker';
-import type { VisibleTaskRow } from './task-picker-keys';
 import { ProfilePicker } from './ProfilePicker';
-import type { VisibleProfileRow } from './profile-picker-keys';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
 import { QuickOpen } from './QuickOpen';
-import { firstOpenOverlay, type OverlayOpenState } from './overlay-registry';
-import type { FuzzyMatchResult } from '../fuzzy-match';
+import { firstOpenOverlay } from './overlay-registry';
+import type { PickerOverlayView } from './picker-overlay-view';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar. Which one
 // wins is not decided here: `firstOpenOverlay` answers that from the one ordered registry the
 // keyboard priority chain and the command-bar suppression flag also read (see `overlay-registry`).
 // Split out of App.tsx to keep it under the file-size limit.
-type Properties = {
-  // Which overlays are up, built once by `buildOverlayOpenState` where the picker state lives.
-  overlays: OverlayOpenState;
-  // The route chooser renders from the view object rather than from `overlays.route`, so the view
-  // itself is still a prop of its own.
-  route: RouteChooserView | null;
-  routeIndex: number;
-  onPickRoute: (index: number) => void;
-  syntaxTheme: string;
-  themePickerIndex: number;
-  onPickTheme: (name: string) => void;
-  theme: string;
-  appThemePickerIndex: number;
-  onPickAppTheme: (name: string) => void;
-  recent: string[];
-  pickerIndex: number;
-  onPickHistory: (command: string) => void;
-  navQuery: string;
-  navIndex: number;
-  tabs: TabView[];
-  onPickTab: (index: number) => void;
-  queueItems: string[];
-  queueIndex: number;
-  onSelectQueue: (index: number) => void;
-  taskRows: VisibleTaskRow[];
-  taskPickerIndex: number;
-  onPickTask: (path: string) => void;
-  onToggleTaskDir: (path: string) => void;
-  profiles: VisibleProfileRow[];
-  profilePickerIndex: number;
-  onPickProfile: (name: string) => void;
-  quickOpenQuery: string;
-  onChangeQuickOpenQuery: (query: string) => void;
-  quickOpenResults: FuzzyMatchResult[];
-  quickOpenIndex: number;
-  onChangeQuickOpenIndex: (index: number) => void;
-  quickOpenLoading: boolean;
-  onPickQuickOpen: (relPath: string) => void;
-  onCloseQuickOpen: () => void;
-  commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
-};
-
+//
+// The prop list is `PickerOverlayView`, declared beside the builder that fills it, so the hook that
+// owns the state assembles the whole bag once and the app shell passes it as a single prop.
 export function PickerOverlays({
   overlays, route, routeIndex, onPickRoute, syntaxTheme, themePickerIndex, onPickTheme,
   theme, appThemePickerIndex, onPickAppTheme,
@@ -71,7 +29,7 @@ export function PickerOverlays({
   profiles, profilePickerIndex, onPickProfile,
   quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
   quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, commandInputRef,
-}: Properties) {
+}: PickerOverlayView) {
   switch (firstOpenOverlay(overlays)) {
   // `route` is what put this case in play, so it is non-null here; the compiler cannot see that
   // across the registry lookup.
