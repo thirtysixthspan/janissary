@@ -13,7 +13,7 @@ type Properties = {
 };
 
 export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Properties) {
-  const { saveConfirmOpen, openSaveConfirm, closeSaveConfirm, indexRef } = useSaveConfirm();
+  const { saveConfirmOpen, openSaveConfirm, closeSaveConfirm, labelRef } = useSaveConfirm();
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
 
@@ -22,19 +22,31 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
       const tab = tabsRef.current[index];
       if (!tab) return false;
       const handle = tabHandles.current.get(tab.label);
-      if (handle?.isDirty()) { openSaveConfirm(index); return true; }
+      if (handle?.isDirty()) { openSaveConfirm(tab.label); return true; }
       return false;
     };
   }, [tabHandles, openSaveConfirm, guardRef]);
 
   if (!saveConfirmOpen) return null;
 
+  // The dialog was raised for one tab; everything below names that tab by label and resolves it
+  // against the list as it stands at that moment, rather than reusing the position it held when the
+  // dialog opened. A tab arriving or leaving in between — an agent opening one, a schedule firing, a
+  // monitor's reporting tab — shifts every position after it.
+  const targetHandle = () => tabHandles.current.get(labelRef.current);
+
+  // `closeTab` still takes an index on the wire, so the index is computed here, immediately before
+  // the send. A tab that is gone by now closes nothing rather than closing whatever took its place.
+  const closeTarget = () => {
+    const index = tabsRef.current.findIndex((tab) => tab.label === labelRef.current);
+    if (index === -1) return;
+    client.send({ method: 'closeTab', params: { index } });
+  };
+
   return (
     <SaveChangesDialog
       onSave={async () => {
-        const idx = indexRef.current;
-        const tab = tabsRef.current[idx];
-        const handle = tab ? tabHandles.current.get(tab.label) : undefined;
+        const handle = targetHandle();
         if (handle) {
           try {
             await handle.save();
@@ -48,17 +60,14 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
           }
         }
         closeSaveConfirm();
-        client.send({ method: 'closeTab', params: { index: idx } });
+        closeTarget();
       }}
       onDiscard={() => {
-        const idx = indexRef.current;
         closeSaveConfirm();
-        client.send({ method: 'closeTab', params: { index: idx } });
+        closeTarget();
       }}
       onCancel={() => {
-        const idx = indexRef.current;
-        const tab = tabsRef.current[idx];
-        const handle = tab ? tabHandles.current.get(tab.label) : undefined;
+        const handle = targetHandle();
         closeSaveConfirm();
         handle?.focus();
       }}

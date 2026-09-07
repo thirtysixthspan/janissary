@@ -278,3 +278,98 @@ describe('CloseSaveGuard over a plugin tab', () => {
     expect(result).toBe(false);
   });
 });
+
+// The tab list is server-driven and replaced whole on every change, so it can move while the dialog
+// is open or a save is pending — an agent opening a tab, a schedule firing, a monitor's reporting
+// tab arriving. Every case above holds it fixed for the whole gesture; these do not.
+describe('CloseSaveGuard while the tab list changes underneath it', () => {
+  function setup(labels: string[], handles: Record<string, DirtyTabHandle>) {
+    const guardRef = makeGuardRef();
+    const client = { send: vi.fn() };
+    const ref = React.createRef<Map<string, DirtyTabHandle>>();
+    (ref as { current: Map<string, DirtyTabHandle> | null }).current = new Map(Object.entries(handles));
+    const tabHandles = ref as React.RefObject<Map<string, DirtyTabHandle>>;
+    const element = (next: string[]) =>
+      React.createElement(CloseSaveGuard, {
+        tabs: next.map((label) => makeTab(label)),
+        tabHandles,
+        client: client as never,
+        guardRef,
+      });
+    const view = render(element(labels));
+    const setTabs = (next: string[]) => { view.rerender(element(next)); };
+    return { ...view, client, guardRef, setTabs };
+  }
+
+  const dirtyHandle = (focus = vi.fn()) =>
+    ({ isDirty: () => true, save: vi.fn().mockResolvedValue(undefined), focus }) as unknown as DirtyTabHandle;
+
+  it('saves and closes the tab it asked about after another is inserted before it', async () => {
+    const handle = dirtyHandle();
+    const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
+    act(() => { guardRef.current!(1); });
+
+    setTabs(['gamma', 'alpha', 'beta']);
+    await act(async () => { fireEvent.click(getByText('Save (y)')); });
+
+    expect(handle.save).toHaveBeenCalled();
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 2 } });
+  });
+
+  it('discards at the index the tab holds after one before it is removed', () => {
+    const handle = dirtyHandle();
+    const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
+    act(() => { guardRef.current!(1); });
+
+    setTabs(['beta']);
+    fireEvent.click(getByText("Don't Save (n)"));
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+  });
+
+  it.each([['Save (y)'], ["Don't Save (n)"]])(
+    'sends no close from %s once the tab it asked about is gone',
+    async (button) => {
+      const handle = dirtyHandle();
+      const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
+      act(() => { guardRef.current!(1); });
+
+      setTabs(['alpha']);
+      await act(async () => { fireEvent.click(getByText(button)); });
+
+      expect(client.send).not.toHaveBeenCalled();
+    },
+  );
+
+  // The list is most likely to have moved by the time an awaited save returns, which is why the
+  // index is computed after it rather than carried across it.
+  it('closes at the index the tab holds once a deferred save resolves', async () => {
+    let shift = () => {};
+    const save = vi.fn(async () => { shift(); });
+    const handle = { isDirty: () => true, save, focus: vi.fn() } as unknown as DirtyTabHandle;
+    const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
+    shift = () => { setTabs(['gamma', 'alpha', 'beta']); };
+    act(() => { guardRef.current!(1); });
+
+    await act(async () => { fireEvent.click(getByText('Save (y)')); });
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 2 } });
+  });
+
+  it('cancel focuses the tab it asked about, not whatever took its position', () => {
+    const betaFocus = vi.fn();
+    const alphaFocus = vi.fn();
+    const { getByText, client, guardRef, setTabs } = setup(
+      ['alpha', 'beta'],
+      { alpha: dirtyHandle(alphaFocus), beta: dirtyHandle(betaFocus) },
+    );
+    act(() => { guardRef.current!(1); });
+
+    setTabs(['beta', 'alpha']);
+    fireEvent.click(getByText('Cancel (Esc)'));
+
+    expect(betaFocus).toHaveBeenCalled();
+    expect(alphaFocus).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+});
