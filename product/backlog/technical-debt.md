@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Build the overlay open-state once where the picker state already lives, instead of rebuilding the same nine-field map at three call sites and hand-ORing a shorter, wrong fourth version of it for the close-tab chord.
 
 Existing Debt: The ordered overlay registry unified which overlay wins but not the state fed into it, so the nine-field open-state object is spelled out by hand at each of the three sites that ask the registry a question, and the close-tab chord bypasses the registry entirely and ORs four of the nine booleans inline — a fourth definition of "an overlay is open" that nothing keeps in step with the other three. Severity: 7/10
@@ -90,6 +88,8 @@ Existing Risk: 3/10 - The scan and the payload check are re-derived at each site
 Proposal Risk: 3/10 - Lookups would run through one method that can gain a map or a guard behind it, but the array itself stays public and directly mutable, so a caller can still bypass the accessor and edit a record in place.
 
 Proposal: `TabManager` in `src/tab/manager.ts` declares `tabs: Tab[]` as a public field and provides `findIndex(label)` (an index) and `cur()`, but no by-label lookup, so callers write `this.managers.tab.tabs.find((t) => t.label === label)` — fifty-two occurrences across thirty-one non-test modules, including `src/harness/manager.ts` (five, in `latestScreenText`, `transcriptTailer`, `browserGone`, `markRunning`, and `failSpawn`, four of which follow the scan with a `tab?.harness` check and an in-place mutation), `src/editor/save.ts`, `src/notifications.ts`, `src/capture/manager.ts`, `src/plugins/host.ts`, `src/schedule/manager.ts`, and `src/monitor/manager.ts`. Add `byLabel(label: string): Tab | undefined` to `TabManager` alongside `findIndex`, plus guard-typed accessors built on the predicates already in `src/tab/view-guards.ts` — `harnessTab(label): HarnessTab | undefined`, `editorTab(label)`, `filesTab(label)`, `pluginTab(label)`, `monitorTab(label)` — each returning the narrowed type so a caller gets a non-optional payload or nothing, rather than a `Tab` plus its own optional-chained check. `src/tab/manager.ts` is near the size limit, so put the accessors in a new `src/tab/lookup.ts` and have the manager delegate, matching how `runtime-operations.ts` and `transcript-operations.ts` are already reached. Then migrate the scan-then-check-payload sites first, since those are the ones the guards actually improve — `src/harness/manager.ts`, `src/editor/save.ts` (`finishSave`), `src/editor/resync.ts`, `src/editor/sync.ts`, and `src/monitor/window.ts` — and leave the plain scan-for-a-tab sites for a follow-up rather than sweeping all fifty-two in one change. Behavior must not move: `byLabel` returns the first match exactly as `find` does. `src/tab/manager.test.ts`, `src/harness/manager.test.ts`, `src/editor/save.test.ts`, and `src/editor/resync.test.ts` cover the migrated paths and must keep passing unchanged; several of them reach a tab's payload with a non-null assertion, which is test-side and can stay.
+
+## development
 
 ## deferred
 
