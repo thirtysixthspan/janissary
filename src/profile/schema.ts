@@ -3,6 +3,8 @@
 // collect-every-problem). Both run the exact same checks; only what they do with a failure differs.
 // Pure, catalog-free, hand-written predicates — no schema library (see the plan's Decision 11).
 
+import type { ProfileTabFile } from './types.js';
+
 type FieldKind = 'string' | 'number' | 'boolean' | 'string[]';
 
 // The four file-navigator detail modes a `files` entry's `details` key may name.
@@ -77,29 +79,47 @@ function harnessProblems(value: Record<string, unknown>, loc: string): string[] 
   ];
 }
 
-// The eleven kinds of tab a profile may declare. Listed once, so the dispatcher's default arm and
-// the message it produces cannot drift apart. `image` and `markdown` are the pre-plugin spellings of
-// a `plugin` entry with that id and stay accepted so a saved profile keeps launching.
-const TAB_TYPES: string[] = [
-  'agent', 'harness', 'editor', 'files', 'notifications', 'schedules', 'plugin', 'image', 'markdown', 'page', 'ssh',
-];
+// Every kind of tab a profile may declare, and whether it can occupy a place in the tab strip and
+// so carries the flat presentation fields. `files` carries them because an undocked navigator lands
+// in the strip like any other tab; `schedules` is always docked, and a `notifications` entry's own
+// `focus` means "visible in the sidebar switcher" rather than "active after launch". `image` and
+// `markdown` are the pre-plugin spellings of a `plugin` entry with that id and stay accepted so a
+// saved profile keeps launching.
+//
+// Keyed by `ProfileTabFile['type']`, so a twelfth kind added to that union fails to compile here
+// until it is classified — where the two hand-kept lists this replaced would have gone on rejecting
+// it on load with `type must be one of …` while the build stayed green.
+const TAB_KINDS: Record<ProfileTabFile['type'], boolean> = {
+  agent: true,
+  harness: true,
+  editor: true,
+  files: true,
+  notifications: false,
+  schedules: false,
+  plugin: true,
+  image: true,
+  markdown: true,
+  page: true,
+  ssh: true,
+};
 
-// The kinds that can occupy a place in the tab strip, and so carry the flat presentation fields. A
-// `files` entry is included because an undocked navigator lands in the strip like any other tab; a
-// `schedules` entry is always docked, and a `notifications` entry's own `focus` means "visible in
-// the sidebar switcher" rather than "active after launch".
-const PRESENTATION_TYPES = new Set(['agent', 'harness', 'editor', 'files', 'plugin', 'image', 'markdown', 'page', 'ssh']);
+// Declaration order above is the order this message lists, which is the order the two lists it
+// replaced used — so the wording `profile validate` prints does not move.
+const TAB_TYPES = Object.keys(TAB_KINDS);
+
+function isTabKind(value: unknown): value is ProfileTabFile['type'] {
+  return typeof value === 'string' && Object.hasOwn(TAB_KINDS, value);
+}
 
 // One element of the `tabs` array: an object carrying a recognized `type`, the presentation fields
 // its type allows, and whatever else that type requires.
 function tabProblems(value: unknown, loc: string): string[] {
   if (!isObject(value)) return [`${loc} must be an object`];
   const type = value.type;
-  if (typeof type !== 'string' || !TAB_TYPES.includes(type)) {
-    return [`${loc}: type must be one of ${TAB_TYPES.join(', ')}`];
-  }
-  const shared = PRESENTATION_TYPES.has(type) ? presentationProblems(value, loc) : [];
-  // `image` and `markdown` reach the default arm: both are fully checked by `pathProblems`.
+  if (!isTabKind(type)) return [`${loc}: type must be one of ${TAB_TYPES.join(', ')}`];
+  const shared = TAB_KINDS[type] ? presentationProblems(value, loc) : [];
+  // No `default` arm: `type` is narrowed to the union, so a kind without a case leaves this
+  // function without a return and fails to compile.
   switch (type) {
   case 'agent': { return [...shared, ...agentProblems(value, loc)]; }
   case 'harness': { return [...shared, ...harnessProblems(value, loc)]; }
@@ -110,7 +130,9 @@ function tabProblems(value: unknown, loc: string): string[] {
   case 'plugin': { return [...shared, ...pluginProblems(value, loc)]; }
   case 'page': { return [...shared, ...pageProblems(value, loc)]; }
   case 'ssh': { return [...shared, ...sshProblems(value, loc)]; }
-  default: { return [...shared, ...pathProblems(value, loc)]; }
+  // Both are fully checked by `pathProblems`; they share an arm rather than a default one.
+  case 'image':
+  case 'markdown': { return [...shared, ...pathProblems(value, loc)]; }
   }
 }
 

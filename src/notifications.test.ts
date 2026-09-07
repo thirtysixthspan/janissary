@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { NotificationConfig } from './config.js';
 import type { Managers } from './managers.js';
-import { shouldNotify, formatTimestamp, notificationText, notify } from './notifications.js';
+import {
+  AMBIENT_EVENTS, EXPLICIT_EVENTS, shouldNotify, formatTimestamp, notificationText, notify,
+  type AmbientNotificationEvent, type ExplicitNotificationEvent,
+} from './notifications.js';
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
 
 const allOn: NotificationConfig = {
@@ -10,6 +13,41 @@ const allOn: NotificationConfig = {
 const allOff: NotificationConfig = {
   events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false, rateLimited: false },
 };
+
+// One case per member of `NotificationEventType`, driven off the tables that classify them — so a
+// seventeenth event is covered the moment it is added, rather than needing a case written for it.
+// Before the tables existed, both switches ended in a `default` arm that answered `false`, so a new
+// event compiled, shipped, and never reached the feed.
+describe('shouldNotify covers every notification event', () => {
+  const ambientEntries = Object.entries(AMBIENT_EVENTS) as Array<
+    [AmbientNotificationEvent, keyof NotificationConfig['events']]
+  >;
+  const explicitEvents = Object.keys(EXPLICIT_EVENTS) as ExplicitNotificationEvent[];
+
+  it.each(explicitEvents)('fires for the explicit event %s whatever the config and focus say', (event) => {
+    expect(shouldNotify(allOff, event, 'janus', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, event, 'build', 'janus')).toBe(true);
+  });
+
+  it.each(ambientEntries)('gates the ambient event %s on the %s toggle and on focus', (event, toggle) => {
+    expect(allOn.events[toggle]).toBe(true);
+    expect(shouldNotify(allOn, event, 'build', 'janus')).toBe(true);
+    expect(shouldNotify(allOff, event, 'build', 'janus')).toBe(false);
+    expect(shouldNotify(allOn, event, 'janus', 'janus')).toBe(false);
+  });
+
+  it.each([...explicitEvents, ...ambientEntries.map(([event]) => event)])(
+    'is suppressed for %s on the notifications tab itself',
+    (event) => { expect(shouldNotify(allOn, event, NOTIFICATIONS_LABEL, 'janus')).toBe(false); },
+  );
+
+  // Ties the classification tables to the already-exhaustive dispatcher in the same file: an event
+  // in neither table cannot compile, and one in a table must have text to render.
+  it.each([...explicitEvents, ...ambientEntries.map(([event]) => event)])(
+    'renders text for %s',
+    (event) => { expect(typeof notificationText(event, 'build', 'detail')).toBe('string'); },
+  );
+});
 
 describe('shouldNotify — ambient events', () => {
   it('fires for a background tab when its event toggle is on', () => {
