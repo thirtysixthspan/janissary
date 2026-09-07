@@ -329,6 +329,53 @@ describe('ImageEditor unsaved work', () => {
     expect(registerDirtyHandle.mock.calls.at(-1)![0]?.isDirty()).toBe(true);
   });
 
+  // The saved checkpoint is the operation list that was written, not the cursor position it stood
+  // at. Editing after an undo rewrites the list beneath the same position, so a cursor comparison
+  // called this flip saved and let the close guard drop it without asking.
+  it('stays unsaved when an operation replaces an undone save at the same cursor', async () => {
+    const registerDirtyHandle = vi.fn();
+    renderEditor(makeCapabilities({ registerDirtyHandle }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flip horizontal' }));
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+    await waitFor(() => {
+      expect(registerDirtyHandle.mock.calls.at(-1)![0]?.isDirty()).toBe(true);
+    });
+  });
+
+  it('is clean at the saved sequence and dirty away from it, across undo and redo', async () => {
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Redo' }));
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+  });
+
+  // The checkpoint recorded is the sequence the request carried, not the one on screen when the
+  // reply lands, so work done while the write was in flight is not marked saved by it.
+  it('leaves an edit made while a save was in flight unsaved', async () => {
+    const intent: IntentSpy = vi.fn(async () => {
+      // The request is outstanding at this point — the flip lands before its reply does.
+      fireEvent.click(screen.getByRole('button', { name: 'Flip horizontal' }));
+      return { name: 'photo.png' };
+    });
+    renderEditor(makeCapabilities({ intent }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
   it('saving through the host handle clears the dirty state', async () => {
     const registerDirtyHandle = vi.fn();
     renderEditor(makeCapabilities({ registerDirtyHandle }));

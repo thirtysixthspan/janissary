@@ -164,6 +164,13 @@ vector nature. Each is replaced by the flattened PNG output.
 After a successful save the header names the original file for a few seconds and then clears. The
 edits stay live and the tab keeps that original identity, so work can continue and be saved again.
 
+Whether the tab counts as saved is a question about the edits, not about how many steps have been
+taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does
+too; any list that differs from what was written — including a different operation applied in place
+of an undone one, which lands at the same step number — reads as unsaved. Two different routes to
+the same picture are not recognised as equal, so the tab errs toward calling that work unsaved. An
+edit made while a save is still in flight is not covered by that save.
+
 ### Unsaved edits
 
 **Done** returns the tab to the viewer without discarding anything: the operation list stays live,

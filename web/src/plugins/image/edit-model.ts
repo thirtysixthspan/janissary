@@ -34,6 +34,24 @@ export function activeOperations(model: EditModel): readonly ImageOperation[] {
   return model.operations.slice(0, model.cursor);
 }
 
+function sameOperation(a: ImageOperation, b: ImageOperation): boolean {
+  if (a.kind === 'crop' && b.kind === 'crop') {
+    return a.rect.x === b.rect.x && a.rect.y === b.rect.y
+      && a.rect.width === b.rect.width && a.rect.height === b.rect.height;
+  }
+  if (a.kind === 'rotate' && b.kind === 'rotate') return a.direction === b.direction;
+  if (a.kind === 'flip' && b.kind === 'flip') return a.axis === b.axis;
+  return false;
+}
+
+// Whether two lists describe the same edit. A cursor position cannot answer this: applying an
+// operation after an undo truncates and appends, so the cursor comes back to a number it has already
+// been over a different list. Structural rather than pixel-aware — two routes to the same image
+// compare unequal, which errs toward calling work unsaved.
+export function sameOperations(a: readonly ImageOperation[], b: readonly ImageOperation[]): boolean {
+  return a.length === b.length && a.every((operation, index) => sameOperation(operation, b[index]));
+}
+
 export function isEdited(model: EditModel): boolean {
   return model.cursor > 0;
 }
