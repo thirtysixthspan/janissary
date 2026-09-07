@@ -1,4 +1,4 @@
-import { commandSegments } from './command-tokens.js';
+import { commandSegments } from './command/tokens.js';
 import { learnedCommands } from './interactive-learned.js';
 
 // Full-screen / interactive programs that need a real TTY and live keystroke

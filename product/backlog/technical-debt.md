@@ -5,10 +5,6 @@
 
 ## development
 
-* Move the stray `src/command-tokens.ts` into the `src/command/` directory that already exists, as `src/command/tokens.ts`: it is the only flat `command-*.ts` file left in `src/`, it has no colocated test, and there is no bare `src/command.ts` entry. `src/command/` already holds `manager.ts`, `queue.ts`, `router.ts`, and `manager.test.ts`, the pipeline that runs a tab's commands, and `command-tokens.ts` is the parser that reduces one command line to the program it actually runs, so it belongs beside them. Nothing in `src/command/` is named `tokens.ts`, so dropping the prefix collides with nothing. Only `src/interactive.ts` and `src/interactive-learned.ts` import it, so the move is a rename plus two import path rewrites. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `command` prefix. Severity: **low**.
-
-## development
-
 ## deferred
 
 * Consolidate the picker state plumbing that the app shell threads through a near-eighty-prop component and restates again in the keyboard layer's snapshot and callback bags. — deferred: complexity 8/10, a restructuring of the near-eighty-prop app shell, three parallel plumbing structures (App.tsx state fan-out, AppMain/PickerOverlays props, the keyboard layer's snapshot/callback bags), and the fold of seven existing hooks plus route-chooser state into one usePickerOverlays hook, with re-render-contract risks (the keyboard layer's ref-based snapshot must not trade into a god context).
