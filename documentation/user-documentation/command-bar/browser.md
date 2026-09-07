@@ -11,8 +11,6 @@ browser content
 
 `goto`, `content`, `eval`, and `shot` all auto-launch the tab's browser and open a window if none exists yet, so you rarely need to call `open` yourself.
 
-![A goto command followed by a content command in the transcript, with the fetched page's title and rendered text printed below it.](/screenshots/browser-output.png)
-
 | Subcommand | What it does |
 |---|---|
 | `browser open [name] [--headed\|-H]` | Launch this tab's browser if it isn't running, and open a new window |
