@@ -24,6 +24,7 @@ type InteractionApis = {
 
 type EditorInteractions = {
   onKeyDown: (event: React.KeyboardEvent) => void;
+  onPaste: (event: React.ClipboardEvent) => void;
   flushTextarea: () => void;
   startComposition: () => void;
   endComposition: () => void;
@@ -93,6 +94,21 @@ export function useEditorInteractions({
     api.apply(action, measuredPageLines(), verticalResolver(bodyRef.current, caretRef.current));
   };
 
+  // The clipboard is taken straight off the event and the default is always cancelled, so a paste
+  // never passes through the hidden textarea: a large one written there and read back is a round
+  // trip through a control the user cannot see, and the browser may scroll the body to its caret
+  // on the way. Non-text clipboard content simply yields nothing to insert.
+  const onPaste = (event: React.ClipboardEvent) => {
+    const text = event.clipboardData?.getData('text/plain') ?? '';
+    event.preventDefault();
+    if (!text) return;
+    if (suggest.queryLine && suggest.focusTarget === 'query') {
+      suggest.setQueryLineState(insertText(suggest.queryLine.state, text));
+      return;
+    }
+    api.paste(text);
+  };
+
   const flushTextarea = () => {
     const textarea = textareaRef.current;
     if (!textarea || composingRef.current || !textarea.value) return;
@@ -104,6 +120,7 @@ export function useEditorInteractions({
 
   return {
     onKeyDown,
+    onPaste,
     flushTextarea,
     startComposition: () => { composingRef.current = true; },
     endComposition: () => { composingRef.current = false; flushTextarea(); },

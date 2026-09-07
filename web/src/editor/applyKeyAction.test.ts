@@ -101,6 +101,40 @@ describe('applyKeyAction', () => {
   });
 });
 
+describe('applyKeyAction — paste', () => {
+  it('inserts at the caret and leaves the caret where the text begins', () => {
+    const surface = makeSurface(st('line one', 0));
+    applyKeyAction(surface, { kind: 'paste', text: 'a\nb\nc' }, 20);
+    expect(surface.get().lines).toEqual(['a', 'b', 'cline one']);
+    expect(surface.get().cursor).toEqual({ line: 0, col: 0 });
+    expect(surface.get().anchor).toBeNull();
+  });
+
+  it('leaves a mid-line caret exactly where it was', () => {
+    const surface = makeSurface(st('abcd', 2));
+    applyKeyAction(surface, { kind: 'paste', text: 'XY' }, 20);
+    expect(surface.get().lines).toEqual(['abXYcd']);
+    expect(surface.get().cursor).toEqual({ line: 0, col: 2 });
+  });
+
+  it('replaces a selection and leaves the caret at the selection start', () => {
+    const surface = makeSurface({ lines: ['abcdef'], cursor: { line: 0, col: 5 }, anchor: { line: 0, col: 2 } });
+    applyKeyAction(surface, { kind: 'paste', text: 'XY' }, 20);
+    expect(surface.get().lines).toEqual(['abXYf']);
+    expect(surface.get().cursor).toEqual({ line: 0, col: 2 });
+    expect(surface.get().anchor).toBeNull();
+  });
+
+  it('is its own undo step even for a single pasted character', () => {
+    const surface = makeSurface(st(''));
+    applyKeyAction(surface, { kind: 'insert', text: 'a' }, 20);
+    applyKeyAction(surface, { kind: 'paste', text: 'b' }, 20);
+    expect(surface.get().lines).toEqual(['ab']);
+    applyKeyAction(surface, { kind: 'undo' }, 20);
+    expect(surface.get().lines).toEqual(['a']);
+  });
+});
+
 // Three selections over the three `foo`s of 'foo foo foo', the middle one primary-last so the
 // creation order the editor keeps is exercised alongside document order.
 const threeFoos = (): EditorState => ({

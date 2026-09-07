@@ -49,6 +49,16 @@ describe('multiEdit', () => {
     expect(next.lines).toEqual(['x', 'y x', 'y x', 'y']);
   });
 
+  it('leaves every caret at the start of its replacement when asked to', () => {
+    const next = multiEdit(threeFoos(), 'insert', () => 'XY', 'start');
+    expect(next.lines).toEqual(['XY XY XY']);
+    expect(next.extraSelections).toEqual([
+      { anchor: null, cursor: { line: 0, col: 0 } },
+      { anchor: null, cursor: { line: 0, col: 3 } },
+    ]);
+    expect(next.cursor).toEqual({ line: 0, col: 6 });
+  });
+
   it('deletes backward one character at every bare caret', () => {
     const state: EditorState = {
       lines: ['abcd'],

@@ -5,7 +5,7 @@
 import type { EditorState, Pos } from './model';
 import {
   insertText, deleteBackward, deleteForward, killToLineEnd,
-  collapseSelection, selectAll, selectionsText,
+  collapseSelection, selectAll, selectionsText, selectionRange,
   allSelections, hasMultipleSelections,
 } from './model';
 import { multiEdit, multiMove, type MultiEditKind } from './multi-caret';
@@ -70,6 +70,16 @@ function editedState(s: EditorState, kind: MultiEditKind, text: string): EditorS
   return multiEdit(s, kind, kind === 'insert' ? textPerSelection(s, text) : () => '');
 }
 
+// A paste leaves every caret at the *start* of what it dropped rather than the end, so the text
+// lands under the place the user was already looking and the view has no caret to chase to the
+// bottom of a long paste. Typing, Enter, Tab, and the file-navigator drop keep the ordinary
+// end-of-insert caret — a paste is the one insert the user did not compose keystroke by keystroke.
+function pastedState(s: EditorState, text: string): EditorState {
+  if (hasMultipleSelections(s)) return multiEdit(s, 'insert', textPerSelection(s, text), 'start');
+  const start = selectionRange(s)?.start ?? s.cursor;
+  return { ...insertText(s, text), cursor: start, anchor: null };
+}
+
 function applyTextEdit(s: EditorState, action: KeyAction, edit: Edit): boolean {
   switch (action.kind) {
     case 'insert': {
@@ -78,6 +88,8 @@ function applyTextEdit(s: EditorState, action: KeyAction, edit: Edit): boolean {
       edit(s, editedState(s, 'insert', action.text), kind);
       return true;
     }
+    // Never coalesced: a pasted character is not a typed one, however short the clipboard is.
+    case 'paste': { edit(s, pastedState(s, action.text), 'other'); return true; }
     case 'deleteBackward':
     case 'deleteForward': { edit(s, editedState(s, action.kind, ''), 'delete'); return true; }
     default: { return false; }

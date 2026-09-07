@@ -134,6 +134,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
           className="editor-textarea"
           aria-label={`Edit ${editor.name}`}
           onKeyDown={interactions.onKeyDown}
+          onPaste={interactions.onPaste}
           onInput={interactions.flushTextarea}
           onCompositionStart={interactions.startComposition}
           onCompositionEnd={interactions.endComposition}

@@ -120,7 +120,11 @@ During IME composition, key events are deferred to the compositing text input an
 as editor actions until composition ends.
 
 Paste (Cmd+V / Ctrl+V) flows through the browser's native paste event and is not captured by the
-editor's key bindings.
+editor's key bindings. The clipboard's plain text is inserted at the cursor, replacing any
+selection, and the cursor is left at the **start** of the pasted text rather than its end — so a
+paste lands under the place being worked on and the view does not scroll away to follow a long
+paste down the file. A paste is always a single undo step, however short the pasted text is.
+Clipboard content that carries no text inserts nothing.
 
 ### Saving
 
@@ -292,7 +296,8 @@ only indication that there are several.
 Cmd+C copies each selection's text joined by newlines, in the order the selections appear in the
 file, and Cmd+X does the same and then deletes at every one of them. Cmd+V distributes: pasting text
 whose line count matches the number of selections gives each selection its own line, and pasting
-anything else puts the whole text at every selection.
+anything else puts the whole text at every selection. Every caret is left at the start of what it
+received, as it is with a single caret.
 
 Cmd+U drops the most recently added selection, one press at a time. Escape drops all of them at once,
 leaving the most recently added as the only caret; a second Escape then clears that selection the way

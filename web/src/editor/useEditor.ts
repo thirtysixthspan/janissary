@@ -17,6 +17,8 @@ export type EditorApi = {
   load: (text: string, line?: number) => void;
   setState: (s: EditorState) => void;
   insert: (text: string) => void;
+  // Clipboard text, dropped at the caret and leaving it where the text begins (see applyKeyAction).
+  paste: (text: string) => void;
   apply: (action: KeyAction, pageLines: number, resolveVertical?: ResolveVertical) => void;
   // Swap the whole state for one an outside transform produced (see ./plugins/), recorded as a
   // single discrete undo step however many lines it changed.
@@ -36,6 +38,7 @@ export function useEditor(onSave: () => void): EditorApi {
   const surface: EditSurface = { getState: () => stateRef.current, setState, undo, kill, onSave };
 
   const insert = (text: string) => applyKeyAction(surface, { kind: 'insert', text }, 0);
+  const paste = (text: string) => applyKeyAction(surface, { kind: 'paste', text }, 0);
   const apply = (action: KeyAction, pageLines: number, resolveVertical?: ResolveVertical) => {
     applyKeyAction(surface, action, pageLines, resolveVertical);
   };
@@ -47,5 +50,5 @@ export function useEditor(onSave: () => void): EditorApi {
     setState(next);
   };
 
-  return { state, stateRef, load, setState, insert, apply, replace, sealUndo: () => undo.seal() };
+  return { state, stateRef, load, setState, insert, paste, apply, replace, sealUndo: () => undo.seal() };
 }
