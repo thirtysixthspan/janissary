@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension, type OpenContext } from './openers/index.js';
@@ -6,7 +5,7 @@ import { didOsOpen } from './openers/os-open.js';
 import { openInEditor } from './openers/editor.js';
 import { nextFreeName } from './editor/next-free-name.js';
 import { expandUserPath } from './paths.js';
-import { SHELL_NAME } from './shell-manager.js';
+import { expandGlob } from './open-glob.js';
 import type { Managers } from './managers.js';
 import { runOpenCommand, pinnedOpenerRefusal } from './open-file-command.js';
 import { getConfig } from './config.js';
@@ -31,7 +30,7 @@ export class OpenFileManager {
   ): Promise<void> {
     return Promise.resolve(runOpenCommand(
       this.managers, parsedCommand, displayCommand, label,
-      (c, l) => this.buildContext(c, l), (p, cwd) => this.expandGlob(p, cwd),
+      (c, l) => this.buildContext(c, l), (p, cwd) => expandGlob(p, cwd),
       (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
       requireOpener,
     ));
@@ -147,17 +146,4 @@ export class OpenFileManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  private expandGlob(pattern: string, cwd: string): string[] {
-    let stdout: string;
-    try {
-      const res = spawnSync(SHELL_NAME, ['-c', String.raw`for f in ${pattern}; do printf '%s\n' "$f"; done`], {
-        cwd, encoding: 'utf8', timeout: 5000,
-      });
-      stdout = res.stdout ?? '';
-    } catch { return []; }
-    const files = stdout.split('\n').map((s) => s.trim()).filter(Boolean)
-      .map((p) => (path.isAbsolute(p) ? p : path.resolve(cwd, p)))
-      .filter((p) => { try { return statSync(p).isFile(); } catch { return false; } });
-    return [...new Set(files)].toSorted((a, b) => a.localeCompare(b));
-  }
 }

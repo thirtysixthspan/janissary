@@ -62,10 +62,12 @@ failure. Only a file that was there when the tab opened can report one.
 
 ### Wildcards
 
-When the path contains shell wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the shell** — exactly as it would be on the command line — into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.
+When the path contains wildcard characters, it is treated as a pattern rather than a single file. The pattern is expanded **by the application itself**, not by a shell, into the list of files it matches, resolved against the active tab's working directory. `open` then acts on each matched file in turn, applying the same presentation (inline or external) to every one.
+
+Expanding it in-process means the same pattern matches the same files on every machine, whatever login shell the user runs. Supported are `*`, `?`, character classes (`[abc]`), and brace expansion (`{png,jpg}`). A pattern is only ever matched, never run: one containing shell punctuation — a `;`, a `&&`, a command substitution — matches nothing and executes nothing.
 
 - A wildcard `open` acts on **at most 10 files**. Matches are deduplicated and sorted by path; when a pattern matches more than 10, only the first 10 are opened and the rest are skipped, with a note reporting how many were matched. Async plugin openers are awaited one at a time so this order is preserved.
-- A pattern that matches nothing reports that there were no matching files.
+- A pattern that matches nothing reports that there were no matching files. Directories are not matches, so a pattern that names only directories reports the same thing.
 - Each matched file is still dispatched individually, so the per-file rules above apply to each — an unsupported type among the matches is reported and skipped without stopping the others.
 
 A path with no wildcard characters is always a single literal target (so a name containing spaces is opened as-is, not split). Wildcards apply to file paths only; a web address is never treated as a pattern.

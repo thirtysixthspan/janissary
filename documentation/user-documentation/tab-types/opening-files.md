@@ -50,13 +50,15 @@ Images are the one file type with an editor of their own — everything else, in
 
 <img class="agent-float left" src="/agents/ahmed-south-east.png" alt="" />
 
-A path with shell wildcard characters opens every matching file, up to 10 at a time:
+A path with wildcard characters opens every matching file, up to 10 at a time:
 
 ```
 open shots/*.png
 ```
 
-The pattern expands exactly as your shell would expand it. Past 10 matches, the first 10 open and a note reports how many matched in total. A pattern matching nothing reports that too. Wildcards only apply to file paths, never web addresses.
+Janissary expands the pattern itself rather than handing it to a shell, so it matches the same files whatever shell you use. You get `*`, `?`, character classes like `[abc]`, and brace expansion like `*.{png,jpg}`. The pattern is only ever matched against filenames, never run — one containing shell punctuation matches nothing.
+
+Past 10 matches, the first 10 open and a note reports how many matched in total. A pattern matching nothing reports that too, as does one that matches only directories. Wildcards only apply to file paths, never web addresses.
 
 ## Errors
 
