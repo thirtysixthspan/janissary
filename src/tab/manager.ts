@@ -20,6 +20,7 @@ import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { AgentStatePersistence } from './persistence.js';
+import { persistAgentState } from './manager-persistence.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -93,12 +94,14 @@ export class TabManager extends TabOpeningState {
     return this.tabs.findIndex((t) => t.label === label);
   }
 
-  // A remote agent tab is live and in-memory: restoring one would resurrect a tab whose workspace
-  // was deleted when its channel died and whose cwd does not exist locally. Guarded here rather than
-  // filtered at each call site, since this is the single write path into the state directory.
-  persist(state: AgentState): void {
-    this.persistence.save(state);
-  }
+  // The single write path into the state directory: a remote agent tab is live and in-memory, and a
+  // closed one no longer exists, so both are refused here rather than filtered at each call site.
+  // See `persistAgentState`.
+  persist(state: AgentState): void { persistAgentState(this.persistence, this.tabs, state); }
+
+  // Stop persisting a tab that has been closed, before its state file is removed (see
+  // `closeTabResources`).
+  forgetPersisted(label: string): void { this.persistence.forget(label); }
   buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState {
     return buildAgentStateFromTab(
       tab, extra,

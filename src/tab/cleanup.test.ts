@@ -1,7 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { closeTabResources } from './cleanup.js';
 import { makeTab } from './index.js';
 import { messageBus } from '../bus.js';
+import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
+import { TranscriptStore } from '../transcript/store.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(): Managers {
@@ -11,7 +16,7 @@ function makeManagers(): Managers {
     acp: { close: vi.fn() },
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
-    tab: { deleteBusy: vi.fn() },
+    tab: { deleteBusy: vi.fn(), forgetPersisted: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
@@ -179,5 +184,70 @@ describe('closeTabResources', () => {
     closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), queue, 2);
 
     expect(queue.has('main')).toBe(false);
+  });
+});
+
+// Without these, every tab the user closed stayed on disk and came back together on the next
+// `--relaunch` — a session's deliberately-closed agents accumulating silently.
+describe('closeTabResources — persisted state', () => {
+  let projectDir: string;
+
+  beforeEach(() => {
+    projectDir = mkdtempSync(path.join(tmpdir(), 'janus-close-state-'));
+    initAgentStateDirectory(projectDir);
+    // eslint-disable-next-line no-new -- the constructor is what binds the transcript directory
+    new TranscriptStore(projectDir);
+  });
+
+  const statePath = (label: string) => path.join(projectDir, '.janissary', 'state', `${label}.json`);
+  const transcriptPath = (label: string) => path.join(projectDir, '.janissary', 'transcripts', `${label}.json`);
+
+  it('removes the closed tab\'s agent-state and transcript files', () => {
+    saveAgentState({ name: 'main', dotColor: 'red', active: false });
+    TranscriptStore.save('main', [{ input: 'ls', output: 'a' }]);
+    expect(existsSync(statePath('main'))).toBe(true);
+    expect(existsSync(transcriptPath('main'))).toBe(true);
+
+    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map(), new Map(), new Map(), 2);
+
+    expect(existsSync(statePath('main'))).toBe(false);
+    expect(existsSync(transcriptPath('main'))).toBe(false);
+  });
+
+  it('leaves another tab\'s files alone', () => {
+    saveAgentState({ name: 'main', dotColor: 'red', active: false });
+    saveAgentState({ name: 'other', dotColor: 'blue', active: false });
+
+    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map(), new Map(), new Map(), 2);
+
+    expect(existsSync(statePath('other'))).toBe(true);
+  });
+
+  // The refusal goes up before the files come down, so a write arriving from an async callback in
+  // between — a shell command finishing after its tab closed — cannot recreate them.
+  it('refuses further writes for the label before removing its files', () => {
+    saveAgentState({ name: 'main', dotColor: 'red', active: false });
+    const managers = makeManagers();
+    const order: string[] = [];
+    (managers.tab.forgetPersisted as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      order.push(existsSync(statePath('main')) ? 'file still there' : 'file already gone');
+    });
+
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), new Map(), new Map(), 2);
+
+    expect(managers.tab.forgetPersisted).toHaveBeenCalledWith('main');
+    expect(order).toEqual(['file still there']);
+  });
+
+  it('closing a tab that was never persisted removes nothing and does not throw', () => {
+    mkdirSync(path.join(projectDir, '.janissary', 'state'), { recursive: true });
+    writeFileSync(path.join(projectDir, '.janissary', 'state', 'keep.json'), '{}');
+
+    expect(() => {
+      closeTabResources(makeTab('ghost', 'red'), makeManagers(), new Map(), new Map(), new Map(), 2);
+    }).not.toThrow();
+    expect(existsSync(path.join(projectDir, '.janissary', 'state', 'keep.json'))).toBe(true);
+
+    rmSync(projectDir, { recursive: true, force: true });
   });
 });

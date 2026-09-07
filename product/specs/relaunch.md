@@ -3,7 +3,7 @@
 (`janus --relaunch`)
 
 1. Preserve `.janissary/state/` directory.
-2. List all `.json` files in the state directory.
+2. List all `.json` files in the state directory. A tab closed during the previous session left no file behind, so the listing is the tabs that were still open (see `state-directory.md`).
 3. Sort the saved agents by their recorded tab `number` and create a tab for each, preserving its saved `number` and `dotColor`.
 4. Load each agent's `cmdHistory` and `log` into its tab, and populate the cwd ref for shell restoration.
 5. If no state files exist, fall back to a single `janus` tab.
