@@ -33,7 +33,9 @@ export function useFileNavigatorSearch(
     const requestId = ++requestRef.current;
     void client.request<{ paths: string[] }>({ method: 'fileNavigatorSearch', params: { index } }).then((result) => {
       if (requestRef.current !== requestId) return;
-      setSearchPaths(result.paths);
+      // The loading flag clears whether or not an answer came. A pop-up left spinning has no way
+      // back except reopening it; an empty list says plainly that there is nothing to pick.
+      setSearchPaths(result?.paths ?? []);
       setSearchLoading(false);
     });
   };

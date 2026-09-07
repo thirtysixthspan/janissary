@@ -78,4 +78,20 @@ describe('useQuickOpen', () => {
     expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /proj/a.ts' } });
     expect(hook!.quickOpenOpen).toBe(false);
   });
+
+  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
+  // reply, and when the server answered with an error. Reading `result.root` off that threw inside
+  // the `.then`, leaving the palette on its loading state with no way back but reopening it.
+  it('clears loading and shows nothing when the request goes unanswered', async () => {
+    let hook: ReturnType<typeof useQuickOpen> | undefined;
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve(undefined)) } as unknown as JanusClient;
+    render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+
+    act(() => hook!.openQuickOpen());
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+
+    expect(hook!.quickOpenLoading).toBe(false);
+    act(() => hook!.setQuickOpenQuery('a'));
+    expect(hook!.quickOpenResults).toEqual([]);
+  });
 });

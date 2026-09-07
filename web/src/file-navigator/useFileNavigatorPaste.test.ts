@@ -139,4 +139,20 @@ describe('useFileNavigatorPaste', () => {
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
     expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/other/b.txt'] });
   });
+
+  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
+  // reply, and when the server answered with an error. Reading `'conflictPaths' in result` off that
+  // threw mid-`.then`, so the paste silently never opened its dialog.
+  it('an unanswered paste raises no conflict and keeps a cut clipboard', async () => {
+    setClipboard('cut', ['/other/a.txt']);
+    const request = vi.fn().mockResolvedValue(undefined);
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+
+    await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
+
+    expect(result.current.pendingConflict).toBeNull();
+    // Nothing was pasted, so a cut still has somewhere to go.
+    expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/other/a.txt'] });
+  });
 });

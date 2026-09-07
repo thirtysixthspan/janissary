@@ -144,11 +144,14 @@ export class JanusClient {
     if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: 'rpc', id: this.nextId++, ...call }));
   }
 
-  // Send an RPC and resolve with the server's reply result (used for Tab completion).
-  request<T>(call: RpcCall): Promise<T> {
+  // Send an RPC and resolve with the server's reply result. `undefined` means there is no result to
+  // read: the socket was not open, the connection ended before the reply arrived, or the server
+  // answered with an error this callback shape has nowhere to carry. Callers branch on it — what to
+  // show for an unanswered request is each surface's own decision, not this method's.
+  request<T>(call: RpcCall): Promise<T | undefined> {
     const id = this.nextId++;
-    return new Promise<T>((resolve) => {
-      if (this.ws.readyState !== WebSocket.OPEN) { resolve(undefined as T); return; }
+    return new Promise<T | undefined>((resolve) => {
+      if (this.ws.readyState !== WebSocket.OPEN) { resolve(undefined); return; }
       this.pending.set(id, (r) => resolve(r as T));
       this.dispatch(id, JSON.stringify({ t: 'rpc', id, ...call }));
     });
