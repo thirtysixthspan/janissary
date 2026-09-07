@@ -128,6 +128,24 @@ describe('CaptureManager.run', () => {
     await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('closed tab'); });
   });
 
+  // The divergence this registry entry closes: `harness`/`ssh` were matched by inline regular
+  // expressions in `CommandManager.run` only, so a command sent to another tab — or asked of it as
+  // a request — answered `Unknown command: "harness claude"` for the very text that launches a
+  // harness when typed into that same tab.
+  it.each([
+    ['harness', 'harness claude'],
+    ['ssh', 'ssh build-box'],
+  ])('dispatches %s through the registry instead of calling it unknown', (name, text) => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', text, callback);
+
+    expect(managers.command.executeCommand).toHaveBeenCalledWith(name, text, 'main', 0);
+    expect(callback).not.toHaveBeenCalledWith(expect.stringContaining('Unknown command'));
+  });
+
   it('falls back to routing an unknown command', () => {
     const managers = makeManagers();
     const capture = new CaptureManager(managers);

@@ -222,6 +222,33 @@ describe('CommandManager bare-harness launch dialog', () => {
   });
 });
 
+// Both reach their manager through the registry now rather than through a branch ahead of it; what
+// the typed path does with the input and the returned error string is unchanged.
+describe('CommandManager delegating harness and ssh', () => {
+  it('hands the whole input to the ssh manager and appends the input line', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('ssh build-box -p 2222');
+    expect(managers.ssh.run).toHaveBeenCalledWith('ssh build-box -p 2222');
+    expect(managers.tab.cur().log).toContainEqual({ input: 'ssh build-box -p 2222', output: '' });
+  });
+
+  it.each([
+    ['harness', 'harness nope', 'Unknown harness "nope".'],
+    ['ssh', 'ssh', 'Usage: ssh <destination>'],
+  ])('appends the error string %s answers with', (manager, text, error) => {
+    const { managers } = makeManagers();
+    (managers[manager as 'harness' | 'ssh'].run as ReturnType<typeof vi.fn>).mockReturnValue(error);
+    managers.command.dispatch(text);
+    expect(managers.tab.cur().log).toContainEqual({ input: '', output: error });
+  });
+
+  it('appends nothing beyond the input line when the manager answers with no error', () => {
+    const { managers } = makeManagers();
+    managers.command.dispatch('ssh build-box');
+    expect(managers.tab.cur().log).toEqual([{ input: 'ssh build-box', output: '' }]);
+  });
+});
+
 describe('CommandManager bare-schedule launch dialog', () => {
   it('opens the schedule dialog for bare `schedule` and records no transcript line', () => {
     const { managers } = makeManagers();
