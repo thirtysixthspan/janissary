@@ -2,6 +2,8 @@
 
 ## ready
 
+* integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
+
 ## development
 
 ## deferred
