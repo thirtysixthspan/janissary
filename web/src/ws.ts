@@ -1,14 +1,7 @@
-import type { ServerEvent, RpcCall, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TabView, TaskRow, ProfileRow } from '@shared/protocol';
+import type { ServerEvent, RpcCall, StateEvent } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 
-export type StateListener = (
-  tabs: TabView[], activeTab: number, secondaryTab: number | undefined,
-  route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
-  syntaxTheme: string, theme: string, tasks: TaskRow[], janissaryTasksDir: string,
-  profiles: ProfileRow[], projectDir: string, version: string,
-  harnessLaunch: HarnessLaunchView | null, scheduleLaunch: ScheduleLaunchView | null,
-  activeTabNameMaxLength?: number,
-) => void;
+export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 export type LayoutListener = (event: {
   sidebarLeft?: number;
@@ -82,14 +75,11 @@ export class JanusClient {
     case 'state': {
       // Must be `null`, not `undefined`: App gates the command line with `route !== null`, so an
       // `undefined` route reads as "chooser open" and silently swallows every keystroke (incl. Enter).
-      for (const listener of this.stateListeners) {
-        listener(
-          event.tabs, event.activeTab, event.secondaryTab, event.route ?? null,
-          event.tabNameMaxLength, event.globalHistory, event.syntaxTheme, event.theme,
-          event.tasks, event.janissaryTasksDir, event.profiles, event.projectDir, event.version,
-          event.harnessLaunch ?? null, event.scheduleLaunch ?? null, event.activeTabNameMaxLength,
-        );
-      }
+      const snapshot: StateEvent = {
+        ...event, route: event.route ?? null,
+        harnessLaunch: event.harnessLaunch ?? null, scheduleLaunch: event.scheduleLaunch ?? null,
+      };
+      for (const listener of this.stateListeners) listener(snapshot);
     
     break;
     }

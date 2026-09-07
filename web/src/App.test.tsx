@@ -30,10 +30,12 @@ const client = {
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
     stateListener = (tabs, active, route, maxLength, history, syntax, theme, tasks) => {
-      listener(
-        tabs, active, undefined, route, maxLength, history, syntax, theme, tasks,
-        '', [], '/tmp', '1.2.3', null, null,
-      );
+      listener({
+        t: 'state', tabs, activeTab: active, route, tabNameMaxLength: maxLength,
+        activeTabNameMaxLength: 50, globalHistory: history, syntaxTheme: syntax, theme, tasks,
+        janissaryTasksDir: '', profiles: [], projectDir: '/tmp', version: '1.2.3',
+        harnessLaunch: null, scheduleLaunch: null,
+      });
     };
     return () => {};
   },
