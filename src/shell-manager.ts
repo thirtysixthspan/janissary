@@ -129,15 +129,12 @@ export class ShellManager {
     messageBus.emit('state', { type: 'dirty' });
 
     const update = (output: string, running: boolean) => {
-      const t = this.managers.tab.tabs.find((x) => x.label === label);
-      if (t) {
-        const log = [...t.log];
-        const index_ = log.findLastIndex((e) => e.input === command && e.running);
-        if (index_ !== -1) log[index_] = { ...log[index_], output, running };
-        t.log = log;
-      }
-      if (!running) { this.managers.tab.deleteBusy(label); this.managers.tab.persist(this.managers.tab.buildAgentState(tab)); }
-      messageBus.emit('state', { type: 'dirty' });
+      this.managers.tab.updateRunning(label, { command }, output, running, {
+        finalize: (t) => {
+          this.managers.tab.deleteBusy(label);
+          this.managers.tab.persist(this.managers.tab.buildAgentState(t));
+        },
+      });
     };
 
     const promotion = createShellPromotion(

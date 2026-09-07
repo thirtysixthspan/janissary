@@ -183,11 +183,12 @@ export class TabManager extends TabOpeningState {
     transcriptOperations.startRunning(this.tabs, label, input, (l, entry) => this.append(l, entry));
   }
 
-  finishRunning(label: string, output: string): void {
-    transcriptOperations.finishRunning(
-      this.tabs, label, output,
-      (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l),
-    );
+  finishRunning(label: string, output: string, match?: transcriptOperations.RunningEntryMatch): void {
+    transcriptOperations.finishRunning(this.tabs, label, output, (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l), match);
+  }
+
+  updateRunning(label: string, match: transcriptOperations.RunningEntryMatch | undefined, output: string, running: boolean, hooks: transcriptOperations.UpdateRunningHooks = {}): void {
+    transcriptOperations.updateRunning(this.tabs, label, match, output, running, hooks);
   }
 
   private capToConfiguredMax(log: LogEntry[]): LogEntry[] {

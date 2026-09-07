@@ -1,10 +1,13 @@
 import type { AgentState } from '../agent/types.js';
 import type { LogEntry, Tab } from './types.js';
+import type { RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
 import { recordHistory } from './history.js';
 import { capLog } from './transcript-log.js';
 import {
-  appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab,
+  appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab, updateRunningEntry,
 } from './transcript-events.js';
+
+export type { RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
 
 export function startRunning(
   tabs: Tab[], label: string, input: string, append: (label: string, entry: LogEntry) => void,
@@ -15,9 +18,16 @@ export function startRunning(
 export function finishRunning(
   tabs: Tab[], label: string, output: string, deleteBusy: (label: string) => void,
   persist: (state: AgentState) => void, buildAgentState: (tab: Tab) => AgentState,
-  markUnread: (label: string) => void,
+  markUnread: (label: string) => void, match?: RunningEntryMatch,
 ): void {
-  finishRunningTab(tabs, label, output, deleteBusy, persist, buildAgentState, markUnread);
+  finishRunningTab(tabs, label, output, deleteBusy, persist, buildAgentState, markUnread, match);
+}
+
+export function updateRunning(
+  tabs: Tab[], label: string, match: RunningEntryMatch | undefined,
+  output: string, running: boolean, hooks: UpdateRunningHooks,
+): void {
+  updateRunningEntry(tabs, label, match, output, running, hooks);
 }
 
 export function capToConfiguredMax(log: LogEntry[], maxLines: number): LogEntry[] {

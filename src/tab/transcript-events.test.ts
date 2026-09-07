@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab,
+  markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab, updateRunningEntry,
 } from './transcript-events.js';
 import { capLog } from './transcript-log.js';
 import { makeTab } from './index.js';
@@ -90,6 +90,103 @@ describe('appendTab', () => {
     appendTab([makeTab('bob', 'red')], 'ghost', { input: 'a', output: '' }, (log) => log, markUnread);
 
     expect(markUnread).not.toHaveBeenCalled();
+  });
+});
+
+describe('updateRunningEntry', () => {
+  it('does nothing for a label with no matching tab but still emits dirty', () => {
+    const persist = vi.fn();
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([makeTab('bob', 'red')], 'ghost', undefined, 'out', false, { finalize: persist });
+
+    expect(persist).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('updates the last matching running entry in place while still running', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'hi', output: '', running: true, markdown: true }]);
+    const finalize = vi.fn();
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([tab], 'bob', { markdown: true }, 'partial', true, { finalize });
+
+    expect(tab.log).toEqual([{ input: 'hi', output: 'partial', running: true, markdown: true }]);
+    expect(finalize).not.toHaveBeenCalled();
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('on finalize runs the hooks, emits the trailing entry, and emits dirty', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'hi', output: '', running: true, markdown: true }]);
+    const emit = vi.spyOn(messageBus, 'emit');
+    const finalize = vi.fn();
+    const markUnread = vi.fn();
+
+    updateRunningEntry([tab], 'bob', { markdown: true }, 'final answer', false, { trailing: true, finalize, markUnread });
+
+    expect(tab.log).toEqual([{ input: 'hi', output: 'final answer', running: false, markdown: true }]);
+    expect(finalize).toHaveBeenCalledWith(tab);
+    expect(markUnread).toHaveBeenCalledWith('bob');
+    expect(emit).toHaveBeenCalledWith('transcript', {
+      type: 'entry:appended', tabLabel: 'bob', entry: { input: '', output: 'final answer' }, tab,
+    });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('emits no trailing entry with empty output or when trailing is unset', () => {
+    const mk = () => makeTab('bob', 'red', 1, [], [{ input: 'hi', output: '', running: true, markdown: true }]);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([mk()], 'bob', { markdown: true }, '', false, { trailing: true, finalize: vi.fn() });
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.anything());
+
+    updateRunningEntry([mk()], 'bob', undefined, 'done', false, { finalize: vi.fn() });
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.anything());
+  });
+
+  it('matches a running entry by its input text when given a command match', () => {
+    const tab = makeTab('bob', 'red', 1, [], [
+      { input: 'ls', output: '', running: true },
+    ]);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([tab], 'bob', { command: 'other' }, 'x', true, {});
+
+    expect(tab.log).toEqual([{ input: 'ls', output: '', running: true }]);
+
+    updateRunningEntry([tab], 'bob', { command: 'ls' }, 'x', false, { trailing: true });
+    expect(tab.log).toEqual([{ input: 'ls', output: 'x', running: false }]);
+    expect(emit).toHaveBeenCalledWith('transcript', {
+      type: 'entry:appended', tabLabel: 'bob', entry: { input: '', output: 'x' }, tab,
+    });
+  });
+
+  it('an interleaved shell entry is no clobber target for the ACP markdown match', () => {
+    const tab = makeTab('bob', 'red', 1, [], [
+      { input: 'acp hi', output: '', running: true, markdown: true },
+      { input: 'git status', output: '', running: true, cwd: '/repo' },
+    ]);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([tab], 'bob', { markdown: true }, 'streamed reply', true, {});
+
+    expect(tab.log[1]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
+    expect(tab.log[0]).toEqual({ input: 'acp hi', output: 'streamed reply', running: true, markdown: true });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('the finalize path with a command match leaves an interleaved shell entry alone', () => {
+    const tab = makeTab('bob', 'red', 1, [], [
+      { input: 'git status', output: '', running: true, cwd: '/repo' },
+      { input: 'monitor ask aslan status', output: '', running: true },
+    ]);
+    const persist = vi.fn();
+
+    finishRunningTab([tab], 'bob', 'report built', vi.fn(), persist, buildAgentState, vi.fn(), { command: 'monitor ask aslan status' });
+
+    expect(tab.log[0]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
+    expect(tab.log[1]).toEqual({ input: 'monitor ask aslan status', output: 'report built', running: false });
   });
 });
 

@@ -205,7 +205,7 @@ describe('BrowserManager', () => {
     });
 
     expect(managers.tab.startRunning).toHaveBeenCalledWith('main', 'goto https://example.com');
-    expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', 'title — https://example.com/w1');
+    expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', 'title — https://example.com/w1', { command: 'goto https://example.com' });
     expect(onDone).toHaveBeenCalledWith('title — https://example.com/w1');
   });
 
@@ -223,7 +223,7 @@ describe('BrowserManager', () => {
       expect(managers.tab.finishRunning).toHaveBeenCalled();
     });
 
-    expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', 'Browser error: nope');
+    expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', 'Browser error: nope', { command: 'open' });
     expect(onDone).toHaveBeenCalledWith('Browser error: nope');
   });
 });

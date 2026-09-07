@@ -11,6 +11,6 @@ export const command: Command = {
       return;
     }
     managers.tab.startRunning(tab.label, command_);
-    void result.then((answer) => managers.tab.finishRunning(tab.label, answer));
+    void result.then((answer) => managers.tab.finishRunning(tab.label, answer, { command: command_ }));
   },
 };

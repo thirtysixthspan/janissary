@@ -98,10 +98,10 @@ export class BrowserManager {
   runInteractive(command: string, label: string, onDone?: (output: string) => void): void {
     this.managers.tab.startRunning(label, command);
     void this.run(label, command)
-      .then((out) => { this.managers.tab.finishRunning(label, out); onDone?.(out); })
+      .then((out) => { this.managers.tab.finishRunning(label, out, { command }); onDone?.(out); })
       .catch((error) => {
         const message = `Browser error: ${errorText(error)}`;
-        this.managers.tab.finishRunning(label, message);
+        this.managers.tab.finishRunning(label, message, { command });
         onDone?.(message);
       });
   }

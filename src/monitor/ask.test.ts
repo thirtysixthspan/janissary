@@ -51,6 +51,7 @@ describe('askMonitor', () => {
     expect(finishRunning).toHaveBeenCalledWith(
       'owner-tab',
       'monitor test-persona: test error — restarting monitor session',
+      { command: 'monitor ask test-persona test question' },
     );
     expect(onRespawn).toHaveBeenCalledOnce();
   });

@@ -2,27 +2,8 @@
 
 ## ready
 
-* Coalesce and incrementally invalidate the per-mutation state broadcast so one keystroke stops re-flattening and re-serializing every open tab's whole transcript.
 
-Existing Debt: The server answers essentially every mutation by synchronously rebuilding the entire view — every tab re-flattened from its full log and the whole record re-serialized to every client — with no dirty-mark coalescing, no per-tab caching of the flattened buffer, and no sequence numbers, because nothing owns "what changed since the last broadcast" as a concept. Severity: 7/10
-
-Existing Risk: 6/10 - A long session's transcripts grow without bound while every shell-output chunk and every ACP chunk re-flattens and re-serializes all of them, so latency accrues run over run, and a slow or reconnected client has no way to detect that it missed a broadcast.
-
-Proposal Risk: 3/10 - Listeners that read manager state synchronously off the broadcast must keep seeing a fully updated view, so the coalescing flush has to run synchronously at flush time, and the wire shape still carries the whole world — payload cost is reduced, not eliminated.
-
-Proposal: Three contained steps across src/index.ts, src/controller/events.ts, src/state-event.ts, and src/tab/view.ts. First, coalesce: the `state: dirty` subscription in src/controller/events.ts calls the emit sink once per event; record a pending flag and flush at most once per macrotask (a short timer or setImmediate) so a burst of mutations in one tick broadcasts once, with the flush itself synchronous so existing listeners still see settled state; add a test that two mutations inside one tick produce one broadcast, which nothing covers today. Second, cache per tab: keep each tab's flattened `bufferLines` beside the tab record and invalidate it on the transcript bus events that already exist — `entry:appended`, `entries:trimmed`, `tab:cleared` in src/bus.ts — so the snapshot builder in src/state-event.ts re-flattens only tabs whose logs moved; `flattenBuffer` and `buildTabViews` in src/tab/view.ts remain the only producers of that shape. Third, sequence: add a monotonically increasing `seq` field to the state event in src/protocol.ts, stamp it in src/state-event.ts, and have the client note (not yet act on) a detected gap in web/src/ws.ts's state arm so the reconnection story has its hook. src/controller.test.ts, src/message-handler-exhaustive.test.ts, web/src/ws.test.ts, and web/src/useServerState.test.ts pin the current shapes and must keep passing; the `seq` field is additive, so clients that ignore it need no change.
-
-
-* Route the shell and ACP running-entry updates through the one transcript finalize choreography the tab module owns instead of three hand-rolled copies.
-
-Existing Debt: Three producers each re-implement "update the running transcript entry, finalize it, persist, and emit" with divergent rules — the shell manager matches the running entry by its command text, the ACP runner and the tab module match by the running flag alone, and busy clearing, unread marking, and the trailing appended-entry emit are owned differently in each copy — because no single operation owns the running-entry lifecycle for every producer. Severity: 5/10
-
-Existing Risk: 5/10 - On an agent tab running a shell command while an ACP prompt streams, the flag-only paths overwrite whatever entry happens to be last-running regardless of which producer owns it, and a fix to capping, unread marking, or busy clearing applied in one copy silently misses the other two.
-
-Proposal Risk: 2/10 - Each producer's deliberate differences (the shell's promoted-to-terminal note and its command-text matching, the ACP path's different unread handling) must survive as parameters to the shared operation, so the risk is a mis-merged parameter rather than the divergence being removed.
-
-Proposal: Make src/tab/transcript-events.ts the single owner: generalize its finalize operation into one `updateRunningEntry(tabs, label, match, output, running, hooks)` whose `match` selects the entry (by running flag, or by `input === command && running`) and whose hooks carry the busy/persist/unread steps each producer needs. Then delete the hand-rolled update closure inside `ShellManager.run` (src/shell-manager.ts) and `makeUpdateRunning` (src/acp/runner.ts), replacing both with calls through `Managers.tab` to that one operation. While there, align the match so the ACP and finalize paths discriminate by producer the way the shell already does, so an interleaved shell command's entry is no longer a clobber target — a behavior change nothing covers today, so say so beside the step and pin it with a new case in src/acp/runner.test.ts. src/shell-manager.test.ts, the busy and queue cases in src/controller.test.ts, src/tab/transcript-events.test.ts, and src/tab/transcript-log.test.ts pin the rest and must keep passing.
-
+## development
 
 * Finish the tab-lookup migration so feature managers stop reaching into the raw tabs array with hand-written label scans.
 
@@ -102,6 +83,8 @@ Proposal: Introduce one `usePickerOverlays` hook in web/src/pickers/ that owns t
 ## development
 
 ## deferred
+
+* Coalesce and incrementally invalidate the per-mutation state broadcast so one keystroke stops re-flattening and re-serializing every open tab's whole transcript. — deferred: complexity 8/10, a cross-cutting performance architecture change spanning the broadcast pipeline (src/index.ts, src/controller/events.ts, src/state-event.ts, src/tab/view.ts), the wire protocol, and the client, with concurrency-sensitive coalescing semantics.
 
 ## declined
 
