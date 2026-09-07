@@ -23,7 +23,7 @@ export default [
   { name: 'app-overview', setup: [], target: 'page' },
   {
     name: 'tabs-overview',
-    setup: ['agent bilal', 'shell sleep 30', 'agent cavus', 'msg janus info morning report ready'],
+    setup: ['agent bilal', 'agent cavus', 'msg janus info morning report ready', 'shell sleep 30'],
     stabilize: 'busy-dot',
     target: 'tab-strip',
     cropToChildren: '.tab',
