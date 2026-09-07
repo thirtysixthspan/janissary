@@ -14,6 +14,8 @@ import { command as hist } from './hist.js';
 import { command as close } from './close.js';
 import { command as quit } from './quit.js';
 import { command as schedule } from './schedule.js';
+import { command as harness } from './harness.js';
+import { command as ssh } from './ssh.js';
 import { command as profile } from './profile.js';
 import { command as open } from './open.js';
 import { command as edit } from './edit.js';
@@ -51,6 +53,12 @@ const coreCommands: Command[] = [
   close,
   quit,
   schedule,
+  // Order here is priority: an entry whose `match` also accepts another's input must come first,
+  // which is why `acpReset` precedes `acp` and `monitors` precedes `monitor`. No predicate in this
+  // list accepts a string starting `harness` or `ssh`, and neither of theirs accepts anyone else's,
+  // so these two have no ordering constraint of their own.
+  harness,
+  ssh,
   profile,
   open,
   edit,

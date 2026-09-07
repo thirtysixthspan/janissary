@@ -3,8 +3,11 @@ import { coreAvailableCommands } from '../commands.js';
 import type { TabPluginDeclaration } from './api.js';
 import { rejectContribution } from './rejections.js';
 
-// Routes handled ahead of `resolveCommand`, so a plugin claiming one would never be reached.
-const ROUTE_NAMES = ['schedule', 'harness', 'ssh', 'shell'];
+// The two routes still handled ahead of `resolveCommand`, so a plugin claiming one would never be
+// reached: bare `schedule` opens its dialog in `CommandManager.run`, and `shell` is stripped by
+// `resolveCommand` itself and has no registry entry. `harness` and `ssh` used to be listed here too;
+// they are `Command` entries now, so `coreCommands` reserves them and this list no longer has to.
+const ROUTE_NAMES = ['schedule', 'shell'];
 
 function firstToken(command: string): string {
   return command.trimStart().split(/\s/u, 1)[0].toLowerCase();

@@ -72,6 +72,15 @@ describe('resolveCommand', () => {
     });
   });
 
+  // Both used to be matched by inline regular expressions in `CommandManager.run` ahead of this
+  // function, so every dispatcher that consults only the registry classified them as unknown.
+  it('classifies harness and ssh, which used to be dispatched ahead of the registry', () => {
+    expect(resolveCommand('harness claude')).toEqual({ kind: 'app', name: 'harness', cmd: 'harness claude' });
+    expect(resolveCommand('harness')).toEqual({ kind: 'app', name: 'harness', cmd: 'harness' });
+    expect(resolveCommand('ssh build-box')).toEqual({ kind: 'app', name: 'ssh', cmd: 'ssh build-box' });
+    expect(resolveCommand('/ssh build-box')).toEqual({ kind: 'app', name: 'ssh', cmd: 'ssh build-box' });
+  });
+
   it('strips a leading slash to force the built-in dispatcher', () => {
     expect(resolveCommand('/clear')).toEqual({ kind: 'app', name: 'clear', cmd: 'clear' });
   });

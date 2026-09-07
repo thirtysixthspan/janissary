@@ -75,3 +75,7 @@ can be aimed at a specific connection).
   so the chosen route runs exactly as if the user had typed the prefix.
 - An explicit prefix always wins: prefixing with `shell `, `db `, or `acp ` bypasses recognition
   entirely, which is the deterministic escape hatch when a guess would be wrong.
+- Every built-in is recognized identically on every path that dispatches a command — typed into a tab,
+  sent to another agent's tab as a `command` message, or asked of it as a `request`. A command that
+  launches an AI harness or an ssh session when typed does the same when it arrives from another
+  agent, rather than being reported as unrecognized there.
