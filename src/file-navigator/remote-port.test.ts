@@ -96,9 +96,22 @@ describe('RemoteFileSystemPort', () => {
     });
   });
 
-  it('still rejects when the reply carries a transport error', async () => {
+  // A far-side failure on an operation whose result can express one is still that operation's own
+  // failure value, not a transport error — rejecting reached the client as an RPC error with no
+  // result at all, where a local tree answers with a report the navigator renders.
+  it('reports an error reply as a failure value for an operation whose result carries one', async () => {
     const h = harness();
     const pending = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from(''));
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+
+    h.reply(undefined, 'The remote file navigator session is not open.');
+
+    await expect(pending).resolves.toMatchObject({ ok: false, reason: 'The remote file navigator session is not open.' });
+  });
+
+  it('still rejects an error reply for an operation with nowhere to put a reason', async () => {
+    const h = harness();
+    const pending = h.port.readDirectory('/remote/ws', 'src');
     await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
 
     h.reply(undefined, 'The remote file navigator session is not open.');
@@ -106,11 +119,35 @@ describe('RemoteFileSystemPort', () => {
     await expect(pending).rejects.toThrow('session is not open');
   });
 
-  it('rejects in-flight work when the channel closes', async () => {
+  it('rejects in-flight read-only work when the channel closes', async () => {
     const h = harness();
     const pending = h.port.search('/remote/ws');
     await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
     h.listener()?.onClose?.();
     await expect(pending).rejects.toThrow('connection ended');
+  });
+
+  it('reports in-flight mutating work as a per-path failure when the channel closes', async () => {
+    const h = harness();
+    const pending = h.port.deleteMany('/remote/ws', ['a.txt', 'b.txt']);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+
+    h.listener()?.onClose?.();
+
+    await expect(pending).resolves.toMatchObject({
+      total: 2, mutated: false, failedPaths: ['a.txt', 'b.txt'],
+      failureReasons: { 'a.txt': expect.stringContaining('connection ended') as string },
+    });
+  });
+
+  it('reports a request made after disposal without ever sending it', async () => {
+    const h = harness();
+    await vi.waitFor(() => expect(h.sent).toHaveLength(1));
+    h.port.dispose();
+
+    await expect(h.port.rename('/remote/ws', 'a.txt', 'b.txt'))
+      .resolves.toMatchObject({ ok: false, reason: expect.stringContaining('closed') as string });
+    // Reported without ever reaching the channel — the only frames sent are the open and the close.
+    expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
   });
 });

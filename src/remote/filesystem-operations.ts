@@ -33,9 +33,11 @@ export type OperationDescriptor = {
   paths: (args: RemoteFilesystemArguments) => string[];
   // Set when an empty path means the workspace root itself rather than an unnamed path.
   rootDestination?: true;
-  // How a containment refusal is answered. Absent when this operation's result — directory entries,
-  // stats, file content — has nowhere to put a reason, in which case it is refused as an error.
-  refusal?: (args: RemoteFilesystemArguments, attempted: string[]) => unknown;
+  // How a refusal is answered. Absent when this operation's result — directory entries, stats, file
+  // content — has nowhere to put a reason, in which case it is refused as an error. The reason comes
+  // from whoever is refusing: containment on the server, a connection that ended or a far-side error
+  // on the client.
+  refusal?: (args: RemoteFilesystemArguments, attempted: string[], reason: string) => unknown;
   run: (context: OperationContext, args: RemoteFilesystemArguments) => MaybePromise<unknown>;
 };
 

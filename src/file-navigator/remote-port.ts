@@ -12,13 +12,14 @@ import type { RowStat } from './stats.js';
 import type { HistoryStep } from './moves.js';
 import { mapRemoteHistory } from './remote-port-history.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
+import {
+  CLOSED_REASON, ENDED_REASON, RemotePortRequests, unavailableResult,
+} from './remote-port-requests.js';
 import { RemotePortWatchers } from './remote-port-watchers.js';
-
-type Pending = { resolve: (value: unknown) => void; reject: (error: Error) => void };
 
 export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   private requestNumber = 0;
-  private pending = new Map<string, Pending>();
+  private requests = new RemotePortRequests();
   private watchers = new RemotePortWatchers();
   private closed = false;
   private opened: Promise<void>;
@@ -41,16 +42,12 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     this.closed = true;
     void this.closeSession();
     this.channel.detachNavigator(this.session);
-    this.rejectPending('The remote file navigator is closed.');
+    this.requests.failAll(CLOSED_REASON);
     this.watchers.clear();
   }
 
   onReply(frame: Parameters<NavigatorListener['onReply']>[0]): void {
-    const pending = this.pending.get(frame.request);
-    if (!pending) return;
-    this.pending.delete(frame.request);
-    if (frame.error === undefined) { pending.resolve(frame.result); return; }
-    pending.reject(new Error(frame.error));
+    this.requests.answer(frame.request, frame.result, frame.error);
   }
 
   onEvent(path: string): void {
@@ -59,7 +56,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
 
   onClose(): void {
     this.closed = true;
-    this.rejectPending('The remote connection ended.');
+    this.requests.failAll(ENDED_REASON);
     this.watchers.clear();
   }
 
@@ -183,11 +180,15 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   private async request<T>(operation: RemoteFilesystemOperation, args: RemoteFilesystemArguments): Promise<T> {
-    await this.opened;
-    if (this.closed) throw new Error('The remote file navigator is closed.');
+    try {
+      await this.opened;
+    } catch {
+      return unavailableResult<T>(operation, args, CLOSED_REASON);
+    }
+    if (this.closed) return unavailableResult<T>(operation, args, CLOSED_REASON);
     const request = `${this.session}:${++this.requestNumber}`;
     return new Promise<T>((resolve, reject) => {
-      this.pending.set(request, { resolve: (value) => resolve(value as T), reject });
+      this.requests.add(request, { operation, args, resolve: (value) => resolve(value as T), reject });
       this.channel.send({ type: 'filesystem-request', session: this.session, request, operation, args });
     });
   }
@@ -210,14 +211,9 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return { ok: true, value: { path: await this.paths.from(root, result.value.path) } };
   }
 
-  private rejectPending(message: string): void {
-    for (const pending of this.pending.values()) pending.reject(new Error(message));
-    this.pending.clear();
-  }
-
   private async openSession(): Promise<void> {
     await this.workspace;
-    if (this.closed) throw new Error('The remote file navigator is closed.');
+    if (this.closed) throw new Error(CLOSED_REASON);
     this.channel.send({ type: 'filesystem-open', session: this.session });
   }
 

@@ -15,8 +15,12 @@ import type { ClientFrame } from './protocol.js';
 // be made against both implementations and their answers compared. The far side serves the same
 // directory the local port reads, and the workspace is that directory, so an escaping path stays
 // escaping in both vocabularies.
-function loopback(root: string): { port: RemoteFileSystemPort; dispose: () => void } {
+function loopback(root: string) {
   const listeners = new Map<string, NavigatorListener>();
+  const sent: ClientFrame[] = [];
+  // A channel that has gone away stops carrying frames; `stopDelivery` is how a test reaches the
+  // state where a request is outstanding and no reply is ever coming.
+  let delivering = true;
   const navigators = new RemoteFileNavigators((frame) => {
     if (frame.type !== 'filesystem-reply') return;
     listeners.get(frame.session)?.onReply(frame);
@@ -25,12 +29,18 @@ function loopback(root: string): { port: RemoteFileSystemPort; dispose: () => vo
     attachNavigator: (session: string, listener: NavigatorListener) => { listeners.set(session, listener); },
     detachNavigator: (session: string) => { listeners.delete(session); },
     send: (frame: ClientFrame) => {
+      sent.push(frame);
+      if (!delivering) return;
       if (frame.type === 'filesystem-open') { navigators.open(frame.session); return; }
       if (frame.type === 'filesystem-request') navigators.request(frame);
     },
   } as unknown as RemoteChannel;
   const port = new RemoteFileSystemPort(channel, 'files-1', Promise.resolve(root));
-  return { port, dispose: () => { port.dispose(); navigators.dispose(); } };
+  return {
+    port, sent,
+    stopDelivery: () => { delivering = false; },
+    dispose: () => { port.dispose(); navigators.dispose(); },
+  };
 }
 
 function tabState(root: string, filesystem: FileSystemPort, remote: boolean): FilesTabState {
@@ -124,5 +134,79 @@ describe('file navigator refusal contract', () => {
     const result = await renameOne(managers, state, 'a.txt', 'b.txt', () => {});
 
     expect(result).toMatchObject({ total: 1, failedPaths: [] });
+  });
+});
+
+// The contract above is about which answers match; this is about the port keeping to it when the
+// channel does not answer at all. A rejection here reaches the client as an RPC error carrying no
+// result, so a rename, a batch delete, or an undo replay that lost its connection looks as though
+// nothing happened — for a destructive operation, the worst thing it could look like.
+describe('file navigator contract when the channel ends mid-operation', () => {
+  let root: string;
+  let remote: ReturnType<typeof loopback>;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'janus-refusal-ended-'));
+    writeFileSync(path.join(root, 'a.txt'), 'a');
+    remote = loopback(root);
+  });
+
+  afterEach(() => {
+    remote.dispose();
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  const managers = { tab: { retargetEditorTab: vi.fn() } } as never;
+
+  // Starts the operation with the channel no longer carrying frames, waits until the request is
+  // genuinely outstanding, then ends the connection under it.
+  async function whileEnding<T>(start: () => T | Promise<T>): Promise<T> {
+    remote.stopDelivery();
+    const pending = start();
+    await vi.waitFor(() => expect(remote.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    remote.port.onClose();
+    return pending;
+  }
+
+  it('reports a rename in flight as a per-path failure rather than rejecting', async () => {
+    const state = tabState(root, remote.port, true);
+
+    const result = await whileEnding(() => renameOne(managers, state, 'a.txt', 'b.txt', () => {}));
+
+    expect(result).toMatchObject({
+      total: 1,
+      failedPaths: ['a.txt'],
+      failureReasons: { 'a.txt': expect.stringContaining('connection ended') as string },
+    });
+  });
+
+  it('reports a batch delete in flight as a per-path failure rather than rejecting', async () => {
+    const state = tabState(root, remote.port, true);
+
+    const result = await whileEnding(() => deleteMany(state, ['a.txt'], () => {}));
+
+    expect(result).toMatchObject({
+      failedPaths: ['a.txt'],
+      failureReasons: { 'a.txt': expect.stringContaining('connection ended') as string },
+    });
+  });
+
+  it('reports a replay in flight as a failure, leaving both history stacks as they were', async () => {
+    const undoStack = [{ entries: [{ from: 'a.txt', to: 'b.txt' }] }];
+
+    const result = await whileEnding(() => remote.port.replay(root, undoStack, [], 'undo', false, false));
+
+    expect(result).toMatchObject({
+      mutated: false,
+      undoStack,
+      redoStack: [],
+      result: { failureReasons: { 'a.txt': expect.stringContaining('connection ended') as string } },
+    });
+  });
+
+  it('still rejects a read whose result has nowhere to carry a reason', async () => {
+    const pending = whileEnding(() => remote.port.search(root));
+
+    await expect(pending).rejects.toThrow('connection ended');
   });
 });

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { containedPath } from '../file-navigator/batch-paths.js';
+import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import { operationDescriptor } from './filesystem-operations.js';
 import type { ClientFrame } from './protocol.js';
 
@@ -21,14 +22,26 @@ export function refusedPaths(frame: RequestFrame, root: string): string[] {
   });
 }
 
-// How a containment refusal is answered. An operation whose result type carries a failure channel
-// names the refusal shape matching it — `{ ok: false, reason }` for a single item, the same
-// `failedPaths`/`failureReasons` report a wholly-refused local batch produces for the rest — so
+export type Refusal = { classified: true; value: unknown } | { classified: false };
+
+// How a failure is answered for one operation. An operation whose result type carries a failure
+// channel names the refusal shape matching it — `{ ok: false, reason }` for a single item, the same
+// `failedPaths`/`failureReasons` report a wholly-failed local batch produces for the rest — so
 // callers branch on the result they already handle instead of catching a transport error. An
 // operation with nowhere to put a reason names none, reports `classified: false`, and is refused as
-// an error reply.
-export function refusalFor(frame: RequestFrame): { classified: true; value: unknown } | { classified: false } {
-  const descriptor = operationDescriptor(frame.operation);
+// an error.
+//
+// Both halves of the channel ask this, with the reason each of them knows: the server for a
+// containment refusal, the client for a connection that ended or an error the far side replied with.
+export function refusalValueFor(
+  operation: RequestFrame['operation'], args: RequestFrame['args'], reason: string,
+): Refusal {
+  const descriptor = operationDescriptor(operation);
   if (!descriptor.refusal) return { classified: false };
-  return { classified: true, value: descriptor.refusal(frame.args, descriptor.paths(frame.args)) };
+  return { classified: true, value: descriptor.refusal(args, descriptor.paths(args), reason) };
+}
+
+// A containment refusal: the request named a path outside the workspace root and ran nothing.
+export function refusalFor(frame: RequestFrame): Refusal {
+  return refusalValueFor(frame.operation, frame.args, OUTSIDE_ROOT_REASON);
 }
