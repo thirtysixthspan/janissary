@@ -20,6 +20,12 @@ A request still waiting for its reply when the connection ends is answered as a 
 
 Nothing is resent. A lost reply does not establish that the server never carried the request out, so replaying a mutating call could apply it twice. A reply that arrives after a connection has been given up on is ignored, exactly as a reply for an unrecognized request id is.
 
+An unavailable answer is also what a caller gets when the socket was never open, and when the server replies with an error the reply's result cannot carry. The three are indistinguishable to the caller and are handled the same way, each surface deciding for itself:
+
+- A file-navigator move, paste, or undo/redo replay leaves the tree as it stands and raises no overwrite dialog. Nothing moved, and there is no per-path report to act on.
+- The file-search pop-up and the quick-open palette stop loading and show an empty result, rather than staying on a loading state that no reply will ever clear.
+- Tab completion leaves the line exactly as it was typed, since there is nothing to complete against.
+
 ### Invalid frames
 
 The server silently drops malformed JSON and JSON values that are not valid RPC envelopes. This includes unknown methods and requests with missing, null, array, or primitive `params`. Dropped frames are neither dispatched nor acknowledged, and they do not close the WebSocket; a later valid request on the same connection is handled normally.

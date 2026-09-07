@@ -110,4 +110,25 @@ describe('useFileNavigatorMoveOperations', () => {
     expect(client.request).toHaveBeenCalledTimes(1);
     expect(result.current.pendingConflict).toBeNull();
   });
+
+  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
+  // reply, and when the server answered with an error. Both of these used to read a field off that
+  // and throw mid-`.then`, so the batch move silently never opened its overwrite dialog.
+  it.each([
+    ['a batch move', (api: { requestMove: (a: string[], b: string, c: string, d: boolean) => void }) => {
+      api.requestMove(['a.txt', 'b.txt'], 'archive', 'archive', false);
+    }],
+    ['an undo', (api: { sendUndo: () => void }) => { void api.sendUndo(); }],
+  ])('leaves %s unanswered by the server with no conflict raised', async (_label, start) => {
+    const client = makeClient(undefined);
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 3));
+
+    await act(async () => {
+      start(result.current as never);
+      await Promise.resolve();
+    });
+
+    expect(result.current.pendingConflict).toBeNull();
+    expect(client.send).not.toHaveBeenCalled();
+  });
 });

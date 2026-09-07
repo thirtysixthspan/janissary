@@ -12,7 +12,7 @@ export type CommandInputProperties = {
   ghostHistory: string[];
   onSubmit: (text: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
-  complete: (text: string, cursor: number) => Promise<CompletionResult>;
+  complete: (text: string, cursor: number) => Promise<CompletionResult | undefined>;
   pickerOpen: boolean;
   busy: boolean;
   autoFocus?: boolean;

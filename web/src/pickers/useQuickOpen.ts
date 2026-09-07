@@ -37,8 +37,11 @@ export function useQuickOpen(client: JanusClient) {
     const requestId = ++requestRef.current;
     void client.request<{ root: string; paths: string[] }>({ method: 'projectFiles', params: {} }).then((result) => {
       if (!openRef.current || requestRef.current !== requestId) return;
-      setRoot(result.root);
-      setPaths(result.paths);
+      // The loading flag clears whether or not an answer came, for the same reason the file-search
+      // pop-up's does: a palette left spinning is stuck until it is reopened. With no paths there is
+      // nothing to pick, so the empty root is never used to build a path.
+      setRoot(result?.root ?? '');
+      setPaths(result?.paths ?? []);
       setQuickOpenLoading(false);
     });
   }, [client, setQuickOpenOpen]);

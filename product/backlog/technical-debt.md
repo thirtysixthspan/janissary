@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make the web client's request result express the answer it can actually return, and handle that answer where callers read fields off it.
-
-Existing Debt: `JanusClient.request` is declared `Promise<T>` but resolves `undefined` both when the socket is not open and when the server replies with an error it discards, so five call sites read fields off a value the type promised was there while four others defend against it. Severity: 7/10
-
-Existing Risk: 7/10 - A batch move or paste answered by a closed socket or a failed remote operation throws on `'conflictPaths' in result` and silently never opens its overwrite dialog, and the same undefined leaves the file-search pop-up and the quick-open palette stuck on their loading state with no way back except reopening them.
-
-Proposal Risk: 2/10 - The unavailable case is a compile error at every call site until it is handled, though what a caller then shows for it is still each caller's own decision and can be inconsistent.
-
-Proposal: `request<T>` in `web/src/ws.ts` resolves `undefined as T` when `readyState` is not `OPEN`, and its pending callback is `(r) => resolve(r as T)`, which discards the reply's `error` and resolves the absent `result` alongside it. Change the return type to `Promise<T | undefined>` and let the compiler find the callers. Four already cope and need no change: `web/src/plugins/api.ts`, `web/src/file-navigator/useFileNavigatorOpener.ts`, `web/src/file-navigator/useSelectionAction.ts`, and both requests in `web/src/editor/useEditorSuggest.ts`. Five do not: `sendBatchMove` and `history` in `web/src/file-navigator/useFileNavigatorMoveOperations.ts`, the paste request in `web/src/file-navigator/useFileNavigatorPaste.ts`, `result.paths` in `web/src/file-navigator/useFileNavigatorSearch.ts`, and `result.root`/`result.paths` in `web/src/pickers/useQuickOpen.ts`. Give each an explicit unavailable branch: the move, paste, and history paths should clear any pending conflict and leave the tree untouched rather than throwing mid-`.then`; the two loading paths must clear their own loading flag so the pop-up closes or shows an empty result instead of spinning. The pending-request settlement entry earlier in this section deliberately keeps `request()`'s existing unavailable-result value, so the two compose rather than conflict — this one is about the type and the call sites, not about when the promise settles. `web/src/ws.test.ts` covers a request started on an already-closed socket; `web/src/file-navigator/useFileNavigatorMoveOperations.test.ts`, `web/src/file-navigator/useFileNavigatorPaste.test.ts`, and `web/src/pickers/useQuickOpen.test.ts` all exercise the success paths and must keep passing, with an undefined-reply case added to each. `useFileNavigatorSearch` has no colocated test at all; add one alongside its new branch.
-
-
 * Remove a tab's persisted state when the tab is closed, so a relaunch restores what was open rather than everything that ever was.
 
 Existing Debt: The agent-state and transcript stores offer a whole-directory clear and a per-tab write but no per-tab delete, and tab teardown — which releases fifteen other kinds of resource — has nothing to call. Severity: 7/10

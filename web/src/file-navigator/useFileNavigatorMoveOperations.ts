@@ -37,6 +37,9 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
       method: 'moveFileNavigatorItems',
       params: { index, sourcePaths, destinationPath, policy },
     });
+    // No answer, so nothing moved and there is no conflict report to act on: dismiss the dialog and
+    // leave the tree as it stands, rather than reading a field off a result that is not there.
+    if (!result) { setPendingConflict(null); return; }
     if ('conflictPaths' in result) {
       setPendingConflict({ kind: 'batch-move', sourcePaths, destinationPath, title });
       return;
@@ -78,6 +81,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
 
   const history = async (method: Method) => {
     const result = await client.request<UndoRedoResult>({ method, params: { index } });
+    if (!result) { setPendingConflict(null); return; }
     const source = method === 'undoFileNavigatorItem' ? 'undo' : 'redo';
     if (result.conflict) {
       const name = basename(result.conflict.fromRelPath);

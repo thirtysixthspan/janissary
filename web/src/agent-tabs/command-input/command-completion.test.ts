@@ -58,6 +58,24 @@ describe('handleTabCompletion', () => {
     vi.unstubAllGlobals();
   });
 
+  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
+  // reply, and when the server answered with an error. Reading `res.newInput` off that threw inside
+  // the `.then`; there is nothing to complete against, so the line the user typed stands.
+  it('leaves the line alone when there is no completion answer', async () => {
+    const rafStub = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', rafStub);
+    const complete = vi.fn().mockResolvedValue(undefined);
+    const setValue = vi.fn();
+    const setCompletions = vi.fn();
+
+    handleTabCompletion('fil', 3, complete, setValue, setCompletions, { current: null });
+
+    await vi.waitFor(() => { expect(setCompletions).toHaveBeenCalledWith([]); });
+    expect(setValue).not.toHaveBeenCalled();
+    expect(rafStub).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it('sets cursor position via requestAnimationFrame after completion', async () => {
     vi.stubGlobal('requestAnimationFrame', (fn: () => void) => fn());
     const input = { current: { selectionStart: 0, selectionEnd: 0 } as HTMLTextAreaElement };
