@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JanusClient } from './ws';
+import type { StateEvent } from '@shared/protocol';
 
 describe('JanusClient', () => {
   let messageHandler: ((event: { data: string }) => void) | undefined;
@@ -87,7 +88,47 @@ describe('JanusClient', () => {
       }),
     });
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith([], 0, 2, null, 20, [], 'monokai', 'dark', [], '/opt/janissary/ai/tasks', [], '/tmp', '1.2.3', { names: ['claude'], models: { claude: ['opus'] } }, null, 40);
+    expect(listener).toHaveBeenCalledWith({
+      t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null,
+      tabNameMaxLength: 20, activeTabNameMaxLength: 40, globalHistory: [],
+      syntaxTheme: 'monokai', theme: 'dark', tasks: [], janissaryTasksDir: '/opt/janissary/ai/tasks',
+      profiles: [], projectDir: '/tmp', version: '1.2.3',
+      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } }, scheduleLaunch: null,
+    });
+  });
+
+  it('forwards every field of a complete snapshot to each subscriber', () => {
+    const client = new JanusClient();
+    const first = vi.fn();
+    const second = vi.fn();
+    client.onState(first);
+    client.onState(second);
+    const snapshot: StateEvent = {
+      t: 'state', tabs: [], activeTab: 1, secondaryTab: 3,
+      route: { cmd: 'command', choices: ['shell', 'acp'] },
+      tabNameMaxLength: 23, activeTabNameMaxLength: 71, globalHistory: ['history'],
+      syntaxTheme: 'monokai', theme: 'light', tasks: [], janissaryTasksDir: '/install/tasks',
+      profiles: [], projectDir: '/project', version: '7.8.9',
+      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
+      scheduleLaunch: { targets: ['agent'], active: 'agent' },
+    };
+    messageHandler!({ data: JSON.stringify(snapshot) });
+    expect(first).toHaveBeenCalledExactlyOnceWith(snapshot);
+    expect(second).toHaveBeenCalledExactlyOnceWith(snapshot);
+  });
+
+  it.each([undefined, null])('normalizes %s dialog fields to null', (missing) => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onState(listener);
+    messageHandler!({ data: JSON.stringify({
+      t: 'state', tabs: [], activeTab: 0, route: missing, harnessLaunch: missing, scheduleLaunch: missing,
+      tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [], syntaxTheme: 'monokai',
+      theme: 'dark', tasks: [], janissaryTasksDir: '', profiles: [], projectDir: '/project', version: '1.2.3',
+    }) });
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({
+      route: null, harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,
+    }));
   });
 
   it('onState unsubscribe stops the listener from being called', () => {

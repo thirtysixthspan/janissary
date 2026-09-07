@@ -3,16 +3,6 @@
 ## ready
 
 
-* Pass named state snapshots through the websocket client subscription boundary.
-
-Existing Debt: The client converts the shared state event into sixteen positional arguments and redeclares their types and optionality, making every snapshot field change require synchronized edits across a second contract. Severity: 6/10
-
-Existing Risk: 5/10 - Swapping adjacent string fields or omitting a newly added field can silently feed the wrong UI state while the positional callback still satisfies its types.
-
-Proposal Risk: 2/10 - Named fields remove positional ambiguity and preserve shared optionality, though the individual React setters still need explicit wiring for new state.
-
-Proposal: Change `StateListener` in `web/src/ws.ts` to accept the shared `StateEvent` from `src/protocol/events.ts`, available through `src/protocol.ts`, and have the `state` arm of `JanusClient.onEvent` forward a named snapshot. Preserve its deliberate null normalization for `route`, `harnessLaunch`, and `scheduleLaunch`. Destructure the named event in `web/src/useServerState.ts`, remove the duplicated optional `activeTabNameMaxLength` contract and its fallback for a field required by the shared event, and preserve route-choice initialization and project-title updates. Update listener fixtures and assertions in `web/src/ws.test.ts`, `web/src/useServerState.test.ts`, and `web/src/App.test.tsx`; add a complete snapshot with distinct values for adjacent string and numeric fields to pin the fan-out. Keep this increment confined to the subscription boundary rather than restructuring the app's state storage.
-
 ## development
 
 ## deferred

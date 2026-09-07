@@ -1,5 +1,14 @@
 # WebSocket RPC
 
+### State snapshots
+
+Each state update supplies the displayed tabs and selections, tab-name limits, command history,
+themes, task and profile lists, launch dialogs, and project title information together. The active
+tab's name limit is applied independently of the inactive-tab limit. An absent secondary selection
+clears the secondary tab. Missing or null route and launch dialogs are treated as closed. A newly
+opened route chooser selects its last choice, or its first position when there are no choices;
+repeated updates for the same command preserve the current choice.
+
 ### Browser history restoration
 
 When the browser restores the app from its back/forward cache, the previously released WebSocket client is replaced with a new connection and sends the normal `init` request. The server keeps the session available for one second after its last client disconnects, and cancels that pending shutdown when the replacement connection arrives during that window.

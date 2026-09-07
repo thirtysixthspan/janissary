@@ -41,7 +41,14 @@ export function useServerState(client: JanusClient, setters: Setters): void {
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
-  useEffect(() => client.onState((nextTabs, active, secondary, nextRoute, nextTabNameMaxLength, nextGlobalHistory, nextSyntaxTheme, nextTheme, nextTasks, nextJanissaryTasksDir, nextProfiles, nextProjectDir, nextVersion, nextHarnessLaunch, nextScheduleLaunch, nextActiveTabNameMaxLength = 50) => {
+  useEffect(() => client.onState(({
+    tabs: nextTabs, activeTab: active, secondaryTab: secondary, route: nextRoute,
+    tabNameMaxLength: nextTabNameMaxLength, activeTabNameMaxLength: nextActiveTabNameMaxLength,
+    globalHistory: nextGlobalHistory, syntaxTheme: nextSyntaxTheme, theme: nextTheme,
+    tasks: nextTasks, janissaryTasksDir: nextJanissaryTasksDir, profiles: nextProfiles,
+    projectDir: nextProjectDir, version: nextVersion,
+    harnessLaunch: nextHarnessLaunch, scheduleLaunch: nextScheduleLaunch,
+  }) => {
     setTabs(nextTabs);
     setActiveTab(active);
     setSecondaryTab(secondary);
