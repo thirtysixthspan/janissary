@@ -4,7 +4,13 @@ A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agen
 
 ### Hardcoded agent
 
-The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. OpenCode's model is configured via the `OPENCODE_CONFIG_CONTENT` env var passed to the subprocess (currently `google/gemini-3.1-flash-lite`), and the agent connection is shown as `acp:<agent>` in the tab's status popup.
+The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. The agent connection is shown as `acp:<agent>` in the tab's status popup.
+
+### Which model runs
+
+The model comes from the harness catalog's OpenCode list — the same catalog the monitor and conversation sessions read, and the same one a project replaces with `.janissary/harness-models.json` (see [[harness]]). `google/gemini-3.1-flash-lite` is preferred while the catalog offers it; otherwise the first model the list does offer is used, so a project that overrides the catalog runs one of its own models rather than a built-in one. An OpenCode list with nothing in it refuses the prompt with a message instead of launching.
+
+The connections panel and status popup show the model the session actually launched with.
 
 ### Connection lifecycle
 
