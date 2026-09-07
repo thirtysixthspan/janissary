@@ -3,9 +3,12 @@ export { parseSuggestion, SUGGESTION_FORMAT } from './reply-format.js';
 
 // Pure parsing for the monitor commands and the monitoring AI's reply format.
 
-export type ParsedMonitor = { persona: string; targets: MonitorTarget[] };
-export type ParsedMonitorAsk = { ask: true; persona: string; question: string };
-export type ParsedUnmonitor = { all: true } | { persona: string; target?: MonitorTarget };
+// `name` is the monitor's runtime identity — the registry key, the reporting tab's label, and what
+// `unmonitor` and `monitor ask` address. For `monitor <persona>` it is the persona, because that
+// command names one and takes the other from it; a profile-launched monitor can carry its own.
+export type ParsedMonitor = { name: string; targets: MonitorTarget[] };
+export type ParsedMonitorAsk = { ask: true; name: string; question: string };
+export type ParsedUnmonitor = { all: true } | { name: string; target?: MonitorTarget };
 
 // A target argument: `group:<n>` or a tab label.
 function parseTarget(word: string): MonitorTarget | { error: string } {
@@ -16,35 +19,35 @@ function parseTarget(word: string): MonitorTarget | { error: string } {
 }
 
 // `monitor <persona> [target...]` — no targets means inline mode (watch the current tab).
-// `monitor ask <persona> <question>` — query the running monitor's ACP directly.
+// `monitor ask <name> <question>` — query the running monitor's ACP directly.
 export function parseMonitorCommand(input: string): ParsedMonitor | ParsedMonitorAsk | { error: string } {
   const words = input.trim().split(/\s+/).slice(1);
   if (words[0] === 'ask') {
-    const persona = words[1];
+    const name = words[1];
     const question = words.slice(2).join(' ');
-    if (!persona || !question) return { error: 'Usage: monitor ask <persona> <question>' };
-    return { ask: true, persona, question };
+    if (!name || !question) return { error: 'Usage: monitor ask <name> <question>' };
+    return { ask: true, name, question };
   }
-  const persona = words[0];
-  if (!persona) return { error: 'Usage: monitor <persona> [tab|group:<n> ...]' };
-  if (words[1] === 'ask') return { error: `Did you mean: monitor ask ${persona} <question>?` };
+  const name = words[0];
+  if (!name) return { error: 'Usage: monitor <persona> [tab|group:<n> ...]' };
+  if (words[1] === 'ask') return { error: `Did you mean: monitor ask ${name} <question>?` };
   const targets: MonitorTarget[] = [];
   for (const word of words.slice(1)) {
     const target = parseTarget(word);
     if ('error' in target) return target;
     targets.push(target);
   }
-  return { persona, targets };
+  return { name, targets };
 }
 
-// `unmonitor --all` | `unmonitor <persona> [target]`
+// `unmonitor --all` | `unmonitor <name> [target]`
 export function parseUnmonitorCommand(input: string): ParsedUnmonitor | { error: string } {
   const words = input.trim().split(/\s+/).slice(1);
   if (words[0] === '--all') return { all: true };
-  const persona = words[0];
-  if (!persona) return { error: 'Usage: unmonitor <persona> [tab|group:<n>] | unmonitor --all' };
-  if (words.length === 1) return { persona };
+  const name = words[0];
+  if (!name) return { error: 'Usage: unmonitor <name> [tab|group:<n>] | unmonitor --all' };
+  if (words.length === 1) return { name };
   const target = parseTarget(words[1]);
   if ('error' in target) return target;
-  return { persona, target };
+  return { name, target };
 }

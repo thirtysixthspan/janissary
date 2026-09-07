@@ -68,9 +68,11 @@ export type TabView = {
   // Editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
   // Monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
-  // persona name, the monitored tabs/groups (pre-formatted), and the running total of bytes
-  // sent/received on the monitor's dedicated ACP session.
-  monitor?: { suggestions: SuggestionView[]; persona: string; targets: string; contextBytes: number };
+  // monitor's runtime name (also this tab's label, and what `unmonitor` and `monitor ask` address),
+  // the persona it runs — the same word as the name unless a profile gave it one of its own — the
+  // monitored tabs/groups (pre-formatted), and the running total of bytes sent/received on the
+  // monitor's dedicated ACP session.
+  monitor?: { suggestions: SuggestionView[]; name: string; persona: string; targets: string; contextBytes: number };
   // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.

@@ -6,33 +6,23 @@ import { isMonitorTab, type MonitorTab } from '../tab/view-guards.js';
 export { findSuggestion, removeSuggestion, runSuggestion, rateSuggestion } from './suggestions.js';
 
 // Monitor reporting tabs: each external-mode monitor gets its own view-only tab
-// (`view: 'monitor'`) named after its persona (e.g. `security`, `quality`) and colored
-// after the tab it monitors — the reporting strip and body left-border carry that color.
+// (`view: 'monitor'`) labelled with the monitor's runtime name (e.g. `security`, `quality`) and
+// colored after the tab it monitors — the reporting strip and body left-border carry that color.
 // Reporting tabs render in the reporting section below the command bar, never in the
 // action strip, and accept no commands; their only interactions are the per-suggestion
 // Run/Dismiss buttons (RPCs handled here).
 
-const makeMonitorTab = (name: string, dotColor: string, number: number): MonitorTab => ({
+const makeMonitorTab = (name: string, persona: string, dotColor: string, number: number): MonitorTab => ({
   // Group 0: reporting tabs sit outside the action-tab group system.
   ...makeTab(name, dotColor, number, [], [], undefined, 0, dotColor),
   view: 'monitor',
   title: name,
-  // The reporting tab's label is always its persona name (see `MonitorManager.start`), so
-  // `persona` never changes after creation; `targets`/`contextBytes` are filled in afterward
-  // via `updateMonitorMeta` once the owning monitor registration exists.
-  monitor: { suggestions: [], persona: name, targets: '', contextBytes: 0 },
+  // Both are fixed at creation: the label is the runtime name, and the persona is whichever one the
+  // monitor runs — the same word unless a profile gave the monitor a name of its own.
+  // `targets`/`contextBytes` are filled in afterward via `updateMonitorMeta` once the owning monitor
+  // registration exists.
+  monitor: { suggestions: [], name, persona, targets: '', contextBytes: 0 },
 });
-
-// A unique label for a new monitor's reporting tab: the persona name, suffixed
-// (`assistant-2`, …) when that label is already taken by any tab. Each monitor instance
-// gets its own window, so the same persona can watch different targets side by side.
-export function allocateMonitorLabel(managers: Managers, persona: string): string {
-  const used = new Set(managers.tab.tabs.map((t) => t.label));
-  if (!used.has(persona)) return persona;
-  let n = 2;
-  while (used.has(`${persona}-${n}`)) n++;
-  return `${persona}-${n}`;
-}
 
 // All monitor reporting tabs currently open. The guard admits only those that actually carry the
 // payload, so every consumer reads `monitor` without asserting — a reporting tab somehow missing it
@@ -44,19 +34,21 @@ export function monitorTabs(managers: Managers): MonitorTab[] {
 // Open the named monitor's reporting tab or reuse the existing one. Reporting tabs are
 // appended at the end of the tab list so action-tab indices (including `activeTab`)
 // never shift, and the active tab is left untouched.
-export function openMonitorTab(managers: Managers, name: string, dotColor: string): MonitorTab {
+export function openMonitorTab(managers: Managers, name: string, persona: string, dotColor: string): MonitorTab {
   const existing = monitorTabs(managers).find((t) => t.label === name);
   if (existing) return existing;
   const tabs = managers.tab.tabs;
-  const tab = makeMonitorTab(name, dotColor, tabs.length + 1);
+  const tab = makeMonitorTab(name, persona, dotColor, tabs.length + 1);
   managers.tab.tabs = [...tabs, tab];
   messageBus.emit('state', { type: 'dirty' });
   return tab;
 }
 
 // Append a suggestion to the named monitor's feed (opening its tab if needed).
-export function pushSuggestion(managers: Managers, name: string, dotColor: string, suggestion: MonitorSuggestion): void {
-  const tab = openMonitorTab(managers, name, dotColor);
+export function pushSuggestion(
+  managers: Managers, name: string, persona: string, dotColor: string, suggestion: MonitorSuggestion,
+): void {
+  const tab = openMonitorTab(managers, name, persona, dotColor);
   tab.monitor.suggestions.push(suggestion);
   messageBus.emit('state', { type: 'dirty' });
 }

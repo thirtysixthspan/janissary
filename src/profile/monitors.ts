@@ -17,9 +17,9 @@ export function startProfileMonitors(
     if ('error' in parsed) { notes.push(`Monitor "${monitor.name}": ${parsed.error}`); continue; }
     if ('ask' in parsed) continue;
     managers.monitor.stop(issuingLabel, monitor.name);
-    const error = managers.monitor.start(issuingLabel, parsed.persona, parsed.targets, monitor.name);
+    const error = managers.monitor.start(issuingLabel, parsed.name, parsed.targets, monitor.name);
     notes.push(error
       ? `Monitor "${monitor.name}": ${error}`
-      : `Monitoring ${formatTargets(parsed.targets)} (persona: ${parsed.persona}).`);
+      : `Monitoring ${formatTargets(parsed.targets)} (persona: ${parsed.name}).`);
   }
 }

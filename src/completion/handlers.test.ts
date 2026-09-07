@@ -72,7 +72,12 @@ describe('completeScheduleTarget', () => {
 });
 
 describe('completeMonitorCommand', () => {
-  const monitor = { personas: ['bilal', 'wali'], targets: ['janus', 'group:1'] };
+  // `nightly-bilal` is a monitor a profile named: running, addressable, and not a persona.
+  const monitor = {
+    personas: ['bilal', 'wali'],
+    names: ['bilal', 'nightly-bilal'],
+    targets: ['janus', 'group:1'],
+  };
 
   it('returns null when there is no monitor context', () => {
     expect(completeMonitorCommand('monitor', 1, ['monitor'], 'bi', undefined, '', '', 0)).toBeNull();
@@ -87,14 +92,17 @@ describe('completeMonitorCommand', () => {
     expect(r?.matches).toEqual(['ask', 'bilal', 'wali']);
   });
 
-  it('completes a persona name plus "--all" at argument 1 for unmonitor', () => {
+  // `unmonitor` and `monitor ask` address a monitor that is already running, so they offer live
+  // monitor names rather than personas — otherwise a profile-named monitor cannot be completed at
+  // all, and a persona with no monitor running is offered for a command that cannot use it.
+  it('completes a live monitor name plus "--all" at argument 1 for unmonitor', () => {
     const r = completeMonitorCommand('unmonitor', 1, ['unmonitor'], '', monitor, 'unmonitor ', 'unmonitor ', 10);
-    expect(r?.matches).toEqual(['--all', 'bilal', 'wali']);
+    expect(r?.matches).toEqual(['--all', 'bilal', 'nightly-bilal']);
   });
 
-  it('completes a persona name at argument 2 after "monitor ask"', () => {
-    const r = completeMonitorCommand('monitor', 2, ['monitor', 'ask'], 'bi', monitor, 'monitor ask bi', 'monitor ask bi', 12);
-    expect(r?.matches).toEqual(['bilal']);
+  it('completes a live monitor name at argument 2 after "monitor ask"', () => {
+    const r = completeMonitorCommand('monitor', 2, ['monitor', 'ask'], 'ni', monitor, 'monitor ask ni', 'monitor ask ni', 12);
+    expect(r?.matches).toEqual(['nightly-bilal']);
   });
 
   it('completes a target at argument 2+ when not in the ask form', () => {

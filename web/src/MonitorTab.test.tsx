@@ -19,10 +19,11 @@ function makeSuggestion(overrides: Partial<SuggestionView> = {}): SuggestionView
 function renderTab(
   suggestions: SuggestionView[],
   handlers: { onRun?: (id: string) => void; onRate?: (id: string, up: boolean) => void; onReset?: () => void; onSnapshot?: () => void } = {},
-  meta: { persona?: string; targets?: string; contextBytes?: number } = {},
+  meta: { name?: string; persona?: string; targets?: string; contextBytes?: number } = {},
 ) {
   return render(
     <MonitorTab
+      name={meta.name ?? meta.persona ?? 'assistant'}
       persona={meta.persona ?? 'assistant'}
       targets={meta.targets ?? 'agent2'}
       contextBytes={meta.contextBytes ?? 0}
@@ -41,10 +42,22 @@ describe('MonitorTab', () => {
     expect(screen.getByText(/No suggestions yet/)).toBeInTheDocument();
   });
 
-  it('renders the persona and targets in the metadata line', () => {
+  it('renders the monitor name and targets in the metadata line', () => {
     renderTab([], {}, { persona: 'security', targets: 'agent2, group:3' });
     expect(screen.getByText('security')).toBeInTheDocument();
     expect(screen.getByText('agent2, group:3')).toBeInTheDocument();
+  });
+
+  // The name is what `unmonitor` and `monitor ask` address, so it leads; the persona is shown
+  // beside it only when a profile gave the monitor a name of its own.
+  it('shows the persona beside the name when they differ, and only the name when they match', () => {
+    const named = renderTab([], {}, { name: 'nightly-security', persona: 'security' });
+    expect(screen.getByText('nightly-security')).toBeInTheDocument();
+    expect(screen.getByText('security')).toBeInTheDocument();
+    named.unmount();
+
+    renderTab([], {}, { name: 'security', persona: 'security' });
+    expect(screen.getAllByText('security')).toHaveLength(1);
   });
 
   it.each([

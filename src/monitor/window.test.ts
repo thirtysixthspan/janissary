@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  allocateMonitorLabel,
   monitorTabs,
   openMonitorTab,
   pushSuggestion,
@@ -31,27 +30,10 @@ function makeManagers(tabs: Tab[] = []): { managers: Managers; dispatchTo: Retur
   return { managers, dispatchTo };
 }
 
-describe('allocateMonitorLabel', () => {
-  it('returns the bare persona name when unused', () => {
-    const { managers } = makeManagers([makeTab('main', 'red')]);
-    expect(allocateMonitorLabel(managers, 'reviewer')).toBe('reviewer');
-  });
-
-  it('suffixes with -2 when the persona name is taken', () => {
-    const { managers } = makeManagers([makeTab('reviewer', 'red')]);
-    expect(allocateMonitorLabel(managers, 'reviewer')).toBe('reviewer-2');
-  });
-
-  it('finds the next free suffix when several are taken', () => {
-    const { managers } = makeManagers([makeTab('reviewer', 'red'), makeTab('reviewer-2', 'blue')]);
-    expect(allocateMonitorLabel(managers, 'reviewer')).toBe('reviewer-3');
-  });
-});
-
 describe('monitorTabs', () => {
   it('returns only tabs with view "monitor"', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    openMonitorTab(managers, 'reviewer', 'blue');
+    openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
     expect(monitorTabs(managers)).toHaveLength(1);
     expect(monitorTabs(managers)[0].label).toBe('reviewer');
   });
@@ -62,22 +44,34 @@ describe('openMonitorTab', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
-    const tab = openMonitorTab(managers, 'reviewer', 'blue');
+    const tab = openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
 
     expect(tab.view).toBe('monitor');
     expect(tab.label).toBe('reviewer');
     expect(tab.title).toBe('reviewer');
-    expect(tab.monitor).toEqual({ suggestions: [], persona: 'reviewer', targets: '', contextBytes: 0 });
+    expect(tab.monitor).toEqual({ suggestions: [], name: 'reviewer', persona: 'reviewer', targets: '', contextBytes: 0 });
     expect(tab.number).toBe(2);
     expect(managers.tab.tabs).toHaveLength(2);
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
   });
 
+  // A profile can name a monitor something other than its persona; the tab is labelled with the
+  // name and records the persona beside it, rather than storing the name under `persona`.
+  it('labels the tab with the name and records the persona separately', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+
+    const tab = openMonitorTab(managers, 'nightly-security', 'security', 'blue');
+
+    expect(tab.label).toBe('nightly-security');
+    expect(tab.monitor.name).toBe('nightly-security');
+    expect(tab.monitor.persona).toBe('security');
+  });
+
   it('reuses an existing monitor tab with the same name', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    const first = openMonitorTab(managers, 'reviewer', 'blue');
-    const second = openMonitorTab(managers, 'reviewer', 'blue');
+    const first = openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
+    const second = openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
     expect(second).toBe(first);
     expect(managers.tab.tabs).toHaveLength(2);
   });
@@ -88,7 +82,7 @@ describe('pushSuggestion', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const suggestion = makeSuggestion('s1');
 
-    pushSuggestion(managers, 'reviewer', 'blue', suggestion);
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', suggestion);
 
     const tabs = monitorTabs(managers);
     expect(tabs).toHaveLength(1);
@@ -97,8 +91,8 @@ describe('pushSuggestion', () => {
 
   it('appends to an already-open monitor tab', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s1'));
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s2'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s1'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s2'));
 
     expect(monitorTabs(managers)[0].monitor?.suggestions.map((s) => s.id)).toEqual(['s1', 's2']);
   });
@@ -107,7 +101,7 @@ describe('pushSuggestion', () => {
 describe('updateMonitorMeta', () => {
   it('updates targets and contextBytes on an existing monitor tab', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    openMonitorTab(managers, 'reviewer', 'blue');
+    openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
 
     updateMonitorMeta(managers, 'reviewer', 'agent2, group:3', 512);
 
@@ -117,7 +111,7 @@ describe('updateMonitorMeta', () => {
 
   it('mutates the monitor object in place rather than replacing it', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    openMonitorTab(managers, 'reviewer', 'blue');
+    openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
     const monitor = monitorTabs(managers)[0].monitor;
 
     updateMonitorMeta(managers, 'reviewer', 'agent2', 100);
@@ -127,7 +121,7 @@ describe('updateMonitorMeta', () => {
 
   it('emits a dirty state event', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    openMonitorTab(managers, 'reviewer', 'blue');
+    openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
     updateMonitorMeta(managers, 'reviewer', 'agent2', 100);
@@ -145,7 +139,7 @@ describe('updateMonitorMeta', () => {
 describe('closeMonitorTab', () => {
   it('closes the named monitor tab', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    openMonitorTab(managers, 'reviewer', 'blue');
+    openMonitorTab(managers, 'reviewer', 'reviewer', 'blue');
 
     closeMonitorTab(managers, 'reviewer');
 
@@ -162,8 +156,8 @@ describe('closeMonitorTab', () => {
 describe('findSuggestion', () => {
   it('finds a suggestion across every monitor feed', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s1'));
-    pushSuggestion(managers, 'security', 'green', makeSuggestion('s2'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s1'));
+    pushSuggestion(managers, 'security', 'security', 'green', makeSuggestion('s2'));
 
     expect(findSuggestion(managers, 's2')?.persona).toBe('reviewer');
   });
@@ -177,8 +171,8 @@ describe('findSuggestion', () => {
 describe('removeSuggestion', () => {
   it('removes a suggestion from whichever feed holds it', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s1'));
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s2'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s1'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s2'));
 
     removeSuggestion(managers, 's1');
 
@@ -187,7 +181,7 @@ describe('removeSuggestion', () => {
 
   it('does not emit a dirty event when the id is not found', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s1'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s1'));
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
     removeSuggestion(managers, 'ghost');
@@ -200,7 +194,7 @@ describe('removeSuggestion', () => {
 describe('runSuggestion', () => {
   it('dispatches the suggestion command to the tab it is about', () => {
     const { managers, dispatchTo } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', { ...makeSuggestion('s1'), command: 'clear', about: 'main' });
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', { ...makeSuggestion('s1'), command: 'clear', about: 'main' });
 
     runSuggestion(managers, 's1');
 
@@ -209,7 +203,7 @@ describe('runSuggestion', () => {
 
   it('does nothing when the suggestion has no command', () => {
     const { managers, dispatchTo } = makeManagers([makeTab('main', 'red')]);
-    pushSuggestion(managers, 'reviewer', 'blue', makeSuggestion('s1'));
+    pushSuggestion(managers, 'reviewer', 'reviewer', 'blue', makeSuggestion('s1'));
 
     runSuggestion(managers, 's1');
 

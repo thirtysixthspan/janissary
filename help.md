@@ -37,7 +37,7 @@
 | `send` | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
 | `queue` | Queue a command for another agent tab (`queue <agent> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
-| `unmonitor` | Stop a monitor (`unmonitor <persona>`) or all monitors started from this tab (`--all`) |
+| `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
 | `monitors` | List active monitors with their targets and suggestion counts |
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone lists available themes; `theme sync` sets the syntax theme to match the app theme name |
 | `syntax` | `syntax theme <name>` sets the editor tab's syntax-highlighting theme (applies to every open editor tab); `syntax theme` alone opens a theme-picker modal |
@@ -64,7 +64,7 @@
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
-| `Tab` | Complete a file path, an agent name for `msg` / `broadcast`, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / target |
+| `Tab` | Complete a file path, an agent name for `msg` / `broadcast`, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
 | `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus |
 | `Enter` | Execute the current command |
 | `Ctrl+C` | Exit |
@@ -126,4 +126,4 @@
 | `Cmd+X` / `Ctrl+X` | Cut the selected rows onto the clipboard |
 | `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the selection implies |
 
-`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`, `ssh:<label>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor` / `unmonitor`, the first argument completes against persona names (from `ai/personas/monitor/`) and later arguments against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).
+`Tab` completes the word at the cursor: filesystem paths against the tab's working directory; at the recipient position of `msg` / `broadcast`, active agent names (`broadcast` also offers `all` and completes each entry of a comma-separated list); at the target of `connection close`, the tab's open connection strings (`sqlite:<name>`, `shell:<shell>`, `acp:opencode`, `browser:<id>`, `ssh:<label>`); and for the `browser` command, its subcommands (`open`, `goto`, `content`, …) plus the tab's open window ids where one is expected (`browser use`, `browser window close`). For `monitor`, the first argument completes against persona names (from `ai/personas/monitor/`); for `unmonitor` and after `monitor ask`, it completes against the names of monitors actually running from this tab, since those arguments address a running monitor rather than choose a persona. Later arguments complete against tab labels and `group:<n>` tokens (`unmonitor` also offers `--all`).

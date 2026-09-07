@@ -4,13 +4,19 @@ Persona-driven AI sessions that watch tab activity and surface suggestions inlin
 
 ### Starting a monitor
 
-`monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a persona-named reporting tab colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
+`monitor <persona> [target...]` starts a dedicated monitoring session. Without targets (inline mode), the monitor watches the owner tab and reports suggestions into its transcript. With explicit targets (tab labels or `group:<n>`) the suggestions appear in a reporting tab named after the monitor and colored after the monitored tab. A tab target may be given by its display alias (see `rename`) as well as its underlying label, matched case-insensitively; `unmonitor`'s target argument recognizes an alias the same way.
 
 Once the monitor's ACP session connects, the owner tab's transcript shows a line naming the monitor, its connection (provider/model), and a one-sentence summary of the persona's role — before any suggestion has been produced.
 
+### Naming a monitor
+
+A monitor has a **name**, and that name is what everything addresses it by: it is the reporting tab's label, what `unmonitor` and `monitor ask` take, what the `monitors` listing and the connections row show, and what the reporting tab's header leads with. Starting one with `monitor <persona>` names it after the persona, so for a monitor started that way the two words are the same and only one is shown. A profile may give a monitor a name of its own (see [[profiles]]), in which case the name and the persona differ, and the persona is shown beside the name wherever it adds information.
+
+Names are unique per owner tab. Two monitors started from the same tab may share a persona as long as their names differ, and starting a second monitor under a name already in use from that tab is refused, naming the name rather than the persona. Completion follows the same distinction: `monitor <persona>` offers persona names, because that argument chooses a persona to start, while `unmonitor` and `monitor ask` offer the names of monitors actually running from the current tab.
+
 ### Reporting tab metadata
 
-An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the persona name, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received from its dedicated ACP session so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the session is respawned after an error, since a fresh session starts a fresh context. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
+An external-mode monitor's reporting tab carries a metadata line above its suggestion feed, styled like the file navigator's and notifications tab's headers: the monitor's name, its persona where that is a different word, the tab(s)/group(s) it monitors (e.g. `agent2, group:3`), and the total size of everything sent to and received from its dedicated ACP session so far, shown in bytes/kilobytes/megabytes. The size grows with every flush and every direct question (`monitor ask`), and resets when the session is respawned after an error, since a fresh session starts a fresh context. Dropping one of several tab targets updates the target list shown; inline monitors have no reporting tab and so show no metadata line.
 
 The metadata line's right-floated reset button discards the accumulated conversation on the monitor's dedicated ACP session and reloads just its persona context — the same recovery the monitor already performs automatically after a prompt error, now available on demand. When two owners share one reporting tab (two different agent tabs monitored by the same persona), resetting it resets every monitor feeding that tab, not just one.
 
@@ -74,7 +80,7 @@ Because the opt-in lives in the persona file (a reviewable, checked-in diff, not
 
 ### Asking a monitor
 
-`monitor ask <persona> <question>` sends a direct question to a running monitor's session, bypassing the batch buffer. The reply lands in the owner tab's transcript. Only one question or flush may be in flight at a time per monitor.
+`monitor ask <name> <question>` sends a direct question to a running monitor's session, bypassing the batch buffer. The reply lands in the owner tab's transcript. Only one question or flush may be in flight at a time per monitor.
 
 ### Rating
 
@@ -82,7 +88,7 @@ Thumbs-up or thumbs-down on a reporting-tab suggestion feeds back to the monitor
 
 ### Lifecycle
 
-A monitor's session is killed when its `monitor stop` command runs, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. A reporting tab stays open as long as at least one monitor feeds it (potentially from a different owner tab); once the last one stops, the reporting tab closes too, and the same owner/persona combination can be started again.
+A monitor's session is killed when its `monitor stop` command runs, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. A reporting tab stays open as long as at least one monitor feeds it (potentially from a different owner tab); once the last one stops, the reporting tab closes too, and the same owner/name combination can be started again.
 
 ### Keyboard focus
 
