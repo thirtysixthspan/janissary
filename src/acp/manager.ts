@@ -5,7 +5,6 @@ import { runAcpToolLoop } from './loop.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isRateLimitError } from './rate-limit.js';
-import { makeUpdateRunning } from './runner.js';
 import type { Managers } from '../managers.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 import { acpLaunchFor, MARKDOWN_INSTRUCTION } from './launch.js';
@@ -168,7 +167,12 @@ export class AcpManager {
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),
     });
 
-    const updateRunning = makeUpdateRunning(label, this.managers);
+    const updateRunning = (output: string, running: boolean) => {
+      this.managers.tab.updateRunning(label, { markdown: true }, output, running, {
+        trailing: true,
+        finalize: (t) => this.managers.tab.persist(this.managers.tab.buildAgentState(t)),
+      });
+    };
 
     const tools = createAcpToolTable(this.managers);
 

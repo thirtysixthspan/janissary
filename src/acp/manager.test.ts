@@ -7,7 +7,6 @@ import type { AcpSession, AcpLoopDeps, AcpLoopHandlers } from './types.js';
 const mocks = vi.hoisted(() => ({
   connectAcp: vi.fn(),
   runAcpToolLoop: vi.fn(),
-  makeUpdateRunning: vi.fn(),
   messageBusEmit: vi.fn(),
   notify: vi.fn(),
 }));
@@ -20,9 +19,6 @@ vi.mock('./index.js', () => ({
 }));
 vi.mock('./loop.js', () => ({
   runAcpToolLoop: mocks.runAcpToolLoop,
-}));
-vi.mock('./runner.js', () => ({
-  makeUpdateRunning: mocks.makeUpdateRunning,
 }));
 vi.mock('../bus.js', () => ({
   messageBus: { emit: mocks.messageBusEmit },
@@ -39,7 +35,6 @@ const makeSession = (): AcpSession => ({ prompt: vi.fn(), kill: vi.fn() });
 
 const setup = () => {
   mocks.connectAcp.mockReturnValue(makeSession());
-  mocks.makeUpdateRunning.mockReturnValue(vi.fn());
   const append = vi.fn();
   const addBusy = vi.fn();
   const deleteBusy = vi.fn();
@@ -53,6 +48,7 @@ const setup = () => {
       deleteBusy,
       persist: vi.fn(),
       buildAgentState: vi.fn(),
+      updateRunning: vi.fn(),
     },
     database: {
       primer: 'db primer',
@@ -63,7 +59,7 @@ const setup = () => {
     questions: { register: registerQuestion },
   } as never;
   const acp = new AcpManager(managers);
-  return { acp, append, addBusy, deleteBusy, managers, registerQuestion };
+  return { acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
 };
 
 describe('AcpManager.run', () => {
@@ -79,10 +75,9 @@ describe('AcpManager.run', () => {
   });
 
   it('creates a session and wires runAcpToolLoop with the prompt, primer, and callbacks', () => {
-    const { acp, managers } = setup();
+    const { acp } = setup();
     acp.run('tab1', 'acp hello world');
     expect(mocks.connectAcp).toHaveBeenCalledOnce();
-    expect(mocks.makeUpdateRunning).toHaveBeenCalledWith('tab1', managers);
     expect(mocks.runAcpToolLoop).toHaveBeenCalledOnce();
     const deps = mocks.runAcpToolLoop.mock.calls[0][2] as Record<string, unknown>;
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
@@ -112,14 +107,12 @@ describe('AcpManager.run', () => {
   });
 
   it('error handler updates output, cleans up busy, and calls onDone', () => {
-    const { acp, deleteBusy } = setup();
-    const updateFn = vi.fn();
-    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    const { acp, deleteBusy, updateRunning } = setup();
     const onDone = vi.fn();
     acp.run('tab1', 'acp hello', onDone);
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.error('something failed');
-    expect(updateFn).toHaveBeenCalledWith('ACP error: something failed', false);
+    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'ACP error: something failed', false, expect.objectContaining({ trailing: true }));
     expect(deleteBusy).toHaveBeenCalledOnce();
     expect(onDone).toHaveBeenCalledWith('ACP error: something failed');
   });
@@ -217,43 +210,35 @@ describe('AcpManager.run', () => {
   });
 
   it('chunk handler calls updateRunning with the buffer verbatim', () => {
-    const { acp } = setup();
-    const updateFn = vi.fn();
-    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    const { acp, updateRunning } = setup();
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('response so far');
-    expect(updateFn).toHaveBeenCalledWith('response so far', true);
+    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'response so far', true, expect.anything());
   });
 
   it('chunk handler leaves an empty buffer unwrapped', () => {
-    const { acp } = setup();
-    const updateFn = vi.fn();
-    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    const { acp, updateRunning } = setup();
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.chunk('');
-    expect(updateFn).toHaveBeenCalledWith('', true);
+    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', true, expect.anything());
   });
 
   it('endTurn handler calls updateRunning with the final text verbatim', () => {
-    const { acp } = setup();
-    const updateFn = vi.fn();
-    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    const { acp, updateRunning } = setup();
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('the final answer');
-    expect(updateFn).toHaveBeenCalledWith('the final answer', false);
+    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'the final answer', false, expect.anything());
   });
 
   it('endTurn handler leaves an empty final string unwrapped', () => {
-    const { acp } = setup();
-    const updateFn = vi.fn();
-    mocks.makeUpdateRunning.mockReturnValue(updateFn);
+    const { acp, updateRunning } = setup();
     acp.run('tab1', 'acp hello');
     const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
     handlers.endTurn('');
-    expect(updateFn).toHaveBeenCalledWith('', false);
+    expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, '', false, expect.anything());
   });
 
   it('ranCommand handler appends the command result to the tab', () => {

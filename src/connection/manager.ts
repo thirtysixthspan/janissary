@@ -42,7 +42,7 @@ export class ConnectionManager {
     }
     if (parsed.kind === 'browser') {
       this.managers.tab.startRunning(label, command);
-      void this.managers.browser.run(label, `browser window close ${parsed.id}`).then((o) => this.managers.tab.finishRunning(label, o));
+      void this.managers.browser.run(label, `browser window close ${parsed.id}`).then((o) => this.managers.tab.finishRunning(label, o, { command }));
       return;
     }
     closeConnection(parsed.kind, parsed.id, this.managers, label, out);

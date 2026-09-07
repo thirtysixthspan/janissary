@@ -73,7 +73,7 @@ describe('ConnectionManager', () => {
       await Promise.resolve();
 
       expect(browserRun).toHaveBeenCalledWith('main', 'browser window close 1');
-      expect(finishRunning).toHaveBeenCalledWith('main', 'Closed connection browser:1.');
+      expect(finishRunning).toHaveBeenCalledWith('main', 'Closed connection browser:1.', { command: 'connection close browser:1' });
     });
   });
 });

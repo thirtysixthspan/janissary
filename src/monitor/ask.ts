@@ -29,10 +29,10 @@ export function askMonitor(
       reg.inFlight = false;
       recordReply(reg, managers, reply);
       // The 💡 prefix keeps the reply out of monitor buffers (like inline suggestions).
-      managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${name}: ${reply.trim() || '(no reply)'}`);
+      managers.tab.finishRunning(owner, `${SUGGESTION_PREFIX} ${name}: ${reply.trim() || '(no reply)'}`, { command: `monitor ask ${name} ${question}` });
     },
     onError: (message) => {
-      managers.tab.finishRunning(owner, `monitor ${name}: ${message} — restarting monitor session`);
+      managers.tab.finishRunning(owner, `monitor ${name}: ${message} — restarting monitor session`, { command: `monitor ask ${name} ${question}` });
       if (isRateLimitError(message)) notify(managers, 'rate-limited', owner);
       onRespawn();
     },
