@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync, statSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, statSync, utimesSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { EditorView, Tab } from '../tab/types.js';
+import type { Managers } from '../managers.js';
+import { saveFile } from './save.js';
 
 const watchMock = vi.fn();
 
@@ -49,6 +51,41 @@ describe('EditorWatchManager', () => {
   });
 
   const run = (): EditorWatchManagerInstance => new EditorWatchManager(managers as never);
+
+  it('replaces the watch after atomic save and detects the next external edit', () => {
+    vi.useFakeTimers();
+    const manager = run();
+    try {
+      manager.watch('notes', file);
+      const oldEvent = watchMock.mock.calls[0][1] as () => void;
+      oldEvent();
+      const saveManagers = {
+        tab: { tabs, openFilePath: () => file }, editorWatch: manager,
+      } as unknown as Managers;
+
+      saveFile(saveManagers, '/open/1', 'saved atomically');
+
+      expect(watchMock).toHaveBeenCalledTimes(2);
+      expect(closeFns[0]).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+      const newEvent = watchMock.mock.calls[1][1] as () => void;
+      oldEvent();
+      newEvent();
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBeUndefined();
+
+      writeFileSync(file, 'changed externally');
+      const later = new Date(Date.now() + 2000);
+      utimesSync(file, later, later);
+      newEvent();
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+    } finally {
+      manager.dispose();
+      vi.useRealTimers();
+    }
+    expect(closeFns[1]).toHaveBeenCalledOnce();
+  });
 
   it('watches the file and pushes a new mtimeMs onto the tab after an external change', () => {
     vi.useFakeTimers();

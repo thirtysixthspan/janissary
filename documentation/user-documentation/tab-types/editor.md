@@ -116,6 +116,8 @@ Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks 
 
 Janissary watches the file behind an open editor tab for changes made by anything else, another process, a git checkout, another tool. If your buffer has no unsaved changes, the new content loads automatically and your cursor stays on the same line.
 
+This continues after you save, including after repeated saves. Your own save does not trigger an external-change reload or an overwrite prompt.
+
 Your typing always wins if you start editing while Janissary is still reading an external change. The in-progress reload cannot replace your new text. If several external changes arrive close together, only the newest completed read can update a clean buffer.
 
 If you do have unsaved changes, your edits are left alone. The next time you try to save, a dialog appears instead: "This file changed on disk. Overwrite it with your changes?" with **Overwrite** and **Cancel**. Overwrite writes your buffer over the external change; Cancel leaves your buffer as it is, still unsaved, and shows the same prompt again on your next save attempt.

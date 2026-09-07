@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveFile } from './save.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
+import { EditorWatchManager } from './watch-manager.js';
 
 function setup(content = 'original') {
   const managers = {} as Managers;
@@ -19,6 +20,30 @@ function setup(content = 'original') {
 }
 
 describe('saveFile', () => {
+  it.skipIf(process.platform !== 'darwin')('continues observing real external edits after successive atomic saves', async () => {
+    const { managers, dir, file, url } = setup();
+    managers.editorWatch = new EditorWatchManager(managers);
+    const tab = managers.tab.tabs.find((item) => item.editor)!;
+    managers.editorWatch.watch(tab.label, file);
+    try {
+      for (const attempt of [1, 2]) {
+        const previousMtime = tab.editor?.mtimeMs;
+        saveFile(managers, url, `save ${attempt}`);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        expect(tab.editor?.mtimeMs).toBe(previousMtime);
+
+        writeFileSync(file, `external edit ${attempt}`);
+        const later = new Date(Date.now() + attempt * 2000);
+        utimesSync(file, later, later);
+        const externalMtime = statSync(file).mtimeMs;
+        await vi.waitFor(() => expect(tab.editor?.mtimeMs).toBe(externalMtime), { timeout: 3000 });
+      }
+    } finally {
+      managers.editorWatch.dispose();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('writes through the open-file allow-list', () => {
     const { managers, file, url } = setup();
     saveFile(managers, url, 'updated content');
