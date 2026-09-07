@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
-import { commandSegments, SEGMENT_SEPARATORS } from './command-tokens.js';
+import { commandSegments, SEGMENT_SEPARATORS } from './command/tokens.js';
 
 // Programs whose need for a terminal was learned by watching them take one over, rather than by
 // being on `interactive.ts`'s built-in list. Kept in `.janissary/interactive-commands.json` — beside
