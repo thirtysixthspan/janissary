@@ -66,7 +66,6 @@ export class CommandManager {
   }
 
   private run(input: string, label: string, index: number, detect?: boolean): void {
-    if (input.trim().toLowerCase() === 'schedule') { this.managers.schedule.openScheduleLaunch(); return; }
     const res = resolveCommand(input);
     switch (res.kind) {
       case 'empty': { return;

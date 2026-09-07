@@ -5,17 +5,6 @@
 
 ## development
 
-* Fold the bare schedule command into its registry definition so the one branch still running ahead of the command resolver can be deleted.
-
-Existing Debt: The bare `schedule` token is intercepted in the command manager before the resolver and opens the launch dialog there, while the same name also has a registry Command that handles every argful form — two definitions of one command that the architecture's own one-definition rule calls an unfinished migration, papered over by a shadow list that keeps plugin claims off the name. Severity: 4/10
-
-Existing Risk: 3/10 - The second path is kept safe only by prose: if a future edit drops `schedule` from the plugin adapter's shadow list, a plugin claiming the name registers successfully and is then silently unreachable for the bare form, with nothing failing loudly.
-
-Proposal Risk: 1/10 - The dialog open is one method call through the Managers registry the Command already receives, so the only real hazard is leaving the shadow-list entry behind with the branch, which the adapter's own comment names.
-
-Proposal: In src/commands/schedule.ts, extend the existing `schedule` Command's run so an empty remainder — the bare token — calls `managers.schedule.openScheduleLaunch()` and returns, exactly as the branch in src/command/manager.ts does today; leave the argful parsing untouched. Delete the pre-registry branch from `CommandManager.run` in src/command/manager.ts and remove `schedule` from `ROUTE_NAMES` in src/plugins/command-adapter.ts, leaving `shell` (stripped inside the resolver itself) as that list's only resident. The registry tests in src/commands.test.ts, the plugin claim tests under src/plugins/, and the command-manager tests pin the surrounding shapes and must keep passing; add one case that a bare `schedule` opens the dialog — a form only the branch covers today, so verify whether a test exists before relying on one.
-
-
 * Fix the handful of comments that actively mislead: two citing a plan path that moved and one describing a client sync method that does not exist.
 
 Existing Debt: Three comments describe things that are no longer there — two cite the editor-persona-connections plan under `product/plans/ready/` after it moved to `product/plans/complete/`, and one in the websocket client describes a fire-and-forget page-snapshot sync method that no longer follows it — the doc-rot the project's own principle calls bugs to fix on sight. Severity: 3/10
