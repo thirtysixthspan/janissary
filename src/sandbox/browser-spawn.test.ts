@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
-import { setGitIdentity } from '../git-identity.js';
+import { setGitIdentity } from '../git/identity.js';
 import { BROWSER_SANDBOX_PROFILE } from './browser-profile.js';
 import {
   BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST,

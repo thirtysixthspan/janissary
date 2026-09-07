@@ -12,7 +12,7 @@ import {
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project-tokens.js';
-import { getGitIdentity, gitIdentityEnv } from '../git-identity.js';
+import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
@@ -201,7 +201,7 @@ function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.P
 
 // Everything a workspaced spawn's environment gains regardless of whether this machine can confine
 // it: the project's credentials, plus the four variables carrying the git identity of the user who
-// opened janissary (see `git-identity.ts`). The identity is read from the module cache rather than
+// opened janissary (see `git/identity.ts`). The identity is read from the module cache rather than
 // threaded through `SandboxOptions` the way the tokens are, because unlike a token — which the
 // remote side merges per provision — it is a single process-wide fact on either machine.
 function workspaceEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {

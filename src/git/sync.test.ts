@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { WorkspaceManager } from './workspace/manager.js';
+import type { WorkspaceManager } from '.../workspace/manager.js';
 
 type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv } };
 
@@ -18,10 +18,10 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-vi.mock('./project-tokens.js', () => ({ getProjectTokens: () => ({ github: 'test-token' }) }));
-vi.mock('./workspace/index.js', () => ({ workspacePath: (name: string) => `/repo/.janissary/workspace/${name}` }));
+vi.mock('../project-tokens.js', () => ({ getProjectTokens: () => ({ github: 'test-token' }) }));
+vi.mock('../workspace/index.js', () => ({ workspacePath: (name: string) => `/repo/.janissary/workspace/${name}` }));
 
-const { GitSync, SYNC_WORKSPACE_NAME } = await import('./git-sync.js');
+const { GitSync, SYNC_WORKSPACE_NAME } = await import('./sync.js');
 
 function makeWorkspace(dir = '/repo/.janissary/workspace/git-sync', ready: Promise<void> = Promise.resolve()) {
   const create = vi.fn().mockReturnValue({ dir, ready });

@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { loadGitIdentity, setGitIdentity, getGitIdentity, gitIdentityEnv } from './git-identity.js';
+import { loadGitIdentity, setGitIdentity, getGitIdentity, gitIdentityEnv } from './identity.js';
 
 // Point git's global and system config at an empty file for every git process this suite starts —
 // its own and the module's alike. Without it, "only one half configured" is a claim about the

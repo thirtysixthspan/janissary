@@ -17,13 +17,13 @@ const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => 
 const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const pullRootMock = vi.fn((_root: string): Promise<string> => Promise.resolve(''));
 
-vi.mock('../git-status.js', () => ({
+vi.mock('../git/status.js', () => ({
   changedPaths: (...args: [string]) => changedPathsMock(...args),
   currentBranch: (...args: [string]) => currentBranchMock(...args),
   remoteUrl: (...args: [string]) => remoteUrlMock(...args),
 }));
 
-vi.mock('../git-pull.js', () => ({
+vi.mock('../git/pull.js', () => ({
   pullRoot: (...args: [string]) => pullRootMock(...args),
 }));
 

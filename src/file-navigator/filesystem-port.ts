@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { changedPaths, currentBranch, remoteUrl, type GitFileStatus } from '../git-status.js';
-import { pullRoot } from '../git-pull.js';
+import { changedPaths, currentBranch, remoteUrl, type GitFileStatus } from '../git/status.js';
+import { pullRoot } from '../git/pull.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { readDirSorted, type FileNavigatorEntry } from './index.js';

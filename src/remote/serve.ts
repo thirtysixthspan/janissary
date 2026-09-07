@@ -1,6 +1,6 @@
 import { loadConfig } from '../config.js';
 import { getProjectTokens, loadProjectTokens, type ProjectTokens } from '../project-tokens.js';
-import { loadGitIdentity, setGitIdentity, type GitIdentity } from '../git-identity.js';
+import { loadGitIdentity, setGitIdentity, type GitIdentity } from '../git/identity.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';

@@ -75,7 +75,7 @@ export type RemoteFilesystemArguments = {
 };
 
 import type { ProjectTokens } from '../project-tokens.js';
-import type { GitIdentity } from '../git-identity.js';
+import type { GitIdentity } from '../git/identity.js';
 import { decodeKnownFrame } from './frame-decode.js';
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote

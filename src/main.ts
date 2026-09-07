@@ -14,7 +14,7 @@ import { loadLearnedCommands } from './interactive-learned.js';
 import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';
 import { loadProjectTokens } from './project-tokens.js';
-import { loadGitIdentity } from './git-identity.js';
+import { loadGitIdentity } from './git/identity.js';
 import { parseCliArgs, usageText, appVersion, CliUsageError } from './cli-args.js';
 import { explainStartupError, formatFatal, maybeStack } from './startup-errors.js';
 import { errorText } from './error-text.js';

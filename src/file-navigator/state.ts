@@ -1,4 +1,4 @@
-import type { GitFileStatus } from '../git-status.js';
+import type { GitFileStatus } from '../git/status.js';
 import type { FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget } from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
