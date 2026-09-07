@@ -3,68 +3,24 @@ import type { JanusClient } from './ws';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
-import { dispatchTaskPickerKey, type VisibleTaskRow } from './pickers/task-picker-keys';
-import { dispatchProfilePickerKey, type VisibleProfileRow } from './pickers/profile-picker-keys';
-import { buildOverlayOpenState, firstOpenOverlay, type OverlayOpenSources } from './pickers/overlay-registry';
-import type { TabNavEntry } from './tab-nav-match';
+import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
+import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
+import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
+import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker-key-bindings';
 
-// The nine open/closed values come from `OverlayOpenSources` rather than being restated here, so a
-// tenth overlay added to the registry stops this snapshot — and the app literal that fills it —
-// from compiling until the new state is threaded through.
-export type StateSnapshot = OverlayOpenSources & {
-  pickerIdx: number;
-  recent: string[];
-  routeIdx: number;
+// Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
+// picker state builds it, rather than being restated here and again at the call site. What is left
+// is the two fields no overlay owns:
+export type StateSnapshot = PickerKeySnapshot & {
   // Whether the active tab shows the transcript body (Cmd+F is only meaningful there) and
   // whether search mode is currently open (gates scroll-key handling so Arrow keys reach the
   // search bar instead of scrolling the transcript underneath it).
   canSearch: boolean;
   searchOpen: boolean;
-  themePickerIdx: number;
-  appThemePickerIdx: number;
-  navQuery: string;
-  navIdx: number;
-  navTabs: TabNavEntry[];
-  queueIdx: number;
-  queueItems: string[];
-  taskPickerIdx: number;
-  visibleTasks: VisibleTaskRow[];
-  profilePickerIdx: number;
-  profiles: VisibleProfileRow[];
 };
 
-export type Callbacks = {
-  setRouteIndex: (setter: (prev: number) => number) => void;
-  chooseRoute: (index: number) => void;
-  runCommand: (text: string) => void;
-  setPickerIndex: (setter: (prev: number) => number) => void;
-  setPickerOpen: (open: boolean) => void;
-  openPicker: () => void;
+export type Callbacks = PickerKeyCallbacks & {
   openSearch: () => void;
-  setThemePickerIndex: (setter: (prev: number) => number) => void;
-  setThemePickerOpen: (open: boolean) => void;
-  pickTheme: (name: string) => void;
-  setAppThemePickerIndex: (setter: (prev: number) => number) => void;
-  setAppThemePickerOpen: (open: boolean) => void;
-  pickAppTheme: (name: string) => void;
-  setNavIndex: (setter: (prev: number) => number) => void;
-  setNavQuery: (query: string) => void;
-  selectNavTab: (index: number) => void;
-  setNavOpen: (open: boolean) => void;
-  openTabNav: () => void;
-  setQueueIndex: (setter: (prev: number) => number) => void;
-  setQueueOpen: (open: boolean) => void;
-  openQueue: () => void;
-  setTaskPickerIndex: (setter: (prev: number) => number) => void;
-  setTaskPickerOpen: (open: boolean) => void;
-  openTaskPicker: () => void;
-  pickTask: (path: string) => void;
-  toggleTaskDir: (path: string) => void;
-  setProfilePickerIndex: (setter: (prev: number) => number) => void;
-  setProfilePickerOpen: (open: boolean) => void;
-  openProfilePicker: () => void;
-  pickProfile: (name: string) => void;
-  openQuickOpen: () => void;
 };
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one

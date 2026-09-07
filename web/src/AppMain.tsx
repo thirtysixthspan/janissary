@@ -1,5 +1,5 @@
 import React from 'react';
-import type { HarnessLaunchView, ScheduleLaunchView } from '@shared/protocol';
+import type { HarnessLaunchView, ScheduleLaunchView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { AgentTabBody } from './agent-tabs/AgentTabBody';
 import { AppShell } from './AppShell';
@@ -12,17 +12,21 @@ import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
 import { commandBarSuppressed } from './pickers/overlay-registry';
+import type { PickerOverlayView } from './pickers/picker-overlay-view';
+import { mountedPickerOverlayProps } from './pickers/picker-overlay-props';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
 import type { EditorDropHandle } from './drop-handles';
 
-type PickerProperties = Omit<React.ComponentProps<typeof PickerOverlays>, 'queueItems' | 'commandInputRef'>;
-
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,
   'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'queueOpen'
-> & PickerProperties & LayoutState & {
+> & LayoutState & {
+  // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
+  // bag, and the two overlays a mounted harness tab renders are projected out of it below.
+  pickers: PickerOverlayView;
+  tabs: TabView[];
   activeTab: number;
   secondaryTab?: number;
   windowFocused: boolean;
@@ -52,13 +56,7 @@ type AppMainProps = Omit<
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppMain({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  overlays, route, routeIndex, onPickRoute, syntaxTheme, themePickerIndex, onPickTheme,
-  theme, appThemePickerIndex, onPickAppTheme, recent, pickerIndex, onPickHistory,
-  navQuery, navIndex, tabs, onPickTab, queueIndex, onSelectQueue,
-  taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
-  profiles, profilePickerIndex, onPickProfile,
-  quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
-  quickOpenLoading, onPickQuickOpen, onCloseQuickOpen,
+  pickers, tabs,
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
@@ -70,30 +68,14 @@ export function AppMain({
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
   guardRef,
 }: AppMainProps) {
-  const pickerOverlays = (
-    <PickerOverlays
-      overlays={overlays} route={route} routeIndex={routeIndex} onPickRoute={onPickRoute}
-      syntaxTheme={syntaxTheme} themePickerIndex={themePickerIndex} onPickTheme={onPickTheme}
-      theme={theme} appThemePickerIndex={appThemePickerIndex} onPickAppTheme={onPickAppTheme}
-      recent={recent} pickerIndex={pickerIndex} onPickHistory={onPickHistory}
-      navQuery={navQuery} navIndex={navIndex} tabs={tabs} onPickTab={onPickTab}
-      queueItems={current.commandQueue} queueIndex={queueIndex} onSelectQueue={onSelectQueue}
-      taskRows={taskRows} taskPickerIndex={taskPickerIndex}
-      onPickTask={onPickTask} onToggleTaskDir={onToggleTaskDir}
-      profiles={profiles} profilePickerIndex={profilePickerIndex} onPickProfile={onPickProfile}
-      quickOpenQuery={quickOpenQuery} onChangeQuickOpenQuery={onChangeQuickOpenQuery}
-      quickOpenResults={quickOpenResults} quickOpenIndex={quickOpenIndex} onChangeQuickOpenIndex={onChangeQuickOpenIndex}
-      quickOpenLoading={quickOpenLoading} onPickQuickOpen={onPickQuickOpen} onCloseQuickOpen={onCloseQuickOpen}
-      commandInputRef={inputReference}
-    />
-  );
+  const pickerOverlays = <PickerOverlays {...pickers} />;
   const focusedAgentBody = (
     <AgentTabBody
         current={current} client={client} lines={lines} runCommand={runCommand}
         transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
         pickerOverlays={pickerOverlays}
-        blockingOverlayOpen={commandBarSuppressed(overlays)}
-        queueOpen={overlays.queue}
+        blockingOverlayOpen={commandBarSuppressed(pickers.overlays)}
+        queueOpen={pickers.overlays.queue}
         search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
         onCommandBarSubmit={onCommandBarSubmit}
         quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
@@ -130,8 +112,7 @@ export function AppMain({
         mountedProps={{
           harnessHandles, tabHandles, editorDropRef: editorDropReference, questionPanelRef,
           onPluginDirty,
-          taskPickerOpen: overlays.task, taskRows, taskPickerIndex, onPickTask,
-          onToggleTaskDir, navOpen: overlays.tabNav, navQuery, navIndex, onPickTab,
+          ...mountedPickerOverlayProps(pickers),
         }}
       />
       <AppReportingSection entries={reportingEntries} client={client} onClose={closeTab}

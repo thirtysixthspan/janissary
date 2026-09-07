@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { useTabNav } from './useTabNav';
 
 function TestComponent({
