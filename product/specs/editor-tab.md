@@ -157,6 +157,12 @@ Closing an editor tab that has unsaved changes triggers a confirmation dialog: "
 - **Don't Save (n):** closes the tab without saving.
 - **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. Focus returns to the editor at the current cursor position.
 
+While Save is pending, repeated Save clicks and keyboard shortcuts do nothing. Cancel and Don't
+Save remain available. Cancelling, discarding, replacing the prompt, or closing the application
+window prevents that save's later completion or failure from closing a tab, dismissing a newer
+prompt, or moving focus. A write already started may still finish. Each current save closes only
+the tab it asked about, at that tab's position when the save completes.
+
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 
 The dialog stays attached to the tab it was raised for. Tabs can still appear, disappear, and reorder while it is open or while a save is running — an agent opening one, a schedule firing, a monitor's reporting tab arriving — and every button acts on the tab that was asked about rather than on whatever occupies its former position. If that tab is gone by the time a button is pressed, the dialog dismisses and no tab is closed in its place.

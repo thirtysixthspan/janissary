@@ -112,6 +112,8 @@ Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks 
 
 **Save** closes the tab only once the file is written. If the save doesn't succeed — the server reports an error, or the file changed on disk and you get the overwrite prompt instead — the dialog steps aside, the tab stays open with your changes intact, and focus returns to the buffer so you can see what happened. Close it again once the save goes through.
 
+While a save is pending, **Save** is disabled, including its keyboard shortcuts. You can still choose **Cancel** or **Don't Save**. Cancelling keeps the tab open even if the write later finishes. A cancelled save cannot close another tab or dismiss a later close prompt; it may still finish writing the file.
+
 ## When the file changes outside the editor
 
 Janissary watches the file behind an open editor tab for changes made by anything else, another process, a git checkout, another tool. If your buffer has no unsaved changes, the new content loads automatically and your cursor stays on the same line.
