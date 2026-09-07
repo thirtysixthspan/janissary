@@ -56,8 +56,8 @@ function finishSave(
     // start one now that it's on disk, rather than moving a baseline that was never set.
     managers.editorWatch.watch(tab.label, targetPath);
   } else if (tab) {
-    // Move the watcher's baseline forward first, so its own `fs.watch` event for this write isn't
-    // mistaken for an external change.
+    // Re-arm observation of the replaced file with its saved baseline, so the save itself isn't
+    // mistaken for an external change and later edits still reach the editor.
     managers.editorWatch.markSaved(tab.label, stat.mtimeMs);
   }
   // The write and "Saved" flash above are synchronous and complete either way; a synced file's

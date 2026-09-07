@@ -167,6 +167,9 @@ This dialog is not the editor tab's alone. Any tab that registers unsaved work w
 
 ### Live reload of external changes
 
+Saving an editor file preserves observation of later external edits, including after repeated
+saves. The save itself does not trigger an external-change reload or overwrite-conflict prompt.
+
 While an editor tab is open, its underlying file is watched for changes made by other processes
 (outside the app). If the buffer has no unsaved changes, an external change is loaded automatically
 — the buffer refreshes to the new on-disk content and the cursor stays on the same line. The

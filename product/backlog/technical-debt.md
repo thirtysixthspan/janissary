@@ -3,17 +3,6 @@
 ## ready
 
 
-* Re-arm editor file watchers when an atomic save replaces the watched file.
-
-Existing Debt: The editor's save path replaces a file through rename but updates only its watcher's timestamp baseline, leaving watcher ownership tied to the pre-save file. Severity: 6/10
-
-Existing Risk: 7/10 - External edits after an ordinary save can stop reaching the editor, leaving stale content on screen and bypassing the overwrite-conflict prompt on a subsequent save.
-
-Proposal Risk: 3/10 - Rebinding after saves restores observation of the current file, but filesystem event loss and independent external replacements remain limitations of single-file watching.
-
-Proposal: `src/atomic-write.ts` writes a temporary file and renames it over the destination, while `finishSave` in `src/editor/save.ts` calls `EditorWatchManager.markSaved` for existing files and that method in `src/editor/watch-manager.ts` changes only `baselineMtimeMs`. The watch manager's own `refresh` comment already documents losing observation after file replacement and its implementation explicitly re-arms the watcher. Give the successful-save path an operation that closes the old watcher, watches the current path, and establishes the saved baseline without emitting a false external-change event; preserve first-save registration for new files and the distinct external-change detection behavior of `refresh`. Extend `src/editor/watch-manager.test.ts` and `src/editor/save.test.ts` to cover the actual atomic-save call path and verify watcher replacement, old-handle disposal, self-event suppression, and detection of the next external edit. Existing watch tests mock `fs.watch` and use in-place `writeFileSync`, so add focused real-filesystem coverage on the supported platform for save followed by external modification; the current tests do not establish that lifecycle behavior. Preserve client reload and dirty-buffer conflict behavior covered by `web/src/editor/useEditorWatchReload.test.ts` and `web/src/editor/useEditorFile.test.ts`.
-
-
 * Give each save-before-close attempt a stable target and cancellable completion.
 
 Existing Debt: The save confirmation tracks one mutable target label without an operation identity or pending-save guard, so awaited callbacks retain authority after their dialog is cancelled or replaced. Severity: 7/10
