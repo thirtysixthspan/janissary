@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { TabManager } from './tab/manager.js';
-import type { Managers } from './managers.js';
-import { projectFilesFor } from './project-files.js';
+import { TabManager } from '../tab/manager.js';
+import type { Managers } from '../managers.js';
+import { projectFilesFor } from './files.js';
 
-vi.mock('./file-navigator/search.js', () => ({
+vi.mock('../file-navigator/search.js', () => ({
   listProjectFiles: vi.fn(async () => ['a.ts', 'b.ts']),
 }));
 

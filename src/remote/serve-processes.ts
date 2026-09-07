@@ -1,7 +1,7 @@
 import { spawnPty } from '../pty.js';
 import { spawnShell } from '../shell/index.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
-import type { ProjectTokens } from '../project-tokens.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol.js';
 
 // The remote server's process table. Every remote harness tab, every remote agent tab's persistent

@@ -1,6 +1,6 @@
 import { connectAcp } from '../acp/index.js';
 import type { AcpSession } from '../acp/types.js';
-import type { ProjectTokens } from '../project-tokens.js';
+import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol.js';
 
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.

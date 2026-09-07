@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import { getProjectTokens } from '../project-tokens.js';
+import { getProjectTokens } from '../project/tokens.js';
 import { getGitIdentity } from '../git/identity.js';
 import type { Managers } from '../managers.js';
 import type { PtySession } from '../pty.js';

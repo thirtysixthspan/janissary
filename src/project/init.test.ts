@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { scaffoldProject } from './project-init.js';
+import { scaffoldProject } from './init.js';
 
 let projectDir: string;
 
@@ -42,7 +42,7 @@ describe('scaffoldProject', () => {
     scaffoldProject(projectDir);
     for (const relativePath of ['.codex/config.toml', '.codex/rules/default.rules', '.claude/settings.json']) {
       expect(readFileSync(path.join(projectDir, relativePath), 'utf8'))
-        .toBe(readFileSync(path.join(import.meta.dirname, '..', relativePath), 'utf8'));
+        .toBe(readFileSync(path.join(import.meta.dirname, '../..', relativePath), 'utf8'));
     }
   });
 
@@ -65,11 +65,11 @@ describe('scaffoldProject', () => {
     scaffoldProject(projectDir);
 
     expect(readFileSync(path.join(projectDir, '.codex', 'config.toml'), 'utf8'))
-      .toBe(readFileSync(path.join(import.meta.dirname, '..', '.codex/config.toml'), 'utf8'));
+      .toBe(readFileSync(path.join(import.meta.dirname, '../..', '.codex/config.toml'), 'utf8'));
     expect(readFileSync(path.join(codexRules, 'custom.rules'), 'utf8')).toBe('custom rules\n');
     expect(existsSync(path.join(codexRules, 'default.rules'))).toBe(true);
     expect(readFileSync(path.join(projectDir, '.claude', 'settings.json'), 'utf8'))
-      .toBe(readFileSync(path.join(import.meta.dirname, '..', '.claude/settings.json'), 'utf8'));
+      .toBe(readFileSync(path.join(import.meta.dirname, '../..', '.claude/settings.json'), 'utf8'));
   });
 
   it('is idempotent: running twice does not throw', () => {

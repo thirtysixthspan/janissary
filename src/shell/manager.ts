@@ -3,7 +3,7 @@ import { createRemoteShell } from '../remote/shell-session.js';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
 import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
 import { getConfig } from '../config.js';
-import { getProjectTokens } from '../project-tokens.js';
+import { getProjectTokens } from '../project/tokens.js';
 import { messageBus } from '../bus.js';
 import type { SandboxOptions } from '../sandbox/index.js';
 import type { Managers } from '../managers.js';

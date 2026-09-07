@@ -5,7 +5,7 @@ import { resyncEditorTab } from '../editor/resync.js';
 import { syncEditorBuffer } from '../editor/sync.js';
 import { notify } from '../notifications.js';
 import { listPersonas } from '../personas.js';
-import { projectFilesFor } from '../project-files.js';
+import { projectFilesFor } from '../project/files.js';
 import type { Managers } from '../managers.js';
 import type { MaybePromise } from '../maybe-promise.js';
 
