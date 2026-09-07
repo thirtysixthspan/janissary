@@ -4,9 +4,11 @@
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
-* detect session, weekly, monthly limits messaging and auto resume once specified time has passed. example messages: 
+* detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
 You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit
 https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 3:16 PM.
+Claude example message: 
+You've hit your session limit resets 1:20pm (America/Chicago)
 
 ## development
 
