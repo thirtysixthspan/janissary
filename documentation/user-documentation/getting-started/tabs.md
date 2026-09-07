@@ -4,7 +4,7 @@ Every tab is an independent workspace: its own transcript, its own command histo
 
 A session starts with a single `janus` tab. New tabs are created on demand — agent tabs with the `agent` command (below), and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
-A left and right sidebar flank the tab area, hidden until something is docked into them. Three kinds of tab can dock — the [file navigator](/user-documentation/tab-types/file-navigator), the [notifications](/user-documentation/tab-types/notifications) feed, and the [schedules](/user-documentation/automation/scheduling) tab — each with its own `left`/`right` form (`files left`, `notifications right`, `schedules left`) that opens or moves it straight into a sidebar. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side.
+A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, and [conversation list](/user-documentation/tab-types/conversations) each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`) that opens or moves them straight into a sidebar. Bare `conversations` returns the list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side.
 
 When a sidebar holds more than one docked tab, it shows its own small tab strip above the visible one — one entry per docked tab, each with its own **×** close button. Clicking an entry switches which docked tab is visible; double-clicking its label opens the same inline rename control as any tab in the center strip. Which entry is visible is only ever remembered on your screen — it resets the next time you launch or relaunch the app.
 
@@ -83,7 +83,7 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 ## Renaming a tab
 
-<img class="agent-float" src="/agents/orhan-south.png" alt="" />
+<img class="agent-float left" src="/agents/orhan-south.png" alt="" />
 
 `rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels.
 
@@ -135,7 +135,7 @@ titlebar is the one exception to display shortening. It reads `Janissary (<versi
 
 ## Reading the transcript
 
-<img class="agent-float left" src="/agents/selim-south-east.png" alt="" />
+<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
 
 A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
 

@@ -56,7 +56,7 @@ export function ConversationTab({
   })).filter((group) => group.models.length > 0);
 
   return (
-    <div className="conversation-tab plugin-tab">
+    <div className="conversation-tab plugin-tab" data-doc-shot="conversation-view">
       <div className="plugin-meta conversation-header">
         <ConversationTitle
           title={conversation.title}
