@@ -153,7 +153,7 @@ editor itself.
 
 Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line.
 
-- **Save (y):** saves the file to disk, then closes the tab.
+- **Save (y):** saves the file to disk, then closes the tab. The close happens only once the file is actually written. If the save does not succeed — the server reports an error, or the file changed on disk and the overwrite prompt goes up instead — the dialog is dismissed, the tab stays open with its changes intact, and focus returns to the editor so the error or the prompt is visible. Closing again after the save succeeds closes the tab as usual.
 - **Don't Save (n):** closes the tab without saving.
 - **Cancel (Esc):** dismisses the dialog and leaves the tab open with changes intact. Focus returns to the editor at the current cursor position.
 
@@ -181,6 +181,10 @@ reload can update a clean buffer.
 - **Overwrite (y):** writes the buffer to disk, replacing the external change.
 - **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save
   attempt shows the same prompt again.
+
+Reaching this prompt through the close dialog's **Save** does not close the tab: the question is
+still open and nothing has been written. The close dialog steps aside so this one can be answered,
+and closing the tab again after the overwrite succeeds closes it.
 
 Like the other editor dialogs, this prompt is modal — all keyboard and click input is trapped until
 a choice is made, and a click outside the dialog does nothing.

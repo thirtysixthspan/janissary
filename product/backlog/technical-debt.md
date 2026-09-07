@@ -2,17 +2,6 @@
 
 ## ready
 
-* Require confirmed save completion before the shared close guard closes an editor tab.
-
-Existing Debt: The shared dirty-handle contract treats a resolved save promise as permission to close, but text and image save implementations also resolve when no successful write occurred. Severity: 7/10
-
-Existing Risk: 8/10 - Choosing Save in the close dialog after a text write error or an external-change conflict can close the tab and discard the buffer before the user can recover or confirm an overwrite.
-
-Proposal Risk: 3/10 - A failed or deferred save keeps the close dialog and buffer alive, although the separate server plugin-failure policy can still remove image tabs after a plugin failure.
-
-Proposal: Define the existing `Promise<void>` save contract in `web/src/tab-handles.ts` and `web/src/plugins/api.ts` to resolve only after a confirmed save and to reject when saving fails or requires a separate decision. In `web/src/editor/useEditorFile.ts`, preserve the visible error and conflict state but stop resolving successfully on a server error, unavailable buffer, or pending overwrite confirmation; propagate that outcome through the imperative handle in `web/src/editor/EditorTab.tsx`. Apply the same contract to the registered handle in `web/src/plugins/image/useImageEdit.ts`, whose catch currently swallows intent failures and whose missing canvas path returns without saving. Have `web/src/CloseSaveGuard.tsx` catch unsuccessful saves and retain the tab, and have direct button and shortcut callers in `web/src/editor/EditorTab.tsx` and `web/src/plugins/image/ImageTab.tsx` consume rejections without unhandled promises. Keep overwrite confirmation explicit and let the user retry closing after it succeeds. `web/src/editor/useEditorFile.test.ts` covers error display and `web/src/CloseSaveGuard.test.tsx` covers successful saves separately, but neither pins their failing-save composition; add cases for a write error, a conflict requiring confirmation, and an unsuccessful image handle, asserting that no close RPC is sent while preserving the successful-close cases.
-
-
 * Track the saved image operation history independently of its undo cursor.
 
 Existing Debt: The image editor records its saved state as a cursor number even though editing after undo replaces the history at that same position. Severity: 6/10

@@ -13,4 +13,9 @@ export type ShellTabHandle = { focus(): void };
 export type QuestionPanelHandle = { focusCancel(): void };
 
 // Exposed by any tab with unsaved changes so shared close and quit guards can save or focus it.
+//
+// `save` resolves only once the work is confirmed on disk, and rejects when it is not: a failed
+// write, a buffer that isn't there to write, or a save that turned into a question the user has yet
+// to answer. A guard that closes a tab on a resolved save would otherwise discard the buffer on
+// exactly the attempts that needed keeping.
 export type DirtyTabHandle = { isDirty(): boolean; save(): Promise<void>; focus(): void };

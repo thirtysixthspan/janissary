@@ -172,9 +172,11 @@ the tab stays marked unsaved, and **Edit image** comes back to exactly the work 
 Unsaved edits are real work, so they are not dropped silently the way zoom and pan are. Closing an
 image tab that holds them raises the same save-changes dialog an editor tab raises, with **Save**,
 **Don't Save**, and **Cancel** (see [[editor-tab]]). **Save** there means what Save means everywhere
-in this feature: replace the original file, then close. This covers every close path — the tab's ×
-button, `Cmd+W`, and typing `close` or `exit` — and unsaved image edits also hold up `quit`, closing
-the last tab, and closing or reloading the browser page (see [[quit-confirmation]]).
+in this feature: replace the original file, then close. The close follows the write, not the attempt
+— if the file is not written the tab stays open with its edits intact, still marked unsaved. This
+covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit` — and unsaved
+image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
+(see [[quit-confirmation]]).
 
 An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored on
 `--relaunch`, and not captured by a profile beyond the file a profile already records.

@@ -30,10 +30,13 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
   // save. Drives the overwrite-conflict prompt instead of a normal save.
   const conflictPendingRef = useRef(false);
 
+  // Throws on every outcome that leaves the buffer unwritten, on top of showing the error. The
+  // shared dirty-handle contract (see `DirtyTabHandle`) says a resolved save means the file is on
+  // disk, and the close guard closes the tab on the strength of that.
   const writeToDisk = async (text: string) => {
     setSaveError(null);
     const error = await client.saveFile(editor.url, text);
-    if (error) { setSaveError(error); return; }
+    if (error) { setSaveError(error); throw new Error(error); }
     setLastSaved(text);
     conflictPendingRef.current = false;
     setSavedFlash(true);
@@ -42,8 +45,11 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
 
   const save = async () => {
     const s = api.stateRef.current;
-    if (!s) return;
-    if (conflictPendingRef.current) { setConflictOpen(true); return; }
+    if (!s) throw new Error('No buffer to save yet');
+    if (conflictPendingRef.current) {
+      setConflictOpen(true);
+      throw new Error('Save is waiting on the overwrite confirmation');
+    }
     await writeToDisk(toText(s));
   };
 
@@ -90,10 +96,12 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     savedFlash,
     conflictOpen,
     save,
+    // The overwrite dialog's own button, not a handle call: nothing is awaiting an answer, and a
+    // failed write is already on screen as the save error, so the rejection is consumed here.
     overwrite: () => {
       setConflictOpen(false);
       const s = api.stateRef.current;
-      if (s) void writeToDisk(toText(s));
+      if (s) void writeToDisk(toText(s)).catch(() => {});
     },
     dismissConflict: () => { setConflictOpen(false); },
   };

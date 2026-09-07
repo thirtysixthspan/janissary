@@ -35,7 +35,18 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
         const idx = indexRef.current;
         const tab = tabsRef.current[idx];
         const handle = tab ? tabHandles.current.get(tab.label) : undefined;
-        if (handle) await handle.save();
+        if (handle) {
+          try {
+            await handle.save();
+          } catch {
+            // The work is still unsaved (see `DirtyTabHandle`), so the tab stays. This dialog is
+            // dismissed rather than held open because it is modal: whatever the surface raised in
+            // its place — a save error, an overwrite prompt — is only reachable once it is gone.
+            closeSaveConfirm();
+            handle.focus();
+            return;
+          }
+        }
         closeSaveConfirm();
         client.send({ method: 'closeTab', params: { index: idx } });
       }}

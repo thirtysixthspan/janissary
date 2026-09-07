@@ -110,6 +110,8 @@ Either way, the buffer is never reloaded: your unsaved content, cursor position,
 
 Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks first: "Do you want to save changes to this file?" with **Save** (the default), **Don't Save**, and **Cancel**. Press `y` to save and close, `n` to close without saving, or `Escape` to keep editing. The dialog is modal; input elsewhere is blocked until you choose.
 
+**Save** closes the tab only once the file is written. If the save doesn't succeed — the server reports an error, or the file changed on disk and you get the overwrite prompt instead — the dialog steps aside, the tab stays open with your changes intact, and focus returns to the buffer so you can see what happened. Close it again once the save goes through.
+
 ## When the file changes outside the editor
 
 Janissary watches the file behind an open editor tab for changes made by anything else, another process, a git checkout, another tool. If your buffer has no unsaved changes, the new content loads automatically and your cursor stays on the same line.

@@ -233,6 +233,19 @@ describe('ImageEditor saving', () => {
     expect(capabilities.reportFailure).toHaveBeenCalledWith('invalid save-edit result');
   });
 
+  // The Save button fires and forgets, so a failed write must leave the edits in place rather than
+  // look like a save that happened.
+  it('keeps the edits unsaved when the save intent fails', async () => {
+    const intent: IntentSpy = vi.fn(async () => { throw new Error('write failed'); });
+    renderEditor(makeCapabilities({ intent }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Save' })); });
+
+    expect(screen.queryByText(/^Saved /u)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
   it('offers Save only while there is unsaved work', async () => {
     renderEditor();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
@@ -295,6 +308,25 @@ describe('ImageEditor unsaved work', () => {
     unmount();
 
     expect(registerDirtyHandle).toHaveBeenLastCalledWith(null);
+  });
+
+  // The host closes the tab on a resolved handle save, so a failed write has to reject through it
+  // or the operation list goes with the tab.
+  it.each([
+    ['the save intent fails', vi.fn(async () => { throw new Error('write failed'); }) as IntentSpy],
+    ['the result is malformed', vi.fn(async () => ({ nope: true })) as IntentSpy],
+  ])('rejects the host handle save when %s, leaving the tab dirty', async (_label, intent) => {
+    const registerDirtyHandle = vi.fn();
+    renderEditor(makeCapabilities({ intent, registerDirtyHandle }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+    await waitFor(() => {
+      expect(registerDirtyHandle.mock.calls.at(-1)![0]?.isDirty()).toBe(true);
+    });
+
+    const handle = registerDirtyHandle.mock.calls.at(-1)![0];
+    await act(async () => { await expect(handle.save()).rejects.toThrow(); });
+
+    expect(registerDirtyHandle.mock.calls.at(-1)![0]?.isDirty()).toBe(true);
   });
 
   it('saving through the host handle clears the dirty state', async () => {

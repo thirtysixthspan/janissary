@@ -60,7 +60,7 @@ Every save is a **PNG**, whatever the file started as. Two consequences are wort
 
 **Done**, or `Escape`, returns to the viewer without discarding anything. The edit list stays live, the tab stays marked unsaved, and the pen button brings you back to exactly where you left off.
 
-Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path, and they hold up `quit` and a browser reload too.
+Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab that holds them asks first, with **Save**, **Don't Save**, and **Cancel** — the same dialog an [editor tab](/user-documentation/tab-types/editor) raises, on every close path, and they hold up `quit` and a browser reload too. **Save** closes the tab only once the file is written; if the write fails the tab stays open with your edits intact, still marked unsaved.
 
 ## Lifecycle
 

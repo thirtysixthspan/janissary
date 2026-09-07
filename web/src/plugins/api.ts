@@ -21,6 +21,10 @@ export { InlineEditInput } from '../InlineEditInput';
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host
 // decides when to ask, which dialog to draw, and what each button does.
+//
+// `save` resolves only once the work is confirmed written, and rejects when it is not. That is not a
+// way to refuse a close: the host still decides what a rejection means. It is how a plugin says the
+// work is still unsaved, so the host keeps the tab rather than closing over it.
 export type TabDirtyHandle = {
   isDirty(): boolean;
   save(): Promise<void>;
