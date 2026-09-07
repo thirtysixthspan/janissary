@@ -107,6 +107,8 @@ Dragging a tab label reorders it within its strip. In a split center area, relea
 
 Releasing the mouse elsewhere commits the previewed order even when the pointer is outside the source strip. Pressing Escape cancels instead, restores the original order, and sends no reorder or pane move. A press that stays below the movement threshold remains an ordinary click, so selecting and double-clicking to rename keep their existing behavior. After a committed drag, the dragged tab remains focused.
 
+A drag ends the same way, without reordering, if the strip changes while it is in flight — a tab arriving or being closed by something other than the drag, such as an agent opening one, a schedule firing, or a monitor's reporting tab appearing. The preview unwinds, the tabs sit where they were, and the release sends neither a reorder nor a pane move. The gesture is not resumed against the new strip; the user starts it again.
+
 ### Metadata row
 
 Agent tabs, harness tabs, and shell (PTY-takeover) tabs each show a small metadata row above their
