@@ -32,6 +32,11 @@ import { ConversationsManager } from '../conversations/manager.js';
 // construction time, so the object need not be fully populated yet). Split out of the Controller
 // constructor purely to keep controller.ts under the file-size guideline; this has no state of its
 // own, mirroring `controller/events.ts`.
+//
+// This order no longer decides teardown. `Controller.shutdown` used to reverse `Object.keys` over
+// the populated object, which made the sequence below the dependency graph by accident — so
+// reordering two lines here silently reordered dispose. Teardown is stated by
+// `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
   managers.database = new DatabaseManager();
   managers.tab = new TabManager(managers, projectDir);

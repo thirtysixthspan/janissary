@@ -41,7 +41,9 @@ describe('createManagers plugin host wiring', () => {
     c.shutdown();
   });
 
-  it('disposes a later consumer before the plugin host during reverse shutdown', () => {
+  // `MANAGER_DISPOSE_ORDER` keeps this pair in the same relative position it held when teardown was
+  // the reverse of construction order; the guarantee is the same, its source is not.
+  it('disposes a plugin-contribution consumer before the plugin host', () => {
     const c = makeController();
     const disposed: string[] = [];
     Object.assign(c.managers.openFile, { dispose: () => { disposed.push('openFile'); } });

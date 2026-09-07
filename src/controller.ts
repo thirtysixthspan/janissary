@@ -6,7 +6,7 @@ import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
 import { messageBus } from './bus.js';
 import type { TabView } from './protocol.js';
-import type { Managers } from './managers.js';
+import { MANAGER_DISPOSE_ORDER, type Managers } from './managers.js';
 import type { AcpRef } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
@@ -106,8 +106,7 @@ export class Controller {
   }
 
   shutdown(): void {
-    const names = Object.keys(this.managers) as Array<keyof Managers>;
-    for (const name of names.toReversed()) this.managers[name].dispose?.();
+    for (const name of MANAGER_DISPOSE_ORDER) this.managers[name].dispose?.();
     messageBus.clear();
   }
 }
