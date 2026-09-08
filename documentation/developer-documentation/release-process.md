@@ -34,8 +34,8 @@ What it does:
 2. Pulls latest from remote (`git pull --rebase`)
 3. Generates the changelog section from conventional commits since the last tag, categorized by type (Features, Bug Fixes, Documentation, Refactoring, Chores, Breaking Changes)
 4. Updates `CHANGELOG.md` with the new version entry
-5. Bumps the version in `package.json`
-6. Commits the version bump (`feat(package): bump version to X.Y.Z`)
+5. Bumps the version in `package.json` and in `package-lock.json`, which carries it both at its root and in the `packages[""]` entry for the root package
+6. Commits those three files — `CHANGELOG.md`, `package.json`, `package-lock.json` — as the version bump (`feat(package): bump version to X.Y.Z`)
 7. Tags the commit (`vX.Y.Z`)
 8. Runs typecheck, the full test suite, and build
 
