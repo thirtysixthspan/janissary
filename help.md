@@ -24,6 +24,8 @@
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image |
+| `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
+| `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
 | `schedule` | Run a command later — once or on a recurring schedule |
