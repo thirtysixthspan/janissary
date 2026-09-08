@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, realpathSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
+import { janissaryRoot } from '../janissary-root.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 
 describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integration (darwin only)', () => {
@@ -82,6 +83,24 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     expect(run(`cat "${grandparent}/package.json"`)).toBe(true);
     expect(run(`cat "${grandparent}/secrets.txt"`)).toBe(false);
     rmSync(grandparent, { recursive: true, force: true });
+  });
+
+  // The whole point of the carve-in: the task picker inserts an execute command naming
+  // $janissary/ai/tasks/ for a built-in task, and an installation under $HOME — a global npm prefix,
+  // or a development checkout — would otherwise hand the agent a file it cannot open. The negative
+  // half is asserted only when the installation actually sits under $HOME; anywhere else the broad
+  // read allow covers it and there is no deny to observe.
+  it('reads a task file under the install\'s ai/ directory, but nothing else in the install', () => {
+    const root = janissaryRoot();
+    const taskFile = path.join(root, 'ai', 'tasks', 'work-an-issue.md');
+    const elsewhere = path.join(root, 'help.md');
+    expect(existsSync(taskFile)).toBe(true);
+    expect(existsSync(elsewhere)).toBe(true);
+
+    expect(runSandboxed(`cat "${taskFile}"`).status).toBe(0);
+    if (realpathSync(root).startsWith(`${realpathSync(homedir())}/`)) {
+      expect(runSandboxed(`cat "${elsewhere}"`).status).not.toBe(0);
+    }
   });
 
   it('a non-secret $HOME read outside any carve-in reports EPERM, not ENOENT', () => {

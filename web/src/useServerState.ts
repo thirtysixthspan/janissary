@@ -17,7 +17,6 @@ type Setters = {
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
-  setJanissaryTasksDir: (dir: string) => void;
   setProfiles: (profiles: ProfileRow[]) => void;
   setRouteIndex: (index: number) => void;
   routeRef: React.RefObject<RouteChooserView | null>;
@@ -36,7 +35,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
   const {
     setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    setTasks, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
@@ -45,7 +44,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     tabs: nextTabs, activeTab: active, secondaryTab: secondary, route: nextRoute,
     tabNameMaxLength: nextTabNameMaxLength, activeTabNameMaxLength: nextActiveTabNameMaxLength,
     globalHistory: nextGlobalHistory, syntaxTheme: nextSyntaxTheme, theme: nextTheme,
-    tasks: nextTasks, janissaryTasksDir: nextJanissaryTasksDir, profiles: nextProfiles,
+    tasks: nextTasks, profiles: nextProfiles,
     projectDir: nextProjectDir, version: nextVersion,
     harnessLaunch: nextHarnessLaunch, scheduleLaunch: nextScheduleLaunch,
   }) => {
@@ -61,7 +60,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
     setTasks(nextTasks);
-    setJanissaryTasksDir(nextJanissaryTasksDir);
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
@@ -75,6 +73,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
   }), [
     client, setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setJanissaryTasksDir, setProfiles, setRouteIndex, routeRef,
+    setTasks, setProfiles, setRouteIndex, routeRef,
   ]);
 }

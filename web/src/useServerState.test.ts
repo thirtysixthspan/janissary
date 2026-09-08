@@ -14,7 +14,7 @@ const makeClient = () => {
       listener?.({
         t: 'state', tabs: [], activeTab: 0, secondaryTab: secondary, route,
         tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [],
-        syntaxTheme: 'github-dark', theme: 'dark', tasks: [], janissaryTasksDir: '',
+        syntaxTheme: 'github-dark', theme: 'dark', tasks: [],
         profiles: [], projectDir: '', version: '', harnessLaunch: null, scheduleLaunch: null,
       });
     },
@@ -34,7 +34,6 @@ const makeSetters = () => ({
   setSyntaxTheme: vi.fn(),
   setTheme: vi.fn(),
   setTasks: vi.fn(),
-  setJanissaryTasksDir: vi.fn(),
   setProfiles: vi.fn(),
   setRouteIndex: vi.fn(),
   routeRef: { current: null as RouteChooserView | null },
@@ -51,7 +50,7 @@ describe('useServerState', () => {
       tabNameMaxLength: 19, activeTabNameMaxLength: 63, globalHistory: ['previous-command'],
       syntaxTheme: 'monokai', theme: 'light',
       tasks: [{ path: 'task.md', name: 'task', depth: 3, dir: false, source: 'project' }],
-      janissaryTasksDir: '/install/tasks', profiles: [{ name: 'profile', source: 'janissary' }],
+      profiles: [{ name: 'profile', source: 'janissary' }],
       projectDir: '/projects/example', version: '4.5.6',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
       scheduleLaunch: { targets: ['agent'], active: 'agent' },
@@ -67,7 +66,6 @@ describe('useServerState', () => {
     expect(setters.setSyntaxTheme).toHaveBeenCalledWith('monokai');
     expect(setters.setTheme).toHaveBeenCalledWith('light');
     expect(setters.setTasks).toHaveBeenCalledWith(snapshot.tasks);
-    expect(setters.setJanissaryTasksDir).toHaveBeenCalledWith('/install/tasks');
     expect(setters.setProfiles).toHaveBeenCalledWith(snapshot.profiles);
     expect(setters.setHarnessLaunch).toHaveBeenCalledWith(snapshot.harnessLaunch);
     expect(setters.setScheduleLaunch).toHaveBeenCalledWith(snapshot.scheduleLaunch);

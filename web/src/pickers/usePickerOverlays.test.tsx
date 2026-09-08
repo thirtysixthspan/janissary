@@ -24,7 +24,7 @@ function TestComponent({ client, current, onHook }: {
 }) {
   const hook = usePickerOverlays({
     client, current, tabs: current ? [current] : [], syntaxTheme: 'monokai',
-    tasks: [], janissaryTasksDir: '/opt/tasks', profiles: [],
+    tasks: [], profiles: [],
     runCommand: () => {},
     inputRef: createRef(), recallRef: createRef(), dropRef: createRef(),
   });

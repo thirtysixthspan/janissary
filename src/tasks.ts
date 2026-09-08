@@ -1,5 +1,6 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
+import { janissaryRoot } from './janissary-root.js';
 import type { TaskRow } from './tab/types.js';
 
 // Depth-first walk of one directory: returns its entries (files and subdirectories, recursed
@@ -38,18 +39,6 @@ function listOne(root: string, source: TaskRow['source']): TaskRow[] {
   } catch {
     return [];
   }
-}
-
-// The Janissary install root — the directory above the running code (mirroring `main.ts`'s
-// `import.meta.dirname/..` pattern). Its `ai/` ships with the `janus` package.
-export function janissaryRoot(): string {
-  return path.join(import.meta.dirname, '..');
-}
-
-// Absolute path of the Janissary install's `ai/tasks` directory, carried to the client so it can
-// build the `execute <dir>/<path>` command for a built-in task.
-export function janissaryTasksDir(): string {
-  return path.join(janissaryRoot(), 'ai', 'tasks');
 }
 
 // Executable task prompts: markdown files under `ai/tasks/` (`build-a-feature.md`,

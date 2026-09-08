@@ -2,7 +2,7 @@ import type { Controller } from './controller.js';
 import type { ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
-import { listTasks, janissaryTasksDir } from './tasks.js';
+import { listTasks } from './tasks.js';
 import { listProfileRows } from './profiles.js';
 import { appVersionNumber } from './cli-args.js';
 
@@ -20,7 +20,7 @@ export function buildStateEvent(controller: Controller): ServerEvent {
     tabNameMaxLength: getConfig().tabNameMaxLength,
     activeTabNameMaxLength: getConfig().activeTabNameMaxLength,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
-    tasks: listTasks(controller.rootDir), janissaryTasksDir: janissaryTasksDir(),
+    tasks: listTasks(controller.rootDir),
     profiles: listProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),
   };
 }

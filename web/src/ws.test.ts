@@ -82,7 +82,6 @@ describe('JanusClient', () => {
         t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null, tabNameMaxLength: 20,
         activeTabNameMaxLength: 40,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
-        janissaryTasksDir: '/opt/janissary/ai/tasks',
         profiles: [], projectDir: '/tmp', version: '1.2.3',
         harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
       }),
@@ -91,7 +90,7 @@ describe('JanusClient', () => {
     expect(listener).toHaveBeenCalledWith({
       t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null,
       tabNameMaxLength: 20, activeTabNameMaxLength: 40, globalHistory: [],
-      syntaxTheme: 'monokai', theme: 'dark', tasks: [], janissaryTasksDir: '/opt/janissary/ai/tasks',
+      syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } }, scheduleLaunch: null,
     });
@@ -107,7 +106,7 @@ describe('JanusClient', () => {
       t: 'state', tabs: [], activeTab: 1, secondaryTab: 3,
       route: { cmd: 'command', choices: ['shell', 'acp'] },
       tabNameMaxLength: 23, activeTabNameMaxLength: 71, globalHistory: ['history'],
-      syntaxTheme: 'monokai', theme: 'light', tasks: [], janissaryTasksDir: '/install/tasks',
+      syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
       scheduleLaunch: { targets: ['agent'], active: 'agent' },
@@ -124,7 +123,7 @@ describe('JanusClient', () => {
     messageHandler!({ data: JSON.stringify({
       t: 'state', tabs: [], activeTab: 0, route: missing, harnessLaunch: missing, scheduleLaunch: missing,
       tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [], syntaxTheme: 'monokai',
-      theme: 'dark', tasks: [], janissaryTasksDir: '', profiles: [], projectDir: '/project', version: '1.2.3',
+      theme: 'dark', tasks: [], profiles: [], projectDir: '/project', version: '1.2.3',
     }) });
     expect(listener).toHaveBeenCalledWith(expect.objectContaining({
       route: null, harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,

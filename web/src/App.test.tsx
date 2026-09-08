@@ -33,7 +33,7 @@ const client = {
       listener({
         t: 'state', tabs, activeTab: active, route, tabNameMaxLength: maxLength,
         activeTabNameMaxLength: 50, globalHistory: history, syntaxTheme: syntax, theme, tasks,
-        janissaryTasksDir: '', profiles: [], projectDir: '/tmp', version: '1.2.3',
+        profiles: [], projectDir: '/tmp', version: '1.2.3',
         harnessLaunch: null, scheduleLaunch: null,
       });
     };

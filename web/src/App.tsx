@@ -32,7 +32,6 @@ export function App({ client }: { client: JanusClient }) {
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [janissaryTasksDir, setJanissaryTasksDir] = useState('');
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
@@ -75,7 +74,7 @@ export function App({ client }: { client: JanusClient }) {
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
   const pickers = usePickerOverlays({
-    client, current, tabs, syntaxTheme, tasks, janissaryTasksDir, profiles, runCommand,
+    client, current, tabs, syntaxTheme, tasks, profiles, runCommand,
     inputRef: inputReference, recallRef: recallReference, dropRef: dropReference,
   });
 
@@ -109,7 +108,7 @@ export function App({ client }: { client: JanusClient }) {
   useServerState(client, {
     setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme,
-    setTasks, setJanissaryTasksDir, setProfiles,
+    setTasks, setProfiles,
     ...pickers.serverState,
   });
 
