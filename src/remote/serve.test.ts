@@ -49,9 +49,14 @@ let tmpDir: string;
 let repoDir: string;
 let plainDir: string;
 let originlessDir: string;
+// An empty stand-in for the home directory `loadProjectTokens` falls back to, so what the remote
+// resolves is the remote project's own file and never the credentials of whoever runs the suite.
+let homeDir: string;
 
 beforeAll(() => {
   tmpDir = realpathSync(mkdtempSync(path.join(tmpdir(), 'remote-serve-test-')));
+  homeDir = path.join(tmpDir, 'home');
+  mkdirSync(homeDir, { recursive: true });
   const originDir = path.join(tmpDir, 'origin.git');
   mkdirSync(originDir, { recursive: true });
   execSync('git init --bare', { cwd: originDir, stdio: 'pipe' });
@@ -202,7 +207,7 @@ describe('RemoteServer', () => {
   it('falls back to the remote\'s own Gemini key when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'gemini-token');
     writeFileSync(tokenPath, 'AIzaSyRemoteOwn\n');
-    loadProjectTokens(repoDir);
+    loadProjectTokens(repoDir, homeDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'gemini-own-key' })}\n`);
@@ -213,14 +218,14 @@ describe('RemoteServer', () => {
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadProjectTokens(repoDir);
+      loadProjectTokens(repoDir, homeDir);
     }
   });
 
   it('falls back to the remote\'s own OpenCode key when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'opencode-token');
     writeFileSync(tokenPath, 'oc_live_remote_own\n');
-    loadProjectTokens(repoDir);
+    loadProjectTokens(repoDir, homeDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'opencode-own-key' })}\n`);
@@ -231,14 +236,14 @@ describe('RemoteServer', () => {
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadProjectTokens(repoDir);
+      loadProjectTokens(repoDir, homeDir);
     }
   });
 
   it('falls back to the remote\'s own Claude token when none is forwarded', async () => {
     const tokenPath = path.join(repoDir, '.janissary', 'claude-token');
     writeFileSync(tokenPath, 'sk-ant-oat01-remote-own\n');
-    loadProjectTokens(repoDir);
+    loadProjectTokens(repoDir, homeDir);
     try {
       const { server, frames } = makeServer();
       server.receive(`${encodeFrame({ type: 'provision', label: 'claude-own-token' })}\n`);
@@ -249,7 +254,7 @@ describe('RemoteServer', () => {
       server.shutdown(0);
     } finally {
       rmSync(tokenPath, { force: true });
-      loadProjectTokens(repoDir);
+      loadProjectTokens(repoDir, homeDir);
     }
   });
 
