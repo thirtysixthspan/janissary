@@ -26,13 +26,13 @@ These rules override every general instruction below to merge to master.
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. In PR update mode, read `./product/backlog/pull-request.md` on the pull request's head branch, remove the resolved entry from it, and remove the file itself once it holds no entries at all. In PR update mode, update the pull request's description with `gh pr edit --body-file` when the resolved entry calls for it (Step 8). Run `./scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Remove the fixed issue from `./product/backlog/issues.md`. In PR update mode, read `./product/backlog/pull-request.md` on the pull request's head branch, remove the resolved entry from it, and remove the file itself once it holds no entries at all. In PR update mode, update the pull request's description with `gh pr edit --body-file` when the resolved entry calls for it (Step 8). Run `$janissary/scripts/run.mjs check-diff` after each change. For an ordinary work item, execute the full merge workflow via `ai/tasks/workspace/merge-change-to-master.md` when implementation is done. In PR update mode, check out, commit to, and push the existing PR's head branch instead.
 
 ### Forbidden — no exceptions
 
 1. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
-2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
-3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
+2. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
+3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `$janissary/scripts/run.mjs check-diff`.
 4. **Choosing an issue that requires significant new architecture.** If an issue would require high complexity error or prone work, pick a simpler issue instead and report why.
 5. **Editing `./product/backlog/issues.md` beyond removing the fixed entry.** Only remove the line for the issue you fixed — do not reorder, rephrase, or otherwise modify the remaining entries. In ordinary mode, never add a work item named at invocation to the file.
 6. **Merging before all checks pass.** The `ai/tasks/workspace/merge-change-to-master.md` workflow handles merge; do not bypass it.
@@ -97,7 +97,7 @@ State your pick and its rating, then go to Step 2.
 
 Follow the plan's implementation steps **in order**. After each step:
 
-1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
+1. Run `$janissary/scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
 3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
@@ -113,7 +113,7 @@ Key rules during implementation:
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
-Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
+Run `$janissary/scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 
@@ -159,9 +159,9 @@ After implementation, tests, specs/docs, plan promotion, and issue removal are c
 
 - **In PR update mode:**
   1. Run `gh pr view <number> --json state,headRefName,url` again and `git branch --show-current`. Stop if the PR is no longer `OPEN` or the current branch is not its recorded head branch.
-  2. Run `./scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop. An entry whose only remedy is a description correction still reaches this point with changes to ship — it wrote a plan file to `./product/plans/complete/` and removed its entry from `./product/backlog/pull-request.md` — so this guard never fires merely because the fix was not a code change.
-  3. Compose a Conventional Commits subject and body describing the completed fix, then commit with `./scripts/run.mjs pr-commit "<subject>" "<body>"`. Do not amend, squash, or otherwise rewrite commits that were already on the PR branch.
-  4. Run `git push`, which pushes through the upstream configured by `gh pr checkout`. If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts while preserving both sides, rerun `./scripts/run.mjs check-diff`, and retry `git push`. Repeat at most three times. Never force-push. If the third attempt fails, leave the local commit intact and report the failure.
+  2. Run `$janissary/scripts/run.mjs pr-check-changes`. If it reports no changes to ship, stop. An entry whose only remedy is a description correction still reaches this point with changes to ship — it wrote a plan file to `./product/plans/complete/` and removed its entry from `./product/backlog/pull-request.md` — so this guard never fires merely because the fix was not a code change.
+  3. Compose a Conventional Commits subject and body describing the completed fix, then commit with `$janissary/scripts/run.mjs pr-commit "<subject>" "<body>"`. Do not amend, squash, or otherwise rewrite commits that were already on the PR branch.
+  4. Run `git push`, which pushes through the upstream configured by `gh pr checkout`. If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts while preserving both sides, rerun `$janissary/scripts/run.mjs check-diff`, and retry `git push`. Repeat at most three times. Never force-push. If the third attempt fails, leave the local commit intact and report the failure.
   5. **When the resolved entry called for a description correction**, apply it now — after the push, never before. A description is a live artifact on GitHub while a file edit is not until it is pushed, so editing it earlier would leave the pull request describing work that is not on its branch if a later step failed. Read the current body with `gh pr view <number> --json body`, apply the change the entry's `Proposal` names, and leave every other paragraph exactly as the author wrote it — `gh pr edit` replaces the body wholesale, so preserving the rest is your job, not the tool's. Write the full revised body to `./temp/pr-body.md` and apply it:
 
      ```bash

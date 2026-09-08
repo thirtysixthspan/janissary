@@ -16,14 +16,14 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Run read-only commands to replicate the reported bug. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file under `./product/plans/` and move it through `draft/` → `ready/` → `complete/`. Remove the fixed bug from `./product/backlog/bugs.md`. Run `$janissary/scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
 1. **Fabricating a fix, a symptom, or a reproduction.** Never invent a failure you did not observe or a fix for a bug you could not reproduce. If the selected bug cannot be reproduced, stop and report (Step 1). If the specs and code leave the intended behavior genuinely ambiguous, stop and report (Step 2).
 2. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
-3. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
-4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `./scripts/run.mjs check-diff`.
+3. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
+4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `$janissary/scripts/run.mjs check-diff`.
 5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a bug named at invocation to the file.
 6. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
@@ -82,7 +82,7 @@ State the correct behavior in one or two sentences before planning the fix. If t
 
 Follow the plan's implementation steps **in order**. After each step:
 
-1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
+1. Run `$janissary/scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
 3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
@@ -102,7 +102,7 @@ Key rules during implementation:
 
 ## Step 5 — Verify the fix
 
-1. Run `./scripts/run.mjs check-diff`. It must pass clean, including the new regression test.
+1. Run `$janissary/scripts/run.mjs check-diff`. It must pass clean, including the new regression test.
 2. Re-run the reproduction from Step 1 and confirm the faulty behavior is gone — the scenario that used to fail now behaves correctly.
 3. If the plan's Verification section describes manual steps, perform them. If manual verification is not possible in this environment, note that in the report.
 

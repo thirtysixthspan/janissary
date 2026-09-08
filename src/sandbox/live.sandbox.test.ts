@@ -103,6 +103,14 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
     }
   });
 
+  // The other half of the same carve-in: the task file the agent just opened tells it to run
+  // `$janissary/scripts/run.mjs`, which the same $HOME content deny would otherwise refuse.
+  it('reads the script runner under the install\'s scripts/ directory', () => {
+    const runner = path.join(janissaryRoot(), 'scripts', 'run.mjs');
+    expect(existsSync(runner)).toBe(true);
+    expect(runSandboxed(`cat "${runner}"`).status).toBe(0);
+  });
+
   it('a non-secret $HOME read outside any carve-in reports EPERM, not ENOENT', () => {
     // Directory-listing-based resolvers (esbuild, notably) walk ancestor directories under $HOME
     // while resolving an entry point; those directories genuinely exist (metadata is allowed

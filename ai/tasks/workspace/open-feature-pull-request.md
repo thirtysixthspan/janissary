@@ -49,7 +49,7 @@ A concise summary of every file touched, grouped by area (`src/`, `web/src/`, `w
 ## Step 0 — Confirm there are changes to ship
 
 ```bash
-./scripts/run.mjs pr-check-changes
+$janissary/scripts/run.mjs pr-check-changes
 ```
 
 Prints the working-tree status and any commits ahead of `master`, and **exits non-zero** when there is nothing to ship. If it reports **"No changes to open a PR for"**, stop.
@@ -61,7 +61,7 @@ Prints the working-tree status and any commits ahead of `master`, and **exits no
 This is the end-of-work gate. Run the full check:
 
 ```bash
-./scripts/run.mjs pr-check-gate
+$janissary/scripts/run.mjs pr-check-gate
 ```
 
 The gate runs **hard** checks only: typecheck, lint errors, tests, CSS. It does not run the advisory quality checks (complexity, duplication, dead code) — those belong to the human end-of-work gate (`npm run check:full`), not this automated step.
@@ -78,7 +78,7 @@ Good: `feature/unread-badge`, `cli/help-version-flags`, `ui/transcript-click-pre
 Bad: `patch-1`, `changes`, `wip`
 
 ```bash
-./scripts/run.mjs pr-create-branch <branch>
+$janissary/scripts/run.mjs pr-create-branch <branch>
 ```
 
 Any uncommitted changes carry over onto the new branch.
@@ -90,7 +90,7 @@ Any uncommitted changes carry over onto the new branch.
 Write **one** commit. The subject line must follow the [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) specification (see [`ai/guidelines/conventional-commits.md`](../../guidelines/conventional-commits.md)): `<type>[optional scope]: <description>`. Valid types: `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `style`, `refactor`, `perf`, `test`, `revert`. Include a body explaining *what* changed and *why*. `pr-commit` stages everything (`git add -A`) and commits with a **single author**:
 
 ```bash
-./scripts/run.mjs pr-commit "feat(ui): add unread badge on inactive tabs" \
+$janissary/scripts/run.mjs pr-commit "feat(ui): add unread badge on inactive tabs" \
   "When a background tab receives new transcript content (messages, command output, shell completion), a sparkle badge appears on the tab strip. Focusing the tab clears it. Covers all content-delivery paths (append, finishRunning, shell onDone) and all activation paths (click, next, reorderTab, closeTab)."
 ```
 
@@ -107,13 +107,13 @@ If earlier commits already exist on the branch, consolidate so the **final** sta
 `origin` always points at GitHub — the workspace is an independent `git clone` of the root repo's `origin` remote. `pr-resolve-remote` reads it and prints the values later steps need:
 
 ```bash
-./scripts/run.mjs pr-resolve-remote
+$janissary/scripts/run.mjs pr-resolve-remote
 ```
 
 This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read those three values directly from the command's stdout output. Each Bash command runs in its own fresh shell with no state persisted from the previous one, so do not reference them as shell variables in later commands — substitute the actual literal values you read into each subsequent command:
 
 ```bash
-./scripts/run.mjs pr-push-branch origin my-branch-name
+$janissary/scripts/run.mjs pr-push-branch origin my-branch-name
 ```
 
 ---
@@ -136,7 +136,7 @@ Use natural line breaks — never wrap lines at a fixed column.
 Use the commit subject (which follows Conventional Commits format) as `<title>`. The PR title must match the commit subject and therefore also follows the Conventional Commits specification. Substitute the actual `OWNER_REPO` and `BRANCH` values you read in Step 4, and pass the body file:
 
 ```bash
-./scripts/run.mjs pr-create-pr owner/repo my-branch-name "<title>" ./temp/pr-body.md
+$janissary/scripts/run.mjs pr-create-pr owner/repo my-branch-name "<title>" ./temp/pr-body.md
 ```
 
 Record the PR number and URL that the command prints.

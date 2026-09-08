@@ -4,7 +4,7 @@ Your job: read the layout of `src/` and find flat clusters of files that share a
 
 The goal is the same as `improve-namespacing.md`: a group like `src/acp-loop.ts`, `src/acp-manager.ts`, `src/acp-runner.ts` reads better as `src/acp/loop.ts`, `manager.ts`, `runner.ts`, because the directory carries the namespace and each filename drops the redundant prefix. The difference is the output. That task performs one move per run and verifies it. This task performs no moves at all. It writes down the candidates it found, with enough detail that whoever picks one up can go straight to the move without re-surveying the tree.
 
-**Never run repository tools.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`, `./scripts/run.mjs check-diff`, FTA, or any other build/lint/test/analysis machinery. A namespace opportunity is visible in a directory listing, so a listing is all you need. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
+**Never run repository tools.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`, `$janissary/scripts/run.mjs check-diff`, FTA, or any other build/lint/test/analysis machinery. A namespace opportunity is visible in a directory listing, so a listing is all you need. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
 
 This task edits **one file only**: `product/backlog/technical-debt.md`, and only its `## development` section. You will never touch application source code, tests, specs, documentation, or config, and you will never modify the `## ready` or `## deferred` sections.
 

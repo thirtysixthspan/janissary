@@ -11,7 +11,7 @@ import {
   ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
-import { janissaryRoot, janissaryAiDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
+import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
 
@@ -277,6 +277,7 @@ export function sandboxSpawn(
   const serverNodeDir = serverNodeDirs();
   const playwright = playwrightPackagePaths();
   const janissaryAi = dualPath(janissaryAiDir());
+  const janissaryScripts = dualPath(janissaryScriptsDir());
 
   scrubbed.JANISSARY_NODE = process.execPath;
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
@@ -298,6 +299,8 @@ export function sandboxSpawn(
     '-D', `PLAYWRIGHT_CORE_DIR=${playwright.dirs[1]}`,
     '-D', `JANISSARY_AI_L=${janissaryAi.literal}`,
     '-D', `JANISSARY_AI_R=${janissaryAi.real}`,
+    '-D', `JANISSARY_SCRIPTS_L=${janissaryScripts.literal}`,
+    '-D', `JANISSARY_SCRIPTS_R=${janissaryScripts.real}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

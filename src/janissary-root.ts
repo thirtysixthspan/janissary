@@ -14,9 +14,19 @@ export function janissaryRoot(): string {
 
 // The install's own `ai/` directory: the guidelines, personas, and executable task prompts that ship
 // with janissary. A sandboxed process reads task files from here (see `sandbox/profile.ts`), which is
-// why it is named separately from the root — nothing else in the installation is carved in.
+// why it is named separately from the root — it and `scripts/` below are the only parts of the
+// installation carved in.
 export function janissaryAiDir(): string {
   return path.join(janissaryRoot(), 'ai');
+}
+
+// The install's own `scripts/` directory: the trusted script runner and the scripts it dispatches to,
+// which ship with the package alongside `ai/`. A task prompt tells the agent to run
+// `$janissary/scripts/run.mjs <script>`, so a sandboxed process has to be able to read this directory
+// too (see `sandbox/profile.ts`) — the runner comes from the installation while the work it does
+// happens in the agent's own working directory.
+export function janissaryScriptsDir(): string {
+  return path.join(janissaryRoot(), 'scripts');
 }
 
 // The environment variable carrying `janissaryRoot()` into every process janissary spawns, so the

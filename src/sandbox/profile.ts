@@ -9,6 +9,7 @@
 // stays denied even inside a carve-in).
 
 import { BROWSER_PORT_BAND_DENY } from './browser-ports.js';
+import { INSTALL_READ_RULE } from './install-reads.js';
 import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
   clausesFor, literalClausesFor, prefixClausesFor,
@@ -130,47 +131,11 @@ ${secretDenyClauses})
 ; level is exactly what those walks expect to see constantly, with no directory-existence lie
 ; involved.
 (deny file-read-data file-read-xattr (subpath (param "HOME")))
-; A process reading its own executable (and the directory it lives in) is always safe to allow —
-; frameworks the process links against may reopen its own binary for introspection (e.g. Keychain's
-; SecItemCopyMatching calls CFBundleGetMainBundle, which does exactly this to determine code identity
-; for ACL matching). Harness binaries installed under $HOME (nvm, ~/.opencode/bin, …) would otherwise
-; fail that self-read and the harness would appear logged out even with a valid Keychain item.
-; SERVER_NODE_DIR_L/R (the janissary server's own process.execPath directory) is carved in for the
-; same self-read reasoning, and so a script running inside the sandbox can invoke the known-good
-; node at JANISSARY_NODE (see index.ts) instead of relying on PATH resolution inside the
-; sandboxed process, which doesn't always find a working node first.
-; PLAYWRIGHT_DIR/PLAYWRIGHT_CORE_DIR are janissary's own copy of the Playwright client, which a
-; harness launched with -b imports from JANISSARY_PLAYWRIGHT to drive the e2e browser (see
-; src/browser/e2e-server.ts). Client and server must be the same version to connect, and a fresh
-; workspace clone has no node_modules until the AI installs them, so the project's own copy cannot
-; be relied on. playwright-core is carved in separately because it is playwright's only runtime
-; dependency and in a hoisted layout sits as a sibling rather than nested, so the parent alone
-; leaves every internal require denied. Unconditional rather than gated on -b: gating it would
-; mean threading a field through SandboxOptions, spawnPty, PseudoterminalManager.spawn, and the
-; remote's spawn path to withhold read access to two directories of janissary's own dependency tree
-; that hold no user data.
-; JANISSARY_AI_L/R is the running installation's own ai/ directory — the guidelines, personas, and
-; executable task prompts that ship with janissary — in both literal and realpath-resolved form,
-; since an npm-global install is commonly reached through a symlinked prefix. The task picker inserts
-; an execute command naming $janissary/ai/tasks/ for a built-in task (see product/specs/task-picker.md), and
-; without this the agent cannot open the file it was just told to run: an installation under $HOME
-; (a global npm prefix, or a development checkout) falls under the $HOME content deny below.
-; Deliberately ai/ alone rather than the whole install root — that directory is prompts written to be
-; read by an agent and holds no user data, while node_modules and the rest of the tree stay denied.
-; Read-only, like every other janissary directory here: an agent that could write these prompts could
-; rewrite what a later unsandboxed run follows.
+${INSTALL_READ_RULE}
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
   (subpath (param "GIT_OBJECTS"))
-  (subpath (param "SELF_DIR_L"))
-  (subpath (param "SELF_DIR_R"))
-  (subpath (param "SERVER_NODE_DIR_L"))
-  (subpath (param "SERVER_NODE_DIR_R"))
-  (subpath (param "PLAYWRIGHT_DIR"))
-  (subpath (param "PLAYWRIGHT_CORE_DIR"))
-  (subpath (param "JANISSARY_AI_L"))
-  (subpath (param "JANISSARY_AI_R"))
 ${readCarveClauses}
 ${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The

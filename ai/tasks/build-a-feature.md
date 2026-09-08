@@ -14,13 +14,13 @@ Your job: pick the simplest available plan from `./product/plans/ready/`, implem
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `./scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
+Read any file in the repo. Edit source, tests, CSS, and spec files as the plan directs. Move the chosen plan file from `./product/plans/ready/` to `./product/plans/complete/`. Run `$janissary/scripts/run.mjs check-diff` after each change. Run the full PR workflow via `ai/tasks/workspace/open-feature-pull-request.md` when implementation is done.
 
 ### Forbidden — no exceptions
 
 1. **Editing files the plan does not touch.** Stay inside the plan's scope. If you discover the plan missed a file, stop and report — do not silently expand scope.
-2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
-3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `./scripts/run.mjs check-diff`.
+2. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
+3. **Skipping tests.** If the plan specifies tests, write them. If it does not, still verify with `$janissary/scripts/run.mjs check-diff`.
 4. **Choosing a plan at complexity 7 or above.** If every plan in `./product/plans/ready/` is rated 7+, stop and report — do not pick one anyway.
 5. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
@@ -56,7 +56,7 @@ State your pick and its complexity in one sentence.
 
 Follow the plan's implementation steps **in order**. After each step:
 
-1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
+1. Run `$janissary/scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
 3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
@@ -73,7 +73,7 @@ Key rules during implementation:
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
-Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
+Run `$janissary/scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 

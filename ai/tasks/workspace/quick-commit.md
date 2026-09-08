@@ -28,7 +28,7 @@ Write a single subject line following [Conventional Commits 1.0.0](../../guideli
 `pr-commit` runs `git add -A` and commits with a **single author and no co-author**:
 
 ```bash
-./scripts/run.mjs pr-commit "<subject>" "<body>"
+$janissary/scripts/run.mjs pr-commit "<subject>" "<body>"
 ```
 
 Pass the body as the second argument (quote both). For a bodyless commit, pass the subject alone.
@@ -48,7 +48,7 @@ If a `Co-Authored-By:` trailer or any AI authorship note appears, strip it with 
 Push the current branch to `origin`:
 
 ```bash
-./scripts/run.mjs pr-push-branch
+$janissary/scripts/run.mjs pr-push-branch
 ```
 
 - **Push succeeds** → go to Step 4.
@@ -58,7 +58,7 @@ Push the current branch to `origin`:
   git pull --rebase origin <branch>
   ```
 
-  - **Rebase clean** → re-run `./scripts/run.mjs pr-push-branch`.
+  - **Rebase clean** → re-run `$janissary/scripts/run.mjs pr-push-branch`.
   - **Rebase stops on conflicts** → open each conflicted file, resolve the markers preserving the intent of **both** sides (never blindly drop the remote's changes), then `git add <files>` and `git rebase --continue`, and re-run the push.
 
   Repeat this push→rebase loop **at most 3 times**. If the push still fails after 3 attempts, **STOP** — leave the commit in place locally and report that the push could not be completed.

@@ -62,7 +62,7 @@ Judge the plan against each of these. Take notes; you will fix them in Step 4.
 - **Reuse blindness.** Does the plan rebuild something the repo already has? Every mechanism the plan needs that already exists should be named with its location — a "What already exists (reuse, don't rebuild)" table is the house pattern.
 - **Testing gaps.** Behavior the plan changes with no test that would catch a regression, or tests named without their location/convention.
 - **Missing boundaries.** No "Out of scope" section, or a goal that quietly grows mid-document.
-- **Missing verification.** The plan should end with how to verify: `./scripts/run.mjs check-diff` during development plus a concrete manual end-to-end check.
+- **Missing verification.** The plan should end with how to verify: `$janissary/scripts/run.mjs check-diff` during development plus a concrete manual end-to-end check.
 
 ---
 

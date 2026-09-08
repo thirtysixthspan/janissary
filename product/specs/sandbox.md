@@ -5,8 +5,8 @@ using a kernel-enforced [Seatbelt](https://en.wikipedia.org/wiki/Sandbox_(comput
 sandbox (`sandbox-exec`), on macOS only. `src/sandbox-profile.ts` holds the static profile text and
 its table-driven carve-out/carve-in/secret-deny lists; `src/sandbox.ts` resolves the dynamic paths
 (workspace, temp dir, `$HOME`, the parent repo's git objects dir, the self-binary's own directory,
-the real Darwin per-user cache dir, the running installation's own `ai/` directory) and wraps the
-spawn in `sandbox-exec -p <profile> -D … --`.
+the real Darwin per-user cache dir, the running installation's own `ai/` and `scripts/` directories)
+and wraps the spawn in `sandbox-exec -p <profile> -D … --`.
 
 ### What gets sandboxed
 
@@ -108,6 +108,15 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   run follows — and unconditional, for the same reason the Playwright directories are: it grants read
   access to one directory of Janissary's own, and gating it would thread a flag through every spawn
   path to no benefit.
+- That same installation's **`scripts/` directory** is readable on identical terms — both forms,
+  read-only, unconditional. The task prompts under `ai/` tell the agent to run
+  `$janissary/scripts/run.mjs <script>` for the project's lint, test, commit, and pull-request
+  steps, so the runner and the scripts it dispatches to have to be openable or the prompt names a
+  command the agent cannot execute. The scripts come from the installation while acting on the
+  agent's own working directory — the project — which is what makes reaching for them through
+  `$janissary` correct rather than merely resolvable. `ai/` and `scripts/` are the only two parts of
+  the installation carved in; the install root itself, `node_modules`, and everything else stay
+  denied.
 - `/dev/null`, the PTY master multiplexer (`/dev/ptmx`), and tty/pty devices get their own narrow
   read/write/ioctl allow, independent of the workspace/`$HOME` rules. `/dev/ptmx` lets a
   sandboxed Janissary process allocate a PTY; its terminal slave needs `ioctl` for raw-mode termios

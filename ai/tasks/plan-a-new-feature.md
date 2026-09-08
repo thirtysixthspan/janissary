@@ -108,7 +108,7 @@ Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name der
 6. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
 7. Out of scope, listing what the user said is explicitly deferred.
 8. Open questions — anything still genuinely unresolved after 2c (write "None" if nothing remains).
-9. Verification section: `./scripts/run.mjs check-diff` plus a concrete manual check.
+9. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
 
 Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
 
