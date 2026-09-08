@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 
-// The credentials a project can hand its workspaced tabs, one row per file under `.janissary/`.
+// The credentials a project can hand its workspaced tabs, one row per file under `.janissary/` —
+// the project's own, or the user's `~/.janissary/` when the project has no file of its own.
 // Adding one is a row here plus its spec and documentation — the loader, the sandbox injection, the
 // remote forwarding, and the per-token fallback all walk this table rather than naming credentials
 // one at a time. Same property `sandbox/paths.ts` has for its path lists, for the same reason: four
@@ -60,8 +62,11 @@ export type ProjectTokens = Partial<Record<ProjectTokenName, string>>;
 
 let tokens: ProjectTokens = {};
 
-function readToken(projectDir: string, file: string): string | undefined {
-  const tokenPath = path.join(projectDir, '.janissary', file);
+// A credential read from one directory's `.janissary/`. Takes the containing directory rather than
+// the project, because the same read serves the project's own directory and the user's home. A file
+// holding only whitespace answers exactly as a missing one does: nothing to inject.
+function readToken(containingDir: string, file: string): string | undefined {
+  const tokenPath = path.join(containingDir, '.janissary', file);
   if (!existsSync(tokenPath)) return undefined;
   return readFileSync(tokenPath, 'utf8').trim() || undefined;
 }
@@ -69,10 +74,16 @@ function readToken(projectDir: string, file: string): string | undefined {
 // Read every configured token once, at startup — `main.ts` for the local server, `runRemoteServer`
 // for the far end of a remote session. Replaces the cache outright rather than merging into it, so
 // loading a second project never leaves the first one's credentials behind.
-export function loadProjectTokens(projectDir: string): ProjectTokens {
+//
+// The project is asked first and the user's `~/.janissary/` second, which is the whole of the
+// override: a project file wins by being consulted first, not by anything comparing the two. A
+// credential belongs to the person more often than to the checkout, so the home copy is what serves
+// every project on the machine, and a project needing a different one says so with a file. `home` is
+// a parameter so a test can point it somewhere empty instead of at the machine's real credentials.
+export function loadProjectTokens(projectDir: string, home: string = homedir()): ProjectTokens {
   const loaded: ProjectTokens = {};
   for (const { name, file } of PROJECT_TOKENS) {
-    const value = readToken(projectDir, file);
+    const value = readToken(projectDir, file) ?? readToken(home, file);
     if (value) loaded[name] = value;
   }
   tokens = loaded;

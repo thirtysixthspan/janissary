@@ -241,14 +241,15 @@ channel's provisioning frame and injected as `GH_TOKEN` only into that remote ta
 processes; it is never written to the remote filesystem. That injection is independent of the
 remote's own isolation state — a remote where the sandbox is inactive, which is every non-macOS
 remote, still receives the token in its workspaced processes. If the local project has no token, the
-remote project's own `.janissary/github-token` remains the fallback. The initial clone uses whatever
+remote's own `github-token` remains the fallback, resolved on that machine from its project's
+`.janissary/` and then its home `~/.janissary/` (see [[workspaced-agent]]). The initial clone uses whatever
 transport the *remote* repository's `origin` already has.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
 `.janissary/gemini-token` travel the same way, in the same map on the same frame, and are injected as
 `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and — for the Gemini key, both variables opencode
 reads — `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
-with the remote project's own matching file as the same fallback. It matters most on exactly the hosts the GitHub
+with the remote's own matching file as the same fallback, resolved the same two ways. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
 which without a forwarded token leaves it reporting itself logged out.

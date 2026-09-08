@@ -52,6 +52,30 @@ spawn) are confined to the workspace directory by a kernel-enforced Seatbelt san
 actually active for a newly created workspaced tab, a one-line notice is appended to that tab's
 transcript. `--offline` additionally denies network access for the tab.
 
+### Where token files are read from
+
+Each of the four credential files described below — `github-token`, `claude-token`, `opencode-token`,
+`gemini-token` — is looked for in two places, and the first one holding a value wins: the project's
+own `.janissary/` directory, then the user's `~/.janissary/`. A credential put in the home directory
+therefore serves every project on the machine, and a project that needs a different one says so by
+keeping its own file. `loadProjectTokens` in `src/project/tokens.ts` resolves both, once at startup,
+per credential — so a single load can take one token from the project and another from home.
+
+A file holding only whitespace answers exactly as a missing one does: nothing to inject. That applies
+to the project's copy too, so an empty project file falls through to the home file rather than
+suppressing it. There is no way to opt one project out of a credential configured in home other than
+giving that project a file with a different value in it.
+
+Nothing about the rest of the credential's journey depends on which of the two files supplied it. It
+is trimmed, injected into the workspaced tab's environment, and forwarded to a remote identically.
+The remote end resolves its own two locations the same way when nothing is forwarded to it, so the
+fallback described under [[remote-server]] is the remote machine's home directory as well as the
+remote project's file.
+
+Both locations are read by the janissary process itself, never from inside a workspace. `~/.janissary`
+is not carved into the sandbox's read allow-list, so a workspaced process cannot open the home copy
+any more than it can open the project's own state directory (see [[sandbox]]).
+
 ### GitHub authentication
 
 The initial clone (done outside the sandbox, by the janissary process itself) uses whatever transport the root repository's `origin` already uses — SSH included, since that step isn't sandboxed. Once cloned, the workspace's own `origin` is rewritten to HTTPS: later git operations run *inside* the workspaced tab's sandbox, which cannot authenticate over SSH (see [[sandbox]]). If a scoped GitHub token is configured (`.janissary/github-token`), it is injected into the workspaced tab's environment, letting `git push` and `gh` (PR creation, merging) authenticate over that HTTPS remote from inside the sandbox. Without a token configured, the workspace still works for local development (commit, fetch, pull); pushing to GitHub or using `gh` from inside the workspace will fail.

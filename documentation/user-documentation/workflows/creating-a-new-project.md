@@ -21,7 +21,7 @@ Create the remote on GitHub first — either from [github.com/new](https://githu
 
 This step is optional. [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) run inside a sandbox that can't authenticate git over SSH, so pushing or using `gh` from inside a workspace needs an HTTPS-compatible token. Without one, workspaces still work fine for local development — commit, fetch, pull all just work — only `git push` and `gh` (PR creation, merging) from inside a workspace will fail.
 
-To set one up: create a fine-grained personal access token at [github.com/settings/tokens](https://github.com/settings/tokens), scoped to this repository, with **Contents** (write), **Pull requests** (write), and **Metadata** (read) permissions. Save it to `.janissary/github-token` in the project's root directory — a plain text file containing just the token. `.janissary/` is gitignored by default, so the token is never committed.
+To set one up: create a fine-grained personal access token at [github.com/settings/tokens](https://github.com/settings/tokens), scoped to this repository, with **Contents** (write), **Pull requests** (write), and **Metadata** (read) permissions. Save it to `.janissary/github-token` in the project's root directory — a plain text file containing just the token. `.janissary/` is gitignored by default, so the token is never committed. A token in `~/.janissary/github-token` works for every project on the machine instead, and a project's own file wins where both exist.
 
 [Tokens for agents](/user-documentation/advanced-agents/tokens) covers this token in more detail, along with the separate one that keeps a `claude` harness signed in inside a workspace.
 

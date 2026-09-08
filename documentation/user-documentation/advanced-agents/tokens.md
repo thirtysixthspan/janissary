@@ -1,15 +1,28 @@
 # Tokens for agents
 
-Janissary reads three optional token files from your project's `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them, and `.janissary/` is gitignored by default so none of them gets committed.
+Janissary reads four optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them, and a project's `.janissary/` is gitignored by default so none of them gets committed.
 
 | File | What it gives a workspaced tab | Set it up when |
 | --- | --- | --- |
-| `.janissary/github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
-| `.janissary/claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
-| `.janissary/opencode-token` | a signed-in `opencode` harness | the machine running the tab has never run `opencode auth login` |
-| `.janissary/gemini-token` | a working Google provider | your harness talks to Gemini |
+| `github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
+| `claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
+| `opencode-token` | a signed-in `opencode` harness | the machine running the tab has never run `opencode auth login` |
+| `gemini-token` | a working Google provider | your harness talks to Gemini |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
+
+## Where to put a token file
+
+You have two places to choose from, and Janissary checks them in this order:
+
+1. `.janissary/` in the project you launched from
+2. `~/.janissary/` in your home directory
+
+Put a token in your home directory and every project on the machine gets it, which is usually what you want for a personal key you'd otherwise copy into each new checkout. Put one in a project and that project uses it instead, so a repository that needs its own scoped GitHub token can have one without disturbing anything else.
+
+The choice is per file, not all-or-nothing. A home `claude-token` and a project `github-token` work together fine.
+
+Emptying a project's file doesn't turn the credential off. A file with nothing in it reads the same as no file at all, so the home copy is used instead. To give one project a different credential, put a different value in its file.
 
 ## Get a GitHub token
 
@@ -17,13 +30,18 @@ None of them is required. Without them, workspaces still clone, run, commit, fet
 
 Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) scoped to just the repositories the agent should reach, with **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only** permissions. Nothing broader.
 
-Save the value to `.janissary/github-token` in your project root:
+Save the value to `github-token`, either in your home directory or in the project that needs it:
 
 ```
+~/.janissary/
+  github-token
+
 your-project/
   .janissary/
     github-token
 ```
+
+A scoped token is the one most worth keeping per project, since the repositories it reaches are a fact about that project.
 
 A workspace rewrites its `origin` to HTTPS because the sandbox can't authenticate git over SSH, which is why this token exists at all. [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) covers what changes once you add it, including the one extra step a codex harness needs.
 
@@ -67,7 +85,7 @@ Google Vertex is the one that can't work. It authenticates with `GOOGLE_APPLICAT
 
 <img class="agent-float left" src="/agents/idris-south-west.png" alt="" />
 
-Janissary reads both files once when it starts, then hands the values to each workspaced tab's processes as they launch. Nothing is copied into the workspace itself, so a token never lands in a clone you might push. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
+Janissary reads your token files once when it starts, project first and home second, then hands the values to each workspaced tab's processes as they launch. Nothing is copied into the workspace itself, so a token never lands in a clone you might push, and a workspaced tab can't read either file directly. Editing a token file takes effect on the next launch of Janissary, not on the next tab.
 
 A token reaches the tab whether or not isolation is actually active on that machine. Isolation needs macOS, so a Linux host runs without it, and the credential arrives the same way either way.
 
@@ -75,7 +93,7 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All four tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If your project has no token, the remote falls back to the matching file in its own project.
+All four tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
 
 Forwarding is what makes a remote work at all for a harness. A Linux host has no keychain for `claude`, and a host nobody has signed into has nothing for `opencode`, so without your tokens those tabs open logged out.
 
