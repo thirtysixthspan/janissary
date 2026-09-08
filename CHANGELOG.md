@@ -2,6 +2,178 @@
 
 All notable changes to this project are documented here.
 
+## [0.13.0] - 2026-09-08
+
+### ⚠ Breaking Changes
+
+- feat(conversations)!: replace chat naming (#954)
+
+### Features
+
+- bump package-lock.json with the release and commit it (#1051)
+- decode every client RPC's params at the socket boundary (#1023)
+- carry a remote browser's full output across the channel and log it locally (#996)
+- keep a dead browser's full output in a log file the notification links (#995)
+- add a task file for regenerating the documentation screenshots (#988)
+- show an attached e2e browser in the metadata row (#986)
+- capture with the workspace's attached browser (#985)
+- report a sandboxed harness's and browser's own output where the user is looking (#983)
+- give a sandboxed harness a contained e2e browser (-b) (#975)
+- add a pull-request-review task that records findings to a backlog (#978)
+- let work-an-issue's PR mode correct the pull request description (#980)
+- draw work-an-issue's PR mode from the branch's pull-request backlog (#979)
+- signal working, success, and failure on the pull button (#974)
+- report a git pull's outcome to the notifications tab (#973)
+- rename a conversation by double-clicking its title (#965)
+- give a conversation tab the agent tab's command bar (#964)
+- attribute workspace commits to the launching user (#963)
+- add a git pull button to the tree header (#962)
+- drag tabs between split panes (#957)
+- replace chat naming (#954)
+- add durable model conversations (#952)
+
+### Bug Fixes
+
+- leave git-sync commits out of the changelog section (#1052)
+- make release scripts executable
+- leave the editor caret at the start of pasted text (#1047)
+- keep each tab's unexecuted command in its own command bar (#1046)
+- invalidate cancelled save-before-close attempts (#1031)
+- re-arm file watchers after atomic saves (#1030)
+- bind shared channel callbacks to their entry (#1029)
+- state the manager teardown order and dispose the remote transport last (#1026)
+- expand a glob in-process instead of through the user's login shell (#1020)
+- resolve the agent tab's model from the harness catalog (#1019)
+- remove a tab's persisted state when it is closed (#1017)
+- declare that a request can answer with nothing, and handle it where callers read it (#1016)
+- report a lost navigator request as the failure value its contract defines (#1015)
+- address a monitor by its runtime name on every surface (#1014)
+- end a drag whose strip changed instead of indexing stale rectangles (#1013)
+- settle outstanding requests when the connection ends (#1012)
+- target the save-changes dialog by tab label, not array position (#1011)
+- track the saved edit as an operation list, not a cursor position (#1010)
+- close a tab only after its save is confirmed (#1009)
+- restore demo profile fixture (#1007)
+- stage tabs overview correctly (#1006)
+- allow node-pty allocation (#1002)
+- drop Chromium's own end line from the gone-browser notification (#1000)
+- relay Chromium's own output into a dead browser's log (#997)
+- keep the scratch directory of a browser that died (#994)
+- report the exit status of a browser that died (#993)
+- refuse a browser teardown request at the e2e guard (#990)
+- replace a dead e2e browser instead of losing it for the tab's life (#987)
+- start e2e child in readable scratch directory (#984)
+- route all review findings through work-an-issue (#981)
+- open a new file on an empty buffer instead of a failed load (#970)
+- separate the turn list from the rows it sits between (#969)
+- move the model selector into the right-aligned metadata actions (#968)
+- take keyboard focus when a dragged file is dropped in (#967)
+- allow reading opencode's cached model list (#961)
+- apps failure
+- create conversations with Cmd+N (#953)
+- measure keyboard vertical scrolling in screen rows so the caret's line stays on the page (#949)
+- reveal the row below the caret before probing so ArrowDown scrolls a screen row (#947)
+- make the client-message dispatcher exhaustive (#928)
+- give remote trees the same refusal contract as local ones (#927)
+
+### Documentation
+
+- explain harness recording failures and transcript scope (#1050)
+- document newfile and newdir commands (#1049)
+- complete notifications settings and navigation (#1045)
+- add the conversations guide and command reference (#1044)
+- refresh documentation gap candidates
+- fix the three comments that describe retired code and paths (#1038)
+- restate the stale architecture principles against the tree (#1022)
+- add browser reproduction guidance (#1008)
+- explain nested test constraint (#1005)
+- remove stale captures (#1004)
+- regenerate documentation screenshots (#1003)
+- record the two screenshot-fixture defects the capture rework surfaced
+- record the e2e browser death repro and its diagnostic gaps
+- regenerate documentation screenshots (#992)
+- note browser.close() destroys a harness e2e browser
+- document server startup, lifetime, and env fallbacks
+- drop the status sections from the pull-request backlog (#982)
+- drop the dependency install from the pull-request-review plan (#977)
+- plan a pull-request-review task that records findings to a backlog (#976)
+- typo
+- contain the e2e browser instead of documenting the hole (#972)
+- rewrite the sandbox end-to-end browser testing plan (#971)
+- specify -b/--browser launches headless by default (#960)
+- resolve -b/--offline as an unhandled contradictory combination (#959)
+- resolve browser-server choice as Playwright launchServer, no Docker (#958)
+- plan sandbox end-to-end browser testing (#956)
+- give each conversation its own durable workspace beside its data in ~/.janissary (#951)
+- drive conversations through the existing ACP channel in an empty workspaced sandbox (#950)
+- draft the conversations tab-plugin plan (#942)
+- record react organization debt as a summary bullet with labeled paragraphs (#940)
+- separate technical debt entries with two blank lines
+- record technical debt entries as a summary bullet with labeled paragraphs (#932)
+- record technical debt as proposal, debt, refactor, and risks (#931)
+- report technical debt findings as structured entries (#930)
+
+### Refactoring
+
+- give the picker overlays one state owner (#1048)
+- move command-tokens.ts into src/command/tokens.ts (#1043)
+- move the project cluster into src/project/ (#1042)
+- move the open-command flow into src/open/ (#1041)
+- move the git cluster into src/git/ (#1040)
+- move the shell cluster into src/shell/ (#1039)
+- fold the bare schedule command into its registry definition (#1037)
+- pair each state-directory init and clear in one boot registry (#1036)
+- walk the dispose registry on the tab-close path with a closeTab per manager (#1035)
+- sweep feature-manager tab scans onto the single lookup surface (#1034)
+- route running-entry updates through one choreography in the tab module (#1033)
+- pass shared named state snapshots to subscribers (#1032)
+- give the tab manager a by-label lookup with guard-typed view accessors (#1028)
+- make the notification and profile tab-kind dispatchers exhaustive (#1027)
+- have getOutput return its decision instead of encoding it in prose (#1025)
+- give harness and ssh a definition in the command registry (#1024)
+- build the overlay open-state once and let the close-tab chord read it (#1021)
+- answer which overlay is open from one ordered registry (#1018)
+- capture every shot from one janissary instance (#1001)
+- inject the client plugin host instead of importing two module-level singletons (#948)
+- move the New schedule launch dialog out of the schedules plugin (#946)
+- lift the agent tab intent builder into the shared layer (#945)
+- move the quick-open picker and route chooser into the pickers feature (#944)
+- colocate four single-consumer root modules into their feature directories (#943)
+- extract the tab's menu actions and file creators into a module (#941)
+- publish the contract's buffer helpers and lint the boundary (#938)
+- narrow view payloads with guards instead of asserting them (#937)
+- derive the frame-type lists and decoder switch from the frame union (#936)
+- give the tool surface one descriptor table (#935)
+- inherit adapter signatures by declaration merging (#934)
+- move MaybePromise and mapMaybe into a shared module (#933)
+- derive filesystem operation handling from one descriptor table (#929)
+- name the post-mutation cache invalidation (#926)
+
+### Chores
+
+- log namespacing opportunities
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log save and request lifecycle debt
+- promote plan
+- add logo
+- promote plan
+- refresh the bundled model catalog (#966)
+- disable Claude commit attribution (#955)
+- promote plan
+- log react organization debt
+- log new technical debt findings
+- log new technical debt findings
+
+### Other
+
+- revert: carry a remote browser's full output across the channel and log it locally (#996) (#999)
+- revert: relay Chromium's own output into a dead browser's log (#997) (#998)
+- revert(browser): remove the e2e browser supervisor (#989)
+- test(plugins): cover the import-boundary lint rules with rejected and allowed cases (#939)
+
 ## [0.12.0] - 2026-08-30
 
 ### ⚠ Breaking Changes
