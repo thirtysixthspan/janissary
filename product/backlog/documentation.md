@@ -2,8 +2,6 @@
 
 ## ready
 
-* harness-recording (5/10) — 7 of 27 facts are missing, 0 wrong; automatic recordings, playback, captures, transcript opening, and startup/relaunch retention are already covered in `documentation/user-documentation/advanced-agents/harness.md`, with remote behavior in `documentation/user-documentation/advanced-agents/remote-agents.md`. Extend the recording section to explain that an open or write failure abandons recording for that session without stopping the harness and reports `harness recording failed` once. Both that message and `ssh recording failed` bypass event opt-in and focused-tab suppression, but are dropped if the notifications feed is closed. Add the distinct once-per-tab `no harness transcript found` diagnostic, explaining that a missing or unrecognized session record leaves screen-based monitoring available without a transcript file. Also document that inline interactive PTYs such as `shell vim` are not recorded, terminal resizes are included in the recording, and transcript collection follows the current harness session rather than importing sessions that predate the tab. Cross-link the diagnostics from `documentation/user-documentation/tab-types/notifications.md`; `help.md` already advertises harness capture, and the existing harness guide documents `harness transcript <name>`. Ground truth is `product/specs/harness-recording.md`, `product/specs/notifications.md`, `src/harness/observers.ts`, `src/harness/recorder.ts`, `src/harness/transcript/tailer.ts`, `src/harness/transcript/sources.ts`, `src/harness/subcommands.ts`, and `src/notifications.ts`.
-
 ## development
 
 ## deferred
@@ -12,6 +10,7 @@
 
 ## resolved
 
+* harness-recording — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-09-08)
 * file-creation-commands — documented in documentation/user-documentation/tab-types/opening-files.md, documentation/user-documentation/command-bar/commands.md, help.md (removed 2026-09-07)
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md, documentation/user-documentation/command-bar/commands.md (removed 2026-09-07)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md, documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/command-bar/commands.md, help.md (removed 2026-09-07)
