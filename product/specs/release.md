@@ -22,7 +22,7 @@ Every run is a dry run unless `--for-real` is passed.
 
 `--for-real` writes three files and commits exactly those three:
 
-- `CHANGELOG.md` gains a `## [<version>] - <date>` section built from the conventional-commit subjects since the last tag, grouped into Breaking Changes, Features, Bug Fixes, Documentation, Refactoring, Chores and Other. Earlier version-bump commits are left out of it.
+- `CHANGELOG.md` gains a `## [<version>] - <date>` section built from the conventional-commit subjects since the last tag, grouped into Breaking Changes, Features, Bug Fixes, Documentation, Refactoring, Chores and Other. Two kinds of commit are left out of it, of every group including Breaking Changes: earlier version bumps, and the `sync: <filename>` commits made when a synced file is saved from an editor tab. Neither reports a change to the product, and between two tags the sync commits outnumber the ones that do. A group left with nothing in it prints no heading — a release whose only uncategorized commits were sync commits has no Other section at all.
 - `package.json` gets the new version.
 - `package-lock.json` gets the new version in both places it carries one — at its root, and in the `packages[""]` entry describing the root package itself. A lockfile with no such entry has only its root version set.
 
