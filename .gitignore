@@ -6,6 +6,7 @@ temp/
 .janissary/
 /coverage
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
 documentation/.vitepress/dist
 documentation/.vitepress/cache
 documentation/public/agents/
