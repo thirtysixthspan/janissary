@@ -17,6 +17,7 @@ import { createInterface } from 'node:readline/promises';
 import { argv, stdin as input, stdout as output } from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { VERSION_FILES, writeVersionFiles } from './release/version-files.mjs';
+import { changelogSection } from './release/changelog.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PKG = new URL('../package.json', import.meta.url);
@@ -64,55 +65,10 @@ function computeVersion(current, input) {
   process.exit(1);
 }
 
-function changelogSection(version, date) {
+function commitSubjects() {
   const range = lastTag() ? `${lastTag()}..HEAD` : 'HEAD';
   const log = capture('git', ['log', '--no-merges', '--format=%s', range]);
-  const lines = log ? log.split('\n') : [];
-
-  const categories = { feat: [], fix: [], docs: [], refactor: [], chore: [], other: [] };
-  for (const line of lines) {
-    if (isReleaseCommit(line)) continue;
-    const match = line.match(/^(\w+)(?:\(.+?\))?!?:\s(.+)$/);
-    if (match) {
-      const type = match[1];
-      const desc = match[2];
-      if (Object.hasOwn(categories, type)) categories[type].push(desc);
-      else categories.other.push(line);
-    } else {
-      categories.other.push(line);
-    }
-  }
-
-  const breaking = lines.filter((l) => l.includes('BREAKING CHANGE') || /^\w+\(.+\)!:/.test(l));
-  const label = {
-    feat: 'Features',
-    fix: 'Bug Fixes',
-    docs: 'Documentation',
-    refactor: 'Refactoring',
-    chore: 'Chores',
-    other: 'Other',
-  };
-
-  let md = `## [${version}] - ${date}\n\n`;
-  if (breaking.length > 0) {
-    md += '### ⚠ Breaking Changes\n\n';
-    for (const b of breaking) md += `- ${b}\n`;
-    md += '\n';
-  }
-  const categoryKeys = ['feat', 'fix', 'docs', 'refactor', 'chore', 'other'];
-  for (const key of categoryKeys) {
-    const items = categories[key];
-    if (items.length === 0) continue;
-    md += `### ${label[key]}\n\n`;
-    for (const item of items) md += `- ${item}\n`;
-    md += '\n';
-  }
-
-  return md.trimEnd() + '\n';
-}
-
-function isReleaseCommit(line) {
-  return /^\w+(\(.+?\))?!?:\s*bump version to \d+\.\d+\.\d+/i.test(line);
+  return log ? log.split('\n') : [];
 }
 
 function lastTag() {
@@ -125,7 +81,7 @@ function lastTag() {
 }
 
 function updateChangelog(version, date) {
-  const section = changelogSection(version, date);
+  const section = changelogSection(version, date, commitSubjects());
   const header = `# Changelog\n\nAll notable changes to this project are documented here.\n\nThe format is based on [Keep a Changelog](https://keepachangelog.com/),\nand this project adheres to [Semantic Versioning](https://semver.org/).\n\n`;
   let content;
   if (existsSync(CHANGELOG)) {

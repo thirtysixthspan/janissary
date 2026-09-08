@@ -227,80 +227,14 @@ All notable changes to this project are documented here.
 
 ### Other
 
-- sync: features.md
-- sync: technical-debt.md
-- sync: documentation.md
-- sync: features.md
 - test(lint-boundaries): pay the ESLint cold start in a hook (#912)
 - test(file-navigator): cover paste replay branches (#906)
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: features.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: bugs.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: documentation.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: features.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: features.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: bugs.md
-- sync: issues.md
-- sync: features.md
-- sync: features.md
 - test(harness): cover parseHarnessCommand and its helpers (#787)
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: features.md
 - build: pin remaining packages from the compromised keyv maintainer account (#775)
 - build: pin keyv and cacheable dependencies against active supply-chain compromise (#774)
 - build: upgrade @agentclientprotocol/sdk to 1.3.0 (#773)
-- sync: technical-debt.md
 - build: upgrade @xterm/xterm to 6.0.0 (#770)
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: issues.md
 - build: apply patch-level dependency updates (#769)
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 
 ## [0.11.0] - 2026-08-03
 
@@ -367,36 +301,10 @@ All notable changes to this project are documented here.
 
 ### Other
 
-- sync: issues.md
 - test(editor): remove target-line caret centering case
-- sync: technical-debt.md
-- sync: features.md
-- sync: features.md
-- sync: bugs.md
-- sync: bugs.md
 - test(ui): pin background video playback while a tab is unfocused (#738)
-- sync: issues.md
 - build: update @emnapi/runtime (#735)
-- sync: issues.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: technical-debt.md
-- sync: documentation.md
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: features.md
-- sync: technical-debt.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
 - revert(file-navigator): remove the Git-synced tree refresh control (#717)
-- sync: features.md
-- sync: issues.md
-- sync: features.md
-- sync: features.md
 
 ## [0.10.1] - 2026-07-31
 
@@ -407,13 +315,6 @@ All notable changes to this project are documented here.
 ### Bug Fixes
 
 - reset the inherited credential helper list before adding gh
-
-### Other
-
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 
 ## [0.10.0] - 2026-07-31
 
@@ -435,16 +336,6 @@ All notable changes to this project are documented here.
 
 - add Creating a New Project user-documentation page (#707)
 - plan file navigator copy, cut, and paste (#705)
-
-### Other
-
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 
 ## [0.9.0] - 2026-07-29
 
@@ -575,21 +466,9 @@ All notable changes to this project are documented here.
 
 ### Other
 
-- sync: documentation.md
 - style: use clipboard icon in monitor metadata bar (#678)
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: technical-debt.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 - test(file-navigator-overlays): type the undo/redo drag stubs as promises
 - test(inactive-agent-tab-body): cover mouse-up focus, transcript prompt/collapse, and acp transcript button (#672)
-- sync: technical-debt.md
 - build(deps): update @emnapi/core to 1.11.3 (#670)
 - test(file-navigator): cover FileNavigatorOverlays empty state and failure dismissal (#669)
 - test(web): cover useLatestRef ref identity and value updates (#668)
@@ -605,51 +484,15 @@ All notable changes to this project are documented here.
 - test(file-navigator): cover moveMany and deleteMany in manager-batch.ts (#656)
 - test(open-file-manager): cover synced edit and markdown open paths (#655)
 - test(profile): cover formatSaveSummary branches in save.ts (#651)
-- sync: technical-debt.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
-- sync: technical-debt.md
-- sync: issues.md
 - style: spin the git sync icon while a synced tab is loading (#632)
 - style: remove buttonface chrome from the git sync icon (#631)
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 - Add black outlines to new agent sprites
 - Match new agent sprite scale and pixel shading
-- sync: features.md
-- sync: features.md
-- sync: features.md
-- sync: issues.md
-- sync: issues.md
 - test(editor): flush persona-fetch promise inside act() in provisioning tab test
-- sync: issues.md
-- sync: issues.md
-- sync: issues.md
 - test(monitor): add coverage for feed-diff capping and diff logic (#623)
 - test(database): add coverage for query classification and row formatting (#622)
-- sync: technical-debt.md
-- sync: technical-debt.md
-- sync: technical-debt.md
 - style: rename file tree to file navigator in remaining comments (#620)
-- sync: technical-debt.md
-- sync: technical-debt.md
 - style: rename file tree to file navigator in theme.css comments (#615)
-- sync: technical-debt.md
-- sync: technical-debt.md
 
 ## [0.8.0] - 2026-07-24
 
@@ -871,8 +714,6 @@ All notable changes to this project are documented here.
 ### Other
 
 - build: update react-fontawesome to 3.5.0 (#609)
-- sync: issues.md
-- sync: issues.md
 - planning: chores
 - planning
 - style(files): fill the file-tree rename input to the row's edge (#547)
