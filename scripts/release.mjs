@@ -12,9 +12,13 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { argv, stdin as input, stdout as output } from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { VERSION_FILES, writeVersionFiles } from './release/version-files.mjs';
 
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PKG = new URL('../package.json', import.meta.url);
 const CHANGELOG = new URL('../CHANGELOG.md', import.meta.url);
 
@@ -140,15 +144,15 @@ function updateChangelog(version, date) {
   }
 }
 
-function updatePackageJson(version) {
-  const pkg = JSON.parse(readFileSync(PKG, 'utf8'));
-  pkg.version = version;
+// Returns the paths written, which are the paths the release commit stages alongside the changelog.
+function updateVersionFiles(version) {
   if (dryRun) {
-    console.log(`package.json version: ${pkg.version} -> ${version} (dry-run, not saved)`);
-  } else {
-    writeFileSync(PKG.pathname, JSON.stringify(pkg, null, 2) + '\n');
-    console.log(`Updated package.json to ${version}`);
+    console.log(`Version ${currentVersion} -> ${version} in ${VERSION_FILES.join(', ')} (dry-run, not saved)`);
+    return [];
   }
+  const written = writeVersionFiles(ROOT, version);
+  for (const file of written) console.log(`Updated ${path.basename(file)} to ${version}`);
+  return written;
 }
 
 async function confirm(message) {
@@ -183,7 +187,7 @@ if (!dryRun) {
 }
 
 updateChangelog(newVersion, date);
-updatePackageJson(newVersion);
+const versionFiles = updateVersionFiles(newVersion);
 
 if (dryRun) {
   console.log(`\nWould commit: "${tag}"`);
@@ -196,7 +200,7 @@ if (dryRun) {
 
 await confirm(`Release v${newVersion} — commit, tag, and build? (y/N) `);
 
-run('git', ['add', PKG.pathname, CHANGELOG.pathname]);
+run('git', ['add', ...versionFiles, CHANGELOG.pathname]);
 run('git', ['commit', '-m', `feat(package): bump version to ${newVersion}`]);
 run('git', ['tag', tag]);
 console.log(`Committed and tagged ${tag}`);
