@@ -23,7 +23,6 @@ type Input = {
   tabs: TabView[];
   syntaxTheme: string;
   tasks: TaskRow[];
-  janissaryTasksDir: string;
   profiles: ProfileRow[];
   runCommand: (text: string) => void;
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -71,7 +70,7 @@ export function usePickerOverlays(input: Input): {
   onEditQueued: (text: string) => void;
   onDeleteQueued: () => void;
 } {
-  const { client, current, tabs, syntaxTheme, tasks, janissaryTasksDir, profiles } = input;
+  const { client, current, tabs, syntaxTheme, tasks, profiles } = input;
   const { runCommand, inputRef, recallRef, dropRef } = input;
 
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
@@ -87,7 +86,7 @@ export function usePickerOverlays(input: Input): {
   const quick = useQuickOpen(client);
   const queue = useQueuePicker(client, current, inputRef, recallRef);
   const populate = usePopulatePickers(
-    tasks, janissaryTasksDir, profiles, recallRef, inputRef, client, harnessPtyId, dropRef,
+    tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef,
   );
 
   const overlays = buildOverlayOpenState({

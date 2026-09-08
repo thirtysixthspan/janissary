@@ -5,15 +5,19 @@ using a kernel-enforced [Seatbelt](https://en.wikipedia.org/wiki/Sandbox_(comput
 sandbox (`sandbox-exec`), on macOS only. `src/sandbox-profile.ts` holds the static profile text and
 its table-driven carve-out/carve-in/secret-deny lists; `src/sandbox.ts` resolves the dynamic paths
 (workspace, temp dir, `$HOME`, the parent repo's git objects dir, the self-binary's own directory,
-the real Darwin per-user cache dir) and wraps the spawn in `sandbox-exec -p <profile> -D … --`.
+the real Darwin per-user cache dir, the running installation's own `ai/` directory) and wraps the
+spawn in `sandbox-exec -p <profile> -D … --`.
 
 ### What gets sandboxed
 
 `sandboxSpawn(options, command, args, env)` wraps any spawn given a `workspaceDir` — the tab's
 shell (`src/shell.ts`), a harness/interactive PTY (`src/pty.ts`), or an ACP agent connection
-(`src/acp.ts`). It returns the input unchanged (no-op) when there's nothing to sandbox: no
-`workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec` isn't on the host
-(non-macOS). Everything a sandboxed process itself spawns inherits the same confinement.
+(`src/acp.ts`). It passes the command and its arguments through unchanged when there's nothing to
+sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec` isn't on
+the host (non-macOS). The environment is not quite a no-op even then — it still gains the `janissary`
+install root, and a workspaced spawn its credentials, neither of which is a confinement concern (see
+[Environment scrubbing](#environment-scrubbing)). Everything a sandboxed process itself spawns
+inherits the same confinement.
 
 A conversation's ACP agent is also confined to its own private workspace. An ordinary agent launched from the conversation's metadata row uses the same directory as its sandbox workspace. That workspace belongs to the durable conversation rather than to a tab or project clone, and closing the conversation tab or shutting down the application does not sweep it. See [[conversations]].
 
@@ -92,6 +96,18 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   leaves every internal import denied. The carve-in applies to every sandboxed spawn, not only a
   `-b` one — it grants read access to two directories of Janissary's own dependency tree, which hold
   no user data, and gating it would thread a flag through every spawn path to no benefit.
+- The running Janissary installation's own **`ai/` directory** (both literal and realpath-resolved,
+  since a global npm install is commonly reached through a symlinked prefix) is readable. That
+  directory holds the guidelines, personas, and executable task prompts that ship with the app, and
+  the task picker inserts an `execute $janissary/ai/tasks/<task>.md` command for a built-in task (see
+  [[task-picker]]) — without the carve-in, an installation under `$HOME` (a global npm prefix, or a
+  development checkout) falls under the `$HOME` content deny and the agent is handed a file it cannot
+  open. Deliberately `ai/` alone rather than the whole install root: those files are prompts written
+  to be read by an agent and hold no user data, while `node_modules` and the rest of the tree stay
+  denied. Read-only — an agent able to write those prompts could rewrite what a later, unsandboxed
+  run follows — and unconditional, for the same reason the Playwright directories are: it grants read
+  access to one directory of Janissary's own, and gating it would thread a flag through every spawn
+  path to no benefit.
 - `/dev/null`, the PTY master multiplexer (`/dev/ptmx`), and tty/pty devices get their own narrow
   read/write/ioctl allow, independent of the workspace/`$HOME` rules. `/dev/ptmx` lets a
   sandboxed Janissary process allocate a PTY; its terminal slave needs `ioctl` for raw-mode termios
@@ -189,7 +205,15 @@ reaches a remote machine. `TMPDIR` is overridden to the workspace's private temp
 `process.execPath` — the absolute path of the Node binary running the janissary server itself —
 so a script inside the sandbox (e.g. a project's own `.claude/settings.json` hook) can invoke a
 known-good `node` directly instead of relying on a bare `node` resolving correctly via `PATH` in
-whatever context spawned it. A tab launched with `-b`/`--browser` additionally gets
+whatever context spawned it. `janissary` is added too, set to the install root of the janissary that
+spawned the process, so the `execute $janissary/ai/tasks/<task>.md` command the task picker inserts
+resolves for the agent that receives it (see [[task-picker]] for why that command names a variable
+rather than a path, and why this one name is lower case). Unlike every other variable here it is set
+on every spawn, not only a workspaced one — the picker inserts the same command whatever kind of tab
+it is populating, so a tab that could not expand it would be worse off than one handed a fixed path,
+and the value is a path to janissary's own code rather than anything that needs protecting. The e2e
+browser child is the exception, taking an environment allowlist rather than the scrub; it runs no
+agent and no task. A tab launched with `-b`/`--browser` additionally gets
 `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client, and
 `JANISSARY_BROWSER_WS_ENDPOINT`, the endpoint of the guard in front of that tab's browser (see
 [End-to-end browser](#end-to-end-browser)). Both name paths and ports on the machine the harness

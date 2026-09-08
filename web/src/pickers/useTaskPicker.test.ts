@@ -22,7 +22,7 @@ function makeDrop(insertAtCaret = vi.fn()): CommandInputDropHandle {
 
 function TestComponent({ tasks, onHook }: { tasks: TaskRow[]; onHook: (hook: ReturnType<typeof useTaskPicker>) => void }) {
   const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
-  const hook = useTaskPicker(tasks, '/janissary/ai/tasks', mockClient, undefined, dropRef);
+  const hook = useTaskPicker(tasks, mockClient, undefined, dropRef);
   onHook(hook);
   return null;
 }
@@ -42,7 +42,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], '/janissary/ai/tasks', mockClient, undefined, dropRef);
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], mockClient, undefined, dropRef);
       return null;
     }
     render(React.createElement(C));
@@ -52,18 +52,18 @@ describe('useTaskPicker', () => {
     expect(hook!.taskPickerOpen).toBe(false);
   });
 
-  it('pickTask on a janissary-source task inserts the absolute execute <janissaryTasksDir>/<path>', () => {
+  it('pickTask on a janissary-source task inserts execute $janissary/ai/tasks/<path>', () => {
     const insertAtCaret = vi.fn();
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], '/opt/janissary/ai/tasks', mockClient, undefined, dropRef);
+      hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], mockClient, undefined, dropRef);
       return null;
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
     act(() => hook!.pickTask('build-a-feature.md'));
-    expect(insertAtCaret).toHaveBeenCalledWith('execute /opt/janissary/ai/tasks/build-a-feature.md');
+    expect(insertAtCaret).toHaveBeenCalledWith('execute $janissary/ai/tasks/build-a-feature.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
 
@@ -74,7 +74,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], '/janissary/ai/tasks', client, 'pty-1', dropRef);
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], client, 'pty-1', dropRef);
       return null;
     }
     render(React.createElement(C));
@@ -83,6 +83,24 @@ describe('useTaskPicker', () => {
     expect(send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-1', data: 'execute ./ai/tasks/fix-a-small-issue.md' } });
     expect(insertAtCaret).not.toHaveBeenCalled();
     expect(hook!.taskPickerOpen).toBe(false);
+  });
+
+  it('pickTask sends the $janissary form into the harness for a janissary-source task', () => {
+    const send = vi.fn();
+    const client = { send, request: vi.fn() } as unknown as JanusClient;
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    function C() {
+      const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
+      hook = useTaskPicker([fileRow('work-an-issue.md', 0, 'janissary')], client, 'pty-1', dropRef);
+      return null;
+    }
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('work-an-issue.md'));
+    expect(send).toHaveBeenCalledWith({
+      method: 'ptyInput',
+      params: { id: 'pty-1', data: 'execute $janissary/ai/tasks/work-an-issue.md' },
+    });
   });
 
   it('visibleTasks hides a directory\'s children until toggleTaskDir expands it', () => {

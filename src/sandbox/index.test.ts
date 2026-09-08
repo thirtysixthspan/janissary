@@ -4,6 +4,7 @@ import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git/identity.js';
+import { janissaryRoot } from '../janissary-root.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 
@@ -14,6 +15,13 @@ function configureUnconfined(): void {
   mkdirSync(path.join(dir, '.janissary'), { recursive: true });
   writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify({ sandboxWorkspaces: false }));
   loadConfig(dir);
+}
+
+// What a pass-through spawn's environment looks like: the caller's own, plus the janissary install
+// root, which is added on every path because the task picker inserts the same `$janissary` command
+// whether or not the tab it populates is workspaced.
+function passedThrough(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return { ...env, janissary: janissaryRoot() };
 }
 
 function parenDepth(text: string): number {
@@ -47,17 +55,17 @@ describe('sandboxSpawn', () => {
     loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
   });
 
-  it('returns the input unchanged when workspaceDir is undefined', () => {
+  it('passes the command and args through unchanged when workspaceDir is undefined', () => {
     const env = { PATH: '/usr/bin' };
     const result = sandboxSpawn({}, 'bash', ['-lc', 'echo hi'], env);
-    expect(result).toEqual({ command: 'bash', args: ['-lc', 'echo hi'], env });
+    expect(result).toEqual({ command: 'bash', args: ['-lc', 'echo hi'], env: passedThrough(env) });
   });
 
-  it('returns the input unchanged when sandboxWorkspaces is configured off', () => {
+  it('passes the command and args through unchanged when sandboxWorkspaces is configured off', () => {
     configureUnconfined();
     const env = { PATH: '/usr/bin' };
     const result = sandboxSpawn({ workspaceDir: '/tmp/whatever' }, 'bash', ['-lc', 'echo hi'], env);
-    expect(result).toEqual({ command: 'bash', args: ['-lc', 'echo hi'], env });
+    expect(result).toEqual({ command: 'bash', args: ['-lc', 'echo hi'], env: passedThrough(env) });
   });
 
   // A non-darwin remote and a host with the toggle off take the same unconfined path, and a
@@ -90,7 +98,7 @@ describe('sandboxSpawn', () => {
     configureUnconfined();
     const env = { PATH: '/usr/bin' };
     const result = sandboxSpawn({ tokens: { github: 'scoped-token' } }, 'bash', [], env);
-    expect(result).toEqual({ command: 'bash', args: [], env });
+    expect(result).toEqual({ command: 'bash', args: [], env: passedThrough(env) });
   });
 
   // A workspaced claude harness on a host that cannot confine anything — a Linux remote, most
@@ -109,7 +117,7 @@ describe('sandboxSpawn', () => {
     configureUnconfined();
     const env = { PATH: '/usr/bin' };
     const result = sandboxSpawn({ tokens: { claude: 'subscription-token' } }, 'bash', [], env);
-    expect(result).toEqual({ command: 'bash', args: [], env });
+    expect(result).toEqual({ command: 'bash', args: [], env: passedThrough(env) });
   });
 
   it('wraps the command in sandbox-exec when a workspaceDir is given and sandboxing is available', () => {
@@ -163,6 +171,56 @@ describe('sandboxSpawn', () => {
     expect(dValues).not.toContain(path.join(home, '.cache/opencode'));
     expect(dValues).not.toContain(path.join(home, '.cache'));
     rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The task picker inserts `execute $janissary/ai/tasks/<task>.md` for a built-in task, so a
+  // workspaced agent has to be able to open the file that names. An install under $HOME — a global
+  // npm prefix, or a development checkout — falls under the $HOME content deny without this.
+  it('carves the install\'s ai/ directory into the read allow-list, literal and resolved', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const aiDir = path.join(janissaryRoot(), 'ai');
+    expect(result.args).toContain(`JANISSARY_AI_L=${aiDir}`);
+    expect(result.args).toContain(`JANISSARY_AI_R=${realpathSync(aiDir)}`);
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_AI_L"))');
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_AI_R"))');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // Narrower than the installation: ai/ is prompts written to be read by an agent, while the rest of
+  // the tree holds janissary's own dependencies and working state.
+  it('does not carve in the install root itself', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
+    expect(dValues).not.toContain(janissaryRoot());
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('sets the janissary install root on a confined spawn, surviving the scrub', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' });
+    expect(result.env.janissary).toBe(janissaryRoot());
+    expect(result.env.NPM_TOKEN).toBeUndefined();
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('sets the janissary install root on an unconfined workspaced spawn too', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.janissary).toBe(janissaryRoot());
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // The picker inserts the same command on any tab and cannot know which are workspaced, so a plain
+  // tab needs the variable as much as a confined one does.
+  it('sets the janissary install root on a spawn with no workspaceDir at all', () => {
+    const result = sandboxSpawn({}, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.janissary).toBe(janissaryRoot());
   });
 
   it('scrubs credential-shaped vars and agent-socket escape vectors, keeping provider keys', () => {
@@ -399,7 +457,7 @@ describe('sandboxSpawn git identity', () => {
     configureUnconfined();
     setGitIdentity({ name: 'Ada Lovelace', email: 'ada@example.com' });
     const env = { PATH: '/usr/bin' };
-    expect(sandboxSpawn({}, 'bash', [], env)).toEqual({ command: 'bash', args: [], env });
+    expect(sandboxSpawn({}, 'bash', [], env)).toEqual({ command: 'bash', args: [], env: passedThrough(env) });
   });
 
   // The user who opened janissary is the author, not whoever the spawning environment names.
@@ -417,7 +475,7 @@ describe('sandboxSpawn git identity', () => {
     setGitIdentity({});
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin' };
-    expect(sandboxSpawn({ workspaceDir }, 'bash', [], env)).toEqual({ command: 'bash', args: [], env });
+    expect(sandboxSpawn({ workspaceDir }, 'bash', [], env)).toEqual({ command: 'bash', args: [], env: passedThrough(env) });
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 });

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { resolvePath, darwinUserCacheDir } from './resolve.js';
+import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 import { browserSpawn, type BrowserSpawnOptions } from './browser-spawn.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
@@ -11,6 +11,7 @@ import {
   ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
+import { janissaryRoot, janissaryAiDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
 
@@ -223,11 +224,27 @@ function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOption
   return Object.keys(added).length === 0 ? env : { ...env, ...added };
 }
 
+// The install root of the running janissary, under the one name a command line can spell: the task
+// picker inserts `execute $janissary/ai/tasks/<task>.md` for a built-in task, and the agent that
+// receives it has no other way to find the installation — a globally installed npm package sits
+// nowhere near the project, and on a remote tab the install that matters is the one on the machine
+// the process actually runs on, not the one the browser is talking to.
+//
+// Added for every spawn, workspaced or not, unlike the credentials above: the picker inserts the same
+// command shape on any tab and cannot know which kind it is populating, so a plain agent tab that got
+// `$janissary` with nothing to expand would be worse off than one given the old absolute path. The
+// value is a filesystem path to janissary's own code, not a credential, so there is nothing for the
+// unconfined path to be careful about.
+function withJanissaryHome(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return { ...env, [JANISSARY_HOME_ENV]: janissaryRoot() };
+}
+
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
 // `spawn` take) for a workspaced tab. Returns the command and args unchanged when there's nothing
 // to sandbox: no `workspaceDir`, the `sandboxWorkspaces` config toggle is off, or `sandbox-exec`
 // isn't available (e.g. non-darwin) — the environment still picks up the workspace's credentials
-// in that case, which is not a sandbox concern (see `withWorkspaceCredentials`). Otherwise
+// in that case, and the janissary install root in every case, neither of which is a sandbox concern
+// (see `withWorkspaceCredentials` and `withJanissaryHome`). Otherwise
 // returns `sandbox-exec -p <profile> -D … -- <command> <args>` plus a credential-scrubbed
 // environment with `TMPDIR` set to the workspace's private temp dir.
 export function sandboxSpawn(
@@ -243,7 +260,9 @@ export function sandboxSpawn(
   // it the other way round handed the whole server environment to a browser on precisely the hosts
   // with no kernel confinement behind it.
   if (options.browser) return browserSpawn(options.browser, dir, command, args, env, confinable);
-  if (!dir || !confinable) return { command, args, env: withWorkspaceCredentials(env, options) };
+  if (!dir || !confinable) {
+    return { command, args, env: withJanissaryHome(withWorkspaceCredentials(env, options)) };
+  }
 
   const workspaceDir = resolvePath(dir);
   const tmpDir = resolvePath(`${dir}.tmp`);
@@ -257,8 +276,10 @@ export function sandboxSpawn(
   const scratchDir = claudeScratchDir();
   const serverNodeDir = serverNodeDirs();
   const playwright = playwrightPackagePaths();
+  const janissaryAi = dualPath(janissaryAiDir());
 
   scrubbed.JANISSARY_NODE = process.execPath;
+  scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
@@ -275,6 +296,8 @@ export function sandboxSpawn(
     '-D', `SERVER_NODE_DIR_R=${serverNodeDir.real}`,
     '-D', `PLAYWRIGHT_DIR=${playwright.dirs[0]}`,
     '-D', `PLAYWRIGHT_CORE_DIR=${playwright.dirs[1]}`,
+    '-D', `JANISSARY_AI_L=${janissaryAi.literal}`,
+    '-D', `JANISSARY_AI_R=${janissaryAi.real}`,
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

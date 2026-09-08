@@ -9,7 +9,6 @@ import { useProfilePicker } from './useProfilePicker';
 // ref). Split out of App.tsx to keep it under the file-size limit.
 export function usePopulatePickers(
   tasks: TaskRow[],
-  janissaryTasksDir: string,
   profiles: ProfileRow[],
   recallRef: React.RefObject<((text: string) => void) | null>,
   inputRef: React.RefObject<HTMLTextAreaElement | null>,
@@ -17,7 +16,7 @@ export function usePopulatePickers(
   harnessPtyId: string | undefined,
   dropRef: React.RefObject<CommandInputDropHandle | null>,
 ) {
-  const task = useTaskPicker(tasks, janissaryTasksDir, client, harnessPtyId, dropRef);
+  const task = useTaskPicker(tasks, client, harnessPtyId, dropRef);
   const profile = useProfilePicker(profiles, recallRef, inputRef, client, harnessPtyId);
   return { ...task, ...profile };
 }

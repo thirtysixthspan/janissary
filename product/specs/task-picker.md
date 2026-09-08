@@ -47,7 +47,7 @@ never a different, unrelated tab.
 | Up / Down | Move the selection, skipping the non-selectable section headers |
 | Right | On a collapsed directory, expands it (selection stays put, its children appear beneath it); on an already-expanded directory, moves the selection to its first child; no effect on a file |
 | Left | On an expanded directory, collapses it; otherwise moves the selection to the parent directory (no effect at the top level) |
-| Return, or clicking a file row | Inserts the task's `execute …` command into the command line at the current cursor position and closes the popup **without submitting** — a Project task inserts the relative `execute ./ai/tasks/<path>`, a Janissary task inserts the absolute `execute <janissary-tasks-dir>/<path>` |
+| Return, or clicking a file row | Inserts the task's `execute …` command into the command line at the current cursor position and closes the popup **without submitting** — a Project task inserts the relative `execute ./ai/tasks/<path>`, a Janissary task inserts `execute $janissary/ai/tasks/<path>` |
 | Return, or clicking a directory row | Toggles that directory's expand state, same as Right/Left |
 | Escape | Closes the popup, leaving the command line unchanged |
 
@@ -59,8 +59,8 @@ deliberately differs from the history picker, where Return runs the selected com
 matches the command-queue picker's behavior of making the command line the edit surface.
 
 On a harness tab there is no command line to populate, so selecting a task instead sends the same
-`execute …` command (relative for a Project task, absolute for a Janissary task) directly into that
-harness's terminal input, exactly as if it had been typed there; the picker's
+`execute …` command (relative for a Project task, `$janissary`-anchored for a Janissary task) directly
+into that harness's terminal input, exactly as if it had been typed there; the picker's
 Up/Down/Left/Right/Enter/Escape keys work the same as on any other tab.
 
 The path is inserted verbatim, with no quoting or escaping — a task file whose name (or an
@@ -72,3 +72,17 @@ When neither source has any task files, the picker shows `(no tasks)`.
 
 Hovering the mouse over the row the keyboard cursor is already on keeps that row's selected
 appearance — the keyboard and mouse highlighting never conflict or combine into a mismatched look.
+
+### `$janissary`
+
+A Janissary task's command names `$janissary`, not a path. Every process Janissary spawns — a tab's
+shell, a harness terminal, an agent connection, and anything those start in turn — is given a
+`janissary` environment variable holding the install root of the Janissary that spawned it, so the
+command an agent receives resolves wherever that agent happens to be running. That matters in two
+cases a fixed path gets wrong: an installation the sandbox would otherwise deny (see [[sandbox]]),
+and a tab whose processes run on a remote machine, where the installation that counts is the one on
+that machine rather than the one the browser is connected to. Project tasks stay relative to the
+working directory, which is already the right anchor for a file inside the project.
+
+The variable is spelled in lower case because it is spelled in a command line: what the picker
+inserts is what a shell expands.

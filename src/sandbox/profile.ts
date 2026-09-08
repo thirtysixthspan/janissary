@@ -149,6 +149,16 @@ ${secretDenyClauses})
 ; mean threading a field through SandboxOptions, spawnPty, PseudoterminalManager.spawn, and the
 ; remote's spawn path to withhold read access to two directories of janissary's own dependency tree
 ; that hold no user data.
+; JANISSARY_AI_L/R is the running installation's own ai/ directory — the guidelines, personas, and
+; executable task prompts that ship with janissary — in both literal and realpath-resolved form,
+; since an npm-global install is commonly reached through a symlinked prefix. The task picker inserts
+; an execute command naming $janissary/ai/tasks/ for a built-in task (see product/specs/task-picker.md), and
+; without this the agent cannot open the file it was just told to run: an installation under $HOME
+; (a global npm prefix, or a development checkout) falls under the $HOME content deny below.
+; Deliberately ai/ alone rather than the whole install root — that directory is prompts written to be
+; read by an agent and holds no user data, while node_modules and the rest of the tree stay denied.
+; Read-only, like every other janissary directory here: an agent that could write these prompts could
+; rewrite what a later unsandboxed run follows.
 (allow file-read-data file-read-xattr
   (subpath (param "WORKSPACE"))
   (subpath (param "TMPDIR"))
@@ -159,6 +169,8 @@ ${secretDenyClauses})
   (subpath (param "SERVER_NODE_DIR_R"))
   (subpath (param "PLAYWRIGHT_DIR"))
   (subpath (param "PLAYWRIGHT_CORE_DIR"))
+  (subpath (param "JANISSARY_AI_L"))
+  (subpath (param "JANISSARY_AI_R"))
 ${readCarveClauses}
 ${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The

@@ -16,9 +16,6 @@ export type StateEvent = {
   syntaxTheme: string;
   theme: string;
   tasks: TaskRow[];
-  // Absolute path of the Janissary install's `ai/tasks` directory, used to build the `execute`
-  // command for a built-in (Janissary-source) task row.
-  janissaryTasksDir: string;
   profiles: ProfileRow[];
   // Absolute path of the project directory the server was started against. Drives the titlebar.
   projectDir: string;
