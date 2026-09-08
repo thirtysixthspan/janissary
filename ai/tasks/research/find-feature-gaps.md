@@ -4,7 +4,7 @@ Your job: take each of Janissary's existing feature areas — as described in `p
 
 This task is the depth-focused sibling of [`find-feature-ideas.md`](find-feature-ideas.md): that task looks for entirely new capabilities or subsystems inspired by adjacent tools; this task instead drills into features Janissary **already has** and checks whether their current implementation holds up against the feature's own category leader. Read `find-feature-ideas.md`'s output style for contrast before starting, so the two tasks stay complementary rather than duplicating each other.
 
-**Never run repository build/lint/test tooling.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run check`, `./scripts/run.mjs check-diff`, or any other build/lint/test/analysis tooling. Plain read-only shell commands used only to navigate (`ls`, `wc -l`, `grep`, `git log`) are fine — the restriction is on running the project's build/lint/test/quality machinery, not on looking at files.
+**Never run repository build/lint/test tooling.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run check`, `$janissary/scripts/run.mjs check-diff`, or any other build/lint/test/analysis tooling. Plain read-only shell commands used only to navigate (`ls`, `wc -l`, `grep`, `git log`) are fine — the restriction is on running the project's build/lint/test/quality machinery, not on looking at files.
 
 This task edits **one file only**: `product/backlog/features.md`, and only its `## development` section. You will never touch application source code, tests, specs, documentation, or config, and you will never modify the `## ready` or `## deferred` sections.
 

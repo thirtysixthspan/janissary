@@ -74,7 +74,7 @@ List the batch, one line per package: `<package> <Current> -> <Wanted>`.
 **Gate first — never skip this.** Before any command that writes to `node_modules/`, check **every** package in the batch against the known-malicious package list, each at the `Wanted` version Step 3 selected:
 
 ```bash
-./scripts/run.mjs check-malicious-package <package-1>@<Wanted-1> <package-2>@<Wanted-2> ... <package-n>@<Wanted-n>
+$janissary/scripts/run.mjs check-malicious-package <package-1>@<Wanted-1> <package-2>@<Wanted-2> ... <package-n>@<Wanted-n>
 ```
 
 The command reports every target and exits with the worst result found. Act on the exit code:

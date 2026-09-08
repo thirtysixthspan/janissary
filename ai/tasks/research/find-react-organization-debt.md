@@ -4,7 +4,7 @@ Your job: read the layout and contents of `web/src/` against [`react-code-organi
 
 The guideline is the spec for this task. It defines feature-based organization over type-named buckets, colocation with promotion to shared only on the second consumer, one-way `shared → feature → app` dependency flow with no cross-feature imports, no barrel files at feature boundaries, components that render rather than decide, hooks as the reactive seam, framework-free injected services, and the pure module → service → hook → component layering. **Read it in full before Step 2.** Every entry you write must trace to one of its numbered sections, and you cite that section by number in the entry.
 
-**Never run repository tools.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`, `./scripts/run.mjs check-diff`, FTA, or any other build/lint/test/analysis machinery. Organization debt is visible by reading files and import statements, so reading is all you need. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
+**Never run repository tools.** Do not run `npm run lint`, `npm run typecheck`, `npm run test`, `npm run quality`, `$janissary/scripts/run.mjs check-diff`, FTA, or any other build/lint/test/analysis machinery. Organization debt is visible by reading files and import statements, so reading is all you need. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
 
 This task edits **one file only**: `product/backlog/technical-debt.md`, and only its `## development` section. You will never touch application source code, tests, specs, documentation, or config, and you will never modify the `## ready`, `## deferred`, or `## declined` sections.
 

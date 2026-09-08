@@ -18,7 +18,7 @@ Your job: regenerate the screenshots the pages under `documentation/user-documen
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Run `npm run build:web`. Run `./scripts/run.mjs docs-screenshots`, with or without shot names. Commit the PNGs the capture writes under `documentation/public/screenshots/`. Execute the full merge workflow via [`workspace/merge-change-to-master.md`](workspace/merge-change-to-master.md) when the run produced changed images.
+Read any file in the repo. Run `npm run build:web`. Run `$janissary/scripts/run.mjs docs-screenshots`, with or without shot names. Commit the PNGs the capture writes under `documentation/public/screenshots/`. Execute the full merge workflow via [`workspace/merge-change-to-master.md`](workspace/merge-change-to-master.md) when the run produced changed images.
 
 ### Forbidden — no exceptions
 
@@ -83,7 +83,7 @@ When names were given, read `scripts/docs-screenshots/manifest.mjs` and confirm 
 ## Step 4 — Capture
 
 ```bash
-./scripts/run.mjs docs-screenshots
+$janissary/scripts/run.mjs docs-screenshots
 ```
 
 Append the shot names when Step 3 chose a subset. The pipeline sets the run up once and keeps it: it seeds one scratch directory from the fixtures, makes it a git repository with a local `origin` so workspaced shots can clone, points `HOME` at a scratch directory so the app's homedir state never touches the real one, starts a fixture web server for the shots that need a page, launches one janissary into that directory, and drives every shot through one browser page. Between shots it puts the app back into its launch state — one `janus` tab, empty — and the working directory back to the fixture commit. At the end it closes the page, kills the app, lets the browser go, and removes the directory. You do not start or stop janissary yourself, and you do not clean up after a shot.
@@ -108,7 +108,7 @@ A `No janissary to drive: <reason>` stop means the app itself never came up — 
 If Step 4 reported `Failed: <names>`, run the capture again with exactly those names and nothing else:
 
 ```bash
-./scripts/run.mjs docs-screenshots <failed-name> [<failed-name> ...]
+$janissary/scripts/run.mjs docs-screenshots <failed-name> [<failed-name> ...]
 ```
 
 A capture can lose a race on a loaded machine, and one retry settles that. Whatever fails the second time is **not retried again**: keep the successfully captured PNGs, carry the still-failing names into the report, and continue to Step 6. A partial regeneration is worth shipping; a retry loop is not.

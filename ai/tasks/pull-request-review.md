@@ -30,7 +30,7 @@ Read any file in the repo. Check out the pull request's head branch. Run read-on
 4. **Fixing anything.** Never edit a source, test, spec, config, plan, or documentation file. Every finding is recorded as a proposal for someone else to execute. This includes the tempting one-line fix: if you touch it, the review is no longer a review.
 5. **Editing the pull request's title or description**, even when the review finds them wrong. `gh pr edit` is never run. The description is the author's statement of intent and it is the evidence the next reader needs.
 6. **Posting to GitHub.** No `gh pr comment`, no `gh pr review`, no inline annotations. The backlog file on the branch is the only output.
-7. **Running the project's build, lint, test, or quality tooling.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `./scripts/run.mjs check-diff`, and no `pr-check-gate` — not even the diff-scoped fast commands. Those tools have their own dedicated tasks that consume their output; this task's instrument is your own reading. The honest cost is that a branch that does not compile can still review clean here, which is why the report says so out loud.
+7. **Running the project's build, lint, test, or quality tooling.** No `npm run lint`, no `npm run typecheck`, no test run, no `npm run check`, no `$janissary/scripts/run.mjs check-diff`, and no `pr-check-gate` — not even the diff-scoped fast commands. Those tools have their own dedicated tasks that consume their output; this task's instrument is your own reading. The honest cost is that a branch that does not compile can still review clean here, which is why the report says so out loud.
 8. **Installing dependencies.** Do not run `npm install`, `npm rebuild`, or any part of `ai/tasks/workspace/prepare-workspace.md`. Nothing in this run consumes `node_modules`.
 9. **Capping, padding, or shaping the finding list to a number.** Record every genuine finding and no marginal ones.
 10. **Committing anything other than `./product/backlog/pull-request.md`.**
@@ -187,14 +187,14 @@ Skip this step entirely when Step 4 wrote nothing — there is no file and nothi
 Otherwise write **one** commit. `pr-commit` stages everything and commits with a **single author and no `Co-Authored-By:` trailer**:
 
 ```bash
-./scripts/run.mjs pr-commit "chore(backlog): record pull request review findings" \
+$janissary/scripts/run.mjs pr-commit "chore(backlog): record pull request review findings" \
   "Reviewed #232 across description fidelity, plan fidelity, functionality gaps, technical debt, and security. Recorded 4 findings in product/backlog/pull-request.md; 2 candidates were dropped as duplicates of existing entries."
 ```
 
 Then push through the upstream `gh pr checkout` configured, substituting the literal branch name — each Bash call is a fresh shell, so nothing persists between them:
 
 ```bash
-./scripts/run.mjs pr-push-branch origin <branch>
+$janissary/scripts/run.mjs pr-push-branch origin <branch>
 ```
 
 If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts preserving both sides, and retry the push. Repeat at most **3 times**. Never resolve a rejection with a force-push. If the third attempt fails, leave the local commit intact and report the failure.

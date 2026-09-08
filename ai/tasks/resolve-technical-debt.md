@@ -18,13 +18,13 @@ This overrides CLAUDE.md's "Capturing command output" guidance (write the output
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `./scripts/run.mjs check-diff` after each change. Ship the work once, at the end, covering every deferral plus the fix (if any) — through `ai/tasks/workspace/merge-change-to-master.md`, or through the triggered playbook's own shipping step when one resolved the item (Step 8).
+Read any file in the repo. Edit source, tests, CSS, and spec files as the fix requires. Update `help.md` and files under `documentation/user-documentation/` when the fix changes behavior they already document. Write a plan file to `./product/plans/complete/`. Execute a hygiene playbook under `ai/tasks/hygiene/` when — and only when — the item names it (Step 2A). Remove the resolved item from `./product/backlog/technical-debt.md`, and move any over-threshold item(s) encountered along the way into its `## deferred` section with a complexity note. Run `$janissary/scripts/run.mjs check-diff` after each change. Ship the work once, at the end, covering every deferral plus the fix (if any) — through `ai/tasks/workspace/merge-change-to-master.md`, or through the triggered playbook's own shipping step when one resolved the item (Step 8).
 
 ### Forbidden — no exceptions
 
 1. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
-2. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` during development.
-3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `./scripts/run.mjs check-diff`.
+2. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
+3. **Skipping tests.** Every fix needs tests that cover the changed behavior. Verify with `$janissary/scripts/run.mjs check-diff`.
 4. **Resolving an item whose complexity exceeds the threshold.** If an item rates above 7/10, do not attempt to implement it — defer it and move to the next item instead (Step 1).
 5. **Editing `./product/backlog/technical-debt.md` beyond the entries in play.** Only remove the line for the item you resolved, and move the line(s) for the item(s) you deferred into `## deferred` with a note (its complexity rating, or the playbook that blocked it per Step 2A) — do not reorder, rephrase, or otherwise modify any other entry.
 6. **Shipping before all checks pass, or shipping it yourself.** Step 8 names the one workflow that ships the change — `ai/tasks/workspace/merge-change-to-master.md`, or the triggered playbook's own shipping step. Do not bypass it, and do not merge a pull request a playbook deliberately left open for review.
@@ -83,7 +83,7 @@ An entry from `find-complex-code.md` may flag its target as risk-sensitive (`src
 3. **Two parts of the playbook do not run here**, because this task already owns them: its workspace-preparation step (done in Step 0) and its own final report (folded into Step 9's report instead). Everything else — its verification gates, its undo rules, its file-by-file recipe — you follow exactly as written.
 4. **Its shipping step is the playbook's call, and you run it — later.** Whether that work merges to master or waits in an open pull request is a decision each playbook makes for itself, and it is not this task's to override: a playbook that ends by opening a PR for review has a reason for wanting a human's eyes on that class of change. Do not run that step yet, though — stop at it, carry on through Step 5 to Step 7 so the spec check and the backlog edits are already in the working tree, and then run it at **Step 8**, which is where a hygiene-triggered run finishes. That ordering matters: the shipping step commits the whole working tree, so a backlog edit made after it would be stranded, uncommitted, outside the change.
 5. If the playbook's own blocked-work rules rule the target out (a name collision, a change that would need a logic edit, a config file hard-coding a path, and so on), do **not** substitute a different target of your own and do not fall back to hand-resolving the item. Move the item into the `## deferred` section of `./product/backlog/technical-debt.md` with a one-sentence note naming the playbook and why it blocked, then return to Step 1 and continue walking from the next item.
-6. Run `./scripts/run.mjs check-diff` and confirm it is clean before leaving this step.
+6. Run `$janissary/scripts/run.mjs check-diff` and confirm it is clean before leaving this step.
 
 A hygiene-triggered run produces **no plan file** — the playbook is the plan. Skip Step 2, Step 3, Step 4, and the plan-promotion half of Step 7; continue at **Step 5**.
 
@@ -105,7 +105,7 @@ A hygiene-triggered run produces **no plan file** — the playbook is the plan. 
 
 Follow the plan's implementation steps **in order**. After each step:
 
-1. Run `./scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
+1. Run `$janissary/scripts/run.mjs check-diff` to catch lint, typecheck, and test failures immediately.
 2. Fix any failures before moving to the next step.
 3. If a step produces a file over the 200-line limit, extract into a new module per `ai/guidelines/code-guidelines.md` — do not compact code, strip comments, or delete spacing.
 
@@ -121,7 +121,7 @@ Key rules during implementation:
 
 If the plan has a Tests section, implement every test case listed. Mirror the test style of the referenced test files (imports, helper patterns, assertion style).
 
-Run `./scripts/run.mjs check-diff` after writing tests. All tests must pass.
+Run `$janissary/scripts/run.mjs check-diff` after writing tests. All tests must pass.
 
 ---
 

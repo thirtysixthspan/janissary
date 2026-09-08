@@ -86,3 +86,9 @@ working directory, which is already the right anchor for a file inside the proje
 
 The variable is spelled in lower case because it is spelled in a command line: what the picker
 inserts is what a shell expands.
+
+It also outlives the insertion. A Janissary task prompt reaches Janissary's own script runner the
+same way it was reached itself — `$janissary/scripts/run.mjs <script>` — for the lint, test, commit,
+and pull-request steps it directs the agent through. Those scripts ship with the installation and
+act on the agent's own working directory, so a Janissary task runs against whatever project the tab
+is open on rather than only against a checkout of Janissary.

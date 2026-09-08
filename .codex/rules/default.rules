@@ -2,8 +2,11 @@
 # These rules allow the matching command prefixes when Codex would otherwise need
 # to cross the sandbox boundary; the workspace-write sandbox remains in effect.
 
+# Both spellings of the same runner: the relative one for a human or an agent working inside a
+# janissary checkout, and the `$janissary` one the task prompts under ai/tasks/ use so they resolve
+# from whatever project the agent is actually working on.
 prefix_rule(
-    pattern = ["./scripts/run.mjs"],
+    pattern = ["./scripts/run.mjs", "$janissary/scripts/run.mjs"],
     decision = "allow",
     justification = "Repository maintenance scripts are part of the project workflow",
 )

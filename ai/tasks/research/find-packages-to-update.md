@@ -6,7 +6,7 @@ The distinction that gives this task its reason to exist: [`update-packages-with
 
 **This task never changes what is installed.** Do not run `npm install`, `npm update`, `npm ci`, `npm audit fix`, or anything else that writes `package.json`, `package-lock.json`, or `node_modules/`. Read-only npm commands (`npm outdated`, `npm view`, `npm ls`, `npm audit`) are your instruments and you must use them. If a read-only command would modify the tree, do not run it.
 
-**Do not run the project's build, lint, test, or quality machinery.** No `npm run lint`, `npm run typecheck`, `npm test`, `npm run check`, `npm run quality`, or `./scripts/run.mjs check-diff`. You are changing nothing, so there is nothing to verify, and an upgrade's real effect on the build is not knowable until the upgrade is installed — which is the resolving task's job, not yours. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
+**Do not run the project's build, lint, test, or quality machinery.** No `npm run lint`, `npm run typecheck`, `npm test`, `npm run check`, `npm run quality`, or `$janissary/scripts/run.mjs check-diff`. You are changing nothing, so there is nothing to verify, and an upgrade's real effect on the build is not knowable until the upgrade is installed — which is the resolving task's job, not yours. Plain read-only shell commands used to navigate (`ls`, `find`, `grep`, `wc -l`, `git log`) are fine.
 
 This task edits **one file only**: `product/backlog/technical-debt.md`, and only its `## development` section. You will never touch application source code, tests, specs, documentation, or config, and you will never modify the `## ready`, `## deferred`, or `## declined` sections.
 
@@ -77,7 +77,7 @@ From `npm audit`, note any advisory that names one of these packages, and whethe
 Now screen the surviving rows against the known-malicious package list, each at the `Latest` version you would be recommending:
 
 ```bash
-./scripts/run.mjs check-malicious-package <package-1>@<Latest-1> <package-2>@<Latest-2> ...
+$janissary/scripts/run.mjs check-malicious-package <package-1>@<Latest-1> <package-2>@<Latest-2> ...
 ```
 
 This is read-only and installs nothing, so it is safe to run here. **Drop every package the check reports as BLOCKED or QUARANTINED** — do not carry it into the report. Recommending such an upgrade would hand a downstream hygiene task a target it is required to refuse, so the recommendation would be dead on arrival. Instead, list the dropped packages in a short "excluded — supply-chain quarantine" note at the end of the report, with the campaign id the check printed, so the exclusion is visible rather than silent. If the check exits 1, say so in the report and treat the screening as not done.

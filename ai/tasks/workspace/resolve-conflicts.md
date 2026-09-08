@@ -14,14 +14,14 @@ Your job: take a pull request that is **already open**, bring its head branch ba
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out the pull request's head branch and rebase it onto `master`. Edit source, tests, CSS, and spec files as conflict resolution and the plan's goal require. Append an adaptation note to the plan file the pull request carries. Run `./scripts/run.mjs check-diff` while iterating and `./scripts/run.mjs pr-check-gate` as the build gate. Commit to and push the pull request's own head branch. Force-push — but only through `./scripts/run.mjs pr-rebase`, which uses `--force-with-lease`.
+Read any file in the repo. Check out the pull request's head branch and rebase it onto `master`. Edit source, tests, CSS, and spec files as conflict resolution and the plan's goal require. Append an adaptation note to the plan file the pull request carries. Run `$janissary/scripts/run.mjs check-diff` while iterating and `$janissary/scripts/run.mjs pr-check-gate` as the build gate. Commit to and push the pull request's own head branch. Force-push — but only through `$janissary/scripts/run.mjs pr-rebase`, which uses `--force-with-lease`.
 
 ### Forbidden — no exceptions
 
 1. **Merging or closing the pull request.** Never run `gh pr merge`, never execute `ai/tasks/workspace/merge-change-to-master.md`, never open a replacement pull request, and never push the work to a different branch. The pull request must still be open when you finish.
 2. **Working a pull request that is not `OPEN`.** If the target does not exist or its state is not `OPEN`, report that and stop. Do not substitute another pull request or branch.
 3. **Proceeding on an ambiguous target.** If no value was passed and the context does not resolve to exactly one open pull request, report the candidates and stop.
-4. **Running `npm run check`.** That is the human's end-of-work gate. Use `./scripts/run.mjs check-diff` while iterating and `./scripts/run.mjs pr-check-gate` to prove the build.
+4. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` while iterating and `$janissary/scripts/run.mjs pr-check-gate` to prove the build.
 5. **A bare `git push --force`.** The only rewrite permitted is `pr-rebase`'s `--force-with-lease`, which aborts rather than discarding commits someone else pushed.
 6. **Resolving a conflict by discarding one side wholesale.** Preserve the intent of *both* sides — never blindly drop `master`'s changes, never drop the pull request's feature.
 7. **Expanding beyond the pull request's plan.** Fix what the rebase broke and what the plan requires. Unrelated cleanups, refactors, and drive-by improvements are out of scope.
@@ -62,13 +62,13 @@ The plan is what you will check the implementation against in Step 5, so read it
 ## Step 3 — Determine the conflict status
 
 ```bash
-./scripts/run.mjs pr-resolve-remote
+$janissary/scripts/run.mjs pr-resolve-remote
 ```
 
 This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read those values from the output — each Bash command runs in its own fresh shell with no state persisted from the previous one, so substitute the actual literal values into every later command rather than referencing shell variables. Then poll GitHub, which computes conflict status asynchronously:
 
 ```bash
-./scripts/run.mjs pr-check-mergeable <branch> <owner/repo>
+$janissary/scripts/run.mjs pr-check-mergeable <branch> <owner/repo>
 ```
 
 - `MERGEABLE` → no conflicts with `master`. Skip to **Step 5** — the plan check and the build gate still run.
@@ -82,7 +82,7 @@ This prints a single space-separated line: `OWNER_REPO BRANCH GH_URL`. Read thos
 `pr-rebase` fetches `master`, rebases the branch onto it, re-runs the check gate, and force-pushes with `--force-with-lease` when the result is clean:
 
 ```bash
-./scripts/run.mjs pr-rebase origin <branch>
+$janissary/scripts/run.mjs pr-rebase origin <branch>
 ```
 
 - **Exit 0** → rebased cleanly, gate green, branch pushed. Re-check the conflict status (Step 3); when it reports `MERGEABLE`, go to Step 5.
@@ -122,13 +122,13 @@ A resolved conflict silently loses hunks. This step is the reason the task exist
 Iterate on uncommitted repairs with the fast gate:
 
 ```bash
-./scripts/run.mjs check-diff
+$janissary/scripts/run.mjs check-diff
 ```
 
 Then prove the branch with the hard gate — typecheck, lint errors, tests, CSS:
 
 ```bash
-./scripts/run.mjs pr-check-gate
+$janissary/scripts/run.mjs pr-check-gate
 ```
 
 `check-diff` is scoped to the **uncommitted** working tree, so straight after a clean rebase it finds nothing and reports success over a branch it never examined. It is a fast loop while you are editing, never the proof. `pr-check-gate` must be green before Step 7 pushes. If you cannot get it green, **STOP** and report exactly what failed — never weaken a test or a lint rule to pass it.
@@ -138,7 +138,7 @@ Then prove the branch with the hard gate — typecheck, lint errors, tests, CSS:
 ## Step 7 — Commit and push the adjustments
 
 ```bash
-./scripts/run.mjs pr-check-changes
+$janissary/scripts/run.mjs pr-check-changes
 ```
 
 If it reports **"No changes to open a PR for"**, Steps 5 and 6 produced nothing to ship: `pr-rebase` already pushed the branch, so skip to Step 8.
@@ -146,17 +146,17 @@ If it reports **"No changes to open a PR for"**, Steps 5 and 6 produced nothing 
 Otherwise write **one** commit. The subject follows [Conventional Commits 1.0.0](../../guidelines/conventional-commits.md): `<type>[optional scope]: <description>`. `pr-commit` stages everything and commits with a **single author and no `Co-Authored-By:` trailer**:
 
 ```bash
-./scripts/run.mjs pr-commit "fix(rebase): restore the queue-drain guard lost resolving conflicts" \
+$janissary/scripts/run.mjs pr-commit "fix(rebase): restore the queue-drain guard lost resolving conflicts" \
   "The rebase onto master dropped the drain guard the plan calls for. Reapplied it against master's new scheduler shape and re-pointed its test at the renamed helper."
 ```
 
 Then push through the upstream `gh pr checkout` configured:
 
 ```bash
-./scripts/run.mjs pr-push-branch origin <branch>
+$janissary/scripts/run.mjs pr-push-branch origin <branch>
 ```
 
-If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts preserving both sides, re-run `./scripts/run.mjs pr-check-gate`, and retry the push. Repeat at most **3 times**. Never resolve a rejection with a bare force-push. If the third attempt fails, leave the local commit intact and report the failure.
+If the push is rejected because the remote branch advanced, run `git pull --rebase`, resolve any conflicts preserving both sides, re-run `$janissary/scripts/run.mjs pr-check-gate`, and retry the push. Repeat at most **3 times**. Never resolve a rejection with a bare force-push. If the third attempt fails, leave the local commit intact and report the failure.
 
 ---
 
@@ -166,7 +166,7 @@ If the push is rejected because the remote branch advanced, run `git pull --reba
 gh pr view <number> --json state,headRefName,headRefOid,url
 ```
 
-Confirm the state is `OPEN` and `headRefOid` matches `git rev-parse HEAD`. Re-run `./scripts/run.mjs pr-check-mergeable <branch> <owner/repo>` and confirm `MERGEABLE`. **Do not merge it** — merging is the human's decision.
+Confirm the state is `OPEN` and `headRefOid` matches `git rev-parse HEAD`. Re-run `$janissary/scripts/run.mjs pr-check-mergeable <branch> <owner/repo>` and confirm `MERGEABLE`. **Do not merge it** — merging is the human's decision.
 
 ---
 

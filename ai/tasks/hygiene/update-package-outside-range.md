@@ -97,7 +97,7 @@ Keep this contract list. Steps 6, 7, and 8 all work from it.
 **Gate first — never skip this.** Before any command that writes to `node_modules/`, check the target — and every member of the coordinated set from Step 2 — against the known-malicious package list:
 
 ```bash
-./scripts/run.mjs check-malicious-package <package>@<target-version> <peer>@<version> ...
+$janissary/scripts/run.mjs check-malicious-package <package>@<target-version> <peer>@<version> ...
 ```
 
 Act on the exit code:

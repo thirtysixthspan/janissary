@@ -7,6 +7,10 @@
 
 import { execFileSync } from 'node:child_process';
 import { changedFiles } from './changed-files.mjs';
+import { scriptPath } from './script-path.mjs';
+
+// Named from this file's own directory, not the working directory — see `script-path.mjs`.
+const LINT_FILES = scriptPath('lint-files.mjs');
 
 const LINTABLE = /\.(?:ts|tsx|js|jsx|mjs|cjs)$/;
 const seq = process.argv.includes('--seq');
@@ -34,7 +38,7 @@ const tools = [];
 if (hasLintable) {
   tools.push({
     name: 'lint',
-    run: () => execFileSync('node', ['scripts/lint-files.mjs'], { stdio: 'pipe', encoding: 'utf8' }),
+    run: () => execFileSync('node', [LINT_FILES], { stdio: 'pipe', encoding: 'utf8' }),
   });
 }
 

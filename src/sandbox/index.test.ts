@@ -188,6 +188,20 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  // Those same task prompts tell the agent to run `$janissary/scripts/run.mjs`, so the runner and
+  // the scripts it dispatches to have to be readable on the same terms the prompts are.
+  it('carves the install\'s scripts/ directory into the read allow-list, literal and resolved', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const scriptsDir = path.join(janissaryRoot(), 'scripts');
+    expect(result.args).toContain(`JANISSARY_SCRIPTS_L=${scriptsDir}`);
+    expect(result.args).toContain(`JANISSARY_SCRIPTS_R=${realpathSync(scriptsDir)}`);
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SCRIPTS_L"))');
+    expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SCRIPTS_R"))');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   // Narrower than the installation: ai/ is prompts written to be read by an agent, while the rest of
   // the tree holds janissary's own dependencies and working state.
   it('does not carve in the install root itself', () => {

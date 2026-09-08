@@ -128,4 +128,4 @@ Before finishing a new tab plugin, verify all of these exist and agree:
 7. Server tests for registration, activation, command, intent, rejection, failure, cleanup, and disposal.
 8. Client tests for lazy loading, payload validation, rendering, intents, and failure.
 9. Product spec update and, for API changes, reference changelog update.
-10. `./scripts/run.mjs check-diff`, the production web build/chunk inspection, and the frozen fixture tests.
+10. `$janissary/scripts/run.mjs check-diff`, the production web build/chunk inspection, and the frozen fixture tests.

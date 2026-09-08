@@ -72,7 +72,7 @@ State your pick in one line: `<package> <Current> -> <Wanted>`.
 **Gate first — never skip this.** Before any command that writes to `node_modules/`, check the target against the known-malicious package list:
 
 ```bash
-./scripts/run.mjs check-malicious-package <package>@<Wanted-version>
+$janissary/scripts/run.mjs check-malicious-package <package>@<Wanted-version>
 ```
 
 Act on the exit code:

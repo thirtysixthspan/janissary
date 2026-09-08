@@ -110,7 +110,7 @@ Compatibility that is only described in prose decays. Freeze it in tests instead
 
 Keep small fixture plugins written against each API generation, and load them against the current host in CI, asserting that registration succeeds and that a representative call round-trips. A pull request that breaks a frozen fixture has made a breaking change, and that is the definition, not a judgment call. Beyond fixtures, the host's own guards need tests: a plugin that throws on activation leaves the host running, a version mismatch is refused with a useful message, and disposal actually releases what was acquired.
 
-Tests are colocated as `*.test.ts(x)` and run through the diff-scoped commands (`./scripts/run.mjs check-diff`) while developing.
+Tests are colocated as `*.test.ts(x)` and run through the diff-scoped commands (`$janissary/scripts/run.mjs check-diff`) while developing.
 
 **Rule.** Every extension point ships with a fixture plugin and a failure test in the same change that introduces it. Every API version keeps its fixture forever, or until that version is formally removed.
 
@@ -154,6 +154,6 @@ A second definition of something that already has one, whether that is a command
 
 **Before adding an extension point.** Define the capability object and confirm it exposes nothing beyond the contract. Pick and document resolution, ordering, and async semantics. Decide the activation trigger. Set the activation and per-call budgets. Write the fixture plugin and the failure test. Write the reference page with the simplest example first. Update the spec.
 
-**Before shipping a plugin.** Confirm the static declaration is complete and honest. Confirm no module-level side effects. Confirm activation is under budget. Confirm every acquire has a matching release in `dispose`. Confirm no wire type is redeclared locally. Confirm failure paths surface a useful message. Confirm files stay under 200 lines, splitting by extraction rather than compaction. Run `./scripts/run.mjs check-diff`.
+**Before shipping a plugin.** Confirm the static declaration is complete and honest. Confirm no module-level side effects. Confirm activation is under budget. Confirm every acquire has a matching release in `dispose`. Confirm no wire type is redeclared locally. Confirm failure paths surface a useful message. Confirm files stay under 200 lines, splitting by extraction rather than compaction. Run `$janissary/scripts/run.mjs check-diff`.
 
 **Before changing the plugin API.** Classify the change against section 4. Run the frozen fixtures. If anything breaks, it is a major bump. Add the replacement before removing anything. Announce the deprecation with its replacement and removal version. Update the changelog and the migration notes.
