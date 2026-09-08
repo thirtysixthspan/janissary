@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented here.
 
+## [0.13.1] - 2026-09-08
+
+### Features
+
+- read credential files from ~/.janissary, overridden by the project (#1054)
+- resolve built-in task paths through a $janissary install root (#1053)
+
 ## [0.13.0] - 2026-09-08
 
 ### ⚠ Breaking Changes
