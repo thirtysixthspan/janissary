@@ -156,7 +156,9 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 ## Recordings
 
-Every harness session is recorded automatically — there's no command to start it. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. Because the whole stream is saved, you can review a session even after its tab has closed and its scrollback is gone. Only the harness's output is recorded. Nothing you type is ever written to the file.
+Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. You can review it after its tab has closed and its scrollback is gone. Recordings contain terminal output and terminal resizes, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
+
+Recording covers named harness tabs and dedicated SSH tabs. Interactive programs launched through `shell`, such as `shell vim`, are not recorded.
 
 Closing the harness tab or quitting the app closes the recording cleanly before the process ends.
 
@@ -169,6 +171,12 @@ asciinema play .janissary/recordings/claude-2026-07-10T18-30-05-123Z.cast
 ```
 
 The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+
+### When recording fails
+
+If opening or writing the recording fails, recording stops for the rest of that session. The harness keeps running. The [notifications](/user-documentation/tab-types/notifications#read-diagnostic-messages) feed reports `harness recording failed` once for that tab; an SSH tab reports `ssh recording failed` on the same terms.
+
+Both messages bypass event toggles and focus suppression, so they can appear while you're watching the affected tab. The feed must already be open: a failure reported while it is closed is dropped, and opening it later doesn't replay the message.
 
 ## Capturing a harness's screen
 
@@ -195,11 +203,15 @@ subagent prompts, tool calls, and results, even when the terminal shows only a c
 line. The editor shows the file as it exists when you open it, so run the command again after more
 activity to open a newer point-in-time view.
 
+Transcript collection follows the current harness session from when the tab opens. It doesn't import earlier sessions as conversation history. The harness may create its session record only after its first turn, so a transcript isn't always available immediately.
+
 The transcript file is created lazily at `.janissary/harness-transcripts/<label>-<timestamp>.txt`
 when the first transcript entry arrives. A harness that produces no transcript leaves no empty file.
 Closing the harness tab or quitting the app stops transcript updates and closes the file cleanly.
 The directory is cleared on a fresh launch and preserved by `janus --relaunch`. SSH tabs never have
 a session transcript.
+
+If Janissary cannot find a session record it recognizes, the tab remains available for screen-based monitoring without a transcript file. The notifications feed reports `no harness transcript found` once for that tab. This message concerns the session transcript, separately from a `.cast` recording failure. It follows the same [diagnostic delivery rules](#when-recording-fails), and is never reported for SSH tabs.
 
 - `harness transcript` with no name: `Usage: harness transcript <name>.`
 - No tab has that label: `No tab labeled "<name>".`
@@ -236,7 +248,7 @@ Before the tab opens, the `ssh <destination> […]` command itself is recorded i
 
 ### Recording an SSH session
 
-Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. Only what the remote host printed is saved — nothing you type is ever written, so a passphrase or a remote `sudo` password never lands on disk. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels.
+Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. It records terminal output and resizes, without input events. Text echoed by the remote program is still output. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels.
 
 That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
 
@@ -246,7 +258,7 @@ Replay it the same way as any other recording:
 asciinema play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
 ```
 
-If the recording can't be written — an unwritable `.janissary/recordings/`, say — the SSH session itself carries on unaffected, and a single `ssh recording failed` line appears in the [notifications](/user-documentation/tab-types/notifications) tab for that session.
+If the recording can't be opened or written, the SSH session carries on while recording stops. The once-per-tab `ssh recording failed` message follows the [recording failure rules](#when-recording-fails).
 
 The ssh tab closes as soon as the `ssh` process exits, whether that's a normal logout, a dropped connection, or an immediate failure. Closing the [last remaining tab](/user-documentation/getting-started/tabs#closing-tabs) quits the app, same as any other tab.
 
