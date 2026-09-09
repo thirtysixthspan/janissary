@@ -41,9 +41,15 @@ Every existing sender of `edit <path>` reaches the same place without changing: 
 
 Error handling, surfaced in the active tab before any opener runs:
 
-- **No opener for the extension** — when opened from the file navigator, a chooser offers editing
-  the file as text or opening it externally; other `open` commands report that the file type is
-  unsupported.
+- **No opener for the extension** — only the inline presentation needs one. `open <file>` reports
+  that the file type is unsupported, because there is no in-app view to route it to, while `open
+  external <file>` hands the file to the operating system's handler and confirms the same way every
+  other external open does — the operating system already knows which application claims the type,
+  so a PDF reaches the system viewer without any opener claiming `.pdf`. When opened from the file
+  navigator, a chooser offers editing the file as text or opening it externally, and both choices
+  now do something. A **plugin's own command** is the exception: it is a second route into one
+  opener, so `video external <file>` reports the unsupported type rather than handing a file that
+  opener does not claim to the operating system.
 - **Missing target or malformed invocation** — a usage message: `open [external] [page] <target>`.
 - **Unviewable or malformed web address** — a message reporting the address is invalid (for example, a non-`http`/`https` scheme).
 - **File does not exist** — a not-found message. Existence is checked before dispatch, so every file opener may assume the file is present.
@@ -81,7 +87,7 @@ A path with no wildcard characters is always a single literal target (so a name 
 - `open external <path>` — hand a file to an **external program** (for images, the OS image viewer).
 - `open external <url>` / `open external page <address>` — open a web address in the **OS default browser**.
 
-Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered.
+Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered when opened in the app, and goes to the operating system's handler when opened externally.
 
 ---
 

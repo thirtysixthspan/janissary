@@ -127,6 +127,8 @@ including while the tree is docked to a sidebar; opened files still land in that
 
 If a file type has no built-in opener, double-clicking the file shows a picker with **Edit as text**
 and **Open externally**. Choose the action you want, or press `Escape` to close the picker.
+**Open externally** hands the file to whichever application your operating system opens that type
+with — a PDF goes to your system PDF viewer.
 
 Right-click a file for **Open**, **Edit**, and **Open with**, followed by the usual file actions.
 **Edit** runs the same `edit` command as the command bar: ordinary files open in the text editor,

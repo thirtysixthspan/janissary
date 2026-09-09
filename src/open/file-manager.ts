@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension, type OpenContext } from '../openers/index.js';
 import { didOsOpen } from '../openers/os-open.js';
+import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { expandUserPath } from '../paths.js';
@@ -98,7 +99,15 @@ export class OpenFileManager {
   ): void | Promise<void> {
     if (!existsSync(file)) { this.managers.tab.append(label, { input: command, output: `open: ${file}: no such file` }); return; }
     const opener = openerForExtension(path.extname(file));
-    if (!opener) { this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` }); return; }
+    // The external presentation does not need an opener: every one of them ends at the same OS
+    // handoff, and the operating system already knows which application claims a `.pdf`. A pinned
+    // command is the exception — it is a route into one opener, so a file that opener does not claim
+    // is refused below rather than quietly launched.
+    if (!opener) {
+      if (external && requireOpener === undefined) { openInDefaultViewer(file, context); return; }
+      this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` });
+      return;
+    }
     if (requireOpener !== undefined && opener.name !== requireOpener) {
       this.managers.tab.append(label, { input: command, output: pinnedOpenerRefusal(requireOpener, file) });
       return;
