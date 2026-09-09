@@ -3,7 +3,8 @@ import { renderHook, act } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
-import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../drop-handles';
+import { registerHarnessDrop } from '../harness-drop-registry';
 
 function makeRows(): FileNavigatorRow[] {
   return [
@@ -47,10 +48,29 @@ function makeEditorBodyElement(): HTMLElement {
   return body;
 }
 
+function makeHarnessBodyElement(ptyId: string): HTMLElement {
+  const body = document.createElement('div');
+  body.dataset.harnessDrop = ptyId;
+  document.body.append(body);
+  return body;
+}
+
+// Every harness registration a case makes, torn down after it so the module-level registry never
+// carries a handle from one case into the next.
+const registeredHarnesses: (() => void)[] = [];
+
+function registerHarness(ptyId: string): HarnessDropHandle {
+  const handle = { insertAtCaret: vi.fn() };
+  registeredHarnesses.push(registerHarnessDrop(ptyId, handle));
+  return handle;
+}
+
 describe('useFileNavigatorDrag', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.replaceChildren();
+    for (const unregister of registeredHarnesses) unregister();
+    registeredHarnesses.length = 0;
   });
 
   it('does not start a drag for a small movement below the threshold', () => {
@@ -380,6 +400,101 @@ describe('useFileNavigatorDrag', () => {
 
       expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(editorDropRef.current.insertAtCaret).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('drop onto a harness tab', () => {
+    it('a drag released over the harness marker types the paths into that harness instead of sending moveFileNavigatorItem', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const harness = registerHarness('pty-1');
+      const { result } = renderHook(() =>
+        useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work'));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
+
+      act(() => {
+        result.current.onRowMouseDown(
+          { path: 'notes.txt' } as FileNavigatorRow,
+          downEvent(0, 0),
+          ['notes.txt', 'src/a.ts'],
+          ['notes.txt', 'src/a.ts'],
+        );
+      });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(harness.insertAtCaret).toHaveBeenCalledOnce();
+      expect(harness.insertAtCaret).toHaveBeenCalledWith('tree/notes.txt tree/src/a.ts');
+      expect(client.send).not.toHaveBeenCalled();
+    });
+
+    it('reaches the harness the pointer is over, not another mounted one', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const left = registerHarness('pty-left');
+      const right = registerHarness('pty-right');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-right'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(right.insertAtCaret).toHaveBeenCalledWith('src/notes.txt');
+      expect(left.insertAtCaret).not.toHaveBeenCalled();
+    });
+
+    it('a remote tree types host-qualified absolute paths, as it does into a command bar', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const harness = registerHarness('pty-1');
+      const { result } = renderHook(() =>
+        useFileNavigatorDrag(makeRows(), client, 0, '/srv/project', 'project', '/srv', undefined, undefined, 'devbox'));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'src/a.ts' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(harness.insertAtCaret).toHaveBeenCalledWith('devbox:/srv/project/src/a.ts');
+    });
+
+    it('hovering the harness marker suppresses the row drop-target highlight', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      registerHarness('pty-1');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+
+      expect(result.current.dropTarget).toBeNull();
+      act(() => { result.current.drop(); });
+    });
+
+    it('a release over a harness body whose PTY registered nothing changes nothing', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-unregistered'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(client.send).not.toHaveBeenCalled();
+      expect(result.current.draggedPath).toBeNull();
+    });
+
+    it('a drag released over a tree row still moves the file as before, unaffected by the harness wiring', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const harness = registerHarness('pty-1');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
+      const otherRow = makeRowElement('other');
+      document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(harness.insertAtCaret).not.toHaveBeenCalled();
     });
   });
 

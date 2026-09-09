@@ -29,7 +29,7 @@ The 📁 button on a remote agent or harness opens that tab's workspace **on the
 
 A remote tree has the same browsing and editing tools as a local one: directory watches, file search, branch and git-status details, open and edit, new file and folder, rename, delete, drag-to-move, copy/cut/paste, and undo/redo. The work happens inside the remote workspace. Opened files use their ordinary viewer or editor, and an editor save writes back to the remote host. If the write fails, the editor stays marked as changed and the notifications feed explains why. Choosing **Open externally** is refused because it runs outside that save route; plugin-added file actions are unavailable for the same reason.
 
-Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar or editor inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
+Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
 
 A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined agent keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile or `janus --relaunch`.
 
@@ -184,8 +184,9 @@ You can also drag selected rows onto the command bar of the active tab to insert
 caret without moving anything. Local paths are relative to the active tab's working directory;
 remote paths use `<host>:<absolute path on that host>`,
 separated by single spaces, and replace any selected command text. This works when the navigator
-is docked and a plain tab is active in the center. It does not work for a view tab, harness tab,
-the file tree itself, or transcript search. Paths are inserted exactly as computed, without quotes,
+is docked and a plain tab is active in the center. It does not work for a view tab, the file tree
+itself, or transcript search — nor for a harness tab, whose terminal takes the drop directly instead
+(below). Paths are inserted exactly as computed, without quotes,
 even when a name contains spaces.
 
 Drag selected rows onto an active plain-text editor to insert their tree-relative paths, separated
@@ -194,6 +195,14 @@ hidden editors are not drop targets.
 
 Dropping hands keyboard focus to the editor and leaves the cursor just after the path it inserted,
 so you can keep typing without reaching for the mouse.
+
+Drag selected rows onto a [harness](/user-documentation/advanced-agents/harness) tab's terminal to
+type their paths into the harness. They arrive as if you had typed them — nothing is submitted —
+in the same form a command-bar drop uses: separated by single spaces, relative to that harness's
+working directory, and host-qualified for a remote tree. Focus moves to the terminal, so you can
+carry on typing from the path you just dropped. The terminal doesn't highlight during the drag, and
+a harness that is still provisioning its workspace isn't a target yet. With two harness tabs side by
+side, the paths go to the one you released over.
 
 ## Creating files and directories
 

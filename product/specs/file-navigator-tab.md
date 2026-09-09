@@ -114,8 +114,8 @@ Plugin-contributed selection actions are likewise not offered for remote rows.
 Clipboard and tree-to-tree drag operations may cross navigator roots only when both roots are on
 the same host. A cross-host drag has no drop target. A cross-host paste is refused in the
 notifications feed without changing the filesystem or clearing the clipboard marks. Dragging a
-remote row into a command bar or editor inserts `<host>:<absolute-remote-path>`; local rows retain
-their relative-path behavior.
+remote row into a command bar, an editor, or a harness inserts `<host>:<absolute-remote-path>`;
+local rows retain their relative-path behavior.
 
 An action naming a path outside the workspace is refused on the remote host, and nothing it named
 runs — including the parts of a multi-item action whose own paths were inside the tree. The refusal
@@ -343,9 +343,9 @@ never wrapped in quotes, even when it contains spaces.
 
 The command bar is only a valid drop target while it is actually visible for the active tab — it
 is not present for a view tab (an image, a markdown preview, an editor, notifications, or the file
-tree itself when that tree is the active, non-docked tab), for a harness tab, or while transcript
-search has replaced it. Dragging over where the command bar would otherwise be in any of these
-cases has no effect: no highlight, no insertion. In practice, dropping a row onto a command bar
+tree itself when that tree is the active, non-docked tab), for a harness tab — whose terminal takes
+the drop directly instead — or while transcript search has replaced it. Dragging over where the
+command bar would otherwise be in any of these cases has no effect: no highlight, no insertion. In practice, dropping a row onto a command bar
 therefore only happens when the file navigator is docked into a sidebar while a different, plain tab is
 active in the center — a docked tree's own active-tab command bar is never a target for itself.
 
@@ -368,6 +368,26 @@ An editor tab is only a valid drop target while it is the active tab and actuall
 practice this means the file navigator is docked into a sidebar while an editor tab is active in
 the center, the same reachability condition as the command bar. Dragging over an inactive or
 not-currently-displayed editor tab has no effect.
+
+### Dragging a row into a harness tab
+
+Releasing a selection over a harness tab's terminal types every selected visible path into that
+harness, exactly as if it had been typed there, without moving anything on disk. Nothing is
+submitted: the paths arrive as text, and the harness sees them at whatever prompt it is showing.
+
+A harness terminal is a command line, so the paths take the same form a command-bar drop uses
+rather than the editor's — separated by single spaces, each one relative to the harness tab's own
+working directory, and, for a remote tree, written as `<host>:<absolute-remote-path>`. Paths are
+inserted exactly as computed, never quoted, even when one contains spaces. Newlines are never used
+as a separator here, since each one would submit the path before it to the harness as a command.
+
+Like the editor, and unlike the command bar, the terminal shows no highlight while a drag passes
+over it. The drop moves keyboard focus to the terminal, so typing carries straight on from the
+dropped path instead of returning to the file tree, where the next letters typed would select a row.
+
+Every visible harness terminal is its own drop target, so with two harness tabs side by side in
+split panes the paths reach the one actually released over — not whichever is the active tab. A
+harness tab still provisioning its workspace has no terminal to type into yet and is not a target.
 
 ### Undoing and redoing a move
 

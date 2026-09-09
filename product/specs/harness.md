@@ -372,6 +372,11 @@ Ctrl-combinations (`Ctrl+C`, `Ctrl+D`, `Ctrl+R`, `Ctrl+Z`, etc.) are sent to the
 Reorder/collapse chords (`Ctrl+←/→`, `Ctrl+T`) are **not** available while a harness is focused;
 switch to another tab first.
 
+A file navigator drag released over the terminal types the dragged paths into the harness, as if
+they had been typed there — space-separated, relative to the tab's own working directory, and
+nothing submitted. Focus moves to the terminal on the drop; see `file-navigator-tab.md` for the
+full behavior.
+
 **Shift+Enter** is translated before it reaches the PTY: instead of a bare carriage return
 (which would submit), the terminal sends `ESC` + `CR` — the same sequence Alt/Option+Enter
 produces in native terminals — which harnesses like claude read as a line continuation. This lets

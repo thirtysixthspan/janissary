@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from './drop-handles';
 
 // The drop handles are type-only, so these cases pin the shape the file navigator's drag code is
 // allowed to call: a member dropped from either contract fails to compile here before it reaches
@@ -37,5 +37,16 @@ describe('EditorDropHandle', () => {
     asEditorTarget.insertAtCaret('notes.md');
 
     expect(commandBar.insertAtCaret).toHaveBeenCalledWith('notes.md');
+  });
+});
+
+describe('HarnessDropHandle', () => {
+  it('accepts a dropped path to type into the terminal', () => {
+    const insertAtCaret = vi.fn();
+    const handle: HarnessDropHandle = { insertAtCaret };
+
+    handle.insertAtCaret('src/index.ts');
+
+    expect(insertAtCaret).toHaveBeenCalledWith('src/index.ts');
   });
 });
