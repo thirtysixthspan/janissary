@@ -14,7 +14,7 @@ function freshState(
 ): FilesTabState {
   return {
     root, filesystem, remote, ownerLabel, expanded: new Set(), watchers: new Map(),
-    listings: new Map(), listingLoads: new Set(), statLoads: new Set(),
+    listings: new Map(), listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0,
     undoStack: [], redoStack: [], details: 'name', stats: new Map(),
   };
 }
@@ -88,8 +88,6 @@ function updateRemoteRoot(port: OpenPort, label: string, ready: Promise<string>)
       port.unwatchDir(state, '');
       state.root = root;
       clearFilesystemCache(state);
-      state.listingLoads.clear();
-      state.statLoads.clear();
       port.watchDir(label, root, '');
     }
     if (port.managers.tab.tabs.some((tab) => tab.label === label)) port.managers.tab.setCwd(label, root);
@@ -120,10 +118,7 @@ function retarget(
   state.ownerLabel = ownerLabel;
   state.undoStack = [];
   state.redoStack = [];
-  state.listings.clear();
-  state.listingLoads.clear();
-  state.statLoads.clear();
-  state.stats.clear();
+  clearFilesystemCache(state);
   port.watchDir(label, root, '');
   port.refreshGit(label);
   if (port.managers.tab.tabs.some((tab) => tab.label === label)) port.managers.tab.setCwd(label, root);

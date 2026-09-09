@@ -44,6 +44,7 @@ function freshState(
     listings: new Map(),
     listingLoads: new Set(),
     statLoads: new Set(),
+    cacheGeneration: 0,
     undoStack: [],
     redoStack: [],
     gitStatuses: new Map(),
@@ -82,8 +83,6 @@ function openRemoteTree(
       current.watchers.clear();
       current.root = nextRoot;
       clearFilesystemCache(current);
-      current.listingLoads.clear();
-      current.statLoads.clear();
       managers.tab.setCwd(label, nextRoot);
       watchDir(label, nextRoot, '');
     }

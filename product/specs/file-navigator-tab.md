@@ -633,6 +633,14 @@ from disk, and the branch text and git-status coloring are recomputed, without w
 directory watchers a git-driven replace may not deliver. A click while a pull is already running in
 that tab does nothing rather than starting an overlapping pull, and reports nothing.
 
+The refreshed tree is the tree the pull left behind: every file the pull added appears and every
+file it removed is gone, at the root and at every level inside a directory the user had expanded.
+The refresh replaces the rows; it never rearranges them. Directories that were expanded stay
+expanded, and one is only ever closed by the refresh when the directory it lived in no longer
+lists it. A remote tree, whose rows arrive a moment after the pull rather than with it, is held to
+the same two rules — what it fills back in is what the pull brought down, never a listing that was
+read before the pull landed.
+
 Every pull that runs reports its outcome as exactly one line in the notifications feed. A pull that
 succeeds reads `Pulled from origin: <git summary>`, carrying git's own account of what it did —
 `Already up to date.` when there was nothing to take, otherwise the count of what changed. When git

@@ -42,9 +42,11 @@ export function runPull(context: PullContext, label: string): void {
   });
 }
 
-// Empty the tab's cached listings so the rebuild that follows re-reads what the pull changed.
-// Answers whether the tab is still the one that started the pull — a tree closed or re-rooted
-// mid-pull keeps whatever it holds now.
+// Empty the tab's cached listings so the rebuild that follows re-reads what the pull changed. The
+// clear also disowns any read that was already in flight, so a listing read before the pull landed
+// cannot resolve afterwards and put the pre-pull contents back on screen. Answers whether the tab
+// is still the one that started the pull — a tree closed or re-rooted mid-pull keeps whatever it
+// holds now.
 function invalidateAfterPull(context: PullContext, label: string, root: string): boolean {
   const current = context.tabs.get(label);
   if (!current || current.root !== root) return false;
