@@ -38,7 +38,7 @@ Questions live only in memory for the running session — they're not saved, and
 
 ## Notifications
 
-If a question opens on a tab you're not currently looking at, and the [notifications](/user-documentation/tab-types/notifications) feed is open, it records `Question from <tab>` as a line you can click to jump to that tab. This one has no on/off toggle in `.janissary/config.json` — unlike the feed's other events, it always fires for a background tab. Nothing is recorded if you're already looking at the tab that asked, and, like every notification, it's dropped rather than queued if the feed is closed at the time.
+If a question opens on a tab you're not currently looking at, the [notifications](/user-documentation/tab-types/notifications) feed records `Question from <tab>` as a line you can click to jump to that tab — opening itself in the right sidebar if it wasn't already up. This one has no on/off toggle in `.janissary/config.json` — unlike the feed's other events, it always fires for a background tab. Nothing is recorded if you're already looking at the tab that asked.
 
 ## Cancelling a question
 

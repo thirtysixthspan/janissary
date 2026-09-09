@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
 import { createEditorControllerAdapter } from './editor-adapter.js';
 
 const EDITOR_URL = '/open/a1b2';
@@ -22,7 +23,7 @@ function makeManagers(options: { notifications?: boolean } = {}) {
       editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
       append,
       cur: () => active,
-      openNotificationsTab: vi.fn(),
+      ...fakeNotificationsHost(tabs),
     },
   } as unknown as Managers;
   return { append, managers };
@@ -67,9 +68,13 @@ describe('editorPluginFailed', () => {
     );
   });
 
-  it('posts nothing while the notifications feed is closed', () => {
+  it('opens the feed and posts into it when none was open', () => {
     const { append, managers } = makeManagers({ notifications: false });
     createEditorControllerAdapter(managers).editorPluginFailed(EDITOR_URL, 'commenting', 'broke');
-    expect(append).not.toHaveBeenCalled();
+    expect(managers.tab.tabs.some((t) => t.view === 'notifications')).toBe(true);
+    expect(append).toHaveBeenCalledWith(
+      NOTIFICATIONS_LABEL,
+      expect.objectContaining({ output: 'Editor plugin "commenting" disabled: broke.' }),
+    );
   });
 });

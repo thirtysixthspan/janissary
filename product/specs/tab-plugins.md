@@ -106,7 +106,7 @@ A plugin payload factory can register files through the host's existing `/open/<
 
 A plugin may report one line of its own to the notifications feed, attributed to the tab it was invoked from. The grant is deliberately narrow: the plugin supplies text and nothing else — not the kind of event, not the tab it is attributed to, and not any link on the line — so a plugin can say that something happened without being able to dress it up as anything else. This is distinct from the failure line the application itself writes when a plugin breaks; a plugin can never report that about itself or about another.
 
-The line obeys every rule the feed already has. It is dropped when no notifications feed is open, because plugin activity must never conjure the feed into existence. It is never suppressed for being about the tab the user is looking at, which is the case that matters most — a plugin reporting on the very view being watched. Like every capability it is gated by the declaration: a plugin that did not ask for it and reports anyway is disabled. See [[notifications]].
+The line obeys every rule the feed already has, including opening the feed in the right sidebar when none is open — a plugin's note is a report to the user on the same terms as any other, and one about the view being watched is the case that matters most. It is never suppressed for being about the tab the user is looking at. Like every capability it is gated by the declaration: a plugin that did not ask for it and reports anyway is disabled. See [[notifications]].
 
 ### Contributing an action for a file navigator selection
 

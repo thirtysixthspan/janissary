@@ -67,6 +67,10 @@ describe('the pull button refreshes the whole tree', () => {
           tabs = [...tabs, { ...janus, label: 'navigator', files: view as never }];
           activeTab = tabs.length - 1;
         },
+        // The pull's own report notifies, and a notification opens the feed when none is open.
+        openNotificationsTab: () => {
+          tabs = [...tabs, { ...janus, label: 'notifications', view: 'notifications' }];
+        },
         retargetEditorTab: () => {},
       },
     };

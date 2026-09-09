@@ -97,7 +97,7 @@ Holding `Shift` while you double-click an audio row in the file navigator sends 
 
 A file can use a codec the app can't decode, or simply be damaged. When that happens the track is dropped from the playlist and the next one starts, so one bad file never stalls a queue.
 
-The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` Like every notification, the line is dropped when no notifications tab is open.
+The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` Like every notification, it opens that feed in the right sidebar if you don't already have it open.
 
 ## Lifecycle
 

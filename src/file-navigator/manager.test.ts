@@ -94,6 +94,10 @@ describe('FileNavigatorManager', () => {
           tabs = [...tabs, { ...janus, label, files: view as never }];
           activeTab = tabs.length - 1;
         },
+        // A file-operation report notifies, and a notification opens the feed when none is open.
+        openNotificationsTab: () => {
+          tabs = [...tabs, { ...janus, label: 'notifications', view: 'notifications' }];
+        },
         retargetEditorTab: retargetEditorTabMock,
       },
     };

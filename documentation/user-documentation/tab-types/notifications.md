@@ -8,11 +8,13 @@ notifications left    open it docked in the left sidebar
 notifications right   open it docked in the right sidebar
 ```
 
-There is only ever one notifications tab, and it opens only when you run `notifications`. The feed has no command line. Closing it and reopening it starts over with an empty feed.
+There is only ever one notifications tab. The feed has no command line. Closing it and reopening it starts over with an empty feed.
 
 <img class="agent-float" src="/agents/hamza-south-west.png" alt="" />
 
-Nothing is collected while the feed is closed. Events that happen before you open it, including any `notify` message, are dropped. Open the feed first, then the events that follow start landing in it.
+You don't have to open it first. If something happens with the feed closed, it opens itself in the right sidebar and the line lands there. It arrives docked, not focused — whatever tab you were working in stays the tab you're working in. Run `notifications` yourself when you want it somewhere else, or want it before anything has happened.
+
+Nothing that happened earlier is filled in. The feed starts empty and collects what follows.
 
 ## Read and scroll the feed
 
@@ -56,13 +58,13 @@ These five events notify only for a **background** tab. Activity in the currentl
 
 <img class="agent-float left" src="/agents/mahir-south.png" alt="" />
 
-`notify <message>` posts your own line into the feed. For example, `notify deploy finished` adds `deploy finished` after the time and originating-tab header. It has no toggle and bypasses focus suppression, so it can report from the active tab too. If the feed is closed, the message is dropped. Bare `notify` prints `Usage: notify <message>.`.
+`notify <message>` posts your own line into the feed. For example, `notify deploy finished` adds `deploy finished` after the time and originating-tab header. It has no toggle and bypasses focus suppression, so it can report from the active tab too. If the feed is closed, it opens in the right sidebar to receive the message. Bare `notify` prints `Usage: notify <message>.`.
 
 ## Read diagnostic messages
 
 `harness recording failed` and `ssh recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
 
-These diagnostics bypass the five event toggles and focus suppression. They still disappear if the feed is closed when they occur.
+These diagnostics bypass the five event toggles and focus suppression, and they open the feed if it isn't already up.
 
 `No opener for ".xyz" files.` means you opened a file type Janissary has no viewer for, whether you typed `open` or double-clicked a row in the [file navigator](/user-documentation/tab-types/file-navigator). It arrives here rather than in the tab you opened from, because a file navigator has no transcript of its own to print it in. See [Opening files and pages](/user-documentation/tab-types/opening-files).
 

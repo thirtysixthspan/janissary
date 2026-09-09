@@ -653,12 +653,13 @@ describe('Controller open command', () => {
       .not.toContain('No opener');
   });
 
-  it('drops the unsupported-type report when the notifications feed is closed', () => {
+  it('opens the feed for the unsupported-type report when it was closed', () => {
     const file = temporaryImage('notes.xyz');
     const { c } = makeController();
     c.dispatch(`open ${file}`);
-    expect(allText(c)).not.toContain('No opener');
-    expect(c.view()).toHaveLength(1);
+    const feed = c.view().find((t) => t.view === 'notifications');
+    expect(feed?.dock).toBe('right');
+    expect(feed!.bufferLines.map((l) => l.text).join('\n')).toContain('No opener for ".xyz" files');
   });
 
   it('reports a missing file before dispatching to an opener', () => {
@@ -1654,14 +1655,32 @@ describe('Controller notifications feed', () => {
     }
   });
 
-  it('drops the event (recording nothing, creating no tab) when the notifications tab is closed', () => {
+  it('opens the feed docked right and records the event when the notifications tab is closed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
       c.dispatch('agent bob --no-workspace');
       c.setActiveTab(0);
       c.dispatch('msg bob info hello there');
-      expect(c.view().some((t) => t.view === 'notifications')).toBe(false);
+      const feed = c.view().find((t) => t.view === 'notifications');
+      expect(feed?.dock).toBe('right');
+      expect(feedText(c)).toContain('Message from janus in bob');
+    } finally {
+      reset();
+    }
+  });
+
+  // Creating a tab focuses it, and docking a focused tab moves focus to whatever sits nearest — so
+  // without restoring it, an event firing in the background would move the user somewhere else.
+  it('leaves the active tab where it was when the feed opens itself', () => {
+    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob --no-workspace');
+      c.setActiveTab(0);
+      const before = c.view()[c.managers.tab.activeTab].label;
+      c.dispatch('msg bob info hello there');
+      expect(c.view()[c.managers.tab.activeTab].label).toBe(before);
     } finally {
       reset();
     }

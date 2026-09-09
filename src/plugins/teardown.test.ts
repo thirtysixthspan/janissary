@@ -74,13 +74,13 @@ describe('plugin teardown', () => {
     const host = new TabPluginHost(
       managers, [manifest], { fixture: async () => ({ activate: () => activation }) },
     );
-    const before = managers.tab.tabs.length;
 
     await host.runOpener('fixture', 'inline', '/tmp/invalid.fixture', {
       label: 'janus', command: 'open invalid.fixture',
     });
 
-    expect(managers.tab.tabs).toHaveLength(before);
+    // Counted by view rather than by total: reporting the failure opens the notifications feed.
+    expect(managers.tab.tabs.filter((tab) => tab.view === 'plugin')).toHaveLength(0);
     expect(managers.tab.openFiles.size).toBe(0);
     expect(host.statusFor('fixture')).toMatchObject({
       state: 'disabled', reason: 'produced an invalid tab payload',

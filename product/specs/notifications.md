@@ -8,10 +8,11 @@ command bar and takes no typed input. Like the file navigator tab (see `file-nav
 it shows no content at all — unlike an agent tab's empty transcript, it does not show the "Type
 `help` for available commands" hint, since there is no command bar to type into.
 
-There is only ever **one** notifications tab, and it is **never created automatically**. It
-appears only when the user runs the `notifications` command; opening it again reuses the existing
-one. Its label is always `notifications`; per [[tab-label-no-markers]] no type or status marker is
-appended.
+There is only ever **one** notifications tab. The user opens it with the `notifications` command,
+which chooses where it goes; a recorded event opens it too, always docked into the right sidebar,
+when there is none open to receive the line (see "Opened by the event that needs it" below).
+Opening it again reuses the existing one. Its label is always `notifications`; per
+[[tab-label-no-markers]] no type or status marker is appended.
 
 ### `notifications [left|right]`
 
@@ -131,19 +132,36 @@ watching — a playlist shedding a track — is exactly the line that must not b
 explicit event with no configuration toggle, but it is emitted only when its owning tab is in the
 background.
 
-### Drop-if-closed
+### Opened by the event that needs it
 
-An event is recorded only if the notifications tab is open **at the moment the event fires**. There
-is no backlog: events fired while the tab is closed are dropped, not buffered, and never cause the
-tab to open or be created. Closing the tab and reopening it starts a fresh, empty feed. This holds
-for `notify` too — if the feed is closed, the message is dropped.
+An event that is recorded always has a feed to land in. When the notifications tab is closed at the
+moment one fires, it **opens docked into the right sidebar** and the line lands in it. Which event
+it was makes no difference: an ambient event that passed its toggle, an explicit one, and a
+`notify` message all open the feed the same way.
+
+It opens **docked, not focused**. A notification is not a request to change what the user is looking
+at, so the feed appears in the sidebar and the active tab is left exactly where it was — including
+when the event fired in a background tab the user is not watching. Docking it into a sidebar that
+already holds a file navigator does not displace that navigator; the two share the side (see
+`sidebars.md`).
+
+Whether an event is recorded at all is still decided first, by the per-event toggles and focus
+suppression above. An event those rules discard opens nothing — the ambient toggles remain the
+control over how much reaches the feed, rather than becoming a control over how often a sidebar
+appears. With the default configuration (every ambient toggle off) only explicit events open the
+feed.
+
+There is still **no backlog**. Nothing that happened before the feed existed is replayed into it,
+and closing the tab discards its contents: reopening it, by command or by the next event, starts a
+fresh, empty feed.
 
 ### `notify <message>`
 
 `notify <message>` pushes a custom line into the feed, attributed to the issuing tab (e.g.
 `build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
-explicit signal that bypasses focus suppression and the per-event toggles, subject only to the
-drop-if-closed rule. It is available from any tab, including agent tabs (an agent dispatches it like
+explicit signal that bypasses focus suppression and the per-event toggles, and — like every other
+recorded event — opens the feed in the right sidebar when none is
+open. It is available from any tab, including agent tabs (an agent dispatches it like
 any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
 a usage error (`Usage: notify <message>.`) and records nothing in the feed.
 

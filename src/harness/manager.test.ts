@@ -448,7 +448,10 @@ describe('HarnessManager auto-approve', () => {
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
-    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt', undefined);
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
+      '/project/.janissary/captures/claude-now.txt',
+    );
   });
 
   it('injects the approval keystroke and notifies when a codex overlay is detected with -y', async () => {
@@ -458,7 +461,10 @@ describe('HarnessManager auto-approve', () => {
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: CODEX_GATE });
     await vi.advanceTimersByTimeAsync(1001);
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
-    expect(notify).toHaveBeenCalledWith(managers, 'auto-approve', 'codex', 'Auto-approved a permission prompt', undefined);
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'codex', 'Auto-approved a permission prompt',
+      '/project/.janissary/captures/claude-now.txt',
+    );
   });
 
   it('writes a capture file and links it on the notification when the notifications tab is open', async () => {
@@ -475,13 +481,15 @@ describe('HarnessManager auto-approve', () => {
     );
   });
 
-  it('writes no capture file when the notifications tab is closed', async () => {
+  // The approval's own notification opens the feed, so the capture is written for the approval that
+  // opens it rather than only for the ones after.
+  it('writes the capture file with the notifications tab closed too', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.run('harness claude -w -y')).toBeUndefined();
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
-    expect(writeCaptureFile).not.toHaveBeenCalled();
+    expect(writeCaptureFile).toHaveBeenCalledWith('claude', expect.any(Number), expect.any(String));
   });
 
   it('never injects into a gate when -y is not given', async () => {

@@ -28,7 +28,7 @@ Switching to a tab that already has a pending question moves keyboard focus to t
 
 Registering a question while its owning tab is not focused records `Question from <tab>` in the notifications feed when that feed is open. This event has no configuration toggle. Its tab label is a link that focuses the asking tab.
 
-No notification is added when the owning tab is already focused. As with every notification, a question raised while the notifications feed is closed is dropped rather than buffered.
+No notification is added when the owning tab is already focused. As with every notification, a question raised while the notifications feed is closed opens that feed in the right sidebar rather than being dropped.
 
 ### Ordering and lifetime
 

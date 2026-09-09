@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Managers } from '../managers.js';
+import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
 import type { Tab } from '../tab/types.js';
 import type {
   TabPluginActivation,
@@ -47,7 +48,7 @@ function makeManagers() {
   const runAs = vi.fn(async () => {});
   const tabs = [{ label: 'janus', dotColor: '#fff', log: [] }];
   const managers = {
-    tab: { tabs, append, closeTab, openPluginTab, cur: () => tabs[0] },
+    tab: { tabs, append, closeTab, openPluginTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
     openFile: { runAs },
   } as unknown as Managers;
   return { append, closeTab, managers, openPluginTab, runAs };
