@@ -5,6 +5,7 @@ import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator
 import { joinCommandPaths, remoteNavigatorPath } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
+import { harnessDropHandle } from '../harness-drop-registry';
 
 const DRAG_THRESHOLD_PX = 4;
 
@@ -49,10 +50,17 @@ export function useFileNavigatorDrag(
   const gestureRef = useRef<Gesture | null>(null);
   const overCommandBarRef = useRef(false);
   const overEditorRef = useRef(false);
+  const overHarnessRef = useRef<string | null>(null);
 
   const hovered = (x: number, y: number, selector: string): Element | null => {
     const element = document.elementFromPoint(x, y);
     return element instanceof Element ? element.closest(selector) : null;
+  };
+  // The PTY id of the harness terminal under the pointer, which is the key its own drop handle is
+  // registered under — null when the pointer is over no harness at all.
+  const hoveredHarnessPty = (x: number, y: number): string | null => {
+    const body = hovered(x, y, '[data-harness-drop]');
+    return body instanceof HTMLElement ? body.dataset.harnessDrop ?? null : null;
   };
   const hoveredRowInfo = (
     x: number, y: number,
@@ -76,6 +84,7 @@ export function useFileNavigatorDrag(
     setDropTarget(null);
     setCommandBarHighlighted(false);
     overEditorRef.current = false;
+    overHarnessRef.current = null;
   };
   const drop = () => {
     const gesture = gestureRef.current;
@@ -89,6 +98,17 @@ export function useFileNavigatorDrag(
         remoteHost
           ? gesture.sourcePaths.map((path) => remoteNavigatorPath(remoteHost, absoluteRoot, path)).join('\n')
           : gesture.sourcePaths.join('\n'),
+      );
+      resetGestureState();
+      return;
+    }
+    // A harness terminal is a command line, so the paths arrive in the same space-separated,
+    // working-directory-relative form the command bar takes: newlines would submit all but the last
+    // of them to the harness as commands.
+    const harnessPty = overHarnessRef.current;
+    if (gesture?.started && harnessPty) {
+      harnessDropHandle(harnessPty)?.insertAtCaret(
+        joinCommandPaths(absoluteRoot, gesture.sourcePaths, targetCwd, remoteHost),
       );
       resetGestureState();
       return;
@@ -125,9 +145,11 @@ export function useFileNavigatorDrag(
     if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
     const overEditor = !overBar && hovered(event.clientX, event.clientY, '[data-editor-drop]') !== null;
     overEditorRef.current = overEditor;
+    const overHarness = overBar || overEditor ? null : hoveredHarnessPty(event.clientX, event.clientY);
+    overHarnessRef.current = overHarness;
     const row = hoveredRowInfo(event.clientX, event.clientY);
     const otherRoot = row.root !== undefined && row.root !== absoluteRoot;
-    setDropTarget(overBar || overEditor || otherRoot ? null : resolveDropTarget(
+    setDropTarget(overBar || overEditor || overHarness !== null || otherRoot ? null : resolveDropTarget(
       rowsRef.current, gesture.operationPaths, row.path, remoteHost, row.host,
     ));
   };

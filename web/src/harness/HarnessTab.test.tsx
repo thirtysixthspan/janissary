@@ -5,6 +5,7 @@ import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
+import { harnessDropHandle } from '../harness-drop-registry';
 
 // ---- xterm stubs -----------------------------------------------------------
 // xterm relies on canvas/WebGL which jsdom doesn't support. We mock both
@@ -48,9 +49,11 @@ function makeKeyEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
 
 describe('HarnessTab', () => {
   let capturedKeyHandler: ((e: KeyboardEvent) => boolean) | null;
+  let capturedFocus: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     capturedKeyHandler = null;
+    capturedFocus = vi.fn();
     const { Terminal: TerminalMock } = await import('@xterm/xterm');
     vi.mocked(TerminalMock).mockImplementation(function() {
       return {
@@ -61,7 +64,7 @@ describe('HarnessTab', () => {
         attachCustomKeyEventHandler: vi.fn(function(fn: (e: KeyboardEvent) => boolean) {
           capturedKeyHandler = fn;
         }),
-        focus: vi.fn(),
+        focus: capturedFocus,
         dispose: vi.fn(),
         cols: 80,
         rows: 24,
@@ -379,5 +382,51 @@ describe('HarnessTab', () => {
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
     );
     expect(queryByTitle('New agent here')).not.toBeInTheDocument();
+  });
+
+  describe('as a file-navigator drop target', () => {
+    it('marks the terminal body with its own PTY id', () => {
+      const { container } = render(
+        <HarnessTab harness={makeHarness({ ptyId: 'pty-drop' })} client={mockClient} label="claude" />,
+      );
+      expect(container.querySelector('.harness-body')).toHaveAttribute('data-harness-drop', 'pty-drop');
+    });
+
+    it('registers a drop handle under its PTY id', () => {
+      render(<HarnessTab harness={makeHarness({ ptyId: 'pty-drop' })} client={mockClient} label="claude" />);
+      expect(harnessDropHandle('pty-drop')).toBeDefined();
+    });
+
+    it('types a dropped path into the PTY and focuses the terminal', () => {
+      render(<HarnessTab harness={makeHarness({ ptyId: 'pty-drop' })} client={mockClient} label="claude" />);
+      vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+      capturedFocus.mockClear();
+
+      harnessDropHandle('pty-drop')!.insertAtCaret('src/index.ts docs/notes.md');
+
+      expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
+        method: 'ptyInput',
+        params: { id: 'pty-drop', data: 'src/index.ts docs/notes.md' },
+      });
+      expect(capturedFocus).toHaveBeenCalled();
+    });
+
+    it('unregisters its handle when the tab unmounts', () => {
+      const { unmount } = render(
+        <HarnessTab harness={makeHarness({ ptyId: 'pty-gone' })} client={mockClient} label="claude" />,
+      );
+
+      unmount();
+
+      expect(harnessDropHandle('pty-gone')).toBeUndefined();
+    });
+
+    it('marks nothing and registers nothing while provisioning, with no PTY to write to', () => {
+      const { container } = render(
+        <HarnessTab harness={makeHarness({ status: 'provisioning', ptyId: '' })} client={mockClient} label="claude" />,
+      );
+      expect(container.querySelector('.harness-body')).not.toHaveAttribute('data-harness-drop');
+      expect(harnessDropHandle('')).toBeUndefined();
+    });
   });
 });

@@ -20,6 +20,11 @@ Everything you type goes to the harness — including `Ctrl+C`, `Ctrl+D`, and `C
 
 Tab reordering (`Ctrl+←/→`) isn't available while a harness has focus — switch to another tab first.
 
+You can also drag files in rather than type their paths: drop a selection from a
+[file navigator](/user-documentation/tab-types/file-navigator) onto the terminal and its paths are
+typed in for you, space-separated and relative to the harness's working directory, with nothing
+submitted. Focus lands in the terminal, so you can keep going from there.
+
 ## Labels
 
 <img class="agent-float left" src="/agents/ahmed-south.png" alt="" />
