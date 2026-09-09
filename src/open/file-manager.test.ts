@@ -423,6 +423,87 @@ describe('OpenFileManager.run (video)', () => {
   });
 });
 
+// A `.pdf` is claimed by no opener, so the registry lookup finds nothing. The external presentation
+// does not need one — the OS knows which application opens a PDF — while the inline presentation
+// still has no in-app view to route it to.
+describe('OpenFileManager.run (unclaimed extension)', () => {
+  type Note = { input: string; output: string };
+
+  const makeManagers = (dir: string, notes: Note[], opened: string[]) => ({
+    tab: {
+      cwdOf: () => dir,
+      launchDir: dir,
+      append: (_label: string, entry: Note) => { notes.push(entry); },
+      registerFile: (file: string) => `/open/test-${file.length}`,
+      openEditorTab: (view: { path: string }) => { opened.push(view.path); return 'editor'; },
+    },
+    plugins: { runOpener: vi.fn() },
+  } as unknown as Managers);
+
+  const temporaryPdf = () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-unclaimed-'));
+    writeFileSync(path.join(dir, 'paper.pdf'), Buffer.alloc(10));
+    return dir;
+  };
+
+  beforeEach(() => {
+    osOpen.didOsOpen.mockReset();
+    osOpen.didOsOpen.mockReturnValue(true);
+  });
+
+  it('hands a pdf to the OS handler on `open external`, opening no tab', async () => {
+    const dir = temporaryPdf();
+    const notes: Note[] = [];
+    const opened: string[] = [];
+
+    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open external paper.pdf', 'janus');
+
+    expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'paper.pdf'));
+    expect(opened).toHaveLength(0);
+    expect(notes).toEqual([{
+      input: 'open external paper.pdf', output: 'Opening paper.pdf in your default viewer…',
+    }]);
+  });
+
+  it('reports the path when the OS handoff cannot be launched', async () => {
+    const dir = temporaryPdf();
+    const notes: Note[] = [];
+    osOpen.didOsOpen.mockReturnValue(false);
+
+    await new OpenFileManager(makeManagers(dir, notes, [])).run('open external paper.pdf', 'janus');
+
+    expect(notes).toEqual([{
+      input: 'open external paper.pdf',
+      output: `No viewer available. The file is at ${path.join(dir, 'paper.pdf')}`,
+    }]);
+  });
+
+  it('still reports the unsupported type for an inline open', async () => {
+    const dir = temporaryPdf();
+    const notes: Note[] = [];
+    const opened: string[] = [];
+
+    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open paper.pdf', 'janus');
+
+    expect(osOpen.didOsOpen).not.toHaveBeenCalled();
+    expect(opened).toHaveLength(0);
+    expect(notes).toEqual([{ input: 'open paper.pdf', output: 'No opener for ".pdf" files.' }]);
+  });
+
+  it('still refuses a pinned command rather than handing the file to the OS', async () => {
+    const dir = temporaryPdf();
+    const notes: Note[] = [];
+
+    await new OpenFileManager(makeManagers(dir, notes, []))
+      .runAs('open external paper.pdf', 'video external paper.pdf', 'janus', 'video');
+
+    expect(osOpen.didOsOpen).not.toHaveBeenCalled();
+    expect(notes).toEqual([{
+      input: 'video external paper.pdf', output: 'No opener for ".pdf" files.',
+    }]);
+  });
+});
+
 describe('OpenFileManager.edit (synced path)', () => {
   type EditorTab = { label: string; editor?: { path: string; size: string; url: string; sync?: string } };
 

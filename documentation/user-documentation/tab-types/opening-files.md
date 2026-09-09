@@ -26,8 +26,11 @@ Targets with an `http://` or `https://` scheme are treated as web addresses; the
 ```
 open external photo.jpg           the OS image viewer (Preview on macOS)
 open external clip.mp4            your configured video player (QuickTime Player by default)
+open external paper.pdf           whichever application your OS opens PDFs with
 open external https://example.com the OS default browser
 ```
+
+This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.pdf` or a `.zip`, so `open external` hands the file over and confirms with `Opening paper.pdf in your default viewer…`. If nothing can be launched, you get the file's path instead.
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
 
@@ -85,5 +88,5 @@ Mistakes are reported in the current tab before anything opens:
 
 - A malformed invocation prints the usage line: `open [external] [page] <target>`.
 - A file that doesn't exist gets a not-found message.
-- A file type with no viewer is reported as unsupported.
+- A file type with no viewer is reported as unsupported when you open it in the app. Use `open external <file>` to hand it to your operating system instead.
 - A malformed or non-`http(s)` address is reported as invalid.
