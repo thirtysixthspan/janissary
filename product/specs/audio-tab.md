@@ -62,7 +62,7 @@ Playback state is live and in-memory: it belongs to the open tab, not to the fil
 
 A container in the playable set can still hold a codec the app cannot decode, and a file can be corrupt. When the player reports a decode failure for an entry, that entry is **dropped from the playlist and the next track starts**. One bad file can never stall a queue, and playback is not interrupted to ask about it.
 
-The drop is reported to the **notifications feed** and nowhere else: the player itself shows nothing, and no line is written to the originating transcript. As with every notification, the line is dropped when no notifications feed is open — a dropped track never conjures the feed into existence. When the feed is open the line always appears, including while the audio tab itself is the one the user is watching (see [[notifications]]).
+The drop is reported to the **notifications feed** and nowhere else: the player itself shows nothing, and no line is written to the originating transcript. As with every notification, the line opens the feed in the right sidebar when none is open. It always appears, including while the audio tab itself is the one the user is watching (see [[notifications]]).
 
 A decode failure is a normal media outcome and does not disable the plugin. Neither does a select or remove request the plugin considers malformed, or one naming a track the queue does not hold: it is refused and the tab keeps working. By contrast, a rejected or timed-out plugin chunk, incompatible payload schema, render exception, or server plugin failure disables the audio plugin, closes the audio tab, and reports the standard plugin failure message. See [[tab-plugins]].
 

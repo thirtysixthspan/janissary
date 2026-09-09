@@ -6,6 +6,7 @@ import {
   type AmbientNotificationEvent, type ExplicitNotificationEvent,
 } from './notifications.js';
 import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
+import { fakeNotificationsHost } from './notifications-tab-test-fixture.js';
 
 const allOn: NotificationConfig = {
   events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true, rateLimited: true },
@@ -332,14 +333,51 @@ describe('notify — line composition', () => {
     expect(entry.openFile).toBeUndefined();
   });
 
-  // Plugin activity must never conjure the feed into existence, exactly as a plugin failure does not.
-  it('drops a plugin note entirely when no notifications feed is open', () => {
+  // Every event that passes `shouldNotify` is guaranteed a feed to land in, a plugin's note as much
+  // as anything else — a note about the very tab the user is watching is the line that matters most.
+  it('opens the feed for a plugin note when none is open', () => {
     const append = vi.fn();
     const janus = { label: 'janus', dotColor: '#abc', log: [] };
-    const managers = { tab: { tabs: [janus], byLabel: (l: string) => (l === 'janus' ? janus : undefined), cur: () => janus, append } } as unknown as Managers;
+    const tabs = [janus];
+    const managers = {
+      tab: {
+        tabs,
+        byLabel: (l: string) => (l === 'janus' ? janus : undefined),
+        cur: () => janus,
+        append,
+        ...fakeNotificationsHost(tabs),
+      },
+    } as unknown as Managers;
 
     notify(managers, 'plugin-note', 'janus', 'Dropped a.mp3 — it could not be played.');
 
+    expect(tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(true);
+    expect(append).toHaveBeenCalledWith(
+      NOTIFICATIONS_LABEL,
+      expect.objectContaining({ output: 'Dropped a.mp3 — it could not be played.' }),
+    );
+  });
+
+  // An event the config and focus rules reject costs nothing and opens nothing — the ambient
+  // toggles stay a volume control rather than a way to fill the screen with sidebars.
+  it('opens nothing for an ambient event whose toggle is off', () => {
+    const append = vi.fn();
+    const janus = { label: 'janus', dotColor: '#abc', log: [] };
+    const build = { label: 'build', dotColor: '#def', log: [] };
+    const tabs = [janus, build];
+    const managers = {
+      tab: {
+        tabs,
+        byLabel: (l: string) => tabs.find((t) => t.label === l),
+        cur: () => janus,
+        append,
+        ...fakeNotificationsHost(tabs),
+      },
+    } as unknown as Managers;
+
+    notify(managers, 'state-change', 'build');
+
+    expect(tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(false);
     expect(append).not.toHaveBeenCalled();
   });
 

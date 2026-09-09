@@ -25,11 +25,11 @@ describe('notify command', () => {
     expect(entries.some((e) => e.output === 'deploy finished' && !!e.from?.endsWith('janus'))).toBe(true);
   });
 
-  it('is a no-op (drops the message, creates nothing) when the notifications tab is closed', () => {
-    const before = managers.tab.tabs.length;
+  it('opens the feed docked right and posts into it when the notifications tab is closed', () => {
     command.run('notify deploy finished', { label: 'janus', index: 0 }, managers);
-    expect(notificationsTab(managers)).toBeUndefined();
-    expect(managers.tab.tabs).toHaveLength(before);
+    const feed = notificationsTab(managers);
+    expect(feed?.dock).toBe('right');
+    expect(feed!.log.some((e) => e.output === 'deploy finished')).toBe(true);
   });
 
   it('fires even when the issuing tab is the active tab (bypasses focus suppression)', () => {

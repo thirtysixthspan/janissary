@@ -36,7 +36,7 @@ directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
 
 ### `notify`
 
-`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles but obeys the drop-if-closed rule: if the notifications tab is not open, the message is dropped and nothing is recorded in the feed. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
+`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles, and — like every recorded event — opens the notifications tab docked into the right sidebar when none is open, so the message always lands somewhere. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
 
 ### `quit`
 

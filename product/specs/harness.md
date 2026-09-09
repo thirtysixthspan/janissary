@@ -224,10 +224,9 @@ notification line carries a link to it: one click opens the whole account in an 
 way the line for an auto-approved permission prompt opens the screen behind it. A browser that said
 nothing writes no file and its line carries no link.
 
-The log is written whether or not the notifications tab is open, unlike the screen capture behind an
-auto-approved prompt, which is written only for an open feed. Approvals are routine and would pile up
-unread; a browser dying is rare and its evidence is the point — the same reasoning that keeps the
-scratch directory below. These files live under the project's `.janissary/` directory and are cleared
+The log is written whether or not the notifications tab is open — as is the screen capture behind an
+auto-approved prompt, now that a recorded notification always has a feed to land in. Both are
+evidence for a line the user will see. These files live under the project's `.janissary/` directory and are cleared
 when janissary next starts, along with every other artifact directory there.
 
 The report also names how a browser ended, since a browser can die without saying anything at all.
@@ -306,8 +305,9 @@ the input caret is back on screen — does not trigger an approval.
 At the moment of a successful auto-approval, the app also saves the harness's on-screen text to a
 file and attaches a clickable, outline-style clipboard-icon link before that same notification line's
 text; clicking the link opens the captured text in an ordinary editor tab, so the user can review
-exactly what was auto-approved after the fact. The capture file is written only when the notification is actually
-recorded (the notifications tab is open), so no orphan files are left behind when the feed is closed. This link is
+exactly what was auto-approved after the fact. The capture file is written whenever the notification
+is recorded, which is every successful auto-approval — the line opens the feed when none is open, so
+there is no approval whose capture nobody could read. This link is
 added only for successful auto-approvals — a prompt still awaiting the user, and the stand-down
 "could not clear the permission prompt" case, get no capture and no link.
 
@@ -315,7 +315,8 @@ If an approved prompt does not clear (the same gate screen redraws unchanged), t
 re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
 standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory
 per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
-every notification, the `auto-approve` line is only recorded while the notifications tab is open.
+every notification, the `auto-approve` line opens the notifications feed in the right sidebar when
+none is open.
 
 A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
 Metadata row in `tabs.md`.

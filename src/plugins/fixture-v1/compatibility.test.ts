@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../../managers.js';
+import { fakeNotificationsHost } from '../../notifications-tab-test-fixture.js';
 import type { Tab } from '../../tab/types.js';
 import { createPluginCommands } from '../command-adapter.js';
 import { createPluginOpeners } from '../opener-adapter.js';
@@ -23,6 +24,7 @@ function makeManagers() {
     openFiles,
     append: vi.fn(),
     cur: () => tabs[0],
+    ...fakeNotificationsHost(tabs),
     registerFile,
     openPluginTab: (
       id: string, prefix: string, key: string, schema: number, source: string,

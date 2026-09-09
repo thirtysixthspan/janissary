@@ -1,7 +1,7 @@
 import type { NotificationConfig } from './config.js';
 import type { Managers } from './managers.js';
 import { getConfig } from './config.js';
-import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './notifications-tab.js';
+import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from './notifications-tab.js';
 
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
@@ -146,10 +146,13 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
   }
 }
 
-// Record a notification for an event on `tabLabel`. Returns immediately (costing nothing, and
-// never creating the tab) while the notifications tab is closed, so the event path is free when the
-// feed is not open. Otherwise it consults the config + focus rules via `shouldNotify` and, on pass,
-// appends the derived line. `message` is the event-specific detail (see `notificationText`).
+// Record a notification for an event on `tabLabel`. The config + focus rules run first, via
+// `shouldNotify`: an event they reject costs nothing and opens nothing, which is what keeps the
+// ambient toggles a volume control rather than a way to fill the screen with sidebars. An event
+// they accept is guaranteed a feed to land in — the open one, or a new one docked right — and then
+// appends the derived line. `shouldNotify` also has to be asked before the feed is revealed because
+// it reads the active tab's label, which opening a tab changes. `message` is the event-specific
+// detail (see `notificationText`).
 export function notify(
   managers: Managers,
   event: NotificationEventType,
@@ -158,9 +161,9 @@ export function notify(
   openFile?: string,
   openTab?: string,
 ): void {
-  if (!notificationsTab(managers)) return;
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
+  revealNotificationsTab(managers);
   const fromColor = managers.tab.byLabel(tabLabel)?.dotColor;
   // The dot label is the notification's provenance header — when, then who — so the line reads
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.

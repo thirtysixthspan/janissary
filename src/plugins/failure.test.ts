@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
 import {
   pluginFailureMessage,
   pluginFailureReason,
@@ -15,13 +16,15 @@ function makeManagers(options: { origin?: boolean; notifications?: boolean } = {
     ...(options.notifications ? [notifications] : []),
   ];
   const append = vi.fn();
-  const openNotificationsTab = vi.fn();
+  const host = fakeNotificationsHost(tabs);
+  const openNotificationsTab = vi.fn(host.openNotificationsTab);
   const managers = {
     tab: {
       tabs,
       byLabel: (label: string) => tabs.find((t: { label: string }) => t.label === label),
       append,
       cur: () => origin,
+      ...host,
       openNotificationsTab,
     },
   } as unknown as Managers;
@@ -61,13 +64,16 @@ describe('reportPluginFailure', () => {
     );
   });
 
-  it('does not create or append to a closed notifications feed', () => {
+  it('opens a closed notifications feed and appends the failure to it', () => {
     const fixture = makeManagers();
     const before = fixture.tabs.length;
     reportPluginFailure(fixture.managers, 'video', 'failed', origin);
-    expect(fixture.append).toHaveBeenCalledTimes(1);
-    expect(fixture.openNotificationsTab).not.toHaveBeenCalled();
-    expect(fixture.tabs).toHaveLength(before);
+    expect(fixture.openNotificationsTab).toHaveBeenCalled();
+    expect(fixture.tabs).toHaveLength(before + 1);
+    expect(fixture.append).toHaveBeenCalledWith(
+      NOTIFICATIONS_LABEL,
+      expect.objectContaining({ output: 'Tab plugin "video" disabled: failed.' }),
+    );
   });
 
   it('does not recreate a closed originating tab', () => {
