@@ -12,6 +12,9 @@ import { NOTIFICATIONS_LABEL, notificationsTab, appendNotification } from './not
 // that an ssh tab's or a harness tab's session recording was abandoned, so nothing more of that
 // session lands on disk, and `file-operation`
 // reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
+// `open-unsupported` reports that `open` found no opener for a file's extension — a deliberate
+// action's answer, and the one dispatcher error a file navigator activation can produce, where the
+// originating tab renders rows rather than a transcript.
 // `plugin-note` is a line a tab plugin reported through
 // its own `notifyUser` capability — a track a playlist had to drop, say — as opposed to
 // `plugin-failure`, which the host reports when a plugin breaks. `e2e-browser-gone` reports that a
@@ -33,6 +36,7 @@ export type NotificationEventType =
   | 'harness-recording-failed'
   | 'e2e-browser-gone'
   | 'file-operation'
+  | 'open-unsupported'
   | 'plugin-failure'
   | 'plugin-note';
 
@@ -62,12 +66,13 @@ export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof Notification
 
 // The events that are always eligible and bypass focus suppression. `manual` is an explicit
 // `notify`, `auto-approve` an auto-approved permission gate, `editor-suggest` a persona query's
-// failure, `question` an agent waiting on a human. The rest — a lost transcript, an abandoned
+// failure, `question` an agent waiting on a human, `open-unsupported` an `open` that found no
+// opener. The rest — a lost transcript, an abandoned
 // recording, a dead browser, a failed file operation, a plugin's own note or breakage — bypass it
 // for one shared reason: the tab it happened to is very often the tab the user is watching, which
 // is exactly the case focus suppression would discard.
 //
-// Keyed by the union so a seventeenth event stops compiling here until it is classified, rather
+// Keyed by the union so an eighteenth event stops compiling here until it is classified, rather
 // than falling through a `default` arm to `false` and never reaching the feed.
 export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   manual: true,
@@ -79,6 +84,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'harness-recording-failed': true,
   'e2e-browser-gone': true,
   'file-operation': true,
+  'open-unsupported': true,
   'plugin-failure': true,
   'plugin-note': true,
 };
@@ -128,7 +134,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'manual':
     case 'auto-approve':
     case 'editor-suggest':
-    case 'file-operation': { return detail ?? ''; }
+    case 'file-operation':
+    case 'open-unsupported': { return detail ?? ''; }
     case 'plugin-failure':
     case 'plugin-note': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
