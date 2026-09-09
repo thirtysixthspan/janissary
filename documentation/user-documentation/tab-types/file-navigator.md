@@ -82,6 +82,8 @@ The button doesn't show up for a directory with no `origin` remote, a remote tha
 
 Anywhere the header shows a branch name, it also shows a **Pull from origin** button (tooltip "Pull from origin"), between the GitHub button and the search button. Clicking it runs `git pull` in the tree's own folder, then refreshes the tree: rows are re-read from disk and the branch text and status colors are recomputed, so what you see matches what the pull brought down. For a tree rooted on a remote host, the pull runs there, inside the workspace.
 
+Files the pull added appear and files it removed disappear, at the top level and inside every folder you had open — and the folders you had open stay open. A folder only closes on a refresh when it is really gone from the folder that held it.
+
 The button tells you how the pull is going. Its icon spins while the pull runs, turns green when the pull works, and turns red when it doesn't — the same signals a [git-synced](/user-documentation/tab-types/editor-git-sync) editor tab's sync icon gives. Hovering names the state. A few seconds after the pull settles the button goes back to normal, so a green or red button always means "just now" rather than "at some point today".
 
 Clicking again while a pull is still running does nothing, so overlapping pulls can't collide.

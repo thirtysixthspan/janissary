@@ -21,6 +21,11 @@ export type FilesTabState = {
   listings: Map<string, FileNavigatorEntry[]>;
   listingLoads: Set<string>;
   statLoads: Set<string>;
+  // Bumped every time the whole cache is dropped — a pull, a reroot, a retarget. An asynchronous
+  // read captures it before it starts, so on resolution it can tell whether the cache it was
+  // started for is still the current one; a read from an earlier generation is discarded rather
+  // than written, which is what stops a listing read before a pull from being rendered after it.
+  cacheGeneration: number;
   debounce?: ReturnType<typeof setTimeout>;
   // Set while the tab is waiting for its root to be created (see `pollForCreation`); cleared once
   // the directory appears.
