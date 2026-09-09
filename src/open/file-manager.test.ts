@@ -9,11 +9,13 @@ import { openerForExtension } from '../openers/index.js';
 import { EDITOR_MAX_BYTES } from '../openers/editor.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
+const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
 
 vi.mock('../config.js', () => ({
   getConfig: () => ({ syncPaths: ['synced/'], externalViewers: { video: 'QuickTime Player' } }),
 }));
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
+vi.mock('../notifications.js', () => ({ notify: notifications.notify }));
 
 describe('OpenFileManager.edit', () => {
   it('opens the editor for a new file that does not exist on disk', () => {
@@ -449,6 +451,7 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
   beforeEach(() => {
     osOpen.didOsOpen.mockReset();
     osOpen.didOsOpen.mockReturnValue(true);
+    notifications.notify.mockReset();
   });
 
   it('hands a pdf to the OS handler on `open external`, opening no tab', async () => {
@@ -478,7 +481,9 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
     }]);
   });
 
-  it('still reports the unsupported type for an inline open', async () => {
+  // The originating tab may be a file navigator, which renders rows rather than a transcript, so
+  // the unsupported-type report goes to the notifications feed instead of that tab's log.
+  it('notifies rather than writing to the transcript for an inline open', async () => {
     const dir = temporaryPdf();
     const notes: Note[] = [];
     const opened: string[] = [];
@@ -487,7 +492,10 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
 
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
     expect(opened).toHaveLength(0);
-    expect(notes).toEqual([{ input: 'open paper.pdf', output: 'No opener for ".pdf" files.' }]);
+    expect(notes).toHaveLength(0);
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".pdf" files.',
+    );
   });
 
   it('still refuses a pinned command rather than handing the file to the OS', async () => {
@@ -498,9 +506,10 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
       .runAs('open external paper.pdf', 'video external paper.pdf', 'janus', 'video');
 
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
-    expect(notes).toEqual([{
-      input: 'video external paper.pdf', output: 'No opener for ".pdf" files.',
-    }]);
+    expect(notes).toHaveLength(0);
+    expect(notifications.notify).toHaveBeenCalledWith(
+      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".pdf" files.',
+    );
   });
 });
 

@@ -95,6 +95,14 @@ These event types can produce a notification line:
   <name>: <reason> | <name>: <reason>` instead. A file navigator pull reports through this same event
   and is the one case that also reports a success: `Pulled from origin: <git summary>` when the pull
   worked, `Could not pull: <git error>` when it did not.
+- **`open-unsupported`** — `open <file>` found no opener registered for the file's extension (see
+  [[open]]). The line is the same `No opener for "<ext>" files.` the dispatcher has always
+  produced, attributed to the tab the command was issued from. It is reported here rather than in
+  that tab's transcript because a file navigator activation produces it too, and a file navigator
+  renders rows rather than a transcript — the message would be written where nobody reads it. It is
+  the only one of the dispatcher's errors that moves: a missing file, a malformed invocation, an
+  unviewable web address, and a plugin command's refusal are all still reported where the command
+  was typed.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
   neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled
@@ -104,15 +112,17 @@ These event types can produce a notification line:
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
-`editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, and
-`plugin-note` events have no toggle. A `question` event fires only for a background tab.
+`editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
+`open-unsupported`, and `plugin-note` events have no toggle. A `question` event fires only for a
+background tab.
 
 ### Focus suppression
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
-`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, and `plugin-note` events **bypass focus suppression**: they still
+`transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
+`plugin-note` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is

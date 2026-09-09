@@ -12,6 +12,7 @@ import { runOpenCommand, pinnedOpenerRefusal } from './file-command.js';
 import { getConfig } from '../config.js';
 import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
 import { isSyncedPath } from '../sync-path-match.js';
 
 export type EditResult = { label: string };
@@ -105,7 +106,9 @@ export class OpenFileManager {
     // is refused below rather than quietly launched.
     if (!opener) {
       if (external && requireOpener === undefined) { openInDefaultViewer(file, context); return; }
-      this.managers.tab.append(label, { input: command, output: `No opener for "${path.extname(file) || '(none)'}" files.` });
+      // The one dispatcher error a file navigator activation can produce, and that tab renders rows
+      // rather than a transcript — so it goes to the notifications feed instead of the tab's log.
+      notify(this.managers, 'open-unsupported', label, `No opener for "${path.extname(file) || '(none)'}" files.`);
       return;
     }
     if (requireOpener !== undefined && opener.name !== requireOpener) {

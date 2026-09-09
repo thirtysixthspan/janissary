@@ -641,11 +641,23 @@ describe('Controller open command', () => {
     expect(c.view()).toHaveLength(1);
   });
 
-  it('reports no opener for an unsupported file type', () => {
+  it('reports no opener for an unsupported file type in the notifications feed', () => {
+    const file = temporaryImage('notes.xyz');
+    const { c } = makeController();
+    openNotificationsTab(c.managers);
+    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
+    c.dispatch(`open ${file}`);
+    const feed = c.view().find((t) => t.view === 'notifications')!;
+    expect(feed.bufferLines.map((l) => l.text).join('\n')).toContain('No opener for ".xyz" files');
+    expect(c.view().find((t) => t.label === 'janus')!.bufferLines.map((l) => l.text).join('\n'))
+      .not.toContain('No opener');
+  });
+
+  it('drops the unsupported-type report when the notifications feed is closed', () => {
     const file = temporaryImage('notes.xyz');
     const { c } = makeController();
     c.dispatch(`open ${file}`);
-    expect(allText(c)).toContain('No opener for ".xyz" files');
+    expect(allText(c)).not.toContain('No opener');
     expect(c.view()).toHaveLength(1);
   });
 

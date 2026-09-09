@@ -39,7 +39,7 @@ Resolution reads the opener registry, which is built from static declarations, s
 
 Every existing sender of `edit <path>` reaches the same place without changing: the command line, the quick-open picker, a transcript file link, the transcript line's own open control, and Shift-activation of a row in the file navigator.
 
-Error handling, surfaced in the active tab before any opener runs:
+Error handling, surfaced before any opener runs — in the active tab, except where noted:
 
 - **No opener for the extension** — only the inline presentation needs one. `open <file>` reports
   that the file type is unsupported, because there is no in-app view to route it to, while `open
@@ -50,6 +50,11 @@ Error handling, surfaced in the active tab before any opener runs:
   now do something. A **plugin's own command** is the exception: it is a second route into one
   opener, so `video external <file>` reports the unsupported type rather than handing a file that
   opener does not claim to the operating system.
+
+  This one report does not go to the active tab's transcript. It is raised as an
+  `open-unsupported` notification (see [[notifications]]), because a file navigator activation
+  produces it too and that tab renders rows rather than a transcript. Like every notification it is
+  subject to the drop-if-closed rule: with the feed closed, the report is not recorded anywhere.
 - **Missing target or malformed invocation** — a usage message: `open [external] [page] <target>`.
 - **Unviewable or malformed web address** — a message reporting the address is invalid (for example, a non-`http`/`https` scheme).
 - **File does not exist** — a not-found message. Existence is checked before dispatch, so every file opener may assume the file is present.
@@ -87,7 +92,7 @@ A path with no wildcard characters is always a single literal target (so a name 
 - `open external <path>` — hand a file to an **external program** (for images, the OS image viewer).
 - `open external <url>` / `open external page <address>` — open a web address in the **OS default browser**.
 
-Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered when opened in the app, and goes to the operating system's handler when opened externally.
+Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered — in the notifications feed — when opened in the app, and goes to the operating system's handler when opened externally.
 
 ---
 
