@@ -16,7 +16,7 @@ The harness takes over the whole tab: no transcript, no command bar — you're t
 
 ## Typing into a harness
 
-Everything you type goes to the harness — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+R`. Two things are held back for the app: `Shift+←`/`Shift+→` still switch tabs, and clicks on the tab strip still work. Switching to a harness tab focuses its terminal automatically, so you can type immediately. `Shift+Enter` is delivered as a line continuation rather than a submit, which is how you compose multi-line prompts in harnesses like claude.
+Everything you type goes to the harness — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+R`. A few things are held back for the app: `Shift+←`/`Shift+→` still switch tabs, clicks on the tab strip still work, and the copy chords below are taken while text is selected. Switching to a harness tab focuses its terminal automatically, so you can type immediately. `Shift+Enter` is delivered as a line continuation rather than a submit, which is how you compose multi-line prompts in harnesses like claude.
 
 Tab reordering (`Ctrl+←/→`) isn't available while a harness has focus — switch to another tab first.
 
@@ -24,6 +24,25 @@ You can also drag files in rather than type their paths: drop a selection from a
 [file navigator](/user-documentation/tab-types/file-navigator) onto the terminal and its paths are
 typed in for you, space-separated and relative to the harness's working directory, with nothing
 submitted. Focus lands in the terminal, so you can keep going from there.
+
+## Copying text out of a harness
+
+To select text, hold `Option` while you drag across it (`Shift`+drag on Windows and Linux). Then
+`Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection. Right-clicking a selection
+offers your browser's own **Copy** over the same text.
+
+The modifier is needed because a harness like claude asks for every click and drag to be reported
+to it, so a plain drag talks to the harness rather than selecting anything. Holding the modifier
+keeps that one drag for yourself.
+
+The copy chords are taken only while something is selected. With nothing selected they go straight
+to the harness, so `Ctrl+C` never stops being the interrupt.
+
+Pasting needs nothing special: `Cmd+V` (`Ctrl+V` on Windows and Linux) types the clipboard into the
+harness.
+
+Selecting and copying work the same in every terminal in the app, including
+[`shell`](/user-documentation/command-bar/shell) takeovers and [SSH sessions](#ssh-sessions).
 
 ## Labels
 

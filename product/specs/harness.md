@@ -385,6 +385,29 @@ multi-line prompts be composed in the harness without any harness-side terminal 
 applies to every xterm.js terminal in the app (harness tabs, interactive PTY takeover, terminal
 cards).
 
+### Selecting and copying terminal text
+
+A harness normally takes the mouse for itself — claude and the other TUI harnesses ask the terminal
+to report every click, drag, and movement to them — so an ordinary drag across the terminal drives
+the harness rather than selecting anything. Holding the terminal's forcing modifier while dragging
+selects text instead: **Option+drag** on macOS, **Shift+drag** elsewhere. A drag that selects is not
+reported to the harness. On macOS this replaces Option+drag's block-column selection and
+Option+click's move-the-cursor behavior, neither of which is reachable while the harness owns the
+mouse anyway.
+
+**Cmd+C** (macOS) and **Ctrl+Shift+C** (every platform) copy the terminal's current selection to the
+system clipboard. Both are held back from the harness only while something is selected; with an
+empty selection they reach it like any other key, so **Ctrl+C** remains the harness's interrupt and
+is never read as a copy. A picker overlay open over the tab still claims the chord first. Right-clicking
+a selection offers the browser's own Copy over the same text.
+
+Pasting needs no chord of its own: **Cmd+V** (macOS) and **Ctrl+V** (elsewhere) arrive as the
+browser's native paste and are delivered to the harness as typed input, bracketed when the harness
+has asked for bracketed paste.
+
+Selection and copy behave this way in every xterm.js terminal in the app — harness tabs, interactive
+PTY takeover, and terminal cards.
+
 ## Tab strip
 
 The tab's name in the strip is the tab's unique label — the harness name by default (`claude`,

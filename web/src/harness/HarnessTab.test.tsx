@@ -50,12 +50,22 @@ function makeKeyEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
 describe('HarnessTab', () => {
   let capturedKeyHandler: ((e: KeyboardEvent) => boolean) | null;
   let capturedFocus: ReturnType<typeof vi.fn>;
+  let capturedOptions: Record<string, unknown>;
+  let selection: string;
+  let writeText: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     capturedKeyHandler = null;
     capturedFocus = vi.fn();
+    capturedOptions = {};
+    selection = '';
+    writeText = vi.fn(() => Promise.resolve());
+    // Defined on the real navigator rather than stubbed wholesale: jsdom ships no clipboard, but
+    // `platform` must survive for isMacPlatform and for the tests that spy on it.
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const { Terminal: TerminalMock } = await import('@xterm/xterm');
-    vi.mocked(TerminalMock).mockImplementation(function() {
+    vi.mocked(TerminalMock).mockImplementation(function(options: Record<string, unknown>) {
+      capturedOptions = options;
       return {
         loadAddon: vi.fn(),
         open: vi.fn(),
@@ -64,6 +74,8 @@ describe('HarnessTab', () => {
         attachCustomKeyEventHandler: vi.fn(function(fn: (e: KeyboardEvent) => boolean) {
           capturedKeyHandler = fn;
         }),
+        hasSelection: vi.fn(() => selection.length > 0),
+        getSelection: vi.fn(() => selection),
         focus: capturedFocus,
         dispose: vi.fn(),
         cols: 80,
@@ -382,6 +394,54 @@ describe('HarnessTab', () => {
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
     );
     expect(queryByTitle('New agent here')).not.toBeInTheDocument();
+  });
+
+  // A harness like claude turns on mouse reporting the moment it starts, which switches xterm's
+  // selection service off. Without the override below no drag can select anything, so every copy
+  // route — the chord and the terminal's right-click menu alike — has nothing to copy.
+  describe('selecting and copying terminal text', () => {
+    it('creates the terminal so a modifier-drag still selects while the harness holds the mouse', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      expect(capturedOptions.macOptionClickForcesSelection).toBe(true);
+    });
+
+    it('copies the terminal selection on Cmd+C instead of passing it to the harness', () => {
+      const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      selection = 'selected harness output';
+      expect(capturedKeyHandler!(makeKeyEvent({ metaKey: true, key: 'c' }))).toBe(false);
+      expect(writeText).toHaveBeenCalledWith('selected harness output');
+      platform.mockRestore();
+    });
+
+    it('copies the terminal selection on Ctrl+Shift+C', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      selection = 'selected harness output';
+      expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+      expect(writeText).toHaveBeenCalledWith('selected harness output');
+    });
+
+    it('leaves Ctrl+C alone so it still interrupts the harness', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      selection = 'selected harness output';
+      expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, key: 'c' }))).toBe(true);
+      expect(writeText).not.toHaveBeenCalled();
+    });
+
+    it('passes the copy chord to the harness when nothing is selected', () => {
+      const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      expect(capturedKeyHandler!(makeKeyEvent({ metaKey: true, key: 'c' }))).toBe(true);
+      expect(writeText).not.toHaveBeenCalled();
+      platform.mockRestore();
+    });
+
+    it('leaves the copy chord to an open picker rather than claiming it', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" taskPickerOpen />);
+      selection = 'selected harness output';
+      expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+      expect(writeText).not.toHaveBeenCalled();
+    });
   });
 
   describe('as a file-navigator drop target', () => {

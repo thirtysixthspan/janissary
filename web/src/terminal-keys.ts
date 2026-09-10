@@ -20,6 +20,15 @@ export function altArrowSequence(e: KeyboardEvent, isMac: boolean): string | nul
   return null;
 }
 
+// The copy chord for a terminal, which has to differ from the usual one because Ctrl+C is the
+// interrupt the program is entitled to: Ctrl+Shift+C is what emulators bind everywhere, and Cmd+C
+// joins it on macOS, where Ctrl+C is still the interrupt and Cmd+C is free.
+export function copySelectionChord(e: KeyboardEvent, isMac: boolean): boolean {
+  if (e.key.toLowerCase() !== 'c' || e.altKey) return false;
+  if (e.ctrlKey && e.shiftKey && !e.metaKey) return true;
+  return isMac && e.metaKey && !e.ctrlKey && !e.shiftKey;
+}
+
 export function isMacPlatform(): boolean {
   const platform = navigator.platform || navigator.userAgent;
   return platform.includes('Mac');
