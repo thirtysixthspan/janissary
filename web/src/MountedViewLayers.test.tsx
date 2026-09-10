@@ -25,10 +25,10 @@ let editorMountCount = 0;
 vi.mock('./editor/EditorTab', () => {
   const { forwardRef, useImperativeHandle, useEffect, createElement } = React;
   return {
-    EditorTab: forwardRef((_props, ref) => {
+    EditorTab: forwardRef(({ visible }: { visible?: boolean }, ref) => {
       useImperativeHandle(ref, () => ({ isDirty: () => false, save: async () => {}, focus: () => {} }), []);
       useEffect(() => { editorMountCount += 1; }, []);
-      return createElement('div', { 'data-testid': 'editor' });
+      return createElement('div', { 'data-testid': 'editor', 'data-visible': String(visible) });
     }),
   };
 });
@@ -150,6 +150,39 @@ describe('MountedViewLayers', () => {
     );
     const el = container.querySelector('.tab-body') as HTMLElement;
     expect(el.style.display).toBe('flex');
+  });
+
+  // The editor tab restores its scroll offset when its body comes back on screen, so what it is
+  // told has to match the `display` its wrapper gets — not which tab happens to be focused, which
+  // in a split leaves one visible body unfocused.
+  it('tells the editor tab its body is on screen even when another pane holds the focus', () => {
+    const tabs = [makeEditorTab('etab', '/test.ts'), makeEditorTab('other', '/other.ts')];
+    const harnessHandles = makeHarnessHandles();
+    const tabHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[1], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, tabHandles, visibleLabels: ['etab', 'other'],
+      }),
+    );
+    const unfocused = container.querySelector('.tab-body') as HTMLElement;
+    expect(unfocused.style.display).toBe('flex');
+    expect(unfocused.querySelector<HTMLElement>('[data-testid="editor"]')?.dataset.visible).toBe('true');
+  });
+
+  it('tells the editor tab its body is hidden when it is left out of the visible set', () => {
+    const tabs = [makeEditorTab('etab', '/test.ts'), makeEditorTab('other', '/other.ts')];
+    const harnessHandles = makeHarnessHandles();
+    const tabHandles = makeEditorHandles();
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[1], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles, tabHandles, visibleLabels: ['other'],
+      }),
+    );
+    const hidden = container.querySelector('.tab-body') as HTMLElement;
+    expect(hidden.style.display).toBe('none');
+    expect(hidden.querySelector<HTMLElement>('[data-testid="editor"]')?.dataset.visible).toBe('false');
   });
 
   it('does not remount the editor tab when only its url/name/path change (rename)', () => {

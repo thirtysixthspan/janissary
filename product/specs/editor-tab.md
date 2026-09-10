@@ -358,7 +358,11 @@ through heavily wrapped text covers more than one screen.
 
 Switching away from an editor tab and back leaves its scroll position exactly as it was, even if the
 cursor is outside the visible viewport when the tab was left. Returning to the tab does not snap the
-view back to the caret — only an actual cursor movement while the tab is active does that.
+view back to the caret — only an actual cursor movement while the tab is active does that. The caret
+comes back on the same line and column it had, and returning the focus to the tab never pulls the
+view to the top of the file. This holds however the tab left the screen: focusing a different tab in
+the same pane, or, in a split, being replaced by another tab in its own pane while the focus sits in
+the other one.
 
 Clicking a `path:line` link in the transcript (see Transcript) opens the editor with the cursor
 already on the target line, scrolled to the middle of the tab so the surrounding context is visible

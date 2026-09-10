@@ -252,6 +252,50 @@ describe('EditorTab', () => {
     expect(scrollMock).not.toHaveBeenCalled();
   });
 
+  // A hidden tab body has no layout, so the browser throws its scroll offset away; `hide` below is
+  // that reset, which jsdom has no way to perform on its own.
+  it('restores the scroll position when a hidden editor tab comes back on screen', async () => {
+    const { client } = makeClient();
+    const view = makeView();
+    const { container, rerender } = await renderLoaded(client, view);
+    const body = container.querySelector('.editor-body') as HTMLElement;
+    body.scrollTop = 240;
+    fireEvent.scroll(body);
+
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    body.scrollTop = 0;
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+
+    expect(body.scrollTop).toBe(240);
+  });
+
+  it('leaves the caret on the line and column it had before the tab was hidden', async () => {
+    const { client } = makeClient();
+    const view = makeView();
+    const { container, rerender } = await renderLoaded(client, view);
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight' });
+
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+
+    expect(container.querySelector(':scope .editor-row-current .editor-content')?.textContent).toBe('line one');
+    expect(textBeforeCaret(container)).toBe('li');
+  });
+
+  it('refocuses without letting the browser scroll the off-screen textarea into view', async () => {
+    const { client } = makeClient();
+    const view = makeView();
+    const { rerender } = await renderLoaded(client, view);
+    const focusSpy = vi.spyOn(textarea(), 'focus');
+
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} visible={false} />);
+    rerender(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active visible />);
+
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+    focusSpy.mockRestore();
+  });
+
   it('places the cursor on the given (1-based) line when opened with a target line', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client, makeView({ line: 2 }));

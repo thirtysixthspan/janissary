@@ -11,6 +11,7 @@ import { useEditorConnections } from './useEditorConnections';
 import { useEditorFind } from './useEditorFind';
 import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { useEditorInteractions } from './useEditorInteractions';
+import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { keepCaretRowVisible } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
@@ -29,9 +30,13 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   tab: TabView;
   client: JanusClient;
   active: boolean;
+  // Whether the tab's body is on screen at all. In a split it can be shown without being the
+  // focused tab, and hidden while the focus sits in the other pane, so this is what the scroll
+  // retention keys on rather than `active`. A standalone render is on screen.
+  visible?: boolean;
   dropRef?: React.RefObject<EditorDropHandle | null>;
   onSplit?: () => void;
-}>(function EditorTab({ editor, tab, client, active, dropRef, onSplit }, ref) {
+}>(function EditorTab({ editor, tab, client, active, visible = true, dropRef, onSplit }, ref) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
@@ -75,8 +80,12 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     };
   }
 
+  const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
+
   const loaded = state !== null;
-  useEffect(() => { if (active && loaded) textareaRef.current?.focus(); }, [active, loaded]);
+  // `preventScroll` because the textarea is pinned to the top of the scrollport (see theme.css): a
+  // plain focus() on a scrolled buffer drags it back into view, undoing the restored position.
+  useEffect(() => { if (active && loaded) textareaRef.current?.focus({ preventScroll: true }); }, [active, loaded]);
   const initialScrollDone = useRef(false);
   const lastCursorRef = useRef<{ line: number; col: number } | null>(null);
   useEffect(() => {
@@ -125,6 +134,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         className="editor-body"
         ref={bodyRef}
         data-editor-drop
+        onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >
