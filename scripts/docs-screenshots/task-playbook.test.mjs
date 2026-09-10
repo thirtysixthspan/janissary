@@ -95,8 +95,14 @@ describe('take-documentation-screenshots playbook', () => {
     expect(playbook).toContain(OUTPUT_DIRECTORY);
   });
 
+  // The `$janissary` spelling is the point, not an accident: a task prompt is inserted as `execute
+  // $janissary/ai/tasks/<path>` and runs against whatever project the tab is open on, where a
+  // relative `./scripts/run.mjs` resolves into that project and finds no runner. The negative pin
+  // catches the reverse drift, which the positive one cannot — a prompt that reverted to the
+  // relative path while still naming the absolute one somewhere would otherwise keep passing.
   it('names a real script-runner target and a real npm script', () => {
-    expect(playbook).toContain('./scripts/run.mjs docs-screenshots');
+    expect(playbook).toContain('$janissary/scripts/run.mjs docs-screenshots');
+    expect(playbook).not.toContain('./scripts/run.mjs');
     expect(existsSync(path.join(repoRoot, 'scripts', 'docs-screenshots.mjs'))).toBe(true);
     expect(playbook).toContain('npm run build:web');
     expect(packageScripts['build:web']).toBeDefined();
