@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from './ws';
-import { altArrowSequence, isMacPlatform, shiftEnterSequence } from './terminal-keys';
+import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal-keys';
 
 type UseXtermOptions = {
   ptyId: string;
@@ -26,6 +26,11 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
     const term = new Terminal({
       fontFamily: fontFamily || 'monospace', fontSize: 13.5, lineHeight: 1.2, cursorBlink: true,
       theme: { background: '#17181b', foreground: '#e4e5e7' },
+      // A harness turns on mouse reporting the moment it starts, which switches xterm's selection
+      // service off so the program owns the mouse. Every emulator keeps a modifier that forces a
+      // selection anyway; xterm's is Shift off macOS, and Option on it — but only once this is set.
+      // Without it macOS has no gesture that selects harness output, so nothing can be copied.
+      macOptionClickForcesSelection: true,
     });
     termRef.current = term;
     const fit = new FitAddon();
@@ -53,6 +58,12 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
         return false;
       }
       if (keyFilterRef.current && !keyFilterRef.current(e)) return false;
+      // Only claimed while something is selected, so Ctrl+C stays the harness's interrupt and a
+      // selection-less Cmd+C reaches it unchanged.
+      if (copySelectionChord(e, isMac) && term.hasSelection()) {
+        void navigator.clipboard.writeText(term.getSelection());
+        return false;
+      }
       const wordMotion = altArrowSequence(e, isMac);
       if (wordMotion !== null) {
         sendKey(wordMotion);
