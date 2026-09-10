@@ -4,6 +4,8 @@
 
 ## development
 
+* copy and paste via key bindings or context menus do not work from harness tabs, like claude. Part of the problem may be the selection of text to be copied. 
+
 ## deferred
 
 * when closing harness tabs, the tab disappears, but the UI is not responsive for many seconds afterwards. the UI should retain responsible when closing harness tabs. Any teardown should be completed in the background, asynchronously. This may only apply to local tabs. more research needed.
