@@ -86,7 +86,8 @@ export function MountedViewLayers({
 
       {indexedTabs(tabs, isEditorTabView).map(({ t, index }) => (
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
-          <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label} dropRef={editorDropRef}
+          <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label}
+            visible={visibleLabels.includes(t.label)} dropRef={editorDropRef}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
         </TabBodyDiv>
