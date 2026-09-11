@@ -2,9 +2,9 @@
 
 ## ready
 
-## development
+* copying text from remote harness tabs for claude and opencode does not work, but works for all local harness tabs.
 
-* copy and paste via key bindings or context menus do not work from harness tabs, like claude. Part of the problem may be the selection of text to be copied. 
+## development
 
 ## deferred
 
