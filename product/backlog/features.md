@@ -12,6 +12,8 @@ https://chatgpt.com/codex/settings/usage to purchase more credits or try again a
 Claude example message: 
 You've hit your session limit resets 1:20pm (America/Chicago)
 
+* allow workspaced harnesses to request spin up of a browser for testing purposes instead of spinning up the browser wwhen the harness is launched. the harness flag -b should still gate the ability of the tab to spin up a browser.
+
 ## development
 
 ## deferred
