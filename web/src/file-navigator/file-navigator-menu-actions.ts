@@ -39,16 +39,15 @@ export type FileNavigatorActions = {
   menuActions: FileNavigatorMenuActions;
 };
 
-// A remote tree has no shell to run a command in, so every creation and edit it makes travels as a
-// protocol call; a local one goes through the command line the same way a typed command would, so
-// the action lands in history beside the user's own.
+// Every edit travels as the navigator-scoped RPC: the server resolves the tab index to the
+// navigator's own label and root, so no command is issued and nothing lands in any tab's
+// transcript, command history, or queue — local and remote trees alike.
 export function createFileNavigatorActions({
   files, client, index, intents, selection, opener, paste, deletion, rename, rowEvents,
   multiOpenSelection, setPendingNewDir,
 }: Params): FileNavigatorActions {
-  const editFile = (path: string) => files.remote
-    ? client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command: 'edit' } })
-    : intents.sendCommand(`edit ${files.absoluteRoot}/${path}`);
+  const editFile = (path: string) =>
+    client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command: 'edit' } });
 
   const createNewFile = () => {
     const destination = newFileTargetDir(files.rows, selection.cursor) ?? '';

@@ -316,45 +316,46 @@ describe('FileNavigatorTab', () => {
     expect(getClipboardSnapshot()).toBeNull();
   });
 
-  it('double-click on a file row sends an open command', () => {
+  it('double-click on a file row opens it via the navigator-scoped RPC', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'open' } });
   });
 
-  it('Shift+double-click on a file row sends an edit command', () => {
+  it('Shift+double-click on a file row edits it via the navigator-scoped RPC', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'), { shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'edit' } });
   });
 
-  it('double-click on a markdown file row sends an edit command', () => {
+  it('double-click on a markdown file row edits it via the navigator-scoped RPC', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' } });
   });
 
-  it('Shift+double-click on a markdown file row sends an open command', () => {
+  it('Shift+double-click on a markdown file row opens it via the navigator-scoped RPC', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'open' } });
   });
 
-  it('double-click on a file row uses the unshortened absoluteRoot, not the display-abbreviated root', () => {
+  it('double-click sends tree-relative paths, never the display-abbreviated root or a command message', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const files = makeFiles({ root: '~/project', absoluteRoot: '/Users/derrick/project' });
     render(<FileNavigatorTab files={files} client={client} index={0} />);
     fireEvent.dblClick(screen.getByText('index.ts'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /Users/derrick/project/src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'open' } });
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
   });
 
   it('shows opener choices for an unsupported file and edits it when chosen', async () => {
@@ -369,7 +370,7 @@ describe('FileNavigatorTab', () => {
     fireEvent.dblClick(screen.getByText('data.xyz'));
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Open data.xyz' })).toBeInTheDocument());
     fireEvent.click(screen.getByText('Edit as text'));
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/data.xyz' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 3, relPath: 'data.xyz', command: 'edit' } });
   });
 
   it('collapse-all button sends fileNavigatorCollapseAll', () => {
@@ -395,7 +396,7 @@ describe('FileNavigatorTab', () => {
     const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' }); // no selection yet -> defaults to src (index 0), moves to src/index.ts
     fireEvent.keyDown(tree, { key: 'Enter' });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'open /home/user/project/src/index.ts' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'open' } });
   });
 
   it('ArrowRight on a collapsed dir sends fileNavigatorToggle', () => {
@@ -428,7 +429,20 @@ describe('FileNavigatorTab', () => {
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'command', params: { text: 'edit /home/user/project/README.md' } });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' } });
+  });
+
+  it('activating a file never injects a command into any tab: every gesture stays on the navigator RPC', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.dblClick(screen.getByText('index.ts'));
+    fireEvent.dblClick(screen.getByText('README.md'), { shiftKey: true });
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'Enter' });
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
+    expect(send).toHaveBeenCalledTimes(3);
   });
 
   it('type-ahead jumps to a matching row', () => {
@@ -1360,7 +1374,7 @@ describe('FileNavigatorTab', () => {
       expect(screen.queryByText('Edit')).not.toBeInTheDocument();
     });
 
-    it.each(['notes.txt', 'photo.png'])('choosing Edit for %s sends its absolute edit command', (name) => {
+    it.each(['notes.txt', 'photo.png'])('choosing Edit for %s edits it via the navigator-scoped RPC', (name) => {
       const send = vi.fn();
       const client = { send } as unknown as JanusClient;
       const files = makeFiles({ rows: [{ path: name, name, depth: 0, dir: false }] });
@@ -1368,7 +1382,7 @@ describe('FileNavigatorTab', () => {
       fireEvent.contextMenu(screen.getByText(name));
       fireEvent.click(screen.getByText('Edit'));
       expect(send).toHaveBeenCalledWith({
-        method: 'command', params: { text: `edit /home/user/project/${name}` },
+        method: 'fileNavigatorOpen', params: { index: 0, relPath: name, command: 'edit' },
       });
     });
 
@@ -1384,8 +1398,8 @@ describe('FileNavigatorTab', () => {
       fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
       fireEvent.contextMenu(screen.getByText('second.jpg'));
       fireEvent.click(screen.getByText('Open'));
-      expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'open /home/user/project/first.png' } });
-      expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'open /home/user/project/second.jpg' } });
+      expect(send).toHaveBeenNthCalledWith(1, { method: 'fileNavigatorOpen', params: { index: 0, relPath: 'first.png', command: 'open' } });
+      expect(send).toHaveBeenNthCalledWith(2, { method: 'fileNavigatorOpen', params: { index: 0, relPath: 'second.jpg', command: 'open' } });
     });
 
     it('edits every selected image from a selected image row', () => {
@@ -1400,8 +1414,8 @@ describe('FileNavigatorTab', () => {
       fireEvent.mouseDown(screen.getByText('second.jpg'), { button: 0, metaKey: true });
       fireEvent.contextMenu(screen.getByText('second.jpg'));
       fireEvent.click(screen.getByText('Edit'));
-      expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'edit /home/user/project/first.png' } });
-      expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'edit /home/user/project/second.jpg' } });
+      expect(send).toHaveBeenNthCalledWith(1, { method: 'fileNavigatorOpen', params: { index: 0, relPath: 'first.png', command: 'edit' } });
+      expect(send).toHaveBeenNthCalledWith(2, { method: 'fileNavigatorOpen', params: { index: 0, relPath: 'second.jpg', command: 'edit' } });
     });
 
     it('choosing Delete opens the ordinary delete confirmation', () => {
@@ -1495,10 +1509,10 @@ describe('FileNavigatorTab', () => {
       await act(async () => { fireEvent.click(screen.getByText('Open with')); });
       fireEvent.click(screen.getByText('Edit as text'));
       expect(send).toHaveBeenNthCalledWith(1, {
-        method: 'command', params: { text: 'edit /home/user/project/src' },
+        method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src', command: 'edit' },
       });
       expect(send).toHaveBeenNthCalledWith(2, {
-        method: 'command', params: { text: 'edit /home/user/project/README.md' },
+        method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' },
       });
     });
 
