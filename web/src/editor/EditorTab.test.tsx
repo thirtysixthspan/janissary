@@ -138,7 +138,7 @@ describe('EditorTab', () => {
   it('auto-focuses the textarea once the file has loaded', async () => {
     const { client } = makeClient();
     await renderLoaded(client);
-    expect(document.activeElement).toBe(textarea());
+    await waitFor(() => expect(document.activeElement).toBe(textarea()));
   });
 
   it('starts the cursor on the first line when opened without a target line', async () => {
