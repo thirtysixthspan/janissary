@@ -38,7 +38,7 @@ export function FileNavigatorTab({
   const search = useFileNavigatorSearch(
     client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
   );
-  const opener = useFileNavigatorOpener(client, index, files.absoluteRoot, files.remote !== undefined);
+  const opener = useFileNavigatorOpener(client, index);
   const deletion = useFileNavigatorDelete(client, index);
   const paste = useFileNavigatorPaste(client, index, files.absoluteRoot, files.remote?.host);
   const selectionAction = useSelectionAction(client, index);
