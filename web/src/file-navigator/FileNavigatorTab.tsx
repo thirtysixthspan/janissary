@@ -80,7 +80,7 @@ export function FileNavigatorTab({
   const {
     editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
   } = createFileNavigatorActions({
-    files, client, index, intents, selection, opener, paste, deletion, rename, rowEvents,
+    files, client, index, selection, opener, paste, deletion, rename, rowEvents,
     multiOpenSelection, setPendingNewDir,
   });
 

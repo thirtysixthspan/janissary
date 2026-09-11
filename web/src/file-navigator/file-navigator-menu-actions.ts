@@ -1,10 +1,9 @@
 import type { FileNavigatorRow, FileNavigatorView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { copySelectionToClipboards } from './file-navigator-copy';
-import { newFileTargetDir, newFileCommand, newDirectoryCommand, newDirectoryTargetPath } from './file-navigator-new-file';
+import { newFileTargetDir, newDirectoryTargetPath } from './file-navigator-new-file';
 import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
-import type { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
@@ -15,7 +14,6 @@ type Params = {
   files: FileNavigatorView;
   client: JanusClient;
   index: number;
-  intents: ReturnType<typeof useFileNavigatorIntents>;
   selection: ReturnType<typeof useFileNavigatorSelection>;
   opener: ReturnType<typeof useFileNavigatorOpener>;
   paste: ReturnType<typeof useFileNavigatorPaste>;
@@ -43,7 +41,7 @@ export type FileNavigatorActions = {
 // navigator's own label and root, so no command is issued and nothing lands in any tab's
 // transcript, command history, or queue — local and remote trees alike.
 export function createFileNavigatorActions({
-  files, client, index, intents, selection, opener, paste, deletion, rename, rowEvents,
+  files, client, index, selection, opener, paste, deletion, rename, rowEvents,
   multiOpenSelection, setPendingNewDir,
 }: Params): FileNavigatorActions {
   const editFile = (path: string) =>
@@ -51,22 +49,13 @@ export function createFileNavigatorActions({
 
   const createNewFile = () => {
     const destination = newFileTargetDir(files.rows, selection.cursor) ?? '';
-    if (files.remote) {
-      client.send({ method: 'fileNavigatorCreateFile', params: { index, destination } });
-      return;
-    }
-    const text = newFileCommand(files.absoluteRoot, destination || null);
-    intents.sendCommand(text);
+    client.send({ method: 'fileNavigatorCreateFile', params: { index, destination } });
   };
 
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
-    if (files.remote) {
-      client.send({ method: 'fileNavigatorCreateDirectory', params: { index, destination: targetDir ?? '' } });
-      return;
-    }
-    intents.sendCommand(newDirectoryCommand(files.absoluteRoot, targetDir));
+    client.send({ method: 'fileNavigatorCreateDirectory', params: { index, destination: targetDir ?? '' } });
   };
 
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
