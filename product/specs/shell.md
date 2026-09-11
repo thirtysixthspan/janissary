@@ -69,6 +69,10 @@ Commands delivered by `msg`/`broadcast` and commands fired by a schedule run in 
 
 `shell --pty <command>` forces PTY takeover regardless of whether `<command>` is on the interactive-program list, for commands that need a real terminal but aren't auto-detected. A bare `shell --pty`, with no command following, opens the user's login shell (`$SHELL`, falling back to `bash`) directly in a PTY — an interactive shell prompt inside the tab.
 
+### `!` and `!!` shorthand
+
+`!<command>` is shorthand for `shell <command>` — a terser way to run a command in the shell without typing the keyword. `!!<command>` is shorthand for `shell --pty <command>`, forcing PTY takeover the same way the flag does. A bare `!!`, like a bare `shell --pty`, opens the user's login shell directly in a PTY.
+
 ### Multi-tab persistence
 
 All agent tabs with a running interactive PTY stay mounted simultaneously (only the active tab is visible, the rest use `display: none`). This preserves xterm state — alternate-screen TUIs like `htop` keep their cursor position and screen buffer intact across tab switches.

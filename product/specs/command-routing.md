@@ -1,8 +1,9 @@
 # Command Routing
 
 How an **unprefixed** command typed into a tab is classified and dispatched. Explicit commands —
-built-ins (`help`, `agent`, `db …`, `connection …`, …) and the `shell ` / `db ` / `acp ` prefixes —
-are resolved directly by `resolveCommand` (`src/server/resolve.ts`) and never reach routing. Anything
+built-ins (`help`, `agent`, `db …`, `connection …`, …) and the `shell ` / `db ` / `acp ` prefixes,
+including the `!` / `!!` shorthand for `shell` / `shell --pty` — are resolved directly by
+`resolveCommand` (`src/server/resolve.ts`) and never reach routing. Anything
 left over (an unrecognized, unprefixed line) is run through probabilistic recognition to decide
 whether it is a shell command, a SQL query, or a natural-language agent prompt — auto-dispatching when
 the guess is confident, and otherwise asking the user to pick via a **route chooser**.
@@ -74,7 +75,8 @@ can be aimed at a specific connection).
 - Routing only ever rewrites a command into an explicit, prefixed form — it never invents new behavior,
   so the chosen route runs exactly as if the user had typed the prefix.
 - An explicit prefix always wins: prefixing with `shell `, `db `, or `acp ` bypasses recognition
-  entirely, which is the deterministic escape hatch when a guess would be wrong.
+  entirely, which is the deterministic escape hatch when a guess would be wrong. `!` and `!!` are
+  shorthand for `shell` and `shell --pty` and bypass recognition the same way.
 - Every built-in is recognized identically on every path that dispatches a command — typed into a tab,
   sent to another agent's tab as a `command` message, or asked of it as a `request`. A command that
   launches an AI harness or an ssh session when typed does the same when it arrives from another
