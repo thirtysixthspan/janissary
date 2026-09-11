@@ -2,6 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
+import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
@@ -42,6 +43,7 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
       />
+      <DefaultContextMenu />
     </div>
   );
 }
