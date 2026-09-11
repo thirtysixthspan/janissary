@@ -20,7 +20,8 @@ export type Resolution =
  * foreground tab can run interactive/app commands; a remote agent refuses them).
  *
  * - `shell`: run in a shell. Explicitly requested via a leading `shell ` keyword — there
- *   is no bare auto-run, so a non-built-in typed without the keyword is unknown.
+ *   is no bare auto-run, so a non-built-in typed without the keyword is unknown. A leading
+ *   `!` or `!!` is shorthand for `shell` / `shell --pty` respectively.
  * - `app`: an application built-in that needs live state.
  * - `output`: a built-in with textual output to display (also the "unknown command" reply).
  * - `empty`: nothing to do.
@@ -28,6 +29,16 @@ export type Resolution =
 export function resolveCommand(raw: string): Resolution {
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'empty' };
+
+  // `!!<cmd>` and `!<cmd>` are shorthand for `shell --pty <cmd>` and `shell <cmd>`. Checked
+  // before the `shell` keyword below, and `!!` before `!`, since a leading `!` alone would
+  // also match the two-character prefix.
+  if (trimmed.startsWith('!!')) {
+    return { kind: 'shell', cmd: trimmed.slice(2).replace(/^\s+/, ''), pty: true };
+  }
+  if (trimmed.startsWith('!')) {
+    return { kind: 'shell', cmd: trimmed.slice(1).replace(/^\s+/, '') };
+  }
 
   // Shell commands are launched with the `shell` keyword, which is stripped before the
   // command reaches the shell. A leading `--pty` flag forces the command into an interactive
