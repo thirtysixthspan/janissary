@@ -85,6 +85,8 @@ The stage shows the document in one of two layouts:
 - **Continuous scroll** — every page stacked vertically in one scrolling stage, the way a markdown
   tab scrolls.
 
+The stage exposes scrollbars when the document overflows, including in continuous layout and when zoomed in. They show the scroll position and can be dragged to move through the document.
+
 A tab opens in **single page**. An icon-only button in the header switches between the two; its name
 and tooltip say what the click will do, reading `Continuous scroll` while the tab is showing one page
 and `Single page` while it is scrolling. Switching keeps the page currently in view. The choice is per

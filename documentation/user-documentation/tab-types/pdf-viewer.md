@@ -27,6 +27,8 @@ A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-p
 
 The keys only reach the PDF tab you are looking at — one hidden behind another tab, or in the other split pane, ignores them.
 
+When the document overflows the stage, you can also drag its scrollbars to move through it.
+
 ## Jumping between pages
 
 The pages button in the header shows a strip of page thumbnails down the left edge. It starts hidden, so a document you have just opened is all document. Click a thumbnail to jump to that page; the page you are on is highlighted as you scroll. The button reads `Show pages` or `Hide pages`, whichever the click will do.

@@ -1,16 +1,5 @@
 # pull-request
 
-* Restore a visible scrollbar on the PDF stage, which inherits the image tab's hidden-scrollbar rule and leaves a scrolling document with no scroll indicator.
-
-Existing Issue: `web/src/plugins/pdf/PdfStage.tsx` renders the stage with the shared `plugin-stage` class, whose rules in `web/src/plugins/shared.css` set `scrollbar-width: none` and hide the WebKit scrollbar outright, and `web/src/plugins/pdf/pdf.css` overrides that class's cursor and alignment for `.pdf-stage` but not its scrollbar, so continuous scroll and any zoomed-in page scroll with no visible bar. Severity: 4/10
-
-Existing Risk: 4/10 - A reader in continuous scroll has no indication of how far through a long document they are and no bar to drag to get somewhere quickly, leaving the keys and a strip that starts hidden as the only navigation, which is the opposite of the honest-scroll-extent property the page placeholders were built to provide.
-
-Proposal Risk: 1/10 - A scrollbar inside the stage takes width from the box the fit is computed against, so a fitted page can end up a few pixels narrower than before unless the fit is measured after the bar exists.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: show a scrollbar on the PDF stage". In `web/src/plugins/pdf/pdf.css`, add `scrollbar-width: thin` to the existing `.pdf-stage` rule and a `.pdf-stage::-webkit-scrollbar` rule re-enabling display, mirroring what that file already does for `.pdf-thumbnails`; do not edit `web/src/plugins/shared.css`, because the image tab's drag-to-pan stage deliberately hides its scrollbar and every other plugin stage inherits that rule. Keep the override scoped to `.pdf-stage` so only this plugin's stage changes. Because `PdfStage` measures `clientWidth`, which excludes a classic scrollbar, confirm in the running app that a fitted single page is still fitted rather than one bar-width too wide once the bar appears; if it is not, the fix belongs with the stage measurement rather than here. No test covers stage styling — `web/src/plugins/pdf/PdfTab.test.tsx` runs in jsdom, which lays out nothing — so this step is verified by hand in the app with a multi-page document in continuous scroll.
-
-
 * Account for the native canvas binary that arrives in the dependency tree behind the new PDF renderer, which the pull request's supply-chain gating and its "one new runtime dependency" claim both pass over.
 
 Existing Issue: `pdfjs-dist@6.3.289` declares `@napi-rs/canvas` as an optional dependency, so `package-lock.json` gains that package plus eleven prebuilt per-platform native binaries, none of which the browser half of this plugin can use — `web/src/plugins/pdf/pdf-document.ts` renders into a DOM canvas — and the gate the pull request reports running covered only the direct package. Severity: 4/10

@@ -22,7 +22,8 @@
 
 /* The stage scrolls in both axes past 100%, so the shared stage's grab cursor — which belongs to the
    image tab's drag-to-pan — does not apply here. */
-.pdf-stage { cursor: auto; align-items: safe center; }
+.pdf-stage { cursor: auto; align-items: safe center; scrollbar-width: thin; }
+.pdf-stage::-webkit-scrollbar { display: block; }
 .pdf-stage.pdf-continuous { align-items: safe center; justify-content: flex-start; }
 .pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px; }
 
