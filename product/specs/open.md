@@ -33,9 +33,9 @@ The chosen presentation of the selected opener is then invoked.
 
 ### `edit` dispatches by file type
 
-`edit <file>` normally bypasses the opener registry entirely and hands the file to the plain-text editor — that bypass is how markdown and extensionless files (`Makefile`, `.gitignore`) get edited. One check runs first: an opener may declare that it edits its own files, and for those extensions `edit` reaches that opener's **edit presentation** instead. The image opener is the only one that does so today, so `edit photo.png` opens the image editor while `edit src/index.ts` and `edit Makefile` still open the plain-text editor.
+`edit <file>` normally bypasses the opener registry entirely and hands the file to the plain-text editor — that bypass is how markdown and extensionless files (`Makefile`, `.gitignore`) get edited. One check runs first: an opener may declare that it edits its own files, and for those extensions `edit` reaches that opener's **edit presentation** instead. Two openers do so today — the image opener and the PDF opener — so `edit photo.png` opens the image editor and `edit paper.pdf` opens the PDF viewer, while `edit src/index.ts` and `edit Makefile` still open the plain-text editor.
 
-Resolution reads the opener registry, which is built from static declarations, so asking whether a plugin owns the verb never activates it. One consequence is accepted rather than worked around: **`edit photo.png` can no longer open a PNG as raw text**, and there is no escape hatch for that. A `:line` suffix still parses as it does for any file; an image has no lines, so the editor discards it and the path still opens.
+Resolution reads the opener registry, which is built from static declarations, so asking whether a plugin owns the verb never activates it. One consequence is accepted rather than worked around: **`edit photo.png` can no longer open a PNG as raw text**, and the same now holds for `edit paper.pdf`; there is no escape hatch for either. A `:line` suffix still parses as it does for any file; neither an image nor a PDF has lines, so the suffix is discarded and the path still opens.
 
 Every existing sender of `edit <path>` reaches the same place without changing: the command line, the quick-open picker, a transcript file link, the transcript line's own open control, and Shift-activation of a row in the file navigator.
 
@@ -45,7 +45,7 @@ Error handling, surfaced before any opener runs — in the active tab, except wh
   that the file type is unsupported, because there is no in-app view to route it to, while `open
   external <file>` hands the file to the operating system's handler and confirms the same way every
   other external open does — the operating system already knows which application claims the type,
-  so a PDF reaches the system viewer without any opener claiming `.pdf`. When opened from the file
+  so a `.zip` archive reaches the system's archive utility without any opener claiming it. When opened from the file
   navigator, a chooser offers editing the file as text or opening it externally, and both choices
   now do something. A **plugin's own command** is the exception: it is a second route into one
   opener, so `video external <file>` reports the unsupported type rather than handing a file that
@@ -180,6 +180,38 @@ Because it is a route into one opener rather than into the registry, `audio` onl
 In a file navigator, the gesture that normally forces the plain-text editor is inverted for an audio row: because a binary audio file has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation queues the file in the app as usual.
 
 The plugin also contributes an **Add to playlist** entry to the row context menu for a multi-row selection of audio files, which queues every selected file in order through this same opener. See [[file-navigator-tab]].
+
+---
+
+## PDF plugin opener
+
+The bundled `pdf` tab plugin contributes an opener for the `.pdf` extension (case-insensitive). Its static declaration is available at startup, but its behavior activates only on the first matching `open`, `edit`, or `pdf` command.
+
+### The configured viewer
+
+Which application receives a PDF handed to the operating system is set by the **external viewers** setting (see [[application-config]]), a map keyed by opener name whose `pdf` entry names the application to launch. Clearing the entry means "use the operating system's default handler for the file type". The setting is edited by hand; there is no command to change it.
+
+### `open external <file>.pdf`
+
+Hands the file to the configured viewer, launched detached so it never blocks the app, and confirms in the active tab which application was used. When no viewer is configured — or the app cannot launch one by name on this platform — the file goes to the operating system's default handler instead, with a correspondingly generic confirmation. If neither can be launched, the file's path is reported instead.
+
+### `open <file>.pdf` — PDF tab
+
+Opens the document in a **PDF tab**: a non-agent view tab that renders the pages in the app, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a PDF tab focuses that tab rather than opening a second one. The PDF tab — its two layouts, the page strip, zoom, keys, text selection, and what happens when a document cannot be rendered — is described in [[pdf-tab]].
+
+### `edit <file>.pdf` — the same tab
+
+The PDF opener claims the `edit` verb for its own file type, so `edit <file>.pdf` reaches the viewer rather than the plain-text editor. A PDF has one presentation: the edit route opens the tab under the same identity the plain route uses, the file's path, so a document already open is focused rather than opened a second time. Nothing in this tab writes to the file.
+
+### `pdf <path>`
+
+The plugin also contributes `pdf <path>`. It is a second route into the same opener and has the same relative-path resolution, wildcard expansion, sorted processing, ten-file limit, missing-file errors, transcript attribution, and focus-existing behavior as `open <path>`. Bare `pdf` prints `Usage: pdf <path>`.
+
+Because it is a route into one opener rather than into the registry, `pdf` only opens PDFs: a file that exists but belongs to another opener is reported as not a PDF file rather than opened, and `pdf external <file>` on a non-PDF reports the unsupported type rather than handing the file to the operating system.
+
+### File navigator gestures
+
+The PDF opener declares no inverted edit gesture, so both activations of a PDF row show the document: plain activation runs `open` and the gesture that normally forces the plain-text editor runs `edit`, which the opener claims. Handing a PDF to an external application from the navigator is reached through the row's **Open with** chooser. See [[file-navigator-tab]].
 
 ---
 

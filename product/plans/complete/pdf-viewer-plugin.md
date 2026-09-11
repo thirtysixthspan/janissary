@@ -44,6 +44,20 @@ This feature adds `pdf` as a bundled tab plugin alongside image, markdown, video
 
 The weight is not guessed at and then forgotten: the implementer records the built chunk's size once it exists, which is what a later decision to drop one bundle would need. Dropping the character maps degrades CJK and unusual-encoding documents; dropping the font data degrades documents relying on the standard 14 fonts; neither breaks the viewer, so both remain revisitable without redesign.
 
+*Measured, at `pdfjs-dist@6.3.289`.* The entry bundle is unchanged — nothing from PDF.js reaches it. What a session that opens a PDF downloads, and nothing else does:
+
+| Emitted | Size | Gzipped |
+|---|---|---|
+| `assets/pdf-*.js` — the plugin's lazy chunk, PDF.js's main build included | 437.8 kB | 131.6 kB |
+| `assets/pdf-*.css` — the shared plugin rules, this plugin's own, and pdfjs-dist's stylesheet | 231.3 kB | 42.1 kB |
+| `assets/pdf.worker.min-*.mjs` — fetched once, when the first document loads | 1,265.4 kB | — |
+| `pdfjs/cmaps/` — 169 files, fetched per document and only when one needs a character map | 1.6 MB total | — |
+| `pdfjs/standard_fonts/` — 16 files, fetched only for a document that embeds no fonts | 816 kB total | — |
+
+The two asset directories are the revisitable part and they are the larger part: they are served on demand, a file at a time, so the cost of keeping both is disk in `web/dist` rather than anything a reader waits for.
+
+*One deviation from what this plan assumed.* `pdfjs-dist@6` no longer ships a text-layer-only stylesheet — `web/pdf_viewer.css` is the single stylesheet it publishes, and it carries the whole viewer application's rules, including a `:root` block setting a color scheme. The decision stands as written (import the dependency's own file rather than restate its geometry, so it tracks upgrades), and the one rule that would otherwise reach past this plugin's tab is put back in `pdf.css`, which loads after it. That counter-rule is the price of the stylesheet now carrying more than the text layer; it is also the whole of what leaks, which is what makes the trade acceptable.
+
 **Everything else is inherited from the plugin contract, not decided here.** A PDF tab is a live in-memory view tab: it joins the active tab's group, takes a distinct dot color, carries the file's name, path, and human-readable size plus one registered reference for the bytes, de-duplicates on the file path so reopening focuses the existing tab, shows a close button, docks into either sidebar, is captured and reissued by a profile, and is not restored by `--relaunch`. None of that is written again for this plugin — it is what `product/specs/tab-plugins.md:39`–`:45` already says every v1 plugin tab does.
 
 ## What already exists (reuse, don't rebuild)

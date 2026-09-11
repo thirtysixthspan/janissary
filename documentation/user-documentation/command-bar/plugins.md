@@ -23,7 +23,7 @@ Each line names the plugin, its own version, the plugin API version it was built
 
 <img class="agent-float left" src="/agents/yusuf-south-east.png" alt="" />
 
-A plugin owns a kind of tab and the ways you reach it. The [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), and the [schedules](/user-documentation/automation/scheduling) list are all plugin tabs. You reach them the way you always have: `open` on a file the plugin claims, `open <url>`, or the plugin's own command such as `video` or `audio`. Nothing about typing a command changes because a plugin is behind it.
+A plugin owns a kind of tab and the ways you reach it. The [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), and the [schedules](/user-documentation/automation/scheduling) list are all plugin tabs. You reach them the way you always have: `open` on a file the plugin claims, `open <url>`, or the plugin's own command such as `video`, `audio`, or `pdf`. Nothing about typing a command changes because a plugin is behind it.
 
 Plugin tabs are live views. They aren't restored by `janus --relaunch`, though `profile save` records most of them and reopens them by reissuing the same command you would type.
 

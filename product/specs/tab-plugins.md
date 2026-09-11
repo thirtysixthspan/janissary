@@ -144,6 +144,14 @@ It answers one intent: writing an edited image as a PNG over the original file. 
 
 Markdown is a bundled plugin like any other: it contributes the `.md` and `.markdown` extensions and their content type, and both presentations of `open`. It declares no command and no file-navigator edit gesture, so `open <file>.md` and `open external <file>.md` behave as they always have and a plainly activated Markdown row still opens in the text editor. It answers no intents; the view's scroll position is entirely client-side. Reopening a file that already has a markdown tab focuses that tab, the same de-duplication every plugin view gets. See [[markdown-tab]] and [[open]].
 
+### Bundled PDF plugin
+
+PDF is a bundled plugin like any other: it contributes the `.pdf` extension and its content type, both presentations of `open`, and `pdf <path>`. `pdf <path>` follows the same path parsing, wildcard expansion, existence checks, transcript provenance, deduplication, and focus-existing behavior as `open <file>.pdf`.
+
+It is the second plugin to claim the `edit` command for its own file type, and the first to claim it while declaring **no** file-navigator edit gesture — the two are mutually exclusive and `edit` wins, so both activations of a PDF row in the navigator show the document rather than sending one of them out to the operating system. A PDF has one presentation, so the edit route opens the tab under the same identity the plain route uses and nothing in the plugin ever writes to the file; its tab registers no unsaved work.
+
+It answers one intent: the client's report that a document failed to load. The failure is detected in the browser, where the renderer is, but the client sends only one value from a closed set — password-protected, unreadable, or anything else — and the server maps it to the fixed line that reaches the notifications feed, so the feed's wording is never a client's to choose. A value outside that set is a rejected request rather than a broken plugin. The layout, zoom, current page, and page strip are entirely client-side. See [[pdf-tab]] and [[open]].
+
 ### Bundled page plugin
 
 Page is the bundled plugin that claims web addresses, so `open <url>`, `open page <address>`, and either with `external` reach it rather than a built-in opener. It declares no extensions and no command. It answers what the user types into the address bar and what the embedded page relays back, moving the tab's identity to whatever address the tab has reached, and reports the page's visible text for a watching monitor. Everything the user sees is unchanged by its being a plugin, except that a page tab is now closed by its name like every other plugin tab, and reopening an address that is already open focuses that tab. See [[embedded-web-page]] and [[open]].

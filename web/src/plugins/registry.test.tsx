@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { IMAGE_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/image/shared';
 import { MARKDOWN_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/markdown/shared';
+import { PDF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/pdf/shared';
 import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shared';
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
@@ -15,6 +16,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)
       .toBe(CONVERSATIONS_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
   });
