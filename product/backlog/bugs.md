@@ -2,6 +2,18 @@
 
 ## ready
 
+* controller tests are intermittently failing in the CI due to timeout. 
+ FAIL   server  src/controller.test.ts > Controller notifications feed > records an incoming message to a background tab when the notifications tab is open
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/controller.test.ts:1611:3
+    1609|     c.view().find((t) => t.view === 'notifications')!.bufferLines.map(…
+    1610|
+    1611|   it('records an incoming message to a background tab when the notific…
+       |   ^
+    1612|     withConfig({ incomingMessage: true, stateChange: false, scheduleFi…
+    1613|     try {
+
 ## development
 
 ## deferred
