@@ -42,10 +42,11 @@ function turn(query: string, response: string, streaming?: true) {
   };
 }
 
-function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0) {
+function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0, clientHeight = 300) {
   Object.defineProperties(element, {
     scrollHeight: { value: scrollHeight, writable: true, configurable: true },
     scrollTop: { value: scrollTop, writable: true, configurable: true },
+    clientHeight: { value: clientHeight, writable: true, configurable: true },
   });
 }
 
@@ -95,6 +96,45 @@ describe('ConversationTab', () => {
     />);
     const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
     stubScroll(viewport, 800);
+    Object.defineProperty(viewport, 'scrollHeight', {
+      value: 1200, writable: true, configurable: true,
+    });
+    rendered.rerender(<ConversationTab
+      payload={payload({ turns: [turn('question', 'partial answer', true)] })}
+      capabilities={value}
+    />);
+    expect(viewport.scrollTop).toBe(1200);
+  });
+
+  it('stops following once the user scrolls away from the bottom while a response streams', () => {
+    const { value } = capabilities();
+    const rendered = render(<ConversationTab
+      payload={payload({ turns: [turn('question', '', true)] })}
+      capabilities={value}
+    />);
+    const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
+    stubScroll(viewport, 800);
+    fireEvent.scroll(viewport, { target: { scrollTop: 200 } });
+    Object.defineProperty(viewport, 'scrollHeight', {
+      value: 1200, writable: true, configurable: true,
+    });
+    rendered.rerender(<ConversationTab
+      payload={payload({ turns: [turn('question', 'partial answer', true)] })}
+      capabilities={value}
+    />);
+    expect(viewport.scrollTop).toBe(200);
+  });
+
+  it('resumes following once the user scrolls back to the bottom', () => {
+    const { value } = capabilities();
+    const rendered = render(<ConversationTab
+      payload={payload({ turns: [turn('question', '', true)] })}
+      capabilities={value}
+    />);
+    const viewport = rendered.container.querySelector('.conversation-turns') as HTMLElement;
+    stubScroll(viewport, 800);
+    fireEvent.scroll(viewport, { target: { scrollTop: 200 } });
+    fireEvent.scroll(viewport, { target: { scrollTop: 790 } });
     Object.defineProperty(viewport, 'scrollHeight', {
       value: 1200, writable: true, configurable: true,
     });
