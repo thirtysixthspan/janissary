@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faFile, faImages, faLayerGroup, faMinus, faPlus,
+  faChevronLeft, faChevronRight, faFile, faImages, faLayerGroup, faMinus, faPlus,
 } from '@fortawesome/free-solid-svg-icons';
 import type { PdfPayload } from '@shared/plugins/pdf/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -98,6 +98,30 @@ export function PdfTab({
               >
                 <FontAwesomeIcon icon={faPlus} />
               </button>
+              {layout === 'single' && (
+                <>
+                  <button
+                    type="button"
+                    className="pdf-action"
+                    title="Previous page"
+                    aria-label="Previous page"
+                    disabled={page === 0}
+                    onClick={() => { handlers.pageBy(-1); }}
+                  >
+                    <FontAwesomeIcon icon={faChevronLeft} />
+                  </button>
+                  <button
+                    type="button"
+                    className="pdf-action"
+                    title="Next page"
+                    aria-label="Next page"
+                    disabled={page >= pageCount - 1}
+                    onClick={() => { handlers.pageBy(1); }}
+                  >
+                    <FontAwesomeIcon icon={faChevronRight} />
+                  </button>
+                </>
+              )}
             </>
           )}
           {capabilities.splitAction}

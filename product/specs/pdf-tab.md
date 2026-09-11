@@ -69,7 +69,7 @@ unchanged.
 The PDF view shows, stacked top to bottom:
 
 1. **Metadata** — the file's name, size, and location, in a compact header, consistent with the image
-   tab's header. To the right of it sit the page-strip toggle, the layout toggle, the zoom controls,
+   tab's header. To the right of it sit the page-strip toggle, the layout toggle, the zoom and page controls,
    and the Split action when available.
 2. **The document**, filling the space beneath the metadata: the page strip down the left edge when
    it is showing, and the page stage taking the rest.
@@ -81,7 +81,7 @@ as `3 / 12`.
 
 The stage shows the document in one of two layouts:
 
-- **Single page** — one page at a time, fitted to the stage, moved between with the page keys.
+- **Single page** — one page at a time, fitted to the stage, moved between with the page keys or the header's Previous page and Next page buttons. The buttons appear only in this layout and are disabled at the first and last page respectively.
 - **Continuous scroll** — every page stacked vertically in one scrolling stage, the way a markdown
   tab scrolls.
 

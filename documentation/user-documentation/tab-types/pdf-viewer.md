@@ -20,6 +20,7 @@ A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-p
 
 | Control | Single page | Continuous scroll |
 |---|---|---|
+| **Previous page** / **Next page** buttons | Previous / next page; disabled at the ends | Hidden |
 | `↑` / `↓` | Previous / next page | Scroll a step |
 | `PageUp` / `PageDown` | Previous / next page | Scroll a screenful |
 | Scroll wheel | Scroll | Scroll |

@@ -1,16 +1,5 @@
 # pull-request
 
-* Deliver the plan's prev/next page controls for single-page layout, which the pull request implements with keys only.
-
-Existing Issue: The plan's layout design decision specifies single-page layout as "one page fitted to the tab with prev/next controls and a `3 / 12` position readout", but `web/src/plugins/pdf/PdfTab.tsx` renders only the page-strip toggle, the layout toggle, and the two zoom buttons, so the only way to change page is the arrow and Page keys or the thumbnail strip — and the strip starts hidden. Severity: 5/10
-
-Existing Risk: 5/10 - A reader using the mouse, a pointer-only device, or assistive technology that drives buttons rather than synthesizing key events cannot advance a page in the layout the tab opens in, and there is nothing on screen to suggest that paging exists at all.
-
-Proposal Risk: 2/10 - Two more controls in an already crowded metadata header risk crowding the action group at narrow widths, especially when the tab is docked into a sidebar, so the header's wrapping needs a look once they are in.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: add prev/next page controls to the PDF tab's single-page layout". Add two icon-only buttons to the action group in `web/src/plugins/pdf/PdfTab.tsx`, beside the existing page-strip, layout, and zoom controls and before `capabilities.splitAction`, shown only in single-page layout and wired to the same `handlers.pageBy(-1)` and `handlers.pageBy(1)` the arrow keys already call, so a button and its key can never drift apart; give them accessible names naming the action (`Previous page` / `Next page`) following the naming rule the two toggles already follow, and disable each at the end of the document it cannot move past, since `pageBy` already clamps. Style them with the existing `.pdf-action` rule in `web/src/plugins/pdf/pdf.css` rather than adding a rule. Then reconcile the three documents that currently describe the layout without them: the "Two page layouts" section of `product/specs/pdf-tab.md`, whose single-page bullet says pages are "moved between with the page keys"; the control table in `documentation/user-documentation/tab-types/pdf-viewer.md`; and the plan at `product/plans/complete/pdf-viewer-plugin.md`, which needs no edit if the controls land as it specified. Extend the header assertion in `web/src/plugins/pdf/PdfTab.test.tsx` to expect both controls in single-page layout, to expect them absent in continuous layout, and to assert that clicking next advances the `3 / 12` readout — that test already mounts the tab with a three-page mocked document, so no new fixture is needed.
-
-
 * Restore a visible scrollbar on the PDF stage, which inherits the image tab's hidden-scrollbar rule and leaves a scrolling document with no scroll indicator.
 
 Existing Issue: `web/src/plugins/pdf/PdfStage.tsx` renders the stage with the shared `plugin-stage` class, whose rules in `web/src/plugins/shared.css` set `scrollbar-width: none` and hide the WebKit scrollbar outright, and `web/src/plugins/pdf/pdf.css` overrides that class's cursor and alignment for `.pdf-stage` but not its scrollbar, so continuous scroll and any zoomed-in page scroll with no visible bar. Severity: 4/10

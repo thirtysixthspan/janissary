@@ -115,6 +115,8 @@ describe('PdfTab header', () => {
     expect(screen.getByLabelText('Continuous scroll')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom in')).toBeInTheDocument();
     expect(screen.getByLabelText('Zoom out')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
     expect(screen.getByLabelText('Split')).toBeInTheDocument();
   });
 });
@@ -128,6 +130,8 @@ describe('PdfTab layout toggle', () => {
 
     expect(container.querySelectorAll('.pdf-page')).toHaveLength(3);
     expect(container.querySelector('.pdf-stage')).toHaveClass('pdf-continuous');
+    expect(screen.queryByRole('button', { name: 'Previous page' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next page' })).not.toBeInTheDocument();
   });
 
   it('names what the click will do rather than the current layout', async () => {
@@ -143,6 +147,24 @@ describe('PdfTab layout toggle', () => {
 });
 
 describe('PdfTab thumbnail strip', () => {
+  it('navigates with header buttons and disables document boundaries', async () => {
+    await mount();
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('3 / 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+    expect(screen.getByText('2 / 3')).toBeInTheDocument();
+  });
+
+  it('disables both page buttons for a one-page document', async () => {
+    await mount(makeDocument(1));
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+  });
+
   it('starts hidden and names what its toggle will do', async () => {
     const { container } = await mount();
     expect(container.querySelector('.pdf-thumbnails')).toBeNull();
