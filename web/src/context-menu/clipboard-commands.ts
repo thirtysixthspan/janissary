@@ -1,20 +1,7 @@
-// The two things the default context menu actually does, kept free of React so the clipboard rules
-// are testable without a render. Every API here is feature-detected: a browser may withhold the
-// async clipboard, and jsdom implements none of them.
-
-async function writeClipboardText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    // No clipboard to write to — a browser may withhold it, and a denied write is not an error
-    // the menu can do anything about.
-  }
-}
-
-export function copyText(text: string): void {
-  if (!text) return;
-  void writeClipboardText(text);
-}
+// Pasting on behalf of the default context menu, kept free of React so the clipboard rules are
+// testable without a render. Every API here is feature-detected: a browser may withhold the async
+// clipboard, and jsdom implements none of them. The menu's Copy is `copyText` in
+// `../shared/system-clipboard`, which the file navigator shares.
 
 async function readClipboardText(): Promise<string> {
   try {

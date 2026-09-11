@@ -15,7 +15,7 @@ When neither entry applies — a right-click on a surface with nothing selected 
 
 ### Surfaces that define their own menu
 
-A surface with a menu of its own keeps it; the default never overrides or extends it. The file navigator's row menu is unchanged, including its own Copy and Paste, which act on files rather than on text.
+A surface with a menu of its own keeps it; the default never overrides or extends it. The file navigator's row menu is unchanged, including its own Copy and Paste, which act on files rather than on text. Its Copy additionally puts the copied paths on the system clipboard as text, so the default menu's Paste elsewhere inserts them (see [[file-navigator-tab]]).
 
 ### Relationship to the copy and paste shortcuts
 

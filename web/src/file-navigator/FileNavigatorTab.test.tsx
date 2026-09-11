@@ -27,6 +27,13 @@ function makeFiles(overrides: Partial<FileNavigatorView> = {}): FileNavigatorVie
   };
 }
 
+// jsdom gives `navigator` no async clipboard at all, so it is defined rather than spied on.
+function stubSystemClipboard() {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+  return writeText;
+}
+
 describe('FileNavigatorTab', () => {
   it('renders rows with indentation, chevrons on dirs, aria-expanded/aria-selected', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
@@ -559,6 +566,7 @@ describe('FileNavigatorTab', () => {
   describe('copy, cut, and paste', () => {
     afterEach(() => {
       clearClipboard();
+      Reflect.deleteProperty(navigator, 'clipboard');
     });
 
     it('Ctrl+C then Ctrl+V on a directory row sends the RPC with the expected params', () => {
@@ -601,6 +609,19 @@ describe('FileNavigatorTab', () => {
       expect(row).toHaveClass('copied');
       expect(row).not.toHaveClass('cut');
       expect(screen.getByText('src').closest('.files-row')).not.toHaveClass('copied');
+    });
+
+    // The system clipboard is what an editor tab's own paste reads, so a copy in the tree has to
+    // reach it too — the file clipboard alone would leave `Cmd+V` in a buffer pasting stale text.
+    it('Ctrl+C over a multi-row selection also writes the paths to the system clipboard', () => {
+      const writeText = stubSystemClipboard();
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+      const tree = container.querySelector('[role="tree"]')!;
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.keyDown(tree, { key: 'c', ctrlKey: true });
+      expect(writeText).toHaveBeenCalledWith('src\nREADME.md');
     });
 
     it('a later Ctrl+X replaces the copy mark with the cut mark', () => {
@@ -1408,11 +1429,14 @@ describe('FileNavigatorTab', () => {
     });
 
     it('choosing Copy arms the clipboard with the clicked row', () => {
+      const writeText = stubSystemClipboard();
       const client = { send: vi.fn() } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.contextMenu(screen.getByText('README.md'));
       fireEvent.click(screen.getByText('Copy'));
       expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/home/user/project/README.md'] });
+      expect(writeText).toHaveBeenCalledWith('README.md');
+      Reflect.deleteProperty(navigator, 'clipboard');
     });
 
     it('choosing Duplicate copies the clicked row into its own directory', () => {

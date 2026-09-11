@@ -497,6 +497,15 @@ lies inside the very directory being copied, counts as a failure the same way a 
 failure does — reported through the notifications feed with its cause and recovery action, never a
 dialog.
 
+A copy also places the same rows on the **system clipboard**, as text, so the selection can be
+pasted straight into an editor tab, a command bar, or any other field that takes text — through that
+surface's own `Cmd+V` or its right-click **Paste** (see [[context-menu]]). The text takes the same
+form dropping the rows onto an editor does: each path relative to the tree's own root, one per line,
+and `<host>:<absolute-remote-path>` for a remote tree. Cutting does not write text this way — a cut
+is a pending move, and pasting it as text elsewhere would do nothing about that move. A copy with
+nothing selected leaves the system clipboard untouched along with the file clipboard, and `Escape`
+disarms only the file clipboard; whatever a copy last placed on the system clipboard stays there.
+
 A clipboard remains app-wide across local and remote trees, but its contents may only be pasted on
 the host they came from. A cross-host paste is refused with a notifications-feed reason, changes
 nothing, and leaves the clipboard and its visible row marks armed.

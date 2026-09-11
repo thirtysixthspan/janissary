@@ -126,7 +126,7 @@
 | `Home` / `End` | Select the first / last visible row |
 | `Page Up` / `Page Down` | Move selection by one viewport of rows |
 | Printable characters | Type-ahead: jump to the next visible row whose name starts with what's typed |
-| `Cmd+C` / `Ctrl+C` | Copy the selected rows onto the clipboard |
+| `Cmd+C` / `Ctrl+C` | Copy the selected rows onto the clipboard, and their paths onto the system clipboard as text |
 | `Cmd+X` / `Ctrl+X` | Cut the selected rows onto the clipboard |
 | `Cmd+V` / `Ctrl+V` | Paste the clipboard into the directory the selection implies |
 

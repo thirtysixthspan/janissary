@@ -1,7 +1,8 @@
 import React from 'react';
 import { ContextMenu } from '../ContextMenu';
 import { defaultMenuGroups } from './default-menu-target';
-import { copyText, pasteInto } from './clipboard-commands';
+import { pasteInto } from './clipboard-commands';
+import { copyText } from '../shared/system-clipboard';
 import { useDefaultContextMenu } from './useDefaultContextMenu';
 
 // The app's fallback right-click menu, mounted once by the shell. It draws Copy and Paste for any

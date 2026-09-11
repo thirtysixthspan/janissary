@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { copyText, pasteInto } from './clipboard-commands';
+import { pasteInto } from './clipboard-commands';
 
 // jsdom implements neither the clipboard events nor the async clipboard, so both are stood up here
 // in the shape the browser gives them: an event carrying a `clipboardData` bag of typed strings.
@@ -43,27 +43,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   Reflect.deleteProperty(document, 'execCommand');
   document.body.replaceChildren();
-});
-
-describe('copyText', () => {
-  it('writes the text to the system clipboard', () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    copyText('selected text');
-    expect(writeText).toHaveBeenCalledWith('selected text');
-  });
-
-  it('writes nothing when there is no text', () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    copyText('');
-    expect(writeText).not.toHaveBeenCalled();
-  });
-
-  it('does not throw when the browser withholds the clipboard', () => {
-    vi.stubGlobal('navigator', {});
-    expect(() => copyText('selected text')).not.toThrow();
-  });
 });
 
 describe('pasteInto', () => {
