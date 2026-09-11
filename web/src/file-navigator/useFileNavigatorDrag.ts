@@ -2,7 +2,7 @@ import { useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
-import { joinCommandPaths, remoteNavigatorPath } from './file-navigator-relative-path';
+import { joinCommandPaths, joinEditorPaths } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
 import { harnessDropHandle } from '../harness-drop-registry';
@@ -95,9 +95,7 @@ export function useFileNavigatorDrag(
     }
     if (gesture?.started && overEditorRef.current) {
       editorDropRef?.current?.insertAtCaret(
-        remoteHost
-          ? gesture.sourcePaths.map((path) => remoteNavigatorPath(remoteHost, absoluteRoot, path)).join('\n')
-          : gesture.sourcePaths.join('\n'),
+        joinEditorPaths(absoluteRoot, gesture.sourcePaths, remoteHost),
       );
       resetGestureState();
       return;

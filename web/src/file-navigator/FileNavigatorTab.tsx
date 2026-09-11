@@ -9,6 +9,7 @@ import { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import { useFileNavigatorKeyDown } from './useFileNavigatorKeyDown';
 import { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import { setClipboard } from './file-navigator-clipboard';
+import { copySelectionToClipboards } from './file-navigator-copy';
 import { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import { FileNavigatorOverlays } from './FileNavigatorOverlays';
 import { useSelectionAction } from './useSelectionAction';
@@ -95,7 +96,9 @@ export function FileNavigatorTab({
       sendRedo: () => void drag.sendRedo(),
       createNewFile,
       beginRename,
-      copySelection: () => setClipboard('copy', clipboardPaths(), files.remote?.host),
+      copySelection: () => copySelectionToClipboards(
+        files.absoluteRoot, selection.operationPaths, files.remote?.host,
+      ),
       cutSelection: () => setClipboard('cut', clipboardPaths(), files.remote?.host),
       paste: () => paste.paste(files.rows, selection.cursor),
       selectSiblings: selection.selectSiblings,

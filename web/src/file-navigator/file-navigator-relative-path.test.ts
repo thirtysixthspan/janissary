@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { joinCommandPaths, relativeNavigatorPath, remoteNavigatorPath } from './file-navigator-relative-path';
+import {
+  joinCommandPaths, joinEditorPaths, relativeNavigatorPath, remoteNavigatorPath,
+} from './file-navigator-relative-path';
 
 describe('relativeNavigatorPath', () => {
   it.each([
@@ -23,5 +25,24 @@ describe('relativeNavigatorPath', () => {
 
   it('keeps the host-qualified form when the remote root is slash', () => {
     expect(remoteNavigatorPath('devbox', '/', 'tmp/a.txt')).toBe('devbox:/tmp/a.txt');
+  });
+});
+
+describe('joinEditorPaths', () => {
+  it('leaves a single tree-relative path as it is', () => {
+    expect(joinEditorPaths('/work', ['src/a.ts'])).toBe('src/a.ts');
+  });
+
+  it('separates several paths with newlines in source order', () => {
+    expect(joinEditorPaths('/work', ['a.ts', 'src/b.ts'])).toBe('a.ts\nsrc/b.ts');
+  });
+
+  it('qualifies remote paths with their host, one per line', () => {
+    expect(joinEditorPaths('/remote/ws', ['a.ts', 'src/b.ts'], 'devbox'))
+      .toBe('devbox:/remote/ws/a.ts\ndevbox:/remote/ws/src/b.ts');
+  });
+
+  it('produces nothing for an empty list', () => {
+    expect(joinEditorPaths('/work', [])).toBe('');
   });
 });
