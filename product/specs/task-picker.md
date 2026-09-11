@@ -5,6 +5,10 @@ Task files are the executable prompts kept under the repository's `ai/tasks/` di
 self-contained instruction set an agent can be told to run. The task picker lists them so one can
 be dropped onto the command line without typing its path by hand.
 
+### Planning a new feature
+
+`plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then asks the user to resolve product decisions, improves the answered draft, and asks further targeted questions whenever the improved plan still leaves a user-flow, edge-case, scope, or user-visible wording decision unanswered. It updates the draft after each answer and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
+
 ### Listing
 
 The picker draws tasks from **two** sources: the project working directory's `ai/tasks/` and the
