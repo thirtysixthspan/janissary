@@ -3,6 +3,8 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from './ws';
 import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal-keys';
+import { osc52ClipboardText } from './terminal-osc52';
+import { copyText } from './shared/system-clipboard';
 
 type UseXtermOptions = {
   ptyId: string;
@@ -72,12 +74,23 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
       return true;
     });
 
+    // A program that copies something on the machine it runs on cannot reach the clipboard of the
+    // person watching it from another one, so it asks the terminal to do it instead. Without this
+    // the request is parsed and dropped, and a remote harness's copy silently does nothing.
+    const osc52 = term.parser.registerOscHandler(52, (data) => {
+      const text = osc52ClipboardText(data);
+      if (text !== null) copyText(text);
+      return true;
+    });
+
     const ro = new ResizeObserver(() => syncSize());
     ro.observe(containerRef.current!);
 
     onMount?.(term);
 
-    return () => { termRef.current = null; detach(); onInput.dispose(); ro.disconnect(); term.dispose(); };
+    return () => {
+      termRef.current = null; detach(); onInput.dispose(); osc52.dispose(); ro.disconnect(); term.dispose();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter; setup callbacks apply per PTY/client
   }, [ptyId, client]);
 

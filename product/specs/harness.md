@@ -401,6 +401,14 @@ empty selection they reach it like any other key, so **Ctrl+C** remains the harn
 is never read as a copy. A picker overlay open over the tab still claims the chord first. Right-clicking
 a selection offers the browser's own Copy over the same text.
 
+A harness's own copy command reaches the system clipboard too. A harness copying something first
+tries the clipboard of the machine it is running on; when it cannot reach it — which is the case
+whenever the harness runs on the far side of `on <host>`, where that machine is the remote one — it
+asks the terminal to do the copying instead, and the terminal honors the request. The text lands on
+the clipboard of the machine the app is being watched from, so copying out of a remote harness tab
+works exactly as it does out of a local one. The reverse is refused: a harness asking the terminal
+to hand back what is *on* the clipboard is answered with nothing.
+
 Pasting needs no chord of its own: **Cmd+V** (macOS) and **Ctrl+V** (elsewhere) arrive as the
 browser's native paste and are delivered to the harness as typed input, bracketed when the harness
 has asked for bracketed paste.

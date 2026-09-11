@@ -51,6 +51,7 @@ describe('HarnessTab', () => {
   let capturedKeyHandler: ((e: KeyboardEvent) => boolean) | null;
   let capturedFocus: ReturnType<typeof vi.fn>;
   let capturedOptions: Record<string, unknown>;
+  let capturedOscHandlers: Map<number, (data: string) => boolean>;
   let selection: string;
   let writeText: ReturnType<typeof vi.fn>;
 
@@ -58,6 +59,7 @@ describe('HarnessTab', () => {
     capturedKeyHandler = null;
     capturedFocus = vi.fn();
     capturedOptions = {};
+    capturedOscHandlers = new Map();
     selection = '';
     writeText = vi.fn(() => Promise.resolve());
     // Defined on the real navigator rather than stubbed wholesale: jsdom ships no clipboard, but
@@ -76,6 +78,12 @@ describe('HarnessTab', () => {
         }),
         hasSelection: vi.fn(() => selection.length > 0),
         getSelection: vi.fn(() => selection),
+        parser: {
+          registerOscHandler: vi.fn((identifier: number, handler: (data: string) => boolean) => {
+            capturedOscHandlers.set(identifier, handler);
+            return { dispose: vi.fn() };
+          }),
+        },
         focus: capturedFocus,
         dispose: vi.fn(),
         cols: 80,
@@ -434,6 +442,22 @@ describe('HarnessTab', () => {
       expect(capturedKeyHandler!(makeKeyEvent({ metaKey: true, key: 'c' }))).toBe(true);
       expect(writeText).not.toHaveBeenCalled();
       platform.mockRestore();
+    });
+
+    // The other half of copying: the harness's own copy command. Running on another machine it
+    // cannot reach the user's clipboard directly, so it asks the terminal to do it with OSC 52 —
+    // which is why copying out of a remote harness tab depends on this handler existing.
+    it('puts a harness OSC 52 clipboard write on the system clipboard', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      const handled = capturedOscHandlers.get(52)?.(`c;${btoa('copied from a remote harness')}`);
+      expect(handled).toBe(true);
+      expect(writeText).toHaveBeenCalledWith('copied from a remote harness');
+    });
+
+    it('answers an OSC 52 clipboard read request with nothing', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      expect(capturedOscHandlers.get(52)?.('c;?')).toBe(true);
+      expect(writeText).not.toHaveBeenCalled();
     });
 
     it('leaves the copy chord to an open picker rather than claiming it', () => {
