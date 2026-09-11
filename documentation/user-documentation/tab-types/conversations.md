@@ -28,7 +28,7 @@ Title matching ignores case. If there is no match, you see `No conversation matc
 
 Type your query into **Message** at the bottom of the conversation tab. Press `Enter` or `Ctrl+Enter` to send it; `Shift+Enter` adds a newline. The input grows with your text, then scrolls when it reaches its maximum height. It takes focus when you open the tab on screen.
 
-Replies appear progressively as formatted Markdown. Each turn shows your query, the reply, and the harness/model pair that answered it. The view follows new queries and streamed replies to the bottom. It initially shows the newest 20 turns; scroll to the top to load 20 older turns at a time.
+Replies appear progressively as formatted Markdown. Each turn shows your query, the reply, and the harness/model pair that answered it. The view follows new queries and streamed replies to the bottom, unless you scroll away to review earlier turns — scrolling back to the bottom resumes following. It initially shows the newest 20 turns; scroll to the top to load 20 older turns at a time.
 
 Use `↑` on the first input line and `↓` on the last to recall previous queries from this conversation. Moving past the newest query restores your draft. If a previous query starts with what you're typing, the rest appears as ghost text. Press `→` or `End` with the caret at the end to accept it.
 
