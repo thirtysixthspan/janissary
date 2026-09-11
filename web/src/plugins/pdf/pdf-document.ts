@@ -2,6 +2,7 @@ import {
   GlobalWorkerOptions,
   InvalidPDFException,
   PasswordException,
+  RenderingCancelledException,
   ResponseException,
   TextLayer,
   getDocument,
@@ -38,6 +39,10 @@ export type LoadedPdf = {
 export type PdfLoadResult =
   | { ok: true; document: LoadedPdf }
   | { ok: false; reason: PdfLoadFailure };
+
+export function isRenderCancellation(error: unknown): boolean {
+  return error instanceof RenderingCancelledException;
+}
 
 // The closed set the notifications feed's wording is keyed on. An encrypted document is reported and
 // never negotiated — there is no password prompt.

@@ -11,7 +11,11 @@ import { PdfTab } from './PdfTab';
 // make sufficient; and `IntersectionObserver` is stubbed on the jsdom global, which does not
 // implement it — the test drives its callback to say which pages are on screen, which is also how
 // the position readout and the highlighted thumbnail are exercised, since both read from it.
-vi.mock('./pdf-document', () => ({ loadPdf: vi.fn() }));
+const cancelled = vi.hoisted(() => new Error('render cancelled'));
+vi.mock('./pdf-document', () => ({
+  loadPdf: vi.fn(),
+  isRenderCancellation: (error: unknown) => error === cancelled,
+}));
 
 const load = vi.mocked(loadPdf);
 
@@ -59,11 +63,11 @@ function onScreen(ratios: Record<number, number>, root = '.pdf-stage'): void {
   });
 }
 
-async function mount(document_: LoadedPdf | null = makeDocument()) {
+async function mount(document_: LoadedPdf | null = makeDocument(), client = capabilities()) {
   load.mockResolvedValue(
     document_ ? { ok: true, document: document_ } : { ok: false, reason: 'password-protected' },
   );
-  const view = render(<PdfTab payload={payload} capabilities={capabilities()} />);
+  const view = render(<PdfTab payload={payload} capabilities={client} />);
   if (document_) await screen.findByLabelText('Show pages');
   return view;
 }
@@ -185,6 +189,58 @@ describe('PdfTab while scrolling', () => {
 });
 
 describe('PdfTab failure', () => {
+  it('reports simultaneous stage failures once and retains metadata', async () => {
+    const document_ = makeDocument();
+    vi.mocked(document_.renderPage).mockRejectedValue(new Error('cannot render'));
+    const client = capabilities();
+    const { container } = await mount(document_, client);
+    await userEvent.click(screen.getByLabelText('Continuous scroll'));
+    onScreen({ 0: 1, 1: 1 });
+    expect(await screen.findByText('Failed to load paper.pdf')).toBeInTheDocument();
+    expect(container.querySelector('.pdf-stage')).toBeNull();
+    expect(screen.getByText('paper.pdf')).toBeInTheDocument();
+    expect(screen.getByText('1.2 MB')).toBeInTheDocument();
+    expect(screen.getByText('/docs/paper.pdf')).toBeInTheDocument();
+    expect(client.intent).toHaveBeenCalledExactlyOnceWith('load-failed', { reason: 'other' });
+  });
+
+  it('ignores render cancellation', async () => {
+    const document_ = makeDocument();
+    vi.mocked(document_.renderPage).mockRejectedValue(cancelled);
+    const client = capabilities();
+    await mount(document_, client);
+    await act(async () => { onScreen({ 0: 1 }); });
+    expect(document_.renderPage).toHaveBeenCalled();
+    expect(screen.queryByText('Failed to load paper.pdf')).not.toBeInTheDocument();
+    expect(client.intent).not.toHaveBeenCalled();
+  });
+
+  it('ignores thumbnail-only failures', async () => {
+    const document_ = makeDocument();
+    vi.mocked(document_.renderPage).mockRejectedValue(new Error('thumbnail'));
+    const client = capabilities();
+    await mount(document_, client);
+    await userEvent.click(screen.getByLabelText('Show pages'));
+    await act(async () => { onScreen({ 0: 1 }, '.pdf-thumbnails'); });
+    expect(document_.renderPage).toHaveBeenCalled();
+    expect(screen.queryByText('Failed to load paper.pdf')).not.toBeInTheDocument();
+    expect(client.intent).not.toHaveBeenCalled();
+  });
+
+  it.each(['close', 'zoom'])('ignores a late rejection after %s', async (change) => {
+    const document_ = makeDocument();
+    let reject!: (reason: Error) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+    vi.mocked(document_.renderPage).mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+    const client = capabilities();
+    const view = await mount(document_, client);
+    onScreen({ 0: 1 });
+    if (change === 'close') view.unmount();
+    else await userEvent.click(screen.getByLabelText('Zoom in'));
+    await act(async () => { reject(new Error('late')); });
+    expect(client.intent).not.toHaveBeenCalled();
+  });
+
   it('renders the failure in place of the stage and keeps the tab', async () => {
     const { container } = await mount(null);
 

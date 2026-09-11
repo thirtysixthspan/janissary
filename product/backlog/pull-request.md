@@ -1,16 +1,5 @@
 # pull-request
 
-* Correct the pull request description's render-failure guarantee by showing a failed PDF tab when a page cannot render.
-
-Existing Issue: `web/src/plugins/pdf/PdfPage.tsx` catches and discards every `renderPage` rejection, so a PDF that loads but whose visible page or text layer cannot render remains in the ready state with a blank placeholder rather than the promised `Failed to load <name>` body and notification. Severity: 6/10
-
-Existing Risk: 5/10 - A user opening a partially corrupt or unsupported document receives no explanation and cannot distinguish a slow render from a permanently unusable document, contrary to the pull request's documented error path.
-
-Proposal Risk: 2/10 - Render cancellation is an expected consequence of changing scale or closing a page, so the failure path must distinguish it from a real PDF.js rendering error to avoid false notifications.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: surface PDF page rendering failures". In `web/src/plugins/pdf/pdf-document.ts`, `web/src/plugins/pdf/PdfPage.tsx`, `web/src/plugins/pdf/PdfStage.tsx`, and `web/src/plugins/pdf/PdfTab.tsx`, propagate genuine stage-page rendering or text-layer failures to the tab's existing failed presentation and emit the closed-set `other` failure intent exactly once; continue treating PDF.js render cancellation as non-fatal and do not make thumbnail-only work a spurious tab failure. Add focused cases to `web/src/plugins/pdf/PdfTab.test.tsx` and, where the one-time notification logic is shared, `web/src/plugins/pdf/usePdfDocument.test.ts`, asserting the failed body, retained metadata, one intent, and no report for cancellation.
-
-
 * Remove the technical documentation debt that says only the video external viewer is read after the PDF plugin adds another reader.
 
 Existing Issue: `product/specs/application-config.md` still states that only `externalViewers.video` is read, while the existing audio plugin and this pull request's PDF opener both read their plugin-keyed entries. Severity: 3/10

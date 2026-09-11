@@ -16,6 +16,7 @@ export type PdfStageProperties = {
   page: number;
   jump: PdfJump;
   onVisiblePage(index: number): void;
+  onRenderFailure(): void;
   stageRef: React.RefObject<HTMLDivElement | null>;
 };
 
@@ -23,7 +24,7 @@ export type PdfStageProperties = {
 // only in which pages the stage lists and which fit rule it applies, so the layout toggle changes
 // two inputs rather than swapping renderers.
 export function PdfStage({
-  document: pdf, layout, zoom, page, jump, onVisiblePage, stageRef,
+  document: pdf, layout, zoom, page, jump, onVisiblePage, onRenderFailure, stageRef,
 }: PdfStageProperties) {
   const [size, setSize] = useState<StageSize>({ width: 0, height: 0 });
   const pageCount = pdf.pageSizes.length;
@@ -91,6 +92,7 @@ export function PdfStage({
             text
             root={stageRef}
             renderPage={pdf.renderPage}
+            onFailure={onRenderFailure}
           />
         ))}
       </div>

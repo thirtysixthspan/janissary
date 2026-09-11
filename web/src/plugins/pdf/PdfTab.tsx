@@ -117,6 +117,7 @@ export function PdfTab({
               page={page}
               jump={jump}
               onVisiblePage={setPage}
+              onRenderFailure={state.onRenderFailure}
               stageRef={stageRef}
             />
           )}

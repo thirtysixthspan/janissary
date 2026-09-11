@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PdfLoadFailure } from '@shared/plugins/pdf/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { loadPdf, type LoadedPdf } from './pdf-document';
 
@@ -16,12 +17,20 @@ export type PdfDocumentState =
 // every render of the tab.
 export function usePdfDocument(
   url: string, capabilities: TabPluginClientCapabilities,
-): PdfDocumentState {
+): PdfDocumentState & { onRenderFailure(): void } {
   const [state, setState] = useState<PdfDocumentState>({ status: 'loading' });
   const reported = useRef(false);
   const intent = useRef(capabilities.intent);
 
   useEffect(() => { intent.current = capabilities.intent; }, [capabilities.intent]);
+
+  const fail = useCallback((reason: PdfLoadFailure) => {
+    setState({ status: 'failed' });
+    if (reported.current) return;
+    reported.current = true;
+    void intent.current('load-failed', { reason }).catch(() => {});
+  }, []);
+  const onRenderFailure = useCallback(() => { fail('other'); }, [fail]);
 
   useEffect(() => {
     let live = true;
@@ -36,16 +45,11 @@ export function usePdfDocument(
         return;
       }
       if (!live) return;
-      setState({ status: 'failed' });
-      if (reported.current) return;
-      reported.current = true;
-      // Nothing is waiting on the answer: the body already says the document failed, and the feed
-      // line is the server's to write.
-      void intent.current('load-failed', { reason: result.reason }).catch(() => {});
+      fail(result.reason);
     });
 
     return () => { live = false; controller.abort(); loaded?.destroy(); };
-  }, [url]);
+  }, [fail, url]);
 
-  return state;
+  return { ...state, onRenderFailure };
 }

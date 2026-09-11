@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { PageSize } from './pdf-view-model';
+import { isRenderCancellation } from './pdf-document';
 
 // How far outside the stage a page starts rendering. The browser answers "is this near the viewport"
 // natively, so this plugin keeps no render window and computes no scroll-offset-to-page arithmetic.
@@ -11,6 +12,7 @@ export type PdfPageProperties = {
   scale: number;
   text: boolean;
   root: React.RefObject<HTMLDivElement | null>;
+  onFailure?(): void;
   renderPage(
     index: number, canvas: HTMLCanvasElement, scale: number, textLayer: HTMLElement | null,
   ): Promise<void>;
@@ -22,7 +24,7 @@ export type PdfPageProperties = {
 // A page keeps its canvas once it has been drawn, so a very long document read end to end grows in
 // memory until the tab is closed. Releasing a canvas far outside the observed margin is a change
 // inside this component if that ever bites.
-export function PdfPage({ index, size, scale, text, root, renderPage }: PdfPageProperties) {
+export function PdfPage({ index, size, scale, text, root, renderPage, onFailure }: PdfPageProperties) {
   const holderRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
@@ -41,10 +43,12 @@ export function PdfPage({ index, size, scale, text, root, renderPage }: PdfPageP
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!near || !canvas) return;
-    // A render superseded by a later one at a different scale rejects; so does a page this document
-    // cannot draw. Neither is a broken plugin, so the page simply stays as it was.
-    void renderPage(index, canvas, scale, text ? layerRef.current : null).catch(() => {});
-  }, [index, near, renderPage, scale, text]);
+    let live = true;
+    void renderPage(index, canvas, scale, text ? layerRef.current : null).catch((error: unknown) => {
+      if (live && !isRenderCancellation(error)) onFailure?.();
+    });
+    return () => { live = false; };
+  }, [index, near, onFailure, renderPage, scale, text]);
 
   return (
     <div

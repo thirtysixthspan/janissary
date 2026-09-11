@@ -159,6 +159,8 @@ open, with its metadata header intact. One line additionally goes to the notific
 An encrypted document is reported, not negotiated: there is no password prompt and no way to supply
 one.
 
+A page or its selectable text failing to render uses the same failed body and the `Could not display <name>` notification. Each tab reports at most once. Cancelling or replacing a render, closing the tab, or failing to draw a thumbnail does not fail the document or send a notification.
+
 ### Tab strip: name and close button
 
 In the tab strip a PDF tab reads exactly like an ordinary tab — same dot, group bar, active highlight,

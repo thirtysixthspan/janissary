@@ -35,7 +35,7 @@ describe('usePdfDocument', () => {
     const { intent, view } = setup({ ok: true, document });
 
     expect(view.result.current.status).toBe('loading');
-    await waitFor(() => { expect(view.result.current).toEqual({ status: 'ready', document }); });
+    await waitFor(() => { expect(view.result.current).toMatchObject({ status: 'ready', document }); });
     expect(intent).not.toHaveBeenCalled();
   });
 
@@ -90,5 +90,13 @@ describe('usePdfDocument', () => {
     await waitFor(() => { expect(view.result.current.status).toBe('ready'); });
     view.unmount();
     expect(document.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares one failure report between repeated render and load failures', async () => {
+    const { intent, view } = setup({ ok: false, reason: 'unreadable' });
+    await waitFor(() => { expect(view.result.current.status).toBe('failed'); });
+    act(() => { view.result.current.onRenderFailure(); view.result.current.onRenderFailure(); });
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('load-failed', { reason: 'unreadable' });
   });
 });
