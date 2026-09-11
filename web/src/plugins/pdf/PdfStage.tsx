@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import type { LoadedPdf } from './pdf-document';
 import { fitScale, type PdfLayout, type StageSize } from './pdf-view-model';
 import { PdfPage } from './PdfPage';
@@ -29,14 +29,19 @@ export function PdfStage({
   const [size, setSize] = useState<StageSize>({ width: 0, height: 0 });
   const pageCount = pdf.pageSizes.length;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
     const measure = () => {
-      const stage = stageRef.current;
-      if (stage) setSize({ width: stage.clientWidth, height: stage.clientHeight });
+      const width = stage.clientWidth;
+      const height = stage.clientHeight;
+      setSize((current) => current.width === width && current.height === height
+        ? current : { width, height });
     };
     measure();
-    globalThis.addEventListener('resize', measure);
-    return () => { globalThis.removeEventListener('resize', measure); };
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => { observer.disconnect(); };
   }, [stageRef]);
 
   // Which page is most of the view, answered natively rather than by scroll arithmetic. Single-page

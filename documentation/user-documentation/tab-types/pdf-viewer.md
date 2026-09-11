@@ -34,6 +34,8 @@ The strip works in both layouts — it is as useful for skimming a long document
 
 ## Zoom
 
+Pages stay fitted as you show or hide the page strip, split the pane, or dock the tab into a sidebar. Your zoom percentage stays the same.
+
 | Control | Action |
 |---|---|
 | `+` in the header | Zoom in, 10% per step |

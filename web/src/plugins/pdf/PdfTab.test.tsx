@@ -21,6 +21,7 @@ const load = vi.mocked(loadPdf);
 
 type Watcher = { callback: IntersectionObserverCallback; elements: Element[] };
 let watchers: Watcher[] = [];
+let resizeWatchers: { callback: ResizeObserverCallback; observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = [];
 
 const payload: PdfPayload = {
   name: 'paper.pdf', path: '/docs/paper.pdf', size: '1.2 MB', url: '/open/ref-1',
@@ -74,7 +75,15 @@ async function mount(document_: LoadedPdf | null = makeDocument(), client = capa
 
 beforeEach(() => {
   watchers = [];
+  resizeWatchers = [];
   load.mockReset();
+  vi.stubGlobal('ResizeObserver', class {
+    observe = vi.fn();
+    disconnect = vi.fn();
+    constructor(callback: ResizeObserverCallback) {
+      resizeWatchers.push({ callback, observe: this.observe, disconnect: this.disconnect });
+    }
+  });
   vi.stubGlobal('IntersectionObserver', class {
     private readonly watcher: Watcher;
     constructor(callback: IntersectionObserverCallback) {
@@ -160,6 +169,29 @@ describe('PdfTab thumbnail strip', () => {
 });
 
 describe('PdfTab while scrolling', () => {
+  it('fits changed stage dimensions and ignores duplicate size notifications', async () => {
+    let width = 632;
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(() => width);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(1000);
+    const document_ = makeDocument();
+    const view = await mount(document_);
+    onScreen({ 0: 1 });
+    const watcher = resizeWatchers[0];
+    expect(watcher.observe).toHaveBeenCalledWith(view.container.querySelector('.pdf-stage'));
+    expect(document_.renderPage).toHaveBeenLastCalledWith(0, expect.anything(), 1, expect.anything());
+    width = 332;
+    act(() => { watcher.callback([], null as never); });
+    expect(document_.renderPage).toHaveBeenLastCalledWith(0, expect.anything(), 0.5, expect.anything());
+    const calls = vi.mocked(document_.renderPage).mock.calls.length;
+    act(() => { watcher.callback([], null as never); });
+    expect(document_.renderPage).toHaveBeenCalledTimes(calls);
+    width = 632;
+    act(() => { watcher.callback([], null as never); });
+    expect(document_.renderPage).toHaveBeenLastCalledWith(0, expect.anything(), 1, expect.anything());
+    view.unmount();
+    expect(watcher.disconnect).toHaveBeenCalledTimes(1);
+  });
+
   it('reads the position and the highlighted thumbnail from the observer', async () => {
     const { container } = await mount();
     await userEvent.click(screen.getByLabelText('Continuous scroll'));

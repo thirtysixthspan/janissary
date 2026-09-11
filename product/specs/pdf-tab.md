@@ -109,6 +109,8 @@ document does not draw every page at once.
 
 ### Zoom and keys
 
+The fit follows the stage's available width and height, including changes caused by showing or hiding the page strip, splitting the pane, or docking into a sidebar. The selected zoom percentage stays the same as the fitted size adjusts.
+
 **100% means fitted**, and what it fits depends on the layout: in single page the whole page fits
 inside the stage, and in continuous scroll the page's width fits so scrolling is the only axis that
 matters. Beyond 100% the page overflows and the stage scrolls in both directions; there is no

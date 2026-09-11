@@ -1,16 +1,5 @@
 # pull-request
 
-* Re-measure the PDF stage when it resizes without the window resizing, so a fitted page stays fitted after the page strip, a split, or a sidebar dock changes its width.
-
-Existing Issue: `web/src/plugins/pdf/PdfStage.tsx` measures the stage once on mount and thereafter only on the window's `resize` event, while the stage is a flex child that loses or gains width whenever the thumbnail strip is toggled, the host's split action divides the pane, or the tab is docked into a sidebar — none of which fires a window resize. Severity: 6/10
-
-Existing Risk: 6/10 - Showing the page strip on a fitted document leaves every page drawn to the old, wider box so the document overflows and is clipped at the right edge, and hiding the strip again leaves it drawn too small, in both layouts and at every zoom level, with nothing but an unrelated window resize to recover it.
-
-Proposal Risk: 2/10 - An observer that fires on every layout change re-renders and re-rasterizes pages more often than the current code does, so the risk moves from a stale fit to redundant render work unless the measured size is only committed when it actually changes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: re-measure the PDF stage on element resize rather than only on window resize". In `web/src/plugins/pdf/PdfStage.tsx`, replace the mount-plus-`resize`-listener measurement with a `ResizeObserver` on the element held by `stageRef`, keeping the initial synchronous measure so the first commit still has a box, and guard `setSize` so an unchanged width and height does not re-render — otherwise every observed tick re-runs `fitScale` and the `scale` prop of every mounted `web/src/plugins/pdf/PdfPage.tsx`, which re-rasterizes canvases. Keep the existing `STAGE_PADDING` arithmetic and the `[stageRef]` dependency shape so `fitScale` in `web/src/plugins/pdf/pdf-view-model.ts` is unchanged and its tests in `web/src/plugins/pdf/pdf-view-model.test.ts` keep passing untouched. Extend `web/src/plugins/pdf/PdfTab.test.tsx` with a stub `ResizeObserver` on the jsdom global alongside the `IntersectionObserver` stub that test already installs — jsdom implements neither — and drive its callback to assert that the page's rendered scale follows a changed stage width; jsdom reports every `clientWidth` as 0, so the assertion has to read the scale passed to the mocked `renderPage` rather than any measured geometry. Nothing currently covers this path, so confirm by hand in the running app that toggling the page strip on a fitted single page leaves the page fitted rather than clipped.
-
-
 * Deliver the plan's prev/next page controls for single-page layout, which the pull request implements with keys only.
 
 Existing Issue: The plan's layout design decision specifies single-page layout as "one page fitted to the tab with prev/next controls and a `3 / 12` position readout", but `web/src/plugins/pdf/PdfTab.tsx` renders only the page-strip toggle, the layout toggle, and the two zoom buttons, so the only way to change page is the arrow and Page keys or the thumbnail strip — and the strip starts hidden. Severity: 5/10
