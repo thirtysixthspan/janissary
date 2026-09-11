@@ -21,31 +21,11 @@ export function newFileTargetDir(rows: FileNavigatorRow[], selected: string | nu
   return row.path.includes('/') ? dirname(row.path) : null;
 }
 
-// A tree-relative path made absolute against the navigator's root, which is what every command the
-// navigator dispatches must send: a relative target would be resolved against the active tab's
-// working directory instead — a workspaced agent's clone, say — rather than the tree being browsed.
-function absoluteIn(absoluteRoot: string, relPath: string | null): string {
-  const root = absoluteRoot.endsWith('/') ? absoluteRoot.slice(0, -1) : absoluteRoot;
-  return relPath === null ? root : `${root}/${relPath}`;
-}
-
-// The `newfile` command target for a new `untitled.md` file, given the navigator's absolute root and
-// the resolved target directory.
-export function newFileCommand(absoluteRoot: string, targetDir: string | null): string {
-  return `newfile ${absoluteIn(absoluteRoot, targetDir)}/untitled.md`;
-}
-
 // The tree-relative path a new `untitled` directory is expected to land at, given the resolved
 // target directory. This is a guess, not a guarantee — a same-named collision at the target makes
 // the server pick the next free name (`untitled-2`, …) instead, which this can't predict. Used
-// both to build the `newdir` command and, client-side, to recognize the created row once it
-// appears so the tree can select it and start an in-place rename.
+// client-side to recognize the created row once it appears so the tree can select it and start an
+// in-place rename.
 export function newDirectoryTargetPath(targetDir: string | null): string {
   return targetDir === null ? 'untitled' : `${targetDir}/untitled`;
-}
-
-// The `newdir` command target for a new `untitled` directory, absolute against the navigator's root
-// for the same reason `newFileCommand` is.
-export function newDirectoryCommand(absoluteRoot: string, targetDir: string | null): string {
-  return `newdir ${absoluteIn(absoluteRoot, newDirectoryTargetPath(targetDir))}`;
 }
