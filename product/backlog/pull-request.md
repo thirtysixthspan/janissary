@@ -1,16 +1,5 @@
 # pull-request
 
-* Remove the technical documentation debt that says only the video external viewer is read after the PDF plugin adds another reader.
-
-Existing Issue: `product/specs/application-config.md` still states that only `externalViewers.video` is read, while the existing audio plugin and this pull request's PDF opener both read their plugin-keyed entries. Severity: 3/10
-
-Existing Risk: 3/10 - Users and maintainers can conclude that `externalViewers.pdf` is ignored and lose the configured PDF hand-off behavior the new plugin documents elsewhere.
-
-Proposal Risk: 1/10 - The documentation can still drift if a future plugin consumes another entry, but accurately describing the current plugin-keyed readers removes the false exclusivity without changing configuration behavior.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: document the PDF external viewer configuration". Update the `externalViewers` row in `product/specs/application-config.md` to retain its default and fallback semantics while naming the current video, audio, and PDF readers (or otherwise describing the plugin-keyed contract without claiming only video). Cross-check the wording against `src/plugins/context.ts`, `src/plugins/audio/activate.ts`, `src/plugins/pdf/activate.ts`, and the configured-viewer sections already added to `product/specs/open.md`; no runtime configuration behavior should change. Add or update a documentation/specification assertion only if the repository already has a colocated test that pins this setting's documented readers.
-
-
 * Re-measure the PDF stage when it resizes without the window resizing, so a fitted page stays fitted after the page strip, a split, or a sidebar dock changes its width.
 
 Existing Issue: `web/src/plugins/pdf/PdfStage.tsx` measures the stage once on mount and thereafter only on the window's `resize` event, while the stage is a flex child that loses or gains width whenever the thumbnail strip is toggled, the host's split action divides the pane, or the tab is docked into a sidebar — none of which fires a window resize. Severity: 6/10
