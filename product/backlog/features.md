@@ -2,7 +2,7 @@
 
 ## ready
 
-* add a pdf viewer plugin that will render a pdf in a new tab type], a pdf tab. 
+* add a pdf viewer plugin that will render a pdf in a new tab type, a pdf tab. 
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
