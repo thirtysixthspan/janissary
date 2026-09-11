@@ -75,14 +75,23 @@ async function drawPage(
   }).render();
 }
 
-export async function loadPdf(url: string): Promise<PdfLoadResult> {
+export async function loadPdf(url: string, signal?: AbortSignal): Promise<PdfLoadResult> {
+  let destroy: (() => void) | undefined;
   try {
+    signal?.throwIfAborted();
     const task = getDocument({
       url,
       cMapUrl: bundledAssets('cmaps'),
       cMapPacked: true,
       standardFontDataUrl: bundledAssets('standard_fonts'),
     });
+    let destroyed = false;
+    destroy = () => {
+      if (destroyed) return;
+      destroyed = true;
+      void task.destroy().catch(() => {});
+    };
+    signal?.addEventListener('abort', destroy, { once: true });
     const pdf = await task.promise;
     const pages = await Promise.all(
       Array.from({ length: pdf.numPages }, (_unused, index) => pdf.getPage(index + 1)),
@@ -101,10 +110,13 @@ export async function loadPdf(url: string): Promise<PdfLoadResult> {
           drawPage(pages[index], canvas, scale, textLayer),
         // Tearing down the loading task is what aborts the outstanding network requests and
         // releases the worker; the proxy itself has no teardown of its own.
-        destroy: () => { void task.destroy(); },
+        destroy,
       },
     };
   } catch (error) {
+    destroy?.();
     return { ok: false, reason: failureKind(error) };
+  } finally {
+    if (destroy) signal?.removeEventListener('abort', destroy);
   }
 }

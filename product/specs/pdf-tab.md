@@ -172,6 +172,8 @@ and ordering — with two differences:
 
 ### Closing
 
+Closing a PDF tab cancels any unfinished document load and releases its rendering resources. A result arriving after close never changes the view or produces a failure notification.
+
 The close button closes a tab by position, which need not be the active tab, performing the same
 teardown the `close` command does for a non-last tab: the tab is removed from the strip, its in-memory
 state is dropped, its registered file is unregistered, and, if it was the active tab, focus is

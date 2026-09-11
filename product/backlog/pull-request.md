@@ -1,16 +1,5 @@
 # pull-request
 
-* Handle the functionality gap where closing a PDF tab leaves an in-flight document load running.
-
-Existing Issue: `usePdfDocument` only destroys a PDF after `loadPdf` resolves, so unmounting a tab while PDF.js is still fetching or parsing it leaves its loading task and worker active until the operation happens to finish. Severity: 5/10
-
-Existing Risk: 5/10 - Closing large, slow, or unreachable PDFs can retain network activity, worker work, and memory after the tab and its registered file have gone away, with repeated opens making the waste accumulate.
-
-Proposal Risk: 2/10 - Cancelling a load during teardown could race its completion, but keeping one explicit cancellation path and retaining the existing late-result cleanup makes the tab's ownership boundary clear.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: cancel in-flight PDF loads when a tab closes". Refactor `web/src/plugins/pdf/pdf-document.ts` and `web/src/plugins/pdf/usePdfDocument.ts` so the hook can cancel PDF.js's loading task during effect cleanup even when `task.promise` has not resolved; retain destruction of a loaded document and ensure a cancelled result cannot update state or send a failure intent. Extend `web/src/plugins/pdf/usePdfDocument.test.ts` with a controlled pending load that is unmounted before resolution and verifies that cancellation occurs, while preserving the existing late-success cleanup and one-report-per-tab behavior.
-
-
 * Correct the pull request description's render-failure guarantee by showing a failed PDF tab when a page cannot render.
 
 Existing Issue: `web/src/plugins/pdf/PdfPage.tsx` catches and discards every `renderPage` rejection, so a PDF that loads but whose visible page or text layer cannot render remains in the ready state with a blank placeholder rather than the promised `Failed to load <name>` body and notification. Severity: 6/10

@@ -57,6 +57,8 @@ If the document can't be rendered, the tab stays open and the body reads `Failed
 
 ## Lifecycle
 
+Closing a PDF tab also stops any document load still in progress.
+
 A PDF tab is a live view, not saved state: the layout, zoom, and page you were on belong to that tab and are not restored by `janus --relaunch`. A second PDF you open starts on page one, fitted, with the strip hidden, whatever you switched the first one to. Closing a tab — via its × button or `close` — just removes the view; the file is untouched. Only files you've explicitly opened are ever served to the viewer, and everything needed to render them ships with the app, so a PDF opens the same way offline or on a remote server.
 
 To hand a PDF to your system's PDF application instead, use `open external <file>.pdf` — see [Opening files and pages](/user-documentation/tab-types/opening-files). You can name which application that should be with the `externalViewers` setting.

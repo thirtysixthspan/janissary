@@ -26,8 +26,9 @@ export function usePdfDocument(
   useEffect(() => {
     let live = true;
     let loaded: LoadedPdf | null = null;
+    const controller = new AbortController();
 
-    void loadPdf(url).then((result) => {
+    void loadPdf(url, controller.signal).then((result) => {
       if (result.ok) {
         if (!live) { result.document.destroy(); return; }
         loaded = result.document;
@@ -43,7 +44,7 @@ export function usePdfDocument(
       void intent.current('load-failed', { reason: result.reason }).catch(() => {});
     });
 
-    return () => { live = false; loaded?.destroy(); };
+    return () => { live = false; controller.abort(); loaded?.destroy(); };
   }, [url]);
 
   return state;
