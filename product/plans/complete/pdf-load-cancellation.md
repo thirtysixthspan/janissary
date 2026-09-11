@@ -15,6 +15,8 @@ Closing a PDF tab immediately releases an unfinished load and never reports its 
 
 Cover abort before load completion, late failure without notification, late success destruction, and normal loaded-document teardown. Retain existing failure mapping and once-per-tab tests.
 
+Pending-promise fixtures use the existing documented lint suppression for the web target's lack of ES2024 Promise.withResolvers typings.
+
 ## Out of scope
 
 Page rendering, navigation, dependencies, and host lifecycle changes.

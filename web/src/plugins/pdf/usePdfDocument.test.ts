@@ -69,6 +69,7 @@ describe('usePdfDocument', () => {
 
   it('aborts a pending load and ignores its late failure', async () => {
     let resolve!: (result: PdfLoadResult) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
     const pending = new Promise<PdfLoadResult>((done) => { resolve = done; });
     const cancelled = vi.fn();
     load.mockImplementation((_url, signal) => {

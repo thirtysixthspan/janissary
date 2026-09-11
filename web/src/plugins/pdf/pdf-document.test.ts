@@ -17,6 +17,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 describe('PDF loading task ownership', () => {
   it('destroys the loading task immediately when a pending load is aborted', async () => {
     let reject!: (error: Error) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
     const promise = new Promise<never>((_resolve, fail) => { reject = fail; });
     const destroy = vi.fn(async () => { reject(new Error('aborted')); });
     vi.mocked(getDocument).mockReturnValue({ promise, destroy } as unknown as ReturnType<typeof getDocument>);
