@@ -409,6 +409,19 @@ under that directory, at any depth), or a wildcard pattern using `*` to stand in
 segment (for example `product/backlog/*` covers files directly inside that directory but not in a
 subdirectory of it, while `product/plans/*/*` covers files exactly two directories deep).
 
+Syncing additionally requires the governing checkout to be confirmedly on that checkout's
+repository's default branch — the branch its remote points its default at, falling back to
+`master` or `main` when the remote's default branch cannot be determined. The governing checkout
+is the checkout containing the root of the file navigator the file was opened from; for a file
+opened with no navigator involved (a shell tab's edit command or a saved-tab restore) it is the
+app's project launch directory itself. A detached-HEAD checkout, a checkout outside any git
+repository, or any git failure all count as off-primary and disable syncing. When either condition
+is not met, the file opens instead as an ordinary editor tab against the real file where it lives —
+its saves commit and push nothing — with no sync status icon, and nothing else announces the
+difference: the absent icon is the entire signal. Branch membership is decided once, when the file
+is opened; a synced tab that is already open keeps its sync behavior when the checkout later
+switches branches, and only the next open of that file is affected.
+
 Every config-listed file is edited from inside a single shared workspace dedicated to syncing,
 separate from the main project checkout and from any agent workspace. This shared workspace is
 created the first time any config-listed file is opened, and is reused for every other config-listed

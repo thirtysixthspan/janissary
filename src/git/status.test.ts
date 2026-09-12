@@ -3,7 +3,9 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { changedPaths, currentBranch, remoteUrl } from './status.js';
+import {
+  changedPaths, currentBranch, defaultBranch, isPrimaryBranch, remoteUrl,
+} from './status.js';
 
 // The initial branch name comes from the machine's `init.defaultBranch`, so a test that checks a
 // branch out by name can only rely on one the repo was told to create.
@@ -143,6 +145,58 @@ describe('currentBranch', () => {
 
   it('resolves to undefined — never rejects — when the git invocation fails', async () => {
     await expect(currentBranch(path.join(root, 'does-not-exist'))).resolves.toBeUndefined();
+  });
+});
+
+describe('primaryBranch', () => {
+  describe('isPrimaryBranch', () => {
+    it.each([
+      ['an exact branch/default match', 'main', 'main', true],
+      ['a feature branch against a detected default', 'feature', 'master', false],
+      ['the literal HEAD for a detached checkout', 'HEAD', 'master', false],
+      ['an absent current branch', undefined, 'master', false],
+    ])('is %s', (_label, current, detected, expected) => {
+      expect(isPrimaryBranch(current, detected)).toBe(expected);
+    });
+
+    it('falls back to the master/main pair when no default branch is detected', () => {
+      expect(isPrimaryBranch('master', undefined)).toBe(true);
+      expect(isPrimaryBranch('main', undefined)).toBe(true);
+      expect(isPrimaryBranch('feature', undefined)).toBe(false);
+    });
+  });
+
+  describe('defaultBranch', () => {
+    let root: string;
+
+    beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'git-status-')); });
+    afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+    it('returns the configured default for a repo with origin/HEAD set', async () => {
+      initRepo(root);
+      execSync('git remote add origin .', { cwd: root, stdio: 'pipe' });
+      execSync('git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/master', { cwd: root, stdio: 'pipe' });
+      expect(await defaultBranch(root)).toBe('master');
+    });
+
+    it('resolves to undefined for a repo with no origin remote', async () => {
+      initRepo(root);
+      expect(await defaultBranch(root)).toBeUndefined();
+    });
+
+    it('resolves to undefined for a repo whose origin/HEAD is unset', async () => {
+      initRepo(root);
+      execSync('git remote add origin .', { cwd: root, stdio: 'pipe' });
+      expect(await defaultBranch(root)).toBeUndefined();
+    });
+
+    it('resolves to undefined for a directory that is not a git repository', async () => {
+      expect(await defaultBranch(root)).toBeUndefined();
+    });
+
+    it('resolves to undefined — never rejects — when the git invocation fails', async () => {
+      await expect(defaultBranch(path.join(root, 'does-not-exist'))).resolves.toBeUndefined();
+    });
   });
 });
 

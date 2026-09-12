@@ -146,7 +146,11 @@ A directory's children are read from disk only once it is **expanded** — an un
 currently checked-out branch name next to the root path. A detached-HEAD checkout shows `HEAD`. A
 tree rooted outside any git repository, or where the branch cannot be determined, shows only the
 path with no branch text. The branch refreshes together with the tree itself (on open, on reroot,
-and on every automatic or interactive refresh), never on a timer of its own.
+and on every automatic or interactive refresh), never on a timer of its own, and is never recomputed
+between refreshes. The same branch also governs syncing: a file activated from this tree is opened
+through GitHub syncing (see [[editor-tab]]) only while the header's branch is the repository's
+default branch, and as an ordinary editor tab for branch content otherwise. Nothing about the
+header's rendering changes either way.
 
 **Git-status coloring.** When the tree is rooted inside a git repository, a file row's name renders
 in a color reflecting its git status: **green** when the file has staged changes (added to the

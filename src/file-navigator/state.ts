@@ -42,6 +42,9 @@ export type FilesTabState = {
   // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
   // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
   githubUrl?: string;
+  // Last-computed detected default branch (`origin/HEAD`'s name, see `git-status.ts`), refreshed
+  // alongside `branch`. Undefined when `origin/HEAD` is unset (or the root is not a repository).
+  defaultBranch?: string;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
   // What this tab's header pull button is signalling. `pulling` is also the coalescing check: a

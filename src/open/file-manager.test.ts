@@ -10,12 +10,16 @@ import { EDITOR_MAX_BYTES } from '../openers/editor.js';
 
 const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?: string) => boolean>(() => true) }));
 const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
+const launchDirBranch = vi.hoisted(() => ({
+  isLaunchDirOnPrimaryBranch: vi.fn<(launchDir: string) => boolean | undefined>(),
+}));
 
 vi.mock('../config.js', () => ({
   getConfig: () => ({ syncPaths: ['synced/'], externalViewers: { video: 'QuickTime Player' } }),
 }));
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
 vi.mock('../notifications.js', () => ({ notify: notifications.notify }));
+vi.mock('./launch-dir-branch.js', () => ({ isLaunchDirOnPrimaryBranch: launchDirBranch.isLaunchDirOnPrimaryBranch }));
 
 describe('OpenFileManager.edit', () => {
   it('opens the editor for a new file that does not exist on disk', () => {
@@ -534,7 +538,12 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
 describe('OpenFileManager.edit (synced path)', () => {
   type EditorTab = { label: string; editor?: { path: string; size: string; url: string; sync?: string } };
 
-  const makeSyncedManagers = (dir: string, tabs: EditorTab[], openSync: () => Promise<{ dir: string } | { error: string }>) => ({
+  const makeSyncedManagers = (
+    dir: string,
+    tabs: EditorTab[],
+    openSync: () => Promise<{ dir: string } | { error: string }>,
+    navigatorPrimary: boolean | undefined = true,
+  ) => ({
     tab: {
       cwdOf: () => dir,
       launchDir: dir,
@@ -550,6 +559,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       workspaceFilePath: (relative: string) => path.join('/workspace', relative),
       openSync,
     },
+    fileNavigator: { onPrimaryBranch: () => navigatorPrimary },
     editorWatch: {
       watch: vi.fn(),
     },
@@ -590,5 +600,103 @@ describe('OpenFileManager.edit (synced path)', () => {
     await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('error'));
 
     expect(managers.editorWatch.watch).not.toHaveBeenCalled();
+  });
+
+  describe('branch gate', () => {
+    beforeEach(() => { launchDirBranch.isLaunchDirOnPrimaryBranch.mockReset(); });
+
+    const setup = (dir: string, tabs: EditorTab[], navigatorPrimary: boolean | undefined) =>
+      makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }), navigatorPrimary);
+
+    it('opens a config-listed path through the sync workspace when the navigator is on its primary branch', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      const mgr = new OpenFileManager(setup(dir, tabs, true));
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(tabs).toHaveLength(1);
+      expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+      expect(tabs[0].editor?.sync).toBe('provisioning');
+    });
+
+    it('opens a config-listed path as an ordinary editor tab when the navigator is on a feature branch', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      const mgr = new OpenFileManager(setup(dir, tabs, false));
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(tabs).toHaveLength(1);
+      expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+      expect(tabs[0].editor?.sync).toBeUndefined();
+    });
+
+    it('never re-points an already-open synced tab; the decision is the navigator branch at open time', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      const mgr = new OpenFileManager(setup(dir, tabs, false));
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+    });
+
+    it('leaves a non-config-listed path outside the branch decision either way', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'plain'));
+      writeFileSync(path.join(dir, 'plain', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      const mgr = new OpenFileManager(setup(dir, tabs, true));
+
+      mgr.edit('edit plain/foo.md', 'plain/foo.md', 'janus');
+
+      expect(tabs[0].editor?.path).toBe(path.join(dir, 'plain', 'foo.md'));
+      expect(tabs[0].editor?.sync).toBeUndefined();
+    });
+
+    it.each([
+      ['an on-primary launch dir', true],
+      ['a feature-branch launch dir', false],
+    ])('follows the launch dir branch for a non-navigator edit with a %s', (label, primary) => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      launchDirBranch.isLaunchDirOnPrimaryBranch.mockReturnValue(primary);
+      const managers = setup(dir, tabs, true) as unknown as Managers;
+      delete managers.fileNavigator;
+      const mgr = new OpenFileManager(managers);
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(launchDirBranch.isLaunchDirOnPrimaryBranch).toHaveBeenCalledWith(dir);
+      expect(tabs).toHaveLength(1);
+      if (primary) {
+        expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+        expect(tabs[0].editor?.sync).toBe('provisioning');
+      } else {
+        expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+        expect(tabs[0].editor?.sync).toBeUndefined();
+      }
+    });
+
+    it('still routes a main-default repository sitting on main through the sync workspace', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      const mgr = new OpenFileManager(setup(dir, tabs, true));
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(tabs[0].editor?.sync).toBe('provisioning');
+    });
   });
 });

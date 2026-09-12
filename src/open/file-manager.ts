@@ -14,6 +14,7 @@ import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isSyncedPath } from '../sync-path-match.js';
+import { isLaunchDirOnPrimaryBranch } from './launch-dir-branch.js';
 
 export type EditResult = { label: string };
 
@@ -53,7 +54,7 @@ export class OpenFileManager {
     const context = this.buildContext(command, label);
     const opener = openerForExtension(path.extname(file));
     if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return undefined; }
-    if (this.isSyncPath(file)) return this.openSynced(file, context, line);
+    if (this.isSyncPath(file, label)) return this.openSynced(file, context, line);
     const editorLabel = openInEditor(file, context, line);
     return editorLabel === undefined ? undefined : { label: editorLabel };
   }
@@ -115,17 +116,26 @@ export class OpenFileManager {
       this.managers.tab.append(label, { input: command, output: pinnedOpenerRefusal(requireOpener, file) });
       return;
     }
-    if (!external && opener.name === 'editor' && this.isSyncPath(file)) { this.openSynced(file, context); return; }
+    if (!external && opener.name === 'editor' && this.isSyncPath(file, label)) { this.openSynced(file, context); return; }
     return external ? opener.external(file, context) : opener.inline(file, context);
   }
 
-  // Whether `file`'s project-relative path is config-listed for GitHub syncing — the sole gate for
-  // the entire feature (see `git-sync.ts`); there is no UI toggle.
-  private isSyncPath(file: string): boolean {
+  // Whether `file` is a candidate for GitHub syncing at all — the sole gate for the entire feature
+  // (see `git-sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
+  // config-listed, and the governing checkout is confirmably on its primary branch. The governing
+  // checkout is the activating tab's own navigator root when the label names one (falling back to
+  // the launch dir's cached pair for a shell tab's `edit`, a profile restore, a plugin opener); a
+  // feature-branch (or unconfirmable) checkout answers "no", so the file opens as an ordinary
+  // editor tab against the real file on disk. Both inputs are values resolved elsewhere — this
+  // stays synchronous, never a git call made here.
+  private isSyncPath(file: string, label: string): boolean {
     const launchDir = this.managers.tab.launchDir;
     if (!launchDir) return false;
     const relative = path.relative(launchDir, file).split(path.sep).join('/');
-    return isSyncedPath(relative, getConfig().syncPaths);
+    if (!isSyncedPath(relative, getConfig().syncPaths)) return false;
+    const navigatorPrimary = this.managers.fileNavigator?.onPrimaryBranch(label);
+    if (navigatorPrimary !== undefined) return navigatorPrimary;
+    return isLaunchDirOnPrimaryBranch(launchDir) ?? false;
   }
 
   // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in

@@ -1,4 +1,5 @@
 import { messageBus } from '../bus.js';
+import { isPrimaryBranch } from '../git/status.js';
 import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
@@ -206,6 +207,14 @@ export class FileNavigatorManager {
   // server resolves them against the root it holds rather than any path the client could name.
   rootOf(label: string): string | undefined {
     return withFilesState(this.tabs, label, undefined, (state) => state.root);
+  }
+
+  // For the GitHub-sync gate: whether this tab's tree is confirmably on its repository's primary
+  // branch, per `isPrimaryBranch` (`src/git/status.ts`) — the same branch the header displays.
+  // `undefined` when `label` is not a navigator tab, so the caller can tell "not a navigator" apart
+  // from "navigator, not primary".
+  onPrimaryBranch(label: string): boolean | undefined {
+    return withFilesState(this.tabs, label, undefined, (state) => isPrimaryBranch(state.branch, state.defaultBranch));
   }
 
   // This tab's expanded directories and detail mode, both for `profile save`.

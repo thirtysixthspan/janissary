@@ -1,6 +1,8 @@
 import { mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { changedPaths, currentBranch, remoteUrl, type GitFileStatus } from '../git/status.js';
+import {
+  changedPaths, currentBranch, defaultBranch, remoteUrl, type GitFileStatus,
+} from '../git/status.js';
 import { pullRoot } from '../git/pull.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
@@ -23,6 +25,10 @@ export type GitMetadata = {
   statuses: [string, GitFileStatus][];
   branch?: string;
   githubUrl?: string;
+  // The remote's detected default branch (`origin/HEAD`'s name, `src/git/status.ts`). Absent for a
+  // remote tree, whose git metadata is its workspace's own and which never matches config-synced
+  // launch-dir paths anyway.
+  defaultBranch?: string;
 };
 export type ReplayResult = {
   result: UndoRedoResult;
@@ -104,11 +110,11 @@ export class LocalFileSystemPort implements FileSystemPort {
   }
 
   private async loadGitMetadata(root: string, onResult: (metadata: GitMetadata) => void): Promise<void> {
-    const [statuses, branch, remote] = await Promise.all([
-      changedPaths(root), currentBranch(root), remoteUrl(root),
+    const [statuses, branch, remote, detectedDefault] = await Promise.all([
+      changedPaths(root), currentBranch(root), remoteUrl(root), defaultBranch(root),
     ]);
     onResult({
-      statuses: [...statuses], branch,
+      statuses: [...statuses], branch, defaultBranch: detectedDefault,
       githubUrl: remote && branch ? githubCommitsUrl(remote, branch) : undefined,
     });
   }
