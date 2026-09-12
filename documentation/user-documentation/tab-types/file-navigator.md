@@ -169,7 +169,8 @@ only that row. A small label follows the cursor and shows the lead name plus the
 additional items. The targeted directory highlights. Dropping onto a selected item, one of its
 descendants, or an item already in the destination does nothing for that item. Dropping onto a
 file in the tree's root moves the selection into the root. Releasing over empty space, losing
-window focus, or pressing `Escape` cancels the drag with nothing moved.
+window focus, pressing `Escape`, or closing the navigator mid-drag cancels the drag with nothing
+moved.
 
 Before a bulk move starts, duplicate paths and `..` are removed. When a selected directory is an
 ancestor of another selected path, the descendant is removed too. Items already in the destination

@@ -4,17 +4,6 @@
 
 ## development
 
-* Give file-navigator drag gestures one lifecycle that releases window listeners on every completion and unmount.
-
-Existing Debt: The file-navigator drag hook violates §6 (hooks are the seam between logic and view) by acquiring four window listeners in its mouse-down handler without effect cleanup, while its public `drop` resets gesture state but leaves listener removal to a separate mouse-up wrapper. Severity: 6/10
-
-Existing Risk: 6/10 - Unmounting a navigator during a drag leaves callbacks holding its move and insertion actions alive, so a later mouse release can act on a surface that has already closed and unfinished gestures can leak between tests.
-
-Proposal Risk: 2/10 - One idempotent gesture disposer prevents callbacks after cancellation or unmount, but drop-target selection still depends on DOM hit testing and can choose the wrong target if those markers change.
-
-Proposal: In `web/src/file-navigator/useFileNavigatorDrag.ts`, make each started gesture own an exact listener-removal closure stored in a ref, replacing any previous gesture before registering another. Use that same idempotent disposer from mouse-up, blur, Escape, public `drop`, and an unmount effect; release listeners in a `finally` path when committing a drop so a throwing destination cannot retain them. Unmount must cancel without moving files or inserting text, clear the retained gesture, and remove any command-bar highlight without setting local React state after teardown. Preserve the hook's signature and returned shape: `web/src/file-navigator/FileNavigatorTab.tsx` is its only production caller, while `web/src/file-navigator/FileNavigatorRows.tsx`, `web/src/file-navigator/FileNavigatorOverlays.tsx`, and `web/src/file-navigator/use-file-navigator-row-events.ts` consume its return type and need no edits. Extend `web/src/file-navigator/useFileNavigatorDrag.test.ts` with unmount-before-release, direct-drop cleanup, repeated gesture start, and throwing-drop cases; assert that later window events neither send a move request nor invoke an insertion handle. Existing tests cover blur, Escape, target-specific insertion, and move conflicts, but some finish with a live gesture or call `drop` directly, so keep their assertions while making teardown explicit. Retain `web/src/file-navigator/useFileNavigatorMoveOperations.test.ts` as the downstream move regression check. This requires lifecycle behavior and test changes, not just an extraction.
-
-
 * Extract PDF stage measurement and visible-page tracking into a hook beside the stage component.
 
 Existing Debt: The PDF stage violates §5 (components render; they do not decide) and §6 (hooks are the seam between logic and view) by keeping resize subscription, intersection-ratio ranking, and token-driven scroll synchronization inside the component that renders the pages. Severity: 5/10

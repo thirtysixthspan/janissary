@@ -338,6 +338,10 @@ disappears and nothing is moved, the same as releasing over empty space.
 Pressing Escape at any point during a drag also cancels it outright, with the same result: the
 drag label disappears and nothing is moved.
 
+Closing or unmounting the navigator while a drag is in progress cancels it the same way: the
+window listeners the gesture held are released, so a later mouse release cannot act on the
+navigator that has already gone, and nothing is moved or inserted.
+
 ### Dragging a row into the command bar
 
 The same click-drag-release gesture used to move a file also has a second possible destination:

@@ -554,4 +554,87 @@ describe('useFileNavigatorDrag', () => {
     expect(commandHandle.insertAtCaret).toHaveBeenCalledWith('tree/notes.txt tree/src/a.ts');
     expect(client.send).not.toHaveBeenCalled();
   });
+
+  // The gesture lifecycle: one disposer serves mouse-up, blur, Escape, the public drop, and
+  // unmount, so a gesture can never outlive the surface that started it.
+
+  it('unmount during a drag releases the window listeners and clears the highlight', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const commandHandle = makeDropHandle();
+    const commandRef = { current: commandHandle };
+    const { result, unmount } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    expect(commandHandle.setDropHighlighted).toHaveBeenCalledWith(true);
+
+    unmount();
+    expect(commandHandle.setDropHighlighted).toHaveBeenLastCalledWith(false);
+
+    expect(() => {
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 40, clientY: 0 })); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup', { clientX: 40, clientY: 0 })); });
+    }).not.toThrow();
+    expect(commandHandle.insertAtCaret).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('a direct drop() releases the window listeners, so a later mouse-up commits nothing', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const commandHandle = makeDropHandle();
+    const commandRef = { current: commandHandle };
+    const { result } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { result.current.drop(); });
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
+
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup', { clientX: 20, clientY: 0 })); });
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
+  });
+
+  it('starting a second gesture releases the first gesture\'s listeners', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const bar = makeCommandBarElement();
+    document.elementFromPoint = vi.fn().mockReturnValue(bar);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    expect(result.current.draggedPath).toBe('notes.txt');
+
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+    act(() => { result.current.onRowMouseDown({ path: 'dest/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 30, clientY: 0 })); });
+
+    expect(result.current.draggedPath).toBe('dest/notes.txt');
+  });
+
+  it('a throwing destination cannot retain the window listeners', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const commandHandle = { insertAtCaret: vi.fn(() => { throw new Error('surface closed'); }), setDropHighlighted: vi.fn() };
+    const commandRef = { current: commandHandle };
+    const { result } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+
+    expect(() => {
+      act(() => { result.current.drop(); });
+    }).toThrow('surface closed');
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
+
+    expect(() => {
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup', { clientX: 20, clientY: 0 })); });
+    }).not.toThrow();
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
+  });
 });
