@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the generic context-menu primitive out of the app root beside the rest of the shared UI, so the file navigator stops importing a component out of the app shell.
-
-Existing Debt: `web/src/file-navigator/FileNavigatorOverlays.tsx` and `web/src/file-navigator/file-navigator-menu-items.ts` import `ContextMenu` and `ContextMenuItem` from `../ContextMenu` at the app root, a feature reaching upward into the app-shell layer in violation of §3 (dependencies flow one way: shared → feature → app), while the `web/src/context-menu/` feature directory that owns the app's default menu imports the same primitive the same way. Severity: 4/10
-
-Existing Risk: 3/10 - `ContextMenu.tsx` is positioned as though it belongs to the app shell rather than to the shared layer, which invites the next contributor to give it app-level or file-navigator-specific knowledge; once it has that, the two features consuming it can no longer be reasoned about or tested apart.
-
-Proposal Risk: 2/10 - The primitive ends up in the shared layer where both consumers may legitimately import it, but it stays generic only by convention — the first feature-specific prop added to it puts the module straight back into violation of §2 (shared code must not know a feature), and nothing in this change would catch that.
-
-Proposal: Move `web/src/ContextMenu.tsx` and its colocated test `web/src/ContextMenu.test.tsx` to `web/src/shared/ContextMenu.tsx` and `web/src/shared/ContextMenu.test.tsx`, unchanged apart from relative import specifiers. Four files import it and need their paths retargeted: `web/src/file-navigator/FileNavigatorOverlays.tsx` and `web/src/file-navigator/file-navigator-menu-items.ts` (`../ContextMenu` → `../shared/ContextMenu`), and `web/src/context-menu/DefaultContextMenu.tsx` and `web/src/context-menu/default-menu-target.ts` (the same change). `web/src/ContextMenu.test.tsx` imports from `./ContextMenu` and keeps that specifier once both files move together. Leave `web/src/context-menu/` exactly where it is — that directory holds the app's default right-click menu, which is a feature, and only the generic primitive moves. `web/src/ContextMenu.test.tsx` covers the menu's rendering and `contextMenuPosition`, and `web/src/context-menu/DefaultContextMenu.test.tsx` renders the default menu through the primitive; both pin the behavior and must keep passing untouched apart from the import path. Because this moves a file and edits four importers, it is hand-planned rather than routed to a playbook.
-
-
 * Move the stick-to-bottom scroll rules and the model-pair encoding out of the conversation tab component into modules beside it, so both can be tested and eventually shared instead of re-derived.
 
 Existing Debt: `web/src/plugins/conversations/ConversationTab.tsx` holds the whole stick-to-bottom pinning algorithm inline — the `stick` and `lastTop` refs, the `pin` callback, and the `onScroll` handler's 1px-versus-40px threshold arithmetic — plus the `harness:model` string encoding and the grouping of the model list into optgroups, all of which are rules in a component body rather than in a module beneath it, in violation of §5 (components render; they do not decide); `web/src/shared/transcript/Transcript.tsx` already carries a character-for-character copy of the same pinning algorithm because there was nothing to import. Severity: 5/10

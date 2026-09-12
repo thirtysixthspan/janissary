@@ -1,4 +1,4 @@
-import type { ContextMenuItem } from '../ContextMenu';
+import type { ContextMenuItem } from '../shared/ContextMenu';
 
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, and the element focus belongs to once the menu closes again.

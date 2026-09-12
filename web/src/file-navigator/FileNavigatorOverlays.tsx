@@ -10,7 +10,7 @@ import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { PendingContextMenu } from './use-file-navigator-row-events';
-import { ContextMenu } from '../ContextMenu';
+import { ContextMenu } from '../shared/ContextMenu';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
 import { getClipboardSnapshot } from './file-navigator-clipboard';
 import { basename } from '../rel-path';
