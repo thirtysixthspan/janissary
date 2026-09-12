@@ -1,5 +1,6 @@
 import type { ServerEvent, RpcCall, StateEvent } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
+import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 
 export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
@@ -24,13 +25,14 @@ export class JanusClient {
   private exitListeners = new Set<ExitListener>();
   private layoutListeners = new Set<LayoutListener>();
   private ptyHandlers = new Map<string, (data: string) => void>();
-  private ptyBuffers = new Map<string, string[]>();
+  private ptyOutput: PtyOutputBuffer;
   private pending = new Map<number, (result: unknown, error?: string) => void>();
   private stateCollectors: Partial<ClientStateCollectors> = {};
 
-  constructor() {
+  constructor(ptyOutputOptions: PtyOutputBufferOptions = {}) {
     const token = new URLSearchParams(location.search).get('token') ?? '';
     this.ws = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
+    this.ptyOutput = new PtyOutputBuffer(ptyOutputOptions);
     this.ws.addEventListener('message', (event) => this.onEvent(JSON.parse(event.data) as ServerEvent));
     this.ws.addEventListener('open', () => this.send({ method: 'init', params: {} }));
     this.ws.addEventListener('close', () => { this.drainPending(); });
@@ -86,13 +88,14 @@ export class JanusClient {
     case 'pty': {
       const h = this.ptyHandlers.get(event.id);
       if (h) h(event.data);
-      else { const b = this.ptyBuffers.get(event.id) ?? []; b.push(event.data); this.ptyBuffers.set(event.id, b); }
-    
+      else this.ptyOutput.record(event.id, event.data);
+
     break;
     }
     case 'pty-exit': {
+      this.ptyOutput.markExited(event.id);
       for (const l of this.exitListeners) l(event.id, event.exitCode);
-    
+
     break;
     }
     case 'layout': {
@@ -208,8 +211,7 @@ export class JanusClient {
 
   // Register a terminal card's writer for a pty id, flushing any buffered early output first.
   attachPty(id: string, onData: (data: string) => void): () => void {
-    const buffered = this.ptyBuffers.get(id);
-    if (buffered) { for (const d of buffered) onData(d); this.ptyBuffers.delete(id); }
+    this.ptyOutput.drain(id, onData);
     this.ptyHandlers.set(id, onData);
     return () => this.ptyHandlers.delete(id);
   }
@@ -225,7 +227,7 @@ export class JanusClient {
     this.exitListeners.clear();
     this.layoutListeners.clear();
     this.ptyHandlers.clear();
-    this.ptyBuffers.clear();
+    this.ptyOutput.dispose();
     this.drainPending();
     this.stateCollectors = {};
   }

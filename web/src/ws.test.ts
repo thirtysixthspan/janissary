@@ -334,6 +334,100 @@ describe('JanusClient', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  // The retention policy lives in pty-output-buffer.ts; these cases pin the client's routing
+  // through it — exit marking, expiration, aggregate pressure, and disposal.
+
+  it('replays output buffered before an exit to a handler attaching within the grace period', () => {
+    vi.useFakeTimers();
+    try {
+      const client = new JanusClient({ exitedTtlMs: 30_000 });
+      messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'hello' }) });
+      messageHandler!({ data: JSON.stringify({ t: 'pty-exit', id: 'tab-1', exitCode: 0 }) });
+
+      const handler = vi.fn();
+      client.attachPty('tab-1', handler);
+
+      expect(handler).toHaveBeenCalledWith('hello');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('expires the output of a stream that exited and never acquired a renderer', () => {
+    vi.useFakeTimers();
+    try {
+      const client = new JanusClient({ exitedTtlMs: 30_000 });
+      messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'hello' }) });
+      messageHandler!({ data: JSON.stringify({ t: 'pty-exit', id: 'tab-1', exitCode: 0 }) });
+
+      vi.advanceTimersByTime(30_000);
+
+      const handler = vi.fn();
+      client.attachPty('tab-1', handler);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('buffers output again after a handler detaches, and replays it on reattach', () => {
+    const client = new JanusClient();
+    const handler = vi.fn();
+    const detach = client.attachPty('tab-1', handler);
+    detach();
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'while detached' }) });
+
+    const reattached = vi.fn();
+    client.attachPty('tab-1', reattached);
+    expect(reattached).toHaveBeenCalledWith('while detached');
+  });
+
+  it('evicts the oldest unclaimed streams under aggregate pressure', () => {
+    const client = new JanusClient({ maxTotalBytes: 20 });
+    for (const id of ['a', 'b', 'c']) {
+      messageHandler!({ data: JSON.stringify({ t: 'pty', id, data: '1234567890' }) });
+    }
+
+    const evicted = vi.fn();
+    client.attachPty('a', evicted);
+    expect(evicted).not.toHaveBeenCalled();
+
+    const kept = vi.fn();
+    client.attachPty('c', kept);
+    expect(kept).toHaveBeenCalledWith('1234567890');
+  });
+
+  it('trims a stream past the per-stream limit and shows the truncation marker on attach', () => {
+    const client = new JanusClient({ maxStreamBytes: 15 });
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'aaaaaaaaaa' }) });
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'bbbbbbbbbb' }) });
+    messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'cc' }) });
+
+    const seen: string[] = [];
+    client.attachPty('tab-1', (data) => { seen.push(data); });
+
+    expect(seen[0]).toContain('[earlier output trimmed]');
+    expect(seen).toContain('cc');
+  });
+
+  it('dispose cancels pending expirations, so advancing time afterwards does nothing', () => {
+    vi.useFakeTimers();
+    try {
+      const client = new JanusClient({ exitedTtlMs: 30_000 });
+      messageHandler!({ data: JSON.stringify({ t: 'pty', id: 'tab-1', data: 'hello' }) });
+      messageHandler!({ data: JSON.stringify({ t: 'pty-exit', id: 'tab-1', exitCode: 0 }) });
+
+      client.dispose();
+      vi.advanceTimersByTime(60_000);
+
+      const handler = vi.fn();
+      client.attachPty('tab-1', handler);
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // A reply is the only thing that used to remove a pending request, so a connection ending with one
   // outstanding left its promise pending for the life of the page — and whatever was waiting on it
   // waiting with it.

@@ -4,17 +4,6 @@
 
 ## development
 
-* Bound retained terminal output in the WebSocket client and expire streams that never acquire a renderer.
-
-Existing Debt: The WebSocket client's early-output buffer has no retention policy, so every PTY without an attached handler accumulates strings until a renderer attaches or the whole client is disposed. Severity: 5/10
-
-Existing Risk: 6/10 - Output received while a terminal surface is absent can grow browser memory indefinitely, and an exited stream that never mounts retains its buffered output for the rest of the session.
-
-Proposal Risk: 3/10 - Bounded retention limits memory growth, but a terminal that mounts after eviction cannot reconstruct all earlier output and needs an explicit truncation indication rather than silently appearing complete.
-
-Proposal: Extract the buffering policy from `JanusClient` in `web/src/ws.ts` into a focused `web/src/pty-output-buffer.ts` module with explicit per-stream and aggregate retained-size limits, ordered draining, and expiration for unclaimed exited streams. Route the `pty` event's no-handler branch and `attachPty` replay through it, mark streams exited in the `pty-exit` branch, and release all retained data and any expiration timer in `dispose`. Preserve a bounded grace period for exit-before-mount rather than deleting output immediately on exit; `web/src/shared/transcript/TerminalCard.tsx` can render completed terminals, and `web/src/useXterm.ts` attaches only from an effect. Define overflow behavior explicitly, including oversized individual chunks and a visible truncation marker, and account for terminal escape sequences when choosing what can safely be replayed after dropping data. Keep live attached delivery unchanged. `web/src/ws.test.ts` currently covers early-output replay and disposal but only checks listener notification on PTY exit; extend it with exit-before-attach, never-attached expiration, detach followed by output, aggregate pressure across many ids, oversized chunks, and disposal with pending expiration. Add direct policy tests beside the extracted module, and retain `web/src/shared/transcript/TerminalCard.test.tsx` as the rendering regression check; none of the current replay assertions establishes a memory bound.
-
-
 * Give file-navigator drag gestures one lifecycle that releases window listeners on every completion and unmount.
 
 Existing Debt: The file-navigator drag hook violates §6 (hooks are the seam between logic and view) by acquiring four window listeners in its mouse-down handler without effect cleanup, while its public `drop` resets gesture state but leaves listener removal to a separate mouse-up wrapper. Severity: 6/10
