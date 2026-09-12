@@ -414,7 +414,12 @@ repository's default branch — the branch its remote points its default at, fal
 `master` or `main` when the remote's default branch cannot be determined. The governing checkout
 is the checkout containing the root of the file navigator the file was opened from; for a file
 opened with no navigator involved (a shell tab's edit command or a saved-tab restore) it is the
-app's project launch directory itself. A detached-HEAD checkout, a checkout outside any git
+app's project launch directory itself. A file navigator that has not yet finished loading the branch
+information for its current root — a tree just opened, or just re-rooted — cannot govern the
+decision either, and such an activation also follows the project launch directory rather than
+counting as off-primary; on a large repository that load takes long enough to be noticeable, and
+without this a file activated immediately after opening a tree would open unsynced while the same
+activation a moment later would not. A detached-HEAD checkout, a checkout outside any git
 repository, or any git failure all count as off-primary and disable syncing. When either condition
 is not met, the file opens instead as an ordinary editor tab against the real file where it lives —
 its saves commit and push nothing — with no sync status icon, and nothing else announces the

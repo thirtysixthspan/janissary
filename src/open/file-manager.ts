@@ -123,8 +123,9 @@ export class OpenFileManager {
   // Whether `file` is a candidate for GitHub syncing at all — the sole gate for the entire feature
   // (see `git-sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
   // config-listed, and the governing checkout is confirmably on its primary branch. The governing
-  // checkout is the activating tab's own navigator root when the label names one (falling back to
-  // the launch dir's cached pair for a shell tab's `edit`, a profile restore, a plugin opener); a
+  // checkout is the activating tab's own navigator root when the label names one and that tree has
+  // already loaded its git metadata (falling back to the launch dir's cached pair for a shell tab's
+  // `edit`, a profile restore, a plugin opener, or a navigator still loading its first result); a
   // feature-branch (or unconfirmable) checkout answers "no", so the file opens as an ordinary
   // editor tab against the real file on disk. Both inputs are values resolved elsewhere — this
   // stays synchronous, never a git call made here.

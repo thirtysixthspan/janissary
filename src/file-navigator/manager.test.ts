@@ -1669,6 +1669,39 @@ describe('FileNavigatorManager', () => {
       await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
     });
 
+    it('answers onPrimaryBranch undefined until the first metadata result lands', async () => {
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockImplementationOnce(() => deferred.promise).mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      expect(manager.onPrimaryBranch(label)).toBeUndefined();
+
+      deferred.resolve('master');
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
+    });
+
+    it('resets onPrimaryBranch to undefined across a reroot until the new root resolves', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      currentBranchMock.mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
+
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockImplementationOnce(() => deferred.promise).mockResolvedValue('feature');
+      manager.reroot(label);
+
+      expect(manager.onPrimaryBranch(label)).toBeUndefined();
+
+      deferred.resolve('feature');
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(false));
+    });
+
     it('discards a default-branch refresh whose root changed (reroot) before it resolved', async () => {
       mkdirSync(path.join(root, 'sub'));
       const deferred = Promise.withResolvers<string | undefined>();

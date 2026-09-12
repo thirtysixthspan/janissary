@@ -542,7 +542,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     dir: string,
     tabs: EditorTab[],
     openSync: () => Promise<{ dir: string } | { error: string }>,
-    navigatorPrimary: boolean | undefined = true,
+    navigatorPrimary: boolean | undefined,
   ) => ({
     tab: {
       cwdOf: () => dir,
@@ -570,7 +570,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     mkdirSync(path.join(dir, 'synced'));
     writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
     const tabs: EditorTab[] = [];
-    const managers = makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }));
+    const managers = makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }), true);
     const mgr = new OpenFileManager(managers);
 
     const result = mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
@@ -592,7 +592,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     mkdirSync(path.join(dir, 'synced'));
     writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
     const tabs: EditorTab[] = [];
-    const managers = makeSyncedManagers(dir, tabs, async () => ({ error: 'clone failed' }));
+    const managers = makeSyncedManagers(dir, tabs, async () => ({ error: 'clone failed' }), true);
     const mgr = new OpenFileManager(managers);
 
     mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
@@ -646,6 +646,24 @@ describe('OpenFileManager.edit (synced path)', () => {
       mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
 
       expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+    });
+
+    // A navigator that has not yet loaded git metadata for its root answers `undefined` rather than
+    // `false`, so a file activated seconds after the tree opened is classified by the launch dir
+    // instead of being silently opened unsynced.
+    it('falls back to the launch dir when the navigator has not yet loaded its branch', () => {
+      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
+      mkdirSync(path.join(dir, 'synced'));
+      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
+      const tabs: EditorTab[] = [];
+      launchDirBranch.isLaunchDirOnPrimaryBranch.mockReturnValue(true);
+      const mgr = new OpenFileManager(setup(dir, tabs, undefined));
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(launchDirBranch.isLaunchDirOnPrimaryBranch).toHaveBeenCalledWith(dir);
+      expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+      expect(tabs[0].editor?.sync).toBe('provisioning');
     });
 
     it('leaves a non-config-listed path outside the branch decision either way', () => {

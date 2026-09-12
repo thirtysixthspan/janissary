@@ -24,6 +24,7 @@ export function refreshGit(
       current.branch = branch;
       current.githubUrl = githubUrl;
       current.defaultBranch = detectedDefault;
+      current.gitMetadataLoaded = true;
       rebuild(label);
     }
     current.gitRefreshing = false;
