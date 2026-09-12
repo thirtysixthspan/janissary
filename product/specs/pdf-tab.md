@@ -62,6 +62,8 @@ same way offline, behind a proxy, and on a remote server.
 
 The server supplies the document and rendering assets; it never renders the document's pages itself.
 
+During development, only readable character maps and standard fonts contained in the installed renderer package are served as PDF assets, with an explicit content type. Missing assets and paths escaping that package, including through links, use the development server's normal not-found handling.
+
 ### Layout
 
 A PDF tab's body has no command bar and no transcript. When the active tab is a PDF view, the app

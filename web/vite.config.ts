@@ -4,13 +4,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { pdfjsAssetMiddleware } from './pdfjs-assets';
 
 // PDF.js reaches for character maps when a document uses CJK or an unusual text encoding, and for
 // standard font data when a document does not embed its fonts. Both ship with the app rather than
 // being fetched from a CDN: the server serves only its own bundled assets, and a viewer that
 // silently stopped working offline or behind a proxy would be the worst of the three outcomes.
 const PDFJS_ASSET_DIRECTORIES = ['cmaps', 'standard_fonts'];
-const PDFJS_ASSET_ROUTE = /^\/pdfjs\/(cmaps|standard_fonts)\/([\w.-]+)$/u;
 
 function pdfjsAssets(): Plugin {
   const packageRoot = path.dirname(
@@ -21,11 +21,7 @@ function pdfjsAssets(): Plugin {
     // The dev server emits no bundle, so the same paths are served straight from the installed
     // package instead.
     configureServer(server) {
-      server.middlewares.use((request, response, next) => {
-        const route = PDFJS_ASSET_ROUTE.exec(request.url ?? '');
-        if (!route) { next(); return; }
-        response.end(readFileSync(path.join(packageRoot, route[1], route[2])));
-      });
+      server.middlewares.use(pdfjsAssetMiddleware(packageRoot));
     },
     generateBundle() {
       const assets = PDFJS_ASSET_DIRECTORIES.flatMap((directory) => {
