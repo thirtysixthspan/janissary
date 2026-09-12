@@ -71,7 +71,7 @@ describe('EventBus', () => {
   });
 
   it('isolation: a throwing listener does not prevent later listeners from firing', () => {
-    const b = bus();
+    const b = new MessageBus<TestChannels>(() => {});
     const thrower = vi.fn(() => { throw new Error('boom'); });
     const spy = vi.fn();
     b.on('test', 'ping', thrower);
@@ -79,6 +79,44 @@ describe('EventBus', () => {
     expect(() => b.emit('test', ping())).not.toThrow();
     expect(thrower).toHaveBeenCalledOnce();
     expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('reports a caught listener error to the sink with the channel, type, and error', () => {
+    const sink = vi.fn();
+    const b = new MessageBus<TestChannels>(sink);
+    const boom = new Error('boom');
+    b.on('test', 'ping', () => { throw boom; });
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledOnce();
+    expect(sink).toHaveBeenCalledWith('test', 'ping', boom);
+  });
+
+  it('a throwing sink is itself swallowed and emit still does not throw', () => {
+    const b = new MessageBus<TestChannels>(() => { throw new Error('sink exploded'); });
+    const spy = vi.fn();
+    b.on('test', 'ping', () => { throw new Error('boom'); });
+    b.on('test', 'ping', spy);
+    expect(() => b.emit('test', ping())).not.toThrow();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('reports repeated failures from one listener once until a successful call clears it', () => {
+    const sink = vi.fn();
+    const b = new MessageBus<TestChannels>(sink);
+    let fail = true;
+    const listener = () => {
+      if (fail) throw new Error('boom');
+    };
+    b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledOnce();
+
+    fail = false;
+    b.emit('test', ping());
+    fail = true;
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledTimes(2);
   });
 
   it('copy-on-iterate: a listener removed mid-dispatch by an earlier listener still fires', () => {

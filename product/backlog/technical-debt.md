@@ -4,17 +4,6 @@
 
 ## development
 
-* Report the errors the message bus catches out of its listeners, instead of discarding them where nothing can see them.
-
-Existing Debt: `MessageBus.emit` in `src/bus.ts` wraps each listener call in a `try`/`catch` with an empty body, so subscriber isolation — which is correct and must stay — is implemented as total silence: the process-wide bus that carries `state: dirty`, every `pty` data and exit event, the transcript events, and the schedule and conversation change signals has no diagnostic path of any kind for a subscriber that throws. Severity: 4/10
-
-Existing Risk: 5/10 - A listener that throws on every event of its type stops doing its job permanently while the app keeps running and reports nothing — the UI silently stops refreshing, a transcript stops recording, a PTY's screen reader stops capturing — and because the failure leaves no stderr line, no notification, and no counter, diagnosing it means bisecting subscribers by hand rather than reading an error.
-
-Proposal Risk: 2/10 - Errors become visible, but a listener that throws on a high-frequency channel like `pty: data` would then emit one report per event, so the reporting path itself can become the noise that buries the signal unless it is rate-limited or deduplicated — and a reporter that throws must not be allowed to break the emit path it was added to protect.
-
-Proposal: Give `MessageBus` an injectable error sink rather than wiring it to any particular reporting module: add an optional constructor argument (or a settable `onListenerError(channel: string, type: string, error: unknown): void`) defaulting to a function that writes one line to stderr via `errorText` from `src/error-text.ts`, and call it from the `catch` in `emit` inside its own `try` so a throwing sink cannot escape. Keep the isolation semantics exactly as they are — later listeners still run, `emit` still never throws — and keep the sink out of `src/notifications.ts`, whose `notify` needs a `Managers` the bus does not and must not hold. Dedupe or rate-limit at the sink, not in `emit`: report at most once per `channel:type` per listener until a subsequent successful call clears it, so a subscriber failing on every `pty: data` event produces one line rather than thousands. `src/bus.test.ts` already pins that a throwing listener does not stop later listeners and that `emit` does not throw; extend it with cases asserting the sink is invoked with the channel, type, and error, that a throwing sink is itself swallowed, and that repeated failures from one listener report once — and confirm the default stderr sink is quiet in the rest of the suite, since a test whose fake subscriber throws deliberately would start printing.
-
-
 * Separate simultaneously due harness commands into distinct scheduled submissions.
 
 Existing Debt: The scheduler treats a harness command as delivered when its text is written, although submission occurs in a later timeout, so the loop has no boundary between commands targeting the same terminal. Severity: 6/10

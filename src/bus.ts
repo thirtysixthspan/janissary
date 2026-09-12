@@ -2,6 +2,7 @@
 // each channel events are discriminated by a `type` string. Listeners are isolated via per-call
 // try/catch so a throwing subscriber never breaks the emit path.
 
+import { errorText } from './error-text.js';
 import type { LogEntry, Tab } from './tab/types.js';
 
 export type Subscription = { unsubscribe: () => void };
@@ -15,8 +16,26 @@ export type ChannelMap = Record<string, { type: string }>;
 type BaseEvent = { type: string };
 type AnyListener = Listener<BaseEvent>;
 
+// Where a caught listener error goes. Injectable so no particular reporting module is wired in
+// here; the default writes one line to stderr. The sink runs inside its own try in `emit`, so a
+// throwing sink cannot break the emit path it was added to protect.
+export type ListenerErrorSink = (channel: string, type: string, error: unknown) => void;
+
+function defaultListenerError(channel: string, type: string, error: unknown): void {
+  process.stderr.write(`message bus: ${channel}:${type} listener failed: ${errorText(error)}\n`);
+}
+
 export class MessageBus<C extends ChannelMap> {
   private listeners = new Map<string, Set<AnyListener>>();
+  // Listeners whose failure on a `channel:type` key has already been reported. A listener failing
+  // on every event of a high-frequency channel would otherwise produce one report per event; a
+  // successful call clears the listener from the key, so a recovery is visible on its next failure.
+  private reported = new Map<string, Set<AnyListener>>();
+  private readonly onListenerError: ListenerErrorSink;
+
+  constructor(onListenerError: ListenerErrorSink = defaultListenerError) {
+    this.onListenerError = onListenerError;
+  }
 
   private key(channel: keyof C, type: string): string {
     return `${String(channel)}:${type}`;
@@ -58,14 +77,28 @@ export class MessageBus<C extends ChannelMap> {
   }
 
   emit<K extends keyof C>(channel: K, event: C[K]): void {
-    const set = this.listeners.get(this.key(channel, event.type));
+    const k = this.key(channel, event.type);
+    const set = this.listeners.get(k);
     if (!set) return;
     const snapshot = [...set];
     for (const fn of snapshot) {
       try {
         fn(event);
-      } catch {
-        // Isolate subscriber errors so a throwing listener cannot break the emit path.
+        this.reported.get(k)?.delete(fn);
+      } catch (error) {
+        // Isolate subscriber errors so a throwing listener cannot break the emit path, but do not
+        // discard them where nothing can see them: report through the sink, deduplicated per
+        // listener until a subsequent successful call clears it.
+        const seen = this.reported.get(k) ?? new Set<AnyListener>();
+        if (!seen.has(fn)) {
+          seen.add(fn);
+          this.reported.set(k, seen);
+          try {
+            this.onListenerError(String(channel), event.type, error);
+          } catch {
+            // A throwing sink must not break the emit path it was added to protect.
+          }
+        }
       }
     }
   }
