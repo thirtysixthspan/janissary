@@ -2,8 +2,6 @@
 
 ## ready
 
-* add a "chat about this" item to the default menu. This item will open a new converation tab, select the last used ai model, paste in the content to the conversation without launching the query. This feature should be part of the conversations plugin and may require extension of the plugin API to add menu items to the default context menu.
-
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
