@@ -14,7 +14,7 @@ import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isSyncedPath } from '../sync-path-match.js';
-import { isLaunchDirOnPrimaryBranch } from './launch-dir-branch.js';
+import { isLaunchDirOnPrimaryBranch, refreshLaunchDirBranch } from './launch-dir-branch.js';
 
 export type EditResult = { label: string };
 
@@ -137,6 +137,9 @@ export class OpenFileManager {
     if (!isSyncedPath(relative, getConfig().syncPaths)) return false;
     const navigatorPrimary = this.governingNavigator(label, launchDir)?.onPrimaryBranch(label);
     if (navigatorPrimary !== undefined) return navigatorPrimary;
+    // Unawaited by design: this open is classified from whatever is already cached, and the refresh
+    // is what makes the *next* one current. Concurrent opens share one resolution.
+    void refreshLaunchDirBranch(launchDir);
     return isLaunchDirOnPrimaryBranch(launchDir) ?? false;
   }
 

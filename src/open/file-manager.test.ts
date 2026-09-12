@@ -12,6 +12,7 @@ const osOpen = vi.hoisted(() => ({ didOsOpen: vi.fn<(file: string, application?:
 const notifications = vi.hoisted(() => ({ notify: vi.fn() }));
 const launchDirBranch = vi.hoisted(() => ({
   isLaunchDirOnPrimaryBranch: vi.fn<(launchDir: string) => boolean | undefined>(),
+  refreshLaunchDirBranch: vi.fn<(launchDir: string) => Promise<void>>(() => Promise.resolve()),
 }));
 
 vi.mock('../config.js', () => ({
@@ -19,7 +20,10 @@ vi.mock('../config.js', () => ({
 }));
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
 vi.mock('../notifications.js', () => ({ notify: notifications.notify }));
-vi.mock('./launch-dir-branch.js', () => ({ isLaunchDirOnPrimaryBranch: launchDirBranch.isLaunchDirOnPrimaryBranch }));
+vi.mock('./launch-dir-branch.js', () => ({
+  isLaunchDirOnPrimaryBranch: launchDirBranch.isLaunchDirOnPrimaryBranch,
+  refreshLaunchDirBranch: launchDirBranch.refreshLaunchDirBranch,
+}));
 
 describe('OpenFileManager.edit', () => {
   it('opens the editor for a new file that does not exist on disk', () => {
@@ -609,7 +613,10 @@ describe('OpenFileManager.edit (synced path)', () => {
   });
 
   describe('branch gate', () => {
-    beforeEach(() => { launchDirBranch.isLaunchDirOnPrimaryBranch.mockReset(); });
+    beforeEach(() => {
+      launchDirBranch.isLaunchDirOnPrimaryBranch.mockReset();
+      launchDirBranch.refreshLaunchDirBranch.mockClear();
+    });
 
     const setup = (
       dir: string,
@@ -757,6 +764,8 @@ describe('OpenFileManager.edit (synced path)', () => {
       mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
 
       expect(launchDirBranch.isLaunchDirOnPrimaryBranch).toHaveBeenCalledWith(dir);
+      // The read is pure, so the gate is the only thing keeping the cache current.
+      expect(launchDirBranch.refreshLaunchDirBranch).toHaveBeenCalledWith(dir);
       expect(tabs).toHaveLength(1);
       if (primary) {
         expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
