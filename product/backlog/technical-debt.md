@@ -4,16 +4,6 @@
 
 ## development
 
-* Move the pane-partitioning and pane-selection rules out of the split center action area into a pure module beside it, so which tab shows in which pane can be tested without a render.
-
-Existing Debt: `web/src/CenterActionArea.tsx` decides the split layout inside its component body — `paneOf` defaulting a tab to the left pane, `paneEntries` partitioning the entries by pane, `selectedIndex` choosing between the active and secondary tab per pane, and `renderPane`'s fallback to the first visible entry when the selected index is not in that pane — which are rules worth unit-testing sitting in a component, in violation of §5 (components render; they do not decide). Severity: 4/10
-
-Existing Risk: 4/10 - The rule that resolves which tab a pane shows is reachable only by rendering the whole split area with a client, so an edge case — a secondary tab closed while split, a tab moved to the other pane, an entry list that no longer contains the selected index — surfaces as the wrong tab body appearing in a pane, and the user's response is to click around until the app agrees with them.
-
-Proposal Risk: 2/10 - The rules become plain functions with direct tests, but the extraction is behavior-preserving by eye only: the current fallback ordering is not pinned by any assertion, so a slip in the precedence between the active tab, the secondary tab, and the first-visible fallback would land unnoticed until someone opened a split pane in an unusual state.
-
-Proposal: `web/src/CenterActionArea.tsx` computes its pane layout inline. Extract those rules into a new `web/src/center-panes.ts` as plain functions — `paneOf(tab)`, `entriesInPane(entries, pane)`, `selectedIndexForPane(tabs, activeTab, secondaryTab, pane)`, and a `currentEntryForPane(visibleEntries, selected)` that folds in the "first visible entry" fallback — and have the component import and call them in place of the inline definitions. The component keeps `onResize`, `renderPane`'s JSX, and the `onPointerDownCapture` handler, all of which are wiring rather than rules. `CenterActionArea`'s export and props are unchanged, so `web/src/AppCenterActionArea.tsx`, the only file that renders it, is unaffected and no import path moves. `web/src/CenterActionArea.test.tsx` renders the area and asserts on the strips and pane bodies — it needs no edit and must keep passing. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/CenterActionArea.tsx`.
-
 * Delete the duplicated Markdown-sanitize render module in the plugin adapter and import the shared one instead, so the HTML-escaping rules the app renders with exist once.
 
 Existing Debt: `web/src/plugins/markdown-render.ts` is a copy, line for line, of `web/src/shared/transcript/markdown.ts` — same `marked` options, same `DOMPurify.sanitize` call, same `try/catch` returning undefined — kept in a second place with its own `web/src/plugins/markdown-render.test.ts` covering the same cases as `web/src/shared/transcript/markdown.test.ts`, violating §2 (colocate; promote to shared only on the second consumer; when you promote, move the file — don't leave a copy behind); the root test file `web/src/markdown-sanitize.test.ts` also exercises `marked`+`DOMPurify` behavior connected to neither module. Severity: 4/10

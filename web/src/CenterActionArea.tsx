@@ -1,9 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
-import type { TabView } from '@shared/protocol';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
 import type { TabEntry } from './tab-entries';
+import { currentEntryForPane, entriesInPane, selectedIndexForPane } from './center-panes';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 
 const MIN_PCT = 15;
@@ -14,10 +14,6 @@ type Properties = BaseCenterActionAreaProps & {
   persistentLayers: React.ReactNode;
 };
 
-function paneOf(tab: TabView): 'left' | 'right' {
-  return tab.pane ?? 'left';
-}
-
 export function CenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
   activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs,
@@ -26,12 +22,6 @@ export function CenterActionArea({
   const [leftPct, setLeftPct] = useState(50);
   const areaRef = useRef<HTMLDivElement>(null);
   const split = secondaryTab !== undefined;
-  const paneEntries = (pane: 'left' | 'right') =>
-    entries.filter((entry) => paneOf(entry.tab) === pane);
-  const selectedIndex = (pane: 'left' | 'right') => {
-    const focused = tabs[activeTab];
-    return focused && paneOf(focused) === pane ? activeTab : secondaryTab;
-  };
   const onResize = useCallback((_down: React.MouseEvent, move: MouseEvent) => {
     const bounds = areaRef.current?.getBoundingClientRect();
     const width = bounds && bounds.width > 0 ? bounds.width : globalThis.innerWidth;
@@ -41,9 +31,11 @@ export function CenterActionArea({
   }, []);
 
   const renderPane = (pane: 'left' | 'right') => {
-    const visibleEntries = paneEntries(pane);
-    const selected = selectedIndex(pane);
-    const current = visibleEntries.find((entry) => entry.index === selected) ?? visibleEntries[0];
+    const visibleEntries = entriesInPane(entries, pane);
+    const current = currentEntryForPane(
+      visibleEntries,
+      selectedIndexForPane(tabs, activeTab, secondaryTab, pane),
+    );
     if (!current) return null;
     const localActive = visibleEntries.indexOf(current);
     return (
