@@ -4,17 +4,6 @@
 
 ## development
 
-* Delete the duplicated Markdown-sanitize render module in the plugin adapter and import the shared one instead, so the HTML-escaping rules the app renders with exist once.
-
-Existing Debt: `web/src/plugins/markdown-render.ts` is a copy, line for line, of `web/src/shared/transcript/markdown.ts` — same `marked` options, same `DOMPurify.sanitize` call, same `try/catch` returning undefined — kept in a second place with its own `web/src/plugins/markdown-render.test.ts` covering the same cases as `web/src/shared/transcript/markdown.test.ts`, violating §2 (colocate; promote to shared only on the second consumer; when you promote, move the file — don't leave a copy behind); the root test file `web/src/markdown-sanitize.test.ts` also exercises `marked`+`DOMPurify` behavior connected to neither module. Severity: 4/10
-
-Existing Risk: 5/10 - This is security-relevant logic (the sanitization that keeps transcript-embedded HTML from becoming script), so a fix applied to one copy — a marked option tightened, a DOMPurify config change — leaves the other serving unsanitized output to whatever surface its consumer feeds, and nothing fails when the two `renderMarkdown` exports drift apart.
-
-Proposal Risk: 2/10 - One `renderMarkdown` remains and both former consumers exercise it, but the surviving module is only checked by `web/src/shared/transcript/markdown.test.ts` plus the surviving plugin tests pointed at the new path; retiring the orphan `web/src/markdown-sanitize.test.ts` without folding its three assertions into it would give up coverage of inline event handlers and `javascript:` URLs unless those cases are copied across.
-
-Proposal: In `web/src/plugins/api.ts`, change the re-export at line-level from `./markdown-render` to `../shared/transcript/markdown` (`export { renderMarkdown } from '../shared/transcript/markdown'`), delete `web/src/plugins/markdown-render.ts` and `web/src/plugins/markdown-render.test.ts` (they are the moved-copy and its shadow test), and re-run `web/src/plugins/api.test.ts` plus `web/src/plugins/markdown`'s body tests, which consume the re-export and pin the plugin-facing surface. `web/src/shared/transcript/markdown.ts` and `markdown.test.ts` do not change; nothing else imports `markdown-render`. Fold the three html-sanitize assertions from the orphan `web/src/markdown-sanitize.test.ts` (img event handlers, `javascript:` links) into `markdown.test.ts`, then delete the orphan. Multi-file delete-and-retarget with a test-file edit, so hand-planned rather than routed to a playbook.
-
-
 * Move the two generic path and match utilities stranded at the app root into the shared layer, so the three features consuming them stop importing app-shell modules.
 
 Existing Debt: `web/src/rel-path.ts` and `web/src/fuzzy-match.ts` are framework-free pure utilities sitting at the app root, imported upward by the file-navigator feature (nine files incl. `web/src/file-navigator/FileNavigatorOverlays.tsx`, `web/src/file-navigator/file-search-match.ts`), the pickers feature (`web/src/pickers/useQuickOpen.ts`, `web/src/pickers/QuickOpen.tsx`, `web/src/pickers/picker-overlay-view.ts`), and the editor feature (`web/src/editor/useEditorFind.ts`, `web/src/editor/EditorFind.tsx`), which is generic shared code living at the app-shell layer — the placement §2 (colocate; promote to shared) names as the thing to move rather than the home the one-way layer table in §3 (dependencies flow one way: shared → feature → app) expects. Severity: 4/10

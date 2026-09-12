@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import type { PluginHost } from './host';
 
-export { renderMarkdown } from './markdown-render';
+export { renderMarkdown } from '../shared/transcript/markdown';
 
 // The host's command bar, published so a plugin whose tab takes a line of text renders the one the
 // agent tab renders rather than a second textarea that drifts from it. Both are free of any feature:
