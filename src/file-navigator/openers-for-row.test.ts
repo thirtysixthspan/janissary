@@ -17,6 +17,15 @@ describe('openersForRow', () => {
     expect(openersForRow('/root', 'docs/readme.md', true)).toEqual({ command: 'edit', choices: [] });
   });
 
+  // The regression guard for the PDF plugin declaring `editsOwnFiles` and no `editGesture`: the
+  // gesture branch is checked first, so a declaration carrying both would send Shift-activation to
+  // `open external` and leave the viewer reachable only by typing the command.
+  it('sends both activations of a pdf row to the viewer rather than out to the OS', () => {
+    expect(openersForRow('/root', 'docs/paper.pdf', false)).toEqual({ command: 'open', choices: [] });
+    expect(openersForRow('/root', 'docs/paper.pdf', true)).toEqual({ command: 'edit', choices: [] });
+    expect(openersForRow('/root', 'docs/PAPER.PDF', true)).toEqual({ command: 'edit', choices: [] });
+  });
+
   it('still offers the two-choice chooser for a row no opener claims', () => {
     const result = openersForRow('/root', 'archive.tar.gz', false);
     expect(result.command).toBeUndefined();

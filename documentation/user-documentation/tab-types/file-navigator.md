@@ -128,14 +128,14 @@ including while the tree is docked to a sidebar; opened files still land in that
 If a file type has no built-in opener, double-clicking the file shows a picker with **Edit as text**
 and **Open externally**. Choose the action you want, or press `Escape` to close the picker.
 **Open externally** hands the file to whichever application your operating system opens that type
-with — a PDF goes to your system PDF viewer.
+with — a `.zip` goes to your system's archive utility.
 
 Right-click a file for **Open**, **Edit**, and **Open with**, followed by the usual file actions.
-**Edit** opens the row for editing just like Shift-double-clicking it: ordinary files open in the
-text editor, while images open directly in the image editor. With multiple images selected,
-right-clicking one of them makes **Open** or **Edit** apply to every selected image. Otherwise,
-each action affects only the row you right-clicked, and **Edit** is not shown for directories.
-**Open with** lets you choose the registered viewer, text editor, or
+**Edit** runs the same `edit` command as the command bar: ordinary files open in the text editor,
+while images open directly in the image editor and PDFs open in the
+[PDF viewer](/user-documentation/tab-types/pdf-viewer). With multiple images selected, right-clicking one
+of them makes **Open** or **Edit** apply to every selected image. Otherwise, each action affects
+only the row you right-clicked, and **Edit** is not shown for directories. **Open with** lets you choose the registered viewer, text editor, or
 external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
 Duplicate, Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to
 it.

@@ -1,0 +1,82 @@
+/* The selectable text PDF.js builds over a rendered page: transparent glyphs positioned to sit
+   exactly on the ones the canvas drew, so a drag across them selects the document's own text.
+
+   The geometry is derived from the text-layer rules of the stylesheet `pdfjs-dist` ships. That file
+   is not imported: it is the stylesheet for the whole viewer application it was written for, and its
+   rules — `.sidebar`, `.dialog`, `.hidden`, `.page`, two `:root` blocks — are written for that
+   application's markup at the top level of the document, where they restyle the host around a PDF
+   tab. Only the text layer is used here, so only the text layer is restated, rooted in this plugin's
+   own class. Nothing below this line matches an element outside a PDF page. */
+
+/* PDF.js sizes the layer with an inline `round(down, var(--total-scale-factor) * Npx,
+   var(--scale-round-x))`; the rounding steps are the layer's to declare. `--min-font-size` is set
+   inline by PDF.js as well — the fallback here keeps the derived scales valid before it arrives. */
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  z-index: 0;
+  text-align: initial;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  transform-origin: 0 0;
+  color-scheme: only light;
+  caret-color: CanvasText;
+  forced-color-adjust: none;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+  --min-font-size: 1;
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+}
+
+/* A page carrying a /Rotate is drawn upright by rotating the layer PDF.js has already marked. */
+.pdf-text-layer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.pdf-text-layer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.pdf-text-layer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+
+.pdf-text-layer span,
+.pdf-text-layer br {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  user-select: text;
+  transform-origin: 0% 0%;
+}
+
+/* Each glyph run is scaled from the font height and horizontal stretch PDF.js writes onto it. */
+.pdf-text-layer > :not(.markedContent),
+.pdf-text-layer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+/* A marked-content group is structure, not a box: its children position against the layer. */
+.pdf-text-layer .markedContent { display: contents; }
+
+.pdf-text-layer span[role="img"] { user-select: none; cursor: default; }
+
+/* The zero-height strip below the last line: dragging past the end of the page selects to the end
+   of it rather than stopping at whatever line the pointer left. */
+.pdf-text-layer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+
+.pdf-text-layer.selecting .endOfContent { top: 0; }
+
+/* The selection over a rendered page, in a color clearly distinct from a page in every theme. The
+   glyphs stay transparent while selected — they are only a stand-in for the ones on the canvas. */
+.pdf-text-layer ::selection { background: rgb(0 110 255 / 35%); color: transparent; }
+.pdf-text-layer br::selection { background: transparent; }

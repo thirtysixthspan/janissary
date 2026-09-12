@@ -442,9 +442,11 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
     plugins: { runOpener: vi.fn() },
   } as unknown as Managers);
 
-  const temporaryPdf = () => {
+  // A `.zip` is the honest example of a type no opener claims; `.pdf` stopped being one when the
+  // PDF plugin claimed it.
+  const temporaryArchive = () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-unclaimed-'));
-    writeFileSync(path.join(dir, 'paper.pdf'), Buffer.alloc(10));
+    writeFileSync(path.join(dir, 'papers.zip'), Buffer.alloc(10));
     return dir;
   };
 
@@ -454,62 +456,78 @@ describe('OpenFileManager.run (unclaimed extension)', () => {
     notifications.notify.mockReset();
   });
 
-  it('hands a pdf to the OS handler on `open external`, opening no tab', async () => {
-    const dir = temporaryPdf();
+  it('hands an archive to the OS handler on `open external`, opening no tab', async () => {
+    const dir = temporaryArchive();
     const notes: Note[] = [];
     const opened: string[] = [];
 
-    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open external paper.pdf', 'janus');
+    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open external papers.zip', 'janus');
 
-    expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'paper.pdf'));
+    expect(osOpen.didOsOpen).toHaveBeenCalledWith(path.join(dir, 'papers.zip'));
     expect(opened).toHaveLength(0);
     expect(notes).toEqual([{
-      input: 'open external paper.pdf', output: 'Opening paper.pdf in your default viewer…',
+      input: 'open external papers.zip', output: 'Opening papers.zip in your default viewer…',
     }]);
   });
 
   it('reports the path when the OS handoff cannot be launched', async () => {
-    const dir = temporaryPdf();
+    const dir = temporaryArchive();
     const notes: Note[] = [];
     osOpen.didOsOpen.mockReturnValue(false);
 
-    await new OpenFileManager(makeManagers(dir, notes, [])).run('open external paper.pdf', 'janus');
+    await new OpenFileManager(makeManagers(dir, notes, [])).run('open external papers.zip', 'janus');
 
     expect(notes).toEqual([{
-      input: 'open external paper.pdf',
-      output: `No viewer available. The file is at ${path.join(dir, 'paper.pdf')}`,
+      input: 'open external papers.zip',
+      output: `No viewer available. The file is at ${path.join(dir, 'papers.zip')}`,
     }]);
   });
 
   // The originating tab may be a file navigator, which renders rows rather than a transcript, so
   // the unsupported-type report goes to the notifications feed instead of that tab's log.
   it('notifies rather than writing to the transcript for an inline open', async () => {
-    const dir = temporaryPdf();
+    const dir = temporaryArchive();
     const notes: Note[] = [];
     const opened: string[] = [];
 
-    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open paper.pdf', 'janus');
+    await new OpenFileManager(makeManagers(dir, notes, opened)).run('open papers.zip', 'janus');
 
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
     expect(opened).toHaveLength(0);
     expect(notes).toHaveLength(0);
     expect(notifications.notify).toHaveBeenCalledWith(
-      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".pdf" files.',
+      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".zip" files.',
     );
   });
 
   it('still refuses a pinned command rather than handing the file to the OS', async () => {
-    const dir = temporaryPdf();
+    const dir = temporaryArchive();
     const notes: Note[] = [];
 
     await new OpenFileManager(makeManagers(dir, notes, []))
-      .runAs('open external paper.pdf', 'video external paper.pdf', 'janus', 'video');
+      .runAs('open external papers.zip', 'video external papers.zip', 'janus', 'video');
 
     expect(osOpen.didOsOpen).not.toHaveBeenCalled();
     expect(notes).toHaveLength(0);
     expect(notifications.notify).toHaveBeenCalledWith(
-      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".pdf" files.',
+      expect.anything(), 'open-unsupported', 'janus', 'No opener for ".zip" files.',
     );
+  });
+
+  // The regression guard for the PDF plugin's claim: `.pdf` used to reach this branch, and now
+  // reaches an opener like any other claimed type.
+  it('dispatches a pdf to its plugin opener rather than reporting no opener', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-claimed-'));
+    writeFileSync(path.join(dir, 'paper.pdf'), Buffer.alloc(10));
+    const notes: Note[] = [];
+    const managers = makeManagers(dir, notes, []);
+
+    await new OpenFileManager(managers).run('open paper.pdf', 'janus');
+
+    expect(managers.plugins.runOpener).toHaveBeenCalledWith(
+      'pdf', 'inline', path.join(dir, 'paper.pdf'), { label: 'janus', command: 'open paper.pdf' },
+    );
+    expect(notifications.notify).not.toHaveBeenCalled();
   });
 });
 

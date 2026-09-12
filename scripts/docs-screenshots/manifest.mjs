@@ -78,6 +78,7 @@ export default [
   // View tabs.
   { name: 'image-tab', setup: ['open ./sample.png'], actions: [{ press: 'PageUp' }], target: 'image-view' },
   { name: 'markdown-tab', setup: ['open ./sample.md'], target: 'markdown-view' },
+  { name: 'pdf-tab', setup: ['open ./sample.pdf'], settle: 2000, target: 'pdf-view' },
   { name: 'page-tab', setup: ['open {{PAGE_URL}}'], settle: 2000, target: 'page-view' },
   {
     name: 'editor-tab',

@@ -9,11 +9,12 @@ open diagram.png              image, in an image tab
 open clip.mp4                 video, played in a video tab
 open track.mp3                audio, queued in the audio tab
 open notes.md                 Markdown, rendered in a markdown tab
+open paper.pdf                PDF, rendered in a PDF tab
 open https://example.com      web page, embedded in a page tab
 open page example.com         same, for a bare address
 ```
 
-Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Audio player](/user-documentation/tab-types/audio-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
+Full form: `open [external] [page] <target>`. Relative paths resolve against the tab's working directory. What kind of tab you get depends on the file type — see [Image viewer](/user-documentation/tab-types/image-viewer), [Video player](/user-documentation/tab-types/video-player), [Audio player](/user-documentation/tab-types/audio-player), [Markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), and [Embedded web pages](/user-documentation/tab-types/web-pages). Every tab it opens joins the current tab's [group](/user-documentation/getting-started/groups) and can be closed from the strip with its × button.
 
 Files opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) use the same viewer or editor as local files. Janissary reads the remote content into its session cache first; saving an editor tab writes the change back to the remote host. If that write fails, the editor remains marked as changed and the notifications feed reports the failure.
 
@@ -26,11 +27,12 @@ Targets with an `http://` or `https://` scheme are treated as web addresses; the
 ```
 open external photo.jpg           the OS image viewer (Preview on macOS)
 open external clip.mp4            your configured video player (QuickTime Player by default)
-open external paper.pdf           whichever application your OS opens PDFs with
+open external paper.pdf           your configured PDF application (the OS default otherwise)
+open external papers.zip          whichever application your OS opens archives with
 open external https://example.com the OS default browser
 ```
 
-This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.pdf` or a `.zip`, so `open external` hands the file over and confirms with `Opening paper.pdf in your default viewer…`. If nothing can be launched, you get the file's path instead.
+This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.zip`, so `open external` hands the file over and confirms with `Opening papers.zip in your default viewer…`. If nothing can be launched, you get the file's path instead.
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
 
