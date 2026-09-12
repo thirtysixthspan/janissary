@@ -1,16 +1,5 @@
 # pull-request
 
-* Correct the default-branch field's doc comment, which states a remote-tree classification the classifier does not implement.
-
-Existing Issue: The comment added to `GitMetadata.defaultBranch` in `src/file-navigator/filesystem-port.ts` says the field is "Absent for a remote tree", while `RemotePort.gitMetadata` (`src/file-navigator/remote-port.ts`) spreads the far side's reply verbatim and so forwards whatever that host resolved; the plan file goes further and claims an absent field "classifies as unconfirmed and therefore unsynced", which `isPrimaryBranch` in `src/git/status.ts` contradicts outright — an absent detected default falls back to exact membership in `master`/`main` and therefore classifies as *primary*. Severity: 3/10
-
-Existing Risk: 3/10 - The comment sits on the one field the sync gate's branch decision is built from, so the next reader reasoning about whether a tree can enable syncing takes the fallback's direction backwards, and the containment that currently keeps remote trees out of the gate rests on path shape rather than on the classification the comment claims.
-
-Proposal Risk: 2/10 - The comment will describe the classifier accurately, but remote trees stay outside the gate by path shape alone, so a sync-paths entry broad enough to cover the remote-file cache directory would still reach the gate with a remote tree's branch.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1082: correct the default-branch comment's remote-tree claim". In `src/file-navigator/filesystem-port.ts`, rewrite the comment on `GitMetadata.defaultBranch` to say what is true: the field carries `origin/HEAD`'s name when the resolving host can determine it, a remote tree reports whatever its own host resolved for its workspace, and an absent value does not mean "unsynced" — `isPrimaryBranch` in `src/git/status.ts` falls back to exact membership in `master`/`main`, so an absent default with `master` checked out classifies as primary. Say separately, and as the actual reason remote trees stay out of the gate, that a remote file is materialized under `<projectDir>/.janissary/remote-files/` by `src/file-navigator/remote-file-cache.ts` and so does not match a launch-dir-relative sync path. Then fix the same claim in `product/plans/complete/disable-git-sync-off-primary-branch.md`, whose bullet on `GitMetadata` states the incorrect classification — the plan is complete and its record should not assert a behavior the merged code does not have. No behavior changes and no new tests; the existing `isPrimaryBranch` cases in `src/git/status.test.ts` already pin the fallback the corrected comment describes.
-
-
 * Remove the defensive optional chain this change adds on the required file-navigator manager, which exists only because a test deletes the manager key outright.
 
 Existing Issue: `src/open/file-manager.ts` reads `this.managers.fileNavigator?.onPrimaryBranch(label)`, but `fileNavigator` is a required member of `Managers` (`src/managers.ts`) populated unconditionally in `src/controller/create-managers.ts`, so the `?.` is dead in production — the only optional-chained required manager anywhere in `src/` — and is triggered solely by the new branch-gate tests' `delete managers.fileNavigator` in `src/open/file-manager.test.ts`. Severity: 2/10

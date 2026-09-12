@@ -25,9 +25,14 @@ export type GitMetadata = {
   statuses: [string, GitFileStatus][];
   branch?: string;
   githubUrl?: string;
-  // The remote's detected default branch (`origin/HEAD`'s name, `src/git/status.ts`). Absent for a
-  // remote tree, whose git metadata is its workspace's own and which never matches config-synced
-  // launch-dir paths anyway.
+  // The remote's detected default branch (`origin/HEAD`'s name, `src/git/status.ts`), as resolved by
+  // whichever host read the tree — a remote tree forwards what its own host resolved for its
+  // workspace, not nothing. Absent means only "not determinable there"; it does not mean unsynced,
+  // because `isPrimaryBranch` reads an absent default as its cue to fall back to exact membership in
+  // `master`/`main`, so an absent default with `master` checked out classifies as primary. What
+  // actually keeps a remote tree out of the GitHub-sync gate is path shape, not this field: a remote
+  // file is materialized under `<projectDir>/.janissary/remote-files/` by `remote-file-cache.ts` and
+  // so never matches a launch-dir-relative sync path.
   defaultBranch?: string;
 };
 export type ReplayResult = {
