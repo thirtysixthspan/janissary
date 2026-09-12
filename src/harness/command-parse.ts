@@ -5,11 +5,17 @@ import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
 // shell-command-string building (shellQuote/buildHarnessCommand) that remains there.
 
+// The launch variant of `HarnessParsed`: every field a harness tab actually opens with. Named and
+// exported so the manager's `open` takes this record by name instead of the same ten fields
+// positionally — four consecutive booleans followed by four consecutive optional strings, where a
+// transposition typechecks and ships.
+export type HarnessLaunch = {
+  name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
+  label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
+};
+
 export type HarnessParsed =
-  | {
-    name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
-    label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
-  }
+  | HarnessLaunch
   | { capture: true; label: string }
   | { transcript: true; label: string }
   | { error: string };
