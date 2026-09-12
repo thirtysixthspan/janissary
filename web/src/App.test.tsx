@@ -44,7 +44,7 @@ const client = {
   attachPty: () => () => {},
 } as unknown as JanusClient;
 
-vi.mock('./useXterm', () => ({
+vi.mock('./shared/terminal/useXterm', () => ({
   useXterm: () => vi.fn(),
 }));
 

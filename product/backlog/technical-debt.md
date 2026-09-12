@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the xterm terminal modules out of the app root into the shared layer, so the shared transcript stops reaching upward into the app shell for the terminal it renders.
-
-Existing Debt: `web/src/shared/transcript/TerminalCard.tsx` imports `useXterm` from `../../useXterm`, an app-root module, which inverts §3 (dependencies flow one way: shared → feature → app) — the shared layer is defined as importing nothing from features or the app shell, and `useXterm.ts` in turn pulls in `terminal-keys.ts` and `terminal-osc52.ts`, which live at the root as well. Severity: 6/10
-
-Existing Risk: 5/10 - The terminal setup that the transcript's terminal cards, the harness tab, and the shell tab all depend on sits in a layer none of them is supposed to import from, so no lint zone can be drawn around the shared layer and a change made to `useXterm` for one surface silently alters the other two with nothing marking the coupling.
-
-Proposal Risk: 3/10 - The modules land in the right layer, but five test files mock `useXterm` by its module path and every one of those paths has to be retargeted by hand; a missed mock does not fail to compile — it renders a real xterm terminal in a jsdom test, which surfaces as a confusing timeout rather than an import error.
-
-Proposal: Create `web/src/shared/terminal/` and move three files into it unchanged: `web/src/useXterm.ts`, `web/src/terminal-keys.ts`, and `web/src/terminal-osc52.ts`, along with their colocated tests `web/src/terminal-keys.test.ts` and `web/src/terminal-osc52.test.ts`. `useXterm.ts` imports `./terminal-keys` and `./terminal-osc52` (both move with it, so those specifiers stay as they are), plus `./ws` and `./shared/system-clipboard`, which become `../../ws` and `../system-clipboard`. Three non-test files import `useXterm` and need their specifiers updated: `web/src/shared/transcript/TerminalCard.tsx` (`../../useXterm` → `../terminal/useXterm`), `web/src/harness/HarnessTab.tsx` (`../useXterm` → `../shared/terminal/useXterm`), and `web/src/ShellTab.tsx` (`./useXterm` → `./shared/terminal/useXterm`). Five test files mock or import it by path and must be retargeted the same way: `web/src/ShellTab.test.tsx`, `web/src/App.test.tsx`, `web/src/shared/transcript/TerminalCard.test.tsx`, `web/src/shared/transcript/Transcript.test.tsx`, and `web/src/shared/transcript/Transcript.pin.test.tsx` — each carries a `vi.mock` with the old path. That mix of a directory move and test-file edits is why this is hand-planned rather than routed to a playbook. Note that `web/src/ws.ts` and `web/src/icons.ts` are also imported upward from `web/src/shared/`; leave them where they are for now, since each is its own move with its own blast radius.
-
-
 * Move the status-window modules out of the app root into the shared layer, so the three tab features that render those panels stop importing them from the app shell.
 
 Existing Debt: `web/src/status-button.ts`, `web/src/useStatusWindows.ts`, `web/src/StatusPanels.tsx`, and `web/src/StatusWindowButton.tsx` sit at the app root but are imported by the harness, editor, and agent-tabs features (`harness/HarnessTabLayer.tsx`, `harness/HarnessTab.tsx`, `editor/useEditorConnections.ts`, `editor/EditorMetaRow.tsx`, `editor/EditorConnectionsPanel.tsx`, `agent-tabs/AgentTabBody.tsx`, `agent-tabs/InactiveAgentTabBody.tsx`) and by `shared/AgentTabMeta.tsx`, which is a feature-and-shared reach upward into the app shell in violation of §3 (dependencies flow one way: shared → feature → app). Severity: 5/10

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../../ws';
 import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal-keys';
 import { osc52ClipboardText } from './terminal-osc52';
-import { copyText } from './shared/system-clipboard';
+import { copyText } from '../system-clipboard';
 
 type UseXtermOptions = {
   ptyId: string;

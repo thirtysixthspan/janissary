@@ -5,11 +5,11 @@ import { ShellTab } from './ShellTab';
 import type { ShellTabHandle } from './tab-handles';
 import type { JanusClient } from './ws';
 
-vi.mock('./useXterm', () => ({
+vi.mock('./shared/terminal/useXterm', () => ({
   useXterm: vi.fn(() => () => {}),
 }));
 
-import { useXterm } from './useXterm';
+import { useXterm } from './shared/terminal/useXterm';
 
 const mockedUseXterm = useXterm as ReturnType<typeof vi.fn>;
 
