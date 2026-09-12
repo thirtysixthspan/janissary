@@ -1,5 +1,5 @@
 import React from 'react';
-import { ContextMenu } from '../ContextMenu';
+import { ContextMenu } from '../shared/ContextMenu';
 import { defaultMenuGroups } from './default-menu-target';
 import { pasteInto } from './clipboard-commands';
 import { copyText } from '../shared/system-clipboard';
