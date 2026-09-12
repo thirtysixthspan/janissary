@@ -3,7 +3,7 @@ import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shar
 import type { JanusClient } from '../ws';
 import { newFileTargetDir } from './file-navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file-navigator-clipboard';
-import { basename, dirname } from '../rel-path';
+import { basename, dirname } from '../shared/rel-path';
 
 type PendingPasteConflict = {
   sources: string[];
