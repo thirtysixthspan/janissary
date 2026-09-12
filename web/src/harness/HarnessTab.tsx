@@ -4,7 +4,7 @@ import type { HarnessView, RemoteTarget } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
-import type { StatusWindowButtonProps } from '../status-button';
+import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../tab-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
 

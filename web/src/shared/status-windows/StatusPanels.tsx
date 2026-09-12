@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { StatusWindowHandlers } from './useStatusWindows';
-import { viewCaptureIcon } from './icons';
+import { viewCaptureIcon } from '../../icons';
 
 type Properties = {
   tab: TabView;

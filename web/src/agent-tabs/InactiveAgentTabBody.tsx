@@ -5,9 +5,9 @@ import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { Transcript } from '../shared/transcript/Transcript';
 import { CommandInput } from './command-input/CommandInput';
 import type { CommandDrafts } from './command-input/useCommandDrafts';
-import { StatusPanels } from '../StatusPanels';
-import { useStatusWindows } from '../useStatusWindows';
-import { statusButton } from '../status-button';
+import { StatusPanels } from '../shared/status-windows/StatusPanels';
+import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
+import { statusButton } from '../shared/status-windows/status-button';
 import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 

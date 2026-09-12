@@ -2,14 +2,14 @@ import React from 'react';
 import type { TabView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { Transcript } from '../shared/transcript/Transcript';
-import { StatusPanels } from '../StatusPanels';
+import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { CommandArea } from './command-input/CommandArea';
 import type { CommandDrafts } from './command-input/useCommandDrafts';
 import type { CommandInputDropHandle } from '../drop-handles';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
-import { useStatusWindows } from '../useStatusWindows';
-import { statusButton } from '../status-button';
+import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
+import { statusButton } from '../shared/status-windows/status-button';
 import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 

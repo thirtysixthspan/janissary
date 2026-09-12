@@ -5,8 +5,8 @@
 
 import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { statusButton, type StatusWindowButtonProps } from '../status-button';
-import { useStatusWindows } from '../useStatusWindows';
+import { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
+import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { isEditorTabView } from '../shared/tab-view-guards';
 
 export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
