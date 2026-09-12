@@ -1,5 +1,5 @@
 import type { RouteChooserView } from '@shared/protocol';
-import type { TabNavEntry } from './tab-nav-match';
+import type { TabNavEntry } from './pickers/tab-nav-match';
 
 export function handleRouteChooserKey(
   e: KeyboardEvent,

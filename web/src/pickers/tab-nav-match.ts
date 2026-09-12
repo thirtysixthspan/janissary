@@ -1,5 +1,5 @@
 import type { TabView } from '@shared/protocol';
-import { isReportingTab, type TabEntry } from './tab-entries';
+import { isReportingTab, type TabEntry } from '../tab-entries';
 
 export type TabNavEntry = TabEntry;
 

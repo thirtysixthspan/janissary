@@ -4,17 +4,6 @@
 
 ## development
 
-* Colocate the tab-nav matching module into the pickers feature whose three files are its real home, leaving only the app shell reaching into it.
-
-Existing Debt: `web/src/tab-nav-match.ts` — the tab-nav picker's `filterTabs`, `displayLabel`, and `TabNavEntry` — lives at the app root while four of its five consumers are in `web/src/pickers/` (`useTabNav.ts`, `TabNavPicker.tsx`, `picker-key-bindings.ts`) and one is the app shell (`web/src/keyboard-handlers.ts`), the one-consumer-at-a-shared-location shape §2 (colocate; promote to shared only on the second consumer) exists to prevent, dressed up as a root module. Severity: 3/10
-
-Existing Risk: 2/10 - The picker-nav rules read as more generally exported than they are, so the next feature that "sorts tabs with labels" imports from the root module and the pickers' own understanding of grouping stops being the single source.
-
-Proposal Risk: 1/10 - Once the module sits beside its consumers the risk is only that the app shell's one remaining import chips away at the colocation; the module's own behavior keeps its colocated test regardless.
-
-Proposal: Move `web/src/tab-nav-match.ts` and its colocated `web/src/tab-nav-match.test.ts` into `web/src/pickers/` as `web/src/pickers/tab-nav-match.ts` and `web/src/pickers/tab-nav-match.test.ts`, unchanged in content. Update the three pickers imports to `./tab-nav-match` from their current `../tab-nav-match`, and `web/src/keyboard-handlers.ts` to `./pickers/tab-nav-match`. `web/src/keyboard-handlers.test.ts` reaches `filterTabs` only through `keyboard-handlers`, so it needs no change and must keep passing with `web/src/pickers/useTabNav.test.ts` and any `TabNavPicker` tests. Two source files plus one test file move and five importers rewrite — hand-planned, not routed to a playbook.
-
-
 * Move the search bar and its transcript-search hook into the shared layer, so the three surfaces that render transcript search stop importing them from the app root.
 
 Existing Debt: `web/src/SearchBar.tsx` and `web/src/useTranscriptSearch.ts` are one cohesive cross-surface feature (filter line over transcript-shaped buffers) sitting at the app root and imported by three features/surfaces — the picker overlay (`web/src/pickers/QuickOpen.tsx`), the file-navigator's search popup (`web/src/file-navigator/FileSearchPopup.tsx`), and the agent-tabs command-bar (`web/src/agent-tabs/command-input/CommandArea.tsx`, through `useCommandBarSubmit.ts`) — with `web/src/useViewSearchState.ts` at the root also consuming the hook, which is generic code placed at the app-shell layer that features import upward, against §2 (colocate; promote to shared) read with §3's layer table (dependencies flow one way: shared → feature → app). Severity: 4/10

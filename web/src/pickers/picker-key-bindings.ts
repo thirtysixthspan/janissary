@@ -2,7 +2,7 @@ import type { OverlayOpenSources } from './overlay-registry';
 import type { PickerOverlaysState } from './picker-overlays-state';
 import type { VisibleTaskRow } from './task-picker-keys';
 import type { VisibleProfileRow } from './profile-picker-keys';
-import type { TabNavEntry } from '../tab-nav-match';
+import type { TabNavEntry } from './tab-nav-match';
 
 // The picker half of the window key handler's live snapshot. The nine open/closed values come from
 // `OverlayOpenSources` rather than being restated, so a tenth overlay added to the registry stops
