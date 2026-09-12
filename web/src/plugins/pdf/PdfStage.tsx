@@ -1,7 +1,8 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React from 'react';
 import type { LoadedPdf } from './pdf-document';
-import { fitScale, type PdfLayout, type StageSize } from './pdf-view-model';
+import { fitScale, type PdfLayout } from './pdf-view-model';
 import { PdfPage } from './PdfPage';
+import { usePdfStageViewport } from './usePdfStageViewport';
 
 // Breathing room between a page and the stage's edges, taken off the box the fit is computed
 // against so a fitted page is not flush with the frame.
@@ -26,55 +27,10 @@ export type PdfStageProperties = {
 export function PdfStage({
   document: pdf, layout, zoom, page, jump, onVisiblePage, onRenderFailure, stageRef,
 }: PdfStageProperties) {
-  const [size, setSize] = useState<StageSize>({ width: 0, height: 0 });
+  const size = usePdfStageViewport({
+    stageRef, layout, pageCount: pdf.pageSizes.length, jump, onVisiblePage,
+  });
   const pageCount = pdf.pageSizes.length;
-
-  useLayoutEffect(() => {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const measure = () => {
-      const width = stage.clientWidth;
-      const height = stage.clientHeight;
-      setSize((current) => current.width === width && current.height === height
-        ? current : { width, height });
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(stage);
-    return () => { observer.disconnect(); };
-  }, [stageRef]);
-
-  // Which page is most of the view, answered natively rather than by scroll arithmetic. Single-page
-  // layout already knows — it shows one page — so the observer runs only while scrolling.
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (layout !== 'continuous' || !stage) return;
-    const ratios = new Map<number, number>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        ratios.set(Number((entry.target as HTMLElement).dataset.page), entry.intersectionRatio);
-      }
-      let best = -1;
-      let bestRatio = 0;
-      for (const [index, ratio] of ratios) {
-        if (ratio <= bestRatio) continue;
-        bestRatio = ratio;
-        best = index;
-      }
-      if (best >= 0) onVisiblePage(best);
-    }, { root: stage, threshold: [0, 0.25, 0.5, 0.75, 1] });
-    for (const element of stage.querySelectorAll('.pdf-page')) observer.observe(element);
-    return () => { observer.disconnect(); };
-  }, [layout, onVisiblePage, pageCount, stageRef]);
-
-  // A jump carries a token rather than only a page number, so clicking the thumbnail of the page you
-  // are already on still scrolls to it. Single-page layout needs no scroll: it re-lists one page.
-  useEffect(() => {
-    const stage = stageRef.current;
-    if (layout !== 'continuous' || !stage) return;
-    stage.querySelector(`.pdf-page[data-page="${CSS.escape(String(jump.page))}"]`)
-      ?.scrollIntoView({ block: 'start' });
-  }, [jump, layout, stageRef]);
 
   const box = {
     width: Math.max(0, size.width - STAGE_PADDING * 2),
