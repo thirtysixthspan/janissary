@@ -16,13 +16,15 @@ export function refreshGit(
   if (state.gitRefreshing) { state.gitRefreshStale = true; return; }
   state.gitRefreshing = true;
   const root = state.root;
-  state.filesystem.gitMetadata(root, ({ statuses, branch, githubUrl }) => {
+  state.filesystem.gitMetadata(root, ({ statuses, branch, githubUrl, defaultBranch: detectedDefault }) => {
     const current = states.get(label);
     if (!current) return;
     if (current.root === root) {
       current.gitStatuses = new Map(statuses);
       current.branch = branch;
       current.githubUrl = githubUrl;
+      current.defaultBranch = detectedDefault;
+      current.gitMetadataLoaded = true;
       rebuild(label);
     }
     current.gitRefreshing = false;

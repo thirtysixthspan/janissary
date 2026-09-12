@@ -1,6 +1,8 @@
 import { mkdirSync, readFileSync, watch, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { changedPaths, currentBranch, remoteUrl, type GitFileStatus } from '../git/status.js';
+import {
+  changedPaths, currentBranch, defaultBranch, remoteUrl, type GitFileStatus,
+} from '../git/status.js';
 import { pullRoot } from '../git/pull.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
@@ -23,6 +25,15 @@ export type GitMetadata = {
   statuses: [string, GitFileStatus][];
   branch?: string;
   githubUrl?: string;
+  // The remote's detected default branch (`origin/HEAD`'s name, `src/git/status.ts`), as resolved by
+  // whichever host read the tree — a remote tree forwards what its own host resolved for its
+  // workspace, not nothing. Absent means only "not determinable there"; it does not mean unsynced,
+  // because `isPrimaryBranch` reads an absent default as its cue to fall back to exact membership in
+  // `master`/`main`, so an absent default with `master` checked out classifies as primary. What
+  // actually keeps a remote tree out of the GitHub-sync gate is path shape, not this field: a remote
+  // file is materialized under `<projectDir>/.janissary/remote-files/` by `remote-file-cache.ts` and
+  // so never matches a launch-dir-relative sync path.
+  defaultBranch?: string;
 };
 export type ReplayResult = {
   result: UndoRedoResult;
@@ -104,11 +115,11 @@ export class LocalFileSystemPort implements FileSystemPort {
   }
 
   private async loadGitMetadata(root: string, onResult: (metadata: GitMetadata) => void): Promise<void> {
-    const [statuses, branch, remote] = await Promise.all([
-      changedPaths(root), currentBranch(root), remoteUrl(root),
+    const [statuses, branch, remote, detectedDefault] = await Promise.all([
+      changedPaths(root), currentBranch(root), remoteUrl(root), defaultBranch(root),
     ]);
     onResult({
-      statuses: [...statuses], branch,
+      statuses: [...statuses], branch, defaultBranch: detectedDefault,
       githubUrl: remote && branch ? githubCommitsUrl(remote, branch) : undefined,
     });
   }

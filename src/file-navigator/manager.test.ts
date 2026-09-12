@@ -15,12 +15,15 @@ vi.mock('node:fs', async (importOriginal) => {
 const changedPathsMock = vi.fn((_root: string): Promise<Map<string, string>> => Promise.resolve(new Map<string, string>()));
 const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
+const defaultBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const pullRootMock = vi.fn((_root: string): Promise<string> => Promise.resolve(''));
 
-vi.mock('../git/status.js', () => ({
+vi.mock('../git/status.js', async (importOriginal) => ({
+  ...(await importOriginal()) as Record<string, unknown>,
   changedPaths: (...args: [string]) => changedPathsMock(...args),
   currentBranch: (...args: [string]) => currentBranchMock(...args),
   remoteUrl: (...args: [string]) => remoteUrlMock(...args),
+  defaultBranch: (...args: [string]) => defaultBranchMock(...args),
 }));
 
 vi.mock('../git/pull.js', () => ({
@@ -53,6 +56,8 @@ describe('FileNavigatorManager', () => {
     currentBranchMock.mockResolvedValue(undefined);
     remoteUrlMock.mockReset();
     remoteUrlMock.mockResolvedValue(undefined);
+    defaultBranchMock.mockReset();
+    defaultBranchMock.mockResolvedValue(undefined);
     pullRootMock.mockReset();
     pullRootMock.mockResolvedValue('');
     watchMock.mockImplementation(() => {
@@ -1615,6 +1620,102 @@ describe('FileNavigatorManager', () => {
       await Promise.resolve();
       await Promise.resolve();
       expect(tabs.find((t) => t.label === label)!.files!.branch).toBeUndefined();
+    });
+  });
+
+  describe('default branch metadata', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    const managerState = (manager: FileNavigatorManagerInstance, label: string) =>
+      (manager as unknown as { tabs: Map<string, { defaultBranch?: string; branch?: string }> }).tabs.get(label);
+
+    it('loads the detected default branch alongside branch and writes it into the tab state', async () => {
+      currentBranchMock.mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      expect(managerState(manager, label)!.defaultBranch).toBeUndefined();
+      await vi.waitFor(() => {
+        expect(managerState(manager, label)!.defaultBranch).toBe('master');
+      });
+    });
+
+    it('updates both branch values together on a refresh', async () => {
+      currentBranchMock.mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(defaultBranchMock).toHaveBeenCalledTimes(1));
+      currentBranchMock.mockResolvedValue('feature');
+      defaultBranchMock.mockResolvedValue(undefined);
+      manager.reroot(label, undefined);
+      await vi.waitFor(() => {
+        const state = managerState(manager, label)!;
+        expect(state.branch).toBe('feature');
+        expect(state.defaultBranch).toBeUndefined();
+      });
+      expect(manager.onPrimaryBranch(label)).toBe(false);
+    });
+
+    it('answers onPrimaryBranch only for file-navigator tabs', async () => {
+      currentBranchMock.mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+      expect(manager.onPrimaryBranch('janus')).toBeUndefined();
+      expect(manager.onPrimaryBranch('other')).toBeUndefined();
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
+    });
+
+    it('answers onPrimaryBranch undefined until the first metadata result lands', async () => {
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockImplementationOnce(() => deferred.promise).mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      expect(manager.onPrimaryBranch(label)).toBeUndefined();
+
+      deferred.resolve('master');
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
+    });
+
+    it('resets onPrimaryBranch to undefined across a reroot until the new root resolves', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      currentBranchMock.mockResolvedValue('master');
+      defaultBranchMock.mockResolvedValue('master');
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(true));
+
+      const deferred = Promise.withResolvers<string | undefined>();
+      currentBranchMock.mockImplementationOnce(() => deferred.promise).mockResolvedValue('feature');
+      manager.reroot(label);
+
+      expect(manager.onPrimaryBranch(label)).toBeUndefined();
+
+      deferred.resolve('feature');
+      await vi.waitFor(() => expect(manager.onPrimaryBranch(label)).toBe(false));
+    });
+
+    it('discards a default-branch refresh whose root changed (reroot) before it resolved', async () => {
+      mkdirSync(path.join(root, 'sub'));
+      const deferred = Promise.withResolvers<string | undefined>();
+      defaultBranchMock
+        .mockImplementationOnce(() => deferred.promise)
+        .mockResolvedValue(undefined);
+      const manager = run();
+      manager.open('files sub', 'janus');
+      const label = navLabel();
+      manager.reroot(label);
+      deferred.resolve('stale-default');
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(managerState(manager, label)!.defaultBranch).toBeUndefined();
     });
   });
 

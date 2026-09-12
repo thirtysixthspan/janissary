@@ -88,6 +88,35 @@ export async function currentBranch(root: string): Promise<string | undefined> {
   }
 }
 
+// Given an absolute directory root, resolve to the name of the branch `origin/HEAD` points at —
+// the remote's detected default branch, as `git clone` records it. A local read (`symbolic-ref`),
+// never a network call. Resolves to `undefined` — never rejects — when `root` is not inside a git
+// repository, has no `origin` remote, has no `origin/HEAD` set, or the command fails for any reason.
+export async function defaultBranch(root: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { cwd: root });
+    const ref = stdout.trim();
+    const name = ref.startsWith('refs/remotes/origin/') ? ref.slice('refs/remotes/origin/'.length) : '';
+    return name || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Whether the repository, currently on branch `current`, is confirmably checked out on its primary
+// branch — the branch a GitHub-synced file's git-sync workspace tracks. `current` comes from
+// `currentBranch` (the literal `HEAD` for a detached checkout) and `detected` from `defaultBranch`
+// (`origin/HEAD`'s name, or `undefined` when undetectable, e.g. a repo cloned-then-initialized away
+// from `origin/HEAD`). False means unsynced: an absent or detached current branch cannot positively
+// confirm a primary branch, and with no detected default the fallback is exact membership in the
+// fixed pair `master`/`main` — `git init` plus `git remote add` routinely has no `origin/HEAD`, and
+// that must not silently disable syncing for a valid project sitting on its main branch.
+export function isPrimaryBranch(current: string | undefined, detected: string | undefined): boolean {
+  if (!current || current === 'HEAD') return false;
+  if (detected) return current === detected;
+  return current === 'master' || current === 'main';
+}
+
 // Given an absolute directory root, resolve to the `origin` remote's URL. Resolves to `undefined`
 // — never rejects — when `root` is not inside a git repository, has no `origin` remote configured,
 // or the command fails for any reason.

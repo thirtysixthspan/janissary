@@ -42,6 +42,15 @@ export type FilesTabState = {
   // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
   // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
   githubUrl?: string;
+  // Last-computed detected default branch (`origin/HEAD`'s name, see `git-status.ts`), refreshed
+  // alongside `branch`. Undefined when `origin/HEAD` is unset (or the root is not a repository).
+  defaultBranch?: string;
+  // Whether a `gitMetadata` result has landed for the tab's *current* root. Set by `refreshGit`
+  // inside the same guard that writes the three values above, and cleared by a reroot. It cannot be
+  // inferred from `branch`/`defaultBranch`, since both are legitimately undefined after a successful
+  // load of a non-repository root — which is why the GitHub-sync gate needs it to tell a navigator
+  // that has not loaded yet apart from one confirmed to be off its primary branch.
+  gitMetadataLoaded?: boolean;
   gitRefreshing?: boolean;
   gitRefreshStale?: boolean;
   // What this tab's header pull button is signalling. `pulling` is also the coalescing check: a

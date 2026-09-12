@@ -14,6 +14,7 @@ import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isSyncedPath } from '../sync-path-match.js';
+import { isLaunchDirOnPrimaryBranch, refreshLaunchDirBranch } from './launch-dir-branch.js';
 
 export type EditResult = { label: string };
 
@@ -53,7 +54,7 @@ export class OpenFileManager {
     const context = this.buildContext(command, label);
     const opener = openerForExtension(path.extname(file));
     if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return undefined; }
-    if (this.isSyncPath(file)) return this.openSynced(file, context, line);
+    if (this.isSyncPath(file, label)) return this.openSynced(file, context, line);
     const editorLabel = openInEditor(file, context, line);
     return editorLabel === undefined ? undefined : { label: editorLabel };
   }
@@ -115,17 +116,46 @@ export class OpenFileManager {
       this.managers.tab.append(label, { input: command, output: pinnedOpenerRefusal(requireOpener, file) });
       return;
     }
-    if (!external && opener.name === 'editor' && this.isSyncPath(file)) { this.openSynced(file, context); return; }
+    if (!external && opener.name === 'editor' && this.isSyncPath(file, label)) { this.openSynced(file, context); return; }
     return external ? opener.external(file, context) : opener.inline(file, context);
   }
 
-  // Whether `file`'s project-relative path is config-listed for GitHub syncing — the sole gate for
-  // the entire feature (see `git-sync.ts`); there is no UI toggle.
-  private isSyncPath(file: string): boolean {
+  // Whether `file` is a candidate for GitHub syncing at all — the sole gate for the entire feature
+  // (see `git-sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
+  // config-listed, and the governing checkout is confirmably on its primary branch. The governing
+  // checkout is the activating tab's own navigator root when that tree governs at all (see
+  // `governingNavigator`) and has already loaded its git metadata — falling back to the launch dir's
+  // cached pair for a shell tab's `edit`, a profile restore, a plugin opener, a navigator rooted
+  // outside the launch dir, or one still loading its first metadata result; a
+  // feature-branch (or unconfirmable) checkout answers "no", so the file opens as an ordinary
+  // editor tab against the real file on disk. Both inputs are values resolved elsewhere — this
+  // stays synchronous, never a git call made here.
+  private isSyncPath(file: string, label: string): boolean {
     const launchDir = this.managers.tab.launchDir;
     if (!launchDir) return false;
     const relative = path.relative(launchDir, file).split(path.sep).join('/');
-    return isSyncedPath(relative, getConfig().syncPaths);
+    if (!isSyncedPath(relative, getConfig().syncPaths)) return false;
+    const navigatorPrimary = this.governingNavigator(label, launchDir)?.onPrimaryBranch(label);
+    if (navigatorPrimary !== undefined) return navigatorPrimary;
+    // Unawaited by design: this open is classified from whatever is already cached, and the refresh
+    // is what makes the *next* one current. Concurrent opens share one resolution.
+    void refreshLaunchDirBranch(launchDir);
+    return isLaunchDirOnPrimaryBranch(launchDir) ?? false;
+  }
+
+  // The file navigator whose branch governs an activation from `label`, or `undefined` when none
+  // does. A navigator governs only while its own root sits at or below the launch dir — the region
+  // the path half of the gate was matched against, and therefore the only region where the tree's
+  // branch is the branch the matched file belongs to. A tree rooted *above* the launch dir (`files
+  // ~/dev` with the project at `~/dev/janissary`) lists files that do match the launch-dir-relative
+  // sync paths while reporting a different repository's branch, or none at all; it falls back to the
+  // launch dir's own cached pair, which is what a non-navigator open already uses.
+  private governingNavigator(label: string, launchDir: string): Managers['fileNavigator'] | undefined {
+    const root = this.managers.fileNavigator.rootOf(label);
+    if (root === undefined) return undefined;
+    const relative = path.relative(launchDir, root);
+    const escapes = relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+    return escapes ? undefined : this.managers.fileNavigator;
   }
 
   // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in
