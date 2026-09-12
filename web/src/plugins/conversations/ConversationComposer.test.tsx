@@ -8,6 +8,7 @@ function renderComposer(overrides: {
   streaming?: boolean;
   deleted?: boolean;
   active?: boolean;
+  initialQuery?: string;
 } = {}) {
   const onSend = vi.fn();
   const rendered = render(
@@ -16,6 +17,7 @@ function renderComposer(overrides: {
       streaming={overrides.streaming ?? false}
       deleted={overrides.deleted ?? false}
       active={overrides.active ?? true}
+      initialQuery={overrides.initialQuery}
       onSend={onSend}
     />,
   );
@@ -90,5 +92,30 @@ describe('ConversationComposer', () => {
     hidden.rendered.unmount();
     const visible = renderComposer({ active: true });
     expect(visible.input).toHaveFocus();
+  });
+
+  it('opens with the pasted draft unsent and sends it as an ordinary query', () => {
+    const { onSend, input } = renderComposer({ initialQuery: 'pasted selection' });
+    expect(input).toHaveValue('pasted selection');
+    expect(onSend).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '  what changed?  ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onSend).toHaveBeenCalledWith('what changed?');
+  });
+
+  it('keeps typed text when a payload update re-renders around it', () => {
+    const { onSend, rendered, input } = renderComposer({ initialQuery: 'pasted selection' });
+    fireEvent.change(input, { target: { value: 'edited draft' } });
+    rendered.rerender(
+      <ConversationComposer
+        history={['first question']}
+        streaming={false}
+        deleted={false}
+        active={true}
+        initialQuery={'pasted selection'}
+        onSend={onSend}
+      />,
+    );
+    expect(input).toHaveValue('edited draft');
   });
 });

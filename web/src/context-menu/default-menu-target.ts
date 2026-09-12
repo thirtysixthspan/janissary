@@ -2,8 +2,12 @@ import type { ContextMenuItem } from '../shared/ContextMenu';
 
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, and the element focus belongs to once the menu closes again.
+// `selectionSource` records where `selectionText` came from: the DOM selection, or the selection of
+// an xterm-owned terminal whose text the DOM cannot see. Copy acts only on the first kind — the
+// terminal already has its own copy shortcut — while a contributed entry can ride either.
 export type DefaultMenuTarget = {
   selectionText: string;
+  selectionSource?: 'dom' | 'terminal';
   pasteTarget: HTMLElement | null;
   restoreFocus: HTMLElement | null;
 };
@@ -37,12 +41,13 @@ function resolvePasteTarget(clicked: Element | null, focused: Element | null): H
 
 export function resolveDefaultMenuTarget(
   clicked: Element | null, focused: Element | null, selectionText: string,
+  selectionSource: 'dom' | 'terminal' = 'dom',
 ): DefaultMenuTarget {
   const pasteTarget = resolvePasteTarget(clicked, focused);
   // Focus returns to the field a paste would have landed in, not to whatever held it before: a
   // paste into a field the user right-clicked but had not focused must leave the caret there.
   const previous = focused instanceof HTMLElement ? focused : null;
-  return { selectionText, pasteTarget, restoreFocus: pasteTarget ?? previous };
+  return { selectionText, selectionSource, pasteTarget, restoreFocus: pasteTarget ?? previous };
 }
 
 // The default menu's single group. An entry that cannot act is omitted rather than greyed out,
@@ -52,7 +57,8 @@ export function defaultMenuGroups(
   target: DefaultMenuTarget, actions: DefaultMenuActions,
 ): ContextMenuItem[][] {
   const { selectionText, pasteTarget } = target;
-  const copyEntry: ContextMenuItem[] = selectionText
+  const copyEntry: ContextMenuItem[] = selectionText !== ''
+    && (target.selectionSource ?? 'dom') === 'dom'
     ? [{ label: 'Copy', onActivate: () => actions.copy(selectionText) }]
     : [];
   const pasteEntry: ContextMenuItem[] = pasteTarget

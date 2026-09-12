@@ -121,6 +121,7 @@ export function ConversationTab({
         streaming={streaming}
         deleted={conversation.deleted === true}
         active={capabilities.active}
+        initialQuery={payload.draftQuery}
         onSend={(query) => { void capabilities.intent('send', { query }); }}
       />
     </div>

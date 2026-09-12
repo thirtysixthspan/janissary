@@ -46,6 +46,22 @@ function openConversation(
   capabilities.openOrFocusTab(id, () => ({ title: payload.conversation.title, payload }));
 }
 
+// One fresh conversation opened in its own tab. `draftQuery` is selection text pasted into the
+// composer before anything is sent, as the default menu's `Chat about this` entry passes it.
+function createConversation(
+  draftQuery: string | undefined,
+  capabilities: TabPluginServerCapabilities,
+): void {
+  const id = randomUUID();
+  capabilities.topicAction({ topic: 'conversations', action: 'create', id });
+  const payload = conversationPayload(dataFrom(capabilities), id);
+  if (!payload) return capabilities.reportFailure('created conversation is unavailable');
+  capabilities.openOrFocusTab(id, () => ({
+    title: payload.conversation.title,
+    payload: draftQuery === undefined ? payload : { ...payload, draftQuery },
+  }));
+}
+
 function parseDock(argument: string): 'left' | 'right' | null | undefined {
   const trimmed = argument.trim().toLowerCase();
   if (!trimmed) return null;
@@ -71,6 +87,9 @@ export function activate(): TabPluginActivation {
       );
       if (!match) return capabilities.rejectRequest(`No conversation matching "${title}".`);
       openConversation(match.id, capabilities);
+    },
+    defaultMenuAction: (selection, capabilities) => {
+      createConversation(selection, capabilities);
     },
     notify: (event, capabilities) => {
       if (event.topic !== 'conversations' || !isConversationsData(event.data)) return;
@@ -107,11 +126,7 @@ function runListIntent(
 ): null | never {
   if (intent === 'create') {
     if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid create payload');
-    const id = randomUUID();
-    capabilities.topicAction({ topic: 'conversations', action: 'create', id });
-    const payload = conversationPayload(dataFrom(capabilities), id);
-    if (!payload) return capabilities.reportFailure('created conversation is unavailable');
-    capabilities.openOrFocusTab(id, () => ({ title: 'New conversation', payload }));
+    createConversation(undefined, capabilities);
     return null;
   }
   if (!isIdIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);

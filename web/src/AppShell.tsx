@@ -43,7 +43,7 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
       />
-      <DefaultContextMenu />
+      <DefaultContextMenu client={client} />
     </div>
   );
 }

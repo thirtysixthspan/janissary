@@ -84,6 +84,26 @@ describe('conversations plugin command', () => {
   });
 });
 
+describe('conversations plugin default-menu entry', () => {
+  it('creates one fresh conversation and opens its tab with the selection pasted unsent', () => {
+    const value = fixture();
+    activate().defaultMenuAction?.('selected text', value.capabilities);
+    const created = value.actions[0];
+    expect(created).toMatchObject({ topic: 'conversations', action: 'create' });
+    expect(value.opened).toHaveLength(1);
+    expect(value.opened[0].value.title).toBe('New conversation');
+    const payload = value.opened[0].value.payload as { kind: string; draftQuery?: string };
+    expect(payload.draftQuery).toBe('selected text');
+    expect(payload.kind).toBe('conversation');
+  });
+
+  it('leaves the payload untouched when no draft is pasted', () => {
+    const value = fixture();
+    activate().command?.('', value.capabilities);
+    expect(value.opened[0].value.payload).not.toHaveProperty('draftQuery');
+  });
+});
+
 describe('conversations plugin intents', () => {
   const list = { kind: 'list' as const, entries: DATA.summaries };
   const conversation = {

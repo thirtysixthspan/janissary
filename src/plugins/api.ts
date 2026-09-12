@@ -100,7 +100,7 @@ export type TabPluginTopicAction =
   // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
   // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
   | { topic: 'schedules'; action: 'focusOwner'; tab: string }
-  | { topic: 'conversations'; action: 'create'; id: string }
+  | { topic: 'conversations'; action: 'create'; id: string; query?: string }
   | { topic: 'conversations'; action: 'load'; id: string }
   | { topic: 'conversations'; action: 'loadOlder'; id: string }
   | { topic: 'conversations'; action: 'send'; id: string; query: string }
@@ -138,6 +138,9 @@ export type TabPluginDeclaration = {
   command?: string;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
+  // An entry the default context menu offers for a text selection. A declaration carrying one must
+  // supply a `defaultMenuAction` handler.
+  defaultMenu?: { label: string };
   // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
   // A declaration carrying one must supply a `selectionAction` handler.
   selectionAction?: TabPluginSelectionAction;
@@ -251,6 +254,9 @@ export type TabPluginActivation = {
   // value is ignored — a notification reports that something happened and cannot influence any host
   // outcome; a plugin acts on it by calling `updateTab`.
   notify?(event: TabPluginNotification, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  // Runs the entry the declaration contributed for the default context menu. Required only when
+  // the declaration carries one. `selection` is the plain text the menu was offered against.
+  defaultMenuAction?(selection: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   // Runs the entry the declaration contributed for a file navigator selection. Required only when
   // the declaration carries one. `paths` are absolute and were resolved by the host against the
   // navigator's own root, so a client can never name a file outside the tree it is browsing.
