@@ -151,7 +151,8 @@ describe('currentBranch', () => {
 describe('primaryBranch', () => {
   describe('isPrimaryBranch', () => {
     it.each([
-      ['an exact branch/default match', 'main', 'main', true],
+      ['an exact branch/default match — a main-default repository on main', 'main', 'main', true],
+      ['a main-default repository sitting on master', 'master', 'main', false],
       ['a feature branch against a detected default', 'feature', 'master', false],
       ['the literal HEAD for a detached checkout', 'HEAD', 'master', false],
       ['an absent current branch', undefined, 'master', false],

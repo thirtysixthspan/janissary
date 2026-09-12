@@ -1,16 +1,5 @@
 # pull-request
 
-* Replace the two branch-gate tests that assert nothing their neighbours do not already assert, so the coverage the pull request claims actually exists.
-
-Existing Issue: In `src/open/file-manager.test.ts`'s `branch gate` block, the case named "never re-points an already-open synced tab; the decision is the navigator branch at open time" opens exactly one tab with `navigatorPrimary` false and asserts only the path — a byte-for-byte weaker repeat of the feature-branch case above it, with no second open and no branch change — and the case named "still routes a main-default repository sitting on main through the sync workspace" builds the same `navigatorPrimary: true` fixture as the first case and cannot observe a `main` default at all, since the stub returns a fixed boolean and never reaches `isPrimaryBranch`. Severity: 4/10
-
-Existing Risk: 5/10 - Both the plan's Tests section and the pull request description list these two behaviors as covered, so a later change that breaks the open-time decision or the `main`-default classification passes a green suite and a reader auditing coverage is told the cases exist when the assertions behind them are vacuous.
-
-Proposal Risk: 2/10 - The replacements pin the two behaviors at the level each actually lives at, but the open-time decision remains an absence of a watcher rather than a positive mechanism, so a test can only show the tab is unchanged and not that nothing is watching.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1082: make the two vacuous branch-gate tests assert the behavior they name". In `src/open/file-manager.test.ts`, rewrite the "never re-points an already-open synced tab" case so it opens a config-listed file while the navigator reports primary (asserting the tab resolves inside `/workspace`), then flips the navigator stub to report a feature branch and asserts the already-open tab's `editor.path` and `editor.sync` are unchanged — `makeSyncedManagers`'s navigator stub is currently a closure over a fixed boolean, so change it to read a mutable variable the test can flip between the two calls. Move the `main`-default assertion out of this file entirely: the stub short-circuits the classifier, so the behavior belongs in `src/git/status.test.ts`'s `isPrimaryBranch` block, which already has the `it.each` table for exact matches — add `['a main-default repository on main', 'main', 'main', true]` there and delete the file-manager case rather than leaving a duplicate of the first test behind. The four remaining cases in the `branch gate` block, and the two pre-existing synced-path cases above it, cover the routing and must keep passing untouched.
-
-
 * Separate the launch-dir cache's refresh from its read so its tests stop racing module state across cases.
 
 Existing Issue: `isLaunchDirOnPrimaryBranch` in `src/open/launch-dir-branch.ts` fires `void refreshLaunchDirBranch(launchDir)` as a side effect of every read, so each case in `src/open/launch-dir-branch.test.ts` leaves an unawaited promise in flight that writes the module-level `cached` record after the case ends — potentially after the next case's `resetLaunchDirBranch()` and even after its own `await refreshLaunchDirBranch(...)` — and the file's `beforeEach` creates a fresh temp directory per case without ever removing it. Severity: 5/10

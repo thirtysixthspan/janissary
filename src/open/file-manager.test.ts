@@ -542,7 +542,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     dir: string,
     tabs: EditorTab[],
     openSync: () => Promise<{ dir: string } | { error: string }>,
-    navigatorPrimary: boolean | undefined,
+    navigatorPrimary: boolean | undefined | (() => boolean | undefined),
     navigatorRoot: string = dir,
   ) => ({
     tab: {
@@ -560,7 +560,12 @@ describe('OpenFileManager.edit (synced path)', () => {
       workspaceFilePath: (relative: string) => path.join('/workspace', relative),
       openSync,
     },
-    fileNavigator: { onPrimaryBranch: () => navigatorPrimary, rootOf: () => navigatorRoot },
+    fileNavigator: {
+      // Resolved per call rather than closed over, so a test can flip the navigator's answer
+      // between two opens and show the decision is made at open time.
+      onPrimaryBranch: () => (typeof navigatorPrimary === 'function' ? navigatorPrimary() : navigatorPrimary),
+      rootOf: () => navigatorRoot,
+    },
     editorWatch: {
       watch: vi.fn(),
     },
@@ -607,7 +612,10 @@ describe('OpenFileManager.edit (synced path)', () => {
     beforeEach(() => { launchDirBranch.isLaunchDirOnPrimaryBranch.mockReset(); });
 
     const setup = (
-      dir: string, tabs: EditorTab[], navigatorPrimary: boolean | undefined, navigatorRoot?: string,
+      dir: string,
+      tabs: EditorTab[],
+      navigatorPrimary: boolean | undefined | (() => boolean | undefined),
+      navigatorRoot?: string,
     ) =>
       makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }), navigatorPrimary, navigatorRoot);
 
@@ -646,16 +654,32 @@ describe('OpenFileManager.edit (synced path)', () => {
       expect(tabs[0].editor?.sync).toBeUndefined();
     });
 
+    // The second open is what keeps the first assertion from passing vacuously: it shows the flipped
+    // stub really does produce a different decision, so the already-open tab staying put is the
+    // absence of a re-point rather than the absence of any change at all.
     it('never re-points an already-open synced tab; the decision is the navigator branch at open time', () => {
-      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
-      mkdirSync(path.join(dir, 'synced'));
-      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
       const tabs: EditorTab[] = [];
-      const mgr = new OpenFileManager(setup(dir, tabs, false));
+      const dir = syncedFixture();
+      let primary = true;
+      const mgr = new OpenFileManager(setup(dir, tabs, () => primary));
 
       mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
 
-      expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+      expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+      expect(tabs[0].editor?.sync).toBe('provisioning');
+
+      primary = false;
+
+      expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+      expect(tabs[0].editor?.sync).toBe('provisioning');
+
+      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
+
+      expect(tabs).toHaveLength(2);
+      expect(tabs[1].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
+      expect(tabs[1].editor?.sync).toBeUndefined();
+      expect(tabs[0].editor?.path).toBe(path.join('/workspace', 'synced/foo.md'));
+      expect(tabs[0].editor?.sync).toBe('provisioning');
     });
 
     // A navigator that has not yet loaded git metadata for its root answers `undefined` rather than
@@ -741,18 +765,6 @@ describe('OpenFileManager.edit (synced path)', () => {
         expect(tabs[0].editor?.path).toBe(path.join(dir, 'synced', 'foo.md'));
         expect(tabs[0].editor?.sync).toBeUndefined();
       }
-    });
-
-    it('still routes a main-default repository sitting on main through the sync workspace', () => {
-      const dir = mkdtempSync(path.join(tmpdir(), 'janus-synced-'));
-      mkdirSync(path.join(dir, 'synced'));
-      writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
-      const tabs: EditorTab[] = [];
-      const mgr = new OpenFileManager(setup(dir, tabs, true));
-
-      mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
-
-      expect(tabs[0].editor?.sync).toBe('provisioning');
     });
   });
 });
