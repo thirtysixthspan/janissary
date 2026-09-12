@@ -151,7 +151,7 @@ export class OpenFileManager {
   // sync paths while reporting a different repository's branch, or none at all; it falls back to the
   // launch dir's own cached pair, which is what a non-navigator open already uses.
   private governingNavigator(label: string, launchDir: string): Managers['fileNavigator'] | undefined {
-    const root = this.managers.fileNavigator?.rootOf(label);
+    const root = this.managers.fileNavigator.rootOf(label);
     if (root === undefined) return undefined;
     const relative = path.relative(launchDir, root);
     const escapes = relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);

@@ -547,7 +547,10 @@ describe('OpenFileManager.edit (synced path)', () => {
     tabs: EditorTab[],
     openSync: () => Promise<{ dir: string } | { error: string }>,
     navigatorPrimary: boolean | undefined | (() => boolean | undefined),
-    navigatorRoot: string = dir,
+    // `null` means "this label names no file-navigator tab" — the production answer, which is a
+    // present manager returning `undefined`, not an absent manager. `undefined` cannot carry that
+    // meaning here: it would fire the default below and silently restore the launch-dir root.
+    navigatorRoot: string | null = dir,
   ) => ({
     tab: {
       cwdOf: () => dir,
@@ -568,7 +571,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       // Resolved per call rather than closed over, so a test can flip the navigator's answer
       // between two opens and show the decision is made at open time.
       onPrimaryBranch: () => (typeof navigatorPrimary === 'function' ? navigatorPrimary() : navigatorPrimary),
-      rootOf: () => navigatorRoot,
+      rootOf: () => navigatorRoot ?? undefined,
     },
     editorWatch: {
       watch: vi.fn(),
@@ -622,7 +625,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       dir: string,
       tabs: EditorTab[],
       navigatorPrimary: boolean | undefined | (() => boolean | undefined),
-      navigatorRoot?: string,
+      navigatorRoot?: string | null,
     ) =>
       makeSyncedManagers(dir, tabs, async () => ({ dir: '/workspace' }), navigatorPrimary, navigatorRoot);
 
@@ -757,9 +760,7 @@ describe('OpenFileManager.edit (synced path)', () => {
       writeFileSync(path.join(dir, 'synced', 'foo.md'), 'hello', 'utf8');
       const tabs: EditorTab[] = [];
       launchDirBranch.isLaunchDirOnPrimaryBranch.mockReturnValue(primary);
-      const managers = setup(dir, tabs, true) as unknown as Managers;
-      delete managers.fileNavigator;
-      const mgr = new OpenFileManager(managers);
+      const mgr = new OpenFileManager(setup(dir, tabs, undefined, null));
 
       mgr.edit('edit synced/foo.md', 'synced/foo.md', 'janus');
 
