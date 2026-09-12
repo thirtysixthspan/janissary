@@ -1,13 +1,11 @@
 import path from 'node:path';
-import type {
-  TabPluginActivation,
-  TabPluginResources,
-  TabPluginServerCapabilities,
+import {
+  defineIntents, type TabPluginActivation, type TabPluginResources, type TabPluginServerCapabilities,
 } from '../api.js';
 import { fileSize, openFileExternally } from '../files.js';
 import { saveImageEdit } from './edit.js';
 import {
-  isImagePayload, isSaveEditPayload, type ImageMode, type ImagePayload,
+  isImagePayload, isSaveEditPayload, type ImageMode, type ImagePayload, type SaveEditPayload,
 } from './shared.js';
 
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
@@ -52,20 +50,13 @@ export function activate(): TabPluginActivation {
     // The viewer half answers no intents — its zoom, pan, and orientation are client-local. The
     // editor half answers exactly one: the canvas holds the edited pixels, so the flatten happens in
     // the browser, while the server owns the destination and the filename entirely.
-    intent: (request, capabilities) => {
-      const tabPayload = request.tabPayload;
-      if (isImagePayload(tabPayload)) {
-        if (request.intent === 'save-edit') {
-          if (isSaveEditPayload(request.payload)) {
-            return { name: saveImageEdit(tabPayload.path, request.payload.dataUrl) };
-          }
-          return capabilities.rejectRequest('invalid save-edit payload');
-        }
-        return capabilities.rejectRequest(`unknown image intent "${request.intent}"`);
-      }
-      // The tab payload is the host's own record, not client input, so a bad one means this plugin
-      // produced something invalid — a real failure rather than a request worth answering.
-      return capabilities.reportFailure('invalid image tab payload');
-    },
+    intent: defineIntents('image', isImagePayload, {
+      'save-edit': {
+        payload: isSaveEditPayload,
+        run: (tabPayload, payload: SaveEditPayload) => ({
+          name: saveImageEdit(tabPayload.path, payload.dataUrl),
+        }),
+      },
+    }),
   };
 }
