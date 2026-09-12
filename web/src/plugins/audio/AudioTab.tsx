@@ -59,7 +59,7 @@ export function AudioTab({
     >
       <div className="plugin-meta">
         <span className="plugin-name">{track?.name ?? 'No tracks queued'}</span>
-        {track && <span className="image-size">{audio.size}</span>}
+        {track && <span className="plugin-size">{audio.size}</span>}
         {track && <span className="plugin-loc">{track.path}</span>}
         <span className="audio-transport">
           <button type="button" title="Previous track" aria-label="Previous track" onClick={transport.previous}>⏮</button>

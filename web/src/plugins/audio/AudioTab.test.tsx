@@ -53,6 +53,15 @@ describe('AudioTab', () => {
     expect(container.querySelector('audio')).toHaveAttribute('controls');
   });
 
+  it('marks the file size with the shared plugin header class', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(
+      <AudioTab payload={makePlaylist(['a.mp3', 'b.mp3'], 1)} capabilities={capabilities} />,
+    );
+    expect(container.querySelector(':scope .plugin-meta .plugin-size')?.textContent).toBe('4.2 MB');
+    expect(container.querySelector('.image-size')).toBeNull();
+  });
+
   it('renders every queued entry with the playing one marked', () => {
     const { capabilities } = makeCapabilities();
     const { container } = render(

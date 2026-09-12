@@ -43,7 +43,7 @@ export function MarkdownTab({
     <div className="plugin-tab" data-doc-shot="markdown-view">
       <div className="plugin-meta">
         <span className="plugin-name">{markdown.name}</span>
-        <span className="image-size">{markdown.size}</span>
+        <span className="plugin-size">{markdown.size}</span>
         <span className="plugin-loc">{markdown.path}</span>
         {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
       </div>

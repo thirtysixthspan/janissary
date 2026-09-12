@@ -53,7 +53,7 @@ export function ImageTab({
     <div className="plugin-tab" data-doc-shot="image-view">
       <div className="plugin-meta">
         <span className="plugin-name">{image.name}</span>
-        <span className="image-size">{image.size}</span>
+        <span className="plugin-size">{image.size}</span>
         <span className="plugin-loc">{image.path}</span>
         {editing && edit.dimensions && (
           <span className="image-dimensions">{edit.dimensions.width} × {edit.dimensions.height}</span>

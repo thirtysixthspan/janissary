@@ -62,6 +62,13 @@ describe('MarkdownTab', () => {
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
   });
 
+  it('marks the file size with the shared plugin header class', async () => {
+    const { container } = renderTab();
+    await waitFor(() => screen.getByRole('heading', { level: 1 }));
+    expect(container.querySelector(':scope .plugin-meta .plugin-size')?.textContent).toBe('2.1 KB');
+    expect(container.querySelector('.image-size')).toBeNull();
+  });
+
   it('fetches the file through the host-supplied resource url', async () => {
     renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));

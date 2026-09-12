@@ -54,6 +54,13 @@ describe('VideoTab', () => {
     expect(container.querySelector('video')).toHaveAttribute('controls');
   });
 
+  it('marks the file size with the shared plugin header class', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<VideoTab payload={makeVideo()} capabilities={capabilities} />);
+    expect(container.querySelector(':scope .plugin-meta .plugin-size')?.textContent).toBe('12 MB');
+    expect(container.querySelector('.image-size')).toBeNull();
+  });
+
   it('renders the supplied split action with the metadata actions', () => {
     const onSplit = vi.fn();
     const { capabilities } = makeCapabilities(onSplit);
