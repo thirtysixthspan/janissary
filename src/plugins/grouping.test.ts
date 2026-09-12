@@ -15,16 +15,17 @@ function makeManagers(): Managers {
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },
-    shell: { close: vi.fn() },
-    acp: { close: vi.fn() },
+    shell: { close: vi.fn(), closeTab: vi.fn() },
+    acp: { close: vi.fn(), closeTab: vi.fn() },
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
-    schedule: { delete: vi.fn() },
-    questions: { cancelTab: vi.fn(), pendingFor: vi.fn() },
-    database: { forgetTab: vi.fn(), closeAll: vi.fn() },
+    schedule: { delete: vi.fn(), closeTab: vi.fn() },
+    questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
+    database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
+    remote: { closeTab: vi.fn() },
   } as unknown as Managers);
   return managers;
 }

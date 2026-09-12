@@ -28,13 +28,6 @@ export type ManagerLifecycle = {
   dispose?(): void;
 };
 
-// The per-tab release method the tab-close walk reads (`src/tab/cleanup.ts`). It sits on its own
-// type rather than on `ManagerLifecycle`: `TabManager` already owns `closeTab(index)` as the
-// orchestrating entry point, and a `label`-keyed method on the manager intersection would not type.
-export type TabReleasingManager = {
-  closeTab?(label: string): void;
-};
-
 type ManagerRegistry = {
   tab: TabManager;
   shell: ShellManager;
@@ -118,3 +111,41 @@ type UnorderedManager = Exclude<keyof Managers, (typeof MANAGER_DISPOSE_ORDER)[n
 export const MANAGER_DISPOSE_ORDER_IS_COMPLETE: [UnorderedManager] extends [never]
   ? true
   : UnorderedManager = true;
+
+// The managers whose per-tab release the tab-close walk performs through their own `closeTab(label)`
+// method (`src/tab/cleanup.ts`). Membership is declared here rather than discovered at runtime by
+// probing every manager for a method that might not be there: a manager named below must actually
+// declare the method, so a rename or removal is a compile error instead of a silently skipped
+// release that leaks its per-tab resource — a PTY, an ACP session, a directory watcher, a database
+// handle — on every tab close.
+//
+// `workspace` is released only through the deferred block in the walk, `tab` orchestrates the walk
+// itself, and `database`'s last-tab `closeAll()` is a separate end-of-walk decision — so those
+// concerns are handled outside this list on purpose, even where a `closeTab(label)` also exists.
+export const MANAGER_TAB_RELEASE = [
+  'shell',
+  'schedule',
+  'pty',
+  'editorAcp',
+  'editorWatch',
+  'fileNavigator',
+  'acp',
+  'browser',
+  'questions',
+  'remote',
+  'database',
+] as const satisfies readonly (keyof ManagerRegistry)[];
+
+// The same compile-time completeness check the dispose order has: a manager listed above whose
+// type does not declare `closeTab(label: string): void` fails this assignment, and the compiler
+// names it. Method syntax keeps parameter checking bivariant, so this is the guard the optional
+// probe could never be.
+type DeclaredTabRelease = {
+  [Name in keyof ManagerRegistry]: ManagerRegistry[Name] extends { closeTab(label: string): void }
+    ? Name
+    : never;
+}[keyof ManagerRegistry];
+type UntypedReleaser = Exclude<(typeof MANAGER_TAB_RELEASE)[number], DeclaredTabRelease>;
+export const MANAGER_TAB_RELEASE_IS_TYPED: [UntypedReleaser] extends [never]
+  ? true
+  : UntypedReleaser = true;
