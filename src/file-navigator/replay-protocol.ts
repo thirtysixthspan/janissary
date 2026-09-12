@@ -32,6 +32,18 @@ function exists(absolute: string): boolean {
   }
 }
 
+function buildReplayResult<Item, Step>(options: ReplayOptions<Item, Step>, failed: Map<Item, string>): UndoRedoResult {
+  const failures = options.groupItems.flatMap((item) => {
+    const reason = failed.get(item);
+    return reason === undefined ? [] : [[options.leg(item).failurePath, reason] as const];
+  });
+  return {
+    total: options.groupItems.length,
+    failedPaths: failures.map(([failurePath]) => failurePath),
+    ...failureReasons(new Map(failures)),
+  };
+}
+
 export function applyReplayProtocol<Item, Step>(options: ReplayOptions<Item, Step>): UndoRedoResult {
   const replay = options.replayItems.map((item) => options.leg(item));
   const conflicts = options.preflight === false
@@ -63,18 +75,5 @@ export function applyReplayProtocol<Item, Step>(options: ReplayOptions<Item, Ste
     options.rebuild();
   }
 
-  const failedPaths: string[] = [];
-  const reasons = new Map<string, string>();
-  for (const item of options.groupItems) {
-    const reason = failed.get(item);
-    if (reason === undefined) continue;
-    const failurePath = options.leg(item).failurePath;
-    failedPaths.push(failurePath);
-    reasons.set(failurePath, reason);
-  }
-  return {
-    total: options.groupItems.length,
-    failedPaths,
-    ...failureReasons(reasons),
-  };
+  return buildReplayResult(options, failed);
 }
