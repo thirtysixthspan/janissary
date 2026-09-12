@@ -294,10 +294,16 @@ describe('PdfTab failure', () => {
     const document_ = makeDocument();
     let reject!: (reason: Error) => void;
     // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
-    vi.mocked(document_.renderPage).mockImplementationOnce(() => new Promise((_resolve, fail) => { reject = fail; }));
+    const pending = new Promise<void>((_resolve, fail) => { reject = fail; });
+    vi.mocked(document_.renderPage).mockImplementationOnce(() => pending);
     const client = capabilities();
     const view = await mount(document_, client);
-    onScreen({ 0: 1 });
+    // Re-sent until the render is in flight: the page observes itself in an effect, so a single
+    // notification can land before there is anything listening for it.
+    await waitFor(() => {
+      onScreen({ 0: 1 });
+      expect(document_.renderPage).toHaveBeenCalled();
+    });
     if (change === 'close') view.unmount();
     else await userEvent.click(screen.getByLabelText('Zoom in'));
     await act(async () => { reject(new Error('late')); });
