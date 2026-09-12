@@ -4,17 +4,6 @@
 
 ## development
 
-* Hand the harness launch path the parsed launch record it already has, instead of spreading it across a ten-argument positional call with four adjacent booleans.
-
-Existing Debt: `HarnessManager.run` in `src/harness/manager.ts` destructures the `HarnessParsed` record returned by `parseHarnessCommand` and passes its ten fields positionally into the private `open`, whose signature runs `name, workspace, offline, autoApprove, browser, label_?, model?, effort?, prompt?, remote?` — four consecutive booleans followed by four consecutive optional strings — even though the very next layer down, `SpawnTabOptions` in `src/harness/spawn-options.ts`, was already grouped into an object with a comment stating that several fields share a type so a transposition in a positional list would compile silently. Severity: 5/10
-
-Existing Risk: 6/10 - Transposing two of those booleans typechecks and ships: `autoApprove` swapped with `offline` launches a harness that auto-approves its own permission prompts when the user asked only for a network-denied sandbox, which hands an agent unattended approval authority the user never granted, and nothing in the type system, the tests, or the runtime would report it.
-
-Proposal Risk: 2/10 - Fields are matched by name afterward and a rename becomes a compile error, but the record still passes through a second hand-written mapping into `SpawnTabOptions` inside `open`, so a field added to the parse result and forgotten there is still a silent omission rather than a build failure.
-
-Proposal: In `src/harness/manager.ts`, change the private `open` to take one object argument instead of ten positional parameters. Export the launch variant of `HarnessParsed` from `src/harness/command-parse.ts` as a named type (the `{ name; workspace; offline; autoApprove; browser; label?; model?; effort?; prompt?; remote? }` member of the union, which is currently anonymous), have `open` accept that type, and change the call in `run` from the ten-argument spread to passing `parsed` directly once the `error`/`capture`/`transcript` variants have been narrowed away. Inside `open`, destructure by name and keep every existing behavior: `uniqueLabel(this.managers.tab.tabs, label ?? name)`, the `resolveLaunchDir` call gated on `workspace && !remote`, the creator-derived `group`/`groupColor`, the `spawnTab` call, and the `prompt` one-shot schedule entry. Leave `openFromProfile` alone — it already builds `SpawnTabOptions` by name from a `ProfileHarnessEntry`. `src/harness/manager.test.ts`, `src/harness/manager-browser.test.ts`, `src/harness/manager-browser-remote.test.ts`, and `src/harness/command-parse.test.ts` drive these launches end to end and pin which flags reach the spawn; all four must keep passing untouched, since `run`'s signature and every observable behavior are unchanged.
-
-
 * Report the errors the message bus catches out of its listeners, instead of discarding them where nothing can see them.
 
 Existing Debt: `MessageBus.emit` in `src/bus.ts` wraps each listener call in a `try`/`catch` with an empty body, so subscriber isolation — which is correct and must stay — is implemented as total silence: the process-wide bus that carries `state: dirty`, every `pty` data and exit event, the transcript events, and the schedule and conversation change signals has no diagnostic path of any kind for a subscriber that throws. Severity: 4/10

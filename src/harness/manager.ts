@@ -1,5 +1,6 @@
 import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
+import type { HarnessLaunch } from './command-parse.js';
 import { harnessSpawnEnv } from './scratch-dir.js';
 import { writeBrowserLog } from '../browser/browser-log.js';
 import { resolveLaunchDir } from './launch-dir.js';
@@ -20,7 +21,7 @@ import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { startRemoteTab } from './remote-launch.js';
-import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
+import { parseRemoteAddress } from '../remote/address.js';
 import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
@@ -84,7 +85,7 @@ export class HarnessManager {
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
-    return this.open(parsed.name, parsed.workspace, parsed.offline, parsed.autoApprove, parsed.browser, parsed.label, parsed.model, parsed.effort, parsed.prompt, parsed.remote);
+    return this.open(parsed);
   }
 
   // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring
@@ -113,10 +114,10 @@ export class HarnessManager {
   // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
   // detected from cwd; otherwise it inherits the creator's cwd. With `remote`, no local clone is
   // made at all — the clone is provisioned by `janus remote-serve` on the named host.
-  private open(
-    name: string, workspace: boolean, offline: boolean, autoApprove: boolean, browser: boolean,
-    label_?: string, model?: string, effort?: string, prompt?: string, remote?: RemoteAddress,
-  ): string | undefined {
+  private open(launch: HarnessLaunch): string | undefined {
+    const {
+      name, workspace, offline, autoApprove, browser, label: label_, model, effort, prompt, remote,
+    } = launch;
     const creator = this.managers.tab.cur();
     const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
     const fallbackCwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
