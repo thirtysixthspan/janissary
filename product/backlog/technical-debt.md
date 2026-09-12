@@ -4,16 +4,6 @@
 
 ## development
 
-* Bring the monitor teardown path — `stopMonitor` and `closeIfUnfed` — under test in a colocated test file beside the module.
-
-Existing Debt: The `MonitorManager` code that actually tears a monitor down lives in `src/monitor/stop.ts`, which has no colocated test file and is never exercised by `src/monitor/manager.test.ts`, so among the monitor modules it is the teardown half — session kill, timer clear, subscription unsubscribe, tab close — that ships with zero coverage. Severity: 5/10
-
-Existing Risk: 6/10 - A regression in `stopMonitor` leaves the monitor's ACP session, its `setInterval` timer, and its bus subscriptions alive with no owner tracking them, so leaked sessions and timers accumulate per stopped monitor in normal use, and `closeIfUnfed` misfires can close a live monitor's reporting tab or strand one open.
-
-Proposal Risk: 2/10 - The behavior ends up pinned by a directly-addressed test, but pinning today's semantics means the JSON.stringify-comparison for target membership is codified rather than fixed, and a rewiring of `MonitorManager` that stops delegating to `stop.ts` could strand these tests without anyone noticing they no longer cover the real path.
-
-Proposal: Add `src/monitor/stop.test.ts` covering `stopMonitor` and `closeIfUnfed` against a fake `MonitorSub` (stub `session.kill`, `subs` unsubscribes, and a fake timer) built to the shape `src/monitor/manager.ts` creates. Cases: an unknown `${owner}:${name}` returns false and mutates nothing; dropping an intermediate target updates `reg.targets` via `formatTargets` and calls `updateMonitorMeta` without tearing down; dropping the last non-inline target tears down, deletes the registry entry, and — via `closeIfUnfed` — closes the reporting tab only when no other live non-inline monitor shares the name; an inline monitor never closes the tab. Also pin the current detail that the JSON.stringify-equality search means an unresolvable target is a silent no-op, so the quirk is at least an observable contract until `src/monitor/targets.test.ts`-style alias resolution takes over. Verify `src/monitor/manager.test.ts` and `src/monitor/window.test.ts` still pass unchanged.
-
 * Hand `Controller`'s five adapter surfaces to the compiler instead of to `Object.assign` plus interface merging, so a dropped wiring is a type error rather than the exhaustiveness test's only guard.
 
 Existing Debt: src/controller.ts assembles the five adapter objects into the class with `Object.assign` in the constructor while the class type claims their members through `interface Controller extends …` declaration merging, a pair the file itself documents (with two eslint disables) as letting a factory dropped from the assign typecheck against an interface whose members the class never implements. Severity: 5/10

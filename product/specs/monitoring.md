@@ -88,7 +88,11 @@ Thumbs-up or thumbs-down on a reporting-tab suggestion feeds back to the monitor
 
 ### Lifecycle
 
-A monitor's session is killed when its `monitor stop` command runs, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. A reporting tab stays open as long as at least one monitor feeds it (potentially from a different owner tab); once the last one stops, the reporting tab closes too, and the same owner/name combination can be started again.
+A monitor's session ends when `unmonitor <name>` stops it, when its owner tab closes, when all of its tab targets have been removed, or when its own reporting tab is closed directly. Stopping releases its periodic updates and activity subscriptions as well as its session, and removes it from the active monitor list. The same owner/name combination can then be started again.
+
+Removing one target from an external monitor keeps its remaining targets active and updates the reporting tab's target list without resetting its accumulated context size. A target that matches none of the monitor's targets leaves it running unchanged. Removing the final target stops the monitor.
+
+A reporting tab stays open while another owner's external monitor with the same name still feeds it; once the last one stops, the reporting tab closes too. Inline monitors and monitors with other names do not keep that reporting tab open, even if they use the same persona. Stopping an inline monitor never closes a reporting tab.
 
 ### Keyboard focus
 
