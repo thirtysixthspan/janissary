@@ -5,7 +5,7 @@ import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../../ws';
 import { Transcript } from './Transcript';
 
-vi.mock('../../useXterm', () => ({
+vi.mock('../terminal/useXterm', () => ({
   useXterm: vi.fn(() => () => {}),
 }));
 

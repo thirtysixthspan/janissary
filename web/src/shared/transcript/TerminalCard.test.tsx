@@ -4,11 +4,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { TerminalCard } from './TerminalCard';
 import type { JanusClient } from '../../ws';
 
-vi.mock('../../useXterm', () => ({
+vi.mock('../terminal/useXterm', () => ({
   useXterm: vi.fn(() => () => {}),
 }));
 
-import { useXterm } from '../../useXterm';
+import { useXterm } from '../terminal/useXterm';
 const mockedUseXterm = useXterm as ReturnType<typeof vi.fn>;
 
 function fakeClient(overrides: Partial<JanusClient> = {}): JanusClient {
