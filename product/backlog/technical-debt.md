@@ -4,16 +4,6 @@
 
 ## development
 
-* Replace the file-navigator manager's hand-threaded positional closure tuples (`portClosures()` spread across every port build) with one shared record keyed by name.
-
-Existing Debt: src/file-navigator/manager.ts's navPort and openPort build their objects over the same four callbacks returned by `portClosures()`, spelled out in positional argument lists again in `src/file-navigator/manager-ports.ts` parameter signatures — three places where the same closures must stay in the same arbitrary order because the ports are formed from a tuple spread and side-by-side same-shaped signatures (`(l) => rebuild(l)` and `(l) => refreshGit(l)` both fit `(label: string) => void`). Severity: 4/10
-
-Existing Risk: 4/10 - Adding a fifth port member — or reordering one of the two identically-typed closures in `portClosures()` — typechecks everywhere and silently hands refreshGit where rebuild was expected, producing, say, tree payloads written without git marks or git calls interpreting the label as a path, with no test positioned to notice because the misbinding is behaviorally plausible.
-
-Proposal Risk: 1/10 - The residual risk is confined to the record's own literal getting a misspelled key, which the `KeyOf`-shaped construction makes a compile error, and the ports themselves remain thin wrappers so their behavior continues to be covered indirectly by every existing file-navigator test passing through them.
-
-Proposal: Reshape `src/file-navigator/manager-ports.ts` so `makeNavigationPort` and `makeOpenPort` take one object argument built at the manager call sites: in `src/file-navigator/manager.ts`, `portClosures()` returns `{ watchDir: (label, absDir, relPath) => this.watchDir(...), unwatchDir: …, rebuild: …, refreshGit: … }` typed as a `PortClosures` interface exported next to the port types, and both factories destructure by name from it instead of enumerating four positional parameters whose signatures are the `NavPort`/`OpenPort` members. Wire the same change through `src/file-navigator/navigation.ts`, `src/file-navigator/open.ts`, and their tests, all of which already pass bound closures via these helpers. Verify `src/file-navigator/manager.test.ts`, `src/file-navigator/index.test.ts`, and `src/controller/file-navigator.test.ts` still pass.
-
 * Bring the web client's plugin-tab failure paths — the error boundary, the five-second activation cap, and the client host plumbing in `PluginBody` — under direct test.
 
 Existing Debt: The client-side plugin machinery that isolates a broken plugin from the rest of the tabs — `web/src/plugins/PluginBody.tsx` and `web/src/plugins/host.tsx` — has no colocated test files, unlike every layer the server half of the plugin contract has (`src/plugins/host.test.ts`, `src/plugins/failure.test.ts`, `src/plugins/teardown.test.ts`), leaving the failure-isolation story on the rendering side to depend solely on whatever the bundled plugin tests happen to exercise indirectly. Severity: 5/10

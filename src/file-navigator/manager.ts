@@ -13,6 +13,7 @@ import { pollForDir } from './poll.js';
 import { writeCreatedPayload, writeRebuiltPayload } from './manager-payload.js';
 import { detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
 import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
+import type { PortClosures } from './port.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FilesTabState } from './state.js';
@@ -74,18 +75,18 @@ export class FileNavigatorManager {
   // The narrow set of manager internals `navigation.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private navPort(): NavPort {
-    return makeNavigationPort(this.managers, this.tabs, ...this.portClosures());
+    return makeNavigationPort(this.managers, this.tabs, this.portClosures());
   }
 
   // Bound closures shared by `navPort()` and `openPort()` for the watcher/rebuild plumbing both
-  // ports expose identically.
-  private portClosures(): [NavPort['watchDir'], NavPort['unwatchDir'], NavPort['rebuild'], NavPort['refreshGit']] {
-    return [
-      (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
-      (state, relPath) => this.unwatchDir(state, relPath),
-      (label) => this.rebuild(label),
-      (label) => this.refreshGit(label),
-    ];
+  // ports expose identically, keyed by name so no two of them can swap places.
+  private portClosures(): PortClosures {
+    return {
+      watchDir: (label, absDir, relPath) => this.watchDir(label, absDir, relPath),
+      unwatchDir: (state, relPath) => this.unwatchDir(state, relPath),
+      rebuild: (label) => this.rebuild(label),
+      refreshGit: (label) => this.refreshGit(label),
+    };
   }
 
   // The manager internals `manager-mutations.ts` operates through, passed the same way the
@@ -106,7 +107,7 @@ export class FileNavigatorManager {
   // The narrow set of manager internals `file-navigator/open.ts` operates through, passed as bound
   // closures so the tab-state map and watcher methods stay private to this class.
   private openPort(): OpenPort {
-    return makeOpenPort(this.managers, this.tabs, ...this.portClosures());
+    return makeOpenPort(this.managers, this.tabs, this.portClosures());
   }
 
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
