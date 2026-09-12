@@ -25,7 +25,6 @@
   color-scheme: only light;
   caret-color: CanvasText;
   forced-color-adjust: none;
-
   --scale-round-x: 1px;
   --scale-round-y: 1px;
   --min-font-size: 1;
@@ -52,11 +51,9 @@
 .pdf-text-layer > :not(.markedContent),
 .pdf-text-layer .markedContent span:not(.markedContent) {
   z-index: 1;
-
   --font-height: 0;
   --scale-x: 1;
   --rotate: 0deg;
-
   font-size: calc(var(--text-scale-factor) * var(--font-height));
   transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
 }
