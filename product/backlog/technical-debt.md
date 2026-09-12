@@ -4,16 +4,6 @@
 
 ## development
 
-* Encode the command router's prefix priority as an explicit ordering property rather than array position, so a new command cannot silently shadow an older one.
-
-Existing Debt: src/commands/index.ts assembles the whole `coreCommands` list — several dozen commands — with dispatch priority left to array position, held only by a prose comment ("Order here is priority", the `acpReset` before `acp` and `monitors` before `monitor` pairs that depend on it), and every new command file must be both registered and threaded into the correct slot by the author's understanding of that comment rather than by the type system. Severity: 6/10
-
-Existing Risk: 5/10 - A command appended to the end of the list whose `match` also accepts input an earlier-positioned command claims — the inverse of today's constraint, like a new command with a loose route_choice interacting with `harness` or `ssh` prefixes — silently misroutes away from the intended handler for every session, and the dispatch exhaustiveness test in `src/message-handler-exhaustive.test.ts` only pins prefixes someone remembered to enumerate.
-
-Proposal Risk: 2/10 - The structural overlap check can only prove what it knows about, so route choices a router infers dynamically (the fixed alternatives in `src/commands/reserved.ts`, plugin-contributed commands appended later) still need to be enumerated by hand into the check's inputs, and a stale enumeration there would read as safe while missing the pair it does not know about.
-
-Proposal: Alongside the `coreCommands` array in `src/commands/index.ts`, add a small runtime first-fit cross-check (a module in `src/commands/` that runs every command's `match` from `src/commands/types.ts` against the others' canonical sample inputs and asserts that for overlapping inputs, priority matches the array's ordering) invoked in `src/commands.test.ts` so a new or reordered command that shadows an earlier one fails its own unit test rather than routing wrong at runtime. Keep everything else as-is: `src/command/manager.ts`'s dispatch is correct whenever the invariant holds, and pairs like `src/commands/monitor.ts`'s `monitors`-before-`monitor` need only two pinned assertions rather than a migration. Verify `src/commands.test.ts`, `src/message-handler-exhaustive.test.ts`, and `src/question-command.test.ts` all still pass.
-
 * Replace the file-navigator manager's hand-threaded positional closure tuples (`portClosures()` spread across every port build) with one shared record keyed by name.
 
 Existing Debt: src/file-navigator/manager.ts's navPort and openPort build their objects over the same four callbacks returned by `portClosures()`, spelled out in positional argument lists again in `src/file-navigator/manager-ports.ts` parameter signatures — three places where the same closures must stay in the same arbitrary order because the ports are formed from a tuple spread and side-by-side same-shaped signatures (`(l) => rebuild(l)` and `(l) => refreshGit(l)` both fit `(label: string) => void`). Severity: 4/10

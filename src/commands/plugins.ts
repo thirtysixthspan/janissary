@@ -20,6 +20,7 @@ function statusLine(
 export const command: Command = {
   name: 'plugins',
   match: (input) => /^plugins\b/iu.test(input),
+  samples: ['plugins', 'plugins list'],
   run: (input, tab, managers) => {
     const argument = input.replace(/^plugins\b\s*/iu, '').trim();
     if (argument) {

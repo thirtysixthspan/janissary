@@ -43,6 +43,7 @@ export function createPluginCommands(
     commands.push({
       name,
       match: (command) => firstToken(command) === name,
+      samples: [name],
       run: (command, tab, managers) => managers.plugins.runCommand(
         declaration.id,
         command,

@@ -3,6 +3,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'next',
   match: (command_) => command_.toLowerCase() === 'next',
+  samples: ['next'],
   run: (_command, context, managers) => {
     managers.tab.moveTab(1);
   },

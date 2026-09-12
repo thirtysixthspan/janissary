@@ -3,6 +3,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'rename',
   match: (command_) => /^rename\b/i.test(command_),
+  samples: ['rename', 'rename notes'],
   run: (command_, tab, managers) => {
     const rest = command_.replace(/^rename\b\s*/i, '').trim();
     managers.tab.renameTab(tab.index, rest);

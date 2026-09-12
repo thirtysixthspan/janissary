@@ -3,6 +3,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'acp-reset',
   match: (command_) => /^acp\s+reset\b/i.test(command_),
+  samples: ['acp reset', 'acp reset bob'],
   run: (_command, tab, managers) => {
     const hadSession = managers.acp.close(tab.label);
     managers.tab.append(tab.label, {

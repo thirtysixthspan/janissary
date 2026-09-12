@@ -10,6 +10,7 @@ export const SEARCH_USAGE = 'Usage: search transcript <pattern>';
 export const command: Command = {
   name: 'search',
   match: (command_) => /^search\s+transcript\b/i.test(command_),
+  samples: ['search transcript hello'],
   run: (command_, tab, managers) => {
     const pattern = command_.replace(/^search\s+transcript\b\s*/i, '').trim();
     const append = (output: string) => managers.tab.append(tab.label, { input: command_, output });

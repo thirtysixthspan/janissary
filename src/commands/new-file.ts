@@ -6,6 +6,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'newfile',
   match: (command_) => /^newfile\b/i.test(command_),
+  samples: ['newfile', 'newfile notes.txt'],
   run: (command, tab, managers) => {
     const target = command.replace(/^newfile\b\s*/i, '').trim();
     if (!target) { managers.tab.append(tab.label, { input: command, output: 'Usage: newfile <file>' }); return; }

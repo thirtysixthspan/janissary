@@ -8,6 +8,7 @@ import { openNotificationsTab } from '../notifications-tab.js';
 export const command: Command = {
   name: 'notifications',
   match: (command_) => /^notifications\b/i.test(command_),
+  samples: ['notifications'],
   run: (command_, tab, managers) => {
     managers.tab.append(tab.label, { input: command_, output: '' });
     const rest = command_.replace(/^notifications\b\s*/i, '');

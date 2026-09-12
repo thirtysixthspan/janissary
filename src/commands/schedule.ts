@@ -42,6 +42,7 @@ function scheduleChange(parsed: Exclude<ScheduleParseResult, { error: string }>,
 export const command: Command = {
   name: 'schedule',
   match: (command_) => /^schedule\b/i.test(command_),
+  samples: ['schedule', 'schedule list'],
   run: (command_, tab, managers) => {
     if (command_.trim().toLowerCase() === 'schedule') { managers.schedule.openScheduleLaunch(); return; }
     const parsed = parseScheduleCommand(command_.replace(/^schedule\b\s*/i, ''), new Date());

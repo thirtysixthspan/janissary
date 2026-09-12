@@ -4,6 +4,7 @@ import { runQuestionCommand } from '../question-command.js';
 export const command: Command = {
   name: 'question',
   match: (command_) => /^question\s+(ask|approve)\b/i.test(command_),
+  samples: ['question ask hello', 'question approve 1'],
   run: (command_, tab, managers) => {
     const result = runQuestionCommand(command_, tab.label, managers.questions);
     if (typeof result === 'string') {

@@ -4,6 +4,7 @@ import { parseMsgCommand as parseMessageCommand } from '../messaging.js';
 export const command: Command = {
   name: 'msg',
   match: (command_) => /^msg\b/i.test(command_),
+  samples: ['msg bob hello'],
   run: (command_, tab, managers) => {
     const parsed = parseMessageCommand(command_);
     if ('error' in parsed) { managers.tab.append(tab.label, { input: command_, output: parsed.error }); return; }

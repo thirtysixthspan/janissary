@@ -10,6 +10,7 @@ import { notify } from '../notifications.js';
 export const command: Command = {
   name: 'notify',
   match: (command_) => /^notify\b/i.test(command_),
+  samples: ['notify', 'notify hello'],
   run: (command_, tab, managers) => {
     const message = command_.replace(/^notify\b\s*/i, '').trim();
     managers.tab.append(tab.label, { input: command_, output: '' });
