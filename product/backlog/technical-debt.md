@@ -4,16 +4,6 @@
 
 ## development
 
-* Hand `Controller`'s five adapter surfaces to the compiler instead of to `Object.assign` plus interface merging, so a dropped wiring is a type error rather than the exhaustiveness test's only guard.
-
-Existing Debt: src/controller.ts assembles the five adapter objects into the class with `Object.assign` in the constructor while the class type claims their members through `interface Controller extends …` declaration merging, a pair the file itself documents (with two eslint disables) as letting a factory dropped from the assign typecheck against an interface whose members the class never implements. Severity: 5/10
-
-Existing Risk: 4/10 - The hole is policed only by `src/controller.test.ts`'s exhaustiveness walk — the repo's largest test file, asserting every merged member is callable — so an adapter factory removed or renamed without updating the interface is one overdue assertion away from shipping, and each new adapter member grows that giant test first while leaving the type still unguarded.
-
-Proposal Risk: 1/10 - What remains is the residual risk of any refactor of the object that fans every feature into the server: wiring still happens at construction, so a typo in a member name inside the typed record still only shows up if the record is partial-but-required, which the construction shape makes a compile error rather than a runtime miss.
-
-Proposal: Create `src/controller/create-adapters.ts` where `src/controller/create-tab-adapter`-style factories assemble their members into one typed record — a `type ControllerMembers` spread from the five adapter interfaces, built with literal object entries per adapter so every member of every adapter interface must appear in the record literal or the file fails to typecheck. Have `src/controller.ts` take that record instead of the five separate `create*ControllerAdapter` results: spread or assign it on the class via a typed constructor step (or ship it as a field the call sites read), keep the public `Controller` surface identical so `src/message-handler.ts`, `src/main.ts`, and `src/index.test.ts` continue to pass, and delete the two `@typescript-eslint/no-unsafe-declaration-merging` disables. Then slim `src/controller.test.ts`'s member-existence walk down to the behavioral assertions the adapters keep, and let `src/controller/create-managers.test.ts` continue to pin manager construction unaffected.
-
 * Encode the command router's prefix priority as an explicit ordering property rather than array position, so a new command cannot silently shadow an older one.
 
 Existing Debt: src/commands/index.ts assembles the whole `coreCommands` list — several dozen commands — with dispatch priority left to array position, held only by a prose comment ("Order here is priority", the `acpReset` before `acp` and `monitors` before `monitor` pairs that depend on it), and every new command file must be both registered and threaded into the correct slot by the author's understanding of that comment rather than by the type system. Severity: 6/10

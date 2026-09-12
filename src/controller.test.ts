@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { Controller } from './controller.js';
+import { createController, type Controller } from './controller.js';
 import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent/state.js';
 import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
@@ -17,11 +17,7 @@ import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
-import { createTabControllerAdapter } from './controller/tab-adapter.js';
-import { createMonitorControllerAdapter } from './controller/monitor-adapter.js';
-import { createEditorControllerAdapter } from './controller/editor-adapter.js';
-import { createFileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
-import { createPluginControllerAdapter } from './controller/plugin-adapter.js';
+import { createControllerAdapters } from './controller/create-adapters.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
@@ -31,7 +27,7 @@ vi.mock('./pty.js');
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
 const makeController = () => {
   let states = 0;
-  const c = new Controller({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
   return { c, get states() { return states; } };
 };
 
@@ -39,30 +35,23 @@ const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l
 
 describe('Controller rootDir', () => {
   it('returns the constructor-supplied projectDir', () => {
-    const c = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
     expect(c.rootDir).toBe('/some/project');
   });
 
   it('falls back to process.cwd() when projectDir is omitted', () => {
-    const c = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
     expect(c.rootDir).toBe(process.cwd());
   });
 });
 
-// The controller's adapter members reach its type by declaration merging, which cannot check that
-// the constructor's `Object.assign` actually supplies them. Walk the factories at runtime instead:
-// an adapter dropped from the composition leaves its methods undefined, and this fails rather than
-// the RPC dispatcher throwing a TypeError in production.
+// The record's own completeness is a compile error now (see `src/controller/create-adapters.ts`),
+// but nothing in the type system checks that `createController` actually attaches it to the
+// instance. Walk the record's keys against the controller to pin that half.
 describe('Controller adapter composition', () => {
-  it('exposes every method the five adapter factories supply', () => {
+  it('exposes every method the adapter record supplies', () => {
     const { c } = makeController();
-    const names = [
-      createTabControllerAdapter,
-      createMonitorControllerAdapter,
-      createEditorControllerAdapter,
-      createFileNavigatorControllerAdapter,
-      createPluginControllerAdapter,
-    ].flatMap((create) => Object.keys(create(c.managers)));
+    const names = Object.keys(createControllerAdapters(c.managers));
     const members = c as unknown as Record<string, unknown>;
 
     expect(names.length).toBeGreaterThan(0);
@@ -335,14 +324,14 @@ describe('Controller', () => {
 
   it('quit asks the host to exit', () => {
     let isExited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('quit');
     expect(isExited).toBe(true);
   });
 
   it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('agent bob --no-workspace');
     c.setActiveTab(1);
     c.dispatch('exit');
@@ -360,7 +349,7 @@ describe('Controller', () => {
 
   it('closing the last tab quits the app', () => {
     let isExited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch('close'); // only tab open -> behaves like quit
     expect(isExited).toBe(true);
   });
@@ -368,7 +357,7 @@ describe('Controller', () => {
   it('closing the last non-docked tab quits the app even with a docked file navigator', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-last-tab-'));
     let isExited = false;
-    const c = new Controller({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
     c.dispatch(`files left ${root}`);
     c.dispatch('close'); // close the active (janus) tab — only non-docked tab
     expect(isExited).toBe(true);

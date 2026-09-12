@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Controller } from './controller.js';
+import { createController } from './controller.js';
 import { MANAGER_DISPOSE_ORDER, MANAGER_DISPOSE_ORDER_IS_COMPLETE } from './managers.js';
 
 const positionOf = (name: string) => MANAGER_DISPOSE_ORDER.indexOf(name as never);
@@ -12,7 +12,7 @@ describe('MANAGER_DISPOSE_ORDER', () => {
   // The `satisfies` clause rejects a name that is not a manager and the type assertion beside it
   // rejects a manager with no position, but neither can see a key written twice.
   it('lists every registered manager exactly once', () => {
-    const controller = new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
     const registered = Object.keys(controller.managers);
     controller.shutdown();
 

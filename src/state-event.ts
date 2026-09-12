@@ -1,4 +1,4 @@
-import type { Controller } from './controller.js';
+import type { ControllerCore } from './controller.js';
 import type { ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
@@ -8,7 +8,7 @@ import { appVersionNumber } from './cli-args.js';
 
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
 // broadcast-driving emitState and message-handler.ts's `init` reply.
-export function buildStateEvent(controller: Controller): ServerEvent {
+export function buildStateEvent(controller: ControllerCore): ServerEvent {
   const secondaryTab = controller.managers.tab.secondaryTabLabel === undefined
     ? undefined
     : controller.managers.tab.findIndex(controller.managers.tab.secondaryTabLabel);

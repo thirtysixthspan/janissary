@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
-import { Controller } from './controller.js';
+import { createController } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ServerEvent } from './protocol.js';
 import { handle } from './message-handler.js';
@@ -58,7 +58,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
 
   // Reassigned below once `close` exists, so the `quit` command can shut the server down cleanly.
   let requestExit: () => void = () => process.exit(0);
-  const controller = new Controller({
+  const controller = createController({
     emitState: () => broadcast(buildStateEvent(controller)),
     sendPty: (id, data) => broadcast({ t: 'pty', id, data }),
     sendPtyExit: (id, exitCode) => broadcast({ t: 'pty-exit', id, exitCode }),
