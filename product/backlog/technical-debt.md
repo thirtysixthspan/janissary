@@ -4,17 +4,6 @@
 
 ## development
 
-* Bring the web client's plugin-tab failure paths — the error boundary, the five-second activation cap, and the client host plumbing in `PluginBody` — under direct test.
-
-Existing Debt: The client-side plugin machinery that isolates a broken plugin from the rest of the tabs — `web/src/plugins/PluginBody.tsx` and `web/src/plugins/host.tsx` — has no colocated test files, unlike every layer the server half of the plugin contract has (`src/plugins/host.test.ts`, `src/plugins/failure.test.ts`, `src/plugins/teardown.test.ts`), leaving the failure-isolation story on the rendering side to depend solely on whatever the bundled plugin tests happen to exercise indirectly. Severity: 5/10
-
-Existing Risk: 5/10 - The five-second activation cap, the pre-mount failure effect reporting, and the `PluginErrorBoundary` hook into `onFailure` each decide whether a misbehaving plugin tab freezes the whole center strip or merely dies alone; a regression — say, the boundary rethrowing during render, or the timeout never settling its state — silently reintroduces a whole-UI hang from one plugin, and nothing in `web/src/` is positioned to catch that today.
-
-Proposal Risk: 2/10 - The tests pin act()-driven timing of the cap and the boundary, so a future change to the activation budget means keeping three assertions in step with the constant, and the React fake-timer rig keeps those green except where the budget genuinely moves.
-
-Proposal: Add `web/src/plugins/PluginBody.test.tsx` driving the component with a stub `TabView` and a registry of fake `ClientPluginRegistration` entries (`web/src/plugins/registry` types): cases for a body that mounts cleanly, one that throws in render to prove the `PluginErrorBoundary` calls `onFailure` and renders nothing while other tabs continue, a promise that never resolves to confirm the `CLIENT_ACTIVATION_MS` timeout reports one failure and drops the lazy import, and a pre-mount failure flowing through the effect — the exact hazard being codified. Verify `web/src/plugins/host.tsx`'s `usePluginHost` wiring through the same file's coverage, and keep `web/src/App.test.tsx` and `web/src/MountedViewLayers.test.tsx` passing since `PluginBody` is mounted there.
-
-
 * Move the xterm terminal modules out of the app root into the shared layer, so the shared transcript stops reaching upward into the app shell for the terminal it renders.
 
 Existing Debt: `web/src/shared/transcript/TerminalCard.tsx` imports `useXterm` from `../../useXterm`, an app-root module, which inverts §3 (dependencies flow one way: shared → feature → app) — the shared layer is defined as importing nothing from features or the app shell, and `useXterm.ts` in turn pulls in `terminal-keys.ts` and `terminal-osc52.ts`, which live at the root as well. Severity: 6/10
