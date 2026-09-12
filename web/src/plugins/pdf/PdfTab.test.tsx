@@ -1,7 +1,7 @@
 import React from 'react';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import type { PdfPayload } from '@shared/plugins/pdf/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { loadPdf, type LoadedPdf } from './pdf-document';
@@ -101,9 +101,30 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe('PdfTab header', () => {
+  it('keeps browser observers available until automatic teardown disposes the document', async () => {
+    const document_ = makeDocument();
+    const intersectionObserver = globalThis.IntersectionObserver;
+    const resizeObserver = globalThis.ResizeObserver;
+    const disposed = vi.fn();
+    vi.mocked(document_.destroy).mockImplementation(() => {
+      disposed(globalThis.IntersectionObserver, globalThis.ResizeObserver);
+    });
+    onTestFinished(() => {
+      expect(disposed).toHaveBeenCalledExactlyOnceWith(intersectionObserver, resizeObserver);
+    });
+
+    await mount(document_);
+
+    expect(disposed).not.toHaveBeenCalled();
+  });
+
   it('shows the file, the position, the controls, and the host split action', async () => {
     await mount();
 
