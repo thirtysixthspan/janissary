@@ -1,16 +1,5 @@
 # pull-request
 
-* Account for the native canvas binary that arrives in the dependency tree behind the new PDF renderer, which the pull request's supply-chain gating and its "one new runtime dependency" claim both pass over.
-
-Existing Issue: `pdfjs-dist@6.3.289` declares `@napi-rs/canvas` as an optional dependency, so `package-lock.json` gains that package plus eleven prebuilt per-platform native binaries, none of which the browser half of this plugin can use — `web/src/plugins/pdf/pdf-document.ts` renders into a DOM canvas — and the gate the pull request reports running covered only the direct package. Severity: 4/10
-
-Existing Risk: 4/10 - Every install of this project now fetches and unpacks a native binary that nothing in the app executes, which widens the supply-chain surface the `security/known-malicious-packages.json` gate exists to narrow and puts a compiled artifact on disk that no audit step is aware of.
-
-Proposal Risk: 2/10 - Declining the optional dependency relies on npm honouring the exclusion on every install path, including CI and a fresh clone, so a later install that quietly restores it would go unnoticed unless the lockfile is what pins the outcome.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1076: keep pdfjs-dist's native canvas out of the dependency tree". First run `./scripts/run.mjs check-malicious-package @napi-rs/canvas@<the locked version>` and `./scripts/run.mjs check-malicious-package --audit` and record the results, since only a clean exit permits keeping it. Then decide between two outcomes and implement one: exclude the optional dependency so it is absent from `package-lock.json` — the only route that actually shrinks the surface, and the one to prefer, since pdfjs-dist needs `@napi-rs/canvas` solely for its Node-side rendering path, which this app never enters — or keep it and make it accounted for. Either way, correct the dependency paragraph of the pull request's own record: `product/plans/complete/pdf-viewer-plugin.md` describes the addition as one dependency gated at one version, and that paragraph is where the next reader will look. Check `.github/workflows/ci.yml` still installs and builds after the change, because an exclusion that works locally and not in CI is worse than keeping the package; the repository pins Node 24 there, which satisfies pdfjs-dist's own `engines` floor either way. No test pins the dependency tree, so the verification is the regenerated lockfile plus a clean `--audit` run.
-
-
 * Assert that the new PDF asset route in the dev server resolves inside the installed package, rather than relying on its URL pattern to imply it.
 
 Existing Issue: The `janus-pdfjs-assets` middleware added to `web/vite.config.ts` builds a filesystem path by joining two capture groups of a request URL onto the resolved `pdfjs-dist` directory and reads it with `readFileSync`, with no assertion that the result stays inside that directory and no handling for a read that fails; the filename group also admits `..`, and a missing file throws out of the handler instead of falling through. Severity: 3/10

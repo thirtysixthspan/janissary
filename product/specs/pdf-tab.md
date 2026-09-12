@@ -60,6 +60,8 @@ is what lets the tab follow the application theme and carry the controls describ
 it needs to do so ships with the app and is served from the app's own address, so a PDF renders the
 same way offline, behind a proxy, and on a remote server.
 
+The server supplies the document and rendering assets; it never renders the document's pages itself.
+
 ### Layout
 
 A PDF tab's body has no command bar and no transcript. When the active tab is a PDF view, the app
