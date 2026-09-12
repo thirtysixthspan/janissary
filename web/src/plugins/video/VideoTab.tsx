@@ -42,7 +42,7 @@ export function VideoTab({
     <div className="video-tab plugin-tab" data-doc-shot="video-view">
       <div className="plugin-meta">
         <span className="plugin-name">{video.name}</span>
-        <span className="image-size">{video.size}</span>
+        <span className="plugin-size">{video.size}</span>
         <span className="plugin-loc">{video.path}</span>
         {saved && <span className="video-shot-saved">Saved {saved}</span>}
         <span className="plugin-actions">

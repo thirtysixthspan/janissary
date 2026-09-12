@@ -63,6 +63,12 @@ describe('ImageTab', () => {
     expect(screen.getByText('/home/user/photo.png')).toBeInTheDocument();
   });
 
+  it('marks the file size with the shared plugin header class', () => {
+    const { container } = renderTab();
+    expect(container.querySelector(':scope .plugin-meta .plugin-size')?.textContent).toBe('1.2 MB');
+    expect(container.querySelector('.image-size')).toBeNull();
+  });
+
   it('loads the image through the host-authenticated resource url', () => {
     const { container } = renderTab();
     expect(container.querySelector(':scope .plugin-stage img')?.getAttribute('src')).toBe('/open/1?token=');

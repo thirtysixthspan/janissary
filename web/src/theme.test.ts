@@ -52,6 +52,13 @@ describe('metadata theme', () => {
     expect(theme).not.toContain('.plugin-meta');
     expect(theme).not.toContain('.plugin-actions');
   });
+
+  it('keeps a plugin header size on one line', () => {
+    const sizeRule = pluginShared.match(/\.plugin-meta \.plugin-size \{[^}]+\}/)?.[0];
+
+    expect(sizeRule).toContain('white-space: nowrap');
+    expect(theme).not.toContain('.plugin-size');
+  });
 });
 
 describe('plugin stylesheet ownership', () => {
