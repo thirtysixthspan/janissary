@@ -265,6 +265,10 @@ export type TabPluginActivationModule = {
   activate(): TabPluginActivation | Promise<TabPluginActivation>;
 };
 
+// The declared intent table lives beside the contract it completes; re-exported here so a plugin
+// imports it from the same module as everything else in the contract.
+export { defineIntents, type TabPluginIntentEntry } from './define-intents.js';
+
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 
