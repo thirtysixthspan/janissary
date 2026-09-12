@@ -231,6 +231,95 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
     expect(input).not.toHaveBeenCalledWith('p1', expect.stringContaining('## scheduled ##'));
     mgr.stop();
   });
+
+  // Two entries due on the same tick must not both write their text before either delayed Enter:
+  // the harness would read one concatenated prompt followed by an empty submission while both
+  // entries counted as fired. At most one is delivered per harness tab per tick.
+  it('delivers at most one due entry per harness tab per tick, retaining the rest', () => {
+    const { managers, input } = runningHarness();
+    const mgr = new ScheduleManager(managers);
+    mocks.notify.mockClear();
+    mgr.set('janus', [promptEntry('first command'), promptEntry('second command')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'first command');
+    expect(input).not.toHaveBeenCalledWith('p1', 'second command');
+    expect(mgr.get('janus')).toHaveLength(1);
+    expect(mocks.notify).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenNthCalledWith(3, 'p1', 'second command');
+    expect(mgr.get('janus')).toEqual([]);
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+    mgr.stop();
+  });
+
+  it('retains a second due recurring entry unchanged when a one-shot consumed the budget', () => {
+    const { managers, input } = runningHarness();
+    const mgr = new ScheduleManager(managers);
+    const recurring: ScheduleEntry = {
+      id: 'tick', command: 'run check', spec: 'every 1m',
+      nextRun: Date.now() - 1000, recurring: true, intervalMs: 60_000,
+    };
+    mgr.set('janus', [promptEntry('one-shot prompt'), recurring]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'one-shot prompt');
+    expect(input).not.toHaveBeenCalledWith('p1', 'run check');
+    const retained = mgr.get('janus')![0];
+    expect(retained.id).toBe('tick');
+    expect(retained.nextRun).toBe(recurring.nextRun);
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'run check');
+    const rescheduled = mgr.get('janus')![0];
+    expect(rescheduled.recurring).toBe(true);
+    expect(rescheduled.nextRun).toBeGreaterThan(recurring.nextRun);
+    mgr.stop();
+  });
+
+  it('delivers one entry per harness tab in the same tick across separate tabs', () => {
+    const first = runningHarness();
+    const { managers: managers2, tab: tab2 } = makeManagers({
+      label: 'second',
+      view: 'harness',
+      harness: { name: 'codex', program: 'codex', ptyId: 'p2', status: 'running' },
+    });
+    first.managers.tab.allLabels = () => ['janus', 'second'];
+    (first.managers.tab as unknown as { byLabel: (label: string) => Tab | undefined }).byLabel =
+      (label: string) => (label === 'janus' ? first.tab : tab2);
+    (managers2.pty as unknown as { input: ReturnType<typeof vi.fn> }).input = first.managers.pty.input;
+    Object.assign(first.managers, { pty: managers2.pty });
+    const mgr = new ScheduleManager(first.managers);
+    const input = first.managers.pty.input as unknown as ReturnType<typeof vi.fn>;
+    mgr.set('janus', [promptEntry('first tab command')]);
+    mgr.set('second', [promptEntry('second tab command')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', 'first tab command');
+    expect(input).toHaveBeenCalledWith('p2', 'second tab command');
+    mgr.stop();
+  });
+
+  it('keeps the agent tab\'s existing multi-entry dispatch in one tick', () => {
+    const { managers } = makeManagers();
+    const dispatchTo = vi.fn();
+    (managers.command as unknown as { dispatchTo: typeof dispatchTo }).dispatchTo = dispatchTo;
+    const mgr = new ScheduleManager(managers);
+    mocks.notify.mockClear();
+    mgr.set('janus', [promptEntry('first'), promptEntry('second')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(dispatchTo).toHaveBeenCalledTimes(2);
+    expect(dispatchTo).toHaveBeenNthCalledWith(1, 'janus', 'first ## scheduled ##', { detect: false });
+    expect(dispatchTo).toHaveBeenNthCalledWith(2, 'janus', 'second ## scheduled ##', { detect: false });
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+    mgr.stop();
+  });
 });
 
 describe('ScheduleManager schedule launch dialog', () => {

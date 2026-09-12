@@ -143,12 +143,20 @@ export class ScheduleManager {
   }
 
   // Fire one tab's due entries, returning the surviving schedule (recurring entries rescheduled,
-  // one-shots dropped), or undefined when nothing fired.
+  // one-shots dropped), or undefined when nothing fired. A harness tab receives at most one
+  // delivered entry per tick: the command is submitted by a delayed Enter, so two entries due on
+  // the same tick would both write their text before either submission landed and the harness
+  // would read one concatenated prompt followed by an empty submission while both entries counted
+  // as fired. The rest stay due for subsequent ticks. Agent tabs dispatch synchronously and keep
+  // their existing multi-entry behavior.
   private fireDue(tab: Tab, sched: ScheduleEntry[], now: number): ScheduleEntry[] | undefined {
     let isChanged = false;
     const remaining: ScheduleEntry[] = [];
+    const budget = tab.view === 'harness' ? 1 : Infinity;
+    let delivered = 0;
     for (const e of sched) {
-      if (e.nextRun > now || !this.fire(tab, e)) { remaining.push(e); continue; }
+      if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
+      delivered++;
       isChanged = true;
       if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
     }

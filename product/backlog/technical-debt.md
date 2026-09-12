@@ -4,17 +4,6 @@
 
 ## development
 
-* Separate simultaneously due harness commands into distinct scheduled submissions.
-
-Existing Debt: The scheduler treats a harness command as delivered when its text is written, although submission occurs in a later timeout, so the loop has no boundary between commands targeting the same terminal. Severity: 6/10
-
-Existing Risk: 6/10 - Two entries due on the same tick write both command strings before either delayed Enter, so the harness can receive one concatenated prompt followed by an empty submission while both schedule entries are counted as fired.
-
-Proposal Risk: 3/10 - Separate scheduled submissions prevent this deterministic overlap, but the fixed 50 ms input delay still assumes the harness has processed the text and cannot prevent a user typing into the terminal during that interval.
-
-Proposal: In `src/schedule/manager.ts`, change `ScheduleManager.fireDue` to accept at most one successfully delivered entry per harness tab per tick and retain the other due entries unchanged for subsequent ticks; leave agent-tab dispatch and recurring-entry rescheduling unchanged. This is a bounded first increment that uses the existing one-second tick rather than introducing a second command queue or another label-keyed state map. Preserve the text-then-delayed-Enter behavior in `ScheduleManager.fire`, the readiness check, and notification emission only for the entry actually accepted. `src/pseudoterminal-manager.ts` forwards each `input` directly to `session.write` and supplies no submission serialization, so the guard belongs before those calls. Extend `src/schedule/manager.test.ts`, whose harness cases each install only one entry, with two distinct due one-shots and mixed recurring/one-shot entries: assert exact input order across successive ticks, retention of the deferred entry, and one notification per accepted command. Also pin that separate harness tabs each submit during the same tick and agent tabs retain their existing multi-entry behavior. The current tests cover readiness retries and the 50 ms Enter delay but do not cover simultaneous due entries; keep those assertions and `src/schedule/index.test.ts` passing.
-
-
 * Bound retained terminal output in the WebSocket client and expire streams that never acquire a renderer.
 
 Existing Debt: The WebSocket client's early-output buffer has no retention policy, so every PTY without an attached handler accumulates strings until a renderer attaches or the whole client is disposed. Severity: 5/10
