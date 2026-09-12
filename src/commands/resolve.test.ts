@@ -22,6 +22,18 @@ describe('resolveCommand', () => {
     expect(resolveCommand('shell --pty  echo hi')).toEqual({ kind: 'shell', cmd: 'echo hi', pty: true });
   });
 
+  it('treats a leading `!` as shorthand for the `shell` keyword', () => {
+    expect(resolveCommand('!ps')).toEqual({ kind: 'shell', cmd: 'ps' });
+    expect(resolveCommand('! git status')).toEqual({ kind: 'shell', cmd: 'git status' });
+    expect(resolveCommand('!')).toEqual({ kind: 'shell', cmd: '' });
+  });
+
+  it('treats a leading `!!` as shorthand for `shell --pty`', () => {
+    expect(resolveCommand('!!htop')).toEqual({ kind: 'shell', cmd: 'htop', pty: true });
+    expect(resolveCommand('!!  vim file.ts')).toEqual({ kind: 'shell', cmd: 'vim file.ts', pty: true });
+    expect(resolveCommand('!!')).toEqual({ kind: 'shell', cmd: '', pty: true });
+  });
+
   it('does not treat a word merely starting with "shell" as the keyword', () => {
     const result = resolveCommand('shellcheck script.sh');
     expect(result.kind).toBe('unknown');

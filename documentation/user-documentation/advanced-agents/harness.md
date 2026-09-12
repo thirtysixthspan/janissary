@@ -38,6 +38,10 @@ keeps that one drag for yourself.
 The copy chords are taken only while something is selected. With nothing selected they go straight
 to the harness, so `Ctrl+C` never stops being the interrupt.
 
+The harness's own copy command works too, including in a tab running `on <host>`. A harness copying
+something reaches for the clipboard of the machine it is running on; when that machine is a remote
+one it asks the terminal instead, and the text arrives on the clipboard in front of you.
+
 Pasting needs nothing special: `Cmd+V` (`Ctrl+V` on Windows and Linux) types the clipboard into the
 harness.
 

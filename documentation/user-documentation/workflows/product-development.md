@@ -42,7 +42,7 @@ plans/
   deferred/    intentionally on hold
 ```
 
-A plan that's still in `draft/` might have open questions or unresolved wording; a plan in `ready/` shouldn't. That distinction matters because an agent picking up work should only ever pull from `ready/` — a draft is a conversation still in progress, not an instruction.
+A plan in `draft/` is still being refined; a plan in `ready/` is reviewed, decided, and safe to build from. The planning task writes an initial draft, asks about anything it cannot determine from the backlog and project, improves the result, then keeps resolving any remaining questions before it finishes. That distinction matters because an agent picking up work should only ever pull from `ready/` — a draft is a conversation still in progress, not an instruction.
 
 ## Kept synced with GitHub by default
 
@@ -62,7 +62,7 @@ Together, the two answer different questions, from different sources: "what are 
 
 Each stage above is small enough to hand to an agent as a self-contained instruction file under `ai/tasks/`, opened without typing its path by hand through the [task picker](/user-documentation/command-bar/tasks) (`Ctrl+A`). A typical loop is four task files, each doing one stage and handing off to the next by moving a file between folders:
 
-1. **Plan the next item.** Take the first entry off a backlog's `ready` list, ask you the handful of questions needed to pin down scope and behavior, and write the answers up as a new file in `plans/draft/`.
+1. **Plan the next item.** Take the first entry off a backlog's `ready` list, write an initial draft, ask you the questions needed to pin down scope and behavior, improve it, and resolve any remaining questions in the `plans/draft/` file.
 2. **Harden the plan.** Re-check a draft plan's claims against the current state of the project, resolve anything ambiguous, and move it to `plans/ready/` once nothing is left unresolved.
 3. **Build it.** Pick the simplest plan out of `plans/ready/`, carry out its steps, update the matching spec, and move the plan to `plans/complete/`.
 4. **Fix a small thing.** For work too small to need a drafted-then-hardened plan, take the next entry from a `fixes`-style backlog, resolve it directly, and record what changed in the spec.

@@ -219,10 +219,11 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Right-click a row | Open that row's context menu at the pointer, leaving the selection exactly as it was |
 | Click-drag a row and release it over a directory row, or any file inside that directory | Moves the dragged file or directory into that directory on disk |
 
-Opening or editing a file from the tree uses the same `open`/`edit` commands available at any
-command line, resolved against the tree's own root — never the currently focused tab's working
-directory, which may point elsewhere. The opened file's tab lands in the same group as the tree
-tab.
+Opening or editing a file from the tree resolves against the tree's own root — never the currently
+focused tab's working directory, which may point elsewhere. The opened file's tab lands in the same
+group as the tree tab. The activation is the navigator's own request, not a typed command: it
+records no entry in any tab's transcript or command history, and a busy agent never queues or
+interrupts it.
 
 If a file has no registered opener, double-clicking it presents a chooser with **Edit as text** and
 **Open externally**. Selecting an option runs that action for the file; Escape closes the chooser.
@@ -248,9 +249,9 @@ clicked row alone.
 The menu holds up to ten entries in four groups, separated in this order: **Open**, **Edit**, and
 **Open with**; **Copy**, **Paste**, and **Duplicate**; **Rename** and **Delete**; **New file** and
 **New folder**.
-Open does what double-clicking the row does. Edit is offered only for a file and sends
-`edit <absolute-path>` for the right-clicked row: ordinary files reach the plain-text editor and
-images reach the image editor because the `edit` command dispatches by file type (see [[open]]).
+Open does what double-clicking the row does. Edit is offered only for a file and edits the
+right-clicked row like Shift+double-click does: ordinary files reach the plain-text editor and
+images reach the image editor because editing dispatches by file type (see [[open]]).
 When the clicked row is part of a multi-row selection containing only images, **Open** and **Edit**
 each apply to every selected image in selection order instead; mixed selections keep the normal
 right-clicked-row behavior.

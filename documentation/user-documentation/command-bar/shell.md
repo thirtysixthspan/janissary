@@ -16,7 +16,7 @@ Plain commands like these are recognized as shell input automatically. When a li
 shell find . -name "*.ts"
 ```
 
-The prefix is the deterministic escape hatch — whatever follows it goes straight to the shell.
+The prefix is the deterministic escape hatch — whatever follows it goes straight to the shell. `!` is shorthand for the same thing — `!find . -name "*.ts"` is identical to `shell find . -name "*.ts"` — and `!!` is shorthand for `shell --pty`, forcing the command straight into a full-tab terminal (see below): `!!htop` is identical to `shell --pty htop`.
 
 The chooser always lists `shell` and `acp (agent prompt)`. It also lists one `db query → <name>`
 option for each database connection open in the current tab. It does not offer a database route
@@ -74,7 +74,7 @@ To force a command into a full-tab PTY that isn't auto-detected, add `--pty` rig
 shell --pty ./some-interactive-script.sh
 ```
 
-A bare `shell --pty`, with no command after it, opens your login shell directly in the tab — a plain interactive shell prompt.
+A bare `shell --pty`, with no command after it, opens your login shell directly in the tab — a plain interactive shell prompt. `!!` is shorthand for `shell --pty`, so `!!./some-interactive-script.sh` and a bare `!!` do the same thing.
 
 ## Programs that aren't on the list
 

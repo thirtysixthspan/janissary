@@ -1,10 +1,10 @@
 # Plan a New Feature
 
-Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation, which need not be listed there at all — interview the user with product-focused questions to pin down scope and behavior, and write a draft plan for it into `./product/plans/draft/`. You produce plan documents only — you never write source code.
+Your job: pick one feature — the first entry under the `## ready` section of `./product/backlog/features.md`, or a specific feature named in the task invocation, which need not be listed there at all — write an initial draft plan for it into `./product/plans/draft/`, resolve its product decisions with the user, and leave a complete plan. You produce plan documents only — you never write source code.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation.
 
-This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions before drafting the plan. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
+This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks, you must stop and ask the user questions after the initial draft and after its improvement passes when any product decision remains unanswered. Do not guess scope, behavior, or edge cases on the user's behalf when a question would resolve it.
 
 **Follow the steps below in order, exactly as written.** Do not skip a step, do not merge two steps together. If you are ever unsure whether you have done enough — re-read the checklist for that step before moving on, don't guess.
 
@@ -22,9 +22,9 @@ Read any file in the repo to ground a plan in real code. Create new plan files u
 
 1. **Writing implementation code into a plan.** No function bodies, no JSX/CSS blocks, no "here's the code." Name the module/type/contract in prose, per `ai/tasks/planning/improve-plan.md`'s rule — the same rule applies here since you are authoring, not implementing.
 2. **Editing any source, test, or config file.** This task only touches `./product/backlog/features.md` and files under `./product/plans/draft/`.
-3. **Skipping the question round.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles.
+3. **Skipping question resolution.** Never invent a plan's scope, edge-case behavior, or UI wording without asking, when the answer is a product decision rather than something the codebase already settles. Keep asking targeted rounds until every such decision is resolved.
 4. **Moving a plan to `./product/plans/ready/`.** That promotion is a separate human/`ai/tasks/planning/improve-plan.md` step. Everything this task produces lands in `./product/plans/draft/`.
-5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is drafted and the user has confirmed it.** Don't clear the backlog ahead of the plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
+5. **Removing a feature's entry from `./product/backlog/features.md` before its plan is complete.** Don't clear the backlog ahead of a complete plan actually existing. Never add a feature named at invocation to the file either — an unlisted feature is planned without ever passing through the backlog.
 
 ---
 
@@ -72,7 +72,24 @@ Answer these four yes/no checks about the feature, using only what the feature's
 
 If you are unsure whether a check is "yes" or "no," treat it as "no" — the default is product-only questions. When in doubt, ask fewer implementation questions rather than more.
 
-### 2c. Ask clarifying questions
+### 2c. Write the initial draft
+
+Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name derived from the feature's `### ` title (lowercase, spaces to hyphens, strip punctuation — e.g. "profile launcher" → `profile-launcher.md`). Follow the house style used in `./product/plans/ready/` (skim an existing one, e.g. `./product/plans/ready/monitor-page-tab-content-feed.md`, for shape).
+
+The initial draft records only the feature text and facts established in Step 2a. Do not invent a design decision that needs the user's input. It must contain, in this order:
+
+1. `# <Feature name>` title.
+2. A short summary paragraph describing the known goal and why it matters.
+3. Design decisions established by the feature text or existing behavior.
+4. A "What already exists (reuse, don't rebuild)" table when Step 2a surfaced precedent to point at. If 2a found nothing relevant, write "None found" rather than omitting the section.
+5. Proposed changes, described in prose (module/function/type names and their contracts) — no code blocks.
+6. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
+7. Out of scope, listing boundaries already established by the feature text.
+8. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
+
+Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
+
+### 2d. Ask the first question round
 
 Ask the user questions using `AskUserQuestion`, one call per round, **maximum 4 questions per call**. Before writing questions, make sure you have at least one question in each of these categories that isn't already answered by the feature's existing text:
 
@@ -87,50 +104,44 @@ Every question must offer concrete options grounded in what you found in Step 2a
 
 Only if Step 2b said this feature is high complexity, add up to 2 implementation questions in the same call, phrased as a choice between concrete approaches (e.g. "extend module X" vs "add a new module") — never as an open "how should this be built?".
 
-After the user answers, check this list before deciding you're done:
+After the user answers, update the initial draft with every answer before continuing. Each answer must become a decision, behavior, scope boundary, or exact user-visible wording in the relevant existing section.
+
+### 2e. Improve the answered draft
+
+Execute these tasks in order and in full:
+
+1. `ai/tasks/planning/improve-plan.md`
+2. `ai/tasks/planning/improve-plan-with-minimalism.md`
+
+The improvement passes may uncover product decisions the initial draft could not settle. Continue to the next step after both passes complete.
+
+### 2f. Resolve any remaining questions
+
+Read the improved plan and check this list:
 
 - [ ] You can state the primary user flow in one or two sentences.
 - [ ] You know the behavior for every edge case you identified.
 - [ ] You know what is out of scope.
 - [ ] You know the exact user-visible wording, if any.
 
-If any box is unchecked, ask one more round (max 4 questions) targeting only the unchecked items. Do not exceed 3 rounds total for one feature — if something is still unresolved after 3 rounds, write it into the plan's "Open questions" section instead of continuing to ask.
+If every box is checked, the plan is complete. Otherwise, ask one more question round (maximum 4 questions) targeting only the unchecked items. Apply every answer to the draft, then re-read it and repeat this step. Continue until every box is checked; do not leave unresolved product decisions in the plan.
 
-### 2d. Draft the plan
-
-Write `./product/plans/draft/<slug>.md`, where `<slug>` is a kebab-case name derived from the feature's `### ` title (lowercase, spaces to hyphens, strip punctuation — e.g. "profile launcher" → `profile-launcher.md`). Follow the house style used in `./product/plans/ready/` (skim an existing one, e.g. `./product/plans/ready/monitor-page-tab-content-feed.md`, for shape). The plan file must contain, in this order, every one of these sections — do not omit any:
-
-1. `# <Feature name>` title.
-2. A short summary paragraph: what the feature does and why, folding in what the user told you in 2c.
-3. Design decisions, stated as decisions (not hedged with "maybe"/"either") — drawn directly from the user's answers. Every question you asked in 2c should map to one decision here.
-4. A "What already exists (reuse, don't rebuild)" table when Step 2a surfaced precedent to point at. If 2a found nothing relevant, write "None found" rather than omitting the section.
-5. Proposed changes, described in prose (module/function/type names and their contracts) — no code blocks.
-6. Tests section naming what should be covered and where (mirroring existing test conventions for the touched area).
-7. Out of scope, listing what the user said is explicitly deferred.
-8. Open questions — anything still genuinely unresolved after 2c (write "None" if nothing remains).
-9. Verification section: `$janissary/scripts/run.mjs check-diff` plus a concrete manual check.
-
-Do not add a `**Complexity: N/10**` line — that is `ai/tasks/planning/improve-plan.md`'s job during the later verification pass, not this task's.
-
-Before moving on, check the plan file against this list:
+Before moving on, check the completed plan against this list:
 
 - [ ] No code blocks containing function bodies, JSX, or CSS.
-- [ ] All 9 sections above are present, in order.
-- [ ] Every design decision traces back to something the user actually said in 2c, not an assumption you made.
+- [ ] All 8 sections above are present, in order.
+- [ ] Every product decision traces back to either the feature text, established behavior, or a user answer.
+- [ ] Every question identified by the final review is resolved in the plan.
 
-### 2e. Remove the entry from the backlog
+### 2g. Remove the entry from the backlog
 
 Edit `./product/backlog/features.md` to remove that feature's `### ` entry (title and body) from the `## ready` section. Leave every other section, heading, and entry byte-for-byte untouched — do not reformat or reflow surrounding text. If the feature came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
-### 2f. Improve and merge the completed plan
+### 2h. Merge the completed plan
 
-Once the draft plan and backlog update are complete, execute these tasks in order and in full:
+Once the completed draft plan and backlog update are complete, execute `ai/tasks/workspace/merge-change-to-master.md` in full.
 
-1. `ai/tasks/planning/improve-plan.md`
-2. `ai/tasks/planning/improve-plan-with-minimalism.md`
-3. `ai/tasks/workspace/merge-change-to-master.md`
-
-Do not stop for approval between these tasks. The two planning tasks refine the draft plan in sequence; the merge task then packages and merges the resulting change.
+Do not stop for approval between these tasks. The merge task packages and merges the completed plan.
 
 ---
 

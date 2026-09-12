@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
@@ -20,18 +20,27 @@ export function ConversationTab({
   const { conversation, models } = payload;
   const streaming = conversation.turns.some((turn) => turn.streaming === true);
   const turnsRef = useRef<HTMLDivElement>(null);
+  const stick = useRef(true);
+  // The scroll position the pin effect itself last wrote. Scroll events are delivered
+  // asynchronously, so the event a pin triggers can land after newer output has grown the
+  // content: at that moment the viewport measures far from the bottom although the user never
+  // moved it. Comparing against this value tells the two apart.
+  const lastTop = useRef(0);
   const latestTurn = conversation.turns.at(-1);
   const latestQuery = latestTurn?.query;
   const latestResponse = latestTurn?.response;
   const latestError = latestTurn?.error;
   const latestStreaming = latestTurn?.streaming;
 
-  useEffect(() => {
+  const pin = useCallback(() => {
     const element = turnsRef.current;
-    if (!capabilities.active || !element) return;
+    if (!capabilities.active || !element || !stick.current) return;
     element.scrollTop = element.scrollHeight;
-  }, [
-    capabilities.active,
+    lastTop.current = element.scrollTop;
+  }, [capabilities.active]);
+
+  useEffect(() => { pin(); }, [
+    pin,
     conversation.id,
     latestError,
     latestQuery,
@@ -108,7 +117,12 @@ export function ConversationTab({
         className="conversation-turns"
         ref={turnsRef}
         onScroll={(event) => {
-          if (event.currentTarget.scrollTop === 0 && conversation.hasOlder) {
+          const element = event.currentTarget;
+          if (Math.abs(element.scrollTop - lastTop.current) >= 1) {
+            lastTop.current = element.scrollTop;
+            stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+          }
+          if (element.scrollTop === 0 && conversation.hasOlder) {
             void capabilities.intent('load-older', {});
           }
         }}
