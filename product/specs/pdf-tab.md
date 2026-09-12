@@ -81,6 +81,8 @@ The PDF view shows, stacked top to bottom:
 A **position readout** in the header names the page currently in view and the document's page count,
 as `3 / 12`.
 
+Once the document is loaded, its metadata, initial position, and controls are available even before the first page is drawn.
+
 ### Two page layouts
 
 The stage shows the document in one of two layouts:
