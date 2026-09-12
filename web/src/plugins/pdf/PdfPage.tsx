@@ -58,7 +58,7 @@ export function PdfPage({ index, size, scale, text, root, renderPage, onFailure 
       style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}
     >
       <canvas className="pdf-page-canvas" ref={canvasRef} />
-      {text && <div className="textLayer" ref={layerRef} />}
+      {text && <div className="pdf-text-layer" ref={layerRef} />}
     </div>
   );
 }

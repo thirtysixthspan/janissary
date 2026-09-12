@@ -52,6 +52,8 @@ Plugin views that present the same shape share one plugin-wide look rather than 
 
 The application keeps the styling of everything it draws itself, including the frames it wraps around a plugin tab, the tab strip, the sidebars, and the split control it renders into a plugin's header. Every theme reaches plugin views the same way it always has, so switching themes recolors a plugin tab exactly as it recolors an application tab.
 
+A plugin's appearance also stops at its own view. Opening a plugin tab never changes how anything outside it looks, and closing it leaves nothing behind — which holds however a plugin is built, including for one that renders with a third-party library carrying the look of the application that library was written for.
+
 ### Borrowing the application's command bar
 
 A plugin whose view takes a line of text renders the application's own command bar rather than an input of its own, so a plugin that asks for text asks for it the way every other part of the application does. Two pieces are offered. The first is the bar itself — the status dot, the prompt glyph, the inline suggestion overlay, and a text area that grows with its content and stops at the height the agent tab's does. The second is the bar's keys: Enter sends, Shift+Enter starts a new line, Ctrl+Enter sends as well, Up and Down walk back and forward through what was entered before, and Right or End at the end of the line accepts the suggestion.

@@ -190,6 +190,15 @@ describe('PdfTab thumbnail strip', () => {
   });
 });
 
+describe('PdfTab selectable text', () => {
+  it('builds the text layer under the plugin\'s own class', async () => {
+    const { container } = await mount();
+
+    expect(container.querySelector(':scope .pdf-page .pdf-text-layer')).not.toBeNull();
+    expect(container.querySelector('.textLayer')).toBeNull();
+  });
+});
+
 describe('PdfTab while scrolling', () => {
   it('fits changed stage dimensions and ignores duplicate size notifications', async () => {
     let width = 632;

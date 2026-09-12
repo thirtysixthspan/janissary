@@ -1,5 +1,5 @@
 import '../shared.css';
-import 'pdfjs-dist/web/pdf_viewer.css';
+import './pdf-text-layer.css';
 import './pdf.css';
 
 export { PdfTab as default } from './PdfTab';

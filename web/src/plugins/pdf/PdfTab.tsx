@@ -56,7 +56,7 @@ export function PdfTab({
     <div className="plugin-tab pdf-tab" data-doc-shot="pdf-view">
       <div className="plugin-meta">
         <span className="plugin-name">{pdf.name}</span>
-        <span className="image-size">{pdf.size}</span>
+        <span className="plugin-size">{pdf.size}</span>
         <span className="plugin-loc">{pdf.path}</span>
         {loaded && <span className="pdf-position">{page + 1} / {pageCount}</span>}
         <span className="plugin-actions">

@@ -154,6 +154,15 @@ active theme.
 
 There is no in-document search: no find field, no match navigation, and no match highlighting.
 
+### Confined to its own tab
+
+Everything the PDF view brings with it applies to the PDF view alone. Opening a PDF changes nothing
+about how the rest of the application looks — the tab strip, either sidebar and whatever is docked
+into it, the transcript, and every other open tab render exactly as they did before, and go on doing
+so for the rest of the session once the PDF tab is closed. The document renderer the tab is built on
+carries the appearance of the viewer application it was written for; none of that reaches past this
+tab.
+
 ### When a document cannot be rendered
 
 If the document cannot be rendered, the stage is replaced by `Failed to load <name>` and the tab stays
