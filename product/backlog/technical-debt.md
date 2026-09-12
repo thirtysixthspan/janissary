@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the two generic path and match utilities stranded at the app root into the shared layer, so the three features consuming them stop importing app-shell modules.
-
-Existing Debt: `web/src/rel-path.ts` and `web/src/fuzzy-match.ts` are framework-free pure utilities sitting at the app root, imported upward by the file-navigator feature (nine files incl. `web/src/file-navigator/FileNavigatorOverlays.tsx`, `web/src/file-navigator/file-search-match.ts`), the pickers feature (`web/src/pickers/useQuickOpen.ts`, `web/src/pickers/QuickOpen.tsx`, `web/src/pickers/picker-overlay-view.ts`), and the editor feature (`web/src/editor/useEditorFind.ts`, `web/src/editor/EditorFind.tsx`), which is generic shared code living at the app-shell layer — the placement §2 (colocate; promote to shared) names as the thing to move rather than the home the one-way layer table in §3 (dependencies flow one way: shared → feature → app) expects. Severity: 4/10
-
-Existing Risk: 4/10 - Each new feature that needs a basename or fuzzy match copies the root module's placement by precedent, so the app root keeps collecting shared utilities and the shared layer's "imports nothing from features or the app shell" property can never be enforced with lint zones; a fix to the matching rules applied in a copy under a feature directory instead of here would leave the other surfaces filtering differently.
-
-Proposal Risk: 2/10 - The utilities lose one layer of upward reach but stay generic only by convention: nothing stops a future consumer-specific branch from landing in them at their new address, and the import-path rewrites touch test mocks that do not fail loudly when one is missed.
-
-Proposal: Create the files unchanged at `web/src/shared/rel-path.ts` and `web/src/shared/fuzzy-match.ts` (delete the root originals; store nothing back at the old paths), moving `web/src/rel-path.test.ts` to `web/src/shared/rel-path.test.ts` and `web/src/fuzzy-match.test.ts` likewise. `fuzzy-match.ts` imports `./rel-path` — both move together, so that specifier stays. Retarget the import specifiers: in the file-navigator feature the nine consumer files listed above change `../rel-path` to `../shared/rel-path`; in pickers, `useQuickOpen.ts`, `QuickOpen.tsx` and `picker-overlay-view.ts` change `../fuzzy-match` to `../../shared/fuzzy-match`; in the editor, `useEditorFind.ts` and `EditorFind.tsx` do the same. Two test files that import or spy by path, `web/src/pickers/QuickOpen.test.tsx` and `web/src/editor/EditorFind.test.tsx`, also import the pure module and are the tests retargeting relative specifiers covers. Multi-file move with importer rewrites — hand-planned, not routed to a playbook.
-
-
 * Colocate the tab-nav matching module into the pickers feature whose three files are its real home, leaving only the app shell reaching into it.
 
 Existing Debt: `web/src/tab-nav-match.ts` — the tab-nav picker's `filterTabs`, `displayLabel`, and `TabNavEntry` — lives at the app root while four of its five consumers are in `web/src/pickers/` (`useTabNav.ts`, `TabNavPicker.tsx`, `picker-key-bindings.ts`) and one is the app shell (`web/src/keyboard-handlers.ts`), the one-consumer-at-a-shared-location shape §2 (colocate; promote to shared only on the second consumer) exists to prevent, dressed up as a root module. Severity: 3/10

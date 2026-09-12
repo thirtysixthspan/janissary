@@ -4,7 +4,7 @@
 // can be on text that has never been written to disk.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fuzzyMatch, type FuzzyMatchResult } from '../fuzzy-match';
+import { fuzzyMatch, type FuzzyMatchResult } from '../shared/fuzzy-match';
 
 const RESULT_CAP = 10;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { FuzzyMatchResult } from '../fuzzy-match';
+import type { FuzzyMatchResult } from '../shared/fuzzy-match';
 
 type Properties = {
   query: string;

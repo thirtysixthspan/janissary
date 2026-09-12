@@ -13,7 +13,7 @@ import type { PendingContextMenu } from './use-file-navigator-row-events';
 import { ContextMenu } from '../shared/ContextMenu';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
 import { getClipboardSnapshot } from './file-navigator-clipboard';
-import { basename } from '../rel-path';
+import { basename } from '../shared/rel-path';
 
 type Properties = {
   drag: ReturnType<typeof useFileNavigatorDrag>;
