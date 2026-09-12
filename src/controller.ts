@@ -11,26 +11,11 @@ import type { AcpRef } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { setClientLayout } from './client-layout.js';
-import { createTabControllerAdapter, type TabControllerAdapter } from './controller/tab-adapter.js';
-import { createMonitorControllerAdapter, type MonitorControllerAdapter } from './controller/monitor-adapter.js';
-import { createEditorControllerAdapter, type EditorControllerAdapter } from './controller/editor-adapter.js';
-import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './controller/file-navigator-adapter.js';
-import { createPluginControllerAdapter, type PluginControllerAdapter } from './controller/plugin-adapter.js';
+import { createControllerAdapters, type ControllerMembers } from './controller/create-adapters.js';
 
-// The five adapter surfaces reach the class type by declaration merging rather than by fifty-six
-// mirrored declarations. The `Object.assign` in the constructor is still the only thing that puts
-// the implementations there, so a factory dropped from it typechecks — `src/controller.test.ts`
-// covers that gap by asserting every adapter member is callable on a constructed controller.
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- that unimplemented-member gap is exactly what the test above covers
-export interface Controller extends
-  TabControllerAdapter,
-  MonitorControllerAdapter,
-  EditorControllerAdapter,
-  FileNavigatorControllerAdapter,
-  PluginControllerAdapter {}
-
-// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging -- pairs with the interface above
-export class Controller {
+// The controller's own surface. The five adapter surfaces are attached by `createController` below
+// rather than declared here, and `Controller` is the composition of the two.
+export class ControllerCore {
   managers: Managers = {} as Managers;
 
   get rootDir(): string { return this.projectDir ?? process.cwd(); }
@@ -38,15 +23,6 @@ export class Controller {
   constructor(private sinks: Sinks, private projectDir?: string) {
     createManagers(this.managers, projectDir);
     wireControllerEvents(this.managers, this.sinks);
-    Object.assign(
-      this,
-      createTabControllerAdapter(this.managers),
-      createMonitorControllerAdapter(this.managers),
-      createEditorControllerAdapter(this.managers),
-      createFileNavigatorControllerAdapter(this.managers),
-      createPluginControllerAdapter(this.managers),
-    );
-    this.managers.schedule.start();
   }
 
   // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
@@ -109,4 +85,15 @@ export class Controller {
     for (const name of MANAGER_DISPOSE_ORDER) this.managers[name].dispose?.();
     messageBus.clear();
   }
+}
+
+export type Controller = ControllerCore & ControllerMembers;
+
+// `Object.assign` types the result as the intersection, so the adapter record reaching the instance
+// is checked rather than asserted. The scheduler starts last, once the surface is complete.
+export function createController(sinks: Sinks, projectDir?: string): Controller {
+  const core = new ControllerCore(sinks, projectDir);
+  const controller = Object.assign(core, createControllerAdapters(core.managers));
+  controller.managers.schedule.start();
+  return controller;
 }

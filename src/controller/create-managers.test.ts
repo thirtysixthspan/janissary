@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Controller } from '../controller.js';
+import { createController, type Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications-tab.js';
 import { TabPluginHost } from '../plugins/host.js';
 
@@ -8,7 +8,7 @@ vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so harness/agent tab creation never spawns real processes.
 vi.mock('../pty.js');
 
-const makeController = () => new Controller({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+const makeController = () => createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
 
 const feedText = (c: Controller) =>
   c.view().find((t) => t.view === 'notifications')?.bufferLines.map((l) => l.text).join('\n') ?? '';

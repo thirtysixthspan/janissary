@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { Controller } from '../controller.js';
+import { createController, type Controller } from '../controller.js';
 import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
 
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
@@ -15,7 +15,7 @@ vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 
 const makeController = () => {
   let states = 0;
-  const c = new Controller({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
   return { c, get states() { return states; } };
 };
 
