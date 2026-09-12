@@ -8,6 +8,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'files',
   match: (command_) => /^files\b/i.test(command_),
+  samples: ['files', 'files .'],
   run: (command_, tab, managers) => {
     managers.tab.append(tab.label, { input: command_, output: '' });
     managers.fileNavigator.open(command_, tab.label);

@@ -32,6 +32,7 @@ function setTheme(name: string): string {
 export const command: Command = {
   name: 'theme',
   match: (command_) => /^theme\b/i.test(command_),
+  samples: ['theme', 'theme dark'],
   run: (command_, tab, managers) => {
     const rest = command_.replace(/^theme\b\s*/i, '').trim();
     if (!rest) {

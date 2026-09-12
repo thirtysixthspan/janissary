@@ -54,9 +54,9 @@ const coreCommands: Command[] = [
   quit,
   schedule,
   // Order here is priority: an entry whose `match` also accepts another's input must come first,
-  // which is why `acpReset` precedes `acp` and `monitors` precedes `monitor`. No predicate in this
-  // list accepts a string starting `harness` or `ssh`, and neither of theirs accepts anyone else's,
-  // so these two have no ordering constraint of their own.
+  // which is why `acpReset` precedes `acp`. Which inputs each command claims is declared by its own
+  // `samples`, and `../commands.test.ts` walks this list through `./priority.ts` to fail any entry
+  // that shadows — or is shadowed by — another, so the constraint no longer rests on this comment.
   harness,
   ssh,
   profile,

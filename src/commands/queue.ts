@@ -14,6 +14,7 @@ export function parseQueueCommand(input: string): { label: string; text: string 
 export const command: Command = {
   name: 'queue',
   match: (command_) => /^queue\b/i.test(command_),
+  samples: ['queue', 'queue list'],
   run: (command_, tab, managers) => {
     // Bare `queue` is the interactive picker (Ctrl+E), handled client-side; reaching the server
     // non-interactively (e.g. via a scheduled dispatch) is a no-op.

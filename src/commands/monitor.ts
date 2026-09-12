@@ -9,6 +9,7 @@ import { parseMonitorCommand, parseUnmonitorCommand } from '../monitor/parsing.j
 export const monitor: Command = {
   name: 'monitor',
   match: (command_) => /^monitor(\s|$)/i.test(command_),
+  samples: ['monitor', 'monitor build'],
   run: (command_, tab, managers) => {
     const out = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     const parsed = parseMonitorCommand(command_);
@@ -34,6 +35,7 @@ export const monitor: Command = {
 export const unmonitor: Command = {
   name: 'unmonitor',
   match: (command_) => /^unmonitor(\s|$)/i.test(command_),
+  samples: ['unmonitor', 'unmonitor build'],
   run: (command_, tab, managers) => {
     const out = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     const parsed = parseUnmonitorCommand(command_);
@@ -52,6 +54,7 @@ export const unmonitor: Command = {
 export const monitors: Command = {
   name: 'monitors',
   match: (command_) => /^monitors$/i.test(command_),
+  samples: ['monitors'],
   run: (command_, tab, managers) => {
     const lines = managers.monitor.list();
     managers.tab.append(tab.label, { input: command_, output: lines.length > 0 ? lines.join('\n') : 'No active monitors.' });

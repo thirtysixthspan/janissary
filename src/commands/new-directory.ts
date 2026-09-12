@@ -3,6 +3,7 @@ import type { Command } from './types.js';
 export const command: Command = {
   name: 'newdir',
   match: (command_) => /^newdir\b/i.test(command_),
+  samples: ['newdir', 'newdir notes'],
   run: (command, tab, managers) => {
     const target = command.replace(/^newdir\b\s*/i, '').trim();
     if (!target) { managers.tab.append(tab.label, { input: command, output: 'Usage: newdir <directory>' }); return; }

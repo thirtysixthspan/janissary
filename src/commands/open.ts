@@ -34,5 +34,6 @@ export function isGlobPattern(argument: string): boolean {
 export const command: Command = {
   name: 'open',
   match: (command_) => /^open\b/i.test(command_),
+  samples: ['open', 'open notes.txt'],
   run: (command, tab, managers) => managers.openFile.run(command, tab.label),
 };

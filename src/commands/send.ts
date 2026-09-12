@@ -34,6 +34,7 @@ function deliverTo(target: Tab, text: string, managers: CommandManagers): string
 export const command: Command = {
   name: 'send',
   match: (command_) => /^send\b/i.test(command_),
+  samples: ['send', 'send hello'],
   run: (command_, tab, managers) => {
     const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
     const parsed = parseSendCommand(command_);

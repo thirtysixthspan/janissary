@@ -12,6 +12,7 @@ function listThemes(): string {
 export const command: Command = {
   name: 'syntax',
   match: (command_) => /^syntax\b/i.test(command_),
+  samples: ['syntax', 'syntax github-dark'],
   run: (command_, tab, managers) => {
     const rest = command_.replace(/^syntax\b\s*/i, '').trim();
     if (!/^theme\b/i.test(rest)) {

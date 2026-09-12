@@ -16,6 +16,7 @@ export function parseClose(command_: string): ParsedClose {
 export const command: Command = {
   name: 'close',
   match: (command_) => /^(?:close|exit)\b/i.test(command_),
+  samples: ['close', 'exit', 'close notes'],
   run: (command_, tab, managers) => {
     const parsed = parseClose(command_);
     if ('error' in parsed) { managers.tab.append(tab.label, { input: command_, output: parsed.error }); return; }
