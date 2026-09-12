@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the search bar and its transcript-search hook into the shared layer, so the three surfaces that render transcript search stop importing them from the app root.
-
-Existing Debt: `web/src/SearchBar.tsx` and `web/src/useTranscriptSearch.ts` are one cohesive cross-surface feature (filter line over transcript-shaped buffers) sitting at the app root and imported by three features/surfaces — the picker overlay (`web/src/pickers/QuickOpen.tsx`), the file-navigator's search popup (`web/src/file-navigator/FileSearchPopup.tsx`), and the agent-tabs command-bar (`web/src/agent-tabs/command-input/CommandArea.tsx`, through `useCommandBarSubmit.ts`) — with `web/src/useViewSearchState.ts` at the root also consuming the hook, which is generic code placed at the app-shell layer that features import upward, against §2 (colocate; promote to shared) read with §3's layer table (dependencies flow one way: shared → feature → app). Severity: 4/10
-
-Existing Risk: 4/10 - The next surface wanting a search filter copies the root placement or a local copy of the rules, so the escape-cycle, cycle, case-insensitive-slice, and selection-collapse behavior that the four current consumers share quietly forks per surface and a fix to one leaves the others drifting in UX key handling and search semantics.
-
-Proposal Risk: 2/10 - The module pair moves with its tests intact, but nothing mechanical stops the next surface growing its own variant of search behavior beside the shared copy and the coupling resurfacing as near-duplicates that no lint zone flags.
-
-Proposal: Create `web/src/shared/search-bar/` and move `web/src/SearchBar.tsx` (with `web/src/SearchBar.test.tsx`) and `web/src/useTranscriptSearch.ts` (with `web/src/useTranscriptSearch.test.ts`) into it unchanged apart from relative specifiers. Retargeting the consumers: `web/src/pickers/QuickOpen.tsx` (`../SearchBar` → `../shared/search-bar/SearchBar`), `web/src/file-navigator/FileSearchPopup.tsx` (`../SearchBar` → `../shared/search-bar/SearchBar`), `web/src/agent-tabs/command-input/CommandArea.tsx` and `web/src/agent-tabs/command-input/useCommandBarSubmit.ts` (`../../SearchBar` → `../../shared/search-bar/SearchBar`, `../../useTranscriptSearch` → `../../shared/search-bar/useTranscriptSearch`), `web/src/useViewSearchState.ts` (`./useTranscriptSearch` → `./shared/search-bar/useTranscriptSearch`), and `web/src/AppMain.tsx` or wherever `SearchBar` is currently rendered for the plain reporting surface if it uses the root path. `useTranscriptSearch`'s dependency on the tab's own state stays as-is; nothing about exports changes, so the wrapped `SearchBar.test.tsx`, `useViewSearchState` tests, `web/src/agent-tabs/command-input/CommandArea.test.tsx`, and `web/src/pickers/QuickOpen.test.tsx` keep the behavior pinned while their import specifiers move. Multi-file move and importer rewrites — hand-planned, not routed to a playbook.
-
-
 * Declare which managers release resources when a tab closes, instead of discovering them at runtime by probing every manager for a method that might not be there.
 
 Existing Debt: The tab-close walk has no declared list of participating managers — it iterates the whole dispose order and calls `(managers[name] as unknown as TabReleasingManager | undefined)?.closeTab?.(label)`, so membership is decided by a double type assertion plus two optional chains at runtime, and the comment that was meant to name the participants was truncated mid-sentence in an earlier edit and no longer parses. Severity: 5/10

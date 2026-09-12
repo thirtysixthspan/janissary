@@ -1,5 +1,5 @@
 import type { TabView, BufferLine } from '@shared/protocol';
-import { useTranscriptSearch } from './useTranscriptSearch';
+import { useTranscriptSearch } from './shared/search-bar/useTranscriptSearch';
 
 const VIEW_TAB_KINDS = ['plugin', 'harness', 'editor', 'files', 'notifications'] as const;
 
