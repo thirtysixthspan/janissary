@@ -7,7 +7,7 @@ import { makeTab } from './index.js';
 import { messageBus } from '../bus.js';
 import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
 import { TranscriptStore } from '../transcript/store.js';
-import type { Managers } from '../managers.js';
+import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 
 function makeManagers(): Managers {
   return {
@@ -46,21 +46,22 @@ describe('closeTabResources', () => {
     expect(managers.database.closeTab).toHaveBeenCalledWith('main');
   });
 
-  it('walks exactly the registry managers that define closeTab, skipping the stated exceptions', () => {
+  it('walks exactly the declared release list, skipping the stated exceptions', () => {
     const tab = makeTab('main', 'red');
     const visited: string[] = [];
     const managers = makeManagers();
-    for (const name of ['shell', 'schedule', 'pty', 'editorAcp', 'editorWatch', 'fileNavigator', 'acp', 'browser', 'questions', 'database'] as const) {
-      const walk = (managers[name] as unknown as { closeTab: ReturnType<typeof vi.fn> }).closeTab;
-      walk?.mockImplementation((_label: string) => { visited.push(name as string); });
+    for (const name of MANAGER_TAB_RELEASE) {
+      if (name === 'remote' && !tab.remote) continue;
+      const walk = managers[name].closeTab as ReturnType<typeof vi.fn>;
+      walk.mockImplementation((_label: string) => { visited.push(name); });
     }
-    for (const name of ['monitor', 'command', 'communication', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'remote']) {
+    for (const name of ['monitor', 'command', 'communication', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
       (managers as unknown as Record<string, unknown>)[name] = undefined;
     }
 
     closeTabResources(tab, managers, new Map(), 2);
 
-    expect(visited).toEqual(['shell', 'schedule', 'pty', 'editorAcp', 'editorWatch', 'fileNavigator', 'acp', 'browser', 'questions', 'database']);
+    expect(visited).toEqual([...MANAGER_TAB_RELEASE].filter((name) => name !== 'remote'));
   });
 
   it('releases the remote channel only when the closed tab carries the remote payload', () => {

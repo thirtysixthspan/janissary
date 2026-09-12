@@ -1,14 +1,15 @@
 import { messageBus } from '../bus.js';
 import type { Tab } from './types.js';
-import { MANAGER_DISPOSE_ORDER, type TabReleasingManager, type Managers } from '../managers.js';
+import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { releaseFileReference } from './file-registry.js';
 import { deleteAgentState } from '../agent/state.js';
 import { TranscriptStore } from '../transcript/store.js';
 
-// The managers whose per-tab release the walk below performs through their own `closeTab` method.
-// `workspace` is released only through the deferred block above the walk, `tab` orchestrates this
-// whole file, and `database`'s last-tab close is a separate end-of-walk decision — so those three
-  // the walk and stated explicitly around it instead.
+// The walk covers exactly the managers named in `MANAGER_TAB_RELEASE` — the declared list beside
+// `MANAGER_DISPOSE_ORDER`. `workspace` is released only through the deferred block below, `tab`
+// orchestrates this whole file, and `database`'s last-tab `closeAll()` is a separate end-of-walk
+// decision, so those three are handled outside the per-tab release list and stated explicitly
+// around it instead.
 export function closeTabResources(
   tab: Tab,
   managers: Managers,
@@ -28,10 +29,9 @@ export function closeTabResources(
     managers.workspace.cancel(label);
     setTimeout(() => managers.workspace.release(workspaceDir), 0);
   }
-  for (const name of MANAGER_DISPOSE_ORDER) {
-    if (name === 'workspace' || name === 'tab') continue;
+  for (const name of MANAGER_TAB_RELEASE) {
     if (name === 'remote' && !tab.remote) continue;
-    (managers[name] as unknown as TabReleasingManager | undefined)?.closeTab?.(label);
+    managers[name].closeTab(label);
   }
   managers.tab.deleteBusy(label);
   // A closed tab is not restored on the next `--relaunch`. The label is refused first and the files

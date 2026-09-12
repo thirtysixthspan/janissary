@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createController } from './controller.js';
-import { MANAGER_DISPOSE_ORDER, MANAGER_DISPOSE_ORDER_IS_COMPLETE } from './managers.js';
+import { MANAGER_DISPOSE_ORDER, MANAGER_DISPOSE_ORDER_IS_COMPLETE, MANAGER_TAB_RELEASE, MANAGER_TAB_RELEASE_IS_TYPED } from './managers.js';
 
 const positionOf = (name: string) => MANAGER_DISPOSE_ORDER.indexOf(name as never);
 
@@ -30,5 +30,17 @@ describe('MANAGER_DISPOSE_ORDER', () => {
 
   it('disposes the state the others read while tearing down last', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
+  });
+});
+
+describe('MANAGER_TAB_RELEASE', () => {
+  it('is declared typed, which the compiler checks by naming any manager without closeTab(label)', () => {
+    expect(MANAGER_TAB_RELEASE_IS_TYPED).toBe(true);
+  });
+
+  // The `satisfies` clause rejects a name that is not a manager and the type assertion beside it
+  // rejects a manager without the method, but neither can see a key written twice.
+  it('names each participating manager exactly once', () => {
+    expect(new Set(MANAGER_TAB_RELEASE).size).toBe(MANAGER_TAB_RELEASE.length);
   });
 });
