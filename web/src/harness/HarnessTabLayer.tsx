@@ -4,10 +4,10 @@ import type { HarnessTabView } from '../shared/tab-view-guards';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import type { HarnessTabHandle } from '../tab-handles';
-import { StatusPanels } from '../StatusPanels';
-import { useStatusWindows } from '../useStatusWindows';
+import { StatusPanels } from '../shared/status-windows/StatusPanels';
+import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { tabBodyBorder } from '../tab-body-border';
-import { statusButton } from '../status-button';
+import { statusButton } from '../shared/status-windows/status-button';
 
 type Properties = {
   // Narrowed by the caller's guard, so the harness payload is read without asserting: a harness tab

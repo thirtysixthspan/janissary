@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import { StatusPanels } from '../StatusPanels';
+import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import type { EditorConnectionsApi } from './useEditorConnections';
 
 // Renders the connections window floating panel, given the hook's return value. The connections
