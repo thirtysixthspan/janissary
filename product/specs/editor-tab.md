@@ -400,16 +400,18 @@ suggestions), Cmd+F is suppressed along with every other keystroke.
 
 ### GitHub syncing
 
-A file whose project-relative path is covered by the application config's sync-paths setting (see
-Application Config) is kept automatically synced with its `origin/master` branch. Syncing is
-entirely config-driven — there is no button or toggle anywhere in the editor to turn it on or off
-for a file; a file syncs if and only if its path is covered by that setting. Each entry in the list
+A file is kept automatically synced with its `origin/master` branch when two conditions hold: its
+project-relative path is covered by the application config's sync-paths setting (see Application
+Config), and the governing checkout is on its default branch (described in the next paragraph). Both
+conditions are decided automatically — there is no button or toggle anywhere in the editor to turn
+syncing on or off for a file, and nothing a user can do to a file makes it sync when either
+condition fails. The path condition is the one that is configured: each entry in the list
 is either an exact file path, a directory path written with a trailing slash (covering every file
 under that directory, at any depth), or a wildcard pattern using `*` to stand in for a single path
 segment (for example `product/backlog/*` covers files directly inside that directory but not in a
 subdirectory of it, while `product/plans/*/*` covers files exactly two directories deep).
 
-Syncing additionally requires the governing checkout to be confirmedly on that checkout's
+The second condition is that the governing checkout is confirmably on that checkout's
 repository's default branch — the branch its remote points its default at, falling back to
 `master` or `main` when the remote's default branch cannot be determined. The governing checkout
 is the checkout containing the root of the file navigator the file was opened from, but only while
@@ -431,11 +433,12 @@ difference: the absent icon is the entire signal. Branch membership is decided o
 is opened; a synced tab that is already open keeps its sync behavior when the checkout later
 switches branches, and only the next open of that file is affected.
 
-Every config-listed file is edited from inside a single shared workspace dedicated to syncing,
-separate from the main project checkout and from any agent workspace. This shared workspace is
-created the first time any config-listed file is opened, and is reused for every other config-listed
-file opened afterward — opening a second synced file never creates a second copy of the shared
-workspace. It persists for the life of the application, not just for as long as any one synced tab
+Every file that does sync is edited from inside a single shared workspace dedicated to syncing,
+separate from the main project checkout and from any agent workspace. A config-listed file that does
+not sync — because the governing checkout is off its default branch — is edited in the project
+checkout itself, and never reaches that workspace. The shared workspace is created the first time
+any file is opened through syncing, and is reused for every other synced file opened afterward —
+opening a second synced file never creates a second copy of the shared workspace. It persists for the life of the application, not just for as long as any one synced tab
 stays open.
 
 If the shared workspace does not exist yet when a synced file is opened, its editor tab opens
