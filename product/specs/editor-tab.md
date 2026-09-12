@@ -412,9 +412,13 @@ subdirectory of it, while `product/plans/*/*` covers files exactly two directori
 Syncing additionally requires the governing checkout to be confirmedly on that checkout's
 repository's default branch — the branch its remote points its default at, falling back to
 `master` or `main` when the remote's default branch cannot be determined. The governing checkout
-is the checkout containing the root of the file navigator the file was opened from; for a file
-opened with no navigator involved (a shell tab's edit command or a saved-tab restore) it is the
-app's project launch directory itself. A file navigator that has not yet finished loading the branch
+is the checkout containing the root of the file navigator the file was opened from, but only while
+that navigator's root is the project directory itself or a directory inside it — the region the
+config-path half of the rule is matched against. A navigator rooted above the project (browsing the
+project from its parent directory) lists project files while showing a different repository's
+branch, or none at all, and so governs nothing. For it, and for a file opened with no navigator
+involved (a shell tab's edit command or a saved-tab restore), the governing checkout is the app's
+project launch directory itself. A file navigator that has not yet finished loading the branch
 information for its current root — a tree just opened, or just re-rooted — cannot govern the
 decision either, and such an activation also follows the project launch directory rather than
 counting as off-primary; on a large repository that load takes long enough to be noticeable, and

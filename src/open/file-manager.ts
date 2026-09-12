@@ -123,9 +123,10 @@ export class OpenFileManager {
   // Whether `file` is a candidate for GitHub syncing at all — the sole gate for the entire feature
   // (see `git-sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
   // config-listed, and the governing checkout is confirmably on its primary branch. The governing
-  // checkout is the activating tab's own navigator root when the label names one and that tree has
-  // already loaded its git metadata (falling back to the launch dir's cached pair for a shell tab's
-  // `edit`, a profile restore, a plugin opener, or a navigator still loading its first result); a
+  // checkout is the activating tab's own navigator root when that tree governs at all (see
+  // `governingNavigator`) and has already loaded its git metadata — falling back to the launch dir's
+  // cached pair for a shell tab's `edit`, a profile restore, a plugin opener, a navigator rooted
+  // outside the launch dir, or one still loading its first metadata result; a
   // feature-branch (or unconfirmable) checkout answers "no", so the file opens as an ordinary
   // editor tab against the real file on disk. Both inputs are values resolved elsewhere — this
   // stays synchronous, never a git call made here.
@@ -134,9 +135,24 @@ export class OpenFileManager {
     if (!launchDir) return false;
     const relative = path.relative(launchDir, file).split(path.sep).join('/');
     if (!isSyncedPath(relative, getConfig().syncPaths)) return false;
-    const navigatorPrimary = this.managers.fileNavigator?.onPrimaryBranch(label);
+    const navigatorPrimary = this.governingNavigator(label, launchDir)?.onPrimaryBranch(label);
     if (navigatorPrimary !== undefined) return navigatorPrimary;
     return isLaunchDirOnPrimaryBranch(launchDir) ?? false;
+  }
+
+  // The file navigator whose branch governs an activation from `label`, or `undefined` when none
+  // does. A navigator governs only while its own root sits at or below the launch dir — the region
+  // the path half of the gate was matched against, and therefore the only region where the tree's
+  // branch is the branch the matched file belongs to. A tree rooted *above* the launch dir (`files
+  // ~/dev` with the project at `~/dev/janissary`) lists files that do match the launch-dir-relative
+  // sync paths while reporting a different repository's branch, or none at all; it falls back to the
+  // launch dir's own cached pair, which is what a non-navigator open already uses.
+  private governingNavigator(label: string, launchDir: string): Managers['fileNavigator'] | undefined {
+    const root = this.managers.fileNavigator?.rootOf(label);
+    if (root === undefined) return undefined;
+    const relative = path.relative(launchDir, root);
+    const escapes = relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+    return escapes ? undefined : this.managers.fileNavigator;
   }
 
   // Mirrors `HarnessManager.spawnTab`/`finishSpawn`'s immediate-placeholder-then-async-fill-in
