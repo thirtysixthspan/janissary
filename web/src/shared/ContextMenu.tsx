@@ -66,6 +66,7 @@ export function ContextMenu({ groups, x, y, onClose }: Properties) {
       tabIndex={-1}
       style={contextMenuPosition(x, y, groups, { width: window.innerWidth, height: window.innerHeight })}
       onKeyDown={onKeyDown}
+      onContextMenu={(event) => event.preventDefault()}
       onBlur={onClose}
     >
       {groups.map((group, groupIndex) => (

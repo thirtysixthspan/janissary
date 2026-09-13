@@ -120,6 +120,12 @@ describe('ContextMenu', () => {
     expect(document.activeElement).toBe(menu());
   });
 
+  it('consumes a right-click without closing the menu', () => {
+    render(<ContextMenu groups={makeGroups()} x={10} y={10} onClose={() => {}} />);
+    expect(fireEvent.contextMenu(menu())).toBe(false);
+    expect(menu()).toBeInTheDocument();
+  });
+
   it('shifts back inside the window rather than overflowing an edge', () => {
     const groups = makeGroups();
     const viewport = { width: window.innerWidth, height: window.innerHeight };

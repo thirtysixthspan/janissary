@@ -3,7 +3,7 @@ import type { ContextMenuItem } from '../shared/ContextMenu';
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, and the element focus belongs to once the menu closes again.
 // `selectionSource` records whether text belongs to the DOM, the editor, or an xterm terminal.
-// Copy acts only on DOM text while a contributed entry can use every source.
+// Copy can use DOM and editor text; a contributed entry can use every source.
 export type DefaultMenuTarget = {
   selectionText: string;
   selectionSource?: 'dom' | 'editor' | 'terminal';
@@ -62,7 +62,7 @@ export function defaultMenuGroups(
 ): ContextMenuItem[][] {
   const { selectionText, pasteTarget } = target;
   const copyEntry: ContextMenuItem[] = selectionText !== ''
-    && (target.selectionSource ?? 'dom') === 'dom'
+    && (target.selectionSource ?? 'dom') !== 'terminal'
     ? [{ label: 'Copy', onActivate: () => actions.copy(selectionText) }]
     : [];
   const pasteEntry: ContextMenuItem[] = pasteTarget

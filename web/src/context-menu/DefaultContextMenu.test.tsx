@@ -151,7 +151,7 @@ describe('DefaultContextMenu', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it('offers the contributed action for an editor-owned selection', async () => {
+  it('offers Copy, Paste, and the contributed action for an editor-owned selection', async () => {
     stubSelection('');
     const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
     render(<DefaultContextMenu client={client as never} />);
@@ -166,7 +166,20 @@ describe('DefaultContextMenu', () => {
     expect(client.request).toHaveBeenCalledWith({
       method: 'defaultMenuSelectionAction', params: { selection: 'editor selection' },
     });
-    expect(labels()).toEqual(['Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+  });
+
+  it('offers only Paste for an editor with no selection', () => {
+    stubSelection('');
+    render(<DefaultContextMenu />);
+    field();
+    const editor = document.createElement('div');
+    editor.dataset.editorSelection = '';
+    const line = document.createElement('span');
+    editor.append(line);
+    document.body.append(editor);
+    rightClick(line);
+    expect(labels()).toEqual(['Paste']);
   });
 
   it('offers only Paste when nothing is selected', () => {
