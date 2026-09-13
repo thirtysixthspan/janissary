@@ -1,5 +1,3 @@
-* chat about this should be the last item onm the context menu and be seperated by a menu divider
-
 * the chat about this should be an option in the context menu for an editor tab. 
 
 * in an editor tab, right clicking should not reset the current text selection. This is critical so that the context menu actions can operate on the selected text.

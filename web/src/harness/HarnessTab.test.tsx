@@ -429,7 +429,7 @@ describe('HarnessTab', () => {
         fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
         const entry = await screen.findByText('Chat about this');
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
-          .toEqual(['Chat about this', 'Paste']);
+          .toEqual(['Paste', 'Chat about this']);
         expect(request).toHaveBeenCalledExactlyOnceWith({
           method: 'defaultMenuSelectionAction', params: { selection: 'selected harness output' },
         });

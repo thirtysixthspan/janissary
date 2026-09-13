@@ -11,8 +11,7 @@ import { useDefaultContextMenu } from './useDefaultContextMenu';
 // same visual language as the file navigator's, which keeps its own menu because it defines one.
 //
 // When a plugin contributes an entry for the selection, it arrives while the menu is open and
-// renders as its own group above Copy and Paste, the ordering the file navigator's contributed
-// entry already follows.
+// renders as its own group after Copy and Paste.
 export function DefaultContextMenu({ client }: { client?: JanusClient }) {
   const { pending, contributed, runContributed, close } = useDefaultContextMenu(client);
   if (!pending) return null;
@@ -22,7 +21,7 @@ export function DefaultContextMenu({ client }: { client?: JanusClient }) {
     paste: (element) => { void pasteInto(element); },
   });
   if (contributed) {
-    groups.unshift([{ label: contributed.label, onActivate: runContributed }]);
+    groups.push([{ label: contributed.label, onActivate: runContributed }]);
   }
   if (groups.length === 0) return null;
 

@@ -80,9 +80,9 @@ describe('DefaultContextMenu', () => {
       method: 'defaultMenuSelectionAction', params: { selection: 'new selection' },
     });
     await act(async () => { second.resolve({ label: 'Chat about this' }); await second.promise; });
-    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
     await act(async () => { first.resolve({ label: 'Stale action' }); await first.promise; });
-    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
     fireEvent.click(screen.getByText('Chat about this'));
     expect(client.send).toHaveBeenCalledExactlyOnceWith({
       method: 'runDefaultMenuSelectionAction',
@@ -135,7 +135,7 @@ describe('DefaultContextMenu', () => {
     rightClick(field());
     if (label === 'Paste') fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' });
     await act(async () => { reply.resolve({ label: 'Chat about this' }); await reply.promise; });
-    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
     expect(screen.getByText(label)).toHaveClass('selected');
     await act(async () => { fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' }); });
     expect(label === 'Copy' ? writeText : readText).toHaveBeenCalledOnce();
@@ -217,7 +217,8 @@ describe('DefaultContextMenu', () => {
     expect(client.request).toHaveBeenCalledWith({
       method: 'defaultMenuSelectionAction', params: { selection: 'selected text' },
     });
-    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(screen.getByRole('menu').querySelectorAll('.context-menu-separator')).toHaveLength(1);
 
     fireEvent.click(entry);
     expect(client.send).toHaveBeenCalledWith({
