@@ -120,7 +120,9 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
 Click a row to replace the selection, and see [Selecting more than one row](#selecting-more-than-one-row)
-below for building a bigger one.
+below for building a bigger one. This row menu is the tree's own; see
+[Right-click menus](/user-documentation/getting-started/context-menus) for the default Copy/Paste menu
+that answers a right-click everywhere else in the app.
 
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.

@@ -64,6 +64,7 @@ export default defineConfig({
             { text: "Tab groups", link: "/user-documentation/getting-started/groups" },
             { text: "Agents", link: "/user-documentation/getting-started/agents" },
             { text: "Keyboard shortcuts", link: "/user-documentation/getting-started/keyboard" },
+            { text: "Right-click menus", link: "/user-documentation/getting-started/context-menus" },
             { text: "Activity log", link: "/user-documentation/getting-started/activity-log" },
             { text: "License", link: "/user-documentation/getting-started/license" },
           ],

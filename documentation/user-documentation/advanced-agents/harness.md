@@ -29,7 +29,9 @@ submitted. Focus lands in the terminal, so you can keep going from there.
 
 To select text, hold `Option` while you drag across it (`Shift`+drag on Windows and Linux). Then
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection. Right-clicking a selection
-offers your browser's own **Copy** over the same text.
+opens the app's own menu instead of the browser's, offering **Chat about this** (also `Cmd+I` on
+macOS, `Ctrl+I` elsewhere) rather than Copy — a terminal's menu never offers Copy. See
+[Right-click menus](/user-documentation/getting-started/context-menus).
 
 The modifier is needed because a harness like claude asks for every click and drag to be reported
 to it, so a plain drag talks to the harness rather than selecting anything. Holding the modifier
