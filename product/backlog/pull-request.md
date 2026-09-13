@@ -1,16 +1,5 @@
 # pull-request
 
-* Preserve the keyboard-selected action when the contributed menu entry arrives asynchronously.
-
-Existing Issue: The default menu prepends Chat about this after resolution while ContextMenu tracks keyboard selection by numeric index, so the same selected index changes from Paste to Copy or from Copy to Chat about this when the reply arrives. Severity: 6/10
-
-Existing Risk: 5/10 - A user who selects Paste with ArrowDown while resolution is pending can press Enter after the reply and overwrite the clipboard with Copy instead of pasting.
-
-Proposal Risk: 2/10 - Selection identity can become unavailable when an item is removed, so a deterministic fallback and dynamic-group tests are needed to keep keyboard navigation predictable.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: preserve keyboard action identity when async menu groups change". Update web/src/shared/ContextMenu.tsx to retain the identity of the highlighted action across changes to groups instead of retaining only its array index; define a fallback when that action disappears and keep ArrowUp, ArrowDown, Enter, and Escape behavior consistent. Keep the contributed group above Copy and Paste in web/src/context-menu/DefaultContextMenu.tsx. Extend web/src/shared/ContextMenu.test.tsx and web/src/context-menu/DefaultContextMenu.test.tsx with a deferred contribution reply: open Copy/Paste, highlight Paste, resolve Chat about this, then press Enter and verify Paste alone runs; also cover retaining Copy and removing the selected entry. Existing menu tests cover static navigation and contribution ordering separately, leaving this interaction uncovered.
-
-
 * Omit the default-menu contribution after its plugin has been disabled.
 
 Existing Issue: Default-menu resolution reads all host declarations without checking plugin status, so it keeps offering Chat about this after the conversations plugin is disabled even though the host refuses to activate it again. Severity: 5/10

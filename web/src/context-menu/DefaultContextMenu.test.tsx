@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultContextMenu } from './DefaultContextMenu';
 
@@ -33,6 +33,13 @@ function labels(): string[] {
   return screen.queryAllByRole('menuitem').map((item) => item.textContent);
 }
 
+function deferredContribution() {
+  let resolve!: (value: { label: string } | null) => void;
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+  const promise = new Promise<{ label: string } | null>((release) => { resolve = release; });
+  return { promise, resolve };
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -40,6 +47,25 @@ afterEach(() => {
 });
 
 describe('DefaultContextMenu', () => {
+  it.each(['Copy', 'Paste'])('retains keyboard-selected %s when the contribution arrives', async (label) => {
+    stubSelection('selected text');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue('clipboard text');
+    vi.stubGlobal('navigator', { clipboard: { writeText, readText } });
+    const reply = deferredContribution();
+    const client = { request: vi.fn(() => reply.promise), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    if (label === 'Paste') fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' });
+    await act(async () => { reply.resolve({ label: 'Chat about this' }); await reply.promise; });
+    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    expect(screen.getByText(label)).toHaveClass('selected');
+    await act(async () => { fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' }); });
+    expect(label === 'Copy' ? writeText : readText).toHaveBeenCalledOnce();
+    expect(label === 'Copy' ? readText : writeText).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
   it('offers Copy and Paste when a right-click lands in a field with text selected', () => {
     stubSelection('selected text');
     render(<DefaultContextMenu />);
