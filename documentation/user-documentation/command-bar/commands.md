@@ -28,7 +28,7 @@ Bare `theme` opens a picker overlay listing every theme, each row showing a swat
 
 `theme sync` sets the syntax-highlighting theme to the app theme's name, when a syntax theme with exactly that name exists — otherwise it reports that no matching syntax theme exists and leaves the syntax theme unchanged. The application theme and the syntax theme are independent settings; nothing keeps them in sync automatically, so `theme sync` is the only bridge between them. Today only `nord` exists in both name sets, so sync usually reports no match.
 
-Embedded web pages and ANSI-colored shell output are deliberately outside the theme.
+The theme applies to the whole window — there is no per-tab or per-workspace theming. Rendered Markdown documents follow the active theme too. Embedded web pages and ANSI-colored shell output are deliberately outside the theme, and so are tab dot colors, which are assigned per tab to tell tabs apart rather than drawn from the theme; status indicators such as the running-command highlight, editor saved/error notices, and search-hit highlighting are theme-driven.
 
 ## `syntax theme`
 
