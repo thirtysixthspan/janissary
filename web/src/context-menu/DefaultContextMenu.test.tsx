@@ -151,6 +151,24 @@ describe('DefaultContextMenu', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('offers the contributed action for an editor-owned selection', async () => {
+    stubSelection('');
+    const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    field();
+    const editor = document.createElement('div');
+    editor.dataset.editorSelection = 'editor selection';
+    const line = document.createElement('span');
+    editor.append(line);
+    document.body.append(editor);
+    rightClick(line);
+    await screen.findByText('Chat about this');
+    expect(client.request).toHaveBeenCalledWith({
+      method: 'defaultMenuSelectionAction', params: { selection: 'editor selection' },
+    });
+    expect(labels()).toEqual(['Paste', 'Chat about this']);
+  });
+
   it('offers only Paste when nothing is selected', () => {
     stubSelection('');
     render(<DefaultContextMenu />);

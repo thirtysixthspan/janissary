@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
+import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
 import { terminalSelectionText } from '../shared/terminal/terminal-selection';
 import type { DefaultMenuEntry } from '@shared/protocol';
 import type { JanusClient } from '../ws';
@@ -32,10 +32,12 @@ export function useDefaultContextMenu(client?: JanusClient) {
       if (event.defaultPrevented) return;
       const clicked = event.target instanceof Element ? event.target : null;
       const domText = domSelectionText();
-      const terminalText = domText ? '' : terminalSelectionText(clicked);
+      const editorText = domText ? '' : editorSelectionText(clicked);
+      const terminalText = domText || editorText ? '' : terminalSelectionText(clicked);
+      const selectionText = domText || editorText || terminalText;
       const target = resolveDefaultMenuTarget(
-        clicked, document.activeElement, domText || terminalText,
-        domText ? 'dom' : terminalText ? 'terminal' : 'dom',
+        clicked, document.activeElement, selectionText,
+        domText ? 'dom' : editorText ? 'editor' : terminalText ? 'terminal' : 'dom',
       );
       if (!target.selectionText && !target.pasteTarget) return;
       event.preventDefault();

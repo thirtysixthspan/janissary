@@ -570,6 +570,7 @@ describe('EditorTab', () => {
     const { container } = await renderLoaded(client);
     fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
     expect(container.querySelector('.editor-sel')).not.toBeNull();
+    expect(container.querySelector('.editor-body')).toHaveAttribute('data-editor-selection', 'l');
   });
 
   it('Shift+ArrowLeft extends the in-editor selection', async () => {

@@ -79,6 +79,22 @@ describe('useEditorMouse', () => {
     body.remove();
   });
 
+  it('leaves the selection alone on a right-click', () => {
+    const api = makeApi(makeState(['hello']));
+    const body = makeEditorBody(1);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus));
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const event = { button: 2, preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(event); });
+    expect(focus).not.toHaveBeenCalled();
+    expect(api.sealUndo).not.toHaveBeenCalled();
+    expect(api.setState).not.toHaveBeenCalled();
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    body.remove();
+  });
+
   it('selects whole line on gutter click', () => {
     const state = makeState(['hello', 'world']);
     const api = makeApi(state);

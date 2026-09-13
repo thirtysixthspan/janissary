@@ -2,12 +2,11 @@ import type { ContextMenuItem } from '../shared/ContextMenu';
 
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, and the element focus belongs to once the menu closes again.
-// `selectionSource` records where `selectionText` came from: the DOM selection, or the selection of
-// an xterm-owned terminal whose text the DOM cannot see. Copy acts only on the first kind — the
-// terminal already has its own copy shortcut — while a contributed entry can ride either.
+// `selectionSource` records whether text belongs to the DOM, the editor, or an xterm terminal.
+// Copy acts only on DOM text while a contributed entry can use every source.
 export type DefaultMenuTarget = {
   selectionText: string;
-  selectionSource?: 'dom' | 'terminal';
+  selectionSource?: 'dom' | 'editor' | 'terminal';
   pasteTarget: HTMLElement | null;
   restoreFocus: HTMLElement | null;
 };
@@ -30,6 +29,11 @@ export function isTextEntryElement(element: Element | null): element is HTMLElem
   return element.isContentEditable;
 }
 
+export function editorSelectionText(clicked: Element | null): string {
+  if (!(clicked instanceof HTMLElement)) return '';
+  return clicked.closest<HTMLElement>('[data-editor-selection]')?.dataset.editorSelection ?? '';
+}
+
 // The field a paste should reach: the one the click landed in, or — when the click landed on
 // something else — whichever field holds the keyboard. The fallback is what makes an editor tab
 // work, since its keystrokes go to a hidden textarea while a right-click lands on a rendered line.
@@ -41,7 +45,7 @@ function resolvePasteTarget(clicked: Element | null, focused: Element | null): H
 
 export function resolveDefaultMenuTarget(
   clicked: Element | null, focused: Element | null, selectionText: string,
-  selectionSource: 'dom' | 'terminal' = 'dom',
+  selectionSource: 'dom' | 'editor' | 'terminal' = 'dom',
 ): DefaultMenuTarget {
   const pasteTarget = resolvePasteTarget(clicked, focused);
   // Focus returns to the field a paste would have landed in, not to whatever held it before: a

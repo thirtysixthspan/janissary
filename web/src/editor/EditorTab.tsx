@@ -12,6 +12,7 @@ import { useEditorFind } from './useEditorFind';
 import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
+import { selectionsText } from './model';
 import { keepCaretRowVisible } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
@@ -134,6 +135,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         className="editor-body"
         ref={bodyRef}
         data-editor-drop
+        data-editor-selection={state ? selectionsText(state) : ''}
         onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
