@@ -15,6 +15,8 @@ An entry that cannot act is left out rather than shown greyed out, so the menu h
 
 When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
 
+The editor is the exception: an empty-selection right-click there opens no menu, including the browser's own menu.
+
 ### A contributed entry
 
 To select harness terminal output while the harness owns the mouse, hold Option while dragging on macOS or Shift while dragging elsewhere. Right-click that selection to offer **Chat about this**.

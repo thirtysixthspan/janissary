@@ -218,7 +218,7 @@ Each editor tab highlights independently: a tab only redraws the lines its own e
 
 One theme is active at a time, shared by every open editor tab. `syntax theme <name>` switches it; `syntax theme` alone opens a picker overlay listing every available theme, with the active one marked by a checkmark. Arrow keys move the selection, Return picks the highlighted theme, Escape closes the picker without changing anything, and clicking a row picks it directly. The chosen theme persists across restarts (see Application Config).
 
-Right-clicking an editor selection leaves that selection unchanged and offers **Copy**, **Paste**, and **Chat about this** in the default context menu; Chat about this follows a divider after Copy and Paste (see [[context-menu]]). With no selection, the editor's menu offers only Paste.
+Right-clicking an editor selection leaves that selection unchanged and offers **Copy**, **Paste**, and **Chat about this** in the default context menu; Chat about this follows a divider after Copy and Paste (see [[context-menu]]). With no selection, right-clicking the editor opens no menu, including the browser's own menu.
 
 Highlighting composes with the existing caret and selection rendering: a token under the caret or inside a selection still shows the caret bar / selection background exactly as it would in unhighlighted text.
 

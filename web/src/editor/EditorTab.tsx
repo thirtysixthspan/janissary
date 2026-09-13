@@ -120,6 +120,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   }));
 
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
+  const selectionText = state ? selectionsText(state) : '';
   const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
 
   return (
@@ -135,9 +136,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         className="editor-body"
         ref={bodyRef}
         data-editor-drop
-        data-editor-selection={state ? selectionsText(state) : ''}
+        data-editor-selection={selectionText}
         onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}
+        onContextMenu={(event) => { if (!selectionText) event.preventDefault(); }}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >
         <EditorConnectionsPanel tab={tab} api={connections} />

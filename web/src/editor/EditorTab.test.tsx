@@ -704,6 +704,20 @@ describe('EditorTab', () => {
     expect(document.activeElement).toBe(ta);
   });
 
+  it('claims an empty-selection right-click without blocking the shared menu for a selection', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector('.editor-body')!;
+    const emptyClick = createEvent.contextMenu(body);
+    fireEvent(body, emptyClick);
+    expect(emptyClick.defaultPrevented).toBe(true);
+
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+    const selectedClick = createEvent.contextMenu(body);
+    fireEvent(body, selectedClick);
+    expect(selectedClick.defaultPrevented).toBe(false);
+  });
+
   it('renders hljs-* spans for a .ts file after load', async () => {
     const { client } = makeClient();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
