@@ -2,6 +2,8 @@
 
 ## ready
 
+* text selection is difficult in harnesses like claude because they dont allow text to remain selected, and instead copy it immediately. add an alternative text selection layer managed by janassiry that selects independent of the underlying subsystems. This should allow selection of text from harnesses that can be feed into copy/paste and chat about this. The key binding could be to hold shift while selecting text using the mouse with the mouse button down. 
+
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
