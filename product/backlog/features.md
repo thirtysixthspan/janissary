@@ -2,6 +2,8 @@
 
 ## ready
 
+* add a 'commit file to origin' menu item in the file navigator context menu that will build and push a commit with the selected file or files. add a commit changes to origin button in the file navigator metadata bar that is the flipped version of the pull from origin button. It should take all changes and commit them to origin. failures should be reported in the notifications tab. the push to origin should be similarly animated to the pull from origin button. the color red on the button should be used to indicate failure. 
+
 * text selection is difficult in harnesses like claude because they dont allow text to remain selected, and instead copy it immediately. add an alternative text selection layer managed by janassiry that selects independent of the underlying subsystems. This should allow selection of text from harnesses that can be feed into copy/paste and chat about this. The key binding could be to hold shift while selecting text using the mouse with the mouse button down. 
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
