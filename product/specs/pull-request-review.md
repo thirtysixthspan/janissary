@@ -6,7 +6,7 @@ A review assesses an open pull request across description fidelity, plan fidelit
 
 ### The review backlog
 
-The review backlog is one flat list of findings with no status grouping. Every entry in it is ready to work, and the order entries appear in is their priority: new findings are added to the end, and moving an entry up is how it is prioritised. An entry leaves the list when it is resolved or when someone decides against it, since deleting an entry is how a finding is declined. Once the last entry goes, the backlog itself is removed from the branch.
+The review backlog is one flat list of findings with no status grouping. Every entry in it is ready to work, and the order entries appear in is their priority: new findings are added to the end, and moving an entry up is how it is prioritised. An entry leaves the list when it is resolved or when someone decides against it, since deleting an entry is how a finding is declined. Once the last entry goes, the backlog returns to its empty form — the leading comment and heading it carries on master — rather than being removed from the branch.
 
 ### Follow-up work
 
