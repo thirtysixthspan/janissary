@@ -99,9 +99,9 @@ export class ConversationsManager {
     this.changed();
   }
 
-  send(id: string, query: string): boolean {
+  send(id: string, query: string, context?: string): boolean {
     const conversation = this.get(id);
-    return conversation ? this.responder.send(conversation, query) : false;
+    return conversation ? this.responder.send(conversation, query, context) : false;
   }
 
   cancel(id: string): boolean {

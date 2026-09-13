@@ -157,49 +157,46 @@ describe('initial conversation draft lifetime', () => {
     expect(value.actions.every((action) => action.action === 'create')).toBe(true);
   });
 
-  it('consumes only the acknowledged draft immediately and on subsequent notifications', () => {
-    const value = draftFixture();
-    const first = value.create('first selection');
-    const second = value.create('second selection');
-    expect(value.run('consume-draft', {}, first.value.payload)).toBeNull();
-    expect(value.updated.at(-1)?.key).toBe(first.key);
-    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
-    const count = value.updated.length;
-    expect(value.run('consume-draft', {}, first.value.payload)).toBeNull();
-    expect(value.updated).toHaveLength(count);
-    value.notify();
-    expect(value.updated.at(-2)?.value.payload).not.toHaveProperty('draftQuery');
-    expect(value.updated.at(-1)).toMatchObject({
-      key: second.key, value: { payload: { draftQuery: 'second selection' } },
-    });
-    expect(value.actions).toHaveLength(2);
-  });
-
-  it('rejects malformed and list-tab acknowledgements without dropping the draft', () => {
+  it('carries the pending draft as context on the first send and clears it after', () => {
     const value = draftFixture();
     const first = value.create('selection');
-    expect(() => value.run('consume-draft', { query: 'selection' }, first.value.payload))
-      .toThrow(new TabPluginRejection('invalid consume-draft payload'));
-    expect(() => value.run('consume-draft', {}, { kind: 'list', entries: [] }))
-      .toThrow(new TabPluginRejection('invalid consume-draft payload'));
-    value.notify();
-    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
+    value.run('send', { query: 'what changed?' }, first.value.payload);
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    expect(value.actions.at(-1)).toEqual({
+      topic: 'conversations', action: 'send', id: first.key,
+      query: 'what changed?', context: 'selection',
+    });
+    value.run('send', { query: 'second question' }, first.value.payload);
+    expect(value.actions.at(-1)).toEqual({
+      topic: 'conversations', action: 'send', id: first.key, query: 'second question',
+    });
   });
 
-  it('clears the pending draft on a valid send, preserving it after an invalid send', () => {
+  it('notifies after the consumed draft clears the payload', () => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    value.run('send', { query: 'edited selection' }, first.value.payload);
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+  });
+
+  it('rejects an invalid send without dropping the draft', () => {
     const value = draftFixture();
     const first = value.create('selection');
     expect(() => value.run('send', {}, first.value.payload))
       .toThrow(new TabPluginRejection('invalid send payload'));
     value.notify();
     expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
-    value.run('send', { query: 'edited selection' }, first.value.payload);
-    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    expect(value.actions).toHaveLength(1);
+  });
+
+  it('answers a draft acknowledgement intent as unknown', () => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    expect(() => value.run('consume-draft', {}, first.value.payload))
+      .toThrow(new TabPluginRejection('unknown conversations intent "consume-draft"'));
     value.notify();
-    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
-    expect(value.actions.at(-1)).toEqual({
-      topic: 'conversations', action: 'send', id: first.key, query: 'edited selection',
-    });
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
   });
 
   it.each(['list', 'command'])('discards an unconsumed draft when a closed tab reopens via %s', (via) => {

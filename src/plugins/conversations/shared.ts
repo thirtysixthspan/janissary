@@ -27,9 +27,10 @@ export type ConversationTabPayload = {
   kind: 'conversation';
   conversation: ConversationWindow;
   models: ConversationModelPair[];
-  // Text pasted into the composer before any query is sent — the `Chat about this` menu entry.
-  // Rides the tab payload rather than the conversation record: it is shown once and holds no
-  // behavior after the tab closes without sending.
+  // Selected text shown in the conversation's history area as context — the `Chat about this`
+  // menu entry. Rides the tab payload rather than the conversation record: it is displayed once,
+  // consumed as context by the tab's first send, and holds no behavior after the tab closes
+  // without sending.
   draftQuery?: string;
 };
 export type ConversationsPayload = ConversationListPayload | ConversationTabPayload;

@@ -32,13 +32,30 @@ export function hasConversationModel(pair: ConversationModelPair): boolean {
     candidate.harness === pair.harness && candidate.model === pair.model);
 }
 
+// The selection a conversation opened with — the `Chat about this` draft — folded into the prompt
+// as additional context ahead of the replay: nothing the model should answer, but something the
+// submitted prompt should have in view.
+export function contextPrompt(
+  context: string | undefined,
+  query: string,
+): string {
+  if (context === undefined) return query;
+  return [
+    'The following text was selected in the application before this prompt and is context for it, not a question on its own:',
+    context,
+    query,
+  ].filter(Boolean).join('\n\n');
+}
+
 export function conversationPrompt(
   query: string,
   turns: readonly ConversationTurnView[],
+  context?: string,
 ): string {
   const replay = turns.slice(-CONVERSATION_WINDOW_SIZE).map((turn) =>
     `User: ${turn.query}\n\nAssistant: ${turn.error ?? turn.response}`).join('\n\n');
-  return [MARKDOWN_INSTRUCTION, replay, `User: ${query}`].filter(Boolean).join('\n\n');
+  return [MARKDOWN_INSTRUCTION, contextPrompt(context, ''), replay, `User: ${query}`]
+    .filter(Boolean).join('\n\n');
 }
 
 export function conversationWindow(

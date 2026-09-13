@@ -121,11 +121,6 @@ function runConversationIntent(
   tabs: ConversationTabs,
 ): null | never {
   switch (intent) {
-    case 'consume-draft': {
-      if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid consume-draft payload');
-      tabs.consume(id, capabilities);
-      return null;
-    }
     case 'load-older': {
       if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid load-older payload');
       capabilities.topicAction({ topic: 'conversations', action: 'loadOlder', id });
@@ -133,8 +128,10 @@ function runConversationIntent(
     }
     case 'send': {
       if (!isSendIntent(value)) return capabilities.rejectRequest('invalid send payload');
-      tabs.consume(id, capabilities);
-      capabilities.topicAction({ topic: 'conversations', action: 'send', id, query: value.query });
+      const context = tabs.consume(id, capabilities);
+      capabilities.topicAction({
+        topic: 'conversations', action: 'send', id, query: value.query, ...(context && { context }),
+      });
       return null;
     }
     case 'cancel': {

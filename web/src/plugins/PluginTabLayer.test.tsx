@@ -115,13 +115,12 @@ describe('PluginTabLayer lazy lifecycle', () => {
     const entry = await import('./conversations/index');
     await act(async () => { release(entry); await pending; });
 
-    expect(await screen.findByLabelText('Message')).toHaveValue('selection\nsecond line');
+    expect(await screen.findByText((_, element) =>
+      element?.className === 'conversation-context-text'
+        && element?.textContent === 'selection\nsecond line')).toBeTruthy();
     expect(screen.getByText('Renamed before mount')).toBeInTheDocument();
-    expect(fixture.request).toHaveBeenCalledExactlyOnceWith({
-      method: 'pluginIntent',
-      params: { tab: 'conversations', intent: 'consume-draft', payload: {} },
-    });
-    expect(fixture.send).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Message')).toHaveValue('');
+    expect(fixture.request).not.toHaveBeenCalled();
   });
 
   it('renders a loading fallback until the chunk mounts', async () => {

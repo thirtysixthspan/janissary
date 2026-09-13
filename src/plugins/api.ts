@@ -103,7 +103,10 @@ export type TabPluginTopicAction =
   | { topic: 'conversations'; action: 'create'; id: string }
   | { topic: 'conversations'; action: 'load'; id: string }
   | { topic: 'conversations'; action: 'loadOlder'; id: string }
-  | { topic: 'conversations'; action: 'send'; id: string; query: string }
+  // The send the conversation tab raises. The optional context is a selection the conversations
+  // plugin captured for this tab — the `Chat about this` draft — which the responder folds into the
+  // prompt text rather than recording anywhere.
+  | { topic: 'conversations'; action: 'send'; id: string; query: string; context?: string }
   | { topic: 'conversations'; action: 'cancel'; id: string }
   | { topic: 'conversations'; action: 'openFiles'; id: string }
   | { topic: 'conversations'; action: 'launchAgent'; id: string }

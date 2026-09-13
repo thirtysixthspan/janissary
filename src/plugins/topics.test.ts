@@ -74,6 +74,7 @@ describe('the conversations topic source', () => {
       { topic: 'conversations', action: 'load', id: 'one' },
       { topic: 'conversations', action: 'loadOlder', id: 'one' },
       { topic: 'conversations', action: 'send', id: 'one', query: 'hello' },
+      { topic: 'conversations', action: 'send', id: 'one', query: 'hello', context: 'selection' },
       { topic: 'conversations', action: 'cancel', id: 'one' },
       {
         topic: 'conversations', action: 'selectModel', id: 'one',
@@ -86,7 +87,8 @@ describe('the conversations topic source', () => {
     expect(managers.conversations.create).toHaveBeenCalledWith('one');
     expect(managers.conversations.load).toHaveBeenCalledWith('one');
     expect(managers.conversations.loadOlder).toHaveBeenCalledWith('one');
-    expect(managers.conversations.send).toHaveBeenCalledWith('one', 'hello');
+    expect(managers.conversations.send).toHaveBeenCalledWith('one', 'hello', undefined);
+    expect(managers.conversations.send).toHaveBeenCalledWith('one', 'hello', 'selection');
     expect(managers.conversations.cancel).toHaveBeenCalledWith('one');
     expect(managers.conversations.selectModel).toHaveBeenCalledWith(
       'one', { harness: 'claude', model: 'sonnet' },

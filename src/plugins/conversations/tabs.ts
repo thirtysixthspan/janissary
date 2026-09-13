@@ -58,10 +58,14 @@ export class ConversationTabs {
     }
   }
 
-  consume(id: string, capabilities: TabPluginServerCapabilities): void {
-    if (!this.drafts.delete(id)) return;
+  // Removes the tab's captured draft and returns what it was, for the send that consumes it as
+  // model context. The refreshed payload follows the same path as every other update.
+  consume(id: string, capabilities: TabPluginServerCapabilities): string | undefined {
+    const draftQuery = this.drafts.get(id);
+    if (!this.drafts.delete(id)) return undefined;
     const payload = conversationPayload(dataFrom(capabilities), id);
     if (payload) capabilities.updateTab(id, () => ({ payload }));
+    return draftQuery;
   }
 
   dispose(): void {

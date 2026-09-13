@@ -40,17 +40,17 @@ The model selector sits with the metadata row's right-aligned controls, ahead of
 
 The last pair any conversation's selector chose is remembered on its own, across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
 
-A conversation opened through the default menu's **Chat about this** entry starts with the selection pasted into the message input, unsent, as if typed. Adding a question around it — or editing it — is the user's act; Enter sends. If the tab closes without sending, the pasted text is gone and nothing about it was saved.
+A conversation opened through the default menu's **Chat about this** entry shows the selection in the conversation itself — a labelled context block in the history area, above the turns — while the message input starts empty. The content is context, not a question: nothing reaches the model, and nothing is sent, until the user types a prompt and sends it. That first submission carries the selection along as additional context and removes the block; later queries are ordinary queries. If the tab closes without sending, the selection is gone and nothing about it was saved.
 
-The selection survives conversation updates while the new tab is still loading, including opening another conversation before its message input appears. Each tab receives its own selection once. Later updates preserve edits without restoring the original text, and reopening a closed conversation does not bring its discarded selection back.
+The selection survives conversation updates while the new tab is still loading, including opening another conversation before the history area appears. Each tab receives its own selection once, and reopening a closed conversation does not bring its discarded selection back.
 
 An unsuccessful model selection leaves the remembered model unchanged. Selecting the current model successfully remembers it again, just as selecting a different model does.
 
 ### The message input
 
-Initial selected text may be empty or span multiple lines. Invalid initial text values are rejected before the message input appears, rather than being converted into text.
+Initial selected text may be empty or span multiple lines. Invalid initial text values are rejected before the history area appears, rather than being converted into text.
 
-The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. Escape clears an unsent query, including text pasted through **Chat about this**. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
+The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. Escape clears an unsent query. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
 
 The status dot blinks while a reply is streaming. Sending is refused during that time, and a refused Enter leaves the typed text in place, so a query composed while the previous reply finishes is not lost. Shift+Enter still starts a new line while streaming. Once the conversation is deleted the line is disabled outright.
 

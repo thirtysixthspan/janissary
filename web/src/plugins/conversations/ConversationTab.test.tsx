@@ -51,17 +51,28 @@ function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0, c
 }
 
 describe('ConversationTab', () => {
-  it('acknowledges the initial draft without sending and keeps edits after consumption', () => {
+  it('shows the selection in the history area, leaves the composer empty, and sends nothing', () => {
     const { value, intent } = capabilities();
-    const rendered = render(<ConversationTab
-      payload={{ ...payload(), draftQuery: 'selected text' }} capabilities={value}
-    />);
-    expect(screen.getByLabelText('Message')).toHaveValue('selected text');
-    expect(intent).toHaveBeenCalledExactlyOnceWith('consume-draft', {});
-    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'edited draft' } });
+    const rendered = render(
+      <ConversationTab payload={{ ...payload(), draftQuery: 'selected text' }} capabilities={value} />,
+    );
+    expect(screen.getByText('Selected text')).toBeInTheDocument();
+    expect(screen.getByText('selected text')).toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveValue('');
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'typed prompt' } });
     rendered.rerender(<ConversationTab payload={payload()} capabilities={value} />);
-    expect(screen.getByLabelText('Message')).toHaveValue('edited draft');
-    expect(intent).toHaveBeenCalledOnce();
+    expect(screen.queryByLabelText('Selected text')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveValue('typed prompt');
+  });
+
+  it('sends the composer text while the draft block is on screen', () => {
+    const { intent, value } = capabilities();
+    render(<ConversationTab payload={{ ...payload(), draftQuery: 'selection' }} capabilities={value} />);
+    const input = screen.getByLabelText('Message');
+    fireEvent.change(input, { target: { value: 'what changed?' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('send', { query: 'what changed?' });
   });
 
   it('renders sanitized Markdown, streaming text, and failures in place', () => {
