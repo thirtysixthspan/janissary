@@ -19,7 +19,9 @@ Agents and harnesses get a workspace by default. Use `--no-workspace` when you d
 
 Add `--offline` to deny network access too.
 
-Isolation is on by default (`sandboxWorkspaces` in `.janissary/config.json`; it requires macOS). When a workspaced tab is created and isolation isn't actually active — the setting is off, or the platform can't enforce it — the tab says so with a one-line notice, so you're never silently unprotected.
+Isolation is on by default (`sandboxWorkspaces` in `.janissary/config.json`; it requires macOS). When a workspaced tab is created and isolation isn't actually active — the setting is off, or the platform can't enforce it — the tab says so with a one-line notice, so you're never silently unprotected: `workspace isolation off: sandboxWorkspaces disabled in config` when the setting is off, or `workspace isolation off: sandbox-exec unavailable` when the platform can't enforce it.
+
+One narrow exception to the reading rules above: the running Janissary installation's own `ai/` and `scripts/` directories stay readable even when they sit under your home directory. That's what lets a shipped task file and the `$janissary/scripts/run.mjs` commands it runs (see [Task picker](/user-documentation/command-bar/tasks)) still work from inside a workspaced tab. The rest of the installation, including `node_modules`, stays off limits.
 
 ## Browsers can't start inside a workspace
 
