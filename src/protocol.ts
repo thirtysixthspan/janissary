@@ -53,7 +53,7 @@ export type ConversationsView = {
   models: ConversationModelPair[];
 };
 
-export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall } from './protocol/plugin.js';
+export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
 export type { SuggestionView, MonitorRpcCall } from './protocol/monitor.js';
 export type { SuggestHunk, EditorRpcCall } from './protocol/editor.js';

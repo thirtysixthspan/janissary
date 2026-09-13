@@ -1,10 +1,27 @@
-import { useEffect, useState } from 'react';
-import { resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
+import { useEffect, useRef, useState } from 'react';
+import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
+import { terminalSelectionText } from '../shared/terminal/terminal-selection';
+import type { DefaultMenuEntry } from '@shared/protocol';
+import type { JanusClient } from '../ws';
 
 export type PendingDefaultMenu = DefaultMenuTarget & { x: number; y: number };
 
-function selectedText(): string {
+function domSelectionText(): string {
   return globalThis.getSelection()?.toString() ?? '';
+}
+
+type ResolvedSelection = { text: string; source: 'dom' | 'editor' | 'terminal' };
+
+function resolveSelection(target: Element | null): ResolvedSelection {
+  const domText = domSelectionText();
+  if (domText) return { text: domText, source: 'dom' };
+  const editorText = editorSelectionText(target);
+  if (editorText) return { text: editorText, source: 'editor' };
+  return { text: terminalSelectionText(target), source: 'terminal' };
+}
+
+function isChatShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'i';
 }
 
 // Watches every right-click the app sees and decides whether the default menu answers it.
@@ -14,28 +31,78 @@ function selectedText(): string {
 // `defaultPrevented` is the whole test for "someone else owns this click", and no surface has to
 // register anything to be left alone. When the click offers neither entry the default is left
 // alone too, so the browser's own menu still appears rather than an empty box of ours.
-export function useDefaultContextMenu() {
+//
+// When the click also resolves a plugin-contributed entry, the label arrives while the menu is
+// open: the server owns the declarations, so the client asks rather than assuming a contributor.
+// A generation counter in the same shape `useSelectionAction` keeps ensures a late reply for a
+// closed menu installs nothing and a reply cannot lag into the next menu.
+export function useDefaultContextMenu(client?: JanusClient) {
   const [pending, setPending] = useState<PendingDefaultMenu | null>(null);
+  const [contributed, setContributed] = useState<DefaultMenuEntry | null>(null);
+  const generation = useRef(0);
 
   useEffect(() => {
     const onContextMenu = (event: MouseEvent) => {
       if (event.defaultPrevented) return;
       const clicked = event.target instanceof Element ? event.target : null;
-      const target = resolveDefaultMenuTarget(clicked, document.activeElement, selectedText());
+      const selection = resolveSelection(clicked);
+      const target = resolveDefaultMenuTarget(
+        clicked, document.activeElement, selection.text, selection.source,
+      );
       if (!target.selectionText && !target.pasteTarget) return;
       event.preventDefault();
+      generation.current += 1;
+      setContributed(null);
+      const queryGeneration = generation.current;
+      if (target.selectionText && typeof client?.request === 'function') {
+        void client.request<DefaultMenuEntry | null>({
+          method: 'defaultMenuSelectionAction', params: { selection: target.selectionText },
+        }).then((entry) => {
+          if (generation.current === queryGeneration) setContributed(entry ?? null);
+        });
+      }
       setPending({ ...target, x: event.clientX, y: event.clientY });
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isChatShortcut(event) || typeof client?.request !== 'function') return;
+      const selection = resolveSelection(document.activeElement);
+      if (!selection.text) return;
+      event.preventDefault();
+      void client.request<DefaultMenuEntry | null>({
+        method: 'defaultMenuSelectionAction', params: { selection: selection.text },
+      }).then((entry) => {
+        if (!entry) return;
+        client.send({
+          method: 'runDefaultMenuSelectionAction',
+          params: { selection: selection.text, action: entry.label },
+        });
+      });
+    };
     document.addEventListener('contextmenu', onContextMenu);
-    return () => document.removeEventListener('contextmenu', onContextMenu);
-  }, []);
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu);
+      globalThis.removeEventListener('keydown', onKeyDown);
+    };
+  }, [client]);
 
   // The menu holds the keyboard while it is open, so whatever had focus gets it back on the way
   // out — otherwise a dismissed menu would leave the app's key handling pointed at the body.
   const close = () => {
+    generation.current += 1;
+    setContributed(null);
     pending?.restoreFocus?.focus();
     setPending(null);
   };
 
-  return { pending, close };
+  const runContributed = () => {
+    if (!contributed || !pending?.selectionText) return;
+    client?.send({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: pending.selectionText, action: contributed.label },
+    });
+    close();
+  };
+
+  return { pending, contributed, runContributed, close };
 }

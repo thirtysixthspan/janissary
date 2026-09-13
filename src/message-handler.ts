@@ -1,9 +1,9 @@
 import type { Controller } from './controller.js';
 import type { ClientMessage, ServerEvent } from './protocol.js';
 import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.js';
+import { dispatchPluginMessage } from './message-handler-plugin.js';
 import {
-  clientReplyMode, isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams,
-  unhandledClientMethod,
+  clientReplyMode, unhandledClientMethod,
 } from './client-message.js';
 import { errorText } from './error-text.js';
 
@@ -85,18 +85,12 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'monitorContextSnapshot': { controller.monitorContextSnapshot(message.params.name); break;
     }
     case 'saveFile': { return controller.saveFile(message.params.url, message.params.content); }
-    case 'pluginIntent': {
-      if (!isPluginIntentParams(message.params)) throw new Error('Invalid pluginIntent params');
-      return controller.pluginIntent(
-        message.params.tab,
-        message.params.intent,
-        message.params.payload,
-      );
-    }
-    case 'pluginFailed': {
-      if (!isPluginFailedParams(message.params)) throw new Error('Invalid pluginFailed params');
-      controller.pluginFailed(message.params.tab, message.params.reason);
-      break;
+    case 'defaultMenuSelectionAction':
+    case 'runDefaultMenuSelectionAction':
+    case 'pluginIntent':
+    case 'pluginFailed':
+    case 'editorPluginFailed': {
+      return dispatchPluginMessage(controller, message);
     }
     case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
     }
@@ -152,15 +146,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'closeEditorConnection': {
       controller.closeEditorConnection(message.params.url, message.params.persona);
-      break;
-    }
-    case 'editorPluginFailed': {
-      if (!isEditorPluginFailedParams(message.params)) {
-        throw new Error('Invalid editorPluginFailed params');
-      }
-      controller.editorPluginFailed(
-        message.params.url, message.params.plugin, message.params.reason,
-      );
       break;
     }
     default: { return unhandledClientMethod(message);

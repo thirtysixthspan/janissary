@@ -27,6 +27,11 @@ export type ConversationTabPayload = {
   kind: 'conversation';
   conversation: ConversationWindow;
   models: ConversationModelPair[];
+  // Selected text shown in the conversation's history area as context — the `Chat about this`
+  // menu entry. Rides the tab payload rather than the conversation record: it is displayed once,
+  // consumed as context by the tab's first send, and holds no behavior after the tab closes
+  // without sending.
+  draftQuery?: string;
 };
 export type ConversationsPayload = ConversationListPayload | ConversationTabPayload;
 
@@ -83,6 +88,7 @@ export function isConversationsPayload(value: unknown): value is ConversationsPa
     return Array.isArray(value.entries) && value.entries.every((entry) => isSummary(entry));
   }
   return value.kind === 'conversation'
+    && (value.draftQuery === undefined || typeof value.draftQuery === 'string')
     && isWindow(value.conversation)
     && Array.isArray(value.models)
     && value.models.every((pair) => isPair(pair));

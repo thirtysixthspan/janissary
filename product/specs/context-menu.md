@@ -6,12 +6,30 @@ The application draws its own right-click menus rather than leaving them to the 
 
 Right-clicking anywhere the application has not defined a menu — an editor tab, a terminal, the command line, a transcript — opens a small menu at the pointer offering **Copy** and **Paste**. It looks and behaves exactly like the file navigator's menu: the same styling, arrow keys and `Enter` to activate an entry, `Escape` or clicking away to dismiss it. Dismissing the menu returns the keyboard to whatever had it before.
 
+Right-clicking the open menu itself does nothing and does not expose the browser's context menu.
+
 An entry that cannot act is left out rather than shown greyed out, so the menu holds one entry, two, or none:
 
-- **Copy** appears only when text is selected, and writes that selection to the system clipboard.
+- **Copy** appears only when page or editor text is selected, and writes that selection to the system clipboard.
 - **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret.
 
 When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
+
+The editor is the exception: an empty-selection right-click there opens no menu, including the browser's own menu.
+
+### A contributed entry
+
+To select harness terminal output while the harness owns the mouse, hold Option while dragging on macOS or Shift while dragging elsewhere. Right-click that selection to offer **Chat about this**.
+
+Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
+
+Disabled plugins contribute no entries to newly opened menus. An entry offered before its plugin is disabled cannot run afterward. A plugin that has not yet been activated can still offer its declared action without loading until the action runs.
+
+When an entry arrives while the menu is open, the highlighted action stays selected as the entries move. If that action disappears, selection moves to the first remaining entry. Enter activates the highlighted action, and arrow navigation continues from its current position.
+
+A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection, an editor's own selection, or, in a terminal, the selection that terminal itself holds — and renders as its own final group after Copy and Paste, separated by a divider. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly for the current selection. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.
+
+The terminal paragraph above is narrowed by that entry and only by it: the menu may read an xterm selection to answer **Chat about this**, but a terminal's menu still offers no Copy — the terminal's copy shortcut remains the way to copy from it, because the selection lives outside the page and Copy's contract is page or editor text.
 
 ### Surfaces that define their own menu
 

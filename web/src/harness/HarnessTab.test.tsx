@@ -1,11 +1,12 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../harness-drop-registry';
+import { DefaultContextMenu } from '../context-menu/DefaultContextMenu';
 
 // ---- xterm stubs -----------------------------------------------------------
 // xterm relies on canvas/WebGL which jsdom doesn't support. We mock both
@@ -408,6 +409,42 @@ describe('HarnessTab', () => {
   // selection service off. Without the override below no drag can select anything, so every copy
   // route — the chord and the terminal's right-click menu alike — has nothing to copy.
   describe('selecting and copying terminal text', () => {
+    it('offers Chat about this for a macOS terminal selection and sends only that selection', async () => {
+      const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
+      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+      const request = vi.fn().mockResolvedValue({ label: 'Chat about this' });
+      const send = vi.fn();
+      const client = { ...mockClient, request, send } as unknown as JanusClient;
+      try {
+        const rendered = render(<>
+          <HarnessTab harness={makeHarness()} client={client} label="claude" />
+          <DefaultContextMenu client={client} />
+        </>);
+        expect(capturedOptions.macOptionClickForcesSelection).toBe(true);
+        selection = 'selected harness output';
+        const input = document.createElement('textarea');
+        rendered.container.querySelector('.harness-body')!.append(input);
+        input.focus();
+        send.mockClear();
+        fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
+        const entry = await screen.findByText('Chat about this');
+        expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
+          .toEqual(['Paste', 'Chat about this']);
+        expect(request).toHaveBeenCalledExactlyOnceWith({
+          method: 'defaultMenuSelectionAction', params: { selection: 'selected harness output' },
+        });
+        fireEvent.click(entry);
+        expect(send).toHaveBeenCalledExactlyOnceWith({
+          method: 'runDefaultMenuSelectionAction',
+          params: { selection: 'selected harness output', action: 'Chat about this' },
+        });
+        expect(writeText).not.toHaveBeenCalled();
+      } finally {
+        platform.mockRestore();
+        domSelection.mockRestore();
+      }
+    });
+
     it('creates the terminal so a modifier-drag still selects while the harness holds the mouse', () => {
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
       expect(capturedOptions.macOptionClickForcesSelection).toBe(true);

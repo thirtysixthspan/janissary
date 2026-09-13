@@ -45,6 +45,12 @@ function validateActivation(
   if (selection && !activation.selectionAction) {
     throw new Error(`contributes "${selection.label}" but provides no selectionAction handler`);
   }
+  // And the default-menu entry, on the same terms: the menu draws its label from the declaration
+  // alone, so an entry with nothing behind it would be offered before anything could discover it
+  // does not run.
+  if (declaration.defaultMenu && !activation.defaultMenuAction) {
+    throw new Error(`contributes "${declaration.defaultMenu.label}" but provides no handler`);
+  }
   // Same rule and same moment as the selection action above: `edit` dispatches by declaration alone,
   // so a plugin claiming the verb with nothing behind it would swallow the command before anything
   // could discover there is no handler — and the plain-text fallback would already be gone.

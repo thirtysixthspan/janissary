@@ -103,7 +103,10 @@ export type TabPluginTopicAction =
   | { topic: 'conversations'; action: 'create'; id: string }
   | { topic: 'conversations'; action: 'load'; id: string }
   | { topic: 'conversations'; action: 'loadOlder'; id: string }
-  | { topic: 'conversations'; action: 'send'; id: string; query: string }
+  // The send the conversation tab raises. The optional context is a selection the conversations
+  // plugin captured for this tab — the `Chat about this` draft — which the responder folds into the
+  // prompt text rather than recording anywhere.
+  | { topic: 'conversations'; action: 'send'; id: string; query: string; context?: string }
   | { topic: 'conversations'; action: 'cancel'; id: string }
   | { topic: 'conversations'; action: 'openFiles'; id: string }
   | { topic: 'conversations'; action: 'launchAgent'; id: string }
@@ -138,6 +141,9 @@ export type TabPluginDeclaration = {
   command?: string;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
+  // An entry the default context menu offers for a text selection. A declaration carrying one must
+  // supply a `defaultMenuAction` handler.
+  defaultMenu?: { label: string };
   // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
   // A declaration carrying one must supply a `selectionAction` handler.
   selectionAction?: TabPluginSelectionAction;
@@ -251,6 +257,9 @@ export type TabPluginActivation = {
   // value is ignored — a notification reports that something happened and cannot influence any host
   // outcome; a plugin acts on it by calling `updateTab`.
   notify?(event: TabPluginNotification, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  // Runs the entry the declaration contributed for the default context menu. Required only when
+  // the declaration carries one. `selection` is the plain text the menu was offered against.
+  defaultMenuAction?(selection: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   // Runs the entry the declaration contributed for a file navigator selection. Required only when
   // the declaration carries one. `paths` are absolute and were resolved by the host against the
   // navigator's own root, so a client can never name a file outside the tree it is browsing.

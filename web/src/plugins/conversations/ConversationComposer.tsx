@@ -25,6 +25,11 @@ export function ConversationComposer({
   const bar = useCommandBarKeys({ value: query, setValue: setQuery, inputRef, history, onSubmit: onSend });
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape' && !streaming) {
+      event.preventDefault();
+      setQuery('');
+      return;
+    }
     const submitting = event.key === 'Enter' && !event.shiftKey;
     if (submitting && streaming) { event.preventDefault(); return; }
     bar.onKeyDown(event);

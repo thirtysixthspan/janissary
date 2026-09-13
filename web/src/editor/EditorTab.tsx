@@ -12,6 +12,7 @@ import { useEditorFind } from './useEditorFind';
 import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
+import { selectionsText } from './model';
 import { keepCaretRowVisible } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
@@ -119,6 +120,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   }));
 
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
+  const selectionText = state ? selectionsText(state) : '';
   const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
 
   return (
@@ -134,8 +136,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         className="editor-body"
         ref={bodyRef}
         data-editor-drop
+        data-editor-selection={selectionText}
         onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}
+        onContextMenu={(event) => { if (!selectionText) event.preventDefault(); }}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >
         <EditorConnectionsPanel tab={tab} api={connections} />

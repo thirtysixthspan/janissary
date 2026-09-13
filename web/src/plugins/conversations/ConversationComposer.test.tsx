@@ -1,4 +1,3 @@
-import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ConversationComposer } from './ConversationComposer';
@@ -23,6 +22,12 @@ function renderComposer(overrides: {
 }
 
 describe('ConversationComposer', () => {
+  it('opens empty: a conversation\'s selection lives in the history area, not the input', () => {
+    const { onSend, input } = renderComposer();
+    expect(input).toHaveValue('');
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it('sends the trimmed query on Enter and clears the input', () => {
     const { onSend, input } = renderComposer();
     fireEvent.change(input, { target: { value: '  what changed?  ' } });
@@ -90,5 +95,20 @@ describe('ConversationComposer', () => {
     hidden.rendered.unmount();
     const visible = renderComposer({ active: true });
     expect(visible.input).toHaveFocus();
+  });
+
+  it('keeps typed text when a payload update re-renders around it', () => {
+    const { onSend, rendered, input } = renderComposer();
+    fireEvent.change(input, { target: { value: 'edited draft' } });
+    rendered.rerender(
+      <ConversationComposer
+        history={['first question']}
+        streaming={false}
+        deleted={false}
+        active={true}
+        onSend={onSend}
+      />,
+    );
+    expect(input).toHaveValue('edited draft');
   });
 });

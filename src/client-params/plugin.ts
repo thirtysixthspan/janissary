@@ -27,6 +27,8 @@ export function isPluginFailedParams(value: unknown): value is { tab: string; re
 
 // Keyed by the union so a method added to `PluginRpcCall` without a decoder fails the build.
 export const PLUGIN_PARAMS: Record<PluginRpcCall['method'], ParamsDecoder> = {
+  defaultMenuSelectionAction: (p) => isString(p.selection),
+  runDefaultMenuSelectionAction: (p) => isString(p.selection) && isString(p.action),
   pluginIntent: isPluginIntentParams,
   pluginFailed: isPluginFailedParams,
 };

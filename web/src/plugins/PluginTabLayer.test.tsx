@@ -2,9 +2,11 @@ import React from 'react';
 import { act, fireEvent, render as renderBare, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
+import type { ConversationTabPayload } from '@shared/plugins/conversations/shared';
 import type { JanusClient } from '../ws';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { PluginTabLayer } from './PluginTabLayer';
+import type * as ConversationsEntry from './conversations/index';
 import {
   clientPlugin,
   type ClientPluginLoader,
@@ -36,8 +38,8 @@ function tab(id = 'fixture', schemaVersion = 1, label = id): TabView {
 
 function client() {
   const send = vi.fn();
-  const request = vi.fn();
-  return { value: { send, request } as unknown as JanusClient, send };
+  const request = vi.fn(async () => null);
+  return { value: { send, request } as unknown as JanusClient, send, request };
 }
 
 function registration(loader: ClientPluginLoader): ClientPluginRegistration {
@@ -63,6 +65,64 @@ afterEach(() => {
 });
 
 describe('PluginTabLayer lazy lifecycle', () => {
+  it('rejects a malformed conversation draft before mounting the message input', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    registry.set('conversations', clientPlugin(1, () => import('./conversations/index')));
+    const fixture = client();
+    const view = tab('conversations');
+    view.plugin!.payload = {
+      kind: 'conversation', draftQuery: 42,
+      conversation: {
+        id: 'first', title: 'New conversation', turns: [], hasOlder: false,
+        pair: { harness: 'claude', model: 'claude-sonnet' },
+      },
+      models: [{ harness: 'claude', model: 'claude-sonnet' }],
+    };
+    render(<PluginTabLayer {...properties(view, fixture.value)} />);
+    await waitFor(() => { expect(fixture.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'pluginFailed', params: { tab: 'conversations', reason: 'invalid plugin payload' },
+    }); });
+    expect(screen.queryByLabelText('Message')).not.toBeInTheDocument();
+    expect(fixture.request).not.toHaveBeenCalled();
+  });
+
+  it('captures a retained conversation draft from an updated snapshot after a delayed load', async () => {
+    let release!: (module: typeof ConversationsEntry) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+    const pending = new Promise<typeof ConversationsEntry>((resolve) => { release = resolve; });
+    registry.set('conversations', clientPlugin(1, () => pending));
+    const fixture = client();
+    const payload: ConversationTabPayload = {
+      kind: 'conversation', draftQuery: 'selection\nsecond line',
+      conversation: {
+        id: 'first', title: 'New conversation',
+        pair: { harness: 'claude', model: 'claude-sonnet' }, turns: [], hasOlder: false,
+      },
+      models: [{ harness: 'claude', model: 'claude-sonnet' }],
+    };
+    const first = tab('conversations');
+    first.plugin!.payload = payload;
+    const rendered = render(<PluginTabLayer {...properties(first, fixture.value)} />);
+    expect(screen.getByText('Loading conversations…')).toBeInTheDocument();
+    const second = tab('conversations');
+    second.plugin!.payload = {
+      ...payload, conversation: { ...payload.conversation, title: 'Renamed before mount' },
+    };
+    rendered.rerender(<PluginTabLayer {...properties(second, fixture.value)} />);
+    expect(screen.queryByLabelText('Message')).not.toBeInTheDocument();
+    expect(fixture.request).not.toHaveBeenCalled();
+
+    const entry = await import('./conversations/index');
+    await act(async () => { release(entry); await pending; });
+
+    expect(await screen.findByText((_, element) =>
+      element?.className === 'conversation-query'
+        && element?.textContent === 'selection\nsecond line')).toBeTruthy();
+    expect(screen.getByText('Renamed before mount')).toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveValue('');
+    expect(fixture.request).not.toHaveBeenCalled();
+  });
+
   it('renders a loading fallback until the chunk mounts', async () => {
     let release!: (module: Awaited<ReturnType<ClientPluginLoader>>) => void;
     // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.

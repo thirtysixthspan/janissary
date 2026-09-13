@@ -33,6 +33,7 @@ The command bar accepts the shortcuts below while an agent tab is active. `Ctrl+
 | `Cmd+F` | Search the current tab's transcript |
 | `Cmd+P` | Open the Quick Open file finder |
 | `Cmd+T` | Open a new agent tab |
+| `Cmd+I` / `Ctrl+I` | Start a chat with the current text selection |
 | `Tab` | Complete a file path, agent name, connection, browser subcommand, or window ID |
 | `Backspace` / `Delete` | Delete the character before the cursor |
 

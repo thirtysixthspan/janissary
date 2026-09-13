@@ -4,20 +4,21 @@ import {
   type TabPluginActivation, type TabPluginDeclaration, type TabPluginLoaders,
   type TabPluginPresentation, type TabPluginServerCapabilities,
 } from './api.js';
-import { activatePlugin, disposePluginActivation } from './activate.js';
-import { tabPluginCatalog } from './catalog.js';
-import {
+import { disposePluginActivation } from './activate.js';
+import { tabPluginCatalog } from './catalog.js';import {
   pluginFailureReason, reportPluginFailure, type PluginFailureOrigin,
 } from './failure.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
 import { tabPluginLoaders } from './loaders.js';
 import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { runPluginDefaultMenuAction } from './default-menu.js';
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
 import type { Subscription } from '../bus.js';
 import { contributionRejection } from './rejections.js';
 import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
+import { startPluginActivation } from './start-activation.js';
 import { closePluginTabs } from './teardown.js';
 
 export type { TabPluginStatus } from './status.js';
@@ -98,6 +99,10 @@ export class TabPluginHost {
 
   runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {
     return runPluginSelectionAction(this.requestPort(), id, action, paths, origin);
+  }
+
+  runDefaultMenuAction(id: string, action: string, selection: string, origin: PluginFailureOrigin): Promise<void> {
+    return runPluginDefaultMenuAction(this.requestPort(), id, action, selection, origin);
   }
 
   intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {
@@ -181,22 +186,15 @@ export class TabPluginHost {
     origin: PluginFailureOrigin,
   ): Promise<TabPluginActivation | undefined> {
     try {
-      const result = await activatePlugin(
-        record.declaration,
-        this.loaders[record.declaration.id],
+      const activation = await startPluginActivation(
+        record,
+        this.loaders,
+        origin,
         this.activationTimeoutMs,
+        () => !this.disposed,
+        (candidate, error, failureOrigin) => this.disable(candidate, error, failureOrigin),
       );
-      if (this.disposed || record.state === 'disabled') {
-        disposePluginActivation(result.activation);
-        return undefined;
-      }
-      record.activation = result.activation;
-      record.activationMs = result.durationMs;
-      record.state = 'active';
-      return result.activation;
-    } catch (error) {
-      this.disable(record, error, origin);
-      return undefined;
+      return activation;
     } finally {
       record.activating = undefined;
     }

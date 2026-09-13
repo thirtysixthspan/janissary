@@ -24,6 +24,8 @@ Click anywhere in the editor body, including the empty space below the last line
 
 Double-click a word to select it. Triple-click, or click the line number in the gutter, to select the whole line; dragging after either extends the selection a line at a time. `Shift`-click extends the selection from where it already starts.
 
+With text selected, press `Cmd+I` on macOS or `Ctrl+I` elsewhere to start a new chat with that text. Right-clicking the selection offers the same action and leaves the selection in place.
+
 A plain click on the header (the file name, size, or location) puts focus straight back in the buffer once you release the mouse, so your cursor and typing pick up right where they were. If you drag to select header text instead, for example to copy the file's path, focus stays in the header so the selection sticks.
 
 ## Keyboard input

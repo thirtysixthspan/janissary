@@ -5,6 +5,7 @@ import type { Conversation } from './store.js';
 import type { ConversationStore } from './store.js';
 import {
   availableConversationModels,
+  contextPrompt,
   conversationPrompt,
   conversationTitle,
   DEFAULT_CONVERSATION_TITLE,
@@ -39,7 +40,7 @@ export class ConversationResponder {
     return this.inFlight.keys();
   }
 
-  send(conversation: Conversation, query: string): boolean {
+  send(conversation: Conversation, query: string, context?: string): boolean {
     const id = conversation.id;
     if (this.inFlight.has(id) || !query.trim()) return false;
     const storedTurns = [...conversation.turns];
@@ -69,7 +70,8 @@ export class ConversationResponder {
     const session = this.sessions.session(id, pair, workspace, {
       onError: (message) => { this.fail(id, pending, message); },
     });
-    session.prompt(hadSession ? query : conversationPrompt(query, storedTurns), {
+    const text = hadSession ? contextPrompt(context, query) : conversationPrompt(query, storedTurns, context);
+    session.prompt(text, {
       onChunk: (text) => { this.chunk(id, pending, text); },
       onEnd: () => { this.complete(id, pending); },
       onError: (message) => { this.fail(id, pending, message); },

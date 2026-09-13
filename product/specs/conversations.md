@@ -22,6 +22,8 @@ Deleting a row always asks for confirmation first. Confirming removes the conver
 
 A new tab is titled `New conversation`. Its first submitted query supplies the title: the first line, capped at 60 characters. Later queries do not rename it.
 
+Creating a conversation from the list opens an empty message input with no history. Creating one through **Chat about this** opens the same empty input, with the selected text standing in the turn list as its own turn (see below).
+
 Double-clicking the title in the metadata row renames the conversation, the same interaction that renames a tab: an edit field replaces the name with its text selected, Enter or a click away commits, Escape cancels. A committed name is trimmed and capped at the same 60 characters, and committing a blank one changes nothing. The new name reaches the tab, the metadata row, and the conversation list together, because all three read the conversation's one name.
 
 A conversation the user has named keeps that name: the first query names only a conversation still called `New conversation`, so renaming a new conversation before asking anything is not undone a moment later. Cancelling a reply that named the conversation gives `New conversation` back, unless the conversation was renamed while that reply was streaming — a cancel undoes its own naming and never a name the user chose. Renaming is refused once the conversation is deleted, like every other control in that row.
@@ -36,9 +38,19 @@ The tab opens with the most recent 20 turns and the newest turn visible. An acti
 
 The model selector sits with the metadata row's right-aligned controls, ahead of the folder, new-agent, and split buttons rather than beside the title. It offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 
+The last pair any conversation's selector chose is remembered on its own, across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
+
+A conversation opened through the default menu's **Chat about this** entry shows the selected text in the turn list as a conversation turn posed by the user, with no model response beneath it and no query yet sent, while the message input starts empty. The content is context, not a question: nothing reaches the model, and nothing is sent, until the user types a prompt and sends it. That first submission carries the selection along as additional context; later queries are ordinary queries. The selection turn never leaves the conversation on its own afterwards — it stays in the turn list whether or not queries have been sent — and nothing about it is saved: if the tab closes without sending, the selection is gone, and reopening the conversation does not bring it back.
+
+The selection survives conversation updates while the new tab is still loading, including opening another conversation before the history area appears. Each tab receives its own selection once, and reopening a closed conversation does not bring its discarded selection back.
+
+An unsuccessful model selection leaves the remembered model unchanged. Selecting the current model successfully remembers it again, just as selecting a different model does.
+
 ### The message input
 
-The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
+Initial selected text may be empty or span multiple lines. Invalid initial text values are rejected before the history area appears, rather than being converted into text.
+
+The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. Escape clears an unsent query. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
 
 The status dot blinks while a reply is streaming. Sending is refused during that time, and a refused Enter leaves the typed text in place, so a query composed while the previous reply finishes is not lost. Shift+Enter still starts a new line while streaming. Once the conversation is deleted the line is disabled outright.
 

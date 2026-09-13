@@ -45,10 +45,15 @@ function actOnSchedules(managers: Managers, action: TabPluginTopicAction): void 
 function actOnConversations(managers: Managers, action: TabPluginTopicAction): void {
   if (action.topic !== 'conversations') return;
   switch (action.action) {
+    // The draft the `Chat about this` entry pasted never reaches the record: it rides the tab
+    // payload the activating plugin builds beside this call, so `create` stays id-only here.
     case 'create': { managers.conversations.create(action.id); return; }
     case 'load': { managers.conversations.load(action.id); return; }
     case 'loadOlder': { managers.conversations.loadOlder(action.id); return; }
-    case 'send': { managers.conversations.send(action.id, action.query); return; }
+    case 'send': {
+      managers.conversations.send(action.id, action.query, action.context);
+      return;
+    }
     case 'cancel': { managers.conversations.cancel(action.id); return; }
     case 'openFiles': { managers.conversations.openFiles(action.id); return; }
     case 'launchAgent': { managers.conversations.launchAgent(action.id); return; }

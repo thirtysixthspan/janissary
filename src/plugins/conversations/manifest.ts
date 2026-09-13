@@ -10,6 +10,7 @@ export const conversationsManifest = {
   fileExtensions: {},
   command: 'conversations',
   notifications: ['conversations'],
+  defaultMenu: { label: 'Chat about this' },
   capabilities: [
     'openOrFocusTab',
     'updateTab',

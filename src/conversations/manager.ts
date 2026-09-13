@@ -62,7 +62,10 @@ export class ConversationsManager {
 
   create(id: string): boolean {
     if (this.conversations.has(id) || this.store.read(id)) return false;
-    const pair = availableConversationModels()[0];
+    const remembered = this.store.readLastUsedPair();
+    const pair = remembered && hasConversationModel(remembered)
+      ? remembered
+      : availableConversationModels()[0];
     if (!pair) throw new Error('No ACP conversation models configured.');
     const timestamp = this.now();
     this.conversations.set(id, {
@@ -96,9 +99,9 @@ export class ConversationsManager {
     this.changed();
   }
 
-  send(id: string, query: string): boolean {
+  send(id: string, query: string, context?: string): boolean {
     const conversation = this.get(id);
-    return conversation ? this.responder.send(conversation, query) : false;
+    return conversation ? this.responder.send(conversation, query, context) : false;
   }
 
   cancel(id: string): boolean {
@@ -111,6 +114,7 @@ export class ConversationsManager {
     this.cancel(id);
     conversation.pair = pair;
     if (conversation.turns.length > 0) this.store.write(conversation);
+    this.store.writeLastUsedPair(pair);
     this.changed();
     return true;
   }

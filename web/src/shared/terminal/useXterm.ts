@@ -5,6 +5,7 @@ import type { JanusClient } from '../../ws';
 import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal-keys';
 import { osc52ClipboardText } from './terminal-osc52';
 import { copyText } from '../system-clipboard';
+import { registerTerminalSelection, unregisterTerminalSelection } from './terminal-selection';
 
 type UseXtermOptions = {
   ptyId: string;
@@ -35,6 +36,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
       macOptionClickForcesSelection: true,
     });
     termRef.current = term;
+    const container = containerRef.current;
+    if (container) registerTerminalSelection(container, term);
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(containerRef.current!);
@@ -90,6 +93,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
 
     return () => {
       termRef.current = null; detach(); onInput.dispose(); osc52.dispose(); ro.disconnect(); term.dispose();
+      if (container) unregisterTerminalSelection(container);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter; setup callbacks apply per PTY/client
   }, [ptyId, client]);

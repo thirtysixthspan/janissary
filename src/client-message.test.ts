@@ -53,6 +53,7 @@ describe('isClientMessage', () => {
 
     expect(methodsByMode.result?.map(([method]) => method)).toEqual([
       'complete',
+      'defaultMenuSelectionAction',
       'deleteFileNavigatorItems',
       'editorPersonas',
       'fileNavigatorOpeners',

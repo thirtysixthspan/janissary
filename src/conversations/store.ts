@@ -67,6 +67,7 @@ export class ConversationStore {
   private readonly claudeJson: string;
   private readonly writeFile: typeof atomicWriteFile;
   private summaries: Map<string, ConversationSummaryView> | undefined;
+  private lastUsedPair: ConversationModelPair | undefined;
   private warned = new Set<string>();
 
   constructor(options: StoreOptions = {}) {
@@ -79,6 +80,24 @@ export class ConversationStore {
   list(): ConversationSummaryView[] {
     this.summaries ??= this.scan();
     return [...this.summaries.values()].toSorted((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  readLastUsedPair(): ConversationModelPair | undefined {
+    if (this.lastUsedPair === undefined) {
+      try {
+        const parsed: unknown = JSON.parse(readFileSync(this.lastUsedFile(), 'utf8'));
+        this.lastUsedPair = isPair(parsed) ? parsed : undefined;
+      } catch {
+        this.lastUsedPair = undefined;
+      }
+    }
+    return this.lastUsedPair;
+  }
+
+  writeLastUsedPair(pair: ConversationModelPair): void {
+    mkdirSync(this.root, { recursive: true });
+    this.writeFile(this.lastUsedFile(), `${JSON.stringify(pair, null, 2)}\n`);
+    this.lastUsedPair = pair;
   }
 
   read(id: string): Conversation | undefined {
@@ -126,6 +145,10 @@ export class ConversationStore {
 
   private file(id: string): string {
     return path.join(this.directory(id), 'conversation.json');
+  }
+
+  private lastUsedFile(): string {
+    return path.join(this.root, 'last-used-model.json');
   }
 
   private scan(): Map<string, ConversationSummaryView> {

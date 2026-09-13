@@ -355,4 +355,66 @@ describe('ConversationsManager', () => {
     expect(session.kill).toHaveBeenCalledOnce();
     expect(existsSync(directory)).toBe(true);
   });
+
+  it('restores a nondefault remembered pair in new conversations before and after restart', () => {
+    const seeded = fixture();
+    const models = seeded.manager.view().models;
+    const initial = models[0];
+    const remembered = models.find((pair) => pair.harness !== initial.harness || pair.model !== initial.model)!;
+    try {
+      expect(remembered).toBeDefined();
+      expect(remembered).not.toEqual(initial);
+      seeded.manager.create('first');
+      expect(seeded.manager.view().windows[0].pair).toEqual(initial);
+      expect(seeded.manager.selectModel('first', remembered)).toBe(true);
+      seeded.manager.create('second');
+      expect(seeded.manager.view().windows.find((window) => window.id === 'second')?.pair)
+        .toEqual(remembered);
+    } finally {
+      seeded.manager.dispose();
+    }
+    const restarted = fixture();
+    try {
+      restarted.manager.create('third');
+      expect(restarted.manager.view().windows[0].pair).toEqual(remembered);
+    } finally {
+      restarted.manager.dispose();
+    }
+  });
+
+  it('falls back to the first available model when the remembered pair is retired', () => {
+    new ConversationStore({ home }).writeLastUsedPair({ harness: 'opencode', model: 'retired/model-0' });
+    const { manager } = fixture();
+    try {
+      manager.create('first');
+      expect(manager.view().windows[0].pair).toEqual(manager.view().models[0]);
+    } finally {
+      manager.dispose();
+    }
+  });
+
+  it('persists every successful selection and leaves the remembered pair unchanged on rejection', () => {
+    const { manager, store } = fixture();
+    const write = vi.spyOn(store, 'writeLastUsedPair');
+    try {
+      manager.create('first');
+      const models = manager.view().models;
+      const initial = models[0];
+      const different = models.find((pair) => pair.harness !== initial.harness || pair.model !== initial.model)!;
+      expect(different).toBeDefined();
+      expect(different).not.toEqual(initial);
+      for (const [index, pair] of [initial, different, different].entries()) {
+        expect(manager.selectModel('first', pair)).toBe(true);
+        expect(write).toHaveBeenCalledTimes(index + 1);
+        expect(write).toHaveBeenLastCalledWith(pair);
+        expect(new ConversationStore({ home }).readLastUsedPair()).toEqual(pair);
+      }
+      expect(manager.selectModel('missing', initial)).toBe(false);
+      expect(manager.selectModel('first', { harness: 'opencode', model: 'retired/model-0' })).toBe(false);
+      expect(write).toHaveBeenCalledTimes(3);
+      expect(new ConversationStore({ home }).readLastUsedPair()).toEqual(different);
+    } finally {
+      manager.dispose();
+    }
+  });
 });
