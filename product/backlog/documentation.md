@@ -2,8 +2,6 @@
 
 ## ready
 
-* sandbox (3/10) — `documentation/user-documentation/advanced-agents/workspacing.md` covers workspace isolation well; 2 of 14 facts are missing and none are wrong. Missing: that the sandbox carves in read access to the Janissary install root, which is what lets a shipped task and `$janissary/scripts/run.mjs` run from inside a workspaced tab (added with the `$janissary` task work); and the two isolation notices verbatim — `workspace isolation off: sandboxWorkspaces disabled in config` and `workspace isolation off: sandbox-exec unavailable` — which the page paraphrases as "a one-line notice" even though those are the strings a reader searches for. Ground truth is `product/specs/sandbox.md` and `src/sandbox/install-reads.ts`. Fix by adding the two message strings to the existing isolation paragraph in `workspacing.md` and one sentence on the install-root carve-in, cross-linked from `command-bar/tasks.md`.
-
 * cli (3/10) — `documentation/user-documentation/getting-started/startup.md` documents the project-directory argument, all five flags, and `janus stop`; 3 of 14 facts are missing and none are wrong. Missing: a commands table naming `janus init [<project-dir>]` and `janus remote-serve [<project-dir>]` alongside `janus stop` (both are documented elsewhere — `workflows/creating-a-new-project.md` and `advanced-agents/remote-agents.md` — but a reader looking up the CLI never sees them listed); that more than one positional argument, and a `<project-dir>` that does not exist or is not a directory, are rejected before anything starts; and that usage errors exit with code 2. Ground truth is `product/specs/cli.md` and `bin/janus.mjs`. Fix by adding a short commands table to `startup.md` that cross-links the two existing pages, and extending the existing usage-error sentence.
 
 ## development
@@ -15,6 +13,7 @@
 
 ## resolved
 
+* sandbox — documented in documentation/user-documentation/advanced-agents/workspacing.md, documentation/user-documentation/command-bar/tasks.md (removed 2026-09-13)
 * remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-09-13)
 * application-themes — documented in documentation/user-documentation/command-bar/commands.md (removed 2026-09-13)
 * task-picker — documented in documentation/user-documentation/command-bar/tasks.md, help.md (removed 2026-09-13)

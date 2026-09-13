@@ -30,7 +30,7 @@ Picking a **Project** task inserts `execute ./ai/tasks/<path>`. Picking a **Jani
 
 ## `$janissary`
 
-`$janissary` is an environment variable set on every process the app spawns — a tab's shell, a harness terminal, an agent connection, and anything those start in turn. It holds the install root of the Janissary that spawned the process, so a command built around it resolves correctly no matter where that process ends up running: inside a sandboxed workspace that can't see an arbitrary absolute path, or on a remote machine where the installation that matters is the one running there, not the one your browser is connected to.
+`$janissary` is an environment variable set on every process the app spawns — a tab's shell, a harness terminal, an agent connection, and anything those start in turn. It holds the install root of the Janissary that spawned the process, so a command built around it resolves correctly no matter where that process ends up running: inside a sandboxed workspace that can't see an arbitrary absolute path, or on a remote machine where the installation that matters is the one running there, not the one your browser is connected to. Inside a [sandboxed workspace](/user-documentation/advanced-agents/workspacing), the installation's `ai/` and `scripts/` directories stay readable specifically so a Janissary task and the `run.mjs` commands it runs still work. The rest of the installation stays off limits.
 
 ## Building a multi-stage workflow
 
