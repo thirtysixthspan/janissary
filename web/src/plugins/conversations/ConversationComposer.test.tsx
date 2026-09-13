@@ -9,6 +9,7 @@ function renderComposer(overrides: {
   deleted?: boolean;
   active?: boolean;
   initialQuery?: string;
+  onConsumeDraft?: () => void;
 } = {}) {
   const onSend = vi.fn();
   const rendered = render(
@@ -18,6 +19,7 @@ function renderComposer(overrides: {
       deleted={overrides.deleted ?? false}
       active={overrides.active ?? true}
       initialQuery={overrides.initialQuery}
+      onConsumeDraft={overrides.onConsumeDraft}
       onSend={onSend}
     />,
   );
@@ -25,6 +27,38 @@ function renderComposer(overrides: {
 }
 
 describe('ConversationComposer', () => {
+  it('acknowledges a captured draft once after mount, including under StrictMode', () => {
+    const onConsumeDraft = vi.fn(() => {
+      expect(screen.getByLabelText('Message')).toHaveValue('selection');
+    });
+    const onSend = vi.fn();
+    const rendered = render(<React.StrictMode>
+      <ConversationComposer history={[]} streaming={false} deleted={false} active={true}
+        initialQuery="selection" onSend={onSend} onConsumeDraft={onConsumeDraft} />
+    </React.StrictMode>);
+    expect(onConsumeDraft).toHaveBeenCalledOnce();
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'edited selection' } });
+    const replacement = vi.fn();
+    rendered.rerender(<React.StrictMode>
+      <ConversationComposer history={[]} streaming={false} deleted={false} active={true}
+        onSend={onSend} onConsumeDraft={replacement} />
+    </React.StrictMode>);
+    expect(replacement).not.toHaveBeenCalled();
+    expect(onSend).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Message')).toHaveValue('edited selection');
+  });
+
+  it('does not acknowledge a draft that was absent when the composer mounted', () => {
+    const onConsumeDraft = vi.fn();
+    const { rendered, onSend, input } = renderComposer({ onConsumeDraft });
+    rendered.rerender(<ConversationComposer
+      history={[]} streaming={false} deleted={false} active={true}
+      initialQuery="late selection" onSend={onSend} onConsumeDraft={onConsumeDraft}
+    />);
+    expect(onConsumeDraft).not.toHaveBeenCalled();
+    expect(input).toHaveValue('');
+  });
+
   it('sends the trimmed query on Enter and clears the input', () => {
     const { onSend, input } = renderComposer();
     fireEvent.change(input, { target: { value: '  what changed?  ' } });

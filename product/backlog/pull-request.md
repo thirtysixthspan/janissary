@@ -1,16 +1,5 @@
 # pull-request
 
-* Preserve the selected draft when conversation updates arrive before the new composer mounts.
-
-Existing Issue: The conversation notification handler replaces the entire tab payload without draftQuery, so a notification received while the client plugin is still loading can erase the selection before the composer's one-time initializer reads it. Severity: 7/10
-
-Existing Risk: 6/10 - Opening two chats while the conversations client chunk is loading, or receiving another conversation update before a new composer mounts, can leave the first new chat empty and require the user to recover the original selection.
-
-Proposal Risk: 2/10 - Retaining an initial draft longer could resurrect stale text if consumption or tab-close cleanup is missed, so delayed-mount and close/reopen coverage must pin its lifetime.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: preserve initial chat drafts through notifications before composer mount". In src/plugins/conversations/activate.ts, retain each new tab's initial draft as transient per-instance state and include it when notify rebuilds that tab's payload until the client has consumed it; add a narrow acknowledgement intent after the composer captures its initial value, and clear the retained value on acknowledgement, sending, reopening a closed conversation, and plugin disposal, pruning closed instance keys during notifications. Keep the draft out of ConversationStore and preserve the existing one-time initialization in web/src/plugins/conversations/ConversationComposer.tsx. Trace the acknowledgement through web/src/plugins/conversations/ConversationTab.tsx and the plugin intent validation. Add server coverage in src/plugins/conversations/activate.test.ts for creation followed by an unrelated conversation notification before acknowledgement, plus consumption and close/reopen behavior. Add a delayed-loader regression using the lifecycle fixture in web/src/plugins/PluginTabLayer.test.tsx: receive a draft-bearing snapshot, receive an updated snapshot before the conversations component mounts, then resolve the loader and verify the selection appears unsent. Existing composer tests cover preserving edited text after mount but do not cover this pre-mount race.
-
-
 * Preserve the keyboard-selected action when the contributed menu entry arrives asynchronously.
 
 Existing Issue: The default menu prepends Chat about this after resolution while ContextMenu tracks keyboard selection by numeric index, so the same selected index changes from Paste to Copy or from Copy to Chat about this when the reply arrives. Severity: 6/10

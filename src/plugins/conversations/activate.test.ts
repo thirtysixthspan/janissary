@@ -24,10 +24,14 @@ function fixture(data: ConversationsView = DATA) {
   const updated: Array<{ key: string; value: TabPluginTabUpdate }> = [];
   const docks: Array<{ key: string; dock: 'left' | 'right' | null }> = [];
   const actions: TabPluginTopicAction[] = [];
+  const live = new Map<string, TabPluginPayload>();
   let current = data;
   const capabilities = {
     openOrFocusTab: (key: string, factory: () => TabPluginPayload) => {
-      opened.push({ key, value: factory() });
+      if (live.has(key)) return;
+      const value = factory();
+      live.set(key, value);
+      opened.push({ key, value });
     },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => {
       updated.push({ key, value: factory() });
@@ -48,7 +52,7 @@ function fixture(data: ConversationsView = DATA) {
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { actions, capabilities, docks, opened, updated };
+  return { actions, capabilities, docks, opened, updated, live, data: () => current };
 }
 
 describe('conversations plugin command', () => {
@@ -101,6 +105,131 @@ describe('conversations plugin default-menu entry', () => {
     const value = fixture();
     activate().command?.('', value.capabilities);
     expect(value.opened[0].value.payload).not.toHaveProperty('draftQuery');
+  });
+});
+
+describe('initial conversation draft lifetime', () => {
+  function draftFixture() {
+    const value = fixture();
+    const plugin = activate();
+    const create = (draft: string) => {
+      plugin.defaultMenuAction?.(draft, value.capabilities);
+      return value.opened.at(-1)!;
+    };
+    const notify = () => plugin.notify?.({
+      topic: 'conversations', data: value.data(), tabs: [...value.live.keys()],
+    }, value.capabilities);
+    const run = (intent: string, payload: unknown, tabPayload: unknown) => plugin.intent({
+      tab: 'conversation-tab', intent, payload, tabPayload,
+    }, value.capabilities);
+    return { ...value, plugin, create, notify, run };
+  }
+
+  it('preserves separate selections through notifications before either composer mounts', () => {
+    const value = draftFixture();
+    const first = value.create('first selection\nwith a second line');
+    value.notify();
+    const second = value.create('second selection');
+    value.notify();
+    expect(value.updated.at(-2)).toMatchObject({
+      key: first.key, value: { payload: { draftQuery: 'first selection\nwith a second line' } },
+    });
+    expect(value.updated.at(-1)).toMatchObject({
+      key: second.key, value: { payload: { draftQuery: 'second selection' } },
+    });
+    expect(value.actions.every((action) => action.action === 'create')).toBe(true);
+  });
+
+  it('consumes only the acknowledged draft immediately and on subsequent notifications', () => {
+    const value = draftFixture();
+    const first = value.create('first selection');
+    const second = value.create('second selection');
+    expect(value.run('consume-draft', {}, first.value.payload)).toBeNull();
+    expect(value.updated.at(-1)?.key).toBe(first.key);
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    const count = value.updated.length;
+    expect(value.run('consume-draft', {}, first.value.payload)).toBeNull();
+    expect(value.updated).toHaveLength(count);
+    value.notify();
+    expect(value.updated.at(-2)?.value.payload).not.toHaveProperty('draftQuery');
+    expect(value.updated.at(-1)).toMatchObject({
+      key: second.key, value: { payload: { draftQuery: 'second selection' } },
+    });
+    expect(value.actions).toHaveLength(2);
+  });
+
+  it('rejects malformed and list-tab acknowledgements without dropping the draft', () => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    expect(() => value.run('consume-draft', { query: 'selection' }, first.value.payload))
+      .toThrow(new TabPluginRejection('invalid consume-draft payload'));
+    expect(() => value.run('consume-draft', {}, { kind: 'list', entries: [] }))
+      .toThrow(new TabPluginRejection('invalid consume-draft payload'));
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
+  });
+
+  it('clears the pending draft on a valid send, preserving it after an invalid send', () => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    expect(() => value.run('send', {}, first.value.payload))
+      .toThrow(new TabPluginRejection('invalid send payload'));
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
+    value.run('send', { query: 'edited selection' }, first.value.payload);
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    expect(value.actions.at(-1)).toEqual({
+      topic: 'conversations', action: 'send', id: first.key, query: 'edited selection',
+    });
+  });
+
+  it.each(['list', 'command'])('discards an unconsumed draft when a closed tab reopens via %s', (via) => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    value.live.delete(first.key);
+    if (via === 'list') {
+      value.run('open', { id: first.key }, { kind: 'list', entries: [] });
+    } else {
+      value.plugin.command?.('New conversation', value.capabilities);
+    }
+    expect(value.opened.at(-1)?.key).toBe(first.key);
+    expect(value.opened.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+  });
+
+  it('retains the draft when opening only focuses its existing tab', () => {
+    const value = draftFixture();
+    const first = value.create('selection');
+    value.run('open', { id: first.key }, { kind: 'list', entries: [] });
+    value.notify();
+    expect(value.opened).toHaveLength(1);
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
+  });
+
+  it('prunes closed instance drafts when another conversation notification arrives', () => {
+    const value = draftFixture();
+    const first = value.create('closed selection');
+    const second = value.create('open selection');
+    value.live.delete(first.key);
+    value.notify();
+    value.live.set(first.key, first.value);
+    value.notify();
+    expect(value.updated.at(-2)).toMatchObject({
+      key: second.key, value: { payload: { draftQuery: 'open selection' } },
+    });
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+  });
+
+  it('releases every pending draft on idempotent plugin disposal', () => {
+    const value = draftFixture();
+    value.create('selection');
+    value.plugin.dispose?.();
+    value.plugin.dispose?.();
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
   });
 });
 

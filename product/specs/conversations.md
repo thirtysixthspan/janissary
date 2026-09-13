@@ -40,6 +40,8 @@ The last pair any conversation's selector chose is remembered on its own, across
 
 A conversation opened through the default menu's **Chat about this** entry starts with the selection pasted into the message input, unsent, as if typed. Adding a question around it — or editing it — is the user's act; Enter sends. If the tab closes without sending, the pasted text is gone and nothing about it was saved.
 
+The selection survives conversation updates while the new tab is still loading, including opening another conversation before its message input appears. Each tab receives its own selection once. Later updates preserve edits without restoring the original text, and reopening a closed conversation does not bring its discarded selection back.
+
 ### The message input
 
 The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.
