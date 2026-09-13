@@ -1,16 +1,5 @@
 # pull-request
 
-* Deliver a remembered-model test that distinguishes restoration from the default model fallback.
-
-Existing Issue: The new creation test remembers the same pair that creation already defaults to, while the restart test reads only the store and never creates a conversation with its nondefault remembered pair. Severity: 4/10
-
-Existing Risk: 4/10 - Removing the remembered-pair branch from conversation creation would still satisfy both new tests, allowing the feature's model-selection promise to regress unnoticed.
-
-Proposal Risk: 1/10 - Tests tied to an incidental catalog ordering can fail after a catalog update, so choose distinct available pairs explicitly and assert the fixture's distinction.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: prove new conversations restore a nondefault remembered model". In src/conversations/manager.test.ts, choose a catalogued pair different from the first available model, select it successfully, then create another conversation in the same manager and assert that pair is used. Dispose the manager, construct a fresh fixture using the same storage root, create a new conversation, and assert the same nondefault pair again. Preserve the retired-model fallback case and assert that unsuccessful selectModel calls do not rewrite the remembered pair. Observe the persistence write after each successful selection rather than only the final stored value, and dispose every new manager fixture to release its bus subscription. The existing session-switch and persistence tests must retain their behavior; no model-selection implementation change is needed to make the intended assertions meaningful.
-
-
 * Reconcile the plan's draft-carrying create contract with the implementation's payload-only draft transport.
 
 Existing Issue: The plugin API adds query to the conversations create action as planned, but the contributor never supplies it, the topic dispatcher ignores it, and ConversationsManager.create still accepts only an id. Severity: 4/10
