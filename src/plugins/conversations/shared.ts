@@ -87,6 +87,7 @@ export function isConversationsPayload(value: unknown): value is ConversationsPa
     return Array.isArray(value.entries) && value.entries.every((entry) => isSummary(entry));
   }
   return value.kind === 'conversation'
+    && (value.draftQuery === undefined || typeof value.draftQuery === 'string')
     && isWindow(value.conversation)
     && Array.isArray(value.models)
     && value.models.every((pair) => isPair(pair));

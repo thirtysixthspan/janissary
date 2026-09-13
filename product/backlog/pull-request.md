@@ -1,16 +1,5 @@
 # pull-request
 
-* Restore the payload type boundary for the newly introduced conversation draft field.
-
-Existing Issue: isConversationsPayload claims to validate ConversationTabPayload without checking draftQuery, so it accepts arrays, objects, numbers, and null where the new composer initializer expects an optional string. Severity: 4/10
-
-Existing Risk: 4/10 - A malformed plugin-produced draft can pass both host and client payload validation and reach text-input code under an incorrect string type, turning a payload error into a rendering or submission failure.
-
-Proposal Risk: 1/10 - Tightening the optional-field guard could reject previously tolerated malformed payloads, which explicit valid and invalid payload fixtures make visible.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: validate draftQuery in the conversation payload guard". Extend isConversationsPayload in src/plugins/conversations/shared.ts so a conversation payload permits draftQuery only when absent or a string, preserving empty strings and the existing list-payload branch. Add a colocated src/plugins/conversations/shared.test.ts covering absent, empty, multiline, and malformed draft values alongside otherwise valid conversation payloads. The guard is reused by src/plugins/context.ts through activation.isPayload and by web/src/plugins/conversations/index.tsx through the client registry, so retain that shared validation boundary rather than adding casts or coercion inside ConversationComposer. Verify that the existing plugin activation and composer tests still accept correctly formed drafts and that malformed drafts are rejected before the input mounts.
-
-
 * Correct the pull request description's macOS terminal-selection gesture.
 
 Existing Issue: The terminal behavior example says Shift-click selects harness output on macOS, contradicting both the description's later Option-click instruction and the configured xterm selection gesture. Severity: 2/10

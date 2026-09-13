@@ -65,6 +65,27 @@ afterEach(() => {
 });
 
 describe('PluginTabLayer lazy lifecycle', () => {
+  it('rejects a malformed conversation draft before mounting the message input', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    registry.set('conversations', clientPlugin(1, () => import('./conversations/index')));
+    const fixture = client();
+    const view = tab('conversations');
+    view.plugin!.payload = {
+      kind: 'conversation', draftQuery: 42,
+      conversation: {
+        id: 'first', title: 'New conversation', turns: [], hasOlder: false,
+        pair: { harness: 'claude', model: 'claude-sonnet' },
+      },
+      models: [{ harness: 'claude', model: 'claude-sonnet' }],
+    };
+    render(<PluginTabLayer {...properties(view, fixture.value)} />);
+    await waitFor(() => { expect(fixture.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'pluginFailed', params: { tab: 'conversations', reason: 'invalid plugin payload' },
+    }); });
+    expect(screen.queryByLabelText('Message')).not.toBeInTheDocument();
+    expect(fixture.request).not.toHaveBeenCalled();
+  });
+
   it('captures a retained conversation draft from an updated snapshot after a delayed load', async () => {
     let release!: (module: typeof ConversationsEntry) => void;
     // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
