@@ -15,6 +15,8 @@ When neither entry applies — a right-click on a surface with nothing selected 
 
 ### A contributed entry
 
+Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
+
 Disabled plugins contribute no entries to newly opened menus. An entry offered before its plugin is disabled cannot run afterward. A plugin that has not yet been activated can still offer its declared action without loading until the action runs.
 
 When an entry arrives while the menu is open, the highlighted action stays selected as the entries move. If that action disappears, selection moves to the first remaining entry. Enter activates the highlighted action, and arrow navigation continues from its current position.

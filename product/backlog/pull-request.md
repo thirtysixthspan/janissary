@@ -1,16 +1,5 @@
 # pull-request
 
-* Deliver the plan's deferred-response regression tests for the default menu.
-
-Existing Issue: The new next-menu test waits for the first contribution before closing and uses immediately resolved promises, leaving the plan's close-before-reply and out-of-order-reply cases untested. Severity: 4/10
-
-Existing Risk: 4/10 - A future change can remove or misplace the generation guard and install stale menu contributions without failing the new tests.
-
-Proposal Risk: 1/10 - An asynchronous test that does not await all controlled resolutions can pass prematurely, so each reply and resulting menu state must be settled explicitly.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: add the planned default-menu stale-response regression tests". Extend web/src/context-menu/DefaultContextMenu.test.tsx with manually controlled promises modeled on web/src/file-navigator/useSelectionAction.test.ts. Cover opening and dismissing a menu before its request resolves, and opening two menus whose requests resolve in reverse order with distinguishable results and selection text. Assert that a dismissed menu stays closed, the newest result remains installed, and activation sends only the newest selection. Include a claimed surface with a client mock and verify it causes no contribution request. Retain the existing ordinary resolve/run and clear-between-menus tests; these additions fulfill the specific stale-reply cases named in product/plans/complete/chat-about-this.md rather than assuming an immediate Promise.resolve exercises them.
-
-
 * Deliver a remembered-model test that distinguishes restoration from the default model fallback.
 
 Existing Issue: The new creation test remembers the same pair that creation already defaults to, while the restart test reads only the store and never creates a conversation with its nondefault remembered pair. Severity: 4/10

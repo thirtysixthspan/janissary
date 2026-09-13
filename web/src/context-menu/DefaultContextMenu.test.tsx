@@ -47,6 +47,59 @@ afterEach(() => {
 });
 
 describe('DefaultContextMenu', () => {
+  it('stays closed when dismissed before its contribution reply resolves', async () => {
+    stubSelection('dismissed selection');
+    const reply = deferredContribution();
+    const client = { request: vi.fn(() => reply.promise), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    expect(client.request).toHaveBeenCalledOnce();
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await act(async () => { reply.resolve({ label: 'Chat about this' }); await reply.promise; });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('retains the newest contribution when two menu replies arrive in reverse order', async () => {
+    const first = deferredContribution();
+    const second = deferredContribution();
+    const client = {
+      request: vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise),
+      send: vi.fn(),
+    };
+    render(<DefaultContextMenu client={client as never} />);
+    const element = field();
+    stubSelection('old selection');
+    rightClick(element);
+    stubSelection('new selection');
+    rightClick(element);
+    expect(client.request).toHaveBeenNthCalledWith(1, {
+      method: 'defaultMenuSelectionAction', params: { selection: 'old selection' },
+    });
+    expect(client.request).toHaveBeenNthCalledWith(2, {
+      method: 'defaultMenuSelectionAction', params: { selection: 'new selection' },
+    });
+    await act(async () => { second.resolve({ label: 'Chat about this' }); await second.promise; });
+    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    await act(async () => { first.resolve({ label: 'Stale action' }); await first.promise; });
+    expect(labels()).toEqual(['Chat about this', 'Copy', 'Paste']);
+    fireEvent.click(screen.getByText('Chat about this'));
+    expect(client.send).toHaveBeenCalledExactlyOnceWith({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'new selection', action: 'Chat about this' },
+    });
+  });
+
+  it('makes no contribution request when a surface claims the menu', () => {
+    stubSelection('claimed selection');
+    const client = { request: vi.fn(), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field(), true);
+    expect(client.request).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
   it('keeps clipboard actions working on subsequent menus after a contribution becomes unavailable', async () => {
     stubSelection('selected text');
     const writeText = vi.fn().mockResolvedValue(undefined);
