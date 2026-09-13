@@ -137,6 +137,13 @@ describe('ConversationComposer', () => {
     expect(onSend).toHaveBeenCalledWith('what changed?');
   });
 
+  it('clears an unsent pasted draft on Escape', () => {
+    const { onSend, input } = renderComposer({ initialQuery: 'pasted selection' });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveValue('');
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it('keeps typed text when a payload update re-renders around it', () => {
     const { onSend, rendered, input } = renderComposer({ initialQuery: 'pasted selection' });
     fireEvent.change(input, { target: { value: 'edited draft' } });

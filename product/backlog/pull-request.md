@@ -1,6 +1,3 @@
-
-* Hitting escape in a conversation tab should clear the command bar of the text to be chatted about.
-
 * chat about this should be the last item onm the context menu and be seperated by a menu divider
 
 * the chat about this should be an option in the context menu for an editor tab. 
