@@ -36,7 +36,9 @@ type Properties = {
 // mirror the opener picker's, so the two read and respond the same way.
 export function ContextMenu({ groups, x, y, onClose }: Properties) {
   const items = groups.flat();
-  const [selected, setSelected] = useState(0);
+  const [selectedLabel, setSelectedLabel] = useState(items[0]?.label);
+  const selected = Math.max(0, items.findIndex((item) => item.label === selectedLabel));
+  if (items[selected]?.label !== selectedLabel) setSelectedLabel(items[selected]?.label);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { containerRef.current?.focus(); }, []);
@@ -49,8 +51,8 @@ export function ContextMenu({ groups, x, y, onClose }: Properties) {
   const onKeyDown = (e: React.KeyboardEvent) => {
     e.stopPropagation();
     switch (e.key) {
-    case 'ArrowUp': { e.preventDefault(); setSelected(Math.max(0, selected - 1)); break; }
-    case 'ArrowDown': { e.preventDefault(); setSelected(Math.min(items.length - 1, selected + 1)); break; }
+    case 'ArrowUp': { e.preventDefault(); setSelectedLabel(items[Math.max(0, selected - 1)]?.label); break; }
+    case 'ArrowDown': { e.preventDefault(); setSelectedLabel(items[Math.min(items.length - 1, selected + 1)]?.label); break; }
     case 'Enter': { e.preventDefault(); activate(selected); break; }
     case 'Escape': { e.preventDefault(); onClose(); break; }
     }

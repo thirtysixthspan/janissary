@@ -13,6 +13,14 @@ An entry that cannot act is left out rather than shown greyed out, so the menu h
 
 When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
 
+### A contributed entry
+
+When an entry arrives while the menu is open, the highlighted action stays selected as the entries move. If that action disappears, selection moves to the first remaining entry. Enter activates the highlighted action, and arrow navigation continues from its current position.
+
+A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection or, in a terminal, the selection that terminal itself holds — and renders as its own group above Copy and Paste. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.
+
+The terminal paragraph above is narrowed by that entry and only by it: the menu may read an xterm selection to answer **Chat about this**, but a terminal's menu still offers no Copy — the terminal's copy shortcut remains the way to copy from it, because the selection lives outside the page and Copy's contract is the page's text.
+
 ### Surfaces that define their own menu
 
 A surface with a menu of its own keeps it; the default never overrides or extends it. The file navigator's row menu is unchanged, including its own Copy and Paste, which act on files rather than on text. Its Copy additionally puts the copied paths on the system clipboard as text, so the default menu's Paste elsewhere inserts them (see [[file-navigator-tab]]).

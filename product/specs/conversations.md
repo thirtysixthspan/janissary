@@ -36,6 +36,12 @@ The tab opens with the most recent 20 turns and the newest turn visible. An acti
 
 The model selector sits with the metadata row's right-aligned controls, ahead of the folder, new-agent, and split buttons rather than beside the title. It offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 
+The last pair any conversation's selector chose is remembered on its own, across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
+
+A conversation opened through the default menu's **Chat about this** entry starts with the selection pasted into the message input, unsent, as if typed. Adding a question around it — or editing it — is the user's act; Enter sends. If the tab closes without sending, the pasted text is gone and nothing about it was saved.
+
+The selection survives conversation updates while the new tab is still loading, including opening another conversation before its message input appears. Each tab receives its own selection once. Later updates preserve edits without restoring the original text, and reopening a closed conversation does not bring its discarded selection back.
+
 ### The message input
 
 The tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query and clears the line; Shift+Enter starts a new line; Ctrl+Enter sends as well. The line grows as it fills and stops at the height the agent tab's does, scrolling beyond it. Up and Down walk back and forward through the queries already asked in this conversation, restoring whatever was being typed on the way past the newest one, and a query that extends what has been typed appears as ghost text that Right or End accepts. There is no send button: Enter is how a query is sent, as it always was.

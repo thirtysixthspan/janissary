@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type {
   ConversationsView,
   TabPluginActivation,
@@ -14,36 +13,13 @@ import {
   isSendIntent,
   type ConversationListPayload,
   type ConversationsPayload,
-  type ConversationTabPayload,
 } from './shared.js';
+import { ConversationTabs, dataFrom } from './tabs.js';
 
 const LIST_KEY = 'conversations';
 
 function listPayload(data: ConversationsView): ConversationListPayload {
   return { kind: 'list', entries: [...data.summaries] };
-}
-
-function conversationPayload(data: ConversationsView, id: string): ConversationTabPayload | undefined {
-  const conversation = data.windows.find((window) => window.id === id);
-  return conversation
-    ? { kind: 'conversation', conversation, models: [...data.models] }
-    : undefined;
-}
-
-function dataFrom(capabilities: TabPluginServerCapabilities): ConversationsView {
-  const data = capabilities.topicData('conversations');
-  if (!isConversationsData(data)) return capabilities.reportFailure('invalid conversations topic data');
-  return data;
-}
-
-function openConversation(
-  id: string,
-  capabilities: TabPluginServerCapabilities,
-): void {
-  capabilities.topicAction({ topic: 'conversations', action: 'load', id });
-  const payload = conversationPayload(dataFrom(capabilities), id);
-  if (!payload) return capabilities.rejectRequest(`Conversation "${id}" not found`);
-  capabilities.openOrFocusTab(id, () => ({ title: payload.conversation.title, payload }));
 }
 
 function parseDock(argument: string): 'left' | 'right' | null | undefined {
@@ -54,6 +30,7 @@ function parseDock(argument: string): 'left' | 'right' | null | undefined {
 }
 
 export function activate(): TabPluginActivation {
+  const tabs = new ConversationTabs();
   return {
     isPayload: isConversationsPayload,
     command: (argument, capabilities) => {
@@ -70,27 +47,27 @@ export function activate(): TabPluginActivation {
         (summary) => summary.title.toLowerCase() === title.toLowerCase(),
       );
       if (!match) return capabilities.rejectRequest(`No conversation matching "${title}".`);
-      openConversation(match.id, capabilities);
+      tabs.open(match.id, capabilities);
+    },
+    defaultMenuAction: (selection, capabilities) => {
+      tabs.create(selection, capabilities);
     },
     notify: (event, capabilities) => {
       if (event.topic !== 'conversations' || !isConversationsData(event.data)) return;
       for (const key of event.tabs) {
         if (key === LIST_KEY) {
           capabilities.updateTab(key, () => ({ payload: listPayload(event.data) }));
-          continue;
         }
-        const payload = conversationPayload(event.data, key);
-        if (payload) capabilities.updateTab(key, () => ({
-          title: payload.conversation.title, payload,
-        }));
       }
+      tabs.update(event.data, event.tabs, capabilities);
     },
     intent: (request, capabilities) => {
       if (!isConversationsPayload(request.tabPayload)) {
         return capabilities.reportFailure('invalid conversations tab payload');
       }
-      return runIntent(request.intent, request.payload, request.tabPayload, capabilities);
+      return runIntent(request.intent, request.payload, request.tabPayload, capabilities, tabs);
     },
+    dispose: () => { tabs.dispose(); },
     opener: {
       inline: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
       external: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
@@ -104,18 +81,15 @@ function runListIntent(
   intent: string,
   value: unknown,
   capabilities: TabPluginServerCapabilities,
+  tabs: ConversationTabs,
 ): null | never {
   if (intent === 'create') {
     if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid create payload');
-    const id = randomUUID();
-    capabilities.topicAction({ topic: 'conversations', action: 'create', id });
-    const payload = conversationPayload(dataFrom(capabilities), id);
-    if (!payload) return capabilities.reportFailure('created conversation is unavailable');
-    capabilities.openOrFocusTab(id, () => ({ title: 'New conversation', payload }));
+    tabs.create(undefined, capabilities);
     return null;
   }
   if (!isIdIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
-  if (intent === 'open') openConversation(value.id, capabilities);
+  if (intent === 'open') tabs.open(value.id, capabilities);
   else capabilities.topicAction({ topic: 'conversations', action: 'delete', id: value.id });
   return null;
 }
@@ -127,15 +101,16 @@ function runIntent(
   value: unknown,
   tab: ConversationsPayload,
   capabilities: TabPluginServerCapabilities,
+  tabs: ConversationTabs,
 ): null | never {
   if (LIST_INTENTS.has(intent)) {
     if (tab.kind !== 'list') return capabilities.rejectRequest(`invalid ${intent} payload`);
-    return runListIntent(intent, value, capabilities);
+    return runListIntent(intent, value, capabilities, tabs);
   }
   if (tab.kind !== 'conversation') {
     return capabilities.rejectRequest(`invalid ${intent} payload`);
   }
-  return runConversationIntent(intent, value, tab.conversation.id, capabilities);
+  return runConversationIntent(intent, value, tab.conversation.id, capabilities, tabs);
 }
 
 function runConversationIntent(
@@ -143,8 +118,14 @@ function runConversationIntent(
   value: unknown,
   id: string,
   capabilities: TabPluginServerCapabilities,
+  tabs: ConversationTabs,
 ): null | never {
   switch (intent) {
+    case 'consume-draft': {
+      if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid consume-draft payload');
+      tabs.consume(id, capabilities);
+      return null;
+    }
     case 'load-older': {
       if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid load-older payload');
       capabilities.topicAction({ topic: 'conversations', action: 'loadOlder', id });
@@ -152,6 +133,7 @@ function runConversationIntent(
     }
     case 'send': {
       if (!isSendIntent(value)) return capabilities.rejectRequest('invalid send payload');
+      tabs.consume(id, capabilities);
       capabilities.topicAction({ topic: 'conversations', action: 'send', id, query: value.query });
       return null;
     }

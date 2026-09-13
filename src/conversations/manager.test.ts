@@ -355,4 +355,41 @@ describe('ConversationsManager', () => {
     expect(session.kill).toHaveBeenCalledOnce();
     expect(existsSync(directory)).toBe(true);
   });
+
+  it('starts a new conversation on the remembered pair, falling back to the first available', () => {
+    const seeded = fixture();
+    seeded.manager.create('first');
+    expect(seeded.manager.view().windows[0].pair).toEqual(
+      expect.objectContaining({ model: 'claude-fable-5' }),
+    );
+    seeded.manager.selectModel('first', { harness: 'claude', model: 'claude-fable-5' });
+    const reopened = fixture();
+    reopened.manager.create('second');
+    expect(reopened.manager.view().windows[0].pair).toEqual(
+      { harness: 'claude', model: 'claude-fable-5' },
+    );
+
+    const staleStore = new ConversationStore({ home });
+    staleStore.writeLastUsedPair({ harness: 'opencode', model: 'retired/model-0' });
+    const stale = fixture();
+    stale.manager.create('third');
+    expect(stale.manager.view().windows[0].pair).toEqual(
+      expect.objectContaining({ model: 'claude-fable-5' }),
+    );
+  });
+
+  it('rewrites the remembered pair on every model selection and round-trips a restart', () => {
+    const first = fixture();
+    first.manager.create('first');
+    first.manager.selectModel('first', { harness: 'claude', model: 'claude-fable-5' });
+    first.manager.selectModel('first', { harness: 'opencode', model: 'opencode/big-pickle' });
+    expect(first.store.readLastUsedPair()).toEqual(
+      { harness: 'opencode', model: 'opencode/big-pickle' },
+    );
+
+    const second = fixture();
+    expect(second.store.readLastUsedPair()).toEqual(
+      { harness: 'opencode', model: 'opencode/big-pickle' },
+    );
+  });
 });

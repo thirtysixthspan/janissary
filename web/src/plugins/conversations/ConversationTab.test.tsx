@@ -51,6 +51,19 @@ function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0, c
 }
 
 describe('ConversationTab', () => {
+  it('acknowledges the initial draft without sending and keeps edits after consumption', () => {
+    const { value, intent } = capabilities();
+    const rendered = render(<ConversationTab
+      payload={{ ...payload(), draftQuery: 'selected text' }} capabilities={value}
+    />);
+    expect(screen.getByLabelText('Message')).toHaveValue('selected text');
+    expect(intent).toHaveBeenCalledExactlyOnceWith('consume-draft', {});
+    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'edited draft' } });
+    rendered.rerender(<ConversationTab payload={payload()} capabilities={value} />);
+    expect(screen.getByLabelText('Message')).toHaveValue('edited draft');
+    expect(intent).toHaveBeenCalledOnce();
+  });
+
   it('renders sanitized Markdown, streaming text, and failures in place', () => {
     const { value } = capabilities();
     const { container } = render(<ConversationTab

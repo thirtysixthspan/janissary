@@ -15,6 +15,53 @@ function menu(): HTMLElement {
 }
 
 describe('ContextMenu', () => {
+  it.each(['Copy', 'Paste'])('retains %s when groups and callbacks are rebuilt', (label) => {
+    const copy = vi.fn();
+    const paste = vi.fn();
+    const chat = vi.fn();
+    const groups = [[{ label: 'Copy', onActivate: copy }, { label: 'Paste', onActivate: paste }]];
+    const rendered = render(<ContextMenu groups={groups} x={10} y={10} onClose={vi.fn()} />);
+    if (label === 'Paste') fireEvent.keyDown(menu(), { key: 'ArrowDown' });
+    rendered.rerender(<ContextMenu groups={[
+      [{ label: 'Chat about this', onActivate: chat }],
+      [{ label: 'Copy', onActivate: () => copy() }, { label: 'Paste', onActivate: () => paste() }],
+    ]} x={10} y={10} onClose={vi.fn()} />);
+    expect(screen.getByText(label)).toHaveClass('selected');
+    fireEvent.keyDown(menu(), { key: 'Enter' });
+    expect(label === 'Copy' ? copy : paste).toHaveBeenCalledOnce();
+    expect(label === 'Copy' ? paste : copy).not.toHaveBeenCalled();
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it('selects the first remaining action after removal and does not restore the removed selection', () => {
+    const onClose = vi.fn();
+    const groups = makeGroups();
+    const rendered = render(<ContextMenu groups={groups} x={10} y={10} onClose={onClose} />);
+    fireEvent.keyDown(menu(), { key: 'ArrowDown' });
+    rendered.rerender(<ContextMenu groups={[[groups[1][0]]]} x={10} y={10} onClose={onClose} />);
+    expect(screen.getByText('Delete')).toHaveClass('selected');
+    rendered.rerender(<ContextMenu groups={groups} x={10} y={10} onClose={onClose} />);
+    expect(screen.getByText('Delete')).toHaveClass('selected');
+    fireEvent.keyDown(menu(), { key: 'ArrowUp' });
+    expect(screen.getByText('Open with')).toHaveClass('selected');
+    fireEvent.keyDown(menu(), { key: 'ArrowDown' });
+    fireEvent.keyDown(menu(), { key: 'ArrowDown' });
+    expect(screen.getByText('Delete')).toHaveClass('selected');
+    fireEvent.keyDown(menu(), { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('closes safely on Enter after every action disappears', () => {
+    const onClose = vi.fn();
+    const activate = vi.fn();
+    const rendered = render(<ContextMenu groups={makeGroups(activate)} x={10} y={10} onClose={onClose} />);
+    rendered.rerender(<ContextMenu groups={[]} x={10} y={10} onClose={onClose} />);
+    fireEvent.keyDown(menu(), { key: 'ArrowDown' });
+    fireEvent.keyDown(menu(), { key: 'Enter' });
+    expect(activate).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
   it('renders every item with a separator between groups', () => {
     const { container } = render(<ContextMenu groups={makeGroups()} x={10} y={10} onClose={() => {}} />);
     expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
