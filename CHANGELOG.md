@@ -2,6 +2,100 @@
 
 All notable changes to this project are documented here.
 
+## [0.14.0] - 2026-09-13
+
+### Features
+
+- a Chat about this entry in the default context menu (#1110)
+- report the errors the message bus catches out of its listeners (#1102)
+- disable GitHub syncing off the primary branch (#1082)
+- add a bundled PDF viewer tab plugin (#1076)
+- pause conversation-tab auto-scroll while reviewing earlier turns (#1079)
+- add ! and !! shorthand prefixes for shell commands (#1077)
+- copy file paths to the system clipboard (#1069)
+- add a default Copy/Paste menu for surfaces that define none (#1068)
+- open the feed in the right sidebar for an event with nowhere to land (#1061)
+- drop a dragged row into a harness tab to type its path (#1057)
+- run janissary's own scripts through $janissary/scripts (#1055)
+
+### Bug Fixes
+
+- drop unbuildable pdf-tab screenshot reference (#1112)
+- give file-navigator drag gestures one lifecycle (#1105)
+- bound retained terminal output in the WebSocket client (#1104)
+- deliver at most one scheduled harness command per tab per tick (#1103)
+- create files and directories in the file navigator without command injection (#1078)
+- wait for autofocus after load (#1074)
+- open file-navigator files without injecting a command into any tab's transcript (#1075)
+- honor a harness's OSC 52 clipboard write (#1070)
+- resolve plan questions before completion (#1073)
+- retain an editor tab's scroll position across tab switches (#1065)
+- restore text selection and copy in harness tabs (#1063)
+- report an unsupported file type in the notifications feed (#1060)
+- hand an unclaimed file type to the OS handler on `open external` (#1059)
+- keep a pull's refresh from collapsing the tree or restoring pre-pull rows (#1058)
+
+### Documentation
+
+- add commands table and usage-error facts to startup.md (#1119)
+- document sandbox isolation notices and install-dir carve-in (#1118)
+- fill remote-agents gaps on remote browsers, connections, and rooting (#1117)
+- clarify application theme scope in commands.md (#1116)
+- document task picker's two sources and $janissary (#1115)
+- document the primary-branch gate for editor git-sync (#1114)
+- document the app's right-click context menu (#1113)
+- refresh documentation gap candidates
+- plan Chat about this default menu entry for conversations (#1109)
+- plan disabling git-sync off the primary branch (#1080)
+- close the PDF viewer plan's open questions (#1072)
+- draft the PDF viewer plugin plan (#1071)
+- distinguish remote session termination from transport loss (#1067)
+- scope sleep-resume reconnect to peer-managed remote sessions (#1066)
+- draft the laptop sleep and resume survival plan (#1064)
+
+### Refactoring
+
+- simplify replay result construction (#1107)
+- extract PDF stage measurement and visible-page tracking into a hook (#1106)
+- hand the harness launch path the parsed launch record (#1101)
+- give the plugin contract a declared intent table (#1100)
+- declare the managers whose per-tab release the close walk performs (#1099)
+- move the search bar and transcript-search hook into the shared layer (#1098)
+- colocate the tab-nav matching module into the pickers feature (#1097)
+- move the path and match utilities into the shared layer (#1096)
+- import the shared markdown renderer from the plugin adapter (#1095)
+- extract the center pane-selection rules into center-panes.ts (#1094)
+- extract the conversation tab's pinning and model-pair rules into modules (#1093)
+- move the context-menu primitive into the shared layer (#1092)
+- move the status-window modules into the shared layer (#1091)
+- move the xterm terminal modules into the shared layer (#1090)
+- pass the shared port closures as one named record (#1088)
+- pin router priority with declared sample ownership (#1087)
+- compose the adapter surfaces through a typed record (#1086)
+
+### Chores
+
+- keep pull-request.md as a comment skeleton instead of deleting it (#1111)
+- log complexity hotspots
+- log react lifecycle and viewport organization debt
+- log scheduler and terminal buffering debt
+- log new technical debt findings
+- log react organization debt
+- log react organization debt
+- log new technical debt findings
+- record the image-size class rename as technical debt
+- ignore the harness's scheduled_tasks.lock (#1056)
+
+### Other
+
+- test(pdf): keep observer stubs until React cleanup completes (#1108)
+- test: cover PluginBody failure paths with a colocated suite (#1089)
+- test(monitor): cover teardown and reporting tab ownership (#1085)
+- style(pdf): satisfy the stylelint empty-line rules in pdf-text-layer.css (#1084)
+- test(pdf): stop the late-rejection case racing its own render call (#1083)
+- style(plugins): mark plugin header file sizes with plugin-size (#1081)
+- test(docs-screenshots): pin the playbook's runner spelling to $janissary/scripts/run.mjs (#1062)
+
 ## [0.13.1] - 2026-09-08
 
 ### Features
