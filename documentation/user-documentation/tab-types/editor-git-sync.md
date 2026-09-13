@@ -14,7 +14,7 @@ It's deliberately narrow: only paths you list are synced, nothing else, and ther
 
 ## Configuring which files are synced
 
-Which paths sync is controlled entirely by the `syncPaths` setting in `.janissary/config.json` (see [the app's configuration](/user-documentation/getting-started/startup#configuration)). There's no runtime command for it — edit the file directly:
+Which paths are eligible to sync is controlled entirely by the `syncPaths` setting in `.janissary/config.json` (see [the app's configuration](/user-documentation/getting-started/startup#configuration)). There's no runtime command for it — edit the file directly:
 
 ```json
 {
@@ -28,7 +28,22 @@ A fresh config already ships with `["product/backlog/", "product/plans/"]`, the 
 - **A directory path ending in `/`** — syncs every file under it, at any depth, e.g. `"product/backlog/"` covers `product/backlog/bugs.md` and anything nested further down.
 - **A `*` wildcard standing in for one path segment** — e.g. `"product/backlog/*"` covers files directly inside that directory but not a subdirectory of it, while `"product/plans/*/*"` covers files exactly two directories deep (matching the `draft`/`ready`/`complete`/`deferred` status folders under `product/plans/`).
 
-A file syncs if and only if its project-relative path matches one of these entries; there's no other way to turn syncing on or off for it.
+Matching `syncPaths` makes a file eligible, but it isn't enough on its own: a file only actually syncs while the checkout that governs it is confirmably on its repository's primary branch too (see the next section). There's no per-file toggle either way — both conditions are decided automatically.
+
+## Which checkout governs syncing
+
+<img class="agent-float" src="/agents/tahir-south.png" alt="" />
+
+A `syncPaths` match only takes effect while the checkout that governs the file is confirmably on that repository's primary branch — the detected default branch from `origin/HEAD`, or exact `master`/`main` membership when that can't be detected. A detached `HEAD`, a checkout outside any git repository, or any git failure all count as unconfirmable and disable syncing.
+
+The governing checkout is:
+
+- The [file navigator](/user-documentation/tab-types/file-navigator) tab's own root repository, for a file activated from that tree.
+- The app's launch directory, for any other open — a shell tab's `edit`, a profile restore, or a plugin opener.
+
+When the governing checkout is off its primary branch (or unconfirmable), the file opens as an ordinary editor tab at its real path instead: saves land in the branch's own working tree, nothing is committed or pushed, and there's no sync status icon. The missing icon is the only signal — nothing else calls out the difference.
+
+This decision is made once, when the file is opened. A tab that's already open keeps its sync behavior even if the governing checkout later switches branches; only the next time you open that file is affected.
 
 ## How the sync happens on save
 
