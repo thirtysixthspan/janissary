@@ -1,16 +1,5 @@
 # pull-request
 
-* Omit the default-menu contribution after its plugin has been disabled.
-
-Existing Issue: Default-menu resolution reads all host declarations without checking plugin status, so it keeps offering Chat about this after the conversations plugin is disabled even though the host refuses to activate it again. Severity: 5/10
-
-Existing Risk: 4/10 - Following a plugin failure, every fresh selection menu advertises an action that cannot open a conversation and repeatedly leads the user into the same failure.
-
-Proposal Risk: 1/10 - Filtering disabled plugins could accidentally exclude a merely unactivated plugin, which a declared-state resolution test would expose.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: suppress default-menu actions belonging to disabled plugins". In src/controller/plugin-adapter.ts, resolve contributions against eligible host records using src/plugins/host.ts statusFor, excluding disabled records while retaining declared and active records without triggering activation. Apply the same eligibility rule when running an action so a reply offered before a failure cannot dispatch the now-disabled contributor. Keep the existing unknown-label and multiple-contributor refusal rules in src/plugins/default-menu.ts. Add focused adapter coverage for declared, active, and disabled states and for disablement between resolve and run; use src/plugins/default-menu.test.ts for the existing activation and failure fixtures. Verify that a subsequent browser menu receives no Chat entry after disablement, while Copy and Paste continue to work under web/src/context-menu/DefaultContextMenu.test.tsx.
-
-
 * Deliver the plan's deferred-response regression tests for the default menu.
 
 Existing Issue: The new next-menu test waits for the first contribution before closing and uses immediately resolved promises, leaving the plan's close-before-reply and out-of-order-reply cases untested. Severity: 4/10

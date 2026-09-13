@@ -15,6 +15,8 @@ When neither entry applies — a right-click on a surface with nothing selected 
 
 ### A contributed entry
 
+Disabled plugins contribute no entries to newly opened menus. An entry offered before its plugin is disabled cannot run afterward. A plugin that has not yet been activated can still offer its declared action without loading until the action runs.
+
 When an entry arrives while the menu is open, the highlighted action stays selected as the entries move. If that action disappears, selection moves to the first remaining entry. Enter activates the highlighted action, and arrow navigation continues from its current position.
 
 A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection or, in a terminal, the selection that terminal itself holds — and renders as its own group above Copy and Paste. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.

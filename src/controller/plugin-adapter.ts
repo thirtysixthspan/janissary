@@ -25,13 +25,17 @@ function originOf(managers: Managers): { label: string; command: string } {
 }
 
 export function createPluginControllerAdapter(managers: Managers): PluginControllerAdapter {
+  const eligibleAction = () => defaultMenuActionFor(managers.plugins.declarations.filter((declaration) => {
+    const state = managers.plugins.statusFor(declaration.id)?.state;
+    return state === 'declared' || state === 'active';
+  }));
   return {
     defaultMenuSelectionAction: () => {
-      const match = defaultMenuActionFor(managers.plugins.declarations);
+      const match = eligibleAction();
       return match ? { label: match.label } : null;
     },
     runDefaultMenuSelectionAction: (selection, action) => {
-      const match = defaultMenuActionFor(managers.plugins.declarations);
+      const match = eligibleAction();
       if (!match || match.label !== action) return;
       void managers.plugins.runDefaultMenuAction(match.plugin, action, selection, originOf(managers));
     },

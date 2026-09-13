@@ -47,6 +47,30 @@ afterEach(() => {
 });
 
 describe('DefaultContextMenu', () => {
+  it('keeps clipboard actions working on subsequent menus after a contribution becomes unavailable', async () => {
+    stubSelection('selected text');
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const readText = vi.fn().mockResolvedValue('clipboard text');
+    vi.stubGlobal('navigator', { clipboard: { writeText, readText } });
+    const client = {
+      request: vi.fn().mockResolvedValueOnce({ label: 'Chat about this' }).mockResolvedValue(null),
+      send: vi.fn(),
+    };
+    render(<DefaultContextMenu client={client as never} />);
+    rightClick(field());
+    await screen.findByText('Chat about this');
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    await act(async () => { rightClick(field()); });
+    expect(labels()).toEqual(['Copy', 'Paste']);
+    fireEvent.click(screen.getByText('Copy'));
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('selected text');
+    await act(async () => { rightClick(field()); });
+    expect(labels()).toEqual(['Copy', 'Paste']);
+    await act(async () => { fireEvent.click(screen.getByText('Paste')); });
+    expect(readText).toHaveBeenCalledOnce();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
   it.each(['Copy', 'Paste'])('retains keyboard-selected %s when the contribution arrives', async (label) => {
     stubSelection('selected text');
     const writeText = vi.fn().mockResolvedValue(undefined);
