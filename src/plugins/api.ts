@@ -100,7 +100,7 @@ export type TabPluginTopicAction =
   // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
   // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
   | { topic: 'schedules'; action: 'focusOwner'; tab: string }
-  | { topic: 'conversations'; action: 'create'; id: string; query?: string }
+  | { topic: 'conversations'; action: 'create'; id: string }
   | { topic: 'conversations'; action: 'load'; id: string }
   | { topic: 'conversations'; action: 'loadOlder'; id: string }
   | { topic: 'conversations'; action: 'send'; id: string; query: string }

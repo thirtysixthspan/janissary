@@ -22,6 +22,8 @@ Deleting a row always asks for confirmation first. Confirming removes the conver
 
 A new tab is titled `New conversation`. Its first submitted query supplies the title: the first line, capped at 60 characters. Later queries do not rename it.
 
+Creating a conversation from the list opens an empty message input. Creating one through **Chat about this** fills that input with the selected text without submitting a query or adding a history turn.
+
 Double-clicking the title in the metadata row renames the conversation, the same interaction that renames a tab: an edit field replaces the name with its text selected, Enter or a click away commits, Escape cancels. A committed name is trimmed and capped at the same 60 characters, and committing a blank one changes nothing. The new name reaches the tab, the metadata row, and the conversation list together, because all three read the conversation's one name.
 
 A conversation the user has named keeps that name: the first query names only a conversation still called `New conversation`, so renaming a new conversation before asking anything is not undone a moment later. Cancelling a reply that named the conversation gives `New conversation` back, unless the conversation was renamed while that reply was streaming — a cancel undoes its own naming and never a name the user chose. Renaming is refused once the conversation is deleted, like every other control in that row.

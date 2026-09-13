@@ -92,9 +92,10 @@ describe('conversations plugin default-menu entry', () => {
   it('creates one fresh conversation and opens its tab with the selection pasted unsent', () => {
     const value = fixture();
     activate().defaultMenuAction?.('selected text', value.capabilities);
-    const created = value.actions[0];
-    expect(created).toMatchObject({ topic: 'conversations', action: 'create' });
     expect(value.opened).toHaveLength(1);
+    expect(value.actions).toEqual([{
+      topic: 'conversations', action: 'create', id: value.opened[0].key,
+    }]);
     expect(value.opened[0].value.title).toBe('New conversation');
     const payload = value.opened[0].value.payload as { kind: string; draftQuery?: string };
     expect(payload.draftQuery).toBe('selected text');
@@ -104,6 +105,22 @@ describe('conversations plugin default-menu entry', () => {
   it('leaves the payload untouched when no draft is pasted', () => {
     const value = fixture();
     activate().command?.('', value.capabilities);
+    expect(value.opened[0].value.payload).not.toHaveProperty('draftQuery');
+  });
+
+  it('creates from the list with an id-only action and no initial draft', () => {
+    const value = fixture();
+    activate().intent({
+      tab: 'conversations', intent: 'create', payload: {},
+      tabPayload: { kind: 'list', entries: DATA.summaries },
+    }, value.capabilities);
+    expect(value.opened).toHaveLength(1);
+    expect(value.actions).toEqual([{
+      topic: 'conversations', action: 'create', id: value.opened[0].key,
+    }]);
+    expect(value.opened[0].value.payload).toMatchObject({
+      kind: 'conversation', conversation: { id: value.opened[0].key, turns: [] },
+    });
     expect(value.opened[0].value.payload).not.toHaveProperty('draftQuery');
   });
 });

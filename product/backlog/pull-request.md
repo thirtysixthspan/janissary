@@ -1,16 +1,5 @@
 # pull-request
 
-* Reconcile the plan's draft-carrying create contract with the implementation's payload-only draft transport.
-
-Existing Issue: The plugin API adds query to the conversations create action as planned, but the contributor never supplies it, the topic dispatcher ignores it, and ConversationsManager.create still accepts only an id. Severity: 4/10
-
-Existing Risk: 4/10 - A caller following the newly declared create contract can supply a draft that is silently discarded, while the completed plan incorrectly describes a transport that does not exist.
-
-Proposal Risk: 1/10 - Removing the unused optional field could reveal another caller relying on it, which a repository-wide call-site review and type checking would expose.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1110: align the create action contract with payload-only conversation drafts". Preserve the payload-only design explicitly documented in the PR body: remove the unused query property from the conversations create variant in src/plugins/api.ts and revise product/plans/complete/chat-about-this.md wherever it promises query transport through the topic action or ConversationsManager.create. Describe the actual transient draft transport and its notification lifetime, keeping the no-persistence requirement intact. Update the corresponding planned activation-test assertion to verify draftQuery on the opened tab payload rather than on the create action. Review every conversations create call in src/plugins/conversations/activate.ts and src/plugins/topics.ts, and extend src/plugins/conversations/activate.test.ts to assert the id-only create action, the draft-bearing opened payload, and the ordinary list-create path with no draft. Do not leave a public field accepted and silently ignored.
-
-
 * Restore the payload type boundary for the newly introduced conversation draft field.
 
 Existing Issue: isConversationsPayload claims to validate ConversationTabPayload without checking draftQuery, so it accepts arrays, objects, numbers, and null where the new composer initializer expects an optional string. Severity: 4/10
