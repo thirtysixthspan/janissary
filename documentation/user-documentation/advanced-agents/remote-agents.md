@@ -48,6 +48,8 @@ Two things, both set up ahead of time:
 - `janus` on the remote account's `PATH`. Nothing is shipped over the connection, so the remote is a normal janissary install, not something Janissary uploads. Janissary runs `janus remote-serve` there through your own login shell, so a `janus` installed by a version manager such as nvm is found the same way it is when you SSH in and type the command yourself.
 - A git repository with an `origin` remote at the path you named, or above your SSH login directory when you named no path.
 
+A path you name is used exactly as given, with no walk upward from it. `on devbox:/tmp` fails with `/tmp is not a git repository.` rather than searching above `/tmp` for one.
+
 ## Sign in through the tab
 
 <img class="agent-float left" src="/agents/malik-south-west.png" alt="" />
@@ -64,6 +66,10 @@ Once the far side answers, the tab stops showing raw terminal output and starts 
 
 Isolation belongs to the remote too. It needs macOS, so a Linux host runs without it, and the notice you see in the tab is that machine's rather than yours. `--offline` only means something where the remote's isolation is active.
 
+## Browsers on a remote host
+
+`-b`/`--browser` on a remote tab starts the confined browser on the remote host instead of on yours, since that host is where the workspace it navigates lives. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser) for what the flag does and what it hands the harness. If that browser dies, you get the same notification and band on the tab a local browser's death gives you, but since only the remote saw what happened, a death with nothing else to report reads `e2e browser stopped on the remote host` instead of `e2e browser exited`.
+
 ## Push from a remote workspace
 
 <img class="agent-float" src="/agents/fariz-south.png" alt="" />
@@ -76,7 +82,7 @@ Your Claude, OpenCode, and Gemini tokens are forwarded the same way, which is wh
 
 ## Find the connections
 
-A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. Closing a shared SSH connection closes every agent and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
+A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connection close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every agent and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
 
 ## Browse and edit remote files
 
