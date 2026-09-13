@@ -10,6 +10,20 @@ function domSelectionText(): string {
   return globalThis.getSelection()?.toString() ?? '';
 }
 
+type ResolvedSelection = { text: string; source: 'dom' | 'editor' | 'terminal' };
+
+function resolveSelection(target: Element | null): ResolvedSelection {
+  const domText = domSelectionText();
+  if (domText) return { text: domText, source: 'dom' };
+  const editorText = editorSelectionText(target);
+  if (editorText) return { text: editorText, source: 'editor' };
+  return { text: terminalSelectionText(target), source: 'terminal' };
+}
+
+function isChatShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'i';
+}
+
 // Watches every right-click the app sees and decides whether the default menu answers it.
 //
 // A surface with a menu of its own has already called `preventDefault()` on the event by the time
@@ -31,13 +45,9 @@ export function useDefaultContextMenu(client?: JanusClient) {
     const onContextMenu = (event: MouseEvent) => {
       if (event.defaultPrevented) return;
       const clicked = event.target instanceof Element ? event.target : null;
-      const domText = domSelectionText();
-      const editorText = domText ? '' : editorSelectionText(clicked);
-      const terminalText = domText || editorText ? '' : terminalSelectionText(clicked);
-      const selectionText = domText || editorText || terminalText;
+      const selection = resolveSelection(clicked);
       const target = resolveDefaultMenuTarget(
-        clicked, document.activeElement, selectionText,
-        domText ? 'dom' : editorText ? 'editor' : terminalText ? 'terminal' : 'dom',
+        clicked, document.activeElement, selection.text, selection.source,
       );
       if (!target.selectionText && !target.pasteTarget) return;
       event.preventDefault();
@@ -53,8 +63,27 @@ export function useDefaultContextMenu(client?: JanusClient) {
       }
       setPending({ ...target, x: event.clientX, y: event.clientY });
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isChatShortcut(event) || typeof client?.request !== 'function') return;
+      const selection = resolveSelection(document.activeElement);
+      if (!selection.text) return;
+      event.preventDefault();
+      void client.request<DefaultMenuEntry | null>({
+        method: 'defaultMenuSelectionAction', params: { selection: selection.text },
+      }).then((entry) => {
+        if (!entry) return;
+        client.send({
+          method: 'runDefaultMenuSelectionAction',
+          params: { selection: selection.text, action: entry.label },
+        });
+      });
+    };
     document.addEventListener('contextmenu', onContextMenu);
-    return () => document.removeEventListener('contextmenu', onContextMenu);
+    globalThis.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu);
+      globalThis.removeEventListener('keydown', onKeyDown);
+    };
   }, [client]);
 
   // The menu holds the keyboard while it is open, so whatever had focus gets it back on the way

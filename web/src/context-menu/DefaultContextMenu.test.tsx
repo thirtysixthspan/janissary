@@ -183,6 +183,34 @@ describe('DefaultContextMenu', () => {
     expect(labels()).toEqual(['Copy']);
   });
 
+  it('runs Chat about this with Cmd+I for the current selection', async () => {
+    stubSelection('selected text');
+    const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    const event = new KeyboardEvent('keydown', { key: 'i', metaKey: true, bubbles: true, cancelable: true });
+    globalThis.dispatchEvent(event);
+    await act(async () => {});
+    expect(event.defaultPrevented).toBe(true);
+    expect(client.request).toHaveBeenCalledWith({
+      method: 'defaultMenuSelectionAction', params: { selection: 'selected text' },
+    });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'runDefaultMenuSelectionAction',
+      params: { selection: 'selected text', action: 'Chat about this' },
+    });
+  });
+
+  it('leaves Cmd+I alone when nothing is selected', () => {
+    stubSelection('');
+    const client = { request: vi.fn(), send: vi.fn() };
+    render(<DefaultContextMenu client={client as never} />);
+    const event = new KeyboardEvent('keydown', { key: 'i', ctrlKey: true, bubbles: true, cancelable: true });
+    globalThis.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+    expect(client.request).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
   it('opens nothing when a surface has already claimed the right-click', () => {
     stubSelection('selected text');
     render(<DefaultContextMenu />);
