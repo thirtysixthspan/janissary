@@ -21,6 +21,14 @@ By default each launch starts fresh: a single `janus` tab, with any state from t
 |---|---|
 | `<project-dir>` | Target directory to work against (default: current directory). |
 
+## Commands
+
+| Command | What it does |
+|---|---|
+| `janus stop [<project-dir>]` | Stop the running instance for a directory. See [Stopping the app](#stopping-the-app) below. |
+| `janus init [<project-dir>]` | Scaffold a new project's `ai/` and `product/` directories. See [Creating a new project](/user-documentation/workflows/creating-a-new-project). |
+| `janus remote-serve [<project-dir>]` | Serve this machine to a remote janissary over an ssh session. See [Remote agents](/user-documentation/advanced-agents/remote-agents). |
+
 ## Flags
 
 | Flag | What it does |
@@ -31,7 +39,7 @@ By default each launch starts fresh: a single `janus` tab, with any state from t
 | `--help` | Print usage and exit. |
 | `--version` | Print the name and version and exit. |
 
-A mistyped flag, a bare `--port` with no value, or a port outside 1–65535 stops the launch with an error and a pointer to `--help` — nothing is started and no state is touched.
+A mistyped flag, a bare `--port` with no value, a port outside 1–65535, more than one positional argument, or a `<project-dir>` that doesn't exist or isn't a directory stops the launch with an error and a pointer to `--help` — nothing is started and no state is touched. These usage errors exit with code 2.
 
 ## Stopping the app
 
