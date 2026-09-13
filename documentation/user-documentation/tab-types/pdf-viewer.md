@@ -12,8 +12,6 @@ open paper.pdf
 
 The tab shows a compact header with the file's name, size, and location, the page you are on out of the document's total, and the view controls. The document fills the space below. The tab is labeled `pdf` in the strip (the filename is in the header) and carries a × close button.
 
-![A PDF tab: the metadata header above a page fitted to the tab.](/screenshots/pdf-tab.png)
-
 ## Two ways to read
 
 A PDF tab opens showing **one page at a time**, fitted to the tab. The stacked-pages button in the header switches to **continuous scroll**, where every page runs down one scrolling column, and back again. The button says what the click will do — `Continuous scroll` while you are on one page, `Single page` while you are scrolling — and switching keeps the page you were on.
