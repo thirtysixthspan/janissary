@@ -61,11 +61,10 @@
 .conversation-tab.plugin-tab { padding: 0; gap: 0; }
 .conversation-header { padding: 8px 12px 0; }
 
-/* The `Chat about this` selection sits above the turn list as the context it is — clearly labelled
-   and marked off from turns, since it is not a question anyone answered and not composer text. */
-.conversation-context { padding: 12px 12px 0; border-bottom: 1px solid var(--border); }
-.conversation-context-label { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
-.conversation-context-text { white-space: pre-wrap; padding-bottom: 12px; }
+/* The `Chat about this` selection renders as a user turn the conversation opened with — the same
+   styling any query uses, with nothing beneath it because no model answered it — and it never
+   leaves the conversation on its own, whether or not the user has sent anything since. No rule of
+   its own is needed: `.conversation-turn` and `.conversation-query` already look the part. */
 .conversation-deleted { padding: 0 12px 16px; }
 .conversation-turns { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding: 16px 12px; }
 .conversation-turn { display: flex; flex-direction: column; gap: 5px; }

@@ -157,27 +157,28 @@ describe('initial conversation draft lifetime', () => {
     expect(value.actions.every((action) => action.action === 'create')).toBe(true);
   });
 
-  it('carries the pending draft as context on the first send and clears it after', () => {
+  it('carries the pending draft as context on the first send and keeps it afterwards', () => {
     const value = draftFixture();
     const first = value.create('selection');
     value.run('send', { query: 'what changed?' }, first.value.payload);
-    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
     expect(value.actions.at(-1)).toEqual({
       topic: 'conversations', action: 'send', id: first.key,
       query: 'what changed?', context: 'selection',
     });
+    value.notify();
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
     value.run('send', { query: 'second question' }, first.value.payload);
     expect(value.actions.at(-1)).toEqual({
       topic: 'conversations', action: 'send', id: first.key, query: 'second question',
     });
   });
 
-  it('notifies after the consumed draft clears the payload', () => {
+  it('keeps the draft in the payload through a send and the notifications around it', () => {
     const value = draftFixture();
     const first = value.create('selection');
     value.run('send', { query: 'edited selection' }, first.value.payload);
     value.notify();
-    expect(value.updated.at(-1)?.value.payload).not.toHaveProperty('draftQuery');
+    expect(value.updated.at(-1)?.value.payload).toHaveProperty('draftQuery', 'selection');
   });
 
   it('rejects an invalid send without dropping the draft', () => {

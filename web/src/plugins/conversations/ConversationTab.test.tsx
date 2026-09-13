@@ -51,22 +51,48 @@ function stubScroll(element: HTMLElement, scrollHeight: number, scrollTop = 0, c
 }
 
 describe('ConversationTab', () => {
-  it('shows the selection in the history area, leaves the composer empty, and sends nothing', () => {
+  it('shows the selection as a user turn with no response and sends nothing', () => {
     const { value, intent } = capabilities();
-    const rendered = render(
+    const { container } = render(
       <ConversationTab payload={{ ...payload(), draftQuery: 'selected text' }} capabilities={value} />,
     );
-    expect(screen.getByText('Selected text')).toBeInTheDocument();
     expect(screen.getByText('selected text')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Selected text')).not.toBeInTheDocument();
+    expect(screen.getByText('selected text')).toHaveClass('conversation-query');
+    expect(container.querySelector(':scope .conversation-draft .conversation-response')).toBeNull();
     expect(screen.getByLabelText('Message')).toHaveValue('');
     expect(intent).not.toHaveBeenCalled();
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'typed prompt' } });
-    rendered.rerender(<ConversationTab payload={payload()} capabilities={value} />);
-    expect(screen.queryByLabelText('Selected text')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Message')).toHaveValue('typed prompt');
   });
 
-  it('sends the composer text while the draft block is on screen', () => {
+  it('keeps the selection turn on screen while a query is sent beneath it', () => {
+    const { value } = capabilities();
+    const rendered = render(
+      <ConversationTab
+        payload={{ ...payload(), draftQuery: 'selected text', conversation: payload().conversation }}
+        capabilities={value}
+      />,
+    );
+    const input = screen.getByLabelText('Message');
+    fireEvent.change(input, { target: { value: 'what changed?' } });
+    rendered.rerender(<ConversationTab
+      payload={{
+        ...payload(), draftQuery: 'selected text',
+        conversation: payload({
+          turns: [{
+            query: 'what changed?', response: 'the answer',
+            pair: { harness: 'opencode', model: 'google/gemini' },
+          }],
+          hasOlder: false,
+        }).conversation,
+      }}
+      capabilities={value}
+    />);
+    expect(screen.getByText('selected text')).toBeInTheDocument();
+    expect(screen.getByLabelText('Message')).toHaveValue('what changed?');
+  });
+
+  it('sends the composer text while the draft turn is on screen', () => {
     const { intent, value } = capabilities();
     render(<ConversationTab payload={{ ...payload(), draftQuery: 'selection' }} capabilities={value} />);
     const input = screen.getByLabelText('Message');

@@ -116,7 +116,7 @@ describe('PluginTabLayer lazy lifecycle', () => {
     await act(async () => { release(entry); await pending; });
 
     expect(await screen.findByText((_, element) =>
-      element?.className === 'conversation-context-text'
+      element?.className === 'conversation-query'
         && element?.textContent === 'selection\nsecond line')).toBeTruthy();
     expect(screen.getByText('Renamed before mount')).toBeInTheDocument();
     expect(screen.getByLabelText('Message')).toHaveValue('');

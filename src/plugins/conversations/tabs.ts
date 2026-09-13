@@ -17,6 +17,7 @@ function conversationPayload(data: ConversationsView, id: string): ConversationT
 
 export class ConversationTabs {
   private readonly drafts = new Map<string, string>();
+  private readonly forwarded = new Set<string>();
 
   create(draftQuery: string | undefined, capabilities: TabPluginServerCapabilities): void {
     const id = randomUUID();
@@ -38,6 +39,7 @@ export class ConversationTabs {
     if (!payload) return capabilities.rejectRequest(`Conversation "${id}" not found`);
     capabilities.openOrFocusTab(id, () => {
       this.drafts.delete(id);
+      this.forwarded.delete(id);
       return { title: payload.conversation.title, payload };
     });
   }
@@ -46,6 +48,9 @@ export class ConversationTabs {
     const open = new Set(keys);
     for (const key of this.drafts.keys()) {
       if (!open.has(key)) this.drafts.delete(key);
+    }
+    for (const key of this.forwarded) {
+      if (!open.has(key)) this.forwarded.delete(key);
     }
     for (const key of keys) {
       const payload = conversationPayload(data, key);
@@ -58,17 +63,17 @@ export class ConversationTabs {
     }
   }
 
-  // Removes the tab's captured draft and returns what it was, for the send that consumes it as
-  // model context. The refreshed payload follows the same path as every other update.
-  consume(id: string, capabilities: TabPluginServerCapabilities): string | undefined {
-    const draftQuery = this.drafts.get(id);
-    if (!this.drafts.delete(id)) return undefined;
-    const payload = conversationPayload(dataFrom(capabilities), id);
-    if (payload) capabilities.updateTab(id, () => ({ payload }));
-    return draftQuery;
+  // Returns the tab's draft the first time a send asks for it, to carry to the model as context;
+  // afterward the send is an ordinary query. The draft stays in the payload — it keeps rendering
+  // as the user-looking turn the conversation opened with until the tab closes or reopens.
+  contextFor(id: string): string | undefined {
+    if (this.forwarded.has(id) || !this.drafts.has(id)) return undefined;
+    this.forwarded.add(id);
+    return this.drafts.get(id);
   }
 
   dispose(): void {
     this.drafts.clear();
+    this.forwarded.clear();
   }
 }

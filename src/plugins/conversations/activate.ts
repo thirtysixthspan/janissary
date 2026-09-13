@@ -128,7 +128,7 @@ function runConversationIntent(
     }
     case 'send': {
       if (!isSendIntent(value)) return capabilities.rejectRequest('invalid send payload');
-      const context = tabs.consume(id, capabilities);
+      const context = tabs.contextFor(id);
       capabilities.topicAction({
         topic: 'conversations', action: 'send', id, query: value.query, ...(context && { context }),
       });

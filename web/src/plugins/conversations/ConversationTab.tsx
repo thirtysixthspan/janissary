@@ -42,9 +42,9 @@ export function ConversationTab({
     return () => { globalThis.removeEventListener('keydown', onKeyDown); };
   }, [capabilities, streaming]);
 
-  // The selection a conversation opened with — `Chat about this`. It is shown in the history area
-  // as context for the prompt, not in the composer: the first submission carries it to the model
-  // and removes the block, and closing the tab without sending simply loses it.
+  // The selection a conversation opened with — `Chat about this`. It renders as a user turn the
+  // model never answered, and stays in the conversation after queries are sent; the first send
+  // carries it to the model as context, and closing or reopening its tab loses it.
   const draft = payload.draftQuery;
 
   const groups = modelGroups(models);
@@ -98,12 +98,6 @@ export function ConversationTab({
           {capabilities.splitAction}
         </span>
       </div>
-      {draft !== undefined && (
-        <div className="conversation-context">
-          <div className="conversation-context-label">Selected text</div>
-          <div className="conversation-context-text">{draft}</div>
-        </div>
-      )}
       <div
         className="conversation-turns"
         ref={turnsRef}
@@ -114,6 +108,11 @@ export function ConversationTab({
           }
         }}
       >
+        {draft !== undefined && (
+          <div className="conversation-turn conversation-draft">
+            <div className="conversation-query">{draft}</div>
+          </div>
+        )}
         {conversation.turns.map((turn, index) => {
           return (
             <div className="conversation-turn" key={`${String(index)}:${turn.query}`}>

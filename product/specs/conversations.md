@@ -22,7 +22,7 @@ Deleting a row always asks for confirmation first. Confirming removes the conver
 
 A new tab is titled `New conversation`. Its first submitted query supplies the title: the first line, capped at 60 characters. Later queries do not rename it.
 
-Creating a conversation from the list opens an empty message input. Creating one through **Chat about this** fills that input with the selected text without submitting a query or adding a history turn.
+Creating a conversation from the list opens an empty message input with no history. Creating one through **Chat about this** opens the same empty input, with the selected text standing in the turn list as its own turn (see below).
 
 Double-clicking the title in the metadata row renames the conversation, the same interaction that renames a tab: an edit field replaces the name with its text selected, Enter or a click away commits, Escape cancels. A committed name is trimmed and capped at the same 60 characters, and committing a blank one changes nothing. The new name reaches the tab, the metadata row, and the conversation list together, because all three read the conversation's one name.
 
@@ -40,7 +40,7 @@ The model selector sits with the metadata row's right-aligned controls, ahead of
 
 The last pair any conversation's selector chose is remembered on its own, across conversations and application restarts. Every newly created conversation starts on that remembered pair — falling back to the first available when it is no longer catalogued — so a conversation created from the list and one opened by the default menu's **Chat about this** (see [[context-menu]]) start identically. Sending a query does not change the memory; choosing another model in the selector does.
 
-A conversation opened through the default menu's **Chat about this** entry shows the selection in the conversation itself — a labelled context block in the history area, above the turns — while the message input starts empty. The content is context, not a question: nothing reaches the model, and nothing is sent, until the user types a prompt and sends it. That first submission carries the selection along as additional context and removes the block; later queries are ordinary queries. If the tab closes without sending, the selection is gone and nothing about it was saved.
+A conversation opened through the default menu's **Chat about this** entry shows the selected text in the turn list as a conversation turn posed by the user, with no model response beneath it and no query yet sent, while the message input starts empty. The content is context, not a question: nothing reaches the model, and nothing is sent, until the user types a prompt and sends it. That first submission carries the selection along as additional context; later queries are ordinary queries. The selection turn never leaves the conversation on its own afterwards — it stays in the turn list whether or not queries have been sent — and nothing about it is saved: if the tab closes without sending, the selection is gone, and reopening the conversation does not bring it back.
 
 The selection survives conversation updates while the new tab is still loading, including opening another conversation before the history area appears. Each tab receives its own selection once, and reopening a closed conversation does not bring its discarded selection back.
 
