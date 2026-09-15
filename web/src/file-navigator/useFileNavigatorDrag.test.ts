@@ -280,7 +280,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('src/notes.txt');
+      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('notes.txt');
       expect(client.send).not.toHaveBeenCalled();
     });
 
@@ -369,7 +369,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(editorDropHandle.insertAtCaret).toHaveBeenCalledWith('src/notes.txt');
+      expect(editorDropHandle.insertAtCaret).toHaveBeenCalledWith('notes.txt');
       expect(client.send).not.toHaveBeenCalled();
     });
 
@@ -531,7 +531,7 @@ describe('useFileNavigatorDrag', () => {
     expect(client.send).not.toHaveBeenCalled();
   });
 
-  it('inserts every selected path once with target-specific separators and command cwd relativity', () => {
+  it('inserts every selected file name with target-specific separators for a command-bar drop', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
@@ -551,7 +551,30 @@ describe('useFileNavigatorDrag', () => {
     act(() => { result.current.drop(); });
 
     expect(commandHandle.insertAtCaret).toHaveBeenCalledOnce();
-    expect(commandHandle.insertAtCaret).toHaveBeenCalledWith('tree/notes.txt tree/src/a.ts');
+    expect(commandHandle.insertAtCaret).toHaveBeenCalledWith('notes.txt a.ts');
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('inserts every selected file name once in the editor with newline separators and no cwd relativity', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const editorDropRef = { current: makeEditorDropHandle() };
+    const { result } = renderHook(() =>
+      useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work', undefined, editorDropRef));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement());
+
+    act(() => {
+      result.current.onRowMouseDown(
+        { path: 'notes.txt' } as FileNavigatorRow,
+        downEvent(0, 0),
+        ['notes.txt', 'src/a.ts'],
+        ['notes.txt', 'src/a.ts'],
+      );
+    });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    act(() => { result.current.drop(); });
+
+    expect(editorDropRef.current.insertAtCaret).toHaveBeenCalledOnce();
+    expect(editorDropRef.current.insertAtCaret).toHaveBeenCalledWith('notes.txt\na.ts');
     expect(client.send).not.toHaveBeenCalled();
   });
 

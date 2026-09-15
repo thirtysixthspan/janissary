@@ -188,25 +188,24 @@ dialog: `Could not move <failed> of <total> items: <names>`, naming up to three 
 truncating the rest with `… and N more`. The line also tells you why the operation failed and what
 to try next. If items failed for different reasons, each shown name is paired with its own reason.
 
-You can also drag selected rows onto the command bar of the active tab to insert their paths at the
-caret without moving anything. Local paths are relative to the active tab's working directory;
-remote paths use `<host>:<absolute path on that host>`,
+You can also drag selected rows onto the command bar of the active tab to insert their file names at
+the caret without moving anything. Remote paths use `<host>:<absolute path on that host>`,
 separated by single spaces, and replace any selected command text. This works when the navigator
 is docked and a plain tab is active in the center. It does not work for a view tab, the file tree
 itself, or transcript search — nor for a harness tab, whose terminal takes the drop directly instead
-(below). Paths are inserted exactly as computed, without quotes,
+(below). Names are inserted exactly as computed, without quotes,
 even when a name contains spaces.
 
-Drag selected rows onto an active plain-text editor to insert their tree-relative paths, separated
+Drag selected rows onto an active plain-text editor to insert their file names, separated
 by newlines, as one editor undo step. The editor does not highlight during the drag. Inactive or
 hidden editors are not drop targets.
 
-Dropping hands keyboard focus to the editor and leaves the cursor just after the path it inserted,
+Dropping hands keyboard focus to the editor and leaves the cursor just after the name it inserted,
 so you can keep typing without reaching for the mouse.
 
 Drag selected rows onto a [harness](/user-documentation/advanced-agents/harness) tab's terminal to
 type their paths into the harness. They arrive as if you had typed them — nothing is submitted —
-in the same form a command-bar drop uses: separated by single spaces, relative to that harness's
+separated by single spaces, relative to that harness's
 working directory, and host-qualified for a remote tree. Focus moves to the terminal, so you can
 carry on typing from the path you just dropped. The terminal doesn't highlight during the drag, and
 a harness that is still provisioning its workspace isn't a target yet. With two harness tabs side by
@@ -236,7 +235,7 @@ If the renamed file is already open in an editor tab, that tab's name and path u
 
 The clipboard is shared across the whole app, so you can copy in one navigator and paste into any other path **on the same host**. A paste onto a different host is refused in the notifications feed, moves nothing, and leaves the clipboard marks in place. Copying with nothing selected leaves the clipboard untouched, and pasting an empty clipboard does nothing.
 
-Copying also puts the paths on your **system clipboard** as text, so you can switch to an [editor tab](/user-documentation/tab-types/editor), a command bar, or any other field and paste them straight in with `Cmd+V` or the right-click **Paste**. You get the same text a drag onto an editor inserts: one path per line, relative to the tree's own root, or `devbox:/srv/project/src/index.ts` for a remote tree. Cutting doesn't do this — a cut is a pending move, so there's nothing useful to paste as text.
+Copying also puts the paths on your **system clipboard** as text, so you can switch to an [editor tab](/user-documentation/tab-types/editor), a command bar, or any other field and paste them straight in with `Cmd+V` or the right-click **Paste**. The text is one path per line, relative to the tree's own root, or `devbox:/srv/project/src/index.ts` for a remote tree — unlike a drag onto an editor, which inserts file names only. Cutting doesn't do this — a cut is a pending move, so there's nothing useful to paste as text.
 
 Rows on the clipboard are marked in every open navigator that shows them, until you paste, copy or cut something else, or press `Escape` to clear it. A cut shows its rows dimmed with a dashed outline; a copy shows its rows at full strength with a dashed outline, since the originals aren't going anywhere. Pasting a cut selection empties the clipboard, so pasting again does nothing; pasting a copy leaves the clipboard as-is, so you can paste the same selection again elsewhere.
 

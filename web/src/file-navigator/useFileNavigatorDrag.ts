@@ -3,7 +3,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
 import { hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
-import { joinCommandPaths, joinEditorPaths } from './file-navigator-relative-path';
+import { joinCommandPaths, joinDropFileNames } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
 import { harnessDropHandle } from '../harness-drop-registry';
@@ -80,12 +80,12 @@ export function useFileNavigatorDrag(
     const gesture = gestureRef.current;
     try {
       if (gesture?.started && overCommandBarRef.current) {
-        dropRef?.current?.insertAtCaret(joinCommandPaths(absoluteRoot, gesture.sourcePaths, targetCwd, remoteHost));
+        dropRef?.current?.insertAtCaret(joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, ' '));
         return;
       }
       if (gesture?.started && overEditorRef.current) {
         editorDropRef?.current?.insertAtCaret(
-          joinEditorPaths(absoluteRoot, gesture.sourcePaths, remoteHost),
+          joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, '\n'),
         );
         return;
       }
