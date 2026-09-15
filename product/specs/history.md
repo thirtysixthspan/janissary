@@ -10,6 +10,8 @@ Each tab stores its own command history array and navigation index. Switching ta
 
 The Up arrow walks backward through the history (most recent first). When navigation begins, the current unexecuted input is retained as a transient draft. The Down arrow walks forward, and moving past the newest executed entry restores that draft, including an empty draft. Each recalled entry and the restored draft are placed on the input line with the cursor at its end. The draft is not added to persisted per-tab or global history and does not appear in the history picker.
 
+On unexecuted input spanning more than one visual line — whether from an inserted newline or from a long line wrapping — the Up and Down arrows move the cursor between those lines first. History navigation only begins once the cursor is already on the input's true first line (for Up) or true last line (for Down).
+
 ### Click to execute
 
 Double-clicking any prompt line (a chevron icon followed by the command) in the transcript executes that command again, as if it were typed into the command bar and Enter was pressed (see Transcript → Re-running a prompt line). Drag-selecting text anywhere in the transcript, including a prompt line, copies the selection to the clipboard and does not trigger execution or steal keyboard focus from the selection (see Tabs → Keyboard focus on tab press). ACP prompt lines (agent tool steps) keep their collapse-toggle single-click behavior.

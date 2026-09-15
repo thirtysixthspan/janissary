@@ -83,13 +83,13 @@ export function useCommandBarKeys({
     switch (event.key) {
     // Off the first/last line, native ArrowUp/ArrowDown moves the caret by a line instead.
     case 'ArrowUp': {
-      if (!isCaretOnFirstLine(value, inputRef.current?.selectionStart)) return;
+      if (!isCaretOnFirstLine(value, inputRef.current?.selectionStart, inputRef.current)) return;
       event.preventDefault();
       recallOlder(value);
       return;
     }
     case 'ArrowDown': {
-      if (!isCaretOnLastLine(value, inputRef.current?.selectionStart)) return;
+      if (!isCaretOnLastLine(value, inputRef.current?.selectionStart, inputRef.current)) return;
       event.preventDefault();
       recallNewer();
       return;
