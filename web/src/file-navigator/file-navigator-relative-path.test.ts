@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  joinCommandPaths, joinEditorPaths, relativeNavigatorPath, remoteNavigatorPath,
+  joinCommandPaths, joinDropFileNames, joinEditorPaths, relativeNavigatorPath, remoteNavigatorPath,
 } from './file-navigator-relative-path';
 
 describe('relativeNavigatorPath', () => {
@@ -25,6 +25,27 @@ describe('relativeNavigatorPath', () => {
 
   it('keeps the host-qualified form when the remote root is slash', () => {
     expect(remoteNavigatorPath('devbox', '/', 'tmp/a.txt')).toBe('devbox:/tmp/a.txt');
+  });
+});
+
+describe('joinDropFileNames', () => {
+  it('keeps only each file name, joined by spaces for the command bar', () => {
+    expect(joinDropFileNames('/work', ['a.ts', 'src/b.ts'])).toBe('a.ts b.ts');
+  });
+
+  it('joins file names by newlines for the editor', () => {
+    expect(joinDropFileNames('/work', ['src/a.ts', 'src/b.ts'], undefined, '\n')).toBe('a.ts\nb.ts');
+  });
+
+  it('keeps the host-qualified absolute form for a remote tree in both separators', () => {
+    expect(joinDropFileNames('/remote/ws', ['a.ts', 'src/b.ts'], 'devbox'))
+      .toBe('devbox:/remote/ws/a.ts devbox:/remote/ws/src/b.ts');
+    expect(joinDropFileNames('/remote/ws', ['src/b.ts'], 'devbox', '\n'))
+      .toBe('devbox:/remote/ws/src/b.ts');
+  });
+
+  it('produces nothing for an empty list', () => {
+    expect(joinDropFileNames('/work', [])).toBe('');
   });
 });
 

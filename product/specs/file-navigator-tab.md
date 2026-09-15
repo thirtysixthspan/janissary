@@ -345,15 +345,17 @@ navigator that has already gone, and nothing is moved or inserted.
 ### Dragging a row into the command bar
 
 The same click-drag-release gesture used to move a file also has a second possible destination:
-the command bar of whichever tab is active. Releasing there inserts every selected visible path
-at the current caret position, separated by single spaces and replacing any active text selection,
-without moving anything on disk. Each inserted path is relative to the active tab's own working
-directory, not the tree's root. A remote tree instead inserts each path as
-`<host>:<absolute-remote-path>`. While the drag is over the command
+the command bar of whichever tab is active. Releasing there inserts every selected visible row's
+file name at the current caret position, separated by single spaces and replacing any active text
+selection, without moving anything on disk. The tree-relative path is not inserted — a path is
+useful to a command that takes several trees at once, not one that names a file to act on; the
+name is what the user was pointing at. A remote tree instead inserts each path as
+`<host>:<absolute-remote-path>`, where a bare name would not resolve to the file.
+While the drag is over the command
 bar, it is highlighted the same way a valid directory drop target is; releasing over it never
 triggers the file-move flow, and no move confirmation or conflict dialog can appear for it.
 
-Both file and directory rows can be dropped this way. The path is inserted exactly as computed,
+Both file and directory rows can be dropped this way. The name is inserted exactly as computed,
 never wrapped in quotes, even when it contains spaces.
 
 The command bar is only a valid drop target while it is actually visible for the active tab — it
@@ -366,18 +368,19 @@ active in the center — a docked tree's own active-tab command bar is never a t
 
 ### Dragging a row into an editor tab
 
-Releasing a selection over an open plain-text editor inserts every selected visible tree-relative
-path at the editor's current cursor position, separated by newlines and recorded as one editor undo
-step, without moving anything on disk. Unlike dropping onto the command bar, the editor body shows
-no highlight while a drag passes over it.
+Releasing a selection over an open plain-text editor inserts every selected visible row's file
+name at the editor's current cursor position, separated by newlines and recorded as one editor
+undo step, without moving anything on disk. As with a command-bar drop, the file name is
+inserted rather than the tree-relative path. Unlike dropping onto the command bar, the editor
+body shows no highlight while a drag passes over it.
 
 The drop moves keyboard focus to the editor, and leaves the cursor at the end of the path it
 inserted — the end of the last one where several were dropped at once — so typing carries straight
 on from there. Without that, focus would stay in the file tree the drag started in, where the next
 letters typed select a row rather than entering text.
 
-For a remote tree, each inserted editor path uses the same `<host>:<absolute-remote-path>` form as a
-command-bar drop rather than a tree-relative path.
+For a remote tree, each inserted editor name uses the same `<host>:<absolute-remote-path>` form
+as a command-bar drop.
 
 An editor tab is only a valid drop target while it is the active tab and actually visible — in
 practice this means the file navigator is docked into a sidebar while an editor tab is active in

@@ -943,7 +943,7 @@ describe('FileNavigatorTab', () => {
       expect(container.querySelectorAll('.drop-target')).toHaveLength(0);
 
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
-      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('project/README.md');
+      expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('README.md');
       bar.remove();
     });
   });
