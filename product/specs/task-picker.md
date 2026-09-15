@@ -7,7 +7,7 @@ be dropped onto the command line without typing its path by hand.
 
 ### Planning a new feature
 
-`plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then asks the user to resolve product decisions, improves the answered draft, and asks further targeted questions whenever the improved plan still leaves a user-flow, edge-case, scope, or user-visible wording decision unanswered. It updates the draft after each answer and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
+`plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then questions the user in phases, each phase worked as a decision tree where every settled decision unblocks the decisions hanging off it — rounds of numbered questions, each with a recommended answer, continuing without any cap on question count until that phase's frontier is empty. The first phase resolves product decisions only (user flow, edge cases, scope, wording). The second phase resolves implementation decisions only — where code lives, which existing mechanism it extends or replaces — and runs only when the feature warrants implementation questions. After the plan exists, a further phase resolves any questions still open; after the two improvement passes, a final phase resolves any new questions they surfaced. It updates the draft after each round and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
 
 ### Listing
 
