@@ -1,6 +1,6 @@
 import type { FileNavigatorRow, FileNavigatorView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { copySelectionToClipboards } from './file-navigator-copy';
+import { copyAbsolutePaths, copySelectionToClipboards } from './file-navigator-copy';
 import { newFileTargetDir, newDirectoryTargetPath } from './file-navigator-new-file';
 import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
@@ -75,6 +75,11 @@ export function createFileNavigatorActions({
       selection.selected.has(row.path) ? selection.operationPaths : [row.path],
     ),
     copy: (row) => copySelectionToClipboards(files.absoluteRoot, [row.path], files.remote?.host),
+    copyFilePath: (row) => copyAbsolutePaths(
+      files.absoluteRoot,
+      selection.selected.has(row.path) ? selection.operationPaths : [row.path],
+      files.remote?.host,
+    ),
     paste: (row) => paste.paste(files.rows, row.path),
     duplicate: (row) => paste.duplicate(row),
     rename: beginRename,

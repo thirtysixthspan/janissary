@@ -10,6 +10,7 @@ export type FileNavigatorMenuActions = {
   edit: (row: FileNavigatorRow) => void;
   openWith: (row: FileNavigatorRow) => void;
   copy: (row: FileNavigatorRow) => void;
+  copyFilePath: (row: FileNavigatorRow) => void;
   paste: (row: FileNavigatorRow) => void;
   duplicate: (row: FileNavigatorRow) => void;
   rename: (row: FileNavigatorRow) => void;
@@ -49,7 +50,11 @@ export function fileNavigatorMenuItems(
     ? []
     : [{ label: 'Rename', onActivate: () => actions.rename(row) }];
   // Duplicate sits with Copy and Paste because it is a copy, but unlike Paste it never depends on
-  // the clipboard. The ".." row has no place in this tree to duplicate into.
+  // the clipboard. Copy file path is a copy too, of the row's location rather than the row itself.
+  // The ".." row has no place in this tree to duplicate into, and no path of its own to copy.
+  const copyPathEntry: ContextMenuItem[] = parentRow
+    ? []
+    : [{ label: 'Copy file path', onActivate: () => actions.copyFilePath(row) }];
   const duplicateEntry: ContextMenuItem[] = parentRow
     ? []
     : [{ label: 'Duplicate', onActivate: () => actions.duplicate(row) }];
@@ -59,7 +64,7 @@ export function fileNavigatorMenuItems(
   return [
     ...openGroup,
     ...contributedGroup,
-    [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry, ...duplicateEntry],
+    [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry, ...duplicateEntry, ...copyPathEntry],
     [...renameEntry, { label: 'Delete', onActivate: () => actions.remove(row) }],
     [
       { label: 'New file', onActivate: actions.newFile },

@@ -105,6 +105,7 @@ function makeMenuActions(): FileNavigatorMenuActions {
     edit: () => {},
     openWith: () => {},
     copy: () => {},
+    copyFilePath: () => {},
     paste: () => {},
     duplicate: () => {},
     rename: () => {},

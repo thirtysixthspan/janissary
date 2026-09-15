@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { copySelectionToClipboards } from './file-navigator-copy';
+import { copyAbsolutePaths, copySelectionToClipboards } from './file-navigator-copy';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 
 // jsdom implements no async clipboard, so `navigator` is stood up with just the one method
@@ -43,6 +43,25 @@ describe('copySelectionToClipboards', () => {
   it('touches neither clipboard when nothing is selected', () => {
     setClipboard('cut', ['/work/kept.ts']);
     copySelectionToClipboards('/work', []);
+    expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/work/kept.ts'] });
+    expect(writeText).not.toHaveBeenCalled();
+  });
+});
+
+describe('copyAbsolutePaths', () => {
+  it('writes the absolute paths, newline-separated', () => {
+    copyAbsolutePaths('/work', ['a.ts', 'src/b.ts']);
+    expect(writeText).toHaveBeenCalledWith('/work/a.ts\n/work/src/b.ts');
+  });
+
+  it('qualifies each path with its host for a remote tree', () => {
+    copyAbsolutePaths('/remote/ws', ['a.ts', 'src/b.ts'], 'devbox');
+    expect(writeText).toHaveBeenCalledWith('devbox:/remote/ws/a.ts\ndevbox:/remote/ws/src/b.ts');
+  });
+
+  it('touches no clipboard state for an empty list', () => {
+    setClipboard('cut', ['/work/kept.ts']);
+    copyAbsolutePaths('/work', []);
     expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/work/kept.ts'] });
     expect(writeText).not.toHaveBeenCalled();
   });
