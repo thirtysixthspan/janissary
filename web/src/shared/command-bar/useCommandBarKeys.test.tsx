@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCommandBarKeys } from './useCommandBarKeys';
 
 // A bare textarea rather than `CommandBarShell`, so a failure here is the keymap's and never the
@@ -114,6 +114,34 @@ describe('useCommandBarKeys — history', () => {
     const { input } = renderKeys({ history: ['first'] });
     fireEvent.keyDown(input, { key: 'ArrowUp', shiftKey: true });
     expect(input).toHaveValue('');
+  });
+
+  describe('a wrapped single-line value', () => {
+    beforeEach(() => {
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
+        measureText: (text: string) => ({ width: text.length * 10 }), font: '',
+      }) as unknown as CanvasRenderingContext2D);
+    });
+
+    afterEach(() => { vi.restoreAllMocks(); });
+
+    it('moves within the wrapped text on ArrowUp instead of recalling', () => {
+      const { input } = renderKeys({ history: ['first'] });
+      fireEvent.change(input, { target: { value: 'a very long line of typed text' } });
+      Object.defineProperty(input, 'clientWidth', { value: 40, configurable: true });
+      input.setSelectionRange(20, 20);
+      fireEvent.keyDown(input, { key: 'ArrowUp' });
+      expect(input).toHaveValue('a very long line of typed text');
+    });
+
+    it('still recalls on ArrowUp once the caret is on the true first row', () => {
+      const { input } = renderKeys({ history: ['first'] });
+      fireEvent.change(input, { target: { value: 'a very long line of typed text' } });
+      Object.defineProperty(input, 'clientWidth', { value: 40, configurable: true });
+      input.setSelectionRange(1, 1);
+      fireEvent.keyDown(input, { key: 'ArrowUp' });
+      expect(input).toHaveValue('first');
+    });
   });
 });
 
