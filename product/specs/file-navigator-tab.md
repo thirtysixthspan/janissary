@@ -256,8 +256,9 @@ Choosing **Edit as text** from that row's **Open with** chooser is another: it o
 file when the clicked row belongs to the selection. The chooser's other options still act on the
 clicked row alone.
 
-The menu holds up to ten entries in four groups, separated in this order: **Open**, **Edit**, and
-**Open with**; **Copy**, **Paste**, and **Duplicate**; **Rename** and **Delete**; **New file** and
+The menu holds up to eleven entries in four groups, separated in this order: **Open**, **Edit**, and
+**Open with**; **Copy**, **Paste**, **Duplicate**, and **Copy file path**; **Rename** and
+**Delete**; **New file** and
 **New folder**.
 Open does what double-clicking the row does. Edit is offered only for a file and edits the
 right-clicked row like Shift+double-click does: ordinary files reach the plain-text editor and
@@ -273,7 +274,13 @@ directory does. It has no keyboard chord of its own and is the one entry with no
 it never prompts and never overwrites, since a name is always available. The copy it creates lands
 on the tab's undo/redo stack like any other paste. Duplicate neither reads nor disturbs the
 clipboard, so it is offered whether or not anything has been copied, and a pending copy or cut
-survives it untouched.
+survives it untouched. **Copy file path** is like Duplicate in that it neither reads nor disturbs
+the clipboard: it writes the copy-paste buffer alone, placing the **absolute path(s)** of the
+selected rows on the system clipboard as text — every selected row, one per line, when the
+clicked row is part of a multi-row selection, and the clicked row alone otherwise — leaving the
+file clipboard and the row marks exactly where they were. For a remote tree each path takes the
+`<host>:<absolute-remote-path>` form. It is not offered on the `..` row, which names no path of
+its own.
 
 Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
 context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
@@ -517,9 +524,9 @@ dialog.
 
 A copy also places the same rows on the **system clipboard**, as text, so the selection can be
 pasted straight into an editor tab, a command bar, or any other field that takes text — through that
-surface's own `Cmd+V` or its right-click **Paste** (see [[context-menu]]). The text takes the same
-form dropping the rows onto an editor does: each path relative to the tree's own root, one per line,
-and `<host>:<absolute-remote-path>` for a remote tree. Cutting does not write text this way — a cut
+surface's own `Cmd+V` or its right-click **Paste** (see [[context-menu]]). The text takes each path
+relative to the tree's own root, one per line, and `<host>:<absolute-remote-path>` for a remote
+tree. Cutting does not write text this way — a cut
 is a pending move, and pasting it as text elsewhere would do nothing about that move. A copy with
 nothing selected leaves the system clipboard untouched along with the file clipboard, and `Escape`
 disarms only the file clipboard; whatever a copy last placed on the system clipboard stays there.

@@ -139,7 +139,7 @@ while images open directly in the image editor and PDFs open in the
 of them makes **Open** or **Edit** apply to every selected image. Otherwise, each action affects
 only the row you right-clicked, and **Edit** is not shown for directories. **Open with** lets you choose the registered viewer, text editor, or
 external application instead. The menu also provides Copy, Paste (when the clipboard is armed),
-Duplicate, Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to
+Duplicate, Copy file path, Rename, Delete, New file, and New folder; the `..` row omits actions that cannot apply to
 it.
 
 ## Selecting more than one row
@@ -249,6 +249,13 @@ appears beside it under the next free `-2` name — a directory brings everythin
 never asks and never overwrites, undoes with `Cmd+Z` like any other paste, and leaves whatever is on
 your clipboard alone. Cut remains keyboard-only; dragging is the mouse route for moving files and
 directories.
+
+The context menu also offers **Copy file path**, for when you want where a file lives rather than
+the file itself. It puts the absolute path on your system clipboard — every selected row, one per
+line, if you right-clicked inside a multi-row selection, and just the clicked row otherwise — for a
+remote tree written as `devbox:/srv/project/src/index.ts`. It leaves your clipboard marks alone: no
+rows are armed for pasting, and a pending copy or cut survives it untouched. It isn't offered on the
+`..` row.
 
 ## Keyboard
 

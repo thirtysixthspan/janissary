@@ -1469,6 +1469,19 @@ describe('FileNavigatorTab', () => {
       Reflect.deleteProperty(navigator, 'clipboard');
     });
 
+    it('choosing Copy file path writes the absolute paths, newline-separated, without arming the file clipboard', () => {
+      const writeText = stubSystemClipboard();
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
+      fireEvent.mouseDown(screen.getByText('src'), { button: 0 });
+      fireEvent.mouseDown(screen.getByText('README.md'), { button: 0, metaKey: true });
+      fireEvent.contextMenu(screen.getByText('README.md'));
+      fireEvent.click(screen.getByText('Copy file path'));
+      expect(writeText).toHaveBeenCalledWith('/home/user/project/src\n/home/user/project/README.md');
+      expect(getClipboardSnapshot()).toBeNull();
+      Reflect.deleteProperty(navigator, 'clipboard');
+    });
+
     it('choosing Duplicate copies the clicked row into its own directory', () => {
       const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
