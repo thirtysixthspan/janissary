@@ -152,6 +152,10 @@ export class JanusClient {
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
+  // Set an editor tab's file name from the metadata row's rename input. Fire-and-forget, same as
+  // editorSync: the renamed view comes back over the next state broadcast.
+  renameEditorFile(url: string, name: string): void { this.send({ method: 'renameEditorFile', params: { url, name } }); }
+
 
   // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).

@@ -36,4 +36,8 @@ export type EditorRpcCall =
   // seen at all — this posts the one notification line naming the plugin and the reason.
   // Fire-and-forget: the client has already stopped resolving that plugin's chords and needs no
   // answer. `url` identifies the editor tab the chord was pressed in, the same way saveFile's does.
-  | { method: 'editorPluginFailed'; params: { url: string; plugin: string; reason: string } };
+  | { method: 'editorPluginFailed'; params: { url: string; plugin: string; reason: string } }
+  // Set an editor tab's file name (the thing renaming the tab label sets literally). `url`
+  // identifies the tab the same way saveFile's does. Fire-and-forget: the renamed view reaches
+  // the client over the next `state` broadcast, like any other server-side tab change.
+  | { method: 'renameEditorFile'; params: { url: string; name: string } };

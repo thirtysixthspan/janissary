@@ -6,6 +6,7 @@ import type { StatusWindowButtonProps } from '../shared/status-windows/status-bu
 import { connectionsWindowIcon } from '../icons';
 import { EditorSyncIcon } from './EditorSyncIcon';
 import { SplitTabButton } from '../SplitTabButton';
+import { EditorMetaName } from './EditorMetaName';
 
 type Properties = {
   editor: EditorView;
@@ -17,16 +18,23 @@ type Properties = {
   connectionsButton: StatusWindowButtonProps;
   onSyncClick?: () => void;
   onSplit?: () => void;
+  onRename: (next: string) => void;
+  onRenameCancel: () => void;
+  onRenameEditingChange: (editing: boolean) => void;
 };
 
 // The editor tab's single metadata row: name/size/path, save state, and the connections button.
 // Split out so EditorTab.tsx stays under the 200-line file cap.
 export function EditorMetaRow({
   editor, dirty, savedFlash, error, onSave, onMouseUp, connectionsButton, onSyncClick, onSplit,
+  onRename, onRenameCancel, onRenameEditingChange,
 }: Properties) {
   return (
     <div className="editor-meta" onMouseUp={onMouseUp}>
-      <span className="editor-name">{editor.name}</span>
+      <EditorMetaName
+        editor={editor} onCommit={onRename} onCancel={onRenameCancel}
+        onEditingChange={onRenameEditingChange}
+      />
       <span className="editor-size">{editor.size}</span>
       <span className="editor-loc">{editor.path}</span>
       {savedFlash && <span className="editor-saved">Saved</span>}

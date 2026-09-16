@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useEditor } from './useEditor';
@@ -84,9 +84,13 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
 
   const loaded = state !== null;
+  // While the metadata row's rename session is open (a new file auto-starts one), the loaded
+  // buffer must not steal the keyboard back from the rename input. The flag starts at the tab's
+  // own newFile state: the loaded effect would otherwise fire before the session reports in.
+  const [renaming, setRenaming] = useState(editor.newFile === true);
   // `preventScroll` because the textarea is pinned to the top of the scrollport (see theme.css): a
   // plain focus() on a scrolled buffer drags it back into view, undoing the restored position.
-  useEffect(() => { if (active && loaded) textareaRef.current?.focus({ preventScroll: true }); }, [active, loaded]);
+  useEffect(() => { if (active && loaded && !renaming) textareaRef.current?.focus({ preventScroll: true }); }, [active, loaded, renaming]);
   const initialScrollDone = useRef(false);
   const lastCursorRef = useRef<{ line: number; col: number } | null>(null);
   useEffect(() => {
@@ -122,6 +126,14 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
   const selectionText = state ? selectionsText(state) : '';
   const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
+  // The metadata row's rename input: committing an accepted name follows the same editor-tab rename
+  // semantics as renaming the tab label, so the tab label and path move together via the next
+  // state broadcast. Enter accepted or Escape keeps the caret at the top of the editor buffer.
+  const focusBuffer = () => { textareaRef.current?.focus(); };
+  const commitEditorName = (next: string) => {
+    client.renameEditorFile(editor.url, next);
+    focusBuffer();
+  };
 
   return (
     <div className="editor-tab" data-doc-shot="editor-view">
@@ -130,6 +142,9 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         onSave={requestSave} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
         onSyncClick={() => client.send({ method: 'resyncEditorTab', params: { url: editor.url } })}
         onSplit={onSplit}
+        onRename={commitEditorName}
+        onRenameCancel={focusBuffer}
+        onRenameEditingChange={setRenaming}
       />
       <PendingSuggestPanel pending={suggest.pending} />
       <div
