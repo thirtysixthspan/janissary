@@ -3,5 +3,3 @@
 # pull-request
 
 * the copy overlay is not an exact duplicate of the screen. colors and spacing should be maintained exactly.
-
-* there should be no paste option in the context menu after the copy region has been set after a mouse drag

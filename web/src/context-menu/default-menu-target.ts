@@ -60,11 +60,15 @@ export function resolveDefaultMenuTarget(
 export function defaultMenuGroups(
   target: DefaultMenuTarget, actions: DefaultMenuActions,
 ): ContextMenuItem[][] {
-  const { selectionText, pasteTarget } = target;
+  const { selectionText, selectionSource, pasteTarget } = target;
   const copyEntry: ContextMenuItem[] = selectionText === ''
     ? []
     : [{ label: 'Copy', onActivate: () => actions.copy(selectionText) }];
-  const pasteEntry: ContextMenuItem[] = pasteTarget
+  // A live terminal copy region withholds Paste even when a field elsewhere holds focus and would
+  // otherwise resolve as the paste target — the drag committed to Copy, not to pasting into
+  // whatever had focus before it started.
+  const isTerminalCopyRegion = selectionSource === 'terminal' && selectionText !== '';
+  const pasteEntry: ContextMenuItem[] = pasteTarget && !isTerminalCopyRegion
     ? [{ label: 'Paste', onActivate: () => actions.paste(pasteTarget) }]
     : [];
   const items = [...copyEntry, ...pasteEntry];

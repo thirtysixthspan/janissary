@@ -11,7 +11,7 @@ Right-clicking the open menu itself does nothing and does not expose the browser
 An entry that cannot act is left out rather than shown greyed out, so the menu holds one entry, two, or none:
 
 - **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and writes that selection to the system clipboard.
-- **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret.
+- **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard, since that menu answers a committed copy region rather than an invitation to paste elsewhere.
 
 When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
 
@@ -19,7 +19,7 @@ The editor is the exception: an empty-selection right-click there opens no menu,
 
 ### A contributed entry
 
-To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Releasing that drag over a non-empty pick opens the default menu itself, offering **Copy** alongside **Chat about this**; right-clicking the held selection afterward opens the same menu again. Escape on either of those menus is the one case where dismissing the default menu does more than "return the keyboard to whatever had it before": it also clears the terminal's held selection, so a single Escape leaves copy mode entirely instead of just closing the menu on top of it. Activating Copy or Chat about this leaves the selection held, as always.
+To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Releasing that drag over a non-empty pick opens the default menu itself, offering **Copy** alongside **Chat about this** and never **Paste**; right-clicking the held selection afterward opens the same menu again. Escape on either of those menus is the one case where dismissing the default menu does more than "return the keyboard to whatever had it before": it also clears the terminal's held selection, so a single Escape leaves copy mode entirely instead of just closing the menu on top of it. Activating Copy or Chat about this leaves the selection held, as always.
 
 Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
 

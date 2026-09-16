@@ -11,7 +11,7 @@ Right-click an editor tab, a terminal, the command line, or a transcript to open
 The menu only ever shows what it can actually do:
 
 - **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and copies that text.
-- **Paste** appears only where text can go — the field you clicked, or the field that already holds the keyboard. That second case is what makes right-clicking an editor tab or a terminal work, since the click lands on rendered output while the keyboard belongs to the tab as a whole. Activating it inserts the clipboard's text at the caret.
+- **Paste** appears only where text can go — the field you clicked, or the field that already holds the keyboard. That second case is what makes right-clicking an editor tab or a terminal work, since the click lands on rendered output while the keyboard belongs to the tab as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard.
 
 ## When nothing applies
 
