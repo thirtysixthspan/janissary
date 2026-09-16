@@ -43,8 +43,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
     const fontFamily = styles.getPropertyValue('--mono').trim();
     // The terminal and the selection overlay above it both read the same custom properties, so a
     // frozen snapshot is provably laid out and painted with what the live screen has.
-    const fontSize = Number(styles.getPropertyValue('--terminal-font-size')) || 13.5;
-    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height')) || 1.2;
+    const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5;
+    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2;
     const theme = {
       background: styles.getPropertyValue('--terminal-bg').trim() || '#17181b',
       foreground: styles.getPropertyValue('--terminal-fg').trim() || '#e4e5e7',

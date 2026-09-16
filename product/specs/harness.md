@@ -396,7 +396,9 @@ the screen into an overlay drawn over the live terminal: the harness keeps runni
 keeps arriving underneath, but the frozen image and the highlight on it never move, change, or clear
 until the user dismisses the selection. The frozen image is the visible screen at the moment the
 drag started, one screenful — text that has scrolled off is selected by scrolling the terminal back
-first and then dragging again. The snapshot is plain text: the harness's own colours and styling are
+first and then dragging again. The overlay is laid out with the same font, size, and line spacing
+the live terminal uses, so the frozen text lines up character for character with the screen it
+covers. The snapshot is plain text: the harness's own colours and styling are
 not carried across, and no on-screen indicator is drawn beyond the highlight itself. The gesture is
 taken outright: the harness never receives the Shift+drag's mouse events, and the surface takes
 keyboard focus as the gesture starts, so the copy chords and Chat about this act on the pick even

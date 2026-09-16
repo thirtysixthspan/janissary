@@ -549,6 +549,21 @@ describe('HarnessTab', () => {
       expect(capturedOptions.theme).toEqual({ background: '#17181b', foreground: '#e4e5e7' });
     });
 
+    it('reads the terminal font size through its px unit instead of discarding it to the fallback', () => {
+      const computed = globalThis.getComputedStyle;
+      const spy = vi.spyOn(globalThis, 'getComputedStyle').mockImplementation((element, pseudo) => (
+        element === document.documentElement
+          ? { getPropertyValue: (name: string) => (name === '--terminal-font-size' ? '20px' : '') } as CSSStyleDeclaration
+          : computed(element, pseudo)
+      ));
+      try {
+        render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        expect(capturedOptions.fontSize).toBe(20);
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
     it('copies the terminal selection on Cmd+C instead of passing it to the harness', () => {
       const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
