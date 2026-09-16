@@ -290,3 +290,32 @@ describe('RemoteChannel — closing', () => {
     expect(h.kill).toHaveBeenCalled();
   });
 });
+it('preserves all session routing while replacing a dropped peer transport', () => {
+  const h = harness();
+  h.channel.receive(`${encodeHandshake('/remote', '12345678-1234-1234-1234-123456789abc')}\n`);
+  const onOutput = vi.fn(), onReply = vi.fn(), onChunk = vi.fn(), onClose = vi.fn();
+  h.channel.attach('p', { onOutput, onExit: vi.fn() });
+  h.channel.attachNavigator('n', { onReply, onEvent: vi.fn(), onClose });
+  h.channel.attachAcp('a', { onReady: vi.fn(), onChunk, onEnd: vi.fn(), onError: vi.fn() });
+  h.channel.closed(); expect(onClose).not.toHaveBeenCalled();
+  h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });
+  h.channel.receive(`${encodeHandshake('/remote')}\n`);
+  expect(h.channel.attached).toBe(false);
+  h.channel.receive(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+  expect(h.channel.attached).toBe(true);
+  h.channel.receive(`${encodeFrame({ type: 'output', id: 'p', data: 'still running' })}\n`);
+  h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'n', request: 'q', result: [] })}\n`);
+  h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'a', text: 'same agent' })}\n`);
+  expect(onOutput).toHaveBeenCalledWith('still running');
+  expect(onReply).toHaveBeenCalledOnce(); expect(onChunk).toHaveBeenCalledWith('same agent');
+});
+it('answers new filesystem requests during a disconnect without sending or replaying them', () => {
+  const h = harness();
+  h.channel.receive(`${encodeHandshake('/remote', '12345678-1234-1234-1234-123456789abc')}\n`);
+  const reply = vi.fn();
+  h.channel.attachNavigator('n', { onReply: reply, onEvent: vi.fn() });
+  h.channel.closed();
+  h.channel.send({ type: 'filesystem-request', session: 'n', request: 'q', operation: 'read-directory', args: {} });
+  expect(reply).toHaveBeenCalledWith(expect.objectContaining({ request: 'q', error: 'Remote connection unavailable.' }));
+  expect(h.written).toEqual([]);
+});

@@ -6,6 +6,8 @@ import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
+import { formatLateDuration } from './display.js';
+import { RESUME_THRESHOLD_MS } from '../resume-watch.js';
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -157,6 +159,10 @@ export class ScheduleManager {
     for (const e of sched) {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
+      if (now - e.nextRun > RESUME_THRESHOLD_MS) {
+        notify(this.managers, 'schedule-late', tab.label,
+          `${e.command} ran ${formatLateDuration(now - e.nextRun)} late (system was asleep)`);
+      }
       isChanged = true;
       if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
     }
@@ -167,6 +173,7 @@ export class ScheduleManager {
   // through an agent tab's command pipeline. Returns false when delivery must wait (the harness
   // is not running), leaving the entry due so it retries on a later tick.
   private fire(tab: Tab, e: ScheduleEntry): boolean {
+    if (tab.sessionEnded || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
       // Sent as one write, a long command's trailing \r can land inside the same burst the harness's

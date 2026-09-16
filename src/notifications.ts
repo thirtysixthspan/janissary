@@ -22,6 +22,8 @@ import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from 
 // died are one event to the user, since the consequence is the same: `connect()` now fails.
 // Explicit events are always eligible and bypass focus suppression.
 export type NotificationEventType =
+  | 'schedule-late'
+  | 'remote-session-ended'
   | 'state-change'
   | 'incoming-message'
   | 'schedule-fire'
@@ -75,6 +77,8 @@ export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof Notification
 // Keyed by the union so an eighteenth event stops compiling here until it is classified, rather
 // than falling through a `default` arm to `false` and never reaching the feed.
 export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
+  'schedule-late': true,
+  'remote-session-ended': true,
   manual: true,
   'auto-approve': true,
   'editor-suggest': true,
@@ -126,6 +130,8 @@ export function formatTimestamp(date: Date): string {
 // header, so repeating it here would double it.
 export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
   switch (event) {
+    case 'schedule-late':
+    case 'remote-session-ended': { return detail ?? ''; }
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
     case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }

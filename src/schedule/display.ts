@@ -1,6 +1,16 @@
 import type { ScheduleEntry, TimeOfDay } from './types.js';
 import { MONTHS } from './parsing.js';
 
+export function formatLateDuration(milliseconds: number): string {
+  const seconds = Math.floor(milliseconds / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  return `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
 export function fmtTime({ hour, minute }: TimeOfDay): string {
   const ap = hour < 12 ? 'am' : 'pm';
   const h = hour % 12 === 0 ? 12 : hour % 12;

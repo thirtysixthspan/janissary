@@ -6,6 +6,7 @@ import http from 'node:http';
 import { WebSocket } from 'ws';
 import { startServer, type RunningServer } from './index.js';
 import type { ServerEvent } from './protocol.js';
+import { messageBus } from './bus.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
 writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
@@ -22,6 +23,39 @@ const waitFor = async (pred: () => boolean, ms = 2000) => {
 };
 
 describe('startServer (WS + RPC + security)', () => {
+  it.each(['resume', 'wall-clock jump', 'idle'] as const)('applies the disconnect grace after %s', async (mode) => {
+    server = await startServer({ webDir });
+    const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
+    await new Promise((resolve) => ws.once('open', resolve));
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      ws.close();
+      await new Promise((resolve) => ws.once('close', resolve));
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await vi.advanceTimersByTimeAsync(750);
+      if (mode === 'resume') messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });
+      else if (mode === 'wall-clock jump') vi.setSystemTime(Date.now() + 60_000);
+      await vi.advanceTimersByTimeAsync(300);
+      expect(exit).toHaveBeenCalledTimes(mode === 'idle' ? 1 : 0);
+      if (mode !== 'idle') {
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(exit).toHaveBeenCalledOnce();
+      }
+      server = null;
+    } finally { vi.useRealTimers(); exit.mockRestore(); }
+  });
+
+  it('does not arm shutdown when a resume has no disconnect countdown', async () => {
+    server = await startServer({ webDir });
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(exit).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); exit.mockRestore(); }
+  });
   it('accepts a token-gated client and streams transcript state', async () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);

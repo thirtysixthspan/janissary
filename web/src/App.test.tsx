@@ -5,6 +5,7 @@ import type { RouteChooserView, TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './ws';
 import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
+import { AppShell } from './AppShell';
 
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();
@@ -23,6 +24,8 @@ let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
 
 const client = {
+  connectionStatus: 'connected',
+  onConnectionStatus: () => () => {},
   send: sendMock,
   request: requestMock,
   renameTab: renameTabMock,
@@ -740,4 +743,10 @@ describe('App protocol client injection', () => {
       vi.stubGlobal('WebSocket', realWebSocket);
     }
   }, 15_000);
+});
+it.each(['agent', 'harness', 'ssh', 'editor', 'files'])('shows reconnection in the shell around a %s view', (view) => {
+  const disconnected = { ...client, connectionStatus: 'reconnecting' } as unknown as JanusClient;
+  render(<AppShell tabs={[]} client={disconnected}><div>{view} view</div></AppShell>);
+  expect(screen.getByRole('status').textContent).toBe('Reconnecting…');
+  expect(screen.getByText(`${view} view`)).toBeInTheDocument();
 });

@@ -13,6 +13,9 @@ import { RemoteAcp } from './serve-acp.js';
 import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import { errorText } from '../error-text.js';
+import { randomUUID } from 'node:crypto';
+import type { Socket } from 'node:net';
+import { DetachedPeer, relayPeer } from './serve-detach.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -24,9 +27,6 @@ import { errorText } from '../error-text.js';
 // cadence (`src/harness/transcript/tailer.ts`).
 const TRANSCRIPT_POLL_MS = 2000;
 
-// SIGHUP is what arrives when the ssh channel drops; the other two cover an ordinary kill. All three
-// mean the same thing here: the session this process exists to serve is over, so its workspace clone
-// goes with it and no clone is ever left behind.
 export const CHANNEL_SIGNALS = ['SIGHUP', 'SIGTERM', 'SIGINT'] as const;
 
 function writeFrame(frame: ServerFrame): void {
@@ -43,6 +43,9 @@ export class RemoteServer {
   private transcriptTimer: NodeJS.Timeout | undefined;
   private buffer = '';
   private stopping = false;
+  readonly sessionId = randomUUID();
+  private peer: DetachedPeer | undefined;
+  private relay: Socket | undefined;
 
   constructor(
     private root: string,
@@ -53,9 +56,16 @@ export class RemoteServer {
   }
 
   listen(): void {
+    this.peer = new DetachedPeer(this.root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0));
+    this.emit = (frame) => this.peer?.emit(frame);
+    void this.peer.start((data) => { process.stdout.write(data); }).then(() => {
+      process.stdout.write(`${encodeHandshake(this.root, this.sessionId)}\n`);
+    }).catch(() => this.shutdown(1));
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', (chunk: string) => { this.receive(chunk); });
-    process.stdin.on('end', () => { this.shutdown(0); });
+    process.stdin.on('end', () => { this.detach(); });
+    process.stdin.on('error', () => this.detach());
+    process.stdout.on('error', () => this.detach());
     wireShutdown(this);
     process.stdin.resume();
   }
@@ -63,6 +73,7 @@ export class RemoteServer {
   // Everything the local side wrote, in arrival order. Newline-delimited, so a frame split across
   // two reads is buffered until it is complete.
   receive(chunk: string): void {
+    if (this.relay) { this.relay.write(chunk); return; }
     this.buffer += chunk;
     let newline = this.buffer.indexOf('\n');
     while (newline !== -1) {
@@ -77,6 +88,8 @@ export class RemoteServer {
   shutdown(code: number): void {
     if (this.stopping) return;
     this.stopping = true;
+    this.peer?.dispose();
+    this.relay?.destroy();
     if (this.transcriptTimer) clearInterval(this.transcriptTimer);
     this.files?.dispose();
     this.processes?.killAll();
@@ -96,6 +109,14 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.refuse(frame.error); return; }
     switch (frame.type) {
+    case 'reattach': {
+      if (this.workspaceDir) { this.emit({ type: 'reattach-result', accepted: false }); return; }
+      this.relay = relayPeer(this.root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
+        if (terminated) this.emit({ type: 'reattach-result', accepted: false });
+        this.shutdown(terminated ? 0 : 1);
+      });
+      return;
+    }
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }
@@ -122,6 +143,7 @@ export class RemoteServer {
   // Clone the project root's `origin` into `.janissary/workspace/<label>` under this root, using the
   // very same `WorkspaceManager` the local server uses for a `-w` launch.
   private async provision(label: string, forwarded: ProjectTokens, identity: GitIdentity): Promise<void> {
+    if (this.processes || this.stopping) return;
     const result = this.workspaces.create(label);
     if ('error' in result) { this.refuse(result.error); return; }
     try {
@@ -130,6 +152,7 @@ export class RemoteServer {
       this.refuse(errorText(error));
       return;
     }
+    if (this.stopping) { this.workspaces.removeAll(); return; }
     this.workspaceDir = result.dir;
     const own = getProjectTokens();
     // Per token, a forwarded value wins and this machine's own file is the fallback — spreading own
@@ -157,8 +180,15 @@ export class RemoteServer {
 
   private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
     if (!this.requireWorkspace()) return;
+    this.peer?.track(frame);
     this.processes?.spawn(frame);
     if (frame.harness !== undefined) this.followTranscript(frame.harness);
+  }
+
+  detach(): void {
+    if (this.relay) { this.shutdown(0); return; }
+    this.buffer = '';
+    this.peer?.detach();
   }
 
   // Nothing this server runs exists outside the clone it provisioned, so every frame that starts
@@ -189,7 +219,10 @@ export function wireShutdown(
   server: RemoteServer,
   on: (signal: string, handler: () => void) => void = (signal, handler) => { process.on(signal as NodeJS.Signals, handler); },
 ): void {
-  for (const signal of CHANNEL_SIGNALS) on(signal, () => { server.shutdown(0); });
+  for (const signal of CHANNEL_SIGNALS) on(signal, () => {
+    if (signal === 'SIGHUP') server.detach();
+    else server.shutdown(0);
+  });
 }
 
 export function runRemoteServer(pathArgument: string | undefined): void {
@@ -204,6 +237,5 @@ export function runRemoteServer(pathArgument: string | undefined): void {
   initWorkspaceDir(resolved.root);
   // Raw mode so the remote tty's line discipline neither echoes the framed input nor rewrites it.
   if (process.stdin.isTTY) process.stdin.setRawMode(true);
-  process.stdout.write(`${encodeHandshake(resolved.root)}\n`);
   new RemoteServer(resolved.root).listen();
 }

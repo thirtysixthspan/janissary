@@ -9,9 +9,11 @@ clears the secondary tab. Missing or null route and launch dialogs are treated a
 opened route chooser selects its last choice, or its first position when there are no choices;
 repeated updates for the same command preserve the current choice.
 
-### Browser history restoration
+### Reconnection and browser history restoration
 
 When the browser restores the app from its back/forward cache, the previously released WebSocket client is replaced with a new connection and sends the normal `init` request. The server keeps the session available for one second after its last client disconnects, and cancels that pending shutdown when the replacement connection arrives during that window.
+
+An unexpected disconnect also reconnects automatically and requests a fresh state snapshot. Existing state, layout, and terminal subscriptions survive that reconnect. Retries continue indefinitely with a five-second maximum delay; becoming visible or coming online prompts an immediate attempt. The window shows `Reconnecting…`, then `Cannot reach session` after six unsuccessful retries, and briefly `Reconnected` after success. Time spent asleep does not consume the server's disconnect grace period. Outstanding requests fail when the connection ends and are never resent; input during the gap is not queued, and missed terminal output is not replayed.
 
 ### Accepted envelopes
 

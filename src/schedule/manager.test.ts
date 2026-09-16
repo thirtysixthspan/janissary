@@ -41,6 +41,32 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
 }
 
 describe('ScheduleManager tick', () => {
+  it('fires each overdue entry once, reports lateness, and schedules recurrence from now', () => {
+    const { managers } = makeManagers();
+    const dispatch = vi.spyOn(managers.command, 'dispatchTo');
+    const manager = new ScheduleManager(managers);
+    mocks.notify.mockClear();
+    manager.set('janus', [
+      { id: 'a', command: 'help', spec: 'once', recurring: false, nextRun: Date.now() - 60_000 },
+      { id: 'b', command: 'clear', spec: 'every 1m', recurring: true, intervalMs: 60_000, nextRun: Date.now() - 60_000 },
+    ]);
+    manager.start(); vi.advanceTimersByTime(1000);
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(mocks.notify.mock.calls.filter((call) => call[1] === 'schedule-late')).toHaveLength(2);
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'schedule-late', 'janus', 'help ran 1m late (system was asleep)');
+    expect(manager.get('janus')).toEqual([expect.objectContaining({ id: 'b', nextRun: Date.now() + 60_000 })]);
+    vi.advanceTimersByTime(1000); expect(dispatch).toHaveBeenCalledTimes(2);
+    manager.stop();
+  });
+
+  it('does not report an on-time command as late', () => {
+    const { managers } = makeManagers();
+    const manager = new ScheduleManager(managers);
+    mocks.notify.mockClear();
+    manager.set('janus', [{ id: 'a', command: 'help', spec: 'once', recurring: false, nextRun: Date.now() }]);
+    manager.start(); vi.advanceTimersByTime(1000); manager.stop();
+    expect(mocks.notify.mock.calls.some((call) => call[1] === 'schedule-late')).toBe(false);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
   });

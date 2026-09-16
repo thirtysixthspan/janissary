@@ -1,6 +1,8 @@
 import type { ServerEvent, RpcCall, StateEvent } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
+import { SocketConnection } from './ws-connection';
+import type { ConnectionPhase } from './reconnect-policy';
 
 export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
@@ -19,7 +21,8 @@ const CONNECTION_ENDED = 'connection closed';
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
 export class JanusClient {
-  private ws: WebSocket;
+  private connection: SocketConnection;
+  private get ws(): WebSocket { return this.connection.socket; }
   private nextId = 1;
   private stateListeners = new Set<StateListener>();
   private exitListeners = new Set<ExitListener>();
@@ -30,12 +33,18 @@ export class JanusClient {
   private stateCollectors: Partial<ClientStateCollectors> = {};
 
   constructor(ptyOutputOptions: PtyOutputBufferOptions = {}) {
-    const token = new URLSearchParams(location.search).get('token') ?? '';
-    this.ws = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
     this.ptyOutput = new PtyOutputBuffer(ptyOutputOptions);
-    this.ws.addEventListener('message', (event) => this.onEvent(JSON.parse(event.data) as ServerEvent));
-    this.ws.addEventListener('open', () => this.send({ method: 'init', params: {} }));
-    this.ws.addEventListener('close', () => { this.drainPending(); });
+    this.connection = new SocketConnection({
+      message: (data) => this.onEvent(JSON.parse(data) as ServerEvent),
+      open: () => this.send({ method: 'init', params: {} }),
+      close: () => this.drainPending(),
+    });
+  }
+
+  get connectionStatus(): ConnectionPhase { return this.connection.phase; }
+  reconnect(): void { this.connection.reconnect(); }
+  onConnectionStatus(listener: (phase: ConnectionPhase) => void): () => void {
+    return this.connection.subscribe(listener);
   }
 
   // Invoke a pending request's callback once and drop it. Every way a request can finish — its
@@ -231,7 +240,7 @@ export class JanusClient {
   // back/forward-cache restore replaces one — and a promise nobody ever settles keeps whatever was
   // waiting on it waiting.
   dispose(): void {
-    this.ws.close();
+    this.connection.dispose();
     this.stateListeners.clear();
     this.exitListeners.clear();
     this.layoutListeners.clear();

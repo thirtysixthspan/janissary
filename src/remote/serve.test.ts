@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
@@ -9,8 +10,12 @@ import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
-import { encodeFrame } from './protocol.js';
+import { encodeFrame, decodeFrame, parseHandshake } from './protocol.js';
 import type { ServerFrame } from './protocol.js';
+import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
+import { randomUUID } from 'node:crypto';
+import { createConnection } from 'node:net';
+import { readFileSync } from 'node:fs';
 
 // Only the process spawners are faked: every other part of this file drives the real server against
 // a real clone, and the credential a spawn is handed is the one thing that has no other observable.
@@ -126,6 +131,22 @@ function makeServer() {
 }
 
 describe('RemoteServer', () => {
+  it.each(['SIGTERM', 'SIGINT'])('preserves work on SIGHUP, then cleans up on %s', async (signal) => {
+    const { server, frames, exit } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: `sleep-${signal}` })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+    const kill = vi.mocked(spawnPty).mock.results.at(-1)!.value.kill;
+    const handlers = new Map<string, () => void>();
+    wireShutdown(server, (name, handler) => handlers.set(name, handler));
+    handlers.get('SIGHUP')!();
+    expect(kill).not.toHaveBeenCalled(); expect(exit).not.toHaveBeenCalled();
+    expect(existsSync(ready.dir)).toBe(true);
+    handlers.get(signal)!();
+    expect(kill).toHaveBeenCalled(); expect(exit).toHaveBeenCalledWith(0);
+    expect(existsSync(ready.dir)).toBe(false);
+  });
   beforeEach(() => {
     vi.mocked(spawnPty).mockReset().mockReturnValue({
       id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
@@ -333,14 +354,15 @@ describe('RemoteServer', () => {
     expect(exit).toHaveBeenCalledTimes(1);
   });
 
-  // SIGHUP is what a dropped ssh channel delivers, so it must clean up exactly like a clean exit.
-  it('wires every channel-ending signal to the same shutdown', () => {
+  it('detaches on SIGHUP and shuts down on SIGTERM', () => {
     const { server, exit } = makeServer();
     const handlers = new Map<string, () => void>();
     wireShutdown(server, (signal, handler) => { handlers.set(signal, handler); });
 
     expect([...handlers.keys()]).toEqual([...CHANNEL_SIGNALS]);
     handlers.get('SIGHUP')!();
+    expect(exit).not.toHaveBeenCalled();
+    handlers.get('SIGTERM')!();
     expect(exit).toHaveBeenCalledWith(0);
   });
 
@@ -375,5 +397,138 @@ describe('RemoteServer', () => {
     expect(frames).toEqual([]);
     server.receive(`${line.slice(5)}\n`);
     expect(frames).toHaveLength(1);
+  });
+});
+describe('detached peer rendezvous', () => {
+  it('keeps a real shell and workspace through EOF and SIGHUP and a fresh remote-serve process', async () => {
+    const script = `
+      import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};
+      import { initWorkspaceDir } from ${JSON.stringify(new URL('../workspace/index.ts', import.meta.url).href)};
+      import { getConfig } from ${JSON.stringify(new URL('../config.ts', import.meta.url).href)};
+      getConfig().sandboxWorkspaces = false;
+      initWorkspaceDir(process.argv[1], process.argv[1] + '/absent-config');
+      new RemoteServer(process.argv[1]).listen();
+    `;
+    const start = () => {
+      const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script, repoDir]);
+      let buffer = '';
+      const lines: string[] = [];
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (chunk: string) => {
+        buffer += chunk;
+        let newline = buffer.indexOf('\n');
+        while (newline !== -1) {
+          lines.push(buffer.slice(0, newline)); buffer = buffer.slice(newline + 1);
+          newline = buffer.indexOf('\n');
+        }
+      });
+      child.stderr.resume();
+      return { child, lines, send: (frame: Parameters<typeof encodeFrame>[0]) => child.stdin.write(`${encodeFrame(frame)}\n`) };
+    };
+    const peer = start();
+    let proxy: ReturnType<typeof start> | undefined;
+    const stop = async (child: ReturnType<typeof spawn>) => {
+      if (child.exitCode !== null || child.signalCode !== null) return;
+      const exited = once(child, 'exit'); child.kill('SIGTERM'); await exited;
+    };
+    try {
+      await vi.waitFor(() => expect(peer.lines[0]).toContain('__JANUS_REMOTE__'), { timeout: 10_000 });
+      const handshake = parseHandshake(peer.lines[0]);
+      if ('error' in handshake || !handshake.session) throw new Error('missing peer identity');
+      peer.send({ type: 'provision', label: 'real-sleep-shell' });
+      await vi.waitFor(() => expect(peer.lines.some((line) => line.includes('workspace-ready'))).toBe(true), { timeout: 10_000 });
+      peer.send({ ...SPAWN_FRAME, id: 'shell', mode: 'pipe' });
+      peer.send({ type: 'input', id: 'shell', data: 'printf "before:%s\\n" "$$"\n' });
+      const outputs = (lines: string[]) => lines.map((line) => decodeFrame(line))
+        .filter((frame) => 'type' in frame && frame.type === 'output').map((frame) => frame.data).join('');
+      await vi.waitFor(() => expect(outputs(peer.lines)).toMatch(/before:\d+/));
+      const shellPid = /before:(\d+)/.exec(outputs(peer.lines))![1];
+      peer.child.stdin.end(); peer.child.kill('SIGHUP');
+      proxy = start();
+      const restored = proxy;
+      await vi.waitFor(() => expect(restored.lines[0]).toContain('__JANUS_REMOTE__'), { timeout: 10_000 });
+      restored.send({ type: 'reattach', session: handshake.session });
+      await vi.waitFor(() => expect(restored.lines.join('\n')).toContain('"accepted":true'));
+      restored.send({ type: 'input', id: 'shell', data: 'printf "after:%s\\n" "$$"\n' });
+      await vi.waitFor(() => expect(outputs(restored.lines)).toContain(`after:${shellPid}`));
+      expect(peer.child.exitCode).toBeNull();
+      expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(true);
+    } finally {
+      if (proxy) await stop(proxy.child);
+      await stop(peer.child);
+    }
+    expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false);
+  }, 30_000);
+  it('reattaches over a private socket, replays missed state once, and drops PTY output', async () => {
+    const received = vi.fn(), output: string[] = [];
+    const peer = new DetachedPeer(repoDir, randomUUID(), received, vi.fn());
+    await peer.start(vi.fn());
+    peer.emit({ type: 'transcript', blocks: ['already delivered'] });
+    peer.detach();
+    peer.emit({ type: 'output', id: 'r1', data: 'missed terminal bytes' });
+    peer.emit({ type: 'transcript', blocks: ['first missed block'] });
+    peer.emit({ type: 'transcript', blocks: ['second missed block'] });
+    peer.emit({ type: 'acp-chunk', id: 'a1', text: 'reply' });
+    peer.emit({ type: 'acp-end', id: 'a1', stopReason: 'end_turn' });
+    peer.track({ ...SPAWN_FRAME, id: 'shell', mode: 'pipe' });
+    peer.emit({ type: 'output', id: 'shell', data: 'command completion sentinel' });
+    const ended = vi.fn();
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, ended)!;
+    try {
+      await vi.waitFor(() => expect(output.join('')).toContain('acp-end'));
+      const frames = output.join('').trim().split('\n').map((line) => JSON.parse(line));
+      expect(frames.map((frame) => frame.type)).toEqual(['reattach-result', 'transcript', 'transcript', 'acp-chunk', 'acp-end', 'output']);
+      expect(frames.at(-1).id).toBe('shell');
+      socket.write(`${encodeFrame({ type: 'input', id: 'r1', data: 'new input' })}\n`);
+      await vi.waitFor(() => expect(received).toHaveBeenCalledWith(expect.stringContaining('input')));
+      socket.destroy(); await vi.waitFor(() => expect(ended).toHaveBeenCalled());
+      output.length = 0;
+      const again = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('reattach-result'));
+        expect(output.join('').trim().split('\n')).toHaveLength(1);
+      } finally { again.destroy(); }
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
+  it('refuses the wrong session and distinguishes a dead pid from a live unreachable peer', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    const recordPath = path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`);
+    const record = JSON.parse(readFileSync(recordPath, 'utf8'));
+    const socket = createConnection(record.socket);
+    const output: string[] = [];
+    socket.setEncoding('utf8'); socket.on('data', (data: string) => { output.push(data); });
+    try {
+      socket.write(`${encodeFrame({ type: 'reattach', session: randomUUID() })}\n`);
+      await vi.waitFor(() => expect(output.join('')).toContain('"accepted":false'));
+      const ended = vi.fn();
+      const unknown = relayPeer(repoDir, randomUUID(), vi.fn(), ended);
+      expect(unknown).toBeUndefined(); expect(ended).toHaveBeenLastCalledWith(true);
+      writeFileSync(recordPath, JSON.stringify({ pid: 2_147_483_647, socket: record.socket }));
+      expect(relayPeer(repoDir, peer.session, vi.fn(), ended)).toBeUndefined();
+      expect(ended).toHaveBeenLastCalledWith(true);
+      ended.mockClear();
+      writeFileSync(recordPath, JSON.stringify({ pid: process.pid, socket: path.join(tmpDir, 'absent.sock') }));
+      const unreachable = relayPeer(repoDir, peer.session, vi.fn(), ended)!;
+      await vi.waitFor(() => expect(ended).toHaveBeenCalledExactlyOnceWith(false));
+      unreachable.destroy();
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
+  it('expires an unreattached peer and cleans up its workspace', async () => {
+    const { server, frames, exit } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'sleep-expiry' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
+    const peer = new DetachedPeer(repoDir, randomUUID(), (data) => server.receive(data), () => server.shutdown(0));
+    await peer.start(vi.fn());
+    vi.useFakeTimers();
+    try {
+      peer.detach(); vi.advanceTimersByTime(REMOTE_DETACH_TIMEOUT_MS - 1);
+      expect(exit).not.toHaveBeenCalled(); expect(existsSync(ready.dir)).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(exit).toHaveBeenCalledOnce(); expect(existsSync(ready.dir)).toBe(false);
+    } finally { peer.dispose(); vi.useRealTimers(); server.shutdown(0); }
   });
 });

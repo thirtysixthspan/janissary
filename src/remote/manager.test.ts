@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
@@ -45,7 +45,7 @@ describe('remoteServeCommand', () => {
   });
 });
 
-function managerHarness(ready = true) {
+function managerHarness(ready = true, session?: string) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
   const reassignTransports = vi.fn();
@@ -69,13 +69,27 @@ function managerHarness(ready = true) {
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
   remote.open('creator', address('devbox'), '/local', handlers);
-  transport?.onData(`${encodeHandshake('/remote')}\n`);
+  transport?.onData(`${encodeHandshake('/remote', session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, reassignTransports, closeTab, transport: () => transport };
 }
 
 describe('RemoteManager shared channels', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.useRealTimers());
+
+  it('retains joined tabs and cached files when an established peer transport drops', () => {
+    vi.useFakeTimers();
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.attach('joined', 'creator');
+    const channel = h.remote.get('creator');
+    h.transport()?.onExit();
+    expect(h.remote.get('joined')).toBe(channel);
+    expect(h.remote.workspaceOf('joined')).toBe('/remote/ws');
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+    expect(clearRemoteFileCacheForWorkspace).not.toHaveBeenCalled();
+    h.remote.dispose();
+  });
 
   it('detaches survivors before callbacks after creator release and repeated exit', () => {
     const h = managerHarness();
@@ -94,7 +108,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.addressOf('joined')).toBeUndefined();
     expect(h.remote.transcriptSource('joined')).toBeUndefined();
     expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith('devbox', 'creator');
-    expect(notify).toHaveBeenCalledWith(expect.anything(), 'manual', 'joined', expect.any(String));
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session-ended', 'joined', expect.any(String));
   });
 
   it('keeps readiness and teardown on the old entry after creator-label reuse', async () => {

@@ -8,6 +8,7 @@ import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
 import { notify } from '../notifications.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
+import { Reattach, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
 // and its channel has gone away.
@@ -17,21 +18,6 @@ export type RemoteLaunchHandlers = {
   onReady: (dir: string, notice?: string) => void;
   onFailed: (message: string) => void;
   onClosed: () => void;
-};
-
-type Entry = {
-  channel: RemoteChannel;
-  transcript: RemoteTranscriptSource;
-  address: RemoteAddress;
-  labels: Set<string>;
-  handlers: Map<string, RemoteLaunchHandlers>;
-  ready: Promise<string>;
-  resolveReady: (dir: string) => void;
-  rejectReady: (error: Error) => void;
-  workspaceDir?: string;
-  settled: boolean;
-  closed: boolean;
-  workspaceLabel: string;
 };
 
 // The local side runs `ssh -t <destination> '$SHELL -ic "janus remote-serve [<path>]"'`. Nothing is
@@ -56,6 +42,10 @@ export function remoteServeCommand(address: RemoteAddress): string {
 // label releases it. Separate launches to the same host deliberately remain separate entries.
 export class RemoteManager {
   private entries = new Map<string, Entry>();
+  private resume = messageBus.on('system', 'resumed', () => {
+    const entries = new Set(this.entries.values());
+    for (const entry of entries) resumeRemote(entry);
+  });
 
   constructor(private managers: Managers) {}
 
@@ -82,11 +72,18 @@ export class RemoteManager {
       },
       {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
-        onAttached: () => deferred.channel?.send({
-          type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(),
-        }),
+        onAttached: () => {
+          if (entry.reconnect.active && channel.sessionId) {
+            channel.send({ type: 'reattach', session: channel.sessionId });
+          } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
+        },
         onFrame: (frame) => {
           switch (frame.type) {
+          case 'reattach-result': {
+            if (frame.accepted) entry.reconnect.accepted();
+            else terminateRemoteEntry(this.managers, entry);
+            break;
+          }
           case 'workspace-ready': {
             if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
             entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
@@ -102,10 +99,14 @@ export class RemoteManager {
           }
         },
         onError: (message) => {
+          if (entry.reconnect.active) return;
           if (!entry.closed && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
           entry.handlers.get(label)?.onFailed(message);
         },
         onClose: () => this.channelClosed(entry),
+        onSessionExit: (_id, owner, harness) => {
+          endRemoteProcess(this.managers, entry, owner ?? label, harness);
+        },
       },
     );
     deferred.channel = channel;
@@ -113,12 +114,24 @@ export class RemoteManager {
     const entry: Entry = {
       channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
       ready, resolveReady, rejectReady, settled: false, closed: false, workspaceLabel: label,
+      reconnect: new Reattach(() => connect(), () => channel.close()),
     };
     this.entries.set(label, entry);
-    deferred.session = this.managers.pty.spawnTransport(label, 'ssh', remoteServeCommand(address), cwd, {
-      onData: (data) => channel.receive(data),
-      onExit: () => channel.closed(),
-    });
+    let generation = 0;
+    const connect = () => {
+      const current = ++generation;
+      deferred.session?.kill();
+      channel.replaceTransport({
+        get id() { return deferred.session?.id ?? ''; },
+        write: (data) => deferred.session?.write(data), kill: () => deferred.session?.kill(),
+      });
+      deferred.session = this.managers.pty.spawnTransport(entry.labels.values().next().value ?? label,
+        'ssh', remoteServeCommand(address), cwd, {
+          onData: (data) => { if (current === generation) channel.receive(data); },
+          onExit: () => { if (current === generation) channel.closed(); },
+        });
+    };
+    connect();
     return channel;
   }
 
@@ -126,7 +139,7 @@ export class RemoteManager {
   attach(label: string, sourceLabel: string, handlers?: RemoteLaunchHandlers): boolean {
     if (this.entries.has(label)) return false;
     const entry = this.entries.get(sourceLabel);
-    if (!entry) return false;
+    if (!entry || entry.closed) return false;
     entry.labels.add(label);
     entry.handlers.set(label, handlers ?? this.joinedHandlers(label));
     this.entries.set(label, entry);
@@ -151,6 +164,7 @@ export class RemoteManager {
   close(label: string): boolean {
     const entry = this.entries.get(label);
     if (!entry) return false;
+    terminateRemoteEntry(this.managers, entry);
     entry.channel.close();
     return true;
   }
@@ -165,6 +179,8 @@ export class RemoteManager {
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
     else {
+      entry.reconnect.stop();
+      entry.channel.finish();
       this.channelClosed(entry);
       entry.channel.close();
     }
@@ -173,13 +189,13 @@ export class RemoteManager {
 
   closeAll(): void {
     const entries = new Set(this.entries.values());
-    for (const entry of entries) entry.channel.close();
+    for (const entry of entries) { entry.reconnect.stop(); entry.closed = true; entry.channel.finish(); entry.channel.close(); }
     this.entries.clear();
   }
 
   closeTab(label: string): void { this.release(label); }
 
-  dispose(): void { this.closeAll(); }
+  dispose(): void { this.resume.unsubscribe(); this.closeAll(); }
 
   private joinedHandlers(label: string): RemoteLaunchHandlers {
     return {
@@ -210,12 +226,14 @@ export class RemoteManager {
 
   private channelClosed(entry: Entry): void {
     if (entry.closed) return;
+    if (entry.channel.sessionId && entry.workspaceDir) { entry.reconnect.lost(); return; }
     entry.closed = true;
     if (!entry.settled) {
       entry.settled = true;
       entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
     } else if (entry.workspaceDir && entry.labels.size > 0) {
-      notify(this.managers, 'manual', entry.labels.values().next().value!, `Remote connection to ${entry.address.host} ended.`);
+      notify(this.managers, 'remote-session-ended', entry.labels.values().next().value!,
+        `Remote janus on ${entry.address.host} ended — start a new agent or shell to continue.`);
     }
     clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
     for (const label of entry.labels) {
@@ -226,4 +244,5 @@ export class RemoteManager {
     entry.handlers.clear();
     for (const handler of handlers) handler.onClosed();
   }
+
 }

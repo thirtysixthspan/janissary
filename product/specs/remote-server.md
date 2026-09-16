@@ -166,31 +166,25 @@ ACP handlers.
 
 An ACP-level failure is not a channel-level fault. An agent that fails to spawn or errors mid-prompt
 is reported on its own error frame and routed to the session that owns it; only a malformed or
-unknown frame closes the channel, and therefore the tab.
+unknown frame interrupts the channel. An established session then attempts to reattach.
 
 ### Lifecycle and cleanup
 
 A remote channel's lifetime is its last user's lifetime. The launching tab, every agent joined from
 it through ➕, and each navigator using its workspace hold a reference. Closing one tab releases its
-reference without closing the surviving tabs or ending their ssh session. The session ends only
-after the last reference is released. If the ssh session drops for any reason, every tab and
-navigator using it closes and the notifications feed reports the ended connection once. There is no
-reconnect, no resume, and no reattach; a new launch starts a fresh session.
+reference without closing the surviving tabs or ending their ssh session. A transport drop keeps those tabs, their file navigators, and their cached workspace files in place. Janissary opens a new SSH connection and reattaches to the existing peer, workspace, and processes. An unreachable peer is retried with bounded delays until it becomes reachable or is confirmed to have ended.
 
-This disconnect cleanup still applies after the launching tab closes. Reusing its name for a new
-launch does not let the earlier session's readiness, errors, or disconnect close or change the new
-session. Each surviving tab is closed once when its own shared session ends.
+Reusing the launching tab's name for a new launch does not let the earlier session's readiness, errors, or recovery close or change the new session.
 
-On the remote side the workspace clone is removed when `remote-serve` exits — including on the
-hangup it receives when the channel drops — so a dropped connection never leaves a clone behind.
-Closing the last user locally ends the session and triggers the same cleanup. Explicitly closing its
-`ssh:` connection is a force-close: it ends the shared channel and closes every tab and navigator
-using it.
+On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources; a peer left without a connection is cleaned up when its wait expires.
+
+A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection also ends recovery and leaves its tabs showing the ended session.
+
+Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
 
 When the application itself quits, each remote process, ACP session, and navigator session is told
 to stop before the channel carrying that instruction is closed. Closing the channel first would
-leave those instructions undeliverable and the far-side processes running until `remote-serve`'s own
-hangup cleanup reached them.
+leave those instructions undeliverable and the far-side processes running until the detached peer expires.
 
 Nothing from the remote workspace is deleted locally when a remote tab closes. Files opened from a
 remote navigator are materialized in the local `.janissary/remote-files/` cache; that cache is

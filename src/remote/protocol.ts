@@ -51,13 +51,19 @@
 // root's workspace-relative prefix, sent only with the whole-tree form (an empty `paths` list), so a
 // navigator rooted below the workspace root stages and commits only its own subtree rather than
 // everything the far side's single shared workspace root can see.
-export const REMOTE_PROTOCOL_VERSION = 13;
+//
+// Version 14 adds the reattach frames (`reattach` out, `reattach-result` back) and a `session` id
+// carried on the handshake, backing reconnection to a peer that outlived its transport across a
+// laptop sleep. A version-13 remote has no rendezvous to answer a reattach request against, so the
+// handshake check above is what turns a stale far side into a clear refusal instead of a reattach
+// request nobody on the other end recognizes.
+export const REMOTE_PROTOCOL_VERSION = 14;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
 export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 
-export type RemoteHandshake = { version: number; root: string };
+export type RemoteHandshake = { version: number; root: string; session?: string };
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
@@ -97,6 +103,7 @@ import { decodeKnownFrame } from './frame-decode.js';
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
+  | { type: 'reattach'; session: string }
   // `identity` is the git name and email of the user who opened janissary locally, so commits made
   // in the remote workspace are attributed to them rather than to whatever account the ssh
   // destination resolved to.
@@ -139,6 +146,7 @@ export type ClientFrame =
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
+  | { type: 'reattach-result'; accepted: boolean }
   // `notice` is what the remote knows about the workspace it just made and the local side cannot
   // work out for itself: whether its processes are actually confined, and which GitHub credential
   // it ended up with. Both are facts about the machine they hold on, so they are reported from
@@ -178,11 +186,13 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // or `ServerFrame` without an entry here is a compile error, instead of a frame type that encodes,
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
+  reattach: true,
   provision: true, spawn: true, input: true, resize: true, kill: true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
+  'reattach-result': true,
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
   'browser-exited': true,
   'filesystem-reply': true, 'filesystem-event': true,
@@ -244,8 +254,8 @@ export function decodeFrame(line: string): RemoteFrame | { error: string } {
   return decodeKnownFrame(type, record);
 }
 
-export function encodeHandshake(root: string): string {
-  return `${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: REMOTE_PROTOCOL_VERSION, root })}`;
+export function encodeHandshake(root: string, session?: string): string {
+  return `${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: REMOTE_PROTOCOL_VERSION, root, session })}`;
 }
 
 // Read the handshake line's payload, rejecting a protocol version this build does not speak. The
@@ -267,7 +277,11 @@ export function parseHandshake(line: string): RemoteHandshake | { error: string 
         + 'Update janissary so both hosts match.',
     };
   }
-  return { version, root: typeof record.root === 'string' ? record.root : '' };
+  if (record.session !== undefined && (typeof record.session !== 'string' || !/^[a-f\d-]{36}$/.test(record.session))) {
+    return { error: 'Malformed remote session id.' };
+  }
+  return { version, root: typeof record.root === 'string' ? record.root : '',
+    ...(typeof record.session === 'string' && { session: record.session }) };
 }
 
 // How many trailing characters of `text` must be held back because they could be the start of

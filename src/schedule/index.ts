@@ -8,7 +8,7 @@ export { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
 import { nextOccurrenceOfTime, nextWeekday, nextDateTime } from './time.js';
 export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
 import { fmtTime } from './display.js';
-export { fmtNextRun, formatSchedule } from './display.js';
+export { fmtNextRun, formatSchedule, formatLateDuration } from './display.js';
 
 // The body parser produces an add result without a name; the wrapper attaches the leading
 // positional name afterwards.

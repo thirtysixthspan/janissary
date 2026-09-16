@@ -13,6 +13,8 @@ import { tabPluginCatalog } from './plugins/catalog.js';
 import { pluginContentTypes } from './plugins/opener-adapter.js';
 import { pluginOpeners } from './openers/index.js';
 import { errorText } from './error-text.js';
+import { messageBus } from './bus.js';
+import { ResumeWatch } from './resume-watch.js';
 
 // Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
 const SECURITY_HEADERS = {
@@ -50,6 +52,19 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   const clients = new Set<WebSocket>();
   let closed = false;
   let exitTimer: ReturnType<typeof setTimeout> | undefined;
+  const resumeWatch = new ResumeWatch();
+  const armExit = () => {
+    clearTimeout(exitTimer);
+    exitTimer = setTimeout(() => {
+      if (resumeWatch.check()) return;
+      exitTimer = undefined;
+      void close().then(() => process.exit(0));
+    }, CLIENT_RECONNECT_GRACE_MS);
+  };
+  const resumeSubscription = messageBus.on('system', 'resumed', () => {
+    if (exitTimer && !closed) armExit();
+  });
+  resumeWatch.start();
 
   const broadcast = (event: ServerEvent) => {
     const s = JSON.stringify(event);
@@ -132,10 +147,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       clients.delete(ws);
       if (clients.size === 0 && !closed) {
         broadcast({ t: 'bye' });
-        exitTimer = setTimeout(() => {
-          exitTimer = undefined;
-          void close().then(() => process.exit(0));
-        }, CLIENT_RECONNECT_GRACE_MS);
+        armExit();
       }
     });
   });
@@ -150,6 +162,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
 
   const close = (): Promise<void> => new Promise((resolve) => {
     closed = true;
+    resumeWatch.stop();
+    resumeSubscription.unsubscribe();
     if (exitTimer) clearTimeout(exitTimer);
     controller.shutdown();
     for (const c of clients) c.close();

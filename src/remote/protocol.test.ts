@@ -11,6 +11,18 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 }
 
 describe('frame codec', () => {
+  it.each([
+    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc' },
+    { type: 'reattach-result', accepted: true },
+    { type: 'reattach-result', accepted: false },
+  ] as const)('round-trips $type', (frame) => { expect(roundTrip(frame)).toEqual(frame); });
+
+  it.each([
+    { type: 'reattach', session: '../../elsewhere' }, { type: 'reattach' },
+    { type: 'reattach-result', accepted: 'true' }, { type: 'reattach-result' },
+  ])('rejects malformed reattachment %j', (frame) => {
+    expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
+  });
   it('round-trips every client frame', () => {
     const frames: RemoteFrame[] = [
       {
@@ -255,14 +267,14 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-close', 'acp-open', 'acp-prompt',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'resize', 'spawn',
+      'input', 'kill', 'provision', 'reattach', 'resize', 'spawn',
     ]);
   });
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'browser-exited',
-      'exit', 'filesystem-event', 'filesystem-reply', 'output',
+      'exit', 'filesystem-event', 'filesystem-reply', 'output', 'reattach-result',
       'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });

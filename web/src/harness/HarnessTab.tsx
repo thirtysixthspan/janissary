@@ -85,7 +85,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
       />
       {isExited && (
         <div className="harness-exited">
-          exited{harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}
+          {harness.sessionEnded ?? `exited${harness.exitCode === undefined ? '' : ` (${harness.exitCode})`}`}
         </div>
       )}
       {harness.provisionError !== undefined && (
