@@ -17,6 +17,12 @@ export function commitFailureText(error: unknown): string {
   return `Could not commit: ${errorText(error)}`;
 }
 
+// A commit that failed after leaving its own staging in place, because the index already held the
+// user's own changes before this action touched it and unwinding it would have destroyed those.
+export function commitFailureLeavesStagedText(error: unknown): string {
+  return `Could not commit: ${errorText(error)} — what was staged is still in your index`;
+}
+
 // Nothing was staged, so nothing was committed. Neither of the other two outcomes, so it borrows
 // neither stem — the notification's own provenance header already names the tab it came from.
 export const NOTHING_TO_COMMIT_TEXT = 'Nothing to commit';
