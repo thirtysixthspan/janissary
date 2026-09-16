@@ -3,6 +3,7 @@ import {
   fileNavigatorToggle,
   fileNavigatorCollapseAll,
   fileNavigatorPull,
+  fileNavigatorCommit,
   fileNavigatorReroot,
   moveFileNavigatorItem,
   moveFileNavigatorItems,
@@ -75,6 +76,20 @@ describe('controller-file-navigator', () => {
     const calls: unknown[] = [];
     const managers = makeManagers(undefined, { pull: (...args: unknown[]) => { calls.push(args); } });
     fileNavigatorPull(managers, 0);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('fileNavigatorCommit delegates with the resolved label, message, and paths', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers('agent', { commit: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorCommit(managers, 0, 'commit: a.md', ['a.md']);
+    expect(calls).toEqual([['agent', 'commit: a.md', ['a.md']]]);
+  });
+
+  it('fileNavigatorCommit is a no-op when the tab index has no label', () => {
+    const calls: unknown[] = [];
+    const managers = makeManagers(undefined, { commit: (...args: unknown[]) => { calls.push(args); } });
+    fileNavigatorCommit(managers, 0, 'commit: a.md', ['a.md']);
     expect(calls).toHaveLength(0);
   });
 

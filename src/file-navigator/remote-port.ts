@@ -11,6 +11,8 @@ import type { PasteManyResult } from './paste.js';
 import type { RowStat } from './stats.js';
 import type { HistoryStep } from './moves.js';
 import { mapRemoteHistory } from './remote-port-history.js';
+import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './remote-port-git.js';
+import type { CommitResult } from '../git/commit.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
 import {
   CLOSED_REASON, ENDED_REASON, RemotePortRequests, unavailableResult,
@@ -78,15 +80,16 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   gitMetadata(root: string, onResult: (metadata: GitMetadata) => void): void {
-    void this.request<GitMetadata>('git', {}).then(async (metadata) => {
-      onResult({ ...metadata, statuses: await this.paths.filterEntries(root, metadata.statuses) });
-    }, () => onResult({ statuses: [] }));
+    remoteGitMetadata(this.requester(), this.paths, root, onResult);
   }
 
-  // `git-pull` carries no path arguments: the far side pulls its own workspace root, so `_root`
-  // exists only to keep the port signature uniform with `gitMetadata`'s. The reply carries git's own
-  // outcome summary, which only the host that ran the pull can know.
-  pull(_root: string): Promise<string> { return this.request('git-pull', {}); }
+  // `_root` exists only to keep the port signature uniform with `gitMetadata`'s — the far side pulls
+  // its own workspace root, so there is nothing to map.
+  pull(_root: string): Promise<string> { return remoteGitPull(this.requester()); }
+
+  commit(root: string, message: string, relPaths: string[]): Promise<CommitResult> {
+    return remoteGitCommit(this.requester(), this.paths, root, message, relPaths);
+  }
 
   async search(root: string): Promise<string[]> {
     const matches = await this.request<string[]>('search', {});
@@ -177,6 +180,12 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   private async unwatch(path: string, listener: () => void): Promise<void> {
     if (!this.watchers.forget(path, listener)) return;
     try { await this.request('unwatch', { path }); } catch { /* teardown is best effort */ }
+  }
+
+  // `request` as a plain value, for the git operations that live in `remote-port-git.ts`: they need
+  // to send frames without learning anything about this port's session bookkeeping.
+  private requester(): RemoteRequest {
+    return (operation, args) => this.request(operation, args);
   }
 
   private async request<T>(operation: RemoteFilesystemOperation, args: RemoteFilesystemArguments): Promise<T> {

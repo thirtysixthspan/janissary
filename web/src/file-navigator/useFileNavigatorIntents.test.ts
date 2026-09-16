@@ -35,6 +35,25 @@ describe('useFileNavigatorIntents', () => {
     expect(send).toHaveBeenNthCalledWith(4, { method: 'fileNavigatorPull', params: { index: 3 } });
   });
 
+  it('sends a commit with the message and the paths it names', () => {
+    const { intents, send } = setup();
+    intents.commit('commit: notes.md', ['src/notes.md']);
+
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'fileNavigatorCommit',
+      params: { index: 3, message: 'commit: notes.md', paths: ['src/notes.md'] },
+    });
+  });
+
+  it('sends an empty path list for the whole-tree form', () => {
+    const { intents, send } = setup();
+    intents.commit('commit: 2 files', []);
+
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'fileNavigatorCommit', params: { index: 3, message: 'commit: 2 files', paths: [] },
+    });
+  });
+
   it('adapts command and GitHub actions to command messages', () => {
     const { intents, send } = setup();
     intents.sendCommand('edit /project/readme.md');

@@ -3,8 +3,9 @@ import type { ContextMenuItem } from '../shared/ContextMenu';
 
 // What the file navigator's context menu can do. Every action takes the right-clicked row rather
 // than the selection, because right-clicking deliberately leaves the selection alone — except
-// Delete, which acts on the whole selection when the clicked row is part of it, matching the
-// Finder/Explorer convention for a destructive multi-file action.
+// Delete and Commit to origin, both of which act on the whole selection when the clicked row is part
+// of it — Delete because that matches the Finder/Explorer convention for a destructive multi-file
+// action, and Commit to origin because one commit carrying every selected file is the point of it.
 export type FileNavigatorMenuActions = {
   open: (row: FileNavigatorRow) => void;
   edit: (row: FileNavigatorRow) => void;
@@ -15,6 +16,7 @@ export type FileNavigatorMenuActions = {
   duplicate: (row: FileNavigatorRow) => void;
   rename: (row: FileNavigatorRow) => void;
   remove: (row: FileNavigatorRow) => void;
+  commitToOrigin: (row: FileNavigatorRow) => void;
   newFile: () => void;
   newDirectory: () => void;
 };
@@ -28,11 +30,16 @@ export type FileNavigatorMenuActions = {
 // plugin's own, offered when every selected row is a file of its claimed types. It is drawn in a
 // group of its own above Copy, labelled with whatever the plugin declared, and this function knows
 // nothing else about it — the navigator never learns what kind of files it is looking at.
+//
+// `hasBranch` is the same kind of caller-supplied visibility fact as `clipboardArmed`: the tree only
+// shows a branch when its root sits in a git repository, and outside one there is nothing to commit
+// to — so `Commit to origin` is omitted exactly where the header's commit button is.
 export function fileNavigatorMenuItems(
   row: FileNavigatorRow,
   clipboardArmed: boolean,
   actions: FileNavigatorMenuActions,
   contributed?: { label: string; onActivate: () => void } | null,
+  hasBranch = false,
 ): ContextMenuItem[][] {
   const parentRow = row.path === '..';
   const editEntry: ContextMenuItem[] = row.dir
@@ -59,13 +66,19 @@ export function fileNavigatorMenuItems(
     ? []
     : [{ label: 'Duplicate', onActivate: () => actions.duplicate(row) }];
 
+  // Commit to origin joins Rename and Delete rather than opening a group of its own: it is the third
+  // entry here that changes something permanently, and the ".." row is not in the tree to commit.
+  const commitEntry: ContextMenuItem[] = parentRow || !hasBranch
+    ? []
+    : [{ label: 'Commit to origin', onActivate: () => actions.commitToOrigin(row) }];
+
   const contributedGroup: ContextMenuItem[][] = contributed ? [[contributed]] : [];
 
   return [
     ...openGroup,
     ...contributedGroup,
     [{ label: 'Copy', onActivate: () => actions.copy(row) }, ...pasteEntry, ...duplicateEntry, ...copyPathEntry],
-    [...renameEntry, { label: 'Delete', onActivate: () => actions.remove(row) }],
+    [...renameEntry, { label: 'Delete', onActivate: () => actions.remove(row) }, ...commitEntry],
     [
       { label: 'New file', onActivate: actions.newFile },
       { label: 'New folder', onActivate: actions.newDirectory },

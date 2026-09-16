@@ -5,8 +5,8 @@ import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from './pro
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
-  'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'search', 'read-file',
-  'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
+  'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
+  'read-file', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
   'create-file', 'create-directory', 'replay',
 ];
 
@@ -20,6 +20,7 @@ const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[
   ['unwatch', { path: 'src' }, ['src']],
   ['git', {}, []],
   ['git-pull', {}, []],
+  ['git-commit', { message: 'commit: a.txt', paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['search', {}, []],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '' }, ['a.txt']],
@@ -47,6 +48,7 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['unwatch', {}],
   ['git', { path: 'src' }],
   ['git-pull', { path: 'src' }],
+  ['git-commit', { message: '', paths: ['a.txt'] }],
   ['search', { path: 'src' }],
   ['read-file', {}],
   ['write-file', { path: 'a.txt' }],

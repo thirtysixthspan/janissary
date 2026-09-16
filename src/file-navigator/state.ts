@@ -1,5 +1,7 @@
 import type { GitFileStatus } from '../git/status.js';
-import type { FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget } from '../tab/types.js';
+import type {
+  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget,
+} from '../tab/types.js';
 import type { HistoryStep } from './moves.js';
 import type { TreeRestoreHint } from './restore.js';
 import type { RowStat } from './stats.js';
@@ -59,6 +61,11 @@ export type FilesTabState = {
   // `error` to the resting state (see `manager-pull.ts`).
   pull?: FileNavigatorPullStatus;
   pullFlash?: ReturnType<typeof setTimeout>;
+  // The same pair for the header's commit button. `committing` is likewise the coalescing check — a
+  // commit holds git's index and `HEAD` at least as hard as a pull does — and `commitFlash` returns
+  // a settled `committed` or `error` to rest (see `manager-commit.ts`).
+  commit?: FileNavigatorCommitStatus;
+  commitFlash?: ReturnType<typeof setTimeout>;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
   // rebuilds. Its `revision` changes only when a new restore is applied, which is what stops the
   // repeated full-state broadcasts from re-applying an old hint over a selection the user has

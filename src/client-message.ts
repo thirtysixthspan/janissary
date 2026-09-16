@@ -32,6 +32,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   fileNavigatorOpeners: 'result',
   fileNavigatorOpen: 'deferred',
   fileNavigatorPull: 'ack',
+  fileNavigatorCommit: 'ack',
   fileNavigatorCreateFile: 'deferred',
   fileNavigatorCreateDirectory: 'deferred',
   fileNavigatorReroot: 'ack',

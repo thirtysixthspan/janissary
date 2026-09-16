@@ -4,6 +4,7 @@ import {
   changedPaths, currentBranch, defaultBranch, remoteUrl, type GitFileStatus,
 } from '../git/status.js';
 import { pullRoot } from '../git/pull.js';
+import { commitRoot, type CommitResult } from '../git/commit.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
 import { readDirSorted, type FileNavigatorEntry } from './index.js';
@@ -67,6 +68,11 @@ export interface FileSystemPort {
   // it finished. Rejects with the git error on failure — like `readFile`, raw work with nowhere to
   // put a reason.
   pull(root: string): Promise<string>;
+  // Commit the named tree-relative paths — or everything under the tree's root, for an empty list —
+  // and push them to `origin` (the header's commit button and the row menu's `Commit to origin`).
+  // Resolves with git's own outcome, including the nothing-to-commit case, and rejects with the git
+  // error on failure, for the same reason `pull` does.
+  commit(root: string, message: string, relPaths: string[]): Promise<CommitResult>;
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
@@ -127,6 +133,19 @@ export class LocalFileSystemPort implements FileSystemPort {
   search(root: string): Promise<string[]> { return listProjectFiles(root); }
 
   pull(root: string): Promise<string> { return pullRoot(root); }
+
+  // Every named path is resolved against the tree's own root, and the whole set is refused if any
+  // one of them escapes it — half a commit is not a coherent thing to make, so this is all-or-
+  // nothing rather than per-path, the rule `resolveSelectionPaths` already applies to a selection.
+  commit(root: string, message: string, relPaths: string[]): Promise<CommitResult> {
+    const resolved: string[] = [];
+    for (const relPath of relPaths) {
+      const absolute = containedPath(root, relPath);
+      if (!absolute) return Promise.reject(new Error(OUTSIDE_ROOT_REASON));
+      resolved.push(absolute);
+    }
+    return commitRoot(root, message, resolved);
+  }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
     const absolute = containedPath(root, relPath);

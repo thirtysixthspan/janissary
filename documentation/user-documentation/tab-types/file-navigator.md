@@ -90,6 +90,22 @@ Clicking again while a pull is still running does nothing, so overlapping pulls 
 
 Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
 
+## Committing your changes to origin
+
+Anywhere the header shows a branch name, it also shows a **Commit changes to origin** button right after the Pull from origin button. Clicking it commits and pushes everything that has changed in the tree's repository. To commit just some of it, right-click a row and choose **Commit to origin** — that commits the selected file or files, or everything inside a folder if you right-click one.
+
+Either way, a one-line field opens over the tree, already filled in with a message: the file's name when one file is involved (`commit: notes.md`), or a count when several are (`commit: 3 files`). Type over it if you want something better. Press `Enter` to commit and push, or `Escape` to cancel. Leaving the field empty and pressing `Enter` cancels too. Clicking away does **not** close this field — it keeps whatever you have typed, so a message you were part-way through writing survives a stray click.
+
+The commit stages what you named, commits it, rebases onto anything new on `origin`, and pushes. If someone else pushed while you were typing, the rebase absorbs their work and your commit still goes up. If that rebase hits a conflict, it is undone, your branch is left exactly where it was, and you are told — sort the conflict out in an editor or a terminal and try again.
+
+The push goes wherever `git push` would go from that folder. If your branch has no upstream yet, the commit fails and tells you so in git's own words, which name the command that sets one. Nothing is published behind your back, and your local commit is still there once you have set it up.
+
+The button spins while the commit runs, turns green when it lands, and turns red when it fails, going back to normal a few seconds later. Clicking again while one is running does nothing, so commits can't overlap.
+
+Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by git's own error when it fails, and `Nothing to commit` when there was nothing to send. Once a commit lands, the rows that were colored as changed lose their color.
+
+For a tree rooted on a remote host, the commit runs there, in that host's workspace.
+
 ## Finding a file by name
 
 Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.

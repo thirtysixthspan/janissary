@@ -8,7 +8,12 @@ import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
+import type { FileNavigatorRow } from '@shared/protocol';
+import type { JanusClient } from '../ws';
+import { createFileNavigatorActions } from './file-navigator-menu-actions';
+import { normalizeOperationPaths } from './useFileNavigatorSelection';
 
 type Drag = ReturnType<typeof useFileNavigatorDrag>;
 type Rename = ReturnType<typeof useFileNavigatorRename>;
@@ -16,6 +21,7 @@ type Deletion = ReturnType<typeof useFileNavigatorDelete>;
 type Paste = ReturnType<typeof useFileNavigatorPaste>;
 type Search = ReturnType<typeof useFileNavigatorSearch>;
 type Opener = ReturnType<typeof useFileNavigatorOpener>;
+type Commit = ReturnType<typeof useFileNavigatorCommit>;
 
 function makeDrag(overrides: Partial<Drag> = {}): Drag {
   return {
@@ -99,7 +105,17 @@ function makeOpener(overrides: Partial<Opener> = {}): Opener {
   };
 }
 
-function makeMenuActions(): FileNavigatorMenuActions {
+function makeCommit(overrides: Partial<Commit> = {}): Commit {
+  return {
+    pendingCommit: null,
+    request: () => {},
+    confirm: () => {},
+    cancel: () => {},
+    ...overrides,
+  };
+}
+
+function makeMenuActions(overrides: Partial<FileNavigatorMenuActions> = {}): FileNavigatorMenuActions {
   return {
     open: () => {},
     edit: () => {},
@@ -110,8 +126,10 @@ function makeMenuActions(): FileNavigatorMenuActions {
     duplicate: () => {},
     rename: () => {},
     remove: () => {},
+    commitToOrigin: () => {},
     newFile: () => {},
     newDirectory: () => {},
+    ...overrides,
   };
 }
 
@@ -126,7 +144,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={null}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
@@ -146,7 +166,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={null}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         onCloseMenu={() => {}}
         focusTree={focusTree}
       />,
@@ -168,7 +190,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={null}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         onCloseMenu={() => {}}
         focusTree={focusTree}
       />,
@@ -188,7 +212,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={null}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
@@ -211,7 +237,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={null}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         onCloseMenu={() => {}}
         focusTree={() => {}}
       />,
@@ -232,7 +260,9 @@ describe('FileNavigatorOverlays', () => {
         search={makeSearch()}
         opener={makeOpener()}
         menu={{ row: menuRow, x: 10, y: 10 }}
+        commit={makeCommit()}
         menuActions={makeMenuActions()}
+        hasBranch={false}
         selectionEntry={selectionEntry}
         onCloseMenu={() => {}}
         focusTree={() => {}}
@@ -253,5 +283,71 @@ describe('FileNavigatorOverlays', () => {
     for (const label of ['Open', 'Edit', 'Open with', 'Copy', 'Delete', 'New file']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
+  });
+
+  // `file-navigator-menu-actions.ts` has no unit test file of its own — the entries it builds are
+  // exercised through the rendered menu, here.
+  const commitRows: FileNavigatorRow[] = [
+    { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },
+    { path: 'src/a.ts', name: 'a.ts', depth: 1, dir: false },
+    { path: 'src/b.ts', name: 'b.ts', depth: 1, dir: false },
+    { path: 'README.md', name: 'README.md', depth: 0, dir: false },
+  ];
+
+  function renderCommitMenu(row: FileNavigatorRow, selected: string[]) {
+    const request = vi.fn();
+    const { menuActions } = createFileNavigatorActions({
+      files: { root: '/ws', absoluteRoot: '/ws', rows: commitRows },
+      client: { send: vi.fn() } as unknown as JanusClient,
+      index: 0,
+      selection: {
+        selected: new Set(selected),
+        operationPaths: normalizeOperationPaths(commitRows, new Set(selected)),
+      } as never,
+      opener: makeOpener(),
+      paste: makePaste(),
+      deletion: makeDeletion(),
+      rename: makeRename(),
+      rowEvents: {} as never,
+      commit: makeCommit({ request }),
+      multiOpenSelection: null,
+      setPendingNewDir: () => {},
+    });
+    render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion()}
+        paste={makePaste()}
+        search={makeSearch()}
+        opener={makeOpener()}
+        menu={{ row, x: 10, y: 10 }}
+        commit={makeCommit()}
+        menuActions={menuActions}
+        hasBranch
+        onCloseMenu={() => {}}
+        focusTree={() => {}}
+      />,
+    );
+    return { request };
+  }
+
+  it('commits every selected row when the clicked row belongs to the selection', () => {
+    const { request } = renderCommitMenu(commitRows[1], ['src/a.ts', 'src/b.ts']);
+    fireEvent.click(screen.getByText('Commit to origin'));
+    expect(request).toHaveBeenCalledWith(['src/a.ts', 'src/b.ts']);
+  });
+
+  it('commits the clicked row alone when it is outside the selection', () => {
+    const { request } = renderCommitMenu(commitRows[3], ['src/a.ts', 'src/b.ts']);
+    fireEvent.click(screen.getByText('Commit to origin'));
+    expect(request).toHaveBeenCalledWith(['README.md']);
+  });
+
+  it('offers Commit to origin on a directory row, where Edit is not offered', () => {
+    const { request } = renderCommitMenu(commitRows[0], []);
+    expect(screen.queryByText('Edit')).toBeNull();
+    fireEvent.click(screen.getByText('Commit to origin'));
+    expect(request).toHaveBeenCalledWith(['src']);
   });
 });
