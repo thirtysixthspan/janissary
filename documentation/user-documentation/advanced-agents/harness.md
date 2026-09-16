@@ -40,9 +40,10 @@ what you copy is the text.
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it leaves it in
 place, so the same pick can be used again. Press `Escape` while the terminal has your keyboard, or
 click plain, to dismiss the selection and unfreeze the screen (a dismiss click is consumed, not sent
-to the harness); the Escape key itself still reaches the harness either way. Right-clicking a
-selection opens the app's own menu instead of the browser's, offering **Chat about this** (also
-`Cmd+I` on macOS, `Ctrl+I` elsewhere) rather than Copy — a terminal's menu never offers Copy. See
+to the harness); the Escape key itself still reaches the harness either way. Releasing the drag over
+a pick opens the app's own menu automatically, offering **Copy** alongside **Chat about this** (also
+`Cmd+I` on macOS, `Ctrl+I` elsewhere); right-clicking the held selection afterward opens the same
+menu again instead of the browser's. See
 [Right-click menus](/user-documentation/getting-started/context-menus).
 
 The copy chords are taken only while something is selected. With nothing selected they go straight

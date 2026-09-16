@@ -464,13 +464,17 @@ describe('HarnessTab', () => {
         const host = rendered.container.querySelector('.harness-body')!;
         const input = document.createElement('textarea');
         shiftDrag(host, 5, 10, 45, 90);
+        // The drag's own release already opened the menu automatically; this test's focus is the
+        // menu a manual right-click resolves once something else holds the keyboard, so it starts
+        // fresh from there.
+        request.mockClear();
         host.append(input);
         input.focus();
         send.mockClear();
         fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
         const entry = await screen.findByText('Chat about this');
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
-          .toEqual(['Paste', 'Chat about this']);
+          .toEqual(['Copy', 'Paste', 'Chat about this']);
         expect(request).toHaveBeenCalledExactlyOnceWith({
           method: 'defaultMenuSelectionAction', params: { selection: 'aa bb\ncc dd' },
         });

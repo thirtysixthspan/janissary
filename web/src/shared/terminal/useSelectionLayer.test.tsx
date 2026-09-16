@@ -106,6 +106,38 @@ describe('useSelectionLayer gestures', () => {
     expect(screen.getByTestId('probe').textContent).toBe('');
   });
 
+  it('opens the context menu at the release point once a drag picks text', () => {
+    mountSelectionLayer(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const onContextMenu = vi.fn();
+    container.addEventListener('contextmenu', onContextMenu);
+    drag(container, 45, 90);
+    expect(onContextMenu).toHaveBeenCalledOnce();
+    const event = onContextMenu.mock.calls[0][0] as MouseEvent;
+    expect(event.clientX).toBe(45);
+    expect(event.clientY).toBe(90);
+  });
+
+  it('opens no context menu when a drag picks nothing', () => {
+    mountSelectionLayer(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const onContextMenu = vi.fn();
+    container.addEventListener('contextmenu', onContextMenu);
+    drag(container, 5, 10, 5, 10);
+    expect(onContextMenu).not.toHaveBeenCalled();
+  });
+
+  it('opens no context menu for a pointerup with no active drag', () => {
+    mountSelectionLayer(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const onContextMenu = vi.fn();
+    container.addEventListener('contextmenu', onContextMenu);
+    drag(container, 45, 90);
+    onContextMenu.mockClear();
+    globalThis.dispatchEvent(new MouseEvent('pointerup', { clientX: 50, clientY: 90 }));
+    expect(onContextMenu).not.toHaveBeenCalled();
+  });
+
   it('dismisses a zero-length overlay on a plain click and consumes that click', () => {
     let api: SelectionLayerApi | undefined;
     mountSelectionLayer(['aa bb', 'cc dd'], (held) => { api = held; });

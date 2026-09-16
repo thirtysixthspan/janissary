@@ -89,7 +89,7 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
       globalThis.removeEventListener('pointermove', extend);
       globalThis.removeEventListener('pointerup', end);
     };
-    const end = () => {
+    const end = (e?: MouseEvent) => {
       // Only a released gesture can have picked nothing; the effect's own teardown must not
       // unfreeze a held (even zero-length) overlay.
       let dragging = false;
@@ -100,7 +100,19 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
       stopListening();
       // A released gesture that never left its starting cell picked nothing, and leaving it
       // on screen would freeze the terminal behind an overlay with no highlight to explain it.
-      if (dragging && !layerHolds(stateRef.current)) clear();
+      if (dragging && !layerHolds(stateRef.current)) {
+        clear();
+        return;
+      }
+      // A release that picks text opens the same default menu a right-click would, at the
+      // point the drag ended: the app's document-level contextmenu listener already resolves
+      // this surface's held selection through the terminal-selection registry, so a dispatched
+      // event needs no menu plumbing of its own.
+      if (dragging && e) {
+        container.dispatchEvent(new MouseEvent('contextmenu', {
+          bubbles: true, cancelable: true, clientX: e.clientX, clientY: e.clientY,
+        }));
+      }
     };
 
     const onDown = (e: MouseEvent) => {

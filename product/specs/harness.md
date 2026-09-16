@@ -425,9 +425,11 @@ screen still freezes while the drag runs: the copy chord reaches the harness unc
 remains the harness's interrupt and is never read as a copy), and the clipboard keeps whatever was on
 it before the drag. A picker overlay open over the tab still claims the chord
 first. Copying a
-held selection leaves it in place, so the same pick can be used twice. Right-clicking a held
-selection offers **Chat about this** (see [[context-menu]]) and no Copy, and `Cmd+I`/`Ctrl+I` runs
-the same action on it directly; neither clears the selection.
+held selection leaves it in place, so the same pick can be used twice. Releasing a Shift+drag
+that picks text opens the default menu itself, at the point the drag ended, offering **Copy**
+alongside **Chat about this** (see [[context-menu]]); right-clicking the held selection afterward
+opens the same menu again. `Cmd+I`/`Ctrl+I` runs Chat about this directly; neither it nor Copy
+clears the selection.
 
 A harness's own copy command reaches the system clipboard too. A harness copying something first
 tries the clipboard of the machine it is running on; when it cannot reach it — which is the case

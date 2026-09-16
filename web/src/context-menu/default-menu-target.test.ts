@@ -94,6 +94,13 @@ describe('defaultMenuGroups', () => {
     expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
   });
 
+  it('offers Copy for a terminal selection too', () => {
+    const groups = defaultMenuGroups(
+      target({ selectionText: 'aa bb', selectionSource: 'terminal' }), actions,
+    );
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+  });
+
   it('yields no group at all when neither entry applies', () => {
     expect(defaultMenuGroups(target(), actions)).toEqual([]);
   });
