@@ -52,7 +52,11 @@ export function normalizeRange(a: Cell, b: Cell): CellRange {
 
 export function layerHolds(state: SelectionLayer | null): boolean {
   if (!state) return false;
-  return state.anchor.row !== state.head.row || state.anchor.col !== state.head.col;
+  // Holding means the pick resolves to text: a range through the blank region below a prompt or
+  // across trailing whitespace is no selection, so it neither claims the copy chord nor empties
+  // the clipboard with it. The extra trim covers multi-blank-row ranges, which arrive as newline
+  // separators without any text between them, and subsumes the zero-length check.
+  return layerText(state).trim() !== '';
 }
 
 // The three cells a line splits into around a selected range, or null when the row is outside

@@ -413,9 +413,12 @@ releases. A second
 Shift+drag replaces it, re-freezing from the screen as it stands then.
 
 **Cmd+C** (macOS) and **Ctrl+Shift+C** (every platform) copy the terminal's current selection to the
-system clipboard. Both are held back from the harness only while something is selected; with an
-empty selection they reach it like any other key, so **Ctrl+C** remains the harness's interrupt and
-is never read as a copy. A picker overlay open over the tab still claims the chord first. Copying a
+system clipboard. Both are held back from the harness only while something is selected. A Shift+drag
+that crosses only blank screen — the region below a prompt's last output — picks nothing, though the
+screen still freezes while the drag runs: the copy chord reaches the harness unchanged (so `Ctrl+C`
+remains the harness's interrupt and is never read as a copy), and the clipboard keeps whatever was on
+it before the drag. A picker overlay open over the tab still claims the chord
+first. Copying a
 held selection leaves it in place, so the same pick can be used twice. Right-clicking a held
 selection offers **Chat about this** (see [[context-menu]]) and no Copy, and `Cmd+I`/`Ctrl+I` runs
 the same action on it directly; neither clears the selection.

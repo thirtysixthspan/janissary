@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Treat a pick that resolves to no text as no selection, so the copy chord neither empties the system clipboard nor is withheld from the harness.
-
-Existing Issue: `layerHolds` returns true whenever the two range ends differ, but `layerText` returns an empty string whenever the picked cells contain nothing — a drag through the blank region below a shell prompt, or across trailing whitespace, since `snapshotViewport` pops trailing blank lines and each picked line is right-trimmed — and the copy branch in `useXterm` then writes that empty string to the clipboard and returns false, so the chord is swallowed. Severity: 5/10
-
-Existing Risk: 5/10 - A user who drags over an empty part of the screen and presses the copy chord destroys whatever they had on the clipboard and gets no feedback, and the same empty pick makes the terminal's selection bridge answer "yes" to `hasSelection` with nothing behind it.
-
-Proposal Risk: 2/10 - An empty pick stops claiming the chord, which is right, but the overlay may still be frozen over a screen with nothing selected on it, so dismissal has to stay reachable — the companion entry on the zero-length Shift+click is where that is settled.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: stop an empty terminal pick from claiming the copy chord". In `web/src/shared/terminal/terminal-selection-layer.ts`, make `layerHolds` mean "this pick resolves to text" rather than "these two cells differ" — the simplest form is to have it test `layerText(state) !== ''`, which subsumes the current zero-length check and costs nothing at the sizes involved, keeping the existing `layerHolds(null)` and zero-length assertions in `web/src/shared/terminal/terminal-selection-layer.test.ts` true. That one change flows to every consumer at once: the copy branch and the registered `TerminalAccess` in `web/src/shared/terminal/useXterm.ts` both route through `selection.holds()`, so an empty pick falls back to the emulator's own selection and, with none, lets the chord reach the PTY unchanged. Add a case to the model tests covering a range whose rows lie past the end of the snapshot (the blank-region drag), asserting both that the text is empty and that the layer does not report holding; and add one to `web/src/harness/HarnessTab.test.tsx` asserting the copy chord returns true and `writeText` is not called after such a drag. The existing test that the chord copies a real multi-line pick and leaves it held is the behavior that must not move.
-
-
 * Take the drag from xterm with a listener xterm actually has, and focus the terminal when the gesture starts, so a selection is reachable by the copy chord.
 
 Existing Issue: The hook's comment states that a capture-phase `pointerdown` with `stopPropagation()` runs ahead of xterm's own handlers, but xterm binds its selection service and its mouse reporting to `mousedown`, which `stopPropagation()` on a `pointerdown` cannot touch — the only thing standing between the gesture and the harness is the browser suppressing the compatibility mouse event after the canceled `pointerdown`, and that same suppression is why the terminal is never focused by the gesture, so a Shift+drag started while focus sits in another field leaves a selection that neither the copy chord nor `Cmd+I` can reach, since both resolve through the focused element. Severity: 5/10

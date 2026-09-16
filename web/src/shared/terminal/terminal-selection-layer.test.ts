@@ -82,6 +82,12 @@ describe('layer holds and text', () => {
     const state = { snapshot: ['alpha beta'], anchor: cell(6, 0), head: cell(10, 0) };
     expect(layerText(state)).toBe('beta');
   });
+
+  it('treats a range past the snapshot as empty text and no selection', () => {
+    const state = { snapshot: ['one'], anchor: cell(0, 5), head: cell(5, 7) };
+    expect(layerText(state)).toBe('');
+    expect(layerHolds(state)).toBe(false);
+  });
 });
 
 describe('rangeSplitForLine', () => {

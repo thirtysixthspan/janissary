@@ -579,6 +579,17 @@ describe('HarnessTab', () => {
         expect(container.querySelector('.terminal-selection-overlay')).not.toBeNull();
       });
 
+      it('lets the copy chord reach the harness after a drag through the blank region', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        const host = container.querySelector('.harness-body')!;
+        screenLines = ['aa bb', 'cc dd'];
+        // Rows 15 to 17 of the hand-laid grid lie in the popped/trailing blank area, so the pick
+        // resolves to no text and the chord stays out of the layer's hands.
+        shiftDrag(host, 300, 300, 400, 340);
+        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(true);
+        expect(writeText).not.toHaveBeenCalled();
+      });
+
       it('keeps the harness answered by the layer on a right-click that lands on the overlay', () => {
         const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
         const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
