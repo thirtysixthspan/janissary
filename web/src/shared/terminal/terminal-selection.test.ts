@@ -75,4 +75,23 @@ describe('terminal selection', () => {
     expect(terminalSelectionText(inner)).toBe('inner selection');
     expect(selection).not.toHaveBeenCalled();
   });
+
+  it('answers with the Shift+drag layer first and falls back to the emulator selection', () => {
+    const start = container();
+    let layerHeld = true;
+    let termHeld = false;
+    const term = { hasSelection: () => termHeld, getSelection: () => 'emulator selection' };
+    const layer = { holds: () => layerHeld, text: () => 'layer selection' };
+    registerTerminalSelection(start, {
+      hasSelection: () => layer.holds() || term.hasSelection(),
+      getSelection: () => (layer.holds() ? layer.text() : term.getSelection()),
+    });
+
+    expect(terminalSelectionText(start)).toBe('layer selection');
+    layerHeld = false;
+    termHeld = true;
+    expect(terminalSelectionText(start)).toBe('emulator selection');
+    termHeld = false;
+    expect(terminalSelectionText(start)).toBe('');
+  });
 });

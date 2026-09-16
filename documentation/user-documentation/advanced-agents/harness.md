@@ -27,18 +27,29 @@ submitted. Focus lands in the terminal, so you can keep going from there.
 
 ## Copying text out of a harness
 
-To select text, hold `Option` while you drag across it (`Shift`+drag on Windows and Linux). Then
-`Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection. Right-clicking a selection
-opens the app's own menu instead of the browser's, offering **Chat about this** (also `Cmd+I` on
-macOS, `Ctrl+I` elsewhere) rather than Copy — a terminal's menu never offers Copy. See
+To select text, hold `Shift` while you drag across it with the mouse button down, on every platform.
+The drag freezes the screen: Janissary draws a still image of it over the live terminal, and the
+text you pick there stays picked — highlighted, adjustable, and copyable again and again — no matter
+how much output the harness keeps streaming underneath. When you dismiss the selection, the live
+terminal appears again, caught up with everything that arrived while it was frozen. The modifier is
+needed because a harness like claude asks for every click and drag to be reported to it, so a plain
+drag talks to the harness rather than selecting anything; holding `Shift` keeps that one drag for
+yourself, and canvas colours aren't carried across — what is copied is the text.
+
+`Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it leaves it in
+place, so the same pick can be used again. Press `Escape`, or click plain, to dismiss the selection
+and unfreeze the screen (a dismiss click is consumed, not sent to the harness). Right-clicking a
+selection opens the app's own menu instead of the browser's, offering **Chat about this** (also
+`Cmd+I` on macOS, `Ctrl+I` elsewhere) rather than Copy — a terminal's menu never offers Copy. See
 [Right-click menus](/user-documentation/getting-started/context-menus).
 
-The modifier is needed because a harness like claude asks for every click and drag to be reported
-to it, so a plain drag talks to the harness rather than selecting anything. Holding the modifier
-keeps that one drag for yourself.
-
 The copy chords are taken only while something is selected. With nothing selected they go straight
-to the harness, so `Ctrl+C` never stops being the interrupt.
+to the harness, so `Ctrl+C` never stops being the interrupt, and `Escape` reaches it normally too.
+
+A selection you've made survives while you keep working in the tab, but clears if you switch tabs
+and back, if you resize the window, or if the harness exits. The frozen image covers the visible
+screen at the moment the drag started — text that has scrolled off is selected by scrolling the
+terminal back first and then dragging again.
 
 The harness's own copy command works too, including in a tab running `on <host>`. A harness copying
 something reaches for the clipboard of the machine it is running on; when that machine is a remote
