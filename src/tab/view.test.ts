@@ -119,6 +119,50 @@ describe('buildTabView', () => {
     expect(view.cwd).toBe('~/project');
   });
 
+  it('reads the workspace dir itself as $workspace for a locally workspaced tab', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const view = buildTabView(tab, false, '/tmp/clone', undefined, [], [], [], (p) => p);
+    expect(view.cwdDisplay).toBe('$workspace');
+    expect(view.cwd).toBe('/tmp/clone');
+  });
+
+  it('reads paths inside the workspace dir as $workspace/<rest>', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const view = buildTabView(tab, false, '/tmp/clone/sub',
+      undefined, [], [], [], (p) => p);
+    expect(view.cwdDisplay).toBe('$workspace/sub');
+  });
+
+  it('leaves cwdDisplay unset for a tab whose workspace does not cover the cwd', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(view.cwdDisplay).toBeUndefined();
+  });
+
+  it('reads a remote tab\'s clone prefix as $workspace via workspaceOf', () => {
+    const tab = makeTab('bekir', '#fff');
+    tab.remote = { host: 'devbox', address: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/srv/.janissary/workspace/bekir/src', undefined, [], [], [], (p) => p,
+      undefined, (label) => (label === 'bekir' ? '/srv/.janissary/workspace/bekir' : undefined),
+    );
+    expect(view.cwdDisplay).toBe('$workspace/src');
+  });
+
+  it('falls back to the ordinary abbreviation once the remote workspace is gone', () => {
+    const tab = makeTab('bekir', '#fff');
+    tab.remote = { host: 'devbox', address: 'devbox' };
+    const remoteWorkspaces: Record<string, string | undefined> = {};
+    const view = buildTabView(
+      tab, false, '/srv/.janissary/workspace/bekir', undefined, [], [], [], () => 'remote path',
+      undefined, (label) => remoteWorkspaces[label],
+    );
+    expect(view.cwdDisplay).toBeUndefined();
+  });
+
   it('carries the unshortened root as absoluteRoot while root itself is shortened', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.files = { root: '/Users/derrick/project', absoluteRoot: '/Users/derrick/project', rows: [] };

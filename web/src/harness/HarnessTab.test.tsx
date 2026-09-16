@@ -290,6 +290,16 @@ describe('HarnessTab', () => {
     expect(getByText('~/project')).toBeInTheDocument();
   });
 
+  it('shows the workspace symbol instead of the raw cwd via cwdDisplay', () => {
+    const { getByText } = render(
+      <HarnessTab
+        harness={makeHarness()} client={mockClient} label="claude"
+        cwd="~/project/.janissary/workspace/bekir" cwdDisplay="$workspace"
+      />,
+    );
+    expect(getByText('$workspace')).toBeInTheDocument();
+  });
+
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const { getByRole } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={['workspaced']} />,

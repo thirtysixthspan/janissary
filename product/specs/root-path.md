@@ -21,6 +21,15 @@ $root/workspace/emrah   = /Users/name/dev/janissary/.janissary/workspace/emrah
 
 Concretely, both the root directory and the state directory inside it are addressed as `$root`, and the **longest matching prefix wins** — so a path under the state directory loses its `.janissary` segment, while a path elsewhere under the root keeps its own first segment.
 
+### The workspace symbol
+
+A **workspaced tab's** metadata row abbreviates further: the tab's own clone reads as
+`$workspace`, and a working directory inside it as `$workspace/<rest>` — no re-derivation from the
+tab header's other elements, and no dependence on the local root. A remote tab's clone is on the
+other host, where no `$root`-style abbreviation applies, so `$workspace` is what shows there too;
+only the metadata row uses this symbol. When the clone's directory is gone (a remote channel no
+longer knows its workspace), the row falls back to the ordinary abbreviation above.
+
 ### Where it applies
 
 The shortcut is applied wherever the application itself renders a path into a tab's transcript, including:

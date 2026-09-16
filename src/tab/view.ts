@@ -1,6 +1,7 @@
 import type { Tab } from './types.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
+import path from 'node:path';
 import { flattenBuffer } from './index.js';
 
 export function buildTabViews(
@@ -21,6 +22,7 @@ export function buildTabViews(
     tab.runtime?.queue ?? [],
     shorten,
     managers.questions.pendingFor(tab.label),
+    (label) => managers.remote.workspaceOf(label),
   ));
 }
 
@@ -36,7 +38,9 @@ export function buildTabView(
   commandQueue: string[],
   shorten: (path: string) => string,
   pendingQuestion?: PendingQuestionView,
+  workspaceOf?: (label: string) => string | undefined,
 ): TabView {
+  const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   return {
     label: tab.label,
     number: tab.number,
@@ -46,6 +50,7 @@ export function buildTabView(
     busy,
     hasUnread: !!tab.hasUnread,
     cwd: shorten(cwd),
+    cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone.
     // The browser flag means the tab *has* a browser, not that it was launched with `-b`: a browser
@@ -87,4 +92,15 @@ export function buildTabView(
     dock: tab.dock,
     pane: tab.pane,
   };
+}
+
+// The metadata row's display symbol for a workspaced tab's working directory: `$workspace` at the
+// clone root, `$workspace/<rest>` inside it — local and remote clones alike, since a remote clone
+// is a path the local `$root` abbreviation could never shorten. Undefined when no workspace prefix
+// applies; display-only, so `cwd` keeps the value every other consumer reads.
+function workspaceCwdDisplay(cwd: string, workspace?: string): string | undefined {
+  if (!workspace) return undefined;
+  if (cwd === workspace) return '$workspace';
+  if (cwd.startsWith(workspace + path.sep)) return `$workspace${cwd.slice(workspace.length)}`;
+  return undefined;
 }

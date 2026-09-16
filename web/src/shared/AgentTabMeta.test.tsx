@@ -4,6 +4,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
 describe('AgentTabMeta', () => {
+  it('renders the display form of the cwd when cwdDisplay is given', () => {
+    const { container } = render(
+      <AgentTabMeta cwd="$root/workspace/bekir" cwdDisplay="$workspace" />,
+    );
+    expect(container.querySelector('.tab-cwd')).toHaveTextContent('$workspace');
+  });
+
+  it('falls back to the plain cwd when cwdDisplay is absent', () => {
+    const { container } = render(<AgentTabMeta cwd="~/project" />);
+    expect(container.querySelector('.tab-cwd')).toHaveTextContent('~/project');
+  });
+
   it('renders the exact Split control only when enabled', () => {
     const onSplit = vi.fn();
     const { rerender } = render(<AgentTabMeta cwd="~/project" onSplit={onSplit} />);

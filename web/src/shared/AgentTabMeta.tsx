@@ -9,7 +9,7 @@ import type { RemoteTarget } from '@shared/protocol';
 import { RemoteChip } from './RemoteChip';
 
 type Properties = {
-  cwd?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTarget;
+  cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTarget;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
@@ -24,14 +24,14 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 }
 
 export function AgentTabMeta({
-  cwd, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
+  cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
   connectionsButton, scheduleButton, onSplit,
 }: Properties) {
   const workspaced = flags?.includes('workspaced') ?? false;
   return (
     <div className="tab-meta">
       {remote !== undefined && <RemoteChip remote={remote} />}
-      <span className="tab-cwd">{cwd}</span>
+      <span className="tab-cwd">{cwdDisplay ?? cwd}</span>
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}
       <span className="tab-flags">

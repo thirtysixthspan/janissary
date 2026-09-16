@@ -60,6 +60,7 @@ export function AgentTabBody({
     >
       <AgentTabMeta
         cwd={current.cwd}
+        cwdDisplay={current.cwdDisplay}
         flags={current.flags}
         remote={current.remote}
         onOpenFileNavigator={intents.onOpenFileNavigator}

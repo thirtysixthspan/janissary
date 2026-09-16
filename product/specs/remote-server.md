@@ -286,8 +286,10 @@ de-duplicated with `-2`, `-3`, … — and the host does not appear in the label
 metadata row gains a chip showing the bare host at the **left of the row, ahead of the working
 directory**, so the row reads "where, then what path there". It uses the same chip styling as the
 model and effort chips, with a tooltip carrying the full destination (`Remote:
-admin@devbox:/srv/proj`). The working directory shown is the remote workspace path, and the tab
-carries the workspaced flag icon like any other workspaced tab.
+admin@devbox:/srv/proj`). The working directory shown is the remote workspace path, prefixed with
+the workspace symbol so the clone reads as `$workspace` (with anything inside it as
+`$workspace/<rest>`), since the far host's own path has no meaning to local `$root` abbreviation —
+and the tab carries the workspaced flag icon like any other workspaced tab.
 
 ### Connections
 

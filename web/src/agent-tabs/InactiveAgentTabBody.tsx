@@ -34,6 +34,7 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
     >
       <AgentTabMeta
         cwd={tab.cwd}
+        cwdDisplay={tab.cwdDisplay}
         flags={tab.flags}
         remote={tab.remote}
         onOpenFileNavigator={intents.onOpenFileNavigator}
