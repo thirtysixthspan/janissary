@@ -18,7 +18,7 @@ import { createFileNavigatorActions } from './file-navigator-menu-actions';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
 import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import { useFileNavigatorCommit } from './useFileNavigatorCommit';
-import { changedFilePaths } from './file-navigator-commit-message';
+import { defaultCommitMessageForCount } from './file-navigator-commit-message';
 import { nextDock } from '../dock-cycle';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
@@ -88,9 +88,9 @@ export function FileNavigatorTab({
   });
 
   // The header button's whole-tree form: it names no paths, so the server stages everything under
-  // the tree's root, but the message it opens pre-filled with is generated from the changed rows the
-  // tree is currently showing.
-  const commitEverything = () => commit.request([], changedFilePaths(files.rows));
+  // the tree's root, and the message it opens pre-filled with is named after every change under that
+  // root — `changedCount` — rather than only the rows the tree currently happens to be showing.
+  const commitEverything = () => commit.request([], defaultCommitMessageForCount(files.changedCount ?? 0));
 
   const onKeyDown = useFileNavigatorKeyDown({
     rows: files.rows,

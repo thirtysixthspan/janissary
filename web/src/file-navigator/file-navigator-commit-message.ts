@@ -1,4 +1,3 @@
-import type { FileNavigatorRow } from '@shared/protocol';
 import { basename } from '../shared/rel-path';
 
 // Pure helpers for the commit-message field — what it opens pre-filled with, and whether what the
@@ -13,11 +12,12 @@ export function defaultCommitMessage(paths: string[]): string {
   return paths.length === 1 ? `commit: ${basename(paths[0])}` : `commit: ${paths.length} files`;
 }
 
-// The changed files the tree is currently showing — what the header button's whole-tree form names
-// its default message after. Directory rows are excluded: their status is the roll-up of what lies
-// beneath them, so counting both would count the same change twice.
-export function changedFilePaths(rows: FileNavigatorRow[]): string[] {
-  return rows.filter((row) => !row.dir && row.gitStatus !== undefined).map((row) => row.path);
+// The header button's whole-tree default: named after every change under the tree's root, which the
+// server counts (`changedCount` on the payload), rather than after only the rows currently rendered.
+// A count has no filename to name, so even a single change reads as `commit: 1 file` rather than
+// naming it outright — unlike `defaultCommitMessage`, which the row menu's named selection still uses.
+export function defaultCommitMessageForCount(count: number): string {
+  return count === 1 ? 'commit: 1 file' : `commit: ${count} files`;
 }
 
 // An empty or whitespace-only message cancels rather than committing — the same silent no-op the

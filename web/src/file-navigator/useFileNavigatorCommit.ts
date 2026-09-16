@@ -11,11 +11,12 @@ export type PendingCommit = { paths: string[]; defaultMessage: string };
 export function useFileNavigatorCommit(commit: (message: string, paths: string[]) => void) {
   const [pendingCommit, setPendingCommit] = useState<PendingCommit | null>(null);
 
-  // `paths` is what the commit names; `namedFor` is what the pre-filled message is generated from,
-  // which is the same list everywhere except the whole-tree form, where the commit names nothing and
-  // the message is generated from the changed rows the tree is showing.
-  const request = (paths: string[], namedFor: string[] = paths) => {
-    setPendingCommit({ paths, defaultMessage: defaultCommitMessage(namedFor) });
+  // `paths` is what the commit names; `defaultMessage` is what the field opens pre-filled with,
+  // defaulting to naming those same paths. The header button's whole-tree form is the one caller that
+  // supplies its own — a count of every change under the tree's root, which has no filename to derive
+  // a path-based default from.
+  const request = (paths: string[], defaultMessage: string = defaultCommitMessage(paths)) => {
+    setPendingCommit({ paths, defaultMessage });
   };
 
   // The field has already decided the message is worth sending — an empty one cancels there rather

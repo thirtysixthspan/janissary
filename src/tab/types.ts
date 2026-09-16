@@ -172,6 +172,10 @@ export type FileNavigatorView = {
   // its resting state, which is also where a settled commit returns after its flash, and where a
   // commit that found nothing to commit settles straight away (see `manager-commit.ts`).
   commit?: FileNavigatorCommitStatus;
+  // Every file git considers changed under the tree's root, regardless of what is currently expanded
+  // or visible — what the header commit button's whole-tree default message counts, since the commit
+  // itself carries everything under the root and not only the rows on screen.
+  changedCount?: number;
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
   restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };

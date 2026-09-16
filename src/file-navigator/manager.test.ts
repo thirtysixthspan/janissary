@@ -1736,6 +1736,21 @@ describe('FileNavigatorManager', () => {
       expect(rows.find((r) => r.path === 'src')?.gitStatus).toBe('changed');
     });
 
+    it('carries the full changed-file count on the payload even when the change sits inside a collapsed directory', async () => {
+      mkdirSync(path.join(root, 'src'));
+      writeFileSync(path.join(root, 'src', 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Map([['src/a.txt', 'changed']]));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      await vi.waitFor(() => {
+        const files = tabs.find((t) => t.label === label)!.files!;
+        expect(files.changedCount).toBe(1);
+      });
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'src')?.expanded).toBeFalsy();
+    });
+
     it('reroot resets the cache (no stale coloring) and triggers a fresh refresh', async () => {
       mkdirSync(path.join(root, 'sub'));
       writeFileSync(path.join(root, 'sub', 'a.txt'), '');
