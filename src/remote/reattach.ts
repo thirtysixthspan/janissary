@@ -68,9 +68,10 @@ export function resumeRemote(entry: RemoteEntry): void {
   entry.reconnect.retry();
 }
 
-export function endRemoteSession(
-  managers: Managers, labels: Iterable<string>, host: string, workspaceLabel: string, what: string,
-): void {
+// Marks and notifies the affected tabs only — it does not clear the workspace's local file cache,
+// since a per-process end (`endRemoteProcess`) does not necessarily mean the session is over. Only
+// `terminateRemoteEntry`, the genuine end of the shared workspace, clears the cache.
+export function endRemoteSession(managers: Managers, labels: Iterable<string>, host: string, what: string): void {
   const text = `${what} on ${host} ended — start a new agent or shell to continue.`;
   let notified = false;
   for (const label of labels) {
@@ -87,13 +88,11 @@ export function endRemoteSession(
     }
     if (!notified) { notify(managers, 'remote-session-ended', label, text); notified = true; }
   }
-  clearRemoteFileCacheForWorkspace(host, workspaceLabel);
   messageBus.emit('state', { type: 'dirty' });
 }
 
 export function endRemoteProcess(managers: Managers, entry: RemoteEntry, label: string, harness: boolean): void {
-  endRemoteSession(managers, [label], entry.address.host, entry.workspaceLabel,
-    harness ? `Remote harness '${label}'` : 'Remote shell');
+  endRemoteSession(managers, [label], entry.address.host, harness ? `Remote harness '${label}'` : 'Remote shell');
   const live = [...entry.labels].some((owner) => {
     const tab = managers.tab.byLabel(owner);
     return tab && tab.view !== 'files' && !tab.sessionEnded;
@@ -105,7 +104,8 @@ export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, ann
   if (entry.closed) return;
   entry.closed = true;
   entry.reconnect.stop();
-  if (announce) endRemoteSession(managers, entry.labels, entry.address.host, entry.workspaceLabel, 'Remote janus');
+  if (announce) endRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
+  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.channel.finish();
   entry.channel.close();
   entry.handlers.clear();

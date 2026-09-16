@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear a remote workspace's local file cache only when its session has actually ended, not when any one of its processes exits.
-
-Existing Issue: `endRemoteSession` in `src/remote/reattach.ts` calls `clearRemoteFileCacheForWorkspace` on every invocation, and `endRemoteProcess` calls it for each individual remote shell or harness exit, so a single process ending on a channel that still has live tabs and file navigators wipes `.janissary/remote-files/<host>/<workspaceLabel>` for the whole workspace and drops its records — while the plan at `product/plans/complete/survive-laptop-sleep-and-resume.md` states the clear "runs here and only here", meaning the terminal path alone. Severity: 4/10
-
-Existing Risk: 4/10 - A user with a remote file open in an editor tab loses the materialized file out from under it the moment an unrelated harness on the same channel exits, and a file navigator browsing the same workspace refetches everything it had cached for no reason the user can see.
-
-Proposal Risk: 2/10 - Clearing only on termination means a cache entry outlives a workspace in the window between a process ending and the session ending, so a stale file can be read once before the terminal path arrives.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: one remote process exiting clears the whole workspace's local file cache". Move the `clearRemoteFileCacheForWorkspace` call out of `endRemoteSession` in `src/remote/reattach.ts` and into the two places that genuinely end a session: `terminateRemoteEntry` in the same file, and `RemoteManager.channelClosed` in `src/remote/manager.ts`, which already calls it. `endRemoteProcess` then marks its tab and notifies without touching the cache, and only escalates to `terminateRemoteEntry` when its `live` check finds no surviving tab — at which point the cache clear happens once, from the terminal path. `src/remote/reattach.test.ts` asserts `clearRemoteFileCacheForWorkspace` was called exactly once in both the refusal case and the terminated-process case; the refusal case keeps that assertion, and the terminated-process case needs splitting so the single-tab variant still clears (because it terminates) while a variant with a second live tab on the same channel asserts the cache survives. Check `src/file-navigator/remote-file-cache.ts` for whether a surviving navigator holds paths that would now outlive a clear, and say so beside the call if it does.
-
-
 * Stop announcing an unexpected session end when the user closes a remote connection themselves.
 
 Existing Issue: `RemoteManager.close`, whose own doc comment still reads "Explicit connection close kills every user of the shared channel", now calls `terminateRemoteEntry` with announcing left on, so a user running `connection close` on a remote tab gets a `remote-session-ended` notification reading `Remote janus on <host> ended — start a new agent or shell to continue.` and finds every affected tab left open in an exited state rather than closed, and neither the pull request description nor its behavior examples mention that this command's outcome changed. Severity: 4/10

@@ -125,6 +125,44 @@ describe('remote reattachment', () => {
     h.remote.dispose();
   });
 
+  it('leaves the cache and channel intact when one process ends but a joined tab is still live', () => {
+    const tab = makeTab('work', 'red', 1, [], [], undefined, 1, 'red');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    tab.view = 'harness';
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'r1', status: 'running' };
+    const joined = makeTab('joined', 'blue', 2, [], [], undefined, 1, 'blue');
+    joined.remote = { address: 'devbox', host: 'devbox' };
+    joined.view = 'agent';
+    const transports: Array<{ onData: (data: string) => void; onExit: () => void }> = [];
+    const managers = {
+      pty: { spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+        transports.push(handlers);
+        return { id: 'ssh1', write: vi.fn(), kill: vi.fn() };
+      }) },
+      tab: {
+        tabs: [tab, joined],
+        byLabel: (label: string) => [tab, joined].find((t) => t.label === label),
+        closeTab: vi.fn(),
+      },
+    } as unknown as Managers;
+    const remote = new RemoteManager(managers);
+    const channel = remote.open('work', { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local',
+      { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+    transports[0].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    const frame = (value: ServerFrame) => transports.at(-1)!.onData(`${encodeFrame(value)}\n`);
+    frame({ type: 'workspace-ready', dir: '/remote/work' });
+    expect(remote.attach('joined', 'work')).toBe(true);
+    channel.attach('r1', { onOutput: vi.fn(), onExit: vi.fn() });
+    channel.send({ type: 'spawn', id: 'r1', program: 'work', command: 'work', mode: 'pty',
+      harness: 'claude', agentName: 'work', cols: 80, rows: 24 });
+    frame({ type: 'exit', id: 'r1', exitCode: 3 });
+    expect(tab.sessionEnded).toContain("Remote harness 'work'");
+    expect(joined.sessionEnded).toBeUndefined();
+    expect(clearRemoteFileCacheForWorkspace).not.toHaveBeenCalled();
+    expect(channel.attached).toBe(true);
+    remote.dispose();
+  });
+
   it.each([true, false])('does not report a locally requested kill as a termination, harness=%s', (harness) => {
     const h = setup();
     if (!harness) { h.tab.view = 'agent'; h.tab.harness = undefined; }
