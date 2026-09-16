@@ -94,13 +94,19 @@ export function buildTabView(
   };
 }
 
-// The metadata row's display symbol for a workspaced tab's working directory: `$workspace` at the
-// clone root, `$workspace/<rest>` inside it — local and remote clones alike, since a remote clone
-// is a path the local `$root` abbreviation could never shorten. Undefined when no workspace prefix
-// applies; display-only, so `cwd` keeps the value every other consumer reads.
+// The metadata row's display symbol for a workspaced tab's working directory: the clone's own name
+// after `$workspace` at the clone root (`$workspace/salih`), continuing with the path below it
+// (`$workspace/salih/notes`) — local and remote clones alike, since a remote clone
+// is a path the local `$root` abbreviation could never shorten. Naming the clone is what keeps a
+// strip of parallel workspaced agents distinguishable. Undefined when no workspace prefix applies
+// or the cwd leaves the clone; display-only, so `cwd` keeps the value every other consumer reads.
 function workspaceCwdDisplay(cwd: string, workspace?: string): string | undefined {
   if (!workspace) return undefined;
-  if (cwd === workspace) return '$workspace';
-  if (cwd.startsWith(workspace + path.sep)) return `$workspace${cwd.slice(workspace.length)}`;
+  const name = path.basename(workspace);
+  if (cwd === workspace) return `$workspace/${name}`;
+  if (cwd.startsWith(workspace + path.sep)) {
+    const relative = path.relative(workspace, cwd).split(path.sep).join('/');
+    return `$workspace/${name}${relative ? `/${relative}` : ''}`;
+  }
   return undefined;
 }
