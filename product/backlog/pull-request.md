@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Repair the prose spliced into the harness user documentation and the garbled behavior bullet in the pull request description.
-
-Existing Issue: The rewritten "Copying text out of a harness" section in the user documentation ends a sentence about why the modifier is needed with the unrelated clause "and canvas colours aren't carried across — what is copied is the text", which introduces rendering jargon a reader of that page has no use for, and the description's seventh behavior example reads "Correct resize/exit options plus Option+drag on macOS now reaches the harness as an ordinary drag (reporting), since Shift+drag replaced Option's copy greet", which is two unrelated claims and a typo in one line. Severity: 2/10
-
-Existing Risk: 2/10 - The one page a user reads to learn the new gesture ends its explanation on a sentence that does not parse, and the description's summary of what changed on macOS is the line a later reader will reach for when asking why Option+drag stopped selecting.
-
-Proposal Risk: 1/10 - Wording only; the risk is that the rewrite states a behavior the implementation does not have, which re-reading the gesture's own section guards against.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: fix the spliced sentence in the harness documentation and the description's macOS bullet". In `documentation/user-documentation/advanced-agents/harness.md`, end the "The modifier is needed because…" sentence at "keeps that one drag for yourself" and move the point about styling into the paragraph that already describes the freeze, phrased for a user rather than for a renderer — that the frozen image carries the text, not the harness's colours or bold. Then rewrite the seventh entry of the pull request's "Behavior examples" list with `gh pr edit` so it makes the single claim it was meant to make: that Option+drag on macOS now reaches the harness as an ordinary reported drag, because Shift+drag replaced it as the selection gesture; the clearing triggers it currently mixes in are already the sixth entry. Check the surrounding section of the documentation page against `product/specs/harness.md`'s "Selecting and copying terminal text" while there, since the two were rewritten together and should still agree on the clearing triggers and on Escape's conditional meaning. Nothing executable changes; the docs site build is the only check.

@@ -34,7 +34,8 @@ how much output the harness keeps streaming underneath. When you dismiss the sel
 terminal appears again, caught up with everything that arrived while it was frozen. The modifier is
 needed because a harness like claude asks for every click and drag to be reported to it, so a plain
 drag talks to the harness rather than selecting anything; holding `Shift` keeps that one drag for
-yourself, and canvas colours aren't carried across — what is copied is the text.
+yourself. The still image carries the text itself, not the harness's colours or bold styling —
+what you copy is the text.
 
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it leaves it in
 place, so the same pick can be used again. Press `Escape` while the terminal has your keyboard, or
