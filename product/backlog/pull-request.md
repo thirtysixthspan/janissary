@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's tab-switch clear on the interactive shell surface, whose selection layer receives neither the inactive nor the exited signal the description says it passes.
-
-Existing Issue: `ShellTab` calls `useXterm` without `active` or `exited` even though `ShellTabLayer` keeps every shell tab mounted and merely sets `display: none` on the inactive ones, and `TerminalCard` passes only `exited`, so on those surfaces the clear-on-tab-switch that the plan, the specs, and the pull request description all state happens only as a side effect of the container's resize observer reporting a zero-sized box when it is hidden. Severity: 4/10
-
-Existing Risk: 4/10 - A frozen snapshot outlives the tab switch wherever that incidental resize notification does not arrive, leaving the user returning to a shell tab that shows a still image of an older screen with no indication why.
-
-Proposal Risk: 2/10 - The signal is explicit on every surface, though the shell layer now threads an active flag it did not previously need, which is one more prop to keep correct as the split-pane visibility rules evolve.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: pass the inactive signal into the selection layer on every terminal surface". `ShellTabLayer` already computes which tabs are active and which are merely visible; pass an `active` prop into `ShellTab` from the same comparison `HarnessTabLayer` uses for `HarnessTab`, and have `ShellTab` forward it to `useXterm` alongside the tab's own exit signal if one is available at that level. For `TerminalCard`, decide explicitly whether a card inside a hidden transcript should drop its snapshot, and either thread the transcript's visibility down to it or record in `product/specs/harness.md` that terminal cards clear on exit and resize only — the spec currently claims the tab switch clears on every surface, so one of the two has to move. Then pin it: the tests added to `web/src/ShellTab.test.tsx` and `web/src/shared/transcript/TerminalCard.test.tsx` in this pull request mock `useXterm` and assert only that an overlay renders for a supplied view, which is why this wiring gap survived — add assertions that the mocked hook was called with the surface's inactive and exited values, the same way the existing tests assert the ptyId reaches it. The harness tab's own clears-on-inactive and clears-on-exit tests already cover the surface that was wired correctly and must keep passing.
-
-
 * Remove the stale-closure trap that ties the terminal's copy chord and selection bridge to the layer hook's callbacks staying referentially stable.
 
 Existing Issue: `useXterm`'s setup effect is pinned to `[ptyId, client]` behind an eslint-disable and now closes over the `selection` object returned by `useSelectionLayer`, so the custom key handler, the registered `TerminalAccess`, and the resize observer all hold the object built on the first render and work only because `holds`, `text`, and `clear` happen to be `useCallback`s with no changing dependencies. Severity: 4/10
