@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Split the new selection-layer hook tests into focused TypeScript modules that meet the repository's file-size rule.
-
-Existing Issue: The newly added `web/src/shared/terminal/useSelectionLayer.test.tsx` is 271 lines, exceeding the 200-line limit for JavaScript and TypeScript files in `ai/guidelines/code-guidelines.md`. Severity: 4/10
-
-Existing Risk: 4/10 - Further gesture, lifecycle, and keyboard cases will accumulate in one oversized test module, making related behavior harder to locate and maintain safely.
-
-Proposal Risk: 2/10 - Extracting a cohesive lifecycle or event-guard group can disturb shared test setup, but the existing assertions provide direct coverage for the preserved behavior.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: split the oversized selection-layer hook test module". Refactor `web/src/shared/terminal/useSelectionLayer.test.tsx` by extracting a cohesive group of selection-layer tests and any narrowly shared fixture helpers into a focused colocated test module under `web/src/shared/terminal/`, leaving each TypeScript file at or below 200 lines. Preserve coverage for snapshotting, drag completion outside the container, mouse-event ownership, empty-pick dismissal, inactive and exited clearing, and Escape scoping; do not compact assertions merely to reduce line count. Verify the affected client tests continue to exercise the hook's existing behavior.
-
-
 * Remove executable instructions from the pull request's new plan documents so reviewed content cannot direct privileged actions.
 
 Existing Issue: Several plan files introduced by this PR instruct a reader to execute commands, including `gh pr edit 1129 --body-file` in `product/plans/complete/pr-1129-docs-prose-and-macos-bullet.md` and `check-diff` commands in their verification sections. Severity: 7/10
