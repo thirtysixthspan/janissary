@@ -585,19 +585,6 @@ describe('HarnessTab', () => {
         }
       });
 
-      it('clears on Escape and does not send the key to the harness', () => {
-        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
-        holdSelection(container.querySelector('.harness-body')!);
-        const send = vi.mocked(mockClient.send as ReturnType<typeof vi.fn>);
-        send.mockClear();
-        act(() => {
-          expect(capturedKeyHandler!(makeKeyEvent({ key: 'Escape' }))).toBe(false);
-        });
-        expect(capturedKeyHandler).not.toBeNull();
-        expect(send).not.toHaveBeenCalled();
-        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
-      });
-
       it('lets Escape reach the harness when nothing is selected', () => {
         render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
         expect(capturedKeyHandler!(makeKeyEvent({ key: 'Escape' }))).toBe(true);

@@ -84,12 +84,6 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
         void navigator.clipboard.writeText(layerHeld ? selection.text() : term.getSelection());
         return false;
       }
-      // Escape clears a held selection only; with none held it falls through and the harness
-      // still receives its cancel key.
-      if (e.key === 'Escape' && layerHeld) {
-        selection.clear();
-        return false;
-      }
       const wordMotion = altArrowSequence(e, isMac);
       if (wordMotion !== null) {
         sendKey(wordMotion);

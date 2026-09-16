@@ -400,8 +400,10 @@ first and then dragging again. The snapshot is plain text: the harness's own col
 not carried across, and no on-screen indicator is drawn beyond the highlight itself.
 
 While a selection is held the tab stays interactive: typing still reaches the harness. The layer
-claims no keys beyond **Escape**, and only while a selection is held — with nothing selected,
-Escape reaches the harness as its cancel key exactly as before. A selection clears on **Escape**, on
+claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection
+and still reaches the harness as its cancel key, and an Escape pressed anywhere else — another tab,
+a menu, a dialog — never touches the selection at all. A selection clears on **Escape** (in its own
+terminal), on
 a plain unmodified click anywhere in the terminal (a click that clears is consumed, not reported to
 the harness), on a tab switch away from the surface, on a resize, and on the PTY exiting. A second
 Shift+drag replaces it, re-freezing from the screen as it stands then.

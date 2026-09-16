@@ -154,6 +154,33 @@ describe('useSelectionLayer', () => {
     const container = screen.getByTestId('container');
     drag(container, 45, 90);
     expect(screen.getByTestId('probe').textContent).not.toBe('');
-    view.rerender(<Surface term={term} inactive={inactive ?? true} exited={exited ?? true} />);    expect(screen.getByTestId('probe').textContent).toBe('');
+    view.rerender(<Surface term={term} inactive={inactive ?? true} exited={exited ?? true} />);
+    expect(screen.getByTestId('probe').textContent).toBe('');
+  });
+
+  it('clears the held selection on a real keydown Escape inside the container', () => {
+    mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    drag(container, 45, 90);
+    expect(screen.getByTestId('probe').textContent).toBe('aa bb\ncc dd');
+    const key = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+    const prevented = vi.fn();
+    key.preventDefault = prevented;
+    act(() => { container.dispatchEvent(key); });
+    expect(screen.getByTestId('probe').textContent).toBe('');
+    expect(prevented).toHaveBeenCalled();
+  });
+
+  it('leaves the held selection alone when Escape is pressed outside the container', () => {
+    mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    drag(container, 45, 90);
+    expect(screen.getByTestId('probe').textContent).toBe('aa bb\ncc dd');
+    const key = new KeyboardEvent('keydown', { key: 'Escape' });
+    const prevented = vi.fn();
+    key.preventDefault = prevented;
+    act(() => { globalThis.dispatchEvent(key); });
+    expect(screen.getByTestId('probe').textContent).toBe('aa bb\ncc dd');
+    expect(prevented).not.toHaveBeenCalled();
   });
 });

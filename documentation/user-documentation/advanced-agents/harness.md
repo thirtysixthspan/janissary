@@ -37,14 +37,16 @@ drag talks to the harness rather than selecting anything; holding `Shift` keeps 
 yourself, and canvas colours aren't carried across — what is copied is the text.
 
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it leaves it in
-place, so the same pick can be used again. Press `Escape`, or click plain, to dismiss the selection
-and unfreeze the screen (a dismiss click is consumed, not sent to the harness). Right-clicking a
+place, so the same pick can be used again. Press `Escape` while the terminal has your keyboard, or
+click plain, to dismiss the selection and unfreeze the screen (a dismiss click is consumed, not sent
+to the harness); the Escape key itself still reaches the harness either way. Right-clicking a
 selection opens the app's own menu instead of the browser's, offering **Chat about this** (also
 `Cmd+I` on macOS, `Ctrl+I` elsewhere) rather than Copy — a terminal's menu never offers Copy. See
 [Right-click menus](/user-documentation/getting-started/context-menus).
 
 The copy chords are taken only while something is selected. With nothing selected they go straight
-to the harness, so `Ctrl+C` never stops being the interrupt, and `Escape` reaches it normally too.
+to the harness, so `Ctrl+C` never stops being the interrupt. An `Escape` pressed anywhere else —
+another tab, a menu, a dialog — never touches a held selection.
 
 A selection you've made survives while you keep working in the tab, but clears if you switch tabs
 and back, if you resize the window, or if the harness exits. The frozen image covers the visible

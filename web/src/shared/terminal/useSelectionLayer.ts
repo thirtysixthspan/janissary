@@ -96,18 +96,20 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
     if (inactive || exited) clear();
   }, [inactive, exited, clear]);
 
+  // Escape is scoped to this surface: a keydown the container receives while an overlay is
+  // frozen clears it, and anything outside stays free to use the key however it does.
   const holdingView = view !== null;
   useEffect(() => {
-    if (!holdingView) return;
+    const container = containerRef.current;
+    if (!container || !holdingView) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       e.preventDefault();
-      e.stopPropagation();
       clear();
     };
-    globalThis.addEventListener('keydown', onKey, {capture: true});
-    return () => globalThis.removeEventListener('keydown', onKey, true);
-  }, [holdingView, clear]);
+    container.addEventListener('keydown', onKey, {capture: true});
+    return () => container.removeEventListener('keydown', onKey, true);
+  }, [containerRef, holdingView, clear]);
 
   return useMemo(() => ({ view, holds, text, clear }), [view, holds, text, clear]);
 }
