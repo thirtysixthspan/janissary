@@ -18,6 +18,11 @@ export type LayoutListener = (event: {
 // `saveFile`'s caller displays it and an empty string reads there as success.
 const CONNECTION_ENDED = 'connection closed';
 
+// How long a wake's liveness probe waits for `init`'s reply before treating an `OPEN`-but-silent
+// socket as dead. Generous enough that a server answering slowly under load is not mistaken for a
+// half-open connection, short enough that a genuine wake still recovers promptly.
+const LIVENESS_TIMEOUT_MS = 4000;
+
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
 export class JanusClient {
@@ -42,7 +47,32 @@ export class JanusClient {
   }
 
   get connectionStatus(): ConnectionPhase { return this.connection.phase; }
-  reconnect(): void { this.connection.reconnect(); }
+
+  // A wake calls this regardless of the socket's reported state. `SocketConnection.reconnect()`
+  // trusts `readyState`, which a suspend that tore down the TCP connection without a `close` event
+  // leaves reporting `OPEN` — the backoff fallback in that case only runs on `close`, and `close`
+  // is exactly what never arrives. An `OPEN` socket instead gets a cheap round trip; no answer
+  // within `LIVENESS_TIMEOUT_MS` is treated as dead.
+  reconnect(): void {
+    if (this.ws.readyState !== WebSocket.OPEN) { this.connection.reconnect(); return; }
+    const probed = this.ws;
+    let settled = false;
+    const deadline = setTimeout(() => {
+      // The socket this probe was checking may have already closed and been replaced by the time
+      // this fires — a real `close` event, a later reconnect, or `dispose` all move `this.ws` on
+      // without necessarily running this callback's `.then()` first. Terminating a socket that is
+      // no longer the one being probed would tear down an unrelated, possibly healthy connection.
+      if (settled || this.ws !== probed) return;
+      settled = true;
+      this.connection.terminate();
+    }, LIVENESS_TIMEOUT_MS);
+    void this.request({ method: 'init', params: {} }).then(() => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(deadline);
+    });
+  }
+
   onConnectionStatus(listener: (phase: ConnectionPhase) => void): () => void {
     return this.connection.subscribe(listener);
   }

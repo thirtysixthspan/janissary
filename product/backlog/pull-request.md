@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Detect a socket that survives sleep in name only, so a wake with a half-open connection still recovers.
-
-Existing Issue: `SocketConnection.reconnect` in `web/src/ws-connection.ts` returns immediately when `socket.readyState` is `OPEN`, which is precisely the state a WebSocket is left in when a suspend tears down the underlying TCP connection without the browser firing `close`, and there is no ping, no pong, and no idle timer anywhere in `web/src/ws.ts`, `web/src/ws-connection.ts`, or `src/index.ts` that would notice, so the `online` and `visibilitychange` handlers added to `web/src/client-page-lifecycle.ts` do nothing on exactly the wake they were added for. Severity: 5/10
-
-Existing Risk: 5/10 - A user opens the lid, the window looks connected, no `Reconnecting…` label appears, and every keystroke and request is dropped by the `readyState === OPEN` guards in `send`, `request`, and `saveFile` until the operating system's TCP timeout finally closes the socket minutes later — the failure is silent and the indicator this feature added actively says nothing is wrong.
-
-Proposal Risk: 2/10 - A liveness probe adds periodic traffic and a wrong threshold would recycle a healthy-but-slow connection, so the timeout has to be generous enough that a loaded server answering slowly is not mistaken for a dead one.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: a half-open socket after sleep is never detected, so the wake handlers no-op and the window silently drops work". Give `SocketConnection` a liveness check the wake handlers can use: on `online` or `visibilitychange`-to-visible with the socket reporting `OPEN`, send a cheap round trip and treat a missing answer within a short deadline as a dead socket, closing it so the existing `close` handler runs its drain, its status publish, and its backoff. The server side already answers `init` with a full state snapshot on every open (`src/index.ts`), so the simplest shape reuses that rather than adding a protocol member; if a dedicated ping is preferred, add it to `src/protocol/events.ts` and the RPC dispatch beside the existing methods. Keep the current early return for a socket that answers, so a wake on a genuinely healthy connection costs one round trip and no reconnect. The plan at `product/plans/complete/survive-laptop-sleep-and-resume.md` names the backoff as the fallback when platform events do not fire, and that fallback only runs on `close`, so record in the module why an `OPEN` socket cannot be trusted. Extend `web/src/ws.test.ts`, which already drives a stubbed `WebSocket` constructor, with a case that holds `readyState` at `OPEN`, fires the wake path, lets the deadline expire, and asserts the socket is closed and a new one opened; `web/src/client-page-lifecycle.test.ts`'s existing online/visibility cases must keep passing.
-
-
 * Clear a remote workspace's local file cache only when its session has actually ended, not when any one of its processes exits.
 
 Existing Issue: `endRemoteSession` in `src/remote/reattach.ts` calls `clearRemoteFileCacheForWorkspace` on every invocation, and `endRemoteProcess` calls it for each individual remote shell or harness exit, so a single process ending on a channel that still has live tabs and file navigators wipes `.janissary/remote-files/<host>/<workspaceLabel>` for the whole workspace and drops its records — while the plan at `product/plans/complete/survive-laptop-sleep-and-resume.md` states the clear "runs here and only here", meaning the terminal path alone. Severity: 4/10

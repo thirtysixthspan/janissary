@@ -568,6 +568,32 @@ describe('JanusClient reconnection', () => {
     client.dispose();
   });
 
+  it('probes an OPEN socket on wake and terminates it if nothing answers', () => {
+    const { client, sockets } = setup();
+    client.reconnect();
+    expect(sockets).toHaveLength(1);
+    const call = JSON.parse(sockets[0].send.mock.calls.at(-1)![0]);
+    expect(call.method).toBe('init');
+    vi.advanceTimersByTime(3999);
+    expect(sockets).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(sockets[0].readyState).toBe(3);
+    vi.advanceTimersByTime(250);
+    expect(sockets).toHaveLength(2);
+    client.dispose();
+  });
+
+  it('does not reconnect an OPEN socket that answers the wake probe in time', async () => {
+    const { client, sockets } = setup();
+    client.reconnect();
+    const call = JSON.parse(sockets[0].send.mock.calls.at(-1)![0]);
+    sockets[0].message({ t: 'rpc-reply', id: call.id, result: 'ok' });
+    await Promise.resolve();
+    vi.advanceTimersByTime(5000);
+    expect(sockets).toHaveLength(1);
+    client.dispose();
+  });
+
   it('settles outstanding work when wake replaces a closing socket before its close event', async () => {
     const { client, sockets } = setup();
     const pending = client.saveFile('/file', 'text');

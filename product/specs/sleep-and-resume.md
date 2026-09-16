@@ -4,7 +4,7 @@
 
 Closing a laptop lid and reopening it preserves the running local session. Time spent asleep does not consume the one-second grace period after the last window disconnects. An idle session still exits when its grace period expires while the machine is awake.
 
-The window reconnects automatically, retrying indefinitely with delays increasing from a quarter second to at most five seconds. Returning to a visible window or coming back online prompts an immediate attempt while disconnected. Every reconnect refreshes the session state, including tabs, transcripts, selections, and busy flags.
+The window reconnects automatically, retrying indefinitely with delays increasing from a quarter second to at most five seconds. Returning to a visible window or coming back online prompts an immediate attempt while disconnected. When the connection still appears open at that moment — a suspend can leave it looking healthy without ever closing it — a quick liveness check confirms it is still answering, and a connection that does not answer within a few seconds is treated as dead and replaced. Every reconnect refreshes the session state, including tabs, transcripts, selections, and busy flags.
 
 ### Connection status
 
