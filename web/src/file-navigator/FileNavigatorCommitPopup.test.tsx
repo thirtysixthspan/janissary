@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
-import { changedFilePaths, defaultCommitMessage } from './file-navigator-commit-message';
+import { defaultCommitMessage, defaultCommitMessageForCount } from './file-navigator-commit-message';
 
 function renderPopup(defaultMessage = 'commit: notes.md') {
   const onCommit = vi.fn();
@@ -28,14 +28,17 @@ describe('defaultCommitMessage', () => {
   });
 });
 
-describe('changedFilePaths', () => {
-  it('names the changed file rows and leaves their roll-up directories out', () => {
-    const rows = [
-      { path: 'src', name: 'src', depth: 0, dir: true, gitStatus: 'changed' as const },
-      { path: 'src/a.md', name: 'a.md', depth: 1, dir: false, gitStatus: 'changed' as const },
-      { path: 'src/b.md', name: 'b.md', depth: 1, dir: false },
-    ];
-    expect(changedFilePaths(rows)).toEqual(['src/a.md']);
+describe('defaultCommitMessageForCount', () => {
+  it('reads zero when there is nothing changed', () => {
+    expect(defaultCommitMessageForCount(0)).toBe('commit: 0 files');
+  });
+
+  it('reads a singular file for a count of one, without naming it', () => {
+    expect(defaultCommitMessageForCount(1)).toBe('commit: 1 file');
+  });
+
+  it('counts several', () => {
+    expect(defaultCommitMessageForCount(3)).toBe('commit: 3 files');
   });
 });
 

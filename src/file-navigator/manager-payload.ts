@@ -36,5 +36,6 @@ export function writeRebuiltPayload(tab: Tab, state: FilesTabState, onReady: () 
     remote: state.remote,
     pull: state.pull,
     commit: state.commit,
+    changedCount: state.gitStatuses?.size ?? 0,
   };
 }
