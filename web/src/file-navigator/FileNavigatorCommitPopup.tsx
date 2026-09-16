@@ -3,6 +3,7 @@ import { committableMessage } from './file-navigator-commit-message';
 
 type Properties = {
   defaultMessage: string;
+  fileCount: number;
   onCommit: (message: string) => void;
   onCancel: () => void;
 };
@@ -17,8 +18,9 @@ type Properties = {
 // those two would discard is a query or a filename the user can retype in seconds; what this one
 // would discard is a sentence they composed. Clicking away therefore leaves it open with its text
 // intact, and only Enter and Escape decide its fate.
-export function FileNavigatorCommitPopup({ defaultMessage, onCommit, onCancel }: Properties) {
+export function FileNavigatorCommitPopup({ defaultMessage, fileCount, onCommit, onCancel }: Properties) {
   const [message, setMessage] = useState(defaultMessage);
+  const title = fileCount === 1 ? 'Commit message' : `Commit message (${fileCount} files)`;
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     e.stopPropagation();
@@ -32,7 +34,8 @@ export function FileNavigatorCommitPopup({ defaultMessage, onCommit, onCancel }:
   };
 
   return (
-    <div className="files-commit-popup" data-doc-shot="file-navigator-commit-popup">
+    <div className="picker files-commit-popup" data-doc-shot="file-navigator-commit-popup">
+      <div className="picker-title">{title}</div>
       <div className="command">
         <div className="input-wrap">
           <input

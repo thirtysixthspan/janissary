@@ -710,12 +710,15 @@ It is the pull button flipped: where the pull takes what `origin` has, this send
 Clicking it commits and pushes every change in the tree's repository. The row context menu's **Commit
 to origin** entry does the same for the selected file or files instead.
 
-Both ask for a commit message first. A small single-line field opens over the tree, already filled
-in with a generated default. For the row menu's named selection, that is the file's own name when one
-file is involved (`sync: notes.md`), and a count when several are (`sync: 3 files`). The header
-button's default is named after every change under the tree's root, not only the rows the tree
-currently happens to be showing, and it counts rather than names even a single change (`sync: 1
-file`), since it commits everything under the root regardless of what is expanded. `Enter` commits
+Both ask for a commit message first. A single-line field, docked to the bottom of the tree in the same
+shape as the **Open with** picker, opens already filled in with a generated default. Its title bar
+reads `Commit message` when exactly one file is involved, and `Commit message (N files)` naming the
+count otherwise — including when nothing has changed. For the row menu's named selection, the
+pre-filled message is the file's own name when one file is involved (`sync: notes.md`), and a count
+when several are (`sync: 3 files`). The header button's default is named after every change under the
+tree's root, not only the rows the tree currently happens to be showing, and it counts rather than
+names even a single change (`sync: 1 file`), since it commits everything under the root regardless of
+what is expanded — its title bar counts the same way. `Enter` commits
 and pushes what is in the field, and `Escape`
 cancels with nothing written; an empty or whitespace-only message cancels in the same silent way an
 emptied rename does. Those two keys are the only things that close it. Unlike the search pop-up and

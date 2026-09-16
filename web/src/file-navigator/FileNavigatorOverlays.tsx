@@ -113,6 +113,7 @@ export function FileNavigatorOverlays({
         <FileNavigatorCommitPopup
           key={commit.pendingCommit.id}
           defaultMessage={commit.pendingCommit.defaultMessage}
+          fileCount={commit.pendingCommit.fileCount}
           onCommit={(message) => { commit.confirm(message); focusTree(); }}
           onCancel={() => { commit.cancel(); focusTree(); }}
         />

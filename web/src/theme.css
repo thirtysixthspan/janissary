@@ -758,9 +758,10 @@ html, body, #root {
 .files-commit--committed { color: var(--success); }
 .files-commit--error { color: var(--error); }
 .files-commit--committing svg { animation: icon-spin 1s linear infinite; }
-/* The tree's two single-input pop-ups — Search files, and the commit-message field — are the same
-   card in the same place, so they are styled together. */
-.file-search-popup, .files-commit-popup {
+/* The tree's Search files pop-up: a small card over the top-right of the header. The commit-message
+   field is docked to the bottom instead, via the shared `.picker` class it now carries — see
+   `.files-commit-popup` below, which styles only its input, not its position. */
+.file-search-popup {
   position: absolute; top: 34px; right: 8px; z-index: 30; width: 280px;
   background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
   box-shadow: 0 6px 24px rgb(0 0 0 / 40%); overflow: hidden;

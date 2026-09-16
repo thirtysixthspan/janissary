@@ -171,6 +171,7 @@ describe('FileNavigatorTab', () => {
     fireEvent.click(container.querySelector('.files-commit')!);
 
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
+    expect(screen.getByText('Commit message (3 files)')).toBeInTheDocument();
   });
 
   it('re-primes the field with the whole-tree default when a row-menu commit is followed by a header commit click', () => {
@@ -185,6 +186,7 @@ describe('FileNavigatorTab', () => {
     fireEvent.contextMenu(screen.getByText('README.md'));
     fireEvent.click(screen.getByText('Commit to origin'));
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: README.md');
+    expect(screen.getByText('Commit message')).toBeInTheDocument();
 
     fireEvent.click(container.querySelector('.files-commit')!);
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');

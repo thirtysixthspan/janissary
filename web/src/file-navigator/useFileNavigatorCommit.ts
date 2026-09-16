@@ -6,7 +6,7 @@ import { defaultCommitMessage } from './file-navigator-commit-message';
 // every `request` — an id rather than the paths, since two requests can legitimately name the same
 // paths — so `FileNavigatorOverlays` can key the popup on it and remount the field, re-seeding it
 // from the new default, when an already-open field is re-targeted.
-export type PendingCommit = { id: number; paths: string[]; defaultMessage: string };
+export type PendingCommit = { id: number; paths: string[]; defaultMessage: string; fileCount: number };
 
 // Owns the commit-message field's pending state and hands what it produces to the commit intent.
 // Both entry points — the header button and the row menu's `Commit to origin` — open the same field;
@@ -16,11 +16,16 @@ export function useFileNavigatorCommit(commit: (message: string, paths: string[]
   const nextId = useRef(0);
 
   // `paths` is what the commit names; `defaultMessage` is what the field opens pre-filled with,
-  // defaulting to naming those same paths. The header button's whole-tree form is the one caller that
-  // supplies its own — a count of every change under the tree's root, which has no filename to derive
-  // a path-based default from.
-  const request = (paths: string[], defaultMessage: string = defaultCommitMessage(paths)) => {
-    setPendingCommit({ id: ++nextId.current, paths, defaultMessage });
+  // defaulting to naming those same paths; `fileCount` is what the dialog's title counts. All three
+  // default from `paths` alone, but the header button's whole-tree form is the one caller that
+  // supplies its own for both — a count of every change under the tree's root, which has no filename
+  // or path list to derive either from.
+  const request = (
+    paths: string[],
+    defaultMessage: string = defaultCommitMessage(paths),
+    fileCount: number = paths.length,
+  ) => {
+    setPendingCommit({ id: ++nextId.current, paths, defaultMessage, fileCount });
   };
 
   // The field has already decided the message is worth sending — an empty one cancels there rather

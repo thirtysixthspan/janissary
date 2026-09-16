@@ -4,12 +4,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
 import { defaultCommitMessage, defaultCommitMessageForCount } from './file-navigator-commit-message';
 
-function renderPopup(defaultMessage = 'sync: notes.md') {
+function renderPopup(defaultMessage = 'sync: notes.md', fileCount = 1) {
   const onCommit = vi.fn();
   const onCancel = vi.fn();
   const utils = render(
     <FileNavigatorCommitPopup
       defaultMessage={defaultMessage}
+      fileCount={fileCount}
       onCommit={onCommit}
       onCancel={onCancel}
     />,
@@ -50,8 +51,23 @@ describe('FileNavigatorCommitPopup', () => {
   });
 
   it('opens pre-filled with the counted form for several files', () => {
-    const { input } = renderPopup(defaultCommitMessage(['a.md', 'b.md']));
+    const { input } = renderPopup(defaultCommitMessage(['a.md', 'b.md']), 2);
     expect(input.value).toBe('sync: 2 files');
+  });
+
+  it('titles the dialog plainly for a single file', () => {
+    renderPopup(undefined, 1);
+    expect(screen.getByText('Commit message')).toBeInTheDocument();
+  });
+
+  it('titles the dialog with the count for several files', () => {
+    renderPopup(undefined, 3);
+    expect(screen.getByText('Commit message (3 files)')).toBeInTheDocument();
+  });
+
+  it('titles the dialog with a zero count when nothing changed', () => {
+    renderPopup(undefined, 0);
+    expect(screen.getByText('Commit message (0 files)')).toBeInTheDocument();
   });
 
   it('sends the typed message on Enter', () => {
@@ -91,7 +107,9 @@ describe('FileNavigatorCommitPopup', () => {
     const onCommit = vi.fn();
     render(
       <div onKeyDown={treeKeyDown}>
-        <FileNavigatorCommitPopup defaultMessage="sync: a.md" onCommit={onCommit} onCancel={vi.fn()} />
+        <FileNavigatorCommitPopup
+          defaultMessage="sync: a.md" fileCount={1} onCommit={onCommit} onCancel={vi.fn()}
+        />
       </div>,
     );
     fireEvent.keyDown(screen.getByLabelText('Commit message'), { key: 'a' });
