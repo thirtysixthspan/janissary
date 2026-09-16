@@ -20,6 +20,10 @@ export class ScheduleManager {
   private schedules = new Map<string, ScheduleEntry[]>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private launchDialogOpen = false;
+  // The wall-clock instant of the most recent resume, so a late entry is blamed on sleep only when
+  // it was already overdue at that moment — not whenever any resume has ever happened.
+  private lastResume = 0;
+  private resumeSubscription = messageBus.on('system', 'resumed', () => { this.lastResume = Date.now(); });
   constructor(private managers: Managers) {}
 
   // Open the "New schedule" dialog (bare `schedule`). Held as a flag, mirroring
@@ -56,6 +60,7 @@ export class ScheduleManager {
   // Stop the firing loop (app shutdown).
   stop(): void {
     clearInterval(this.timer);
+    this.resumeSubscription.unsubscribe();
   }
 
   dispose(): void {
@@ -164,8 +169,9 @@ export class ScheduleManager {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
       if (now - e.nextRun > SCHEDULE_LATE_THRESHOLD_MS) {
-        notify(this.managers, 'schedule-late', tab.label,
-          `${e.command} ran ${formatLateDuration(now - e.nextRun)} late (system was asleep)`);
+        const duration = formatLateDuration(now - e.nextRun);
+        const cause = e.nextRun < this.lastResume ? ' (system was asleep)' : '';
+        notify(this.managers, 'schedule-late', tab.label, `${e.command} ran ${duration} late${cause}`);
       }
       isChanged = true;
       if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });

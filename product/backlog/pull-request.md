@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Say why a scheduled command was late instead of asserting that the system was asleep.
-
-Existing Issue: `ScheduleManager.fireDue` in `src/schedule/manager.ts` raises `schedule-late` with the fixed line `<command> ran <duration> late (system was asleep)` for any delivery more than `RESUME_THRESHOLD_MS` past its due time, and it never consults the `system` bus channel's `resumed` event, so the several non-sleep paths that already leave an entry due — a harness tab whose status is not yet `running`, the one-entry-per-tick budget that holds a second overdue command back, an agent tab busy with a queued command, and the new `tab.remote && !channel.attached` guard added in this diff — all produce a notification blaming sleep. Severity: 5/10
-
-Existing Risk: 5/10 - A user whose machine never slept is told it did, which is both a wrong explanation for a late command and a misleading signal when they are trying to work out why a schedule fired at the wrong time, and the wording is fixed in three places — the code, `product/specs/scheduling.md`, and `product/specs/notifications.md` — so the false claim is now documented as intended behavior.
-
-Proposal Risk: 2/10 - Attributing lateness correctly means the notification's wording varies, so a user scanning the feed no longer sees one memorable line, and a cause that fits none of the known reasons needs a neutral fallback that says less than the current sentence does.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: every late scheduled command is reported as caused by sleep, whatever actually delayed it". Have `ScheduleManager` subscribe to the `system` channel's `resumed` event on the same `messageBus` the class already imports, record the instant of the last resume, and attribute lateness to sleep only when the entry's `nextRun` falls before that instant; otherwise emit the same duration with a neutral clause — `<command> ran <duration> late` — leaving the parenthetical for the sleep case alone so the existing wording survives where it is true. The class already holds both `now` and `e.nextRun` in `fireDue`, so no new plumbing is needed beyond the subscription and its teardown in `stop`. Update the `schedule-late` lines in `product/specs/scheduling.md` and `product/specs/notifications.md`, and the `Overdue commands` section of `product/specs/sleep-and-resume.md`, to state both forms. Extend `src/schedule/manager.test.ts`'s new lateness cases with one that fires an overdue entry with no preceding `resumed` event and asserts the neutral wording, keeping the existing case that emits `resumed` first and asserts the sleep wording; `src/schedule/index.test.ts`'s `formatLateDuration` cases are unaffected.
-
-
 * Detect a socket that survives sleep in name only, so a wake with a half-open connection still recovers.
 
 Existing Issue: `SocketConnection.reconnect` in `web/src/ws-connection.ts` returns immediately when `socket.readyState` is `OPEN`, which is precisely the state a WebSocket is left in when a suspend tears down the underlying TCP connection without the browser firing `close`, and there is no ping, no pong, and no idle timer anywhere in `web/src/ws.ts`, `web/src/ws-connection.ts`, or `src/index.ts` that would notice, so the `online` and `visibilitychange` handlers added to `web/src/client-page-lifecycle.ts` do nothing on exactly the wake they were added for. Severity: 5/10

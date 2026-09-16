@@ -22,7 +22,7 @@ Plain `ssh <destination>` tabs keep their ordinary close-on-exit behavior: a dro
 
 ### Overdue commands
 
-A scheduled command that became due while asleep fires once after waking. A recurring command calculates its next run from the current time rather than replaying every missed occurrence. A command delivered more than five seconds late raises `<command> ran <duration> late (system was asleep)`, including when its tab is active and notification toggles are off. A disconnected remote tab waits for its channel to be ready before a scheduled command is delivered.
+A scheduled command that became due while asleep fires once after waking. A recurring command calculates its next run from the current time rather than replaying every missed occurrence. A command delivered more than five seconds late raises `<command> ran <duration> late (system was asleep)` when it was already overdue at the machine's last resume, or `<command> ran <duration> late` when its lateness has some other cause, including when its tab is active and notification toggles are off. A disconnected remote tab waits for its channel to be ready before a scheduled command is delivered.
 
 ### Limits
 

@@ -47,7 +47,7 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
-- **`schedule-late`** — a scheduled command is delivered more than five seconds late: `<command> ran <duration> late (system was asleep)`.
+- **`schedule-late`** — a scheduled command is delivered more than five seconds late: `<command> ran <duration> late (system was asleep)` if it was already overdue when the machine last resumed, or `<command> ran <duration> late` otherwise.
 - **`remote-session-ended`** — a remote peer, harness, or shell is confirmed to have ended: `<what> on <host> ended — start a new agent or shell to continue.` The affected tab stays open; no replacement session starts automatically.
 
 These event types can produce a notification line:

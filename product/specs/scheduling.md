@@ -28,7 +28,7 @@ A single one-second interval (`ScheduleManager` in `src/schedule-manager.ts`) dr
 
 ### Sleep and overdue commands
 
-A command that became due while the machine was asleep runs once on wake; recurring schedules compute their next run from the current time. Delivery more than five seconds late adds `<command> ran <duration> late (system was asleep)` to the notifications feed, even for the active tab and with notification toggles disabled. Durations use seconds, minutes, hours and minutes, or days and hours. Several overdue entries each notify once when delivered. Remote entries wait until their channel is attached; entries on an ended session do not fire.
+A command that became due while the machine was asleep runs once on wake; recurring schedules compute their next run from the current time. Delivery more than five seconds late adds a line to the notifications feed, even for the active tab and with notification toggles disabled: `<command> ran <duration> late (system was asleep)` when the entry was already overdue at the machine's last resume, or `<command> ran <duration> late` otherwise. Durations use seconds, minutes, hours and minutes, or days and hours. Several overdue entries each notify once when delivered. Remote entries wait until their channel is attached; entries on an ended session do not fire.
 
 ### Schedule window
 
