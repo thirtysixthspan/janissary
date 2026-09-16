@@ -21,6 +21,7 @@ const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[
   ['git', {}, []],
   ['git-pull', {}, []],
   ['git-commit', { message: 'commit: a.txt', paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
+  ['git-commit', { message: 'commit: 2 files', paths: [], root: 'src' }, ['src']],
   ['search', {}, []],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
   ['write-file', { path: 'a.txt', content: '' }, ['a.txt']],
@@ -49,6 +50,7 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['git', { path: 'src' }],
   ['git-pull', { path: 'src' }],
   ['git-commit', { message: '', paths: ['a.txt'] }],
+  ['git-commit', { message: 'x', paths: [], root: 3 }],
   ['search', { path: 'src' }],
   ['read-file', {}],
   ['write-file', { path: 'a.txt' }],
@@ -122,7 +124,8 @@ describe('FILESYSTEM_OPERATIONS', () => {
     const rootDestination = ALL_OPERATIONS.filter((operation) => operationDescriptor(operation).rootDestination);
 
     expect(alphabetical(rootDestination)).toEqual([
-      'create-directory', 'create-file', 'move', 'move-many', 'paste', 'read-directory', 'unwatch', 'watch',
+      'create-directory', 'create-file', 'git-commit', 'move', 'move-many', 'paste', 'read-directory',
+      'unwatch', 'watch',
     ]);
   });
 });

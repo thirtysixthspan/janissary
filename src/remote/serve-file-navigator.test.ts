@@ -54,6 +54,7 @@ describe('RemoteFileNavigators', () => {
     ['watch', { path: '../outside' }],
     ['read-directory', { path: '../outside' }],
     ['stat', { paths: ['../outside'] }],
+    ['git-commit', { message: 'x', paths: [], root: '../outside' }],
   ] as const)('refuses escaping paths as an error for %s, which has no failure channel', async (operation, args) => {
     const reply = await request(operation, args);
     expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
@@ -130,6 +131,22 @@ describe('RemoteFileNavigators', () => {
 
     expect(reply).toMatchObject({ result: { mutated: false, pairs: [] } });
     expect(existsSync(path.join(root, 'dest', 'outside'))).toBe(false);
+  });
+
+  it('scopes a sub-rooted navigator\'s whole-tree commit to its own subtree, not the workspace root', async () => {
+    const commit = vi.fn().mockResolvedValue({ committed: false });
+    const fake = { commit } as unknown as FileSystemPort;
+    const holder = new RemoteFileNavigators((frame) => { frames.push(frame); }, root, fake);
+    holder.open('files2');
+
+    holder.request({
+      type: 'filesystem-request', session: 'files2', request: 'q1',
+      operation: 'git-commit', args: { message: 'commit: 2 files', paths: [], root: 'src' },
+    });
+    await vi.waitFor(() => expect(commit).toHaveBeenCalled());
+
+    expect(commit).toHaveBeenCalledWith(path.join(root, 'src'), 'commit: 2 files', []);
+    holder.dispose();
   });
 
   it('stops every watcher on close and dispose', async () => {

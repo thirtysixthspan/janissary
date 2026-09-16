@@ -34,11 +34,16 @@ export function remoteGitPull(request: RemoteRequest): Promise<string> {
 // root rather than the navigator's, so each one is mapped before it crosses the wire, exactly as
 // `delete-many` maps its own. Sending them unmapped is the failure this closes: on a navigator
 // rooted below the workspace root it would stage the wrong files, or none, while every layer
-// reported success. An empty list is the header button's whole-tree form, which the far side scopes
-// to its own navigator root instead.
+// reported success. An empty list is the header button's whole-tree form: the far side has one
+// workspace root shared by every navigator, so the navigator's own root travels alongside as its
+// workspace-relative prefix, computed the same way a named path is — `paths.to` with nothing to
+// append — rather than leaving the far side to guess which subtree "everything" means.
 export async function remoteGitCommit(
   request: RemoteRequest, paths: RemotePortPaths, root: string, message: string, relPaths: string[],
 ): Promise<CommitResult> {
+  if (relPaths.length === 0) {
+    return request('git-commit', { message, paths: [], root: await paths.to(root, '') });
+  }
   const remotePaths = await Promise.all(relPaths.map((relPath) => paths.to(root, relPath)));
   return request('git-commit', { message, paths: remotePaths });
 }

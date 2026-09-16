@@ -99,6 +99,16 @@ describe('RemoteFileSystemPort', () => {
       .toMatchObject({ operation: 'git-commit', args: { paths: [] } });
   });
 
+  // The case that fails if the marker is skipped: a tree rooted below the workspace root must send
+  // its own root, or the far side's single shared workspace root gets committed instead.
+  it('sends the navigator root\'s workspace-relative prefix for a sub-rooted whole-tree commit', async () => {
+    const h = harness();
+    void h.port.commit('/remote/ws/src', 'commit: 2 files', []);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'git-commit', args: { paths: [], root: 'src' } });
+  });
+
   it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
     const h = harness();
     const write = h.port.writeFile('/remote/ws', '../outside', Buffer.from(''));
