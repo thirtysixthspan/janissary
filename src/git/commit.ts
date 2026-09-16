@@ -50,7 +50,7 @@ export async function commitRoot(
   }
   if (await hasUpstream(root)) {
     await pullRebase(root);
-    await execFileAsync('git', ['push'], { cwd: root });
+    await execFileAsync('git', ['push', 'origin', 'HEAD'], { cwd: root });
   } else {
     const branch = await currentBranch(root);
     await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], { cwd: root });
@@ -124,9 +124,9 @@ async function currentBranch(root: string): Promise<string> {
 
 // The bare `git pull --rebase` names no remote and no branch for the reason `pullRoot` gives: the
 // navigator's root is an arbitrary checkout, and the branch's configured upstream is what should
-// decide. It only runs once `hasUpstream` has confirmed there is one to rebase against. A rebase
-// that fails after starting is abandoned so the branch is left as it was, and the original error
-// still surfaces.
+// decide the rebase source. Publishing intentionally differs: it always sends HEAD to the matching
+// branch name on origin, even when the configured upstream has another name. A rebase that fails
+// after starting is abandoned so the branch is left as it was, and the original error still surfaces.
 async function pullRebase(root: string): Promise<void> {
   try {
     await execFileAsync('git', ['pull', '--rebase'], { cwd: root });

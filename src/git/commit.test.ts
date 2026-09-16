@@ -74,7 +74,7 @@ describe('commitRoot', () => {
       'commit -m commit: notes.md',
       'rev-parse --abbrev-ref --symbolic-full-name @{u}',
       'pull --rebase',
-      'push',
+      'push origin HEAD',
     ]);
     for (const call of calls) expect(call).toMatchObject({ file: 'git', options: { cwd: '/repo' } });
   });
@@ -98,11 +98,13 @@ describe('commitRoot', () => {
     expect(calls[3].args).toEqual(['commit', '-m', '--amend me\nand more']);
   });
 
-  it('rebases and pushes bare, naming no remote or branch, when an upstream is already configured', async () => {
+  it('rebases against the upstream and pushes HEAD to origin when their branch names differ', async () => {
+    branchName = 'master';
+
     await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
 
     expect(calls[5].args).toEqual(['pull', '--rebase']);
-    expect(calls[6].args).toEqual(['push']);
+    expect(calls[6].args).toEqual(['push', 'origin', 'HEAD']);
   });
 
   it('creates the branch on origin when it has no upstream, skipping the pull since there is nothing to rebase against', async () => {

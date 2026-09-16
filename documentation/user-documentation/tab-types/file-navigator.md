@@ -98,7 +98,7 @@ Either way, a one-line field docked to the bottom of the tree opens, in the same
 
 The commit stages what you named, commits it, rebases onto anything new on `origin`, and pushes. If someone else pushed while you were typing, the rebase absorbs their work and your commit still goes up. If that rebase hits a conflict, it is undone, your branch is left exactly where it was, and you are told — sort the conflict out in an editor or a terminal and try again.
 
-The push goes to your current branch's own name on `origin`. If your branch already has an upstream, it goes wherever `git push` would go from that folder. If it doesn't have one yet, the push creates it on `origin` instead of failing, so a brand-new branch gets published the first time you commit from it.
+The push goes to your current branch's own name on `origin`, even when its configured upstream has a different name. If that branch does not exist on `origin` yet, the push creates it instead of failing, so a brand-new branch gets published the first time you commit from it.
 
 If the commit itself fails before it produces anything — a pre-commit hook that refuses it, or a message git won't accept — you aren't left with what it staged sitting in your repository unexplained. When nothing was staged before you clicked, that staging is undone. When something already was — staged by you, outside the tree — it's left alone rather than risk undoing your own work, and the failure message says so.
 
