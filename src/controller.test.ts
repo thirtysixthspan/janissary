@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -25,22 +25,35 @@ vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 vi.mock('./pty.js');
 
 // Sinks that just count state emissions; no PTY/shell spawning is exercised here.
+// Every controller the tests create is tracked and shut down after each test: shutdown() clears the
+// module-global messageBus the controller wired onto, so one test's controller cannot stay listening
+// under the next one's emissions (see the unshrunken-teardown blowup plan), and each started
+// scheduler interval is stopped instead of piling one more onto the file's run.
+const liveControllers: Controller[] = [];
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  liveControllers.push(c);
   return { c, get states() { return states; } };
 };
+
+afterEach(() => {
+  for (const c of liveControllers) c.shutdown();
+  liveControllers.length = 0;
+});
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
 
 describe('Controller rootDir', () => {
   it('returns the constructor-supplied projectDir', () => {
     const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
+    liveControllers.push(c);
     expect(c.rootDir).toBe('/some/project');
   });
 
   it('falls back to process.cwd() when projectDir is omitted', () => {
     const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    liveControllers.push(c);
     expect(c.rootDir).toBe(process.cwd());
   });
 });
@@ -325,6 +338,7 @@ describe('Controller', () => {
   it('quit asks the host to exit', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    liveControllers.push(c);
     c.dispatch('quit');
     expect(isExited).toBe(true);
   });
@@ -332,6 +346,7 @@ describe('Controller', () => {
   it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    liveControllers.push(c);
     c.dispatch('agent bob --no-workspace');
     c.setActiveTab(1);
     c.dispatch('exit');
@@ -350,6 +365,7 @@ describe('Controller', () => {
   it('closing the last tab quits the app', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    liveControllers.push(c);
     c.dispatch('close'); // only tab open -> behaves like quit
     expect(isExited).toBe(true);
   });
@@ -358,6 +374,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-last-tab-'));
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    liveControllers.push(c);
     c.dispatch(`files left ${root}`);
     c.dispatch('close'); // close the active (janus) tab — only non-docked tab
     expect(isExited).toBe(true);
