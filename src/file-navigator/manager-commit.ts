@@ -20,10 +20,11 @@ export type CommitContext = MutationContext & { refreshGit: (label: string) => v
 // tab survived the commit: the user typed a message and armed the action, so they are owed its
 // outcome even if they re-rooted or closed the tree while it ran. Coalesced: a click while one
 // commit is still in flight is ignored, since overlapping commits collide on git's index and
-// `HEAD`, and it reports nothing because nothing happened.
+// `HEAD`, and it reports nothing because nothing happened — and the same is true of a click while a
+// pull is in flight, since a pull collides on the same lockfiles a commit would.
 export function runCommit(context: CommitContext, label: string, message: string, paths: string[]): void {
   const state = context.tabs.get(label);
-  if (!state || state.commit === 'committing') return;
+  if (!state || state.commit === 'committing' || state.pull === 'pulling') return;
   if (state.commitFlash) clearTimeout(state.commitFlash);
   state.commitFlash = undefined;
   state.commit = 'committing';

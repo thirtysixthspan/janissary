@@ -22,10 +22,11 @@ export type PullContext = MutationContext & { refreshGit: (label: string) => voi
 // whether or not the tab survived the pull: the user armed it and is owed its outcome even if they
 // re-rooted or closed the tree while it ran. Coalesced: a click while one pull is still in flight is
 // ignored, since overlapping `git pull`s collide on git's lockfiles, and it reports nothing because
-// nothing happened.
+// nothing happened — and the same is true of a click while a commit is in flight, since a commit
+// collides on the same lockfiles a pull would.
 export function runPull(context: PullContext, label: string): void {
   const state = context.tabs.get(label);
-  if (!state || state.pull === 'pulling') return;
+  if (!state || state.pull === 'pulling' || state.commit === 'committing') return;
   if (state.pullFlash) clearTimeout(state.pullFlash);
   state.pullFlash = undefined;
   state.pull = 'pulling';

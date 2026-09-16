@@ -1129,6 +1129,21 @@ describe('FileNavigatorManager', () => {
       expect(pullRootMock).toHaveBeenCalledTimes(2);
     });
 
+    it('ignores a pull while a commit is still in flight, and reports nothing for it', async () => {
+      openNotificationsTab();
+      const { promise } = Promise.withResolvers<CommitResultShape>();
+      commitRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.commit(label, 'commit: notes.md', []);
+      manager.pull(label);
+
+      expect(pullRootMock).not.toHaveBeenCalled();
+      expect(outputs).toEqual([]);
+    });
+
     it('signals working, then success, then returns the button to rest', async () => {
       vi.useFakeTimers();
       try {
@@ -1315,6 +1330,21 @@ describe('FileNavigatorManager', () => {
       expect(outputs).toEqual(['Committed to origin: main abc1234']);
       manager.commit(label, 'commit: c', []);
       expect(commitRootMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('ignores a commit while a pull is still in flight, and reports nothing for it', async () => {
+      openNotificationsTab();
+      const { promise } = Promise.withResolvers<string>();
+      pullRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.pull(label);
+      manager.commit(label, 'commit: notes.md', []);
+
+      expect(commitRootMock).not.toHaveBeenCalled();
+      expect(outputs).toEqual([]);
     });
 
     it('signals working, then success, then returns the button to rest', async () => {
