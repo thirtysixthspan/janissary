@@ -34,6 +34,15 @@ describe('ShellTab', () => {
     expect(opts.client).toBe(client);
   });
 
+  it('passes the surface\'s activity to useXterm so a hidden tab clears its selection layer', () => {
+    mockedUseXterm.mockClear();
+    render(<ShellTab ptyId="pty1" client={fakeClient()} active />);
+    expect(mockedUseXterm.mock.calls[0][0].active).toBe(true);
+    mockedUseXterm.mockClear();
+    render(<ShellTab ptyId="pty2" client={fakeClient()} active={false} />);
+    expect(mockedUseXterm.mock.calls[0][0].active).toBe(false);
+  });
+
   it('passes a keyFilter that blocks shift+arrow keys and allows other keys', () => {
     const client = fakeClient();
     mockedUseXterm.mockClear();

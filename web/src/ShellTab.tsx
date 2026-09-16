@@ -8,6 +8,7 @@ import type { RemoteTarget } from '@shared/protocol';
 
 type Properties = {
   ptyId: string; client: JanusClient; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget;
+  active?: boolean;
   onSplit?: () => void;
 };
 
@@ -23,7 +24,7 @@ function shellKeyFilter(e: KeyboardEvent): boolean {
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
 // Unmounts when the program exits; the transcript is restored by the parent.
 export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({
-  ptyId, client, cwd, cwdDisplay, flags, remote, onSplit,
+  ptyId, client, cwd, cwdDisplay, flags, remote, active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const { focus: focusTerm, selection } = useXterm({
@@ -32,6 +33,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
     containerRef: hostReference,
     keyFilter: shellKeyFilter,
     onMount: (term) => { term.focus(); },
+    active,
   });
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (

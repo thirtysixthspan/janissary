@@ -443,7 +443,11 @@ has asked for bracketed paste.
 
 Selection and copy behave this way in every xterm.js terminal in the app — harness tabs (including
 ssh tabs), interactive PTY takeover, and terminal cards — so the gesture means one thing everywhere;
-a plain shell that never took the mouse behaves consistently with the surfaces that did.
+a plain shell that never took the mouse behaves consistently with the surfaces that did. The
+clearing triggers above are wired to the signal each surface carries: a harness or ssh tab, and a
+shell's interactive PTY takeover, clear on a tab switch away from the surface and on the PTY
+exiting; a terminal card inside a transcript clears on the PTY's exiting and on a resize, but has no
+tab identity of its own, so scrolling the transcript past it never clears it.
 
 ## Tab strip
 

@@ -80,6 +80,15 @@ describe('TerminalCard', () => {
     expect(container.querySelector('.terminal-card.maximized')).toBeInTheDocument();
   });
 
+  it("passes the card's exited value to useXterm so a cleared card's layer drops its view", () => {
+    mockedUseXterm.mockClear();
+    render(<TerminalCard entry={{ ptyId: 'p1', program: 'test', status: 'running', exitCode: undefined }} client={fakeClient()} />);
+    expect(mockedUseXterm.mock.calls[0][0].exited).toBe(false);
+    mockedUseXterm.mockClear();
+    render(<TerminalCard entry={{ ptyId: 'p2', program: 'test', status: 'exited', exitCode: 0 }} client={fakeClient()} />);
+    expect(mockedUseXterm.mock.calls[0][0].exited).toBe(true);
+  });
+
   it('passes a keyFilter that blocks shift+ctrl and allows plain keys', () => {
     mockedUseXterm.mockClear();
     render(<TerminalCard entry={{ ptyId: 'p1', program: 'test', status: 'running', exitCode: undefined }} client={fakeClient()} />);
