@@ -47,7 +47,10 @@
 // Version 13 adds the `git-commit` filesystem operation, backing the file navigator's commit button
 // and its `Commit to origin` menu entry. A version-12 remote refuses it as an unknown operation, so
 // the commit fails with a clear error reply rather than both ends disagreeing silently — the same
-// shape the `git-pull` bump above took.
+// shape the `git-pull` bump above took. `git-commit` also carries an optional `root`: the navigator
+// root's workspace-relative prefix, sent only with the whole-tree form (an empty `paths` list), so a
+// navigator rooted below the workspace root stages and commits only its own subtree rather than
+// everything the far side's single shared workspace root can see.
 export const REMOTE_PROTOCOL_VERSION = 13;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
@@ -74,6 +77,10 @@ export type RemoteFilesystemArguments = {
   // The commit message the user approved in the navigator's own field, carried with `git-commit` so
   // the far side never has to prompt for one mid-operation.
   message?: string;
+  // `git-commit`'s whole-tree form (an empty `paths`) names the navigator root's workspace-relative
+  // prefix here, since the far side's single shared workspace root cannot otherwise tell one
+  // navigator's root from another's.
+  root?: string;
   mode?: 'copy' | 'cut';
   undoStack?: unknown[];
   redoStack?: unknown[];
