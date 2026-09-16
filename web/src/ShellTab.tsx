@@ -1,6 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './shared/terminal/useXterm';
+import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from './shared/AgentTabMeta';
 import type { ShellTabHandle } from './tab-handles';
 import type { RemoteTarget } from '@shared/protocol';
@@ -25,7 +26,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   ptyId, client, cwd, flags, remote, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
-  const focusTerm = useXterm({
+  const { focus: focusTerm, selection } = useXterm({
     ptyId,
     client,
     containerRef: hostReference,
@@ -36,7 +37,9 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   return (
     <div className="harness-tab">
       <AgentTabMeta cwd={cwd} flags={flags} remote={remote} onSplit={onSplit} />
-      <div className="harness-body" ref={hostReference} />
+      <div className="harness-body" ref={hostReference}>
+        <SelectionOverlay state={selection.view} />
+      </div>
     </div>
   );
 });

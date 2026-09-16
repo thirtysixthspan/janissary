@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from '../../ws';
 import type { TerminalEntry } from '@shared/protocol';
 import { useXterm } from '../terminal/useXterm';
+import { SelectionOverlay } from '../terminal/SelectionOverlay';
 import { collapsedIcon } from '../../icons';
 
 type Properties = { entry: TerminalEntry; client: JanusClient };
@@ -22,11 +23,12 @@ export function TerminalCard({ entry, client }: Properties) {
   const hostReference = useRef<HTMLDivElement>(null);
   const [maximized, setMaximized] = useState(false);
 
-  useXterm({
+  const { selection } = useXterm({
     ptyId: entry.ptyId,
     client,
     containerRef: hostReference,
     keyFilter: cardKeyFilter,
+    exited: entry.status === 'exited',
   });
 
   const isExited = entry.status === 'exited';
@@ -41,7 +43,9 @@ export function TerminalCard({ entry, client }: Properties) {
         <button onClick={() => setMaximized((m) => !m)}>{maximized ? 'restore' : 'maximize'}</button>
         {!isExited && <button onClick={() => client.send({ method: 'ptyKill', params: { id: entry.ptyId } })}>kill</button>}
       </div>
-      <div className="body" ref={hostReference} onClick={() => { /* xterm handles focus on click */ }} />
+      <div className="body" ref={hostReference} onClick={() => { /* xterm handles focus on click */ }}>
+        <SelectionOverlay state={selection.view} />
+      </div>
     </div>
   );
 }

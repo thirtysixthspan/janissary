@@ -5,7 +5,7 @@ import { TerminalCard } from './TerminalCard';
 import type { JanusClient } from '../../ws';
 
 vi.mock('../terminal/useXterm', () => ({
-  useXterm: vi.fn(() => () => {}),
+  useXterm: vi.fn(() => ({ focus: () => {}, selection: { view: null, holds: () => false, text: () => '', clear: () => {} } })),
 }));
 
 import { useXterm } from '../terminal/useXterm';
@@ -16,6 +16,18 @@ function fakeClient(overrides: Partial<JanusClient> = {}): JanusClient {
 }
 
 describe('TerminalCard', () => {
+  it('renders the held selection over the card body', () => {
+    mockedUseXterm.mockImplementationOnce(() => ({
+      focus: () => {},
+      selection: { view: { snapshot: ['aa bb', 'cc dd'], anchor: { col: 0, row: 0 }, head: { col: 2, row: 1 } } },
+    }));
+    const { container } = render(<TerminalCard entry={{ ptyId: 'p1', program: 'test', status: 'running', exitCode: undefined }} client={fakeClient()} />);
+    const overlay = container.querySelector('.terminal-selection-overlay');
+    expect(overlay).not.toBeNull();
+    expect(container.querySelector('.body')!.contains(overlay)).toBe(true);
+    expect(container.querySelectorAll('.editor-sel').length).toBeGreaterThan(0);
+  });
+
   it('renders the program name', () => {
     render(<TerminalCard entry={{ ptyId: 'p1', program: 'npm start', status: 'running', exitCode: undefined }} client={fakeClient()} />);
     expect(screen.getByText(/npm start/)).toBeInTheDocument();
