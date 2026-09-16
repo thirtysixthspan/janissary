@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
 import { defaultCommitMessage, defaultCommitMessageForCount } from './file-navigator-commit-message';
 
-function renderPopup(defaultMessage = 'commit: notes.md') {
+function renderPopup(defaultMessage = 'sync: notes.md') {
   const onCommit = vi.fn();
   const onCancel = vi.fn();
   const utils = render(
@@ -20,38 +20,38 @@ function renderPopup(defaultMessage = 'commit: notes.md') {
 
 describe('defaultCommitMessage', () => {
   it('names a single file outright', () => {
-    expect(defaultCommitMessage(['src/notes.md'])).toBe('commit: notes.md');
+    expect(defaultCommitMessage(['src/notes.md'])).toBe('sync: notes.md');
   });
 
   it('counts anything else', () => {
-    expect(defaultCommitMessage(['a.md', 'b.md', 'c.md'])).toBe('commit: 3 files');
+    expect(defaultCommitMessage(['a.md', 'b.md', 'c.md'])).toBe('sync: 3 files');
   });
 });
 
 describe('defaultCommitMessageForCount', () => {
   it('reads zero when there is nothing changed', () => {
-    expect(defaultCommitMessageForCount(0)).toBe('commit: 0 files');
+    expect(defaultCommitMessageForCount(0)).toBe('sync: 0 files');
   });
 
   it('reads a singular file for a count of one, without naming it', () => {
-    expect(defaultCommitMessageForCount(1)).toBe('commit: 1 file');
+    expect(defaultCommitMessageForCount(1)).toBe('sync: 1 file');
   });
 
   it('counts several', () => {
-    expect(defaultCommitMessageForCount(3)).toBe('commit: 3 files');
+    expect(defaultCommitMessageForCount(3)).toBe('sync: 3 files');
   });
 });
 
 describe('FileNavigatorCommitPopup', () => {
   it('opens pre-filled and focused', () => {
     const { input } = renderPopup(defaultCommitMessage(['src/notes.md']));
-    expect(input.value).toBe('commit: notes.md');
+    expect(input.value).toBe('sync: notes.md');
     expect(document.activeElement).toBe(input);
   });
 
   it('opens pre-filled with the counted form for several files', () => {
     const { input } = renderPopup(defaultCommitMessage(['a.md', 'b.md']));
-    expect(input.value).toBe('commit: 2 files');
+    expect(input.value).toBe('sync: 2 files');
   });
 
   it('sends the typed message on Enter', () => {
@@ -91,7 +91,7 @@ describe('FileNavigatorCommitPopup', () => {
     const onCommit = vi.fn();
     render(
       <div onKeyDown={treeKeyDown}>
-        <FileNavigatorCommitPopup defaultMessage="commit: a.md" onCommit={onCommit} onCancel={vi.fn()} />
+        <FileNavigatorCommitPopup defaultMessage="sync: a.md" onCommit={onCommit} onCancel={vi.fn()} />
       </div>,
     );
     fireEvent.keyDown(screen.getByLabelText('Commit message'), { key: 'a' });

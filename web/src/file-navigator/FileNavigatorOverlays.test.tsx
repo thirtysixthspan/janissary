@@ -371,10 +371,10 @@ describe('FileNavigatorOverlays', () => {
   }
 
   it('re-primes the commit-message field with the new default when it is re-targeted while open', () => {
-    const first = { id: 1, paths: ['notes.md'], defaultMessage: 'commit: notes.md' };
-    const second = { id: 2, paths: [], defaultMessage: 'commit: 3 files' };
+    const first = { id: 1, paths: ['notes.md'], defaultMessage: 'sync: notes.md' };
+    const second = { id: 2, paths: [], defaultMessage: 'sync: 3 files' };
     const { rerender } = renderOverlays(makeCommit({ pendingCommit: first }));
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: notes.md');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: notes.md');
     rerender(<FileNavigatorOverlays
       drag={makeDrag()}
       rename={makeRename()}
@@ -388,6 +388,6 @@ describe('FileNavigatorOverlays', () => {
       hasBranch={false}
       onCloseMenu={() => {}}
       focusTree={() => {}} />,);
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
   });
 });

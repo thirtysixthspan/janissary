@@ -137,7 +137,7 @@ describe('FileNavigatorTab', () => {
     fireEvent.click(commit!);
 
     expect(client.send).not.toHaveBeenCalled();
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 0 files');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 0 files');
   });
 
   it('sends the commit the message field produced, naming no paths for the whole tree', () => {
@@ -151,11 +151,11 @@ describe('FileNavigatorTab', () => {
 
     fireEvent.click(container.querySelector('.files-commit')!);
     const input = screen.getByLabelText('Commit message') as HTMLInputElement;
-    expect(input.value).toBe('commit: 1 file');
+    expect(input.value).toBe('sync: 1 file');
     fireEvent.keyDown(input, { key: 'Enter' });
 
     expect(client.send).toHaveBeenCalledWith({
-      method: 'fileNavigatorCommit', params: { index: 0, message: 'commit: 1 file', paths: [] },
+      method: 'fileNavigatorCommit', params: { index: 0, message: 'sync: 1 file', paths: [] },
     });
   });
 
@@ -170,7 +170,7 @@ describe('FileNavigatorTab', () => {
 
     fireEvent.click(container.querySelector('.files-commit')!);
 
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
   });
 
   it('re-primes the field with the whole-tree default when a row-menu commit is followed by a header commit click', () => {
@@ -184,10 +184,10 @@ describe('FileNavigatorTab', () => {
 
     fireEvent.contextMenu(screen.getByText('README.md'));
     fireEvent.click(screen.getByText('Commit to origin'));
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: README.md');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: README.md');
 
     fireEvent.click(container.querySelector('.files-commit')!);
-    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
   });
 
   it('closes the commit-message field when the search pop-up opens', () => {

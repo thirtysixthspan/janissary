@@ -712,9 +712,9 @@ to origin** entry does the same for the selected file or files instead.
 
 Both ask for a commit message first. A small single-line field opens over the tree, already filled
 in with a generated default. For the row menu's named selection, that is the file's own name when one
-file is involved (`commit: notes.md`), and a count when several are (`commit: 3 files`). The header
+file is involved (`sync: notes.md`), and a count when several are (`sync: 3 files`). The header
 button's default is named after every change under the tree's root, not only the rows the tree
-currently happens to be showing, and it counts rather than names even a single change (`commit: 1
+currently happens to be showing, and it counts rather than names even a single change (`sync: 1
 file`), since it commits everything under the root regardless of what is expanded. `Enter` commits
 and pushes what is in the field, and `Escape`
 cancels with nothing written; an empty or whitespace-only message cancels in the same silent way an
