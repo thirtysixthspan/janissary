@@ -114,8 +114,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       return true;
     });
 
-      // A resize leaves the selection anchored to a grid that no longer exists.
-      const ro = new ResizeObserver(() => { selectionRef.current.clear(); syncSize(); });
+    // A resize leaves the selection anchored to a grid that no longer exists.
+    const ro = new ResizeObserver(() => { selectionRef.current.clear(); syncSize(); });
     ro.observe(containerRef.current!);
 
     onMount?.(term);

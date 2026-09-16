@@ -86,8 +86,8 @@ describe('useSelectionLayer', () => {
     const container = screen.getByTestId('container');
     const down = new MouseEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10 });
     Object.defineProperties(down, {
-    	button: { value: 0 },
-    	shiftKey: { value: true },
+      button: { value: 0 },
+      shiftKey: { value: true },
     });
     const prevented = vi.fn();
     down.preventDefault = prevented;

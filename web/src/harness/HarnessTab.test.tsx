@@ -553,12 +553,9 @@ describe('HarnessTab', () => {
     });
 
     describe('the Shift+drag selection layer', () => {
-      const HELD_TEXT = 'drag held';
-
-      function holdSelection(host: Element, screen: string[] = ['aa bb', 'cc dd']): string {
+      function holdSelection(host: Element, screen: string[] = ['aa bb', 'cc dd']): void {
         screenLines = [...screen];
         shiftDrag(host, 5, 10, 45, 90);
-        return HELD_TEXT;
       }
 
       it('freezes the screen and paints the picked run over it', () => {

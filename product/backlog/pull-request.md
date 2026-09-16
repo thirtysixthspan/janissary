@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clean up the formatting artifacts and the unused constant left in the new selection-layer code and tests.
-
-Existing Issue: `useXterm` has the `ResizeObserver` construction and its comment indented two levels deeper than the statements around them; `useSelectionLayer.test.tsx` indents two object properties with a tab after four spaces and puts a `rerender` call and the assertion that follows it on one physical line; and `HarnessTab.test.tsx` defines a `HELD_TEXT` constant of `'drag held'` that its `holdSelection` helper returns and no caller reads, while the text actually held is `'aa bb\ncc dd'`. Severity: 2/10
-
-Existing Risk: 2/10 - Nothing breaks, but a constant whose value is not the value it names is the kind of thing a later reader trusts, and the project's formatting rules are enforced by convention rather than by a lint rule here, so artifacts like these persist once merged.
-
-Proposal Risk: 1/10 - Purely textual, and the risk is only that a reformat touches lines the reviewer of the next change then has to re-read; keeping the edit to the named spots avoids that.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: tidy the formatting artifacts in the terminal selection layer". Re-indent the `ResizeObserver` construction and the comment above it in `web/src/shared/terminal/useXterm.ts` to match the surrounding statements in that effect; replace the tab-indented properties inside the `Object.defineProperties` call in `web/src/shared/terminal/useSelectionLayer.test.tsx` with the file's two-space indentation, and split the `view.rerender(...)` call and the `expect` that shares its line in the surface-clears test onto separate lines; and in `web/src/harness/HarnessTab.test.tsx` delete the `HELD_TEXT` constant and the unused return from `holdSelection`, leaving the helper returning nothing. Note that `eslint-config-prettier` is applied last in `eslint.config.mjs` and switches the stylistic rules off, so none of this is currently caught by the linter — that is the reason to fix it by hand rather than assuming the gate would have. No behavior changes and no assertions move, so the whole client suite should pass unchanged.
-
-
 * Repair the prose spliced into the harness user documentation and the garbled behavior bullet in the pull request description.
 
 Existing Issue: The rewritten "Copying text out of a harness" section in the user documentation ends a sentence about why the modifier is needed with the unrelated clause "and canvas colours aren't carried across — what is copied is the text", which introduces rendering jargon a reader of that page has no use for, and the description's seventh behavior example reads "Correct resize/exit options plus Option+drag on macOS now reaches the harness as an ordinary drag (reporting), since Shift+drag replaced Option's copy greet", which is two unrelated claims and a typo in one line. Severity: 2/10
