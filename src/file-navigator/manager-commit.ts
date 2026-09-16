@@ -1,4 +1,5 @@
-import { commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from './commit-report.js';
+import { commitFailureLeavesStagedText, commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from './commit-report.js';
+import { commitLeftStagingInPlace } from '../git/commit.js';
 import { notify } from '../notifications.js';
 import type { MutationContext } from './manager-mutations.js';
 import type { FileNavigatorCommitStatus } from '../tab/types.js';
@@ -43,7 +44,8 @@ export function runCommit(context: CommitContext, label: string, message: string
     settle(context, label, 'committed');
     if (stillRooted(context, label, root)) context.refreshGit(label);
   }, (error: unknown) => {
-    notify(context.managers, 'file-operation', label, commitFailureText(error));
+    const text = commitLeftStagingInPlace(error) ? commitFailureLeavesStagedText(error) : commitFailureText(error);
+    notify(context.managers, 'file-operation', label, text);
     settle(context, label, 'error');
   });
 }

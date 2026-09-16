@@ -735,6 +735,14 @@ published as a side effect: the attempt fails with git's own message, which alre
 that would set one, the local commit stays where it is, and nothing is configured on the user's
 behalf.
 
+A commit that fails before it produces a commit object does not leave what it staged sitting in the
+user's repository: if nothing was staged before the action ran, the staging it added is undone, and
+the failure is reported as usual. If the index already held changes of the user's own before the
+action touched it, nothing is undone — unwinding it would destroy that prior staging instead of
+protecting it — and the failure names that the staging was left in place. Once the commit itself has
+landed, nothing is undone if the rebase or the push that follows fails; a real commit exists by then,
+and it is left exactly as it landed.
+
 Every commit that runs reports its outcome as exactly one line in the notifications feed. One that
 lands reads `Committed to origin: <git summary>`, carrying git's own account of what it did, or
 `Committed to origin` when git reported no summary. One that fails reads `Could not commit: <git

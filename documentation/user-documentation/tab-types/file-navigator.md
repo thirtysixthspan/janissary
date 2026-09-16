@@ -100,6 +100,8 @@ The commit stages what you named, commits it, rebases onto anything new on `orig
 
 The push goes wherever `git push` would go from that folder. If your branch has no upstream yet, the commit fails and tells you so in git's own words, which name the command that sets one. Nothing is published behind your back, and your local commit is still there once you have set it up.
 
+If the commit itself fails before it produces anything — a pre-commit hook that refuses it, or a message git won't accept — you aren't left with what it staged sitting in your repository unexplained. When nothing was staged before you clicked, that staging is undone. When something already was — staged by you, outside the tree — it's left alone rather than risk undoing your own work, and the failure message says so.
+
 The button spins while the commit runs, turns green when it lands, and turns red when it fails, going back to normal a few seconds later. Clicking again while one is running does nothing, so commits can't overlap — and neither can a commit collide with a pull that is still running, so committing is also a no-op while a pull is in flight.
 
 Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by git's own error when it fails, and `Nothing to commit` when there was nothing to send. Once a commit lands, the rows that were colored as changed lose their color.

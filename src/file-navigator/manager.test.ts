@@ -37,6 +37,7 @@ vi.mock('../git/pull.js', () => ({
 
 vi.mock('../git/commit.js', () => ({
   commitRoot: (...args: [string, string, string[]]) => commitRootMock(...args),
+  commitLeftStagingInPlace: () => false,
 }));
 
 const { FileNavigatorManager } = await import('./manager.js');

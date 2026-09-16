@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from './commit-report.js';
+import {
+  commitFailureLeavesStagedText, commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT,
+} from './commit-report.js';
 
 describe('commitSuccessText', () => {
   it('carries git\'s own outcome summary', () => {
@@ -19,6 +21,13 @@ describe('commitFailureText', () => {
 
   it('stringifies a non-Error throw', () => {
     expect(commitFailureText('killed')).toBe('Could not commit: killed');
+  });
+});
+
+describe('commitFailureLeavesStagedText', () => {
+  it('carries an Error\'s message and says the staging was left in place', () => {
+    expect(commitFailureLeavesStagedText(new Error('pre-commit hook refused')))
+      .toBe('Could not commit: pre-commit hook refused — what was staged is still in your index');
   });
 });
 
