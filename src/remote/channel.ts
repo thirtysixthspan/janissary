@@ -128,6 +128,7 @@ export class RemoteChannel {
     for (const id of this.spawned.keys()) this.send({ type: 'kill', id });
     for (const id of this.acpSessions.keys()) this.send({ type: 'acp-close', id });
     for (const session of this.navigators.keys()) this.send({ type: 'filesystem-close', session });
+    this.send({ type: 'shutdown' });
     this.state = 'closed';
     this.sessionId = undefined;
     for (const listener of this.sessions.values()) listener.onExit(1);

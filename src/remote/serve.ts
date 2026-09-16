@@ -117,6 +117,7 @@ export class RemoteServer {
       });
       return;
     }
+    case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
     case 'input': { this.processes?.input(frame.id, frame.data); return; }

@@ -104,6 +104,9 @@ import { decodeKnownFrame } from './frame-decode.js';
 // only other thing the local side ever asks for.
 export type ClientFrame =
   | { type: 'reattach'; session: string }
+  // No payload: the far side removes its workspace and exits, exactly as SIGTERM does — sent by
+  // every local path that ends a session on purpose rather than losing its transport.
+  | { type: 'shutdown' }
   // `identity` is the git name and email of the user who opened janissary locally, so commits made
   // in the remote workspace are attributed to them rather than to whatever account the ssh
   // destination resolved to.
@@ -186,7 +189,7 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // or `ServerFrame` without an entry here is a compile error, instead of a frame type that encodes,
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
-  reattach: true,
+  reattach: true, shutdown: true,
   provision: true, spawn: true, input: true, resize: true, kill: true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,

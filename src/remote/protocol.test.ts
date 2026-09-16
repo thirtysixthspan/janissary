@@ -267,7 +267,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-close', 'acp-open', 'acp-prompt',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'reattach', 'resize', 'spawn',
+      'input', 'kill', 'provision', 'reattach', 'resize', 'shutdown', 'spawn',
     ]);
   });
 
@@ -288,7 +288,9 @@ describe('admitted frame types', () => {
     const admitted = [...Object.keys(CLIENT_FRAME_TYPES), ...Object.keys(SERVER_FRAME_TYPES)];
     // Each is sent with no fields, so every decoder rejects it as malformed — the point is that
     // none comes back as *unknown*, which is what an admitted-but-undecoded type would produce.
+    // `shutdown` carries no fields at all, so it is the one type that decodes cleanly on its own.
     for (const type of admitted) {
+      if (type === 'shutdown') { expect(decodeFrame(JSON.stringify({ type }))).toEqual({ type }); continue; }
       expect(decodeFrame(JSON.stringify({ type }))).toEqual({
         error: expect.stringContaining(`Malformed remote frame "${type}"`),
       });

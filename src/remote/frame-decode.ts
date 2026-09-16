@@ -197,6 +197,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'reattach-result': {
     return typeof record.accepted === 'boolean' ? { type, accepted: record.accepted } : malformed(type);
   }
+  case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }
   case 'spawn': { return decodeSpawn(record); }
   case 'input': { return decodeAddressedData(type, record); }

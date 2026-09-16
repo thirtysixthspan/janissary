@@ -147,6 +147,18 @@ describe('RemoteServer', () => {
     expect(kill).toHaveBeenCalled(); expect(exit).toHaveBeenCalledWith(0);
     expect(existsSync(ready.dir)).toBe(false);
   });
+
+  it('shuts down and removes the workspace on an explicit shutdown frame', async () => {
+    const { server, frames, exit } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'sleep-shutdown' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    const ready = frames.find((frame) => frame.type === 'workspace-ready')!;
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+    const kill = vi.mocked(spawnPty).mock.results.at(-1)!.value.kill;
+    server.receive(`${encodeFrame({ type: 'shutdown' })}\n`);
+    expect(kill).toHaveBeenCalled(); expect(exit).toHaveBeenCalledWith(0);
+    expect(existsSync(ready.dir)).toBe(false);
+  });
   beforeEach(() => {
     vi.mocked(spawnPty).mockReset().mockReturnValue({
       id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
