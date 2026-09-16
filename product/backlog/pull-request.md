@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Resolve cell columns through the terminal's cell grid rather than string indices, so wide characters do not shift the pick.
-
-Existing Issue: `rangeSplitForLine` and `layerText` slice each snapshot line with `String.prototype.slice` at the picked cell columns, but `translateToString` emits one code point for a double-width glyph that occupies two terminal cells and nothing for the cell that glyph's second half fills, so on any line containing CJK text or an emoji the string index and the cell column diverge and the highlight and the copied text shift left by one position per wide character to the left of the pick. Severity: 4/10
-
-Existing Risk: 4/10 - Harness output routinely carries emoji, so the picked text quietly starts or ends a character or two away from what the highlight showed, and the user only learns about it after pasting.
-
-Proposal Risk: 3/10 - The mapping is right for wide characters, but the snapshot is still a plain string per line, so a combining sequence or a zero-width joiner can still put a grapheme's pieces on either side of a boundary.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: map selection columns through terminal cell widths, not string indices". In `web/src/shared/terminal/terminal-selection-layer.ts`, have `snapshotViewport` capture each line's cell-to-index mapping alongside its text rather than the text alone — the cheapest form that needs no proposed API is to walk the line's characters and advance a cell counter by two for code points whose East Asian width is wide (a small local predicate over the code point ranges, or `Intl.Segmenter`-free arithmetic kept in this module), producing for each line an array whose entry per cell is the string index that cell starts at. Then `rangeSplitForLine` takes its `from` and `to` from that array instead of using the column directly, and `layerText` follows it unchanged. Keep the returned `SelectionLayer` shape carrying the plain `snapshot` lines the overlay renders, so `web/src/shared/terminal/SelectionOverlay.tsx` needs no change beyond passing the per-line mapping through to `rangeSplitForLine`. Add cases to `web/src/shared/terminal/terminal-selection-layer.test.ts` covering a line whose first glyph is double-width — the picked substring must be the same characters the columns name — and a line of plain ASCII, which must resolve exactly as it does today so the existing single-line and multi-line assertions stay valid.
-
-
 * Deliver the plan's tab-switch clear on the interactive shell surface, whose selection layer receives neither the inactive nor the exited signal the description says it passes.
 
 Existing Issue: `ShellTab` calls `useXterm` without `active` or `exited` even though `ShellTabLayer` keeps every shell tab mounted and merely sets `display: none` on the inactive ones, and `TerminalCard` passes only `exited`, so on those surfaces the clear-on-tab-switch that the plan, the specs, and the pull request description all state happens only as a side effect of the container's resize observer reporting a zero-sized box when it is hidden. Severity: 4/10

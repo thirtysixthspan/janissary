@@ -400,7 +400,10 @@ first and then dragging again. The snapshot is plain text: the harness's own col
 not carried across, and no on-screen indicator is drawn beyond the highlight itself. The gesture is
 taken outright: the harness never receives the Shift+drag's mouse events, and the surface takes
 keyboard focus as the gesture starts, so the copy chords and Chat about this act on the pick even
-when focus sat in another field when the drag began.
+when focus sat in another field when the drag began. Characters that occupy two terminal cells —
+CJK glyphs and emoji — are picked the way they are drawn on that grid: the highlight's columns name
+cells, not character positions, and the copied text contains exactly the glyphs the highlight
+showed.
 
 While a selection is held the tab stays interactive: typing still reaches the harness. The layer
 claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection

@@ -11,23 +11,62 @@ export type Cell = { col: number; row: number };
 export type CellRange = { start: Cell; end: Cell };
 
 // One held selection: the frozen screen and, while a drag is running, its two end cells. A
-// range whose ends coincide is zero-length and counts as no selection.
-export type SelectionLayer = { snapshot: string[]; anchor: Cell; head: Cell };
+// range whose ends coincide is zero-length and counts as no selection. `cells` carries, per
+// snapshot line, the string index each terminal cell starts at — a double-width glyph occupies
+// two cells but emits one code point, so cell column and string index do not coincide.
+export type SelectionLayer = { snapshot: string[]; cells: number[][]; anchor: Cell; head: Cell };
+
+// East Asian wide/fullwidth and the heavy emoji planel ranges: the glyph classes that occupy two
+// terminal cells in the grid the pointer drags across.
+function isDoubleWidth(cp: number): boolean {
+  return (cp >= 0x11_00 && cp <= 0x11_5F)
+    || (cp >= 0x2e_80 && cp <= 0x9f_ff)
+    || (cp >= 0xac_00 && cp <= 0xd7_a3)
+    || (cp >= 0xf9_00 && cp <= 0xfa_ff)
+    || (cp >= 0xfe_30 && cp <= 0xfe_6f)
+    || (cp >= 0xff_00 && cp <= 0xff_60)
+    || (cp >= 0xff_e0 && cp <= 0xff_e6)
+    || (cp >= 0x1_f3_00 && cp <= 0x1_fa_ff)
+    || cp >= 0x2_00_00;
+}
+
+// The string index each cell of a line starts at. A narrow glyph owns one cell; a wide one owns
+// two — its first cell starts at the glyph, its second at the index after it, so a pick bounded
+// there keeps the whole glyph.
+export function selectionCellIndices(line: string): number[] {
+  const cells: number[] = [];
+  let index = 0;
+  for (const glyph of line) {
+    cells.push(index);
+    if (isDoubleWidth(glyph.codePointAt(0) ?? 0)) cells.push(index + glyph.length);
+    index += glyph.length;
+  }
+  return cells;
+}
+
+export type ViewportSnapshot = { snapshot: string[]; cells: number[][] };
 
 // The visible screen as text: the `rows` lines starting at the buffer's `viewportY`, rendered
 // the way the server-side harness reader renders them (`translateToString(true)`), with
 // trailing blank lines dropped. The viewport offset is what separates this from that reader's
 // loop — a client terminal has scrollback, so reading the whole buffer would put thousands of
-// lines behind an overlay sized to one screen and misaddress every cell coordinate.
-export function snapshotViewport(term: Terminal): string[] {
+// lines behind an overlay sized to one screen and misaddress every cell coordinate. Runs the
+// cell walker beside each line, so a picked column can always be resolved through the grid.
+export function snapshotViewport(term: Terminal): ViewportSnapshot {
   const buffer = term.buffer.active;
-  const lines: string[] = [];
+  const snapshot: string[] = [];
+  const cells: number[][] = [];
   const start = buffer.viewportY;
   for (let i = start; i < start + term.rows; i++) {
-    lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
+    const line = buffer.getLine(i)?.translateToString(true) ?? '';
+    snapshot.push(line);
+    cells.push(selectionCellIndices(line));
   }
-  while (lines.length > 0 && lines.at(-1) === '') lines.pop();
-  return lines;
+  while (snapshot.length > 0 && snapshot.at(-1) === '') {
+    snapshot.pop();
+    cells.pop();
+  }
+  return { snapshot, cells };
 }
 
 type Rect = { left: number; top: number; width: number; height: number };
@@ -61,10 +100,16 @@ export function layerHolds(state: SelectionLayer | null): boolean {
 
 // The three cells a line splits into around a selected range, or null when the row is outside
 // it. The selected slice is `end.col`-exclusive, which is what makes a zero-length range empty.
-export function rangeSplitForLine(line: string, row: number, range: CellRange): [string, string, string] | null {
+// `cells` names where each grid cell of the line's text starts, so a picked column means its
+// cell, not its string position; without one the column is the plain string index, which is
+// exactly what every ASCII line resolves through.
+export function rangeSplitForLine(
+  line: string, row: number, range: CellRange, cells?: readonly number[],
+): [string, string, string] | null {
   if (row < range.start.row || row > range.end.row) return null;
-  const from = Math.min(row === range.start.row ? range.start.col : 0, line.length);
-  const to = Math.min(row === range.end.row ? range.end.col : line.length, line.length);
+  const columnStart = (col: number) => (cells ? cells[col] ?? line.length : Math.min(col, line.length));
+  const from = Math.min(row === range.start.row ? columnStart(range.start.col) : 0, line.length);
+  const to = Math.min(row === range.end.row ? columnStart(range.end.col) : line.length, line.length);
   if (from >= to) return [line, '', ''];
   return [line.slice(0, from), line.slice(from, to), line.slice(to)];
 }
@@ -78,7 +123,7 @@ export function layerText(state: SelectionLayer | null): string {
   const picked: string[] = [];
   const lastRow = Math.min(range.end.row, state.snapshot.length - 1);
   for (let row = range.start.row; row <= lastRow && lastRow >= range.start.row; row++) {
-    const parts = rangeSplitForLine(state.snapshot[row] ?? '', row, range);
+    const parts = rangeSplitForLine(state.snapshot[row] ?? '', row, range, state.cells?.[row]);
     if (!parts) continue;
     picked.push(parts[1].trimEnd());
   }

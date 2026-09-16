@@ -117,7 +117,7 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
         if (!anchor) return;
         anchorRef.current = anchor;
         term.focus();
-        update({ snapshot: snapshotViewport(term), anchor, head: anchor });
+        update({ ...snapshotViewport(term), anchor, head: anchor });
         globalThis.addEventListener('pointermove', extend);
         globalThis.addEventListener('pointerup', end);
         return;

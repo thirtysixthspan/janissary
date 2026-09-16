@@ -24,7 +24,8 @@ export function SelectionOverlay({ state, probeRef }: Properties) {
         aria-hidden="true"
       >{ 'x'.repeat(PROBE_CHARACTERS) }</div>
       {state.snapshot.map((line, row) => {
-        const [before, picked, after] = rangeSplitForLine(line, row, range) ?? [line, '', ''];
+        const [before, picked, after] =
+          rangeSplitForLine(line, row, range, state.cells?.[row]) ?? [line, '', ''];
         return (
           <div className="terminal-selection-row" key={row}>
             {before && <span>{before}</span>}
