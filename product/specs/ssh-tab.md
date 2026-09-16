@@ -48,7 +48,8 @@ It carries the same harness payload — `name`, `program` (`ssh`), `ptyId`, `sta
 plus one extra field: **destination**, the connection identity used by the connections panel.
 Because it is a harness-view tab, it inherits everything a harness tab gets for free: the full-tab
 PTY layout, focus behavior, input model, tab strip, placement/grouping, and persistence rules
-described in Harness Tab.
+described in Harness Tab. Shift+drag selects text with the terminal selection layer the same way it
+does in a harness tab — see Selecting and copying terminal text in `harness.md`.
 
 ## Connections panel
 

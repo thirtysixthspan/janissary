@@ -19,7 +19,7 @@ The editor is the exception: an empty-selection right-click there opens no menu,
 
 ### A contributed entry
 
-To select harness terminal output while the harness owns the mouse, hold Option while dragging on macOS or Shift while dragging elsewhere. Right-click that selection to offer **Chat about this**.
+To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Right-click that selection to offer **Chat about this**.
 
 Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
 

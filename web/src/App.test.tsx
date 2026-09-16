@@ -45,7 +45,7 @@ const client = {
 } as unknown as JanusClient;
 
 vi.mock('./shared/terminal/useXterm', () => ({
-  useXterm: () => vi.fn(),
+  useXterm: () => ({ focus: vi.fn(), selection: { view: null, holds: () => false, text: () => '', clear: () => {} } }),
 }));
 
 // jsdom doesn't include ResizeObserver — Transcript observes its content element.
