@@ -1,5 +1,6 @@
+import path from 'node:path';
 import {
-  history, historyPaths, nonEmptyString, optionalPolicy, stringArray, stringValue, policy,
+  history, historyPaths, nonEmptyString, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
 } from './filesystem-argument-checks.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
@@ -154,6 +155,27 @@ const MUTATION_OPERATIONS = {
     decode: destinationOnly, paths: namedDestination,
     rootDestination: true, refusal: refusedItem,
     run: (context, args) => context.filesystem.createDirectory(context.root, args.destination ?? ''),
+  },
+  // Commits and pushes the named paths, or the navigator's own root for an empty list — its
+  // workspace-relative prefix travels as `root`, since the far side's single shared workspace root
+  // cannot otherwise tell one navigator's root from another's. Its result is a summary string with
+  // nowhere to put a reason, so — like `read-file` — it names no refusal shape and a contained-path
+  // refusal comes back as an error instead. `rootDestination` is required, not cosmetic: a navigator
+  // rooted at the workspace itself derives an *empty* prefix, and that must read as the root itself
+  // rather than as an escaping path.
+  'git-commit': {
+    valid: (args) => nonEmptyString(args.message) && stringArray(args.paths)
+      && (args.root === undefined || stringValue(args.root)),
+    decode: (args) => ({
+      message: args.message as string, paths: args.paths as string[], ...optionalRoot(args.root),
+    }),
+    paths: (args) => [...(args.paths ?? []), ...(args.root === undefined ? [] : [args.root])],
+    rootDestination: true,
+    run: (context, args) => {
+      const paths = args.paths ?? [];
+      const root = paths.length === 0 && args.root ? path.join(context.root, args.root) : context.root;
+      return context.filesystem.commit(root, args.message ?? '', paths);
+    },
   },
   replay: {
     valid: (args) => history(args.undoStack) && history(args.redoStack)

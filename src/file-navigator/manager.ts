@@ -21,6 +21,7 @@ import type { FileNavigatorDetail } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { invalidateDirectory } from './filesystem-cache.js';
 import { runPull } from './manager-pull.js';
+import { runCommit } from './manager-commit.js';
 import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 import type { MaybePromise } from '../maybe-promise.js';
@@ -241,6 +242,13 @@ export class FileNavigatorManager {
   // the outcome on the button itself and in the notifications feed — see `manager-pull.ts`.
   pull(label: string): void {
     runPull({ ...this.mutationContext(), refreshGit: (l) => this.refreshGit(l) }, label);
+  }
+
+  // Commit the named tree-relative paths — or the whole tree, for an empty list — and push them to
+  // `origin`, reporting the outcome on the header button and in the notifications feed. See
+  // `manager-commit.ts`.
+  commit(label: string, message: string, paths: string[]): void {
+    runCommit({ ...this.mutationContext(), refreshGit: (l) => this.refreshGit(l) }, label, message, paths);
   }
 
   // Replay a saved tree view onto this tab: expand every saved directory that still resolves, then

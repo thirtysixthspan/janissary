@@ -1,0 +1,118 @@
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
+import { defaultCommitMessage, defaultCommitMessageForCount } from './file-navigator-commit-message';
+
+function renderPopup(defaultMessage = 'sync: notes.md', fileCount = 1) {
+  const onCommit = vi.fn();
+  const onCancel = vi.fn();
+  const utils = render(
+    <FileNavigatorCommitPopup
+      defaultMessage={defaultMessage}
+      fileCount={fileCount}
+      onCommit={onCommit}
+      onCancel={onCancel}
+    />,
+  );
+  const input = screen.getByLabelText('Commit message') as HTMLInputElement;
+  return { ...utils, input, onCommit, onCancel };
+}
+
+describe('defaultCommitMessage', () => {
+  it('names a single file outright', () => {
+    expect(defaultCommitMessage(['src/notes.md'])).toBe('sync: notes.md');
+  });
+
+  it('counts anything else', () => {
+    expect(defaultCommitMessage(['a.md', 'b.md', 'c.md'])).toBe('sync: 3 files');
+  });
+});
+
+describe('defaultCommitMessageForCount', () => {
+  it('reads zero when there is nothing changed', () => {
+    expect(defaultCommitMessageForCount(0)).toBe('sync: 0 files');
+  });
+
+  it('reads a singular file for a count of one, without naming it', () => {
+    expect(defaultCommitMessageForCount(1)).toBe('sync: 1 file');
+  });
+
+  it('counts several', () => {
+    expect(defaultCommitMessageForCount(3)).toBe('sync: 3 files');
+  });
+});
+
+describe('FileNavigatorCommitPopup', () => {
+  it('opens pre-filled and focused', () => {
+    const { input } = renderPopup(defaultCommitMessage(['src/notes.md']));
+    expect(input.value).toBe('sync: notes.md');
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('opens pre-filled with the counted form for several files', () => {
+    const { input } = renderPopup(defaultCommitMessage(['a.md', 'b.md']), 2);
+    expect(input.value).toBe('sync: 2 files');
+  });
+
+  it('titles the dialog plainly for a single file', () => {
+    renderPopup(undefined, 1);
+    expect(screen.getByText('Commit message')).toBeInTheDocument();
+  });
+
+  it('titles the dialog with the count for several files', () => {
+    renderPopup(undefined, 3);
+    expect(screen.getByText('Commit message (3 files)')).toBeInTheDocument();
+  });
+
+  it('titles the dialog with a zero count when nothing changed', () => {
+    renderPopup(undefined, 0);
+    expect(screen.getByText('Commit message (0 files)')).toBeInTheDocument();
+  });
+
+  it('sends the typed message on Enter', () => {
+    const { input, onCommit, onCancel } = renderPopup();
+    fireEvent.change(input, { target: { value: 'fix the parser' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith('fix the parser');
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it.each(['', ' '.repeat(3)])('cancels rather than committing a message of %j', (value) => {
+    const { input, onCommit, onCancel } = renderPopup();
+    fireEvent.change(input, { target: { value } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it('cancels on Escape without sending', () => {
+    const { input, onCommit, onCancel } = renderPopup();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('keeps its text and sends nothing when it loses focus', () => {
+    const { input, onCommit, onCancel } = renderPopup();
+    fireEvent.change(input, { target: { value: 'still typing' } });
+    fireEvent.blur(input);
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('still typing');
+  });
+
+  it('keeps keystrokes from reaching the tree behind it', () => {
+    const treeKeyDown = vi.fn();
+    const onCommit = vi.fn();
+    render(
+      <div onKeyDown={treeKeyDown}>
+        <FileNavigatorCommitPopup
+          defaultMessage="sync: a.md" fileCount={1} onCommit={onCommit} onCancel={vi.fn()}
+        />
+      </div>,
+    );
+    fireEvent.keyDown(screen.getByLabelText('Commit message'), { key: 'a' });
+    expect(treeKeyDown).not.toHaveBeenCalled();
+  });
+});

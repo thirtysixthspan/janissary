@@ -94,8 +94,10 @@ These event types can produce a notification line:
   order and truncating past three names with `… and N more`. A shared cause and recovery action is
   appended once. If the named items failed for different reasons, the suffix reads `Reasons:
   <name>: <reason> | <name>: <reason>` instead. A file navigator pull reports through this same event
-  and is the one case that also reports a success: `Pulled from origin: <git summary>` when the pull
-  worked, `Could not pull: <git error>` when it did not.
+  and is one of two cases that also report a success: `Pulled from origin: <git summary>` when the
+  pull worked, `Could not pull: <git error>` when it did not. A file navigator commit is the other,
+  and reports three lines: `Committed to origin: <git summary>` when it landed, `Could not commit:
+  <git error>` when it failed, and `Nothing to commit` when there was nothing staged to commit.
 - **`open-unsupported`** — `open <file>` found no opener registered for the file's extension (see
   [[open]]). The line is the same `No opener for "<ext>" files.` the dispatcher has always
   produced, attributed to the tab the command was issued from. It is reported here rather than in

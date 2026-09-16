@@ -17,6 +17,11 @@ const currentBranchMock = vi.fn((_root: string): Promise<string | undefined> => 
 const remoteUrlMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const defaultBranchMock = vi.fn((_root: string): Promise<string | undefined> => Promise.resolve(undefined));
 const pullRootMock = vi.fn((_root: string): Promise<string> => Promise.resolve(''));
+type CommitResultShape = { committed: true; summary: string } | { committed: false };
+const commitRootMock = vi.fn(
+  (_root: string, _message: string, _paths: string[]): Promise<CommitResultShape> =>
+    Promise.resolve({ committed: true, summary: '' }),
+);
 
 vi.mock('../git/status.js', async (importOriginal) => ({
   ...(await importOriginal()) as Record<string, unknown>,
@@ -28,6 +33,11 @@ vi.mock('../git/status.js', async (importOriginal) => ({
 
 vi.mock('../git/pull.js', () => ({
   pullRoot: (...args: [string]) => pullRootMock(...args),
+}));
+
+vi.mock('../git/commit.js', () => ({
+  commitRoot: (...args: [string, string, string[]]) => commitRootMock(...args),
+  commitLeftStagingInPlace: () => false,
 }));
 
 const { FileNavigatorManager } = await import('./manager.js');
@@ -60,6 +70,8 @@ describe('FileNavigatorManager', () => {
     defaultBranchMock.mockResolvedValue(undefined);
     pullRootMock.mockReset();
     pullRootMock.mockResolvedValue('');
+    commitRootMock.mockReset();
+    commitRootMock.mockResolvedValue({ committed: true, summary: '' });
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
@@ -1118,6 +1130,21 @@ describe('FileNavigatorManager', () => {
       expect(pullRootMock).toHaveBeenCalledTimes(2);
     });
 
+    it('ignores a pull while a commit is still in flight, and reports nothing for it', async () => {
+      openNotificationsTab();
+      const { promise } = Promise.withResolvers<CommitResultShape>();
+      commitRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.commit(label, 'commit: notes.md', []);
+      manager.pull(label);
+
+      expect(pullRootMock).not.toHaveBeenCalled();
+      expect(outputs).toEqual([]);
+    });
+
     it('signals working, then success, then returns the button to rest', async () => {
       vi.useFakeTimers();
       try {
@@ -1180,6 +1207,223 @@ describe('FileNavigatorManager', () => {
       const manager = run();
       manager.pull('missing');
       expect(pullRootMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('git commit', () => {
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+    const navTab = () => tabs.find((t) => t.label.startsWith('navigator'))!;
+    const openNotificationsTab = () => {
+      tabs = [...tabs, {
+        label: 'notifications', dotColor: '#fff', number: 1, group: 1, groupColor: '#fff',
+        log: [], cmdHistory: [], cmdHistoryIdx: -1, scrollOffset: 0, view: 'notifications',
+      } as Tab];
+    };
+
+    it('marks the payload in flight immediately and resolves the named paths against the root', () => {
+      writeFileSync(path.join(root, 'notes.md'), 'edited');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: notes.md', ['notes.md']);
+
+      expect(navTab().files!.commit).toBe('committing');
+      expect(commitRootMock).toHaveBeenCalledWith(root, 'commit: notes.md', [path.join(root, 'notes.md')]);
+    });
+
+    it('stages nothing of its own for the whole-tree form', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: 2 files', []);
+
+      expect(commitRootMock).toHaveBeenCalledWith(root, 'commit: 2 files', []);
+    });
+
+    it('reports a landed commit as one line carrying git\'s summary and refreshes git metadata', async () => {
+      openNotificationsTab();
+      commitRootMock.mockResolvedValue({ committed: true, summary: '1 file changed, 2 insertions(+)' });
+      currentBranchMock.mockResolvedValue('main');
+      remoteUrlMock.mockResolvedValue('git@github.com:owner/repo.git');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: notes.md', []);
+
+      await vi.waitFor(() => {
+        expect(outputs).toContain('Committed to origin: 1 file changed, 2 insertions(+)');
+      });
+      expect(outputs).toHaveLength(1);
+      await vi.waitFor(() => {
+        expect(navTab().files!.githubUrl).toBe('https://github.com/owner/repo/commits/main/');
+      });
+    });
+
+    it('reports a commit git said nothing about without a summary suffix', async () => {
+      openNotificationsTab();
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: notes.md', []);
+
+      await vi.waitFor(() => expect(outputs).toContain('Committed to origin'));
+      expect(outputs).toHaveLength(1);
+    });
+
+    it('reports a failed commit as one line and leaves the tree as it was', async () => {
+      openNotificationsTab();
+      commitRootMock.mockRejectedValue(new Error('no upstream branch'));
+      const manager = run();
+      manager.open('files', 'janus');
+      writeFileSync(path.join(root, 'failed-commit.txt'), 'new');
+
+      manager.commit(navLabel(), 'commit: notes.md', []);
+      await vi.waitFor(() => expect(outputs).toContain('Could not commit: no upstream branch'));
+
+      expect(outputs).toHaveLength(1);
+      expect(navTab().files!.rows.some((row) => row.path === 'failed-commit.txt')).toBe(false);
+    });
+
+    it('reports a nothing-to-commit result without leaving the button showing failure', async () => {
+      vi.useFakeTimers();
+      try {
+        openNotificationsTab();
+        commitRootMock.mockResolvedValue({ committed: false });
+        const manager = run();
+        manager.open('files', 'janus');
+
+        manager.commit(navLabel(), 'commit: 0 files', []);
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(outputs).toEqual(['Nothing to commit']);
+        expect(navTab().files!.commit).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('commits nothing at all when any named path escapes the tree root, and reports', async () => {
+      openNotificationsTab();
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: 2 files', ['notes.md', '../outside.md']);
+
+      await vi.waitFor(() => expect(outputs).toHaveLength(1));
+      expect(outputs[0]).toContain('Could not commit:');
+      expect(commitRootMock).not.toHaveBeenCalled();
+    });
+
+    it('ignores a second commit while one is still in flight, and reports nothing for it', async () => {
+      openNotificationsTab();
+      const { promise, resolve } = Promise.withResolvers<CommitResultShape>();
+      commitRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.commit(label, 'commit: a', []);
+      manager.commit(label, 'commit: b', []);
+      expect(commitRootMock).toHaveBeenCalledTimes(1);
+
+      resolve({ committed: true, summary: 'main abc1234' });
+      await vi.waitFor(() => expect(navTab().files!.commit).toBe('committed'));
+      expect(outputs).toEqual(['Committed to origin: main abc1234']);
+      manager.commit(label, 'commit: c', []);
+      expect(commitRootMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('ignores a commit while a pull is still in flight, and reports nothing for it', async () => {
+      openNotificationsTab();
+      const { promise } = Promise.withResolvers<string>();
+      pullRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.pull(label);
+      manager.commit(label, 'commit: notes.md', []);
+
+      expect(commitRootMock).not.toHaveBeenCalled();
+      expect(outputs).toEqual([]);
+    });
+
+    it('signals working, then success, then returns the button to rest', async () => {
+      vi.useFakeTimers();
+      try {
+        commitRootMock.mockResolvedValue({ committed: true, summary: 'main abc1234' });
+        const manager = run();
+        manager.open('files', 'janus');
+
+        manager.commit(navLabel(), 'commit: notes.md', []);
+        expect(navTab().files!.commit).toBe('committing');
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(navTab().files!.commit).toBe('committed');
+
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(navTab().files!.commit).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('signals failure the same way and returns to rest', async () => {
+      vi.useFakeTimers();
+      try {
+        commitRootMock.mockRejectedValue(new Error('no upstream branch'));
+        const manager = run();
+        manager.open('files', 'janus');
+
+        manager.commit(navLabel(), 'commit: notes.md', []);
+        expect(navTab().files!.commit).toBe('committing');
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(navTab().files!.commit).toBe('error');
+
+        await vi.advanceTimersByTimeAsync(3000);
+        expect(navTab().files!.commit).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('drops the flash timer when the tab closes before it fires', async () => {
+      vi.useFakeTimers();
+      try {
+        const manager = run();
+        manager.open('files', 'janus');
+        const label = navLabel();
+
+        manager.commit(label, 'commit: notes.md', []);
+        await vi.advanceTimersByTimeAsync(0);
+        manager.closeTab(label);
+
+        expect(() => vi.advanceTimersByTime(3000)).not.toThrow();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('reports the outcome even when the tab closed mid-commit', async () => {
+      openNotificationsTab();
+      const { promise, resolve } = Promise.withResolvers<CommitResultShape>();
+      commitRootMock.mockReturnValue(promise);
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      manager.commit(label, 'commit: notes.md', []);
+      manager.closeTab(label);
+      resolve({ committed: true, summary: 'main abc1234' });
+
+      await vi.waitFor(() => expect(outputs).toEqual(['Committed to origin: main abc1234']));
+    });
+
+    it('is a no-op for an unknown tab label', () => {
+      const manager = run();
+      manager.commit('missing', 'commit: notes.md', []);
+      expect(commitRootMock).not.toHaveBeenCalled();
     });
   });
 
@@ -1490,6 +1734,21 @@ describe('FileNavigatorManager', () => {
       const rows = tabs.find((t) => t.label === label)!.files!.rows;
       expect(rows.find((r) => r.path === 'src/a.txt')?.gitStatus).toBe('changed');
       expect(rows.find((r) => r.path === 'src')?.gitStatus).toBe('changed');
+    });
+
+    it('carries the full changed-file count on the payload even when the change sits inside a collapsed directory', async () => {
+      mkdirSync(path.join(root, 'src'));
+      writeFileSync(path.join(root, 'src', 'a.txt'), '');
+      changedPathsMock.mockResolvedValue(new Map([['src/a.txt', 'changed']]));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = navLabel();
+
+      await vi.waitFor(() => {
+        const files = tabs.find((t) => t.label === label)!.files!;
+        expect(files.changedCount).toBe(1);
+      });
+      expect(tabs.find((t) => t.label === label)!.files!.rows.find((r) => r.path === 'src')?.expanded).toBeFalsy();
     });
 
     it('reroot resets the cache (no stale coloring) and triggers a fresh refresh', async () => {

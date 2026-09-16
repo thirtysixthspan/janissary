@@ -1,11 +1,14 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget } from '@shared/protocol';
+import type {
+  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget,
+} from '@shared/protocol';
 import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { FileNavigatorPullButton } from './FileNavigatorPullButton';
+import { FileNavigatorCommitButton } from './FileNavigatorCommitButton';
 import { SplitTabButton } from '../SplitTabButton';
 import { RemoteChip } from '../shared/RemoteChip';
 
@@ -17,8 +20,10 @@ type Properties = {
   dock?: 'left' | 'right';
   details?: FileNavigatorDetail;
   pull?: FileNavigatorPullStatus;
+  commit?: FileNavigatorCommitStatus;
   onOpenGithub: (githubUrl: string) => void;
   onPull?: () => void;
+  onCommit?: () => void;
   onCycleDock?: () => void;
   onSetDetail: (details: FileNavigatorDetail) => void;
   onCollapseAll: () => void;
@@ -28,13 +33,14 @@ type Properties = {
   onSplit?: () => void;
 };
 
-// The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, search,
-// new items, dock cycle, collapse all) on the right. Docked into a sidebar the row has no width for
+// The file navigator's metadata row: root/branch on the left, action buttons (GitHub link, pull,
+// commit, search, new items, dock cycle, collapse all) on the right. The commit button sits
+// immediately after the pull button, so the pair reads down-then-up. Docked into a sidebar the row has no width for
 // both on one line, so it stacks onto two — see `.files-header--docked`. Split out of
 // `FileNavigatorTab` to keep it under the file-size limit.
 export function FileNavigatorHeader({
-  root, remote, branch, githubUrl, dock, details, pull, onOpenGithub, onPull, onCycleDock,
-  onSetDetail, onCollapseAll, onSearch, onNewFile, onNewDirectory, onSplit,
+  root, remote, branch, githubUrl, dock, details, pull, commit, onOpenGithub, onPull, onCommit,
+  onCycleDock, onSetDetail, onCollapseAll, onSearch, onNewFile, onNewDirectory, onSplit,
 }: Properties) {
   const following = nextDetail(details);
   return (
@@ -47,6 +53,7 @@ export function FileNavigatorHeader({
       <div className="files-actions">
         {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
         {onPull && <FileNavigatorPullButton status={pull} onClick={onPull} />}
+        {onCommit && <FileNavigatorCommitButton status={commit} onClick={onCommit} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>

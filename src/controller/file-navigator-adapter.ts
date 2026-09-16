@@ -8,6 +8,7 @@ export type FileNavigatorControllerAdapter = {
   fileNavigatorToggle(index: number, path: string): void;
   fileNavigatorCollapseAll(index: number): void;
   fileNavigatorPull(index: number): void;
+  fileNavigatorCommit(index: number, message: string, paths: string[]): void;
   fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void;
   fileNavigatorReroot(index: number, relPath?: string): void;
   moveFileNavigatorItem(index: number, fromRelPath: string, toRelPath: string): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItem>;
@@ -37,6 +38,7 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     fileNavigatorToggle: (index, path) => fileNavigatorRpc.fileNavigatorToggle(managers, index, path),
     fileNavigatorCollapseAll: (index) => fileNavigatorRpc.fileNavigatorCollapseAll(managers, index),
     fileNavigatorPull: (index) => fileNavigatorRpc.fileNavigatorPull(managers, index),
+    fileNavigatorCommit: (index, message, paths) => fileNavigatorRpc.fileNavigatorCommit(managers, index, message, paths),
     fileNavigatorSetDetail: (index, details) => fileNavigatorRpc.fileNavigatorSetDetail(managers, index, details),
     fileNavigatorReroot: (index, relPath) => fileNavigatorRpc.fileNavigatorReroot(managers, index, relPath),
     moveFileNavigatorItem: (index, from, to) => fileNavigatorRpc.moveFileNavigatorItem(managers, index, from, to),

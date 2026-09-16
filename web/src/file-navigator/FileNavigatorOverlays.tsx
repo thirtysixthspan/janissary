@@ -9,6 +9,8 @@ import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
+import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
+import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
 import type { PendingContextMenu } from './use-file-navigator-row-events';
 import { ContextMenu } from '../shared/ContextMenu';
 import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
@@ -22,8 +24,12 @@ type Properties = {
   paste: ReturnType<typeof useFileNavigatorPaste>;
   search: ReturnType<typeof useFileNavigatorSearch>;
   opener: ReturnType<typeof useFileNavigatorOpener>;
+  commit: ReturnType<typeof useFileNavigatorCommit>;
   menu: PendingContextMenu | null;
   menuActions: FileNavigatorMenuActions;
+  // Whether the tree is showing a branch, which is what decides if `Commit to origin` is offered —
+  // the same fact that decides whether the header shows its commit button.
+  hasBranch: boolean;
   // The plugin-contributed selection entry for the open menu, already bound to the selection it acts
   // on, or nothing when the selection resolves to no such entry.
   selectionEntry?: { label: string; onActivate: () => void } | null;
@@ -38,8 +44,10 @@ export function FileNavigatorOverlays({
   paste,
   search,
   opener,
+  commit,
   menu,
   menuActions,
+  hasBranch,
   selectionEntry,
   onCloseMenu,
   focusTree,
@@ -94,11 +102,20 @@ export function FileNavigatorOverlays({
       {menu && (
         <ContextMenu
           groups={fileNavigatorMenuItems(
-            menu.row, getClipboardSnapshot() !== null, menuActions, selectionEntry,
+            menu.row, getClipboardSnapshot() !== null, menuActions, selectionEntry, hasBranch,
           )}
           x={menu.x}
           y={menu.y}
           onClose={() => { onCloseMenu(); focusTree(); }}
+        />
+      )}
+      {commit.pendingCommit && (
+        <FileNavigatorCommitPopup
+          key={commit.pendingCommit.id}
+          defaultMessage={commit.pendingCommit.defaultMessage}
+          fileCount={commit.pendingCommit.fileCount}
+          onCommit={(message) => { commit.confirm(message); focusTree(); }}
+          onCancel={() => { commit.cancel(); focusTree(); }}
         />
       )}
       {search.searchOpen && (

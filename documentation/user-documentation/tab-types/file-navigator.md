@@ -86,9 +86,27 @@ Files the pull added appear and files it removed disappear, at the top level and
 
 The button tells you how the pull is going. Its icon spins while the pull runs, turns green when the pull works, and turns red when it doesn't — the same signals a [git-synced](/user-documentation/tab-types/editor-git-sync) editor tab's sync icon gives. Hovering names the state. A few seconds after the pull settles the button goes back to normal, so a green or red button always means "just now" rather than "at some point today".
 
-Clicking again while a pull is still running does nothing, so overlapping pulls can't collide.
+Clicking again while a pull is still running does nothing, so overlapping pulls can't collide — and neither can a pull collide with a commit that is still running, so pulling is also a no-op while a commit is in flight.
 
 Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
+
+## Committing your changes to origin
+
+Anywhere the header shows a branch name, it also shows a **Commit changes to origin** button right after the Pull from origin button. Clicking it commits and pushes everything that has changed in the tree's repository. To commit just some of it, right-click a row and choose **Commit to origin** — that commits the selected file or files, or everything inside a folder if you right-click one.
+
+Either way, a one-line field docked to the bottom of the tree opens, in the same style as the **Open with** picker, already filled in with a message. Its title reads `Commit message` for one file, or `Commit message (N files)` for the count otherwise. For the row menu, the pre-filled message is the file's name when one file is involved (`sync: notes.md`), or a count when several are (`sync: 3 files`). For the header button, it's always a count of every change under the tree's root — not just what's visible, and not just what's expanded — so even a single change reads as `sync: 1 file` rather than naming it. Type over it if you want something better. Press `Enter` to commit and push, or `Escape` to cancel. Leaving the field empty and pressing `Enter` cancels too. Clicking away does **not** close this field — it keeps whatever you have typed, so a message you were part-way through writing survives a stray click. Asking for a different commit while the field is open — say, from the row menu after the header button — re-targets it: the field comes back pre-filled with the new target's message, and whatever you had typed over the old default is discarded. Opening the search pop-up closes the commit field as well, since the two would otherwise sit in the same place.
+
+The commit stages what you named, commits it, rebases onto anything new on `origin`, and pushes. If someone else pushed while you were typing, the rebase absorbs their work and your commit still goes up. If that rebase hits a conflict, it is undone, your branch is left exactly where it was, and you are told — sort the conflict out in an editor or a terminal and try again.
+
+The push goes to your current branch's own name on `origin`, even when its configured upstream has a different name. If that branch does not exist on `origin` yet, the push creates it instead of failing, so a brand-new branch gets published the first time you commit from it.
+
+If the commit itself fails before it produces anything — a pre-commit hook that refuses it, or a message git won't accept — you aren't left with what it staged sitting in your repository unexplained. When nothing was staged before you clicked, that staging is undone. When something already was — staged by you, outside the tree — it's left alone rather than risk undoing your own work, and the failure message says so.
+
+The button spins while the commit runs, turns green when it lands, and turns red when it fails, going back to normal a few seconds later. Clicking again while one is running does nothing, so commits can't overlap — and neither can a commit collide with a pull that is still running, so committing is also a no-op while a pull is in flight.
+
+Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by git's own error when it fails, and `Nothing to commit` when there was nothing to send. Once a commit lands, the rows that were colored as changed lose their color.
+
+For a tree rooted on a remote host, the commit runs there, in that host's workspace.
 
 ## Finding a file by name
 

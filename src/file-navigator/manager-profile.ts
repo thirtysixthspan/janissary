@@ -1,4 +1,5 @@
 import { stopPolling } from './poll.js';
+import { clearFlashTimers } from './manager-flash.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
 import type { FilesTabState } from './state.js';
 
@@ -7,11 +8,13 @@ import type { FilesTabState } from './state.js';
 // limit — see `ai/guidelines/code-guidelines.md`.
 
 // Stop one tab's watchers, debounce timer, and creation poll, then forget its state (tab close).
+// The flash timers are cleared through the shared descriptor list, so a future third button's
+// timer is cleared by being listed there, not here.
 export function closeTabState(tabs: Map<string, FilesTabState>, label: string): void {
   const state = tabs.get(label);
   if (!state) return;
   if (state.debounce) clearTimeout(state.debounce);
-  if (state.pullFlash) clearTimeout(state.pullFlash);
+  clearFlashTimers(state);
   stopPolling(state);
   for (const watcher of state.watchers.values()) watcher.stop();
   state.filesystem.dispose();

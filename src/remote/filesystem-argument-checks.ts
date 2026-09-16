@@ -53,3 +53,8 @@ export function historyPaths(steps: HistoryStep[]): string[] {
 export function optionalPolicy(value: unknown): Pick<RemoteFilesystemArguments, 'policy'> {
   return value === undefined ? {} : { policy: value as RemoteFilesystemArguments['policy'] };
 }
+
+// `git-commit`'s whole-tree-form root marker, optional for the same reason a conflict policy is.
+export function optionalRoot(value: unknown): Pick<RemoteFilesystemArguments, 'root'> {
+  return value === undefined ? {} : { root: value as RemoteFilesystemArguments['root'] };
+}

@@ -9,6 +9,13 @@ const CASES: Array<[
   ['fileNavigatorToggle', { index: 0, path: 'src' }, [{ index: 0 }, { index: 0, path: 3 }]],
   ['fileNavigatorCollapseAll', { index: 0 }, [{}, { index: '0' }]],
   ['fileNavigatorPull', { index: 1 }, [{ index: null }]],
+  // An empty path array is accepted: that is the header button's whole-tree form.
+  ['fileNavigatorCommit', { index: 0, message: 'commit: a.md', paths: [] }, [
+    { index: 0, paths: [] },
+    { index: 0, message: 7, paths: [] },
+    { index: 0, message: 'commit: a.md', paths: 'a.md' },
+    { index: 0, message: 'commit: a.md', paths: ['a.md', 2] },
+  ]],
   ['fileNavigatorSetDetail', { index: 0, details: 'modified' }, [{ index: 0 }, { index: 0, details: 'owner' }]],
   ['fileNavigatorReroot', { index: 0 }, [{ index: 0, path: 4 }]],
   ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b' }, [

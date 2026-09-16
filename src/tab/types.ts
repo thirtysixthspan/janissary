@@ -143,6 +143,12 @@ export type FileNavigatorRow = {
 // signal — the file navigator's counterpart to an editor tab's `sync`.
 export type FileNavigatorPullStatus = 'pulling' | 'pulled' | 'error';
 
+// The same three-state signal for the header's commit button, which is the pull button flipped: a
+// commit and push in flight, one that landed, or one that failed. Declared separately from
+// `FileNavigatorPullStatus` because the two buttons settle independently and their status names read
+// as what each one did.
+export type FileNavigatorCommitStatus = 'committing' | 'committed' | 'error';
+
 // A file navigator view (opened via `files [path]`). The server owns the tree — `rows` is the
 // pre-flattened, already-sorted, currently-visible row list; the client never walks directories.
 // `root` is display-abbreviated for the header; `absoluteRoot` is the same root unshortened, used
@@ -160,8 +166,16 @@ export type FileNavigatorView = {
   waitingFor?: string;
   // What the header's pull button is currently signalling: a pull in flight, or the outcome of one
   // that just settled. Absent is the button's resting state — no pull has run recently — which is
-  // also where a settled pull returns after its brief flash (see `manager-pull.ts`).
+  // also where a settled pull returns after its brief flash (see `manager-flash.ts`).
   pull?: FileNavigatorPullStatus;
+  // What the header's commit button is currently signalling, on the same terms as `pull`: absent is
+  // its resting state, which is also where a settled commit returns after its flash, and where a
+  // commit that found nothing to commit settles straight away (see `manager-flash.ts`).
+  commit?: FileNavigatorCommitStatus;
+  // Every file git considers changed under the tree's root, regardless of what is currently expanded
+  // or visible — what the header commit button's whole-tree default message counts, since the commit
+  // itself carries everything under the root and not only the rows on screen.
+  changedCount?: number;
   // A selection restored from a profile, applied by the client once per `revision` (see
   // `file-navigator/restore.ts`). Absent for a tree that was never launched from a profile.
   restore?: { revision: number; cursor?: string; anchor?: string; selected: string[] };
