@@ -25,7 +25,7 @@ function fakeBuffer(lines: string[]): FakeBuffer {
   };
 }
 
-type FakeTerm = { buffer: FakeBuffer; cols: number; rows: number };
+type FakeTerm = { buffer: FakeBuffer; cols: number; rows: number; focus: ReturnType<typeof vi.fn> };
 
 // A surface holding the hook against a hand-laid grid: the container is the div tests dispatch
 // on, and its children stand in for the inner element xterm renders and the copy of the view the
@@ -62,7 +62,7 @@ function Surface({ term, inactive, exited, onApi }: {
 
 describe('useSelectionLayer', () => {
   function mount(termLines: string[], onApi?: (api: SelectionLayerApi) => void, inactive?: boolean, exited?: boolean) {
-    const term: FakeTerm = { buffer: fakeBuffer(termLines), cols: 80, rows: 24 };
+    const term: FakeTerm = { buffer: fakeBuffer(termLines), cols: 80, rows: 24, focus: vi.fn() };
     const view = render(<Surface term={term} inactive={inactive} exited={exited} onApi={onApi} />);
     return { term, view };
   }
@@ -124,6 +124,46 @@ describe('useSelectionLayer', () => {
     globalThis.dispatchEvent(new MouseEvent('pointerup', { clientX: 50, clientY: 90 }));
     fireEvent(container, new MouseEvent('pointermove', { bubbles: true, clientX: 100, clientY: 120 }));
     expect(screen.getByTestId('probe').textContent).toBe('aa bb\ncc dd');
+  });
+
+  it('focuses the terminal on Shift+pointerdown so the copy paths reach the pick', () => {
+    const { term } = mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const down = new MouseEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10 });
+    Object.defineProperties(down, { button: { value: 0 }, shiftKey: { value: true } });
+    act(() => {
+      container.dispatchEvent(down);
+    });
+    expect(term.focus).toHaveBeenCalled();
+  });
+
+  it('takes the mousedown xterm is bound to once the gesture owns it', () => {
+    mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const down = new MouseEvent('pointerdown', { bubbles: true, clientX: 5, clientY: 10 });
+    Object.defineProperties(down, { button: { value: 0 }, shiftKey: { value: true } });
+    act(() => {
+      container.dispatchEvent(down);
+    });
+    const e = new MouseEvent('mousedown', { bubbles: true, clientX: 5, clientY: 10 });
+    Object.defineProperty(e, 'button', { value: 0 });
+    const prevented = vi.fn();
+    const stopped = vi.fn();
+    e.preventDefault = prevented; e.stopPropagation = stopped;
+    act(() => { container.dispatchEvent(e); });
+    expect(prevented).toHaveBeenCalled();
+    expect(stopped).toHaveBeenCalled();
+  });
+
+  it('lets a plain unguarded mousedown through to the terminal', () => {
+    mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const e = new MouseEvent('mousedown', { bubbles: true, clientX: 5, clientY: 10 });
+    Object.defineProperty(e, 'button', { value: 0 });
+    const prevented = vi.fn();
+    e.preventDefault = prevented;
+    act(() => { container.dispatchEvent(e); });
+    expect(prevented).not.toHaveBeenCalled();
   });
 
   it('unfreezes on release when a Shift+click picks nothing', () => {

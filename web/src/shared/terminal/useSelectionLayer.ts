@@ -1,11 +1,13 @@
 // Janissary's Shift+drag selection layer, bound to one terminal surface.
 //
-// The pointer listeners here run in the capture phase on the surface's container — before
+// The gesture's listeners here run in the capture phase on the surface's container — before
 // xterm's own handlers, which attach inside the container — so the gesture is taken from the
-// harness instead of reaching its mouse reporting or its selection service. A drag runs over a
-// snapshot of the screen taken at Shift+pointerdown, so nothing the harness draws afterwards can
-// move or clear it; window-level move/up listeners follow the drag so a release outside the
-// container still ends it.
+// harness instead of reaching its mouse reporting or its selection service. The mouse events
+// the harness actually receives — pointerdown, and the mousedown and click its service is bound
+// to — are each cut out by a capture-phase listener for the event itself; the guards never
+// change state, only suppress. A drag runs over a snapshot of the screen taken at
+// Shift+pointerdown, so nothing the harness draws afterwards can move or clear it; window-level
+// move/up listeners follow the drag so a release outside the container still ends it.
 
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -114,6 +116,7 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
           : null;
         if (!anchor) return;
         anchorRef.current = anchor;
+        term.focus();
         update({ snapshot: snapshotViewport(term), anchor, head: anchor });
         globalThis.addEventListener('pointermove', extend);
         globalThis.addEventListener('pointerup', end);
@@ -127,9 +130,26 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
         clear();
       }
     };
+    // xterm binds its selection service and its mouse reporting to mousedown and click, which no
+    // pointerdown handler can touch; these guards take the events it actually receives. They
+    // mirror the pointerdown handler's branches and never change state.
+    const ownsMouse = (e: MouseEvent) => {
+      if (e.button !== 0 || !termRef.current) return false;
+      const modifiers = !e.ctrlKey && !e.metaKey && !e.altKey;
+      return (e.shiftKey && modifiers) || (!e.shiftKey && modifiers && stateRef.current !== null);
+    };
+    const onMouseDownOrClick = (e: MouseEvent) => {
+      if (!ownsMouse(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
     container.addEventListener('pointerdown', onDown, {capture: true});
+    container.addEventListener('mousedown', onMouseDownOrClick, {capture: true});
+    container.addEventListener('click', onMouseDownOrClick, {capture: true});
     return () => {
       container.removeEventListener('pointerdown', onDown, true);
+      container.removeEventListener('mousedown', onMouseDownOrClick, true);
+      container.removeEventListener('click', onMouseDownOrClick, true);
       stopListening();
     };
   }, [containerRef, termRef, clear, update]);

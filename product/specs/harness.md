@@ -397,7 +397,10 @@ keeps arriving underneath, but the frozen image and the highlight on it never mo
 until the user dismisses the selection. The frozen image is the visible screen at the moment the
 drag started, one screenful — text that has scrolled off is selected by scrolling the terminal back
 first and then dragging again. The snapshot is plain text: the harness's own colours and styling are
-not carried across, and no on-screen indicator is drawn beyond the highlight itself.
+not carried across, and no on-screen indicator is drawn beyond the highlight itself. The gesture is
+taken outright: the harness never receives the Shift+drag's mouse events, and the surface takes
+keyboard focus as the gesture starts, so the copy chords and Chat about this act on the pick even
+when focus sat in another field when the drag began.
 
 While a selection is held the tab stays interactive: typing still reaches the harness. The layer
 claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection
