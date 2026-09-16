@@ -59,10 +59,22 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
       if (!anchor || !current || !cell) return;
       update({ ...current, head: cell });
     };
-    const end = () => {
-      anchorRef.current = null;
+    const stopListening = () => {
       globalThis.removeEventListener('pointermove', extend);
       globalThis.removeEventListener('pointerup', end);
+    };
+    const end = () => {
+      // Only a released gesture can have picked nothing; the effect's own teardown must not
+      // unfreeze a held (even zero-length) overlay.
+      let dragging = false;
+      if (anchorRef.current !== null) {
+        dragging = true;
+        anchorRef.current = null;
+      }
+      stopListening();
+      // A released gesture that never left its starting cell picked nothing, and leaving it
+      // on screen would freeze the terminal behind an overlay with no highlight to explain it.
+      if (dragging && !layerHolds(stateRef.current)) clear();
     };
 
     const onDown = (e: MouseEvent) => {
@@ -79,7 +91,9 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
         globalThis.addEventListener('pointerup', end);
         return;
       }
-      if (e.button === 0 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && layerHolds(stateRef.current)) {
+      // Any overlay on screen is dismissed and consumed by a plain click, even one holding a
+      // zero-length range that a release could not unfreeze itself.
+      if (e.button === 0 && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && stateRef.current !== null) {
         e.preventDefault();
         e.stopPropagation();
         clear();
@@ -88,7 +102,7 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
     container.addEventListener('pointerdown', onDown, {capture: true});
     return () => {
       container.removeEventListener('pointerdown', onDown, true);
-      end();
+      stopListening();
     };
   }, [containerRef, termRef, clear, update]);
 

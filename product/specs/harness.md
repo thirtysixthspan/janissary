@@ -405,7 +405,9 @@ and still reaches the harness as its cancel key, and an Escape pressed anywhere 
 a menu, a dialog — never touches the selection at all. A selection clears on **Escape** (in its own
 terminal), on
 a plain unmodified click anywhere in the terminal (a click that clears is consumed, not reported to
-the harness), on a tab switch away from the surface, on a resize, and on the PTY exiting. A second
+the harness), on a tab switch away from the surface, on a resize, and on the PTY exiting. A Shift+drag
+that never leaves its starting cell picks nothing and unfreezes the screen as soon as the button
+releases. A second
 Shift+drag replaces it, re-freezing from the screen as it stands then.
 
 **Cmd+C** (macOS) and **Ctrl+Shift+C** (every platform) copy the terminal's current selection to the

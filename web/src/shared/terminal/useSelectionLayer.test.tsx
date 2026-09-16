@@ -118,6 +118,43 @@ describe('useSelectionLayer', () => {
     expect(screen.getByTestId('probe').textContent).toBe('aa bb\ncc dd');
   });
 
+  it('unfreezes on release when a Shift+click picks nothing', () => {
+    mount(['aa bb', 'cc dd']);
+    const container = screen.getByTestId('container');
+    const pointer = (type: string, x: number, y: number, shift: boolean) => {
+      const e = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+      Object.defineProperties(e, { button: { value: 0 }, shiftKey: { value: shift } });
+      return e;
+    };
+    act(() => {
+      container.dispatchEvent(pointer('pointerdown', 5, 10, true));
+      container.dispatchEvent(pointer('pointerup', 5, 10, true));
+    });
+    expect(screen.getByTestId('probe').textContent).toBe('');
+  });
+
+  it('dismisses a zero-length overlay on a plain click and consumes that click', () => {
+    let api: SelectionLayerApi | undefined;
+    mount(['aa bb', 'cc dd'], (held) => { api = held; });
+    const container = screen.getByTestId('container');
+    const pointer = (type: string, x: number, y: number, shift: boolean) => {
+      const e = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+      Object.defineProperties(e, { button: { value: 0 }, shiftKey: { value: shift } });
+      return e;
+    };
+    act(() => {
+      container.dispatchEvent(pointer('pointerdown', 5, 10, true));
+    });
+    expect(api?.view).not.toBeNull();
+    const clear = new MouseEvent('pointerdown', { bubbles: true, clientX: 20, clientY: 20 });
+    Object.defineProperty(clear, 'button', { value: 0 });
+    const prevented = vi.fn();
+    clear.preventDefault = prevented;
+    act(() => { container.dispatchEvent(clear); });
+    expect(api?.view).toBeNull();
+    expect(prevented).toHaveBeenCalled();
+  });
+
   it('re-snapshots and replaces on a second Shift+pointerdown', () => {
     const { term } = mount(['first screenful']);
     const container = screen.getByTestId('container');

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop a Shift+click that picks nothing from leaving the terminal frozen under an overlay a plain click cannot dismiss.
-
-Existing Issue: A Shift+pointerdown immediately stores a snapshot with `anchor` equal to `head` and renders the overlay, and nothing drops that state on pointerup, so a Shift+click with no drag leaves the live screen hidden behind a frozen image with no highlight on it — and the plain-click branch that would clear it is gated on `layerHolds`, which is false for a zero-length range, so clicking does nothing while the harness keeps drawing invisibly underneath. Severity: 7/10
-
-Existing Risk: 7/10 - A single mis-click freezes the user's view of a running harness with no visible selection to explain it and no obvious way out, while typing still reaches the PTY, so the user goes on interacting with a program whose output they cannot see.
-
-Proposal Risk: 2/10 - A zero-length pick resolves to nothing at all, which is correct but means a very short deliberate drag now silently selects nothing rather than freezing, so the gesture's minimum size becomes a behavior worth pinning in a test.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: drop the frozen overlay when a Shift+drag picks nothing". In `web/src/shared/terminal/useSelectionLayer.ts`, the `end` callback currently only detaches the window listeners; have it also clear the state when `layerHolds` is false for the current state, so a Shift+click or a drag that never leaves its starting cell unfreezes the screen on release. Then widen the plain-pointerdown branch in `onDown` from `layerHolds(stateRef.current)` to "a view exists", so any overlay on screen — including one left by a future path that holds a zero-length range — is dismissed and consumed by a plain click rather than ignored. Keep the two conditions distinct in the rest of the hook: `holds` stays the non-empty-range test used by the selection bridge and the copy chord in `web/src/shared/terminal/useXterm.ts`, while dismissal keys off the presence of a view. Cover both in `web/src/shared/terminal/useSelectionLayer.test.tsx`: a Shift+pointerdown followed immediately by a pointerup at the same point leaves no view, and a plain pointerdown clears and consumes while a view is present. The existing tests that a drag holds its pick, that a second Shift+drag replaces it, and that a plain click clears a real selection all pin behavior that must not move.
-
-
 * Draw the frozen overlay in the same colours the terminal itself is constructed with, so the snapshot is not invisible in the light themes.
 
 Existing Issue: `.terminal-selection-overlay` paints `color: #e4e5e7` on `background: var(--terminal-bg)`, but the xterm `Terminal` in `useXterm` is constructed with a hard-coded theme of `#17181b` background and `#e4e5e7` foreground regardless of the app theme, and `--terminal-bg` is `#fff` in the light theme and `#fdf6e3` in solarized light — so on those themes the live terminal renders light-on-dark while the overlay drawn over it renders near-white text on a white ground. Severity: 7/10
