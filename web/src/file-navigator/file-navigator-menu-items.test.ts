@@ -83,7 +83,7 @@ describe('fileNavigatorMenuItems', () => {
     const groups = fileNavigatorMenuItems(fileRow, true, makeActions(), null, true);
     expect(labels(groups)).toEqual([
       ['Open', 'Edit', 'Open with'],
-      ['Copy', 'Paste', 'Duplicate'],
+      ['Copy', 'Paste', 'Duplicate', 'Copy file path'],
       ['Rename', 'Delete', 'Commit to origin'],
       ['New file', 'New folder'],
     ]);
@@ -92,7 +92,7 @@ describe('fileNavigatorMenuItems', () => {
   it('offers Commit to origin on a directory row, where Edit is not offered', () => {
     expect(labels(fileNavigatorMenuItems(directoryRow, true, makeActions(), null, true))).toEqual([
       ['Open', 'Open with'],
-      ['Copy', 'Paste', 'Duplicate'],
+      ['Copy', 'Paste', 'Duplicate', 'Copy file path'],
       ['Rename', 'Delete', 'Commit to origin'],
       ['New file', 'New folder'],
     ]);
