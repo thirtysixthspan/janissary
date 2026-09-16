@@ -24,9 +24,11 @@ Concretely, both the root directory and the state directory inside it are addres
 ### The workspace symbol
 
 A **workspaced tab's** metadata row abbreviates further: the tab's own clone reads as
-`$workspace`, and a working directory inside it as `$workspace/<rest>` — no re-derivation from the
+`$workspace/<name>` (the clone's own directory name), and a working directory inside it as
+`$workspace/<name>/<rest>` — no re-derivation from the
 tab header's other elements, and no dependence on the local root. A remote tab's clone is on the
-other host, where no `$root`-style abbreviation applies, so `$workspace` is what shows there too;
+other host, where no `$root`-style abbreviation applies, so the same symbol with the clone's name
+shows there too;
 only the metadata row uses this symbol. When the clone's directory is gone (a remote channel no
 longer knows its workspace), the row falls back to the ordinary abbreviation above.
 

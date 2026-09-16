@@ -119,20 +119,20 @@ describe('buildTabView', () => {
     expect(view.cwd).toBe('~/project');
   });
 
-  it('reads the workspace dir itself as $workspace for a locally workspaced tab', () => {
+  it('reads the workspace dir itself as $workspace/<name> for a locally workspaced tab', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.workspaceDir = '/tmp/clone';
     const view = buildTabView(tab, false, '/tmp/clone', undefined, [], [], [], (p) => p);
-    expect(view.cwdDisplay).toBe('$workspace');
+    expect(view.cwdDisplay).toBe('$workspace/clone');
     expect(view.cwd).toBe('/tmp/clone');
   });
 
-  it('reads paths inside the workspace dir as $workspace/<rest>', () => {
+  it('reads paths inside the workspace dir as $workspace/<name>/<rest>', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.workspaceDir = '/tmp/clone';
     const view = buildTabView(tab, false, '/tmp/clone/sub',
       undefined, [], [], [], (p) => p);
-    expect(view.cwdDisplay).toBe('$workspace/sub');
+    expect(view.cwdDisplay).toBe('$workspace/clone/sub');
   });
 
   it('leaves cwdDisplay unset for a tab whose workspace does not cover the cwd', () => {
@@ -142,14 +142,14 @@ describe('buildTabView', () => {
     expect(view.cwdDisplay).toBeUndefined();
   });
 
-  it('reads a remote tab\'s clone prefix as $workspace via workspaceOf', () => {
+  it('reads a remote tab\'s clone prefix as $workspace/<name> via workspaceOf', () => {
     const tab = makeTab('bekir', '#fff');
     tab.remote = { host: 'devbox', address: 'devbox' };
     const view = buildTabView(
       tab, false, '/srv/.janissary/workspace/bekir/src', undefined, [], [], [], (p) => p,
       undefined, (label) => (label === 'bekir' ? '/srv/.janissary/workspace/bekir' : undefined),
     );
-    expect(view.cwdDisplay).toBe('$workspace/src');
+    expect(view.cwdDisplay).toBe('$workspace/bekir/src');
   });
 
   it('falls back to the ordinary abbreviation once the remote workspace is gone', () => {

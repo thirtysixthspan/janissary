@@ -118,10 +118,12 @@ contributes no icon — there is no "disabled" indicator — and the row always 
 least the working directory, even when a tab has zero active flags.
 
 A workspaced tab's working directory is shown with the workspace symbol instead of the clone's
-physical location: the workspace dir itself reads as `$workspace`, and anything the tab `cd`s into
-inside it as `$workspace/<rest>`. This applies to a remote tab's clone exactly as to a local one —
-the remote clone's own path is unusable shorthand for the local `$root` abbreviation, so `$workspace`
-is the display symbol for both. The symbol changes only what the metadata row shows; the working
+physical location: the workspace dir itself reads as `$workspace/<name>` (its clone name after the
+symbol, e.g. `$workspace/salih`), and anything the tab `cd`s into inside it as
+`$workspace/<name>/<rest>`. This applies to a remote tab's clone exactly as to a local one —
+the remote clone's own path is unusable shorthand for the local `$root` abbreviation, and naming
+the clone keeps a strip of parallel workspaced agents distinguishable. The symbol changes only
+what the metadata row shows; the working
 directory value itself keeps its ordinary abbreviated form everywhere else (transcript prompt lines,
 search command defaults, file drag-and-drop resolution).
 
