@@ -11,7 +11,7 @@ edit notes/new-idea.md      the path doesn't have to exist yet
 
 The tab shows the file's name, size, and location in a header, with the editable buffer below.
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selection, and paste all
-work as you'd expect. The save, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
+work as you'd expect. The save, commit, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
 Long sentences wrap between words when they reach the editor's edge. A single token wider than the editor can still break so it doesn't create horizontal scrolling.
 
 You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file.
@@ -103,6 +103,8 @@ enabled. The save atomically replaces the file while keeping its existing permis
 write leaves the previous on-disk file and your unsaved editor state intact.
 
 If the path didn't exist when you ran `edit`, the file shows a size of "unknown" and isn't created until your first save. Opening that same not-yet-existing path again doesn't focus the first tab the way opening an existing file would; each open gets its own independent, unsaved tab, since none of them has a real file to converge on yet. If you save one of those tabs without renaming it, and another tab already saved a file under that name in the meantime, your save doesn't overwrite it: it picks the next free name in the same folder instead, such as `untitled.md` becoming `untitled-2.md`, and updates the tab to match.
+
+Beside the save button, the **Commit to origin** icon saves the file and then commits exactly that one file and pushes it to your current branch — the same commit-and-push cycle the [file navigator's](/user-documentation/tab-types/file-navigator) commit uses, with a generated `sync: <filename>` message. The icon spins while the commit runs, turns green on success and red on failure, and each outcome also lands as one line in the [notifications](/user-documentation/tab-types/notifications) tab. Files on a remote host commit from their navigator instead.
 
 ## Renaming a tab renames the file
 

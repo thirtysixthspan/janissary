@@ -156,6 +156,11 @@ export class JanusClient {
   // editorSync: the renamed view comes back over the next state broadcast.
   renameEditorFile(url: string, name: string): void { this.send({ method: 'renameEditorFile', params: { url, name } }); }
 
+  // Commit the tab's one file to origin on the current branch, revision history the same as the
+  // navigator's commit: the save happens first, client-side, then this arms the cycle. Fire-and-
+  // forget, same as editorSync.
+  commitEditorFile(url: string, message: string): void { this.send({ method: 'commitEditorFile', params: { url, message } }); }
+
 
   // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
   // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).

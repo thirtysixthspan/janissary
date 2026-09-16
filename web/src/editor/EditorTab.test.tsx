@@ -58,7 +58,8 @@ function makeClient(saveError?: string) {
     return response.text();
   });
   const renameEditorFile = vi.fn();
-  return { client: { saveFile, editorSync, request, send, readFile, renameEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile };
+  const commitEditorFile = vi.fn();
+  return { client: { saveFile, editorSync, request, send, readFile, renameEditorFile, commitEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile, commitEditorFile };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {
@@ -668,8 +669,18 @@ describe('EditorTab', () => {
     await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
     const actions = container.querySelector('.editor-actions')!;
 
-    expect(actions.querySelectorAll('button')).toHaveLength(4);
+    expect(actions.querySelectorAll('button')).toHaveLength(5);
     expect(container.querySelector('.editor-meta')?.querySelectorAll(':scope > button')).toHaveLength(0);
+  });
+
+  it('committing via the metadata icon saves first, then commits the file with a generated message', async () => {
+    const { client, saveFile, commitEditorFile } = makeClient();
+    const { container } = await renderLoaded(client);
+    type('x');
+    await waitFor(() => expect(container.querySelector('.editor-commit-button')).not.toBeNull());
+    fireEvent.click(container.querySelector('.editor-commit-button')!);
+    await waitFor(() => expect(commitEditorFile).toHaveBeenCalledWith('/open/1', 'sync: notes.txt'));
+    expect(saveFile).toHaveBeenCalled();
   });
 
   it('does not render a sync status icon for an ordinary, non-synced editor tab', async () => {

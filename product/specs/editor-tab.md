@@ -42,10 +42,25 @@ up/down, etc.) are not.
 - **Metadata header** — a single row showing the file's name, size, and location. The location is
   abbreviated using the `$root` and `~` shortcuts (see `root-path.md`), the same as elsewhere the
   application displays a path.
-- The metadata header groups every action at the right edge of that same row: the sync-status icon when present, save, connections status, and Split when available. The save button is enabled when the buffer has unsaved changes and
+- The metadata header groups every action at the right edge of that same row: the sync-status icon when present, save, commit to origin, connections status, and Split when available. The save button is enabled when the buffer has unsaved changes and
   disabled and dimmed when the buffer is clean. The connections-status button opens the tab's
   connections window (see [[connection]]) and is dimmed and inert when no persona connection is
   open.
+
+### Committing to origin
+
+The metadata header also carries a **Commit to origin** icon, the file navigator's commit-to-origin
+button applied to this one file (see `file-navigator-tab.md`). Clicking it saves the current buffer
+to disk first, exactly as the save path does — a failed save aborts the commit with the row's usual
+error shown — then stages just that one file, commits it with the navigator's generated single-file
+message (`sync: <filename>`), rebases onto whatever `origin` has moved to, and pushes to the current
+branch's own name. The icon says where the cycle is: it spins while committing, turns the success
+color when a commit lands and the error color when one fails, and returns to rest a few seconds
+after settling. Each outcome is reported as one line in the notifications feed, named the same way
+the navigator's commit is reported. A click while a commit is already running does nothing — the
+in-flight one is the one that counts. A file editor open on a remote tree's file cannot commit from
+here: the attempt is refused with a notifications line pointing at the navigator, since committing a
+remote file runs in that file's own navigator.
 - **Editor body** — fills the remaining space. Scrolls independently.
 
 ### Focus protection

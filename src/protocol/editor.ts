@@ -40,4 +40,9 @@ export type EditorRpcCall =
   // Set an editor tab's file name (the thing renaming the tab label sets literally). `url`
   // identifies the tab the same way saveFile's does. Fire-and-forget: the renamed view reaches
   // the client over the next `state` broadcast, like any other server-side tab change.
-  | { method: 'renameEditorFile'; params: { url: string; name: string } };
+  | { method: 'renameEditorFile'; params: { url: string; name: string } }
+  // The metadata row's commit-to-origin icon: the save already happened client-side; stage the
+  // one file, commit, rebase onto `origin`, and push the current branch. Fire-and-forget — the
+  // state reaches the client as `editor.commit` over subsequent `state` broadcasts. `url`
+  // identifies the tab the same way saveFile's does.
+  | { method: 'commitEditorFile'; params: { url: string; message: string } };
