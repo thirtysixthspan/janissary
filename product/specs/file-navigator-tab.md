@@ -98,8 +98,8 @@ tab keeps its independent lifetime.
 ### Remote trees
 
 A tree rooted in a remote workspace has the same rows, detail modes, branch and git-status metadata,
-git pull, search, watches, open/edit actions, creation, rename, delete, move, clipboard actions,
-and undo/redo as a local tree. Every filesystem operation runs on the remote host and is contained
+git pull, commit to origin, search, watches, open/edit actions, creation, rename, delete, move,
+clipboard actions, and undo/redo as a local tree. Every filesystem operation runs on the remote host and is contained
 within the workspace provisioned for the channel. The header shows the same host chip as the owning
 tab, ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
 destination.
@@ -252,13 +252,14 @@ of the current selection — right-clicking never changes what is selected, so a
 highlight stays visible underneath the menu. **Delete** is one exception: choosing it deletes the
 whole current selection when the clicked row is part of it, and just the clicked row otherwise, so
 right-clicking any row inside a multi-row highlight and deleting removes every highlighted row.
+**Commit to origin** follows the same rule, so one commit carries every highlighted row.
 Choosing **Edit as text** from that row's **Open with** chooser is another: it opens every selected
 file when the clicked row belongs to the selection. The chooser's other options still act on the
 clicked row alone.
 
-The menu holds up to ten entries in four groups, separated in this order: **Open**, **Edit**, and
-**Open with**; **Copy**, **Paste**, and **Duplicate**; **Rename** and **Delete**; **New file** and
-**New folder**.
+The menu holds up to eleven entries in four groups, separated in this order: **Open**, **Edit**, and
+**Open with**; **Copy**, **Paste**, and **Duplicate**; **Rename**, **Delete**, and **Commit to
+origin**; **New file** and **New folder**.
 Open does what double-clicking the row does. Edit is offered only for a file and edits the
 right-clicked row like Shift+double-click does: ordinary files reach the plain-text editor and
 images reach the image editor because editing dispatches by file type (see [[open]]).
@@ -275,9 +276,15 @@ on the tab's undo/redo stack like any other paste. Duplicate neither reads nor d
 clipboard, so it is offered whether or not anything has been copied, and a pending copy or cut
 survives it untouched.
 
+**Commit to origin** opens the commit-message field described below and, when it is confirmed,
+builds and pushes one commit carrying the selected file or files. Unlike **Edit**, it is offered on
+a directory row, where it commits everything beneath that directory; selecting a folder and a file
+inside it commits the folder once rather than naming the file twice.
+
 Entries that do not apply are left out rather than shown greyed, so the menu's height varies with
 context: **Paste** is absent when nothing has been copied or cut, **Edit** is absent for directories,
-and **Open**, **Edit**, **Open with**, **Duplicate**, and **Rename** are absent on the `..` row.
+**Commit to origin** is absent wherever the header shows no branch text, and **Open**, **Edit**,
+**Open with**, **Duplicate**, **Rename**, and **Commit to origin** are absent on the `..` row.
 
 One further entry can appear, and it is the only one that acts on the whole selection rather than on
 the clicked row: a **tab plugin's contributed selection entry**, drawn in a group of its own between
@@ -683,6 +690,58 @@ spinning is coalesced away like any other.
 The button is absent wherever the header shows no branch text —
 outside a git repository, or while a waiting tree has no metadata yet — the same quiet degradation
 as the branch text.
+
+### Committing to origin
+
+Under the same condition that shows the branch text, the header also carries a **Commit changes to
+origin** button, shown immediately after the Pull from origin button, so the pair reads down-then-up.
+It is the pull button flipped: where the pull takes what `origin` has, this sends what the tree has.
+Clicking it commits and pushes every change in the tree's repository. The row context menu's **Commit
+to origin** entry does the same for the selected file or files instead.
+
+Both ask for a commit message first. A small single-line field opens over the tree, already filled
+in with a generated default: the file's own name when one file is involved (`commit: notes.md`), and
+a count when several are (`commit: 3 files`). The header button's default is named after the changed
+files the tree is currently showing. `Enter` commits and pushes what is in the field, and `Escape`
+cancels with nothing written; an empty or whitespace-only message cancels in the same silent way an
+emptied rename does. Those two keys are the only things that close it. Unlike the search pop-up and
+the rename field, clicking away does not dismiss it — the field keeps its text and stays open,
+because what it holds is a sentence the user composed rather than something reconstructible from
+what is on screen. Closing it returns keyboard focus to the tree, and the keys typed into it never
+reach the tree's own cursor.
+
+What runs is: stage what the action names — the selected files and directories, or everything under
+the tree's root for the header button — commit with the given message, rebase onto whatever `origin`
+has moved to in the meantime, and push. A tree rooted at a subdirectory of a repository commits only
+what that tree shows; changes elsewhere in the repository are left alone. Someone else having pushed
+first is absorbed by the rebase and is not an error. A rebase that hits a conflict is abandoned, the
+branch is left exactly where it was, and the failure is reported; resolving that conflict is done in
+an editor or a terminal.
+
+The push names no remote and no branch, so it goes wherever `git push` in that directory would — the
+precise mirror of what the pull button takes from. A branch with no configured upstream is not
+published as a side effect: the attempt fails with git's own message, which already names the command
+that would set one, the local commit stays where it is, and nothing is configured on the user's
+behalf.
+
+Every commit that runs reports its outcome as exactly one line in the notifications feed. One that
+lands reads `Committed to origin: <git summary>`, carrying git's own account of what it did, or
+`Committed to origin` when git reported no summary. One that fails reads `Could not commit: <git
+error>`, carrying git's own error. When there was nothing to commit — a clean tree, or a selection
+whose files are all unchanged — the line reads `Nothing to commit`, since the user armed the action
+and is owed an answer about why nothing happened. The outcome is reported whether or not the tree
+that started the commit is still open or still rooted where it was. After a commit lands, the tree's
+git-status coloring is recomputed, so rows that were marked changed stop being marked.
+
+The button says what is happening on its own face in the same three-state vocabulary the pull button
+uses: its icon spins while the commit runs, turns the success color when it lands, and turns the
+error color when it fails, with tooltips naming the same three states and the failure tooltip
+pointing at the notifications tab. A settled state holds briefly and then the button returns to rest.
+Nothing to commit returns it to rest directly rather than showing failure, since nothing failed. A
+click while a commit is already running in that tab does nothing rather than starting an overlapping
+one, and reports nothing. The button stays clickable throughout.
+
+The button is absent wherever the header shows no branch text, exactly as the pull button is.
 
 ### Finding a file by name
 

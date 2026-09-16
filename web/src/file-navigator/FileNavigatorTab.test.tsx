@@ -126,6 +126,52 @@ describe('FileNavigatorTab', () => {
     expect(container.querySelector('.files-pull')).toBeNull();
   });
 
+  it('opens the commit-message field rather than sending anything when the commit button is clicked', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileNavigatorTab files={makeFiles({ branch: 'main' })} client={client} index={0} />,
+    );
+    const commit = container.querySelector('.files-commit');
+    expect(commit).not.toBeNull();
+
+    fireEvent.click(commit!);
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 0 files');
+  });
+
+  it('sends the commit the message field produced, naming no paths for the whole tree', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      branch: 'main',
+      rows: [{ path: 'README.md', name: 'README.md', depth: 0, dir: false, gitStatus: 'changed' }],
+    });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
+
+    fireEvent.click(container.querySelector('.files-commit')!);
+    const input = screen.getByLabelText('Commit message') as HTMLInputElement;
+    expect(input.value).toBe('commit: README.md');
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'fileNavigatorCommit', params: { index: 0, message: 'commit: README.md', paths: [] },
+    });
+  });
+
+  it('signals the commit status the tree payload carries on its commit button', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileNavigatorTab files={makeFiles({ branch: 'main', commit: 'committing' })} client={client} index={0} />,
+    );
+    expect(container.querySelector('.files-commit--committing')).not.toBeNull();
+  });
+
+  it('renders no .files-commit element when branch is undefined', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
+    expect(container.querySelector('.files-commit')).toBeNull();
+  });
+
   it('renders a "Looking for" banner and no rows while waitingFor is set', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(

@@ -9,6 +9,7 @@ import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';
 import type { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
+import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
 
 type Params = {
   files: FileNavigatorView;
@@ -20,6 +21,7 @@ type Params = {
   deletion: ReturnType<typeof useFileNavigatorDelete>;
   rename: ReturnType<typeof useFileNavigatorRename>;
   rowEvents: ReturnType<typeof useFileNavigatorRowEvents>;
+  commit: ReturnType<typeof useFileNavigatorCommit>;
   // Which paths Open and Edit fan out over when the clicked row belongs to the multi-row
   // selection, already resolved by the app shell's classifier — null when it does not apply.
   multiOpenSelection: string[] | null;
@@ -41,7 +43,7 @@ export type FileNavigatorActions = {
 // navigator's own label and root, so no command is issued and nothing lands in any tab's
 // transcript, command history, or queue — local and remote trees alike.
 export function createFileNavigatorActions({
-  files, client, index, selection, opener, paste, deletion, rename, rowEvents,
+  files, client, index, selection, opener, paste, deletion, rename, rowEvents, commit,
   multiOpenSelection, setPendingNewDir,
 }: Params): FileNavigatorActions {
   const editFile = (path: string) =>
@@ -61,6 +63,14 @@ export function createFileNavigatorActions({
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
   const clipboardPaths = () => selection.operationPaths.map((relPath) => `${files.absoluteRoot}/${relPath}`);
 
+  // What the two selection-scoped entries act on: the whole selection when the clicked row belongs
+  // to it, the clicked row alone otherwise. Normalizing drops descendants of selected directories,
+  // so selecting a folder and a file inside it names the folder once rather than naming the child
+  // twice.
+  const selectionOrRow = (row: FileNavigatorRow) => (selection.selected.has(row.path)
+    ? selection.operationPaths
+    : normalizeOperationPaths(files.rows, new Set([row.path])));
+
   const menuActions: FileNavigatorMenuActions = {
     open: (row) => {
       if (multiOpenSelection?.includes(row.path)) for (const path of multiOpenSelection) opener.open(path, false);
@@ -78,11 +88,8 @@ export function createFileNavigatorActions({
     paste: (row) => paste.paste(files.rows, row.path),
     duplicate: (row) => paste.duplicate(row),
     rename: beginRename,
-    remove: (row) => deletion.request(
-      selection.selected.has(row.path)
-        ? selection.operationPaths
-        : normalizeOperationPaths(files.rows, new Set([row.path])),
-    ),
+    remove: (row) => deletion.request(selectionOrRow(row)),
+    commitToOrigin: (row) => commit.request(selectionOrRow(row)),
     newFile: createNewFile,
     newDirectory: createNewDirectory,
   };

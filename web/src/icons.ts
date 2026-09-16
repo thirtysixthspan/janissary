@@ -27,6 +27,7 @@ export {
   faArrowsUpDown as resizeIcon,
   faArrowsRotate as syncIcon,
   faDownload as pullIcon,
+  faUpload as commitIcon,
   faTableColumns as splitTabIcon,
   faTableList as fileDetailIcon,
 } from '@fortawesome/free-solid-svg-icons';

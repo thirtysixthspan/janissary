@@ -17,6 +17,8 @@ import { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
 import { createFileNavigatorActions } from './file-navigator-menu-actions';
 import type { FileNavigatorTabProperties as Properties } from './file-navigator-tab-types';
 import { useFileNavigatorIntents } from './useFileNavigatorIntents';
+import { useFileNavigatorCommit } from './useFileNavigatorCommit';
+import { changedFilePaths } from './file-navigator-commit-message';
 import { nextDock } from '../dock-cycle';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
@@ -42,6 +44,7 @@ export function FileNavigatorTab({
   const deletion = useFileNavigatorDelete(client, index);
   const paste = useFileNavigatorPaste(client, index, files.absoluteRoot, files.remote?.host);
   const selectionAction = useSelectionAction(client, index);
+  const commit = useFileNavigatorCommit(intents.commit);
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);
 
   // Scroll the selected row into view (nearest block alignment avoids unnecessary scroll
@@ -80,9 +83,14 @@ export function FileNavigatorTab({
   const {
     editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
   } = createFileNavigatorActions({
-    files, client, index, selection, opener, paste, deletion, rename, rowEvents,
+    files, client, index, selection, opener, paste, deletion, rename, rowEvents, commit,
     multiOpenSelection, setPendingNewDir,
   });
+
+  // The header button's whole-tree form: it names no paths, so the server stages everything under
+  // the tree's root, but the message it opens pre-filled with is generated from the changed rows the
+  // tree is currently showing.
+  const commitEverything = () => commit.request([], changedFilePaths(files.rows));
 
   const onKeyDown = useFileNavigatorKeyDown({
     rows: files.rows,
@@ -123,9 +131,10 @@ export function FileNavigatorTab({
     >
       <FileNavigatorHeader
         root={files.root} remote={files.remote} branch={files.branch} githubUrl={files.githubUrl}
-        dock={dock} details={files.details} pull={files.pull}
+        dock={dock} details={files.details} pull={files.pull} commit={files.commit}
         onOpenGithub={intents.openGithub}
         onPull={files.branch ? intents.pull : undefined}
+        onCommit={files.branch ? commitEverything : undefined}
         onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}
         onSetDetail={intents.setDetail} onCollapseAll={intents.collapseAll}
         onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
@@ -142,8 +151,10 @@ export function FileNavigatorTab({
         paste={paste}
         search={search}
         opener={opener}
+        commit={commit}
         menu={rowEvents.menu}
         menuActions={menuActions}
+        hasBranch={Boolean(files.branch)}
         selectionEntry={!files.remote && selectionAction.entry ? {
           label: selectionAction.entry.label,
           onActivate: () => { selectionAction.run(selection.operationPaths); },

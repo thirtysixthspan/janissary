@@ -16,6 +16,7 @@ function makeActions(): FileNavigatorMenuActions {
     duplicate: vi.fn(),
     rename: vi.fn(),
     remove: vi.fn(),
+    commitToOrigin: vi.fn(),
     newFile: vi.fn(),
     newDirectory: vi.fn(),
   };
@@ -75,6 +76,39 @@ describe('fileNavigatorMenuItems', () => {
       ['Delete'],
       ['New file', 'New folder'],
     ]);
+  });
+
+  it('appends Commit to origin to the Rename/Delete group when the tree has a branch', () => {
+    const groups = fileNavigatorMenuItems(fileRow, true, makeActions(), null, true);
+    expect(labels(groups)).toEqual([
+      ['Open', 'Edit', 'Open with'],
+      ['Copy', 'Paste', 'Duplicate'],
+      ['Rename', 'Delete', 'Commit to origin'],
+      ['New file', 'New folder'],
+    ]);
+  });
+
+  it('offers Commit to origin on a directory row, where Edit is not offered', () => {
+    expect(labels(fileNavigatorMenuItems(directoryRow, true, makeActions(), null, true))).toEqual([
+      ['Open', 'Open with'],
+      ['Copy', 'Paste', 'Duplicate'],
+      ['Rename', 'Delete', 'Commit to origin'],
+      ['New file', 'New folder'],
+    ]);
+  });
+
+  it('omits Commit to origin on the ".." row and on a tree with no branch', () => {
+    expect(labels(fileNavigatorMenuItems(parentRow, true, makeActions(), null, true))[1])
+      .toEqual(['Delete']);
+    expect(labels(fileNavigatorMenuItems(fileRow, true, makeActions(), null, false))[2])
+      .toEqual(['Rename', 'Delete']);
+  });
+
+  it('routes Commit to origin to its action with the clicked row', () => {
+    const actions = makeActions();
+    const groups = fileNavigatorMenuItems(fileRow, true, actions, null, true);
+    groups[2][2].onActivate();
+    expect(actions.commitToOrigin).toHaveBeenCalledWith(fileRow);
   });
 
   it('routes each entry to its action with the clicked row', () => {

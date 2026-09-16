@@ -35,9 +35,15 @@ export function useFileNavigatorIntents(client: JanusClient, index: number) {
     client.send({ method: 'fileNavigatorPull', params: { index } });
   }, [client, index]);
 
+  const commit = useCallback((message: string, paths: string[]) => {
+    client.send({ method: 'fileNavigatorCommit', params: { index, message, paths } });
+  }, [client, index]);
+
   const openGithub = useCallback((githubUrl: string) => {
     sendCommand(`open ${githubUrl}`);
   }, [sendCommand]);
 
-  return { sendCommand, toggle, reroot, rerootTo, setDock, setDetail, collapseAll, pull, openGithub };
+  return {
+    sendCommand, toggle, reroot, rerootTo, setDock, setDetail, collapseAll, pull, commit, openGithub,
+  };
 }

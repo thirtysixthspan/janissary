@@ -155,6 +155,15 @@ const MUTATION_OPERATIONS = {
     rootDestination: true, refusal: refusedItem,
     run: (context, args) => context.filesystem.createDirectory(context.root, args.destination ?? ''),
   },
+  // Commits and pushes the named paths, or the far side's own navigator root for an empty list. Its
+  // result is a summary string with nowhere to put a reason, so — like `read-file` — it names no
+  // refusal shape and a contained-path refusal comes back as an error instead.
+  'git-commit': {
+    valid: (args) => nonEmptyString(args.message) && stringArray(args.paths),
+    decode: (args) => ({ message: args.message as string, paths: args.paths as string[] }),
+    paths: (args) => args.paths ?? [],
+    run: (context, args) => context.filesystem.commit(context.root, args.message ?? '', args.paths ?? []),
+  },
   replay: {
     valid: (args) => history(args.undoStack) && history(args.redoStack)
       && (args.direction === 'undo' || args.direction === 'redo')

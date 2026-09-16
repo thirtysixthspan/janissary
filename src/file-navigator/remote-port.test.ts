@@ -70,6 +70,35 @@ describe('RemoteFileSystemPort', () => {
     await expect(pending).resolves.toBe('Already up to date.');
   });
 
+  it('commits through the git-commit operation with the message and its paths', async () => {
+    const h = harness();
+    const pending = h.port.commit('/remote/ws', 'commit: notes.txt', ['notes.txt']);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request')).toMatchObject({
+      operation: 'git-commit', args: { message: 'commit: notes.txt', paths: ['notes.txt'] },
+    });
+    h.reply({ committed: true, summary: '1 file changed, 2 insertions(+)' });
+    await expect(pending).resolves.toEqual({ committed: true, summary: '1 file changed, 2 insertions(+)' });
+  });
+
+  // The case that fails if the workspace mapping is skipped: a tree rooted below the workspace root
+  // must send paths the far side can resolve against the *workspace*, not against the tree.
+  it('maps a sub-rooted tree\'s paths onto the workspace before sending them', async () => {
+    const h = harness();
+    void h.port.commit('/remote/ws/src', 'commit: index.ts', ['app/index.ts']);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'git-commit', args: { paths: ['src/app/index.ts'] } });
+  });
+
+  it('sends an empty path list for the whole-tree form', async () => {
+    const h = harness();
+    void h.port.commit('/remote/ws', 'commit: 2 files', []);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'git-commit', args: { paths: [] } });
+  });
+
   it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
     const h = harness();
     const write = h.port.writeFile('/remote/ws', '../outside', Buffer.from(''));

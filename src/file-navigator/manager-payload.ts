@@ -20,7 +20,8 @@ export function writeCreatedPayload(tab: Tab, state: FilesTabState, absDir: stri
 }
 
 // The payload for an ordinary rebuild: the pruned, git-marked, stat-marked row list plus the
-// branch, GitHub URL, pull status, and pending restore hint the tab is currently carrying.
+// branch, GitHub URL, pull and commit statuses, and pending restore hint the tab is currently
+// carrying.
 export function writeRebuiltPayload(tab: Tab, state: FilesTabState, onReady: () => void): void {
   const rows = pruneAndBuildRows(state, onReady);
   tab.files = {
@@ -34,5 +35,6 @@ export function writeRebuiltPayload(tab: Tab, state: FilesTabState, onReady: () 
     details: state.details,
     remote: state.remote,
     pull: state.pull,
+    commit: state.commit,
   };
 }

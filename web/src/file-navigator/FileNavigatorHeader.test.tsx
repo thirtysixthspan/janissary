@@ -47,12 +47,14 @@ describe('FileNavigatorHeader', () => {
 
   it('offers the docked header the same actions apart from the split control', () => {
     const { container } = render(
-      <FileNavigatorHeader root="/local/ws" dock="left" onSplit={vi.fn()} onPull={vi.fn()} {...callbacks} />,
+      <FileNavigatorHeader
+        root="/local/ws" dock="left" onSplit={vi.fn()} onPull={vi.fn()} onCommit={vi.fn()} {...callbacks}
+      />,
     );
     const actions = container.querySelector('.files-actions');
 
     expect(actions?.querySelector('.tab-split')).toBeNull();
-    for (const action of ['.files-pull', '.files-search', '.files-new-file', '.files-new-directory', '.files-dock-cycle', '.files-detail-cycle', '.files-collapse-all']) {
+    for (const action of ['.files-pull', '.files-commit', '.files-search', '.files-new-file', '.files-new-directory', '.files-dock-cycle', '.files-detail-cycle', '.files-collapse-all']) {
       expect(actions?.querySelector(action), action).not.toBeNull();
     }
   });
@@ -73,5 +75,27 @@ describe('FileNavigatorHeader', () => {
   it('passes the pull status through to the button', () => {
     const { container } = render(<FileNavigatorHeader root="/local/ws" onPull={vi.fn()} pull="pulling" {...callbacks} />);
     expect(container.querySelector('.files-pull--pulling')).not.toBeNull();
+  });
+
+  it('renders the commit button immediately after the pull button', () => {
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" onPull={vi.fn()} onCommit={vi.fn()} {...callbacks} />,
+    );
+    const actions = [...(container.querySelector('.files-actions')!.children)];
+    const pull = actions.findIndex((child) => child.className === 'files-pull');
+    const commit = actions.findIndex((child) => child.className === 'files-commit');
+    expect(commit).toBe(pull + 1);
+  });
+
+  it('renders no commit button without onCommit', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" onPull={vi.fn()} {...callbacks} />);
+    expect(container.querySelector('.files-commit')).toBeNull();
+  });
+
+  it('passes the commit status through to the button', () => {
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" onCommit={vi.fn()} commit="committing" {...callbacks} />,
+    );
+    expect(container.querySelector('.files-commit--committing')).not.toBeNull();
   });
 });

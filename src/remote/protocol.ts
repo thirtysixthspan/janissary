@@ -43,7 +43,12 @@
 // the harness with no browser variables at all, so a `harness … on <host> -b` tab would come up
 // looking healthy while every `chromium.connect` inside it failed with nothing to point at — the
 // same failure the check exists for.
-export const REMOTE_PROTOCOL_VERSION = 12;
+//
+// Version 13 adds the `git-commit` filesystem operation, backing the file navigator's commit button
+// and its `Commit to origin` menu entry. A version-12 remote refuses it as an unknown operation, so
+// the commit fails with a clear error reply rather than both ends disagreeing silently — the same
+// shape the `git-pull` bump above took.
+export const REMOTE_PROTOCOL_VERSION = 13;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -52,8 +57,8 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 export type RemoteHandshake = { version: number; root: string };
 
 export type RemoteFilesystemOperation =
-  | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'search' | 'read-file'
-  | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
+  | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
+  | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay';
 
 export type RemoteFilesystemArguments = {
@@ -66,6 +71,9 @@ export type RemoteFilesystemArguments = {
   destination?: string;
   policy?: 'overwrite-all' | 'skip-conflicts';
   name?: string;
+  // The commit message the user approved in the navigator's own field, carried with `git-commit` so
+  // the far side never has to prompt for one mid-operation.
+  message?: string;
   mode?: 'copy' | 'cut';
   undoStack?: unknown[];
   redoStack?: unknown[];

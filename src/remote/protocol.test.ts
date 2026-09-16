@@ -316,8 +316,9 @@ describe('handshake', () => {
   // ssh destination's own account rather than to the user who opened janissary.
   // Version 10 answers a `git-pull` with no result. Version 11 ignores `spawn`'s `browser` flag: a
   // `-b` tab on that host comes up looking healthy with no browser variables set at all, so every
-  // `chromium.connect` inside it fails with nothing to point at.
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])('rejects a remote speaking older protocol version %i', (version) => {
+  // `chromium.connect` inside it fails with nothing to point at. Version 12 does not know the
+  // `git-commit` filesystem operation, so the navigator's commit button would fail there.
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])('rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
