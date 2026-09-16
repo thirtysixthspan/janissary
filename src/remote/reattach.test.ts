@@ -107,6 +107,21 @@ describe('remote reattachment', () => {
     h.remote.dispose();
   });
 
+  it.each([true, false])('does not report a locally requested kill as a termination, harness=%s', (harness) => {
+    const h = setup();
+    if (!harness) { h.tab.view = 'agent'; h.tab.harness = undefined; }
+    const exited = vi.fn(); h.channel.attach('r1', { onOutput: vi.fn(), onExit: exited });
+    h.channel.send({ type: 'spawn', id: 'r1', program: 'work', command: 'work', mode: harness ? 'pty' : 'pipe',
+      harness: harness ? 'claude' : undefined, agentName: 'work', cols: 80, rows: 24 });
+    h.channel.send({ type: 'kill', id: 'r1' });
+    h.frame({ type: 'exit', id: 'r1', exitCode: 0 });
+    expect(exited).toHaveBeenCalledExactlyOnceWith(0);
+    expect(notify).not.toHaveBeenCalled();
+    expect(h.tab.sessionEnded).toBeUndefined();
+    expect(h.transports[0].kill).not.toHaveBeenCalled();
+    h.remote.dispose();
+  });
+
   it('replaces a stale SSH transport immediately on system resume', () => {
     const h = setup();
     messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });

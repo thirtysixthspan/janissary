@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop reporting a locally requested kill of a remote shell or harness as a far-side session termination.
-
-Existing Issue: `RemoteChannel.send` records every `spawn` frame in its `spawned` map but never removes an id when the local side sends the matching `kill`, so the `exit` frame the far side echoes back runs `onSessionExit` and then `endRemoteProcess` in `src/remote/reattach.ts`, which stamps the tab's `sessionEnded`, raises a `remote-session-ended` notification, and — when no other live tab shares the channel — calls `terminateRemoteEntry` and tears the whole remote session down. Severity: 7/10
-
-Existing Risk: 7/10 - Running `connection close shell` in a remote agent tab, or any path through `ShellManager.close` and `ShellManager.getShell` that retires a non-writable shell so the next command can spawn a fresh one, now ends the user's entire remote session and tells them to start a new agent, destroying a live workspace and its running work in response to a routine local action.
-
-Proposal Risk: 3/10 - A kill that is issued locally and then also dies for a genuine far-side reason within the same window is reported as a clean local kill rather than a termination, which under-reports rather than over-reports, but it means a peer that really has gone away can be missed once.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: a locally requested kill of a remote shell or harness is misreported as the remote session ending". In `src/remote/channel.ts`, delete the id from the `spawned` map inside `send` when the frame is a `kill`, so the subsequent `exit` frame finds no record and takes the plain `listener?.onExit(...)` path without reaching `handlers.onSessionExit`. Check `RemoteChannel.finish`, which sends a `kill` for every id in `spawned` while iterating that same map — switch it to iterate a snapshot (`[...this.spawned.keys()]`) so the deletion does not mutate the collection mid-loop. While in that dispatch block, also resolve the ended tab by the frame's session id through `managers.tab.harnessTabByPtyId` rather than by `spawned.agentName`: `onSessionExit` currently discards the id it is handed and passes the spawn's `agentName`, which happens to equal the tab label only because `PseudoterminalManager.registerRemotePty` and `createRemoteShell` in `src/remote/shell-session.ts` both pass it that way, and `RemoteManager.notifyBrowserGone` already documents why resolving by id is the correct shape when joined tabs share a channel. Add a case to `src/remote/reattach.test.ts` beside the existing `reports a terminated process` pair: send the `spawn`, send a `kill` for the same id, then deliver the `exit` frame, and assert no notification is raised, `tab.sessionEnded` stays undefined, and the transport is not killed. `src/shell/manager.test.ts` covers the shell respawn contract and must keep passing untouched.
-
-
 * Reconnect a remote session on resume only when its transport has actually failed, and raise the wall-clock threshold so a stalled event loop is not mistaken for sleep.
 
 Existing Issue: `resumeRemote` in `src/remote/reattach.ts` unconditionally calls `channel.close()` and `channel.closed()` on every remote entry that has a session id and a workspace whenever the `system` bus channel reports `resumed`, with no check that the transport is unhealthy, and `ResumeWatch` in `src/resume-watch.ts` declares a resume whenever a 500 ms tick observes a wall-clock gap beyond `RESUME_THRESHOLD_MS` of five seconds. Severity: 6/10

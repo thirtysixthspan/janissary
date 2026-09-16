@@ -106,6 +106,7 @@ export class RemoteChannel {
       return;
     }
     if (frame.type === 'spawn') this.spawned.set(frame.id, frame);
+    else if (frame.type === 'kill') this.spawned.delete(frame.id);
     this.transport.write(`${encodeFrame(frame)}\n`);
   }
 
