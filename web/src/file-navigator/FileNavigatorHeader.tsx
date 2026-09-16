@@ -53,7 +53,7 @@ export function FileNavigatorHeader({
       <div className="files-actions">
         {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
         {onPull && <FileNavigatorPullButton status={pull} onClick={onPull} />}
-        {onCommit && <FileNavigatorCommitButton status={commit} onClick={onCommit} />}
+        {onCommit && <FileNavigatorCommitButton status={commit} branch={branch} onClick={onCommit} />}
         <button type="button" className="files-search" title="Search files" onClick={onSearch}>
           <FontAwesomeIcon icon={searchFilesIcon} />
         </button>

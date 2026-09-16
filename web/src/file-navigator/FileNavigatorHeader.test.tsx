@@ -33,6 +33,14 @@ describe('FileNavigatorHeader', () => {
     expect(container.querySelector('.files-header')).not.toHaveClass('files-header--docked');
   });
 
+  it('passes the branch through to the commit button tooltip', () => {
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" branch="main" onCommit={vi.fn()} {...callbacks} />,
+    );
+    const commit = container.querySelector('.files-commit')!;
+    expect(commit.getAttribute('title')).toBe('Commit changes to origin (branch main)');
+  });
+
   it('stacks the header onto two lines while docked', () => {
     const { container } = render(
       <FileNavigatorHeader root="/local/ws" dock="left" branch="master" {...callbacks} />,
