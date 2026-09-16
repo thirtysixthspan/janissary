@@ -71,14 +71,21 @@ export function snapshotViewport(term: Terminal): ViewportSnapshot {
 
 type Rect = { left: number; top: number; width: number; height: number };
 
+// The grid the frozen screen sits on: the emulator's own cell size, and where its screen box
+// starts inside the surface's container. Both painting and hit-testing read these, so the cell
+// under the pointer is always the cell the user sees under it.
+export type ScreenMetrics = { cellWidth: number; cellHeight: number; offsetLeft: number; offsetTop: number };
+
 // A pointer position on a fixed monospace grid: division is exact, so a column is which
-// fraction of the container's width the point has crossed. Dragging past the container edge
-// clamps to the grid instead of falling off the end.
+// fraction of the grid's width the point has crossed. The offsets move the origin from the
+// container's corner to the screen's, which is where the first cell actually starts. Dragging past
+// the grid's edge clamps to it instead of falling off the end.
 export function cellFromPoint(
-  x: number, y: number, rect: Rect, cellWidth: number, cellHeight: number, cols: number, rows: number,
+  x: number, y: number, rect: Rect, metrics: ScreenMetrics, cols: number, rows: number,
 ): Cell {
-  const col = Math.min(cols - 1, Math.max(0, cellWidth > 0 ? Math.floor((x - rect.left) / cellWidth) : 0));
-  const row = Math.min(rows - 1, Math.max(0, cellHeight > 0 ? Math.floor((y - rect.top) / cellHeight) : 0));
+  const { cellWidth, cellHeight, offsetLeft, offsetTop } = metrics;
+  const col = Math.min(cols - 1, Math.max(0, cellWidth > 0 ? Math.floor((x - rect.left - offsetLeft) / cellWidth) : 0));
+  const row = Math.min(rows - 1, Math.max(0, cellHeight > 0 ? Math.floor((y - rect.top - offsetTop) / cellHeight) : 0));
   return { col, row };
 }
 

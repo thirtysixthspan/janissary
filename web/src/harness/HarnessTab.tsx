@@ -95,7 +95,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         <div className="harness-browser-gone">{harness.browserError}</div>
       )}
       <div className="harness-body" data-harness-drop={ptyId || undefined} ref={hostReference} onClick={() => { /* focus handled by xterm */ }}>
-        <SelectionOverlay state={selection.view} probeRef={selection.probeRef} />
+        <SelectionOverlay state={selection.view} screen={selection.screen} />
       </div>
     </div>
   );
