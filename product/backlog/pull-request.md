@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Document the move to remote protocol version 13 in the spec section that narrates every previous version bump.
-
-Existing Issue: `product/specs/remote-server.md` carries a running account of every `REMOTE_PROTOCOL_VERSION` move — the token map, version 7 for filesystem sessions and the per-spawn agent name, 8 for hosted ACP, then the git identity and the end-to-end browser — each with a paragraph naming what the frames gained and what a stale peer would do wrong, and this branch moves the constant to 13 by adding a session id to the handshake and the `reattach` and `reattach-result` frames without adding that paragraph, so the spec's version narrative stops at 12 while the code is at 13. Severity: 5/10
-
-Existing Risk: 5/10 - The one document that explains why each version is incompatible falls a version behind, so the next contributor to touch the handshake has no record of what 13 added and either duplicates the session field or bumps again without understanding what a version-12 peer would do with a `reattach` frame it cannot decode.
-
-Proposal Risk: 1/10 - The spec is current, but it stays a hand-maintained narrative that the next bump can forget in exactly the same way unless someone notices the omission again.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: remote protocol version 13 is not recorded in remote-server.md's version history". Add a paragraph to the version-history run in `product/specs/remote-server.md`, immediately after the end-to-end browser paragraph and before the `After the handshake, every frame is validated before dispatch` sentence, following the established shape: state that reattachment moves the version to 13, that the handshake line now carries an optional session id and the union gains `reattach` and `reattach-result`, and — the part every sibling paragraph supplies — what a version-12 peer would do wrong, which is that it neither publishes a session id nor answers a reattach, so a local side would send a frame the far end refuses as unknown and sit on the retry path forever rather than falling back. Also state that this is why the mismatch is refused at the handshake, as the other paragraphs do. No code changes; `src/remote/protocol.test.ts` already covers the round trip and the refusal.
-
-
 * Say why a scheduled command was late instead of asserting that the system was asleep.
 
 Existing Issue: `ScheduleManager.fireDue` in `src/schedule/manager.ts` raises `schedule-late` with the fixed line `<command> ran <duration> late (system was asleep)` for any delivery more than `RESUME_THRESHOLD_MS` past its due time, and it never consults the `system` bus channel's `resumed` event, so the several non-sleep paths that already leave an entry due — a harness tab whose status is not yet `running`, the one-entry-per-tick budget that holds a second overdue command back, an agent tab busy with a queued command, and the new `tab.remote && !channel.attached` guard added in this diff — all produce a notification blaming sleep. Severity: 5/10
