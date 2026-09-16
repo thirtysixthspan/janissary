@@ -15,7 +15,7 @@ live in its sixth entry.
 End the "The modifier is needed because…" sentence at "keeps that one drag for yourself"
 and state the snapshot-styling point in the freeze paragraph in user terms — the frozen
 image carries the text, not the harness's colours or bold. Rewrite the seventh
-description bullet with `gh pr edit --body-file` to make its single claim: Option+drag on
+description bullet so its single claim is: Option+drag on
 macOS now reaches the harness as an ordinary reported drag, because Shift+drag replaced
 it as the selection gesture. Title untouched; every other paragraph preserved
 byte-for-byte. Nothing executable changes.
@@ -23,5 +23,4 @@ byte-for-byte. Nothing executable changes.
 ## Implementation steps
 
 1. `documentation/user-documentation/advanced-agents/harness.md`: the two-part prose fix.
-2. `./temp/pr-body.md` from the current body minus the seventh bullet rewrite; apply with
-   `gh pr edit 1129 --body-file ./temp/pr-body.md`.
+2. Preserve the current body apart from the seventh bullet's rewritten claim.

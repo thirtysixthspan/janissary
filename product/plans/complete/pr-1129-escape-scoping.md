@@ -19,7 +19,7 @@ The hook `useSelectionLayer` installs a window-capture `keydown` listener whenev
 ## Tests
 
 - `useSelectionLayer.test.tsx`: Escape keydown on the container clears the held selection and is defaultPrevented; Escape keydown on the window (outside the container) leaves the selection held and is not defaultPrevented.
-- Existing HarnessTab tests for Escape reaching the harness with nothing selected keep passing; check-diff green.
+- Existing HarnessTab tests for Escape reaching the harness with nothing selected continue to pass.
 
 ## Out of scope
 
