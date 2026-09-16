@@ -149,7 +149,7 @@ export type ClientFrame =
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
-  | { type: 'reattach-result'; accepted: boolean }
+  | { type: 'reattach-result'; accepted: boolean; truncated?: boolean }
   // `notice` is what the remote knows about the workspace it just made and the local side cannot
   // work out for itself: whether its processes are actually confined, and which GitHub credential
   // it ended up with. Both are facts about the machine they hold on, so they are reported from

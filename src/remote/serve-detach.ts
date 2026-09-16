@@ -7,6 +7,11 @@ import { decodeFrame, encodeFrame, type ClientFrame, type ServerFrame } from './
 
 export const REMOTE_DETACH_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
+// However long a peer stays detached, its replay buffer never grows past this — an ordinary
+// detachment (minutes to hours) never comes close, while even a week of a chatty ACP agent or a
+// busy remote shell cannot exhaust the remote host's memory.
+export const PENDING_BUFFER_BUDGET_BYTES = 1_000_000;
+
 export class DetachedPeer {
   private server: Server | undefined;
   private socket: Socket | undefined;
@@ -14,6 +19,8 @@ export class DetachedPeer {
   private expiry: ReturnType<typeof setTimeout> | undefined;
   private sink: ((data: string) => void) | undefined;
   private pending: ServerFrame[] = [];
+  private pendingBytes = 0;
+  private dropped = false;
   private record: string;
   private stopped = false;
   private connections = new Set<Socket>();
@@ -43,8 +50,17 @@ export class DetachedPeer {
 
   emit(frame: ServerFrame): void {
     if (this.stopped) return;
-    if (this.sink) this.sink(`${encodeFrame(frame)}\n`);
-    else if (frame.type !== 'output' || this.pipes.has(frame.id)) this.pending.push(frame);
+    if (this.sink) { this.sink(`${encodeFrame(frame)}\n`); return; }
+    if (frame.type === 'output' && !this.pipes.has(frame.id)) return;
+    const encoded = encodeFrame(frame);
+    this.pending.push(frame);
+    this.pendingBytes += encoded.length;
+    while (this.pendingBytes > PENDING_BUFFER_BUDGET_BYTES) {
+      const removed = this.pending.shift();
+      if (!removed) break;
+      this.pendingBytes -= encodeFrame(removed).length;
+      this.dropped = true;
+    }
   }
 
   track(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
@@ -63,6 +79,7 @@ export class DetachedPeer {
     this.stopped = true;
     this.sink = undefined;
     this.pending = [];
+    this.pendingBytes = 0;
     clearTimeout(this.expiry);
     this.socket?.destroy();
     this.server?.close();
@@ -96,10 +113,12 @@ export class DetachedPeer {
       clearTimeout(this.expiry);
       this.expiry = undefined;
       this.sink = (chunk) => { socket.write(chunk); };
-      this.emit({ type: 'reattach-result', accepted: true });
+      this.emit({ type: 'reattach-result', accepted: true, ...(this.dropped && { truncated: true }) });
+      this.dropped = false;
       const pending = this.pending.toSorted((a, b) => Number(a.type === 'exit') - Number(b.type === 'exit'));
       for (const frame of pending) socket.write(`${encodeFrame(frame)}\n`);
       this.pending = [];
+      this.pendingBytes = 0;
       this.receive(buffer.slice(newline + 1));
     });
     socket.on('close', () => {

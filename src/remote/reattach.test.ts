@@ -68,6 +68,24 @@ describe('remote reattachment', () => {
     h.remote.dispose();
   });
 
+  it('leaves a harness tab\'s log untouched on a truncated replay', () => {
+    const h = setup(); h.transports[0].onExit(); vi.advanceTimersByTime(250);
+    h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    const before = h.tab.log.length;
+    h.frame({ type: 'reattach-result', accepted: true, truncated: true });
+    expect(h.tab.log.length).toBe(before);
+    h.remote.dispose();
+  });
+
+  it('appends a drop notice to a non-harness tab\'s log on a truncated replay', () => {
+    const h = setup(); h.tab.view = 'agent'; h.tab.harness = undefined;
+    h.transports[0].onExit(); vi.advanceTimersByTime(250);
+    h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    h.frame({ type: 'reattach-result', accepted: true, truncated: true });
+    expect(h.tab.log.at(-1)?.output).toContain('dropped to limit memory use');
+    h.remote.dispose();
+  });
+
   it('keeps retrying an unreachable peer without declaring it ended', () => {
     const h = setup(); h.transports[0].onExit();
     for (let attempt = 0; attempt < 8; attempt++) { vi.advanceTimersByTime(30_000); h.transports.at(-1)!.onExit(); }

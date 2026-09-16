@@ -80,8 +80,10 @@ export class RemoteManager {
         onFrame: (frame) => {
           switch (frame.type) {
           case 'reattach-result': {
-            if (frame.accepted) entry.reconnect.accepted();
-            else terminateRemoteEntry(this.managers, entry);
+            if (frame.accepted) {
+              entry.reconnect.accepted();
+              if (frame.truncated) this.reportTruncatedReplay(entry);
+            } else terminateRemoteEntry(this.managers, entry);
             break;
           }
           case 'workspace-ready': {
@@ -221,6 +223,18 @@ export class RemoteManager {
     const text = message ?? 'e2e browser stopped on the remote host';
     notify(this.managers, 'e2e-browser-gone', tab.label, text);
     tab.harness.browserError = text;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // The detached peer's replay buffer overflowed and dropped its oldest frames. A harness tab's
+  // body is its PTY and nothing renders `tab.log` there, so only a non-harness (agent) tab gets a
+  // visible line — the same reasoning `endRemoteSession`'s non-harness branch already uses.
+  private reportTruncatedReplay(entry: Entry): void {
+    for (const label of entry.labels) {
+      const tab = this.managers.tab.byLabel(label);
+      if (!tab || tab.harness) continue;
+      tab.log = [...tab.log, { input: '', output: 'Some remote output produced while disconnected was dropped to limit memory use.' }];
+    }
     messageBus.emit('state', { type: 'dirty' });
   }
 

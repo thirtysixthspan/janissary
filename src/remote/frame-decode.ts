@@ -195,7 +195,12 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
       ? { type, session: record.session } : malformed(type);
   }
   case 'reattach-result': {
-    return typeof record.accepted === 'boolean' ? { type, accepted: record.accepted } : malformed(type);
+    if (typeof record.accepted !== 'boolean') return malformed(type);
+    if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);
+    return {
+      type, accepted: record.accepted,
+      ...(record.truncated !== undefined && { truncated: record.truncated }),
+    };
   }
   case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }

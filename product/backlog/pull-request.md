@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Cap and age out the detached peer's replay buffer so a week-long detachment cannot exhaust memory on the remote host.
-
-Existing Issue: `DetachedPeer.emit` in `src/remote/serve-detach.ts` pushes every non-PTY frame — transcript blocks, ACP chunks, and pipe-mode process output for ids registered through `track` — onto an unbounded `pending` array whenever no sink is attached, and nothing trims, caps, or ages that array for the seven days `REMOTE_DETACH_TIMEOUT_MS` permits a peer to stay detached. Severity: 6/10
-
-Existing Risk: 6/10 - A remote agent left running while its laptop is shut for a weekend accumulates every byte its shell and its ACP agent produced in the peer process's heap, and the peer is killed by the remote host's OOM killer rather than reattached to — losing exactly the work this feature exists to preserve, on the far side where nothing reports why.
-
-Proposal Risk: 2/10 - A bounded buffer means a long detachment loses the oldest replayed frames, so a user who reattaches after a very long gap sees a truncated transcript — visible and explicable, unlike the current silent kill.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: the detached remote peer buffers replayable frames without a cap for up to seven days". In `src/remote/serve-detach.ts`, give `pending` a byte or frame budget and an overflow rule, dropping from the front and recording that frames were dropped so the reattaching side can report a gap rather than presenting a truncated buffer as complete — the plan at `product/plans/complete/survive-laptop-sleep-and-resume.md` names "a cap, an overflow rule, and a replay path" as the price of buffering, and the replay path landed without the first two. The existing `reattaches over a private socket, replays missed state once, and drops PTY output` case in `src/remote/serve.test.ts` pins the ordering and the PTY-drop rule and must keep passing; add one beside it that overflows the budget and asserts the oldest frames are gone, the newest survive, and the drop is reported. Also update the pull request description and `product/specs/sleep-and-resume.md`, both of which state only what is *not* replayed across a gap and never mention that transcript, ACP, and pipe-output frames are buffered and replayed at all — a reader of either would not know this buffer exists.
-
-
 * Document the move to remote protocol version 13 in the spec section that narrates every previous version bump.
 
 Existing Issue: `product/specs/remote-server.md` carries a running account of every `REMOTE_PROTOCOL_VERSION` move — the token map, version 7 for filesystem sessions and the per-spawn agent name, 8 for hosted ACP, then the git identity and the end-to-end browser — each with a paragraph naming what the frames gained and what a stale peer would do wrong, and this branch moves the constant to 13 by adding a session id to the handshake and the `reattach` and `reattach-result` frames without adding that paragraph, so the spec's version narrative stops at 12 while the code is at 13. Severity: 5/10

@@ -503,6 +503,25 @@ describe('detached peer rendezvous', () => {
     } finally { socket.destroy(); peer.dispose(); }
   });
 
+  it('drops the oldest buffered frames once the replay budget is exceeded, and reports the gap', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    peer.detach();
+    const big = 'x'.repeat(50_000);
+    for (let index = 0; index < 30; index++) peer.emit({ type: 'transcript', blocks: [`${big}-${index}`] });
+    const output: string[] = [];
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+    try {
+      await vi.waitFor(() => expect(output.join('')).toContain('reattach-result'));
+      const frames = output.join('').trim().split('\n').map((line) => decodeFrame(line));
+      expect(frames[0]).toMatchObject({ type: 'reattach-result', accepted: true, truncated: true });
+      const transcripts = frames.filter((frame) => 'type' in frame && frame.type === 'transcript') as Extract<ServerFrame, { type: 'transcript' }>[];
+      expect(transcripts.length).toBeLessThan(30);
+      expect(transcripts.at(-1)!.blocks[0]).toContain('-29');
+      expect(transcripts.some((frame) => frame.blocks[0].includes('-0'))).toBe(false);
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
   it('refuses the wrong session and distinguishes a dead pid from a live unreachable peer', async () => {
     const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
     await peer.start(vi.fn());

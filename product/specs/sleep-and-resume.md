@@ -14,7 +14,7 @@ Requests outstanding when the local connection closes fail and are never resent.
 
 ### Remote work
 
-Remote agents and harnesses launched with `on <address>` continue running on their host when the connection drops. Recovery opens a new SSH connection and reattaches to the existing workspace and processes. Related tabs and file navigators remain open. A detached remote session waits up to seven days; if nobody returns, its processes and workspace are cleaned up.
+Remote agents and harnesses launched with `on <address>` continue running on their host when the connection drops. Recovery opens a new SSH connection and reattaches to the existing workspace and processes. Related tabs and file navigators remain open. A detached remote session waits up to seven days; if nobody returns, its processes and workspace are cleaned up. Output produced while detached — an agent's replies, a remote shell's output — is buffered up to a fixed size; a detachment that produces more than that drops the oldest of it and, on reattachment, an agent tab's transcript notes that some output was dropped to limit memory use.
 
 A remote session that is confirmed to have ended is not restarted. The affected tab stays open, preserves its transcript, and explains what ended. A notification reads `<what> on <host> ended — start a new agent or shell to continue.`, where `<what>` is `Remote janus`, `Remote harness '<label>'`, or `Remote shell`. Unreachability alone is not treated as termination.
 
