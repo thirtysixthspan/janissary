@@ -110,6 +110,10 @@ export type EditorView = {
   // doesn't render. `provisioning` covers the shared sync workspace's first-open clone/pull;
   // `syncing` covers an in-flight save-triggered commit/pull-rebase/push cycle.
   sync?: 'provisioning' | 'syncing' | 'synced' | 'error';
+  // In-flight state of the metadata row's commit-to-origin icon — the navigator's commit button
+  // cycle applied to this single file: a commit and push armed on the icon, one that landed, one
+  // that failed. Held a few seconds after settling, then cleared back to rest.
+  commit?: FileNavigatorCommitStatus;
 };
 
 // Which per-row detail a file navigator shows to the right of each name: none, a human-readable

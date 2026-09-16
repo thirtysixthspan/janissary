@@ -14,6 +14,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   answerQuestion: 'ack',
   chooseRoute: 'ack',
   closeEditorConnection: 'ack',
+  commitEditorFile: 'ack',
   closeHarnessLaunch: 'ack',
   closeScheduleLaunch: 'ack',
   closeTab: 'ack',

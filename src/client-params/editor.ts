@@ -23,4 +23,5 @@ export const EDITOR_PARAMS: Record<EditorRpcCall['method'], ParamsDecoder> = {
   closeEditorConnection: (p) => isString(p.url) && isString(p.persona),
   editorPluginFailed: isEditorPluginFailedParams,
   renameEditorFile: (p) => isString(p.url) && isString(p.name),
+  commitEditorFile: (p) => isString(p.url) && isString(p.message),
 };

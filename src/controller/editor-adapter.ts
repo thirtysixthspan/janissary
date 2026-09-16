@@ -2,6 +2,7 @@ import { closeConnection } from '../connection/close.js';
 import { editorSuggest, ownerLabel, type EditorSuggestParams, type EditorSuggestResult } from '../editor-suggest/handler.js';
 import { saveFile } from '../editor/save.js';
 import { renameEditorFile } from '../editor/rename.js';
+import { commitEditorFile } from '../editor/commit.js';
 import { resyncEditorTab } from '../editor/resync.js';
 import { syncEditorBuffer } from '../editor/sync.js';
 import { notify } from '../notifications.js';
@@ -21,6 +22,7 @@ export type EditorControllerAdapter = {
   closeEditorConnection(url: string, persona: string): void;
   editorPluginFailed(url: string, plugin: string, reason: string): void;
   renameEditorFile(url: string, name: string): void;
+  commitEditorFile(url: string, message: string): void;
 };
 
 export function createEditorControllerAdapter(managers: Managers): EditorControllerAdapter {
@@ -40,5 +42,6 @@ export function createEditorControllerAdapter(managers: Managers): EditorControl
       );
     },
     renameEditorFile: (url, name) => renameEditorFile(managers, url, name),
+    commitEditorFile: (url, message) => commitEditorFile(managers, url, message),
   };
 }

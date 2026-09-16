@@ -134,6 +134,13 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     client.renameEditorFile(editor.url, next);
     focusBuffer();
   };
+  // The metadata row's commit-to-origin icon: the save lands first (its failure is already on
+  // screen as the row's error), then the commit/push cycle arms server-side on the same file.
+  const commitOrigin = () => {
+    void saveRef.current()
+      .then(() => client.commitEditorFile(editor.url, `sync: ${editor.name}`))
+      .catch(() => {});
+  };
 
   return (
     <div className="editor-tab" data-doc-shot="editor-view">
@@ -145,6 +152,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         onRename={commitEditorName}
         onRenameCancel={focusBuffer}
         onRenameEditingChange={setRenaming}
+        onCommitOrigin={commitOrigin}
       />
       <PendingSuggestPanel pending={suggest.pending} />
       <div

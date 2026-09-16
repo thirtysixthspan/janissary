@@ -98,6 +98,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'renameEditorFile': { controller.renameEditorFile(message.params.url, message.params.name); break;
     }
+    case 'commitEditorFile': { controller.commitEditorFile(message.params.url, message.params.message); break;
+    }
     case 'reportLayout': { controller.reportLayout(message.params); break;
     }
     case 'fileNavigatorToggle':

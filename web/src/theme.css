@@ -760,6 +760,17 @@ html, body, #root {
 .files-commit--committed { color: var(--success); }
 .files-commit--error { color: var(--error); }
 .files-commit--committing svg { animation: icon-spin 1s linear infinite; }
+
+/* The editor metadata row's commit-to-origin icon: the navigator commit button's cycle rendered
+   beside the save button, in the same working/success/failure vocabulary. */
+.editor-commit-button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.editor-commit-button:hover { color: var(--fg); }
+.editor-commit-button--committed { color: var(--success); }
+.editor-commit-button--error { color: var(--error); }
+.editor-commit-button--committing svg { animation: icon-spin 1s linear infinite; }
 /* The tree's Search files pop-up: a small card over the top-right of the header. The commit-message
    field is docked to the bottom instead, via the shared `.picker` class it now carries — see
    `.files-commit-popup` below, which styles only its input, not its position. */
