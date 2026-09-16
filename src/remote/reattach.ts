@@ -59,10 +59,12 @@ export class Reattach {
   stop(): void { this.accepted(); this.stopped = true; }
 }
 
+// Only an entry already mid-backoff after losing its transport benefits from a resume: it has
+// something to collapse the wait on. An attached channel's transport is healthy by definition — a
+// resume signal has nothing to fix there, so forcing a replacement would only discard an
+// unbuffered PTY gap for no reason.
 export function resumeRemote(entry: RemoteEntry): void {
-  if (entry.closed || !entry.channel.sessionId || !entry.workspaceDir) return;
-  entry.channel.close();
-  entry.channel.closed();
+  if (entry.closed || !entry.channel.sessionId || !entry.workspaceDir || !entry.reconnect.active) return;
   entry.reconnect.retry();
 }
 

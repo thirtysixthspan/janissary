@@ -122,11 +122,19 @@ describe('remote reattachment', () => {
     h.remote.dispose();
   });
 
-  it('replaces a stale SSH transport immediately on system resume', () => {
+  it('leaves an attached channel alone on system resume', () => {
     const h = setup();
     messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });
+    expect(h.transports).toHaveLength(1);
+    expect(h.transports[0].kill).not.toHaveBeenCalled();
+    h.remote.dispose();
+  });
+
+  it('collapses the backoff wait immediately on system resume once a transport is already lost', () => {
+    const h = setup();
+    h.transports[0].onExit();
+    messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });
     expect(h.transports).toHaveLength(2);
-    expect(h.transports[0].kill).toHaveBeenCalled();
     h.remote.dispose();
     messageBus.emit('system', { type: 'resumed', sleptMs: 60_000 });
     expect(h.transports).toHaveLength(2);

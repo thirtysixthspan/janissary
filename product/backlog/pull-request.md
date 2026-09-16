@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reconnect a remote session on resume only when its transport has actually failed, and raise the wall-clock threshold so a stalled event loop is not mistaken for sleep.
-
-Existing Issue: `resumeRemote` in `src/remote/reattach.ts` unconditionally calls `channel.close()` and `channel.closed()` on every remote entry that has a session id and a workspace whenever the `system` bus channel reports `resumed`, with no check that the transport is unhealthy, and `ResumeWatch` in `src/resume-watch.ts` declares a resume whenever a 500 ms tick observes a wall-clock gap beyond `RESUME_THRESHOLD_MS` of five seconds. Severity: 6/10
-
-Existing Risk: 6/10 - A five-second event-loop stall from a large clone, a heavy state serialization, or a garbage-collection pause on a loaded machine destroys every healthy remote ssh connection at once, and because a remote harness's PTY output is deliberately not buffered across the gap, each affected terminal silently loses whatever the harness printed while the replacement connection was being established.
-
-Proposal Risk: 3/10 - Reconnecting only an unhealthy transport means a connection that survived sleep in name but is dead underneath is left to the ordinary retry path, so recovery for that case takes one detection cycle longer than an unconditional replacement would.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: every system resume destroys healthy remote ssh connections, and a five-second stall counts as a resume". Two changes. In `src/resume-watch.ts`, widen `RESUME_THRESHOLD_MS` to a value a stalled event loop cannot plausibly reach — thirty seconds is the natural floor for "the machine was asleep" — and slow `RESUME_TICK_MS` to match, since a tick twice a second buys nothing for detecting a gap of that size and keeps the Node event loop awake continuously on a laptop, which is the opposite of what this feature is for. Note that `src/schedule/manager.ts` imports `RESUME_THRESHOLD_MS` for its lateness gate, so check that raising it does not silently change which schedules are reported late — if the two want different numbers, give the schedule side its own exported constant rather than sharing this one. In `src/remote/reattach.ts`, make `resumeRemote` a no-op for an entry whose `channel.attached` is true and whose transport is still live, and reserve the forced replacement for entries already in the reconnecting state — the point of the resume signal for remote work is to collapse the backoff wait, not to discard a working connection. Update the case in `src/remote/reattach.test.ts` that currently asserts a resume always produces a second transport so it pins the new rule in both directions: an attached channel keeps its transport, a lost one reconnects immediately without waiting out its backoff. `src/index.test.ts`'s grace-window cases depend on the resume signal firing at all and must keep passing.
-
-
 * Cap and age out the detached peer's replay buffer so a week-long detachment cannot exhaust memory on the remote host.
 
 Existing Issue: `DetachedPeer.emit` in `src/remote/serve-detach.ts` pushes every non-PTY frame — transcript blocks, ACP chunks, and pipe-mode process output for ids registered through `track` — onto an unbounded `pending` array whenever no sink is attached, and nothing trims, caps, or ages that array for the seven days `REMOTE_DETACH_TIMEOUT_MS` permits a peer to stay detached. Severity: 6/10

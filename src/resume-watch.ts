@@ -1,7 +1,7 @@
 import { messageBus } from './bus.js';
 
-export const RESUME_THRESHOLD_MS = 5000;
-export const RESUME_TICK_MS = 500;
+export const RESUME_THRESHOLD_MS = 30_000;
+export const RESUME_TICK_MS = 5000;
 
 export class ResumeWatch {
   private timer: ReturnType<typeof setInterval> | undefined;

@@ -7,7 +7,11 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
-import { RESUME_THRESHOLD_MS } from '../resume-watch.js';
+
+// Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
+// user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
+// five seconds regardless of what wall-clock gap counts as a resume.
+const SCHEDULE_LATE_THRESHOLD_MS = 5000;
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -159,7 +163,7 @@ export class ScheduleManager {
     for (const e of sched) {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
-      if (now - e.nextRun > RESUME_THRESHOLD_MS) {
+      if (now - e.nextRun > SCHEDULE_LATE_THRESHOLD_MS) {
         notify(this.managers, 'schedule-late', tab.label,
           `${e.command} ran ${formatLateDuration(now - e.nextRun)} late (system was asleep)`);
       }
