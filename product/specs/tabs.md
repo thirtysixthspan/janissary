@@ -117,6 +117,14 @@ followed by an icon for each of the tab's currently-active flags. A flag with no
 contributes no icon — there is no "disabled" indicator — and the row always renders, showing at
 least the working directory, even when a tab has zero active flags.
 
+A workspaced tab's working directory is shown with the workspace symbol instead of the clone's
+physical location: the workspace dir itself reads as `$workspace`, and anything the tab `cd`s into
+inside it as `$workspace/<rest>`. This applies to a remote tab's clone exactly as to a local one —
+the remote clone's own path is unusable shorthand for the local `$root` abbreviation, so `$workspace`
+is the display symbol for both. The symbol changes only what the metadata row shows; the working
+directory value itself keeps its ordinary abbreviated form everywhere else (transcript prompt lines,
+search command defaults, file drag-and-drop resolution).
+
 A tab whose process runs on another host (see `remote-server.md`) shows one extra element: a host
 chip at the **left** of the row, ahead of the working directory, so the row reads "where, then what
 path there". The chip shows the bare host and carries the full destination in its tooltip

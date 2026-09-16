@@ -10,7 +10,7 @@ agent bekir on admin@devbox
 harness claude as build on devbox with fix the tests
 ```
 
-Janissary opens one SSH session to that host, clones a workspace there from the host's own copy of the repository, and runs the agent or harness inside it. The tab behaves like a local one in every other way: same label, same busy dot, same `send`, capture, recording, and monitoring. The one visible difference is a chip with the host name at the left of the tab's metadata row, ahead of the working directory.
+Janissary opens one SSH session to that host, clones a workspace there from the host's own copy of the repository, and runs the agent or harness inside it. The tab behaves like a local one in every other way: same label, same busy dot, same `send`, capture, recording, and monitoring. The one visible difference is a chip with the host name at the left of the tab's metadata row, ahead of the working directory, which shows the clone as `$workspace` (with anything inside it as `$workspace/<rest>`) — the same symbol a local workspaced tab uses.
 
 The clause can appear anywhere among the other options, and it isn't case sensitive. An `on` that falls inside a `with <prompt>` clause is part of the prompt, not a clause, because the prompt is separated out before any option is read.
 

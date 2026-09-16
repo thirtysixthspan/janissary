@@ -6,7 +6,7 @@ import type { ShellTabHandle } from './tab-handles';
 import type { RemoteTarget } from '@shared/protocol';
 
 type Properties = {
-  ptyId: string; client: JanusClient; cwd?: string; flags?: string[]; remote?: RemoteTarget;
+  ptyId: string; client: JanusClient; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget;
   onSplit?: () => void;
 };
 
@@ -22,7 +22,7 @@ function shellKeyFilter(e: KeyboardEvent): boolean {
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
 // Unmounts when the program exits; the transcript is restored by the parent.
 export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({
-  ptyId, client, cwd, flags, remote, onSplit,
+  ptyId, client, cwd, cwdDisplay, flags, remote, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const focusTerm = useXterm({
@@ -35,7 +35,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (
     <div className="harness-tab">
-      <AgentTabMeta cwd={cwd} flags={flags} remote={remote} onSplit={onSplit} />
+      <AgentTabMeta cwd={cwd} cwdDisplay={cwdDisplay} flags={flags} remote={remote} onSplit={onSplit} />
       <div className="harness-body" ref={hostReference} />
     </div>
   );

@@ -43,6 +43,11 @@ export type TabView = {
   // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.
   hasUnread: boolean;
   cwd: string;
+  // Display form of `cwd` for a workspaced tab's metadata row: the workspace root reads as
+  // `$workspace` and anything inside it as `$workspace/<rest>`, local and remote clones alike
+  // (see buildTabView). Undefined when the working directory is no workspace and prefixed dir —
+  // ordinary tabs render `cwd` as before.
+  cwdDisplay?: string;
   // Identifiers of this tab's currently-active flags ('workspaced', 'autoApprove', 'browser'), for
   // the metadata row's flag-emoji display. Empty when none are active.
   flags?: string[];

@@ -118,6 +118,11 @@ The hidden `.janissary` state directory folds into the root, so a workspaced clo
 prefix wins. The root directory itself appears as `$root/`. Paths elsewhere under your home
 directory shorten to `~`.
 
+A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metadata row shortens
+one step further: the clone reads as `$workspace`, and anything inside it as `$workspace/<rest>` —
+on remote hosts too, where the raw clone path has no meaning to the local root shortcut. This
+symbol appears only in the metadata row; transcript lines and paths you type keep the forms above.
+
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
 editor tab's metadata header, and app status messages that name a path. It is display-only. The
 underlying absolute paths do not change, and the raw output of your shell commands is never rewritten.
