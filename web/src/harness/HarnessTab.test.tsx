@@ -491,6 +491,13 @@ describe('HarnessTab', () => {
       expect(capturedOptions.macOptionClickForcesSelection).toBeUndefined();
     });
 
+    it('constructs the terminal with the two colours the theme stylesheet defines', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      // jsdom defines no stylesheet values, so these are the hook's literal fallbacks — the
+      // same values theme.css carries in every palette's --terminal-bg / --terminal-fg.
+      expect(capturedOptions.theme).toEqual({ background: '#17181b', foreground: '#e4e5e7' });
+    });
+
     it('copies the terminal selection on Cmd+C instead of passing it to the harness', () => {
       const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);

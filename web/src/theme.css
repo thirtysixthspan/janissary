@@ -36,7 +36,8 @@
   --error: #cf222e;
   --search-hit-bg: #fff8c5;
   --search-hit-fg: #4d3800;
-  --terminal-bg: #fff;
+  --terminal-bg: #17181b;
+  --terminal-fg: #e4e5e7;
   --editor-current-line: rgb(0 0 0 / 4%);
   --editor-selection: rgb(9 105 218 / 25%);
 }
@@ -54,7 +55,8 @@
   --error: #dc322f;
   --search-hit-bg: #b58900;
   --search-hit-fg: #002b36;
-  --terminal-bg: #002b36;
+  --terminal-bg: #17181b;
+  --terminal-fg: #e4e5e7;
   --editor-current-line: rgb(255 255 255 / 4%);
   --editor-selection: rgb(38 139 210 / 30%);
 }
@@ -72,7 +74,8 @@
   --error: #dc322f;
   --search-hit-bg: #b58900;
   --search-hit-fg: #fdf6e3;
-  --terminal-bg: #fdf6e3;
+  --terminal-bg: #17181b;
+  --terminal-fg: #e4e5e7;
   --editor-current-line: rgb(0 0 0 / 4%);
   --editor-selection: rgb(38 139 210 / 25%);
 }
@@ -90,7 +93,8 @@
   --error: #bf616a;
   --search-hit-bg: #ebcb8b;
   --search-hit-fg: #2e3440;
-  --terminal-bg: #2e3440;
+  --terminal-bg: #17181b;
+  --terminal-fg: #e4e5e7;
   --editor-current-line: rgb(255 255 255 / 4%);
   --editor-selection: rgb(136 192 208 / 30%);
 }
@@ -108,7 +112,8 @@
   --error: #f55;
   --search-hit-bg: #ffb86c;
   --search-hit-fg: #282a36;
-  --terminal-bg: #282a36;
+  --terminal-bg: #17181b;
+  --terminal-fg: #e4e5e7;
   --editor-current-line: rgb(255 255 255 / 4%);
   --editor-selection: rgb(189 147 249 / 30%);
 }
@@ -568,10 +573,11 @@ html, body, #root {
 .harness-body { flex: 1; min-height: 0; background: var(--terminal-bg); position: relative; }
 /* Janissary's Shift+drag selection layer: the frozen screen drawn over the live terminal. The
    overlay fills the surface's registered container, matches the terminal's own grid metrics, and
-   reuses the app's one selection colour even though its name says editor. */
+   is painted with the same two colours the xterm terminal itself is constructed with, so the
+   frozen image is indistinguishable from the live screen it covers apart from the highlight. */
 .terminal-selection-overlay {
   position: absolute; inset: 0; overflow: hidden;
-  background: var(--terminal-bg); color: #e4e5e7;
+  background: var(--terminal-bg); color: var(--terminal-fg);
   font-family: var(--mono); font-size: 13.5px; line-height: 1.2;
 }
 .terminal-selection-row { white-space: pre; }

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Draw the frozen overlay in the same colours the terminal itself is constructed with, so the snapshot is not invisible in the light themes.
-
-Existing Issue: `.terminal-selection-overlay` paints `color: #e4e5e7` on `background: var(--terminal-bg)`, but the xterm `Terminal` in `useXterm` is constructed with a hard-coded theme of `#17181b` background and `#e4e5e7` foreground regardless of the app theme, and `--terminal-bg` is `#fff` in the light theme and `#fdf6e3` in solarized light — so on those themes the live terminal renders light-on-dark while the overlay drawn over it renders near-white text on a white ground. Severity: 7/10
-
-Existing Risk: 6/10 - Every user on a light theme who tries the new gesture sees the terminal's contents vanish the instant they Shift+drag, with the selection highlight the only thing visible, which reads as the feature having broken the terminal.
-
-Proposal Risk: 2/10 - The overlay and the emulator agree on both colours, but they agree by sharing two values that are still chosen in one place and consumed in another, so a future theme change has to remember both consumers.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: make the terminal selection overlay use the terminal's own colours". Add a `--terminal-fg` custom property beside the existing `--terminal-bg` in each theme block of `web/src/theme.css`, setting both to the values the emulator currently hard-codes (`#17181b` and `#e4e5e7`) so nothing about the live terminal's appearance changes in this step. Then have `useXterm` read both through `getComputedStyle(document.documentElement).getPropertyValue(...)` the way it already reads `--mono`, falling back to the current literals when the property is empty, and pass them as the `theme` option; and change the `.terminal-selection-overlay` rule to `color: var(--terminal-fg)`. That leaves one definition per theme feeding both the emulator and the overlay, and makes the two provably agree instead of agreeing by coincidence on the dark default. Verify by eye on the light and solarized-light themes that the frozen overlay is indistinguishable from the live screen it covers apart from the highlight; no existing test asserts the terminal's constructed theme, so add one in `web/src/harness/HarnessTab.test.tsx` beside the existing `capturedOptions` assertions pinning that the terminal is built with the same two values the stylesheet defines.
-
-
 * Map a pointer to a cell using the overlay's own rendered grid instead of dividing the container's box, so the highlight lands where the user is pointing.
 
 Existing Issue: `cellFromPoint` derives cell width and height by dividing the container's full bounding rect by the terminal's `cols` and `rows`, while the overlay lays its snapshot out with the font's natural advance width and a CSS `line-height` of 1.2 on 13.5px — and the terminal's own grid is narrower still, because the fit addon reserves the viewport scrollbar's width and floors the column count — so the arithmetic that decides which cell the pointer is over and the layout the user is actually dragging across use three different cell sizes. Severity: 6/10

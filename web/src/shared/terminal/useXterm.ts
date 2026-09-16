@@ -35,10 +35,17 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
   const selection = useSelectionLayer({ containerRef, termRef, inactive: active === false, exited });
 
   useEffect(() => {
-    const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
+    const styles = getComputedStyle(document.documentElement);
+    const fontFamily = styles.getPropertyValue('--mono').trim();
+    // The terminal and the selection overlay above it both read the same two custom properties,
+    // so a frozen snapshot is provably painted with the colours the live screen has.
+    const theme = {
+      background: styles.getPropertyValue('--terminal-bg').trim() || '#17181b',
+      foreground: styles.getPropertyValue('--terminal-fg').trim() || '#e4e5e7',
+    };
     const term = new Terminal({
       fontFamily: fontFamily || 'monospace', fontSize: 13.5, lineHeight: 1.2, cursorBlink: true,
-      theme: { background: '#17181b', foreground: '#e4e5e7' },
+      theme,
       // Selection comes from the Shift+drag layer above the terminal, so xterm's own
       // forcing-modifier drag (the old macOptionClickForcesSelection) stays off: leaving it set
       // would give macOS a second selection that the harness's redraws could revoke.
