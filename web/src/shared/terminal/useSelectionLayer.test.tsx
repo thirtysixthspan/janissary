@@ -38,6 +38,12 @@ function Surface({ term, inactive, exited, onApi }: {
     containerRef.current = node;
     if (node) vi.spyOn(node, 'getBoundingClientRect').mockReturnValue(RECT);
   }, []);
+  // 40 characters of the overlay's probe at 10px-per-cell by 20px-per-row: the measured geometry
+  // the hook reads off the real overlay's probe row, laid out by hand here.
+  const bindProbe = (node: HTMLDivElement | null) => {
+    api.probeRef.current = node;
+    if (node) vi.spyOn(node, 'getBoundingClientRect').mockReturnValue({ top: 0, left: 0, width: 400, height: 20 } as DOMRect);
+  };
   const api = useSelectionLayer({
     containerRef: containerRef as React.RefObject<HTMLDivElement>,
     termRef: { current: term as unknown as Terminal },
@@ -48,9 +54,11 @@ function Surface({ term, inactive, exited, onApi }: {
     <div data-testid="container" ref={bind}>
       <div data-testid="inner" />
       <div data-testid="probe">{api.view ? api.text() : ''}</div>
+      <div data-testid="grid-probe" ref={bindProbe} />
     </div>
   );
 }
+
 
 describe('useSelectionLayer', () => {
   function mount(termLines: string[], onApi?: (api: SelectionLayerApi) => void, inactive?: boolean, exited?: boolean) {

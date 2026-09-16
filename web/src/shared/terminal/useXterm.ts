@@ -37,14 +37,16 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
   useEffect(() => {
     const styles = getComputedStyle(document.documentElement);
     const fontFamily = styles.getPropertyValue('--mono').trim();
-    // The terminal and the selection overlay above it both read the same two custom properties,
-    // so a frozen snapshot is provably painted with the colours the live screen has.
+    // The terminal and the selection overlay above it both read the same custom properties, so a
+    // frozen snapshot is provably laid out and painted with what the live screen has.
+    const fontSize = Number(styles.getPropertyValue('--terminal-font-size')) || 13.5;
+    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height')) || 1.2;
     const theme = {
       background: styles.getPropertyValue('--terminal-bg').trim() || '#17181b',
       foreground: styles.getPropertyValue('--terminal-fg').trim() || '#e4e5e7',
     };
     const term = new Terminal({
-      fontFamily: fontFamily || 'monospace', fontSize: 13.5, lineHeight: 1.2, cursorBlink: true,
+      fontFamily: fontFamily || 'monospace', fontSize, lineHeight, cursorBlink: true,
       theme,
       // Selection comes from the Shift+drag layer above the terminal, so xterm's own
       // forcing-modifier drag (the old macOptionClickForcesSelection) stays off: leaving it set

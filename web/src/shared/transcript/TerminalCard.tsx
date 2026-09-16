@@ -44,7 +44,7 @@ export function TerminalCard({ entry, client }: Properties) {
         {!isExited && <button onClick={() => client.send({ method: 'ptyKill', params: { id: entry.ptyId } })}>kill</button>}
       </div>
       <div className="body" ref={hostReference} onClick={() => { /* xterm handles focus on click */ }}>
-        <SelectionOverlay state={selection.view} />
+        <SelectionOverlay state={selection.view} probeRef={selection.probeRef} />
       </div>
     </div>
   );

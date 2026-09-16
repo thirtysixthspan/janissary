@@ -35,9 +35,9 @@ type Rect = { left: number; top: number; width: number; height: number };
 // A pointer position on a fixed monospace grid: division is exact, so a column is which
 // fraction of the container's width the point has crossed. Dragging past the container edge
 // clamps to the grid instead of falling off the end.
-export function cellFromPoint(x: number, y: number, rect: Rect, cols: number, rows: number): Cell {
-  const cellWidth = rect.width / cols;
-  const cellHeight = rect.height / rows;
+export function cellFromPoint(
+  x: number, y: number, rect: Rect, cellWidth: number, cellHeight: number, cols: number, rows: number,
+): Cell {
   const col = Math.min(cols - 1, Math.max(0, cellWidth > 0 ? Math.floor((x - rect.left) / cellWidth) : 0));
   const row = Math.min(rows - 1, Math.max(0, cellHeight > 0 ? Math.floor((y - rect.top) / cellHeight) : 0));
   return { col, row };

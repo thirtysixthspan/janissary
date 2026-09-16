@@ -38,7 +38,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
     <div className="harness-tab">
       <AgentTabMeta cwd={cwd} cwdDisplay={cwdDisplay} flags={flags} remote={remote} onSplit={onSplit} />
       <div className="harness-body" ref={hostReference}>
-        <SelectionOverlay state={selection.view} />
+        <SelectionOverlay state={selection.view} probeRef={selection.probeRef} />
       </div>
     </div>
   );

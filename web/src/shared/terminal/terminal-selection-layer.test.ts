@@ -23,7 +23,11 @@ function fakeTerminal(lines: string[], viewportY: number, rows: number = 24): Te
 }
 
 const cell = (col: number, row: number) => ({ col, row });
+// The same geometry the earlier container-division tests used, expressed the way the hook now
+// supplies it: the container's origin via the rect and 10px-by-20px cells measured off the
+// overlay's probe row.
 const rect = { left: 100, top: 0, width: 800, height: 480 };
+const cellFrom = (x: number, y: number) => cellFromPoint(x, y, rect, 10, 20, 80, 24);
 
 describe('snapshotViewport', () => {
   it('reads the viewport rows starting at the offset, not the whole buffer', () => {
@@ -41,14 +45,14 @@ describe('snapshotViewport', () => {
 
 describe('cellFromPoint', () => {
   it('maps a point inside the container onto its cell', () => {
-    expect(cellFromPoint(300, 240, rect, 80, 24)).toEqual(cell(20, 12));
-    expect(cellFromPoint(107, 30, rect, 80, 24)).toEqual(cell(0, 1));
+    expect(cellFrom(300, 240)).toEqual(cell(20, 12));
+    expect(cellFrom(107, 30)).toEqual(cell(0, 1));
   });
 
   it('clamps points outside the container to the grid edge', () => {
-    expect(cellFromPoint(0, 0, rect, 80, 24)).toEqual(cell(0, 0));
-    expect(cellFromPoint(900, 600, rect, 80, 24)).toEqual(cell(79, 23));
-    expect(cellFromPoint(50, 300, rect, 80, 24)).toEqual(cell(0, 15));
+    expect(cellFrom(0, 0)).toEqual(cell(0, 0));
+    expect(cellFrom(900, 600)).toEqual(cell(79, 23));
+    expect(cellFrom(50, 300)).toEqual(cell(0, 15));
   });
 });
 

@@ -406,6 +406,8 @@ a menu, a dialog — never touches the selection at all. A selection clears on *
 terminal), on
 a plain unmodified click anywhere in the terminal (a click that clears is consumed, not reported to
 the harness), on a tab switch away from the surface, on a resize, and on the PTY exiting. A Shift+drag
+shifts nothing, and the highlight follows the pointer exactly — including over the last column and
+the bottom row of the screen, where the drag is still resolved against the visible grid. A Shift+drag
 that never leaves its starting cell picks nothing and unfreezes the screen as soon as the button
 releases. A second
 Shift+drag replaces it, re-freezing from the screen as it stands then.

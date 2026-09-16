@@ -10,6 +10,7 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
+import { PROBE_CHARACTERS } from './SelectionOverlay';
 import {
   cellFromPoint, layerHolds, layerText, snapshotViewport,
   type Cell, type SelectionLayer,
@@ -27,12 +28,16 @@ export type SelectionLayerApi = {
   holds: () => boolean;
   text: () => string;
   clear: () => void;
+  probeRef: React.RefObject<HTMLDivElement | null>;
 };
 
 export function useSelectionLayer({ containerRef, termRef, inactive = false, exited = false }: Options): SelectionLayerApi {
   const [view, setView] = useState<SelectionLayer | null>(null);
   const stateRef = useRef<SelectionLayer | null>(null);
   const anchorRef = useRef<Cell | null>(null);
+  // Fed to SelectionOverlay's probe row by the surface that renders it, and measured here so the
+  // mapping runs over the grid the user actually drags across.
+  const probeRef = useRef<HTMLDivElement | null>(null);
 
   const update = useCallback((next: SelectionLayer | null) => {
     stateRef.current = next;
@@ -47,10 +52,29 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
     const container = containerRef.current;
     if (!container) return;
 
+    // The overlay's own DOM reports the grid the user is actually dragging across: the probe
+    // row's measured width per known character is the real per-character advance and its height
+    // the real per-row height. Before the overlay has laid out — no probe, nothing measurable —
+    // the container box divided by the terminal's grid is the fallback.
+    const grid = () => {
+      const rect = container.getBoundingClientRect();
+      const probe = probeRef.current;
+      if (probe) {
+        const measured = probe.getBoundingClientRect();
+        if (measured.width > 0 && measured.height > 0) {
+          return { rect, cellWidth: measured.width / PROBE_CHARACTERS, cellHeight: measured.height };
+        }
+      }
+      const term = termRef.current;
+      if (!term) return null;
+      return { rect, cellWidth: rect.width / term.cols, cellHeight: rect.height / term.rows };
+    };
     const cellAt = (e: MouseEvent) => {
       const term = termRef.current;
       if (!term) return null;
-      return cellFromPoint(e.clientX, e.clientY, container.getBoundingClientRect(), term.cols, term.rows);
+      const gridMetrics = grid();
+      if (!gridMetrics) return null;
+      return cellFromPoint(e.clientX, e.clientY, gridMetrics.rect, gridMetrics.cellWidth, gridMetrics.cellHeight, term.cols, term.rows);
     };
     const extend = (e: MouseEvent) => {
       const anchor = anchorRef.current;
@@ -84,7 +108,11 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
         e.preventDefault();
         e.stopPropagation();
         end();
-        const anchor = cellFromPoint(e.clientX, e.clientY, container.getBoundingClientRect(), term.cols, term.rows);
+        const gridMetrics = grid();
+        const anchor = gridMetrics
+          ? cellFromPoint(e.clientX, e.clientY, gridMetrics.rect, gridMetrics.cellWidth, gridMetrics.cellHeight, term.cols, term.rows)
+          : null;
+        if (!anchor) return;
         anchorRef.current = anchor;
         update({ snapshot: snapshotViewport(term), anchor, head: anchor });
         globalThis.addEventListener('pointermove', extend);
@@ -125,5 +153,5 @@ export function useSelectionLayer({ containerRef, termRef, inactive = false, exi
     return () => container.removeEventListener('keydown', onKey, true);
   }, [containerRef, holdingView, clear]);
 
-  return useMemo(() => ({ view, holds, text, clear }), [view, holds, text, clear]);
+  return useMemo(() => ({ view, holds, text, clear, probeRef }), [view, holds, text, clear]);
 }
