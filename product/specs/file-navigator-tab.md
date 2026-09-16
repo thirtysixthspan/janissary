@@ -671,7 +671,9 @@ Search files. Clicking it runs `git pull` at the tree's own root (on the remote 
 workspace, for a remote tree) and then refreshes the whole view: every visible directory is re-read
 from disk, and the branch text and git-status coloring are recomputed, without waiting on the
 directory watchers a git-driven replace may not deliver. A click while a pull is already running in
-that tab does nothing rather than starting an overlapping pull, and reports nothing.
+that tab does nothing rather than starting an overlapping pull, and reports nothing — and so does a
+click while a commit is running in that tab, since a pull and a commit collide on the same git
+lockfiles a second pull would.
 
 The refreshed tree is the tree the pull left behind: every file the pull added appears and every
 file it removed is gone, at the root and at every level inside a directory the user had expanded.
@@ -748,7 +750,8 @@ error color when it fails, with tooltips naming the same three states and the fa
 pointing at the notifications tab. A settled state holds briefly and then the button returns to rest.
 Nothing to commit returns it to rest directly rather than showing failure, since nothing failed. A
 click while a commit is already running in that tab does nothing rather than starting an overlapping
-one, and reports nothing. The button stays clickable throughout.
+one, and reports nothing — and so does a click while a pull is running in that tab, since a commit and
+a pull collide on the same git lockfiles a second commit would. The button stays clickable throughout.
 
 The button is absent wherever the header shows no branch text, exactly as the pull button is.
 

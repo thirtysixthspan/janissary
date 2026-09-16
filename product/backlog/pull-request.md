@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Prevent a pull and a commit in the same file navigator tab from running concurrently, since each holds git's index lock and the two actions coalesce only against themselves.
-
-Existing Issue: `runPull` guards on `state.pull === 'pulling'` and `runCommit` guards on `state.commit === 'committing'`, and neither checks the other's in-flight flag, so with a long pull running, pressing the header commit button — or confirming the row-menu message field — starts a `git commit` that collides with the concurrent `git pull` on git's index and `HEAD` lockfiles. Severity: 4/10
-
-Existing Risk: 5/10 - One of the two git commands fails with a lockfile error mid-run, and the user reads it as their commit or pull having lost work: the commit case is worse than the pull's, because a failed push-armed commit is a message the user composed that appears to have vanished even though the local commit survives.
-
-Proposal Risk: 2/10 - The added guard makes one entry point briefly unresponsive while the other action runs, with no error shown, so a test pinning the "reports nothing" behavior across both actions is what keeps the change from reading as a hang.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1128: coalesce a commit with an in-flight pull, and vice versa". In `src/file-navigator/manager-pull.ts`'s `runPull` entry guard, treat `state.commit === 'committing'` the same as `state.pull === 'pulling'` — return early, post nothing — and mirror that in `src/file-navigator/manager-commit.ts`'s `runCommit` by returning early when `state.pull === 'pulling'`. The empty-or-whitespace cancel path in the message field stays client-side, so a coalesced field confirmation silently closes with no RPC, matching the pull button's existing quiet coalescing. Tests: extend the `src/file-navigator/manager.test.ts` cases this pull request added (the 'second click while one is in flight is ignored and posts nothing' bullet) with one commit-while-pulling and one pull-while-committing case each declaring no notification and no status change, next to the existing `src/file-navigator/manager-pull.ts` coalescing coverage; the pull's own test file's argument expectations in `src/git/commit.test.ts` and `src/git/pull.test.ts` must stay untouched.
-
-
 * Stop a commit that fails before it creates a commit object from leaving every change it staged sitting in the user's git index with no mention of it.
 
 Existing Issue: `commitRoot` stages with `git add -A` as its first step and never unwinds that, so a `git commit` that rejects — a pre-commit hook that refuses, an unconfigured `user.email`, a message git will not take — leaves every change under the tree root, or every path the row menu named, staged in the user's own repository, while the only thing reported is `Could not commit: <git error>`, which says nothing about the index having been rewritten on their behalf. Severity: 4/10
