@@ -92,6 +92,11 @@ export function FileNavigatorTab({
   // root — `changedCount` — rather than only the rows the tree currently happens to be showing.
   const commitEverything = () => commit.request([], defaultCommitMessageForCount(files.changedCount ?? 0));
 
+  // Opening the search pop-up closes a pending commit-message field first: the two single-input
+  // cards share one position in the tree, so leaving the field open would draw them on top of
+  // each other.
+  const openSearch = () => { commit.cancel(); search.openSearch(); };
+
   const onKeyDown = useFileNavigatorKeyDown({
     rows: files.rows,
     selection,
@@ -137,7 +142,7 @@ export function FileNavigatorTab({
         onCommit={files.branch ? commitEverything : undefined}
         onCycleDock={dock === undefined ? undefined : () => intents.setDock(nextDock(dock))}
         onSetDetail={intents.setDetail} onCollapseAll={intents.collapseAll}
-        onSearch={search.openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
+        onSearch={openSearch} onNewFile={createNewFile} onNewDirectory={createNewDirectory}
         onSplit={onSplit}
       />
       <FileNavigatorRows

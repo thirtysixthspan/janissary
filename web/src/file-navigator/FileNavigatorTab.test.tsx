@@ -173,6 +173,39 @@ describe('FileNavigatorTab', () => {
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
   });
 
+  it('re-primes the field with the whole-tree default when a row-menu commit is followed by a header commit click', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({
+      branch: 'main',
+      changedCount: 3,
+      rows: [{ path: 'README.md', name: 'README.md', depth: 0, dir: false, gitStatus: 'changed' }],
+    });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={0} />);
+
+    fireEvent.contextMenu(screen.getByText('README.md'));
+    fireEvent.click(screen.getByText('Commit to origin'));
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: README.md');
+
+    fireEvent.click(container.querySelector('.files-commit')!);
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
+  });
+
+  it('closes the commit-message field when the search pop-up opens', () => {
+    const client = {
+      send: vi.fn(),
+      request: vi.fn().mockResolvedValue({ paths: [] }),
+    } as unknown as JanusClient;
+    const { container } = render(
+      <FileNavigatorTab files={makeFiles({ branch: 'main' })} client={client} index={0} />,
+    );
+    fireEvent.click(container.querySelector('.files-commit')!);
+    expect(screen.getByLabelText('Commit message')).toBeInTheDocument();
+
+    fireEvent.click(container.querySelector('.files-search')!);
+
+    expect(screen.queryByLabelText('Commit message')).not.toBeInTheDocument();
+  });
+
   it('signals the commit status the tree payload carries on its commit button', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const { container } = render(

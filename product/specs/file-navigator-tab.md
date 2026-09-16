@@ -715,6 +715,13 @@ because what it holds is a sentence the user composed rather than something reco
 what is on screen. Closing it returns keyboard focus to the tree, and the keys typed into it never
 reach the tree's own cursor.
 
+Choosing `Commit to origin` while the field is already open re-targets it rather than being refused:
+the field comes back pre-filled with the new target's default, and it comes back as a fresh field,
+so a message typed over the previous target's default is gone — the re-target was the user's
+deliberate choice of a different commit, and a stale default naming one file over a whole-tree
+commit is the worse thing to lose. Opening the search pop-up closes the commit-message field rather
+than drawing the two single-input cards on top of each other.
+
 What runs is: stage what the action names — the selected files and directories, or everything under
 the tree's root for the header button — commit with the given message, rebase onto whatever `origin`
 has moved to in the meantime, and push. A tree rooted at a subdirectory of a repository commits only

@@ -349,4 +349,44 @@ describe('FileNavigatorOverlays', () => {
     fireEvent.click(screen.getByText('Commit to origin'));
     expect(request).toHaveBeenCalledWith(['src']);
   });
+
+  function renderOverlays(commit: Commit) {
+    return render(
+      <FileNavigatorOverlays
+        drag={makeDrag()}
+        rename={makeRename()}
+        deletion={makeDeletion()}
+        paste={makePaste()}
+        search={makeSearch()}
+        opener={makeOpener()}
+        menu={null}
+        commit={commit}
+        menuActions={makeMenuActions()}
+        hasBranch={false}
+        onCloseMenu={() => {}}
+        focusTree={() => {}}
+      />,
+    );
+  }
+
+  it('re-primes the commit-message field with the new default when it is re-targeted while open', () => {
+    const first = { id: 1, paths: ['notes.md'], defaultMessage: 'commit: notes.md' };
+    const second = { id: 2, paths: [], defaultMessage: 'commit: 3 files' };
+    const { rerender } = renderOverlays(makeCommit({ pendingCommit: first }));
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: notes.md');
+    rerender(<FileNavigatorOverlays
+      drag={makeDrag()}
+      rename={makeRename()}
+      deletion={makeDeletion()}
+      paste={makePaste()}
+      search={makeSearch()}
+      opener={makeOpener()}
+      menu={null}
+      commit={makeCommit({ pendingCommit: second })}
+      menuActions={makeMenuActions()}
+      hasBranch={false}
+      onCloseMenu={() => {}}
+      focusTree={() => {}} />,);
+    expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('commit: 3 files');
+  });
 });
