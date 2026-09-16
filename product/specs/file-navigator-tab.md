@@ -773,7 +773,10 @@ click while a commit is already running in that tab does nothing rather than sta
 one, and reports nothing — and so does a click while a pull is running in that tab, since a commit and
 a pull collide on the same git lockfiles a second commit would. The button stays clickable throughout.
 
-The button is absent wherever the header shows no branch text, exactly as the pull button is.
+The button is absent wherever the header shows no branch text, exactly as the pull button is. Its
+tooltip names the branch the push will go to — the tree's checked-out branch, which is also where
+the push lands on `origin` (see its own paragraph below) — as `Commit changes to origin (branch
+<name>)`, with the committing/committed/failed state appended after it.
 
 ### Finding a file by name
 

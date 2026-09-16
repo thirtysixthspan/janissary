@@ -36,6 +36,18 @@ describe('FileNavigatorCommitButton', () => {
     expect(button.getAttribute('title')).toBe('Commit changes to origin: failed — see notifications');
   });
 
+  it('names the target branch in the tooltip when given one', () => {
+    const { container } = render(<FileNavigatorCommitButton branch="main" onClick={vi.fn()} />);
+    const button = container.querySelector('.files-commit')!;
+    expect(button.getAttribute('title')).toBe('Commit changes to origin (branch main)');
+  });
+
+  it('names the target branch in every status tooltip too', () => {
+    const { container } = render(<FileNavigatorCommitButton branch="feature/x" status="committing" onClick={vi.fn()} />);
+    const button = container.querySelector('.files-commit--committing')!;
+    expect(button.getAttribute('title')).toBe('Commit changes to origin (branch feature/x): committing');
+  });
+
   it('stays clickable in every state', () => {
     for (const status of ['committing', 'committed', 'error'] as const) {
       const onClick = vi.fn();
