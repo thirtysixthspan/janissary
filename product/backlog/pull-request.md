@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the stale-closure trap that ties the terminal's copy chord and selection bridge to the layer hook's callbacks staying referentially stable.
-
-Existing Issue: `useXterm`'s setup effect is pinned to `[ptyId, client]` behind an eslint-disable and now closes over the `selection` object returned by `useSelectionLayer`, so the custom key handler, the registered `TerminalAccess`, and the resize observer all hold the object built on the first render and work only because `holds`, `text`, and `clear` happen to be `useCallback`s with no changing dependencies. Severity: 4/10
-
-Existing Risk: 4/10 - The first change that makes any of those callbacks depend on the layer's state — the obvious one being deriving `text` from `view` rather than from a ref — silently pins the copy chord and the context menu to an empty selection, and nothing in the suite would fail, because every test that exercises the chord holds a selection made after mount through the same stale object.
-
-Proposal Risk: 2/10 - The effect reads the live layer through a ref, which is a well-worn shape in this file already, but it does mean the indirection has to be understood by the next reader rather than inferred from the dependency array.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: stop useXterm's setup effect from closing over the selection layer object". In `web/src/shared/terminal/useXterm.ts`, keep a ref holding the current `SelectionLayerApi` — assigned on every render beside the existing `keyFilterRef.current = keyFilter` line, which is the pattern this file already uses for exactly this reason — and have the three consumers inside the effect read `selectionRef.current` rather than the captured `selection`: the `layerHeld` test and the clipboard write in `attachCustomKeyEventHandler`, the `hasSelection`/`getSelection` pair passed to `registerTerminalSelection`, and the `clear()` call in the `ResizeObserver` callback. Extend the comment on the existing eslint-disable to name the selection ref alongside the key-filter ref so the next reader sees why the dependency array is still correct. Behavior does not change, so the whole of `web/src/harness/HarnessTab.test.tsx`'s selection-layer describe block should pass untouched; to prove the indirection actually works rather than merely compiling, add a test that a selection made after a re-render of the surface is still what the copy chord copies.
-
-
 * Clean up the formatting artifacts and the unused constant left in the new selection-layer code and tests.
 
 Existing Issue: `useXterm` has the `ResizeObserver` construction and its comment indented two levels deeper than the statements around them; `useSelectionLayer.test.tsx` indents two object properties with a tab after four spaces and puts a `rerender` call and the assertion that follows it on one physical line; and `HarnessTab.test.tsx` defines a `HELD_TEXT` constant of `'drag held'` that its `holdSelection` helper returns and no caller reads, while the text actually held is `'aa bb\ncc dd'`. Severity: 2/10

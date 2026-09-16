@@ -33,6 +33,10 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
   const keyFilterRef = useRef(keyFilter);
   keyFilterRef.current = keyFilter;
   const selection = useSelectionLayer({ containerRef, termRef, inactive: active === false, exited });
+  // Keep a ref to the latest selection object as well, for the same reason: the setup effect below
+  // must never depend on the layer's state, and its setup callbacks read the live layer here.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
 
   useEffect(() => {
     const styles = getComputedStyle(document.documentElement);
@@ -57,8 +61,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
     if (container) registerTerminalSelection(container, {
       // The layer answers first; with nothing held the emulator's own selection is still
       // readable, which is what keeps native drags on surfaces that never take the mouse working.
-      hasSelection: () => selection.holds() || term.hasSelection(),
-      getSelection: () => (selection.holds() ? selection.text() : term.getSelection()),
+      hasSelection: () => selectionRef.current.holds() || term.hasSelection(),
+      getSelection: () => (selectionRef.current.holds() ? selectionRef.current.text() : term.getSelection()),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -88,9 +92,9 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       // Only claimed while something is selected, so Ctrl+C stays the harness's interrupt and a
       // selection-less Cmd+C reaches it unchanged. The layer answers before the emulator does, and
       // copying from the layer leaves the selection held — the same pick can be used twice.
-      const layerHeld = selection.holds();
+      const layerHeld = selectionRef.current.holds();
       if (copySelectionChord(e, isMac) && (layerHeld || term.hasSelection())) {
-        void navigator.clipboard.writeText(layerHeld ? selection.text() : term.getSelection());
+        void navigator.clipboard.writeText(layerHeld ? selectionRef.current.text() : term.getSelection());
         return false;
       }
       const wordMotion = altArrowSequence(e, isMac);
@@ -111,7 +115,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
     });
 
       // A resize leaves the selection anchored to a grid that no longer exists.
-      const ro = new ResizeObserver(() => { selection.clear(); syncSize(); });
+      const ro = new ResizeObserver(() => { selectionRef.current.clear(); syncSize(); });
     ro.observe(containerRef.current!);
 
     onMount?.(term);
@@ -120,7 +124,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       termRef.current = null; detach(); onInput.dispose(); osc52.dispose(); ro.disconnect(); term.dispose();
       if (container) unregisterTerminalSelection(container);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter; setup callbacks apply per PTY/client
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter and selectionRef the latest selection layer; setup callbacks apply per PTY/client
   }, [ptyId, client]);
 
   const focus = useCallback(() => termRef.current?.focus(), []);

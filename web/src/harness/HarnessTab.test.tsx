@@ -622,6 +622,16 @@ describe('HarnessTab', () => {
         expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
       });
 
+      it('copies a pick made through the live layer after a re-render of the surface', () => {
+        // A re-render rebuilds the hook's return and the effect closure holds the first render's
+        // object; reading the current selection through a ref is what keeps this pick reachable.
+        const { container, rerender } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        rerender(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+      });
+
       it('is consumed when a plain click clears it, so the harness sees no click', () => {
         const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
         holdSelection(container.querySelector('.harness-body')!);
