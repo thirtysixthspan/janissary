@@ -739,11 +739,11 @@ first is absorbed by the rebase and is not an error. A rebase that hits a confli
 branch is left exactly where it was, and the failure is reported; resolving that conflict is done in
 an editor or a terminal.
 
-The push names no remote and no branch, so it goes wherever `git push` in that directory would — the
-precise mirror of what the pull button takes from. A branch with no configured upstream is not
-published as a side effect: the attempt fails with git's own message, which already names the command
-that would set one, the local commit stays where it is, and nothing is configured on the user's
-behalf.
+The push goes to the current branch's own name on `origin`, never to any other branch. When that
+branch already has a configured upstream the push names no remote and no branch, so it goes wherever
+`git push` in that directory would — the precise mirror of what the pull button takes from. When it
+does not yet exist on `origin`, the push creates it there instead of failing, and no rebase runs
+first, since there is nothing yet on `origin` for this branch to rebase against.
 
 A commit that fails before it produces a commit object does not leave what it staged sitting in the
 user's repository: if nothing was staged before the action ran, the staging it added is undone, and

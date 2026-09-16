@@ -16,6 +16,11 @@ let commitStdout = '';
 // something.
 let diffDirty: boolean[] = [false, true];
 let diffCalls = 0;
+// Whether the current branch has a configured upstream, and its name — kept separate from `failing`
+// since both are answered by a `rev-parse` call, and a forced rejection of `rev-parse` itself would
+// make the two checks indistinguishable.
+let upstreamExists = true;
+let branchName = 'feature-branch';
 
 vi.mock('node:child_process', () => ({
   execFile: (
@@ -28,6 +33,15 @@ vi.mock('node:child_process', () => ({
       diffCalls += 1;
       if (dirty) callback(new Error('git diff failed'), { stdout: '', stderr: '' });
       else callback(null, { stdout: '', stderr: '' });
+      return;
+    }
+    if (args[0] === 'rev-parse' && args.includes('@{u}')) {
+      if (upstreamExists) callback(null, { stdout: `origin/${branchName}\n`, stderr: '' });
+      else callback(new Error('no upstream configured'), { stdout: '', stderr: '' });
+      return;
+    }
+    if (args[0] === 'rev-parse') {
+      callback(null, { stdout: `${branchName}\n`, stderr: '' });
       return;
     }
     if (failing.has(args[0])) callback(new Error(`git ${args[0]} failed`), { stdout: '', stderr: '' });
@@ -45,10 +59,12 @@ beforeEach(() => {
   commitStdout = '';
   diffDirty = [false, true];
   diffCalls = 0;
+  upstreamExists = true;
+  branchName = 'feature-branch';
 });
 
 describe('commitRoot', () => {
-  it('stages, checks, commits, rebases, and pushes in that order, all at the given root', async () => {
+  it('stages, checks, commits, checks for an upstream, rebases, and pushes in that order, all at the given root', async () => {
     await commitRoot('/repo', 'commit: notes.md', ['/repo/notes.md']);
 
     expect(subcommands()).toEqual([
@@ -56,6 +72,7 @@ describe('commitRoot', () => {
       'add -A -- /repo/notes.md',
       'diff --cached --quiet',
       'commit -m commit: notes.md',
+      'rev-parse --abbrev-ref --symbolic-full-name @{u}',
       'pull --rebase',
       'push',
     ]);
@@ -81,11 +98,29 @@ describe('commitRoot', () => {
     expect(calls[3].args).toEqual(['commit', '-m', '--amend me\nand more']);
   });
 
-  it('names no remote and no branch on either the rebase or the push', async () => {
+  it('rebases and pushes bare, naming no remote or branch, when an upstream is already configured', async () => {
     await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
 
-    expect(calls[4].args).toEqual(['pull', '--rebase']);
-    expect(calls[5].args).toEqual(['push']);
+    expect(calls[5].args).toEqual(['pull', '--rebase']);
+    expect(calls[6].args).toEqual(['push']);
+  });
+
+  it('creates the branch on origin when it has no upstream, skipping the pull since there is nothing to rebase against', async () => {
+    upstreamExists = false;
+    branchName = 'throwaway';
+
+    await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
+
+    expect(subcommands()).not.toContain('pull --rebase');
+    expect(subcommands()).not.toContain('rebase --abort');
+    expect(calls.at(-1)?.args).toEqual(['push', '--set-upstream', 'origin', 'throwaway']);
+  });
+
+  it('rejects with the git error when the publishing push fails for a branch with no upstream', async () => {
+    upstreamExists = false;
+    failing = new Set(['push']);
+
+    await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git push failed');
   });
 
   it('resolves with the last non-empty line of the commit output', async () => {
@@ -116,13 +151,6 @@ describe('commitRoot', () => {
     failing = new Set(['pull', 'rebase']);
 
     await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git pull failed');
-  });
-
-  it('never attempts to set an upstream when the rebase fails for want of one', async () => {
-    failing = new Set(['pull']);
-
-    await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git pull failed');
-    expect(calls.flatMap((call) => call.args)).not.toContain('--set-upstream');
   });
 
   it('rejects with the git error when the push fails', async () => {

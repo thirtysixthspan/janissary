@@ -48,8 +48,13 @@ export async function commitRoot(
     else await unstage(root);
     throw error;
   }
-  await pullRebase(root);
-  await execFileAsync('git', ['push'], { cwd: root });
+  if (await hasUpstream(root)) {
+    await pullRebase(root);
+    await execFileAsync('git', ['push'], { cwd: root });
+  } else {
+    const branch = await currentBranch(root);
+    await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], { cwd: root });
+  }
   return { committed: true, summary: pullSummary(stdout) };
 }
 
@@ -96,12 +101,32 @@ async function hasStagedChanges(root: string): Promise<boolean> {
   }
 }
 
+// Whether the current branch already has a configured upstream. `commitRoot` uses this to decide
+// whether there is anything to rebase against before it pushes: a branch with no upstream has
+// nothing on `origin` yet, so a `git pull --rebase` first would only reproduce the "no upstream
+// branch" failure this check exists to route around.
+async function hasUpstream(root: string): Promise<boolean> {
+  try {
+    await execFileAsync('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], { cwd: root });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// The name of the branch actually checked out, read fresh rather than assumed, so a first-time
+// publish always names the branch the tree is on — never `master`, never a name inferred from
+// anywhere else.
+async function currentBranch(root: string): Promise<string> {
+  const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root });
+  return stdout.trim();
+}
+
 // The bare `git pull --rebase` names no remote and no branch for the reason `pullRoot` gives: the
 // navigator's root is an arbitrary checkout, and the branch's configured upstream is what should
-// decide. On a branch with no upstream this is what fails, before the commit has been pushed
-// anywhere, and git's own error — which already names the `--set-upstream` command that fixes it —
-// is what the caller reports. Nothing here configures an upstream. A rebase that fails after
-// starting is abandoned so the branch is left as it was, and the original error still surfaces.
+// decide. It only runs once `hasUpstream` has confirmed there is one to rebase against. A rebase
+// that fails after starting is abandoned so the branch is left as it was, and the original error
+// still surfaces.
 async function pullRebase(root: string): Promise<void> {
   try {
     await execFileAsync('git', ['pull', '--rebase'], { cwd: root });
