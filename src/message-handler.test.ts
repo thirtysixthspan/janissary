@@ -57,6 +57,7 @@ const makeController = () =>
     monitorContextSnapshot: vi.fn(),
     syncEditorBuffer: vi.fn(),
     resyncEditorTab: vi.fn(),
+    renameEditorFile: vi.fn(),
     undoFileNavigatorItem: vi.fn(() => ({})),
     redoFileNavigatorItem: vi.fn(() => ({})),
     openFileNavigatorFor: vi.fn(),
@@ -297,6 +298,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x' } });
     expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x');
+  });
+
+  it('routes renameEditorFile', () => {
+    const controller = makeController();
+    dispatchCall(controller, 15, { method: 'renameEditorFile', params: { url: '/open/1', name: 'plan.md' } });
+    expect(controller.renameEditorFile).toHaveBeenCalledWith('/open/1', 'plan.md');
   });
 
   it('routes fileNavigatorToggle', () => {

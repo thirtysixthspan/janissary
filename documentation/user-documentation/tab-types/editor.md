@@ -106,7 +106,7 @@ If the path didn't exist when you ran `edit`, the file shows a size of "unknown"
 
 ## Renaming a tab renames the file
 
-Unlike other tab kinds, editing an editor tab's label doesn't just set a display alias. It renames the file itself: type `notes.txt` and that becomes the file's actual name. For a file that hasn't been saved yet, this only updates where the first save will write to. For a file that already exists on disk, whether opened as an existing file or saved for the first time from a new one, renaming moves it to the new path right away.
+Unlike other tab kinds, editing an editor tab's label doesn't just set a display alias. It renames the file itself: type `notes.txt` and that becomes the file's actual name. For a file that hasn't been saved yet, this only updates where the first save will write to. A file tab opened from the [file navigator](/user-documentation/tab-types/file-navigator)'s New file action starts with its default name (`untitled.md`, or the next free name) already highlighted in the metadata row, so you can type the real name and press Enter without touching the tab label; pressing Escape keeps the default name. The metadata row's file name itself is also double-click to rename, just like the tab label. For a file that already exists on disk, whether opened as an existing file or saved for the first time from a new one, renaming moves it to the new path right away.
 
 Either way, the buffer is never reloaded: your unsaved content, cursor position, and undo history stay exactly as they were, and focus returns to the buffer once the rename finishes. Renaming the same file from the [file navigator](/user-documentation/tab-types/file-navigator) has the same effect on an editor tab that already has it open.
 

@@ -85,6 +85,16 @@ undo history remain in the live editor buffer, and the next save writes that con
 path. Once the rename commits, keyboard focus returns to the editor buffer so the user can keep
 typing immediately, without needing to click back into it.
 
+A new-file tab starts its own rename session the moment it opens: the file's name — `untitled.md`,
+or the next free name on a collision — is highlighted with keyboard focus directly in the metadata
+row's file-name display, so the default can be typed over without touching the tab label. The edit
+works like the tab-label rename: Enter (or clicking away) accepts the typed name and the tab label
+and metadata row update together; the accepted name follows the same literal-filename rules above.
+If the accepted name equals the current one, nothing is renamed. Escape keeps the default name even
+when characters had been typed over it. After accepting or dismissing, keyboard focus and the input
+caret return to the top of the editor buffer. The metadata row's file name keeps working as a
+double-click-to-rename field afterwards, the same way a tab label is renamed.
+
 Renaming the same file from the file navigator instead (see `file-navigator-tab.md`) has the same
 effect on an already-open editor tab: its name and path update to match, with its unsaved content,
 dirty state, cursor, and undo history preserved exactly as above — the buffer is never reloaded.

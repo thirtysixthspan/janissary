@@ -198,6 +198,8 @@ html, body, #root {
 .editor-tab { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 12px; gap: 8px; }
 .editor-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; color: var(--muted); }
 .editor-meta .editor-name { color: var(--fg); font-weight: 600; }
+/* Inline editor-name rename input: reads as an in-place edit like .tab-rename-input. */
+.editor-meta .editor-name-input { font: inherit; color: var(--fg); font-weight: 600; background: transparent; border: none; outline: none; padding: 0; margin: 0; }
 .editor-meta .editor-loc { font-size: 12px; word-break: break-all; }
 .tab-meta {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;

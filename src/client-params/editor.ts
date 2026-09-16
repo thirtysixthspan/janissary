@@ -22,4 +22,5 @@ export const EDITOR_PARAMS: Record<EditorRpcCall['method'], ParamsDecoder> = {
   editorSuggest: (p) => isString(p.url) && isString(p.persona) && isString(p.content) && isString(p.prompt),
   closeEditorConnection: (p) => isString(p.url) && isString(p.persona),
   editorPluginFailed: isEditorPluginFailedParams,
+  renameEditorFile: (p) => isString(p.url) && isString(p.name),
 };

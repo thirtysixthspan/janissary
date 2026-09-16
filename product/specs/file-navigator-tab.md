@@ -813,7 +813,12 @@ whichever tab happens to be active. A navigator rooted at one project therefore 
 that project even while a workspaced agent, whose shell runs inside a separate clone, holds focus.
 
 The user names the file by editing the new editor tab's label — the typed text becomes the
-filename literally, with no extension appended (see Editor Tab → "New files"). On save, if the
+filename literally, with no extension appended (see Editor Tab → "New files"). The new tab opens
+its name pre-selected with keyboard focus in the editor's metadata row, immediately after the
+default `untitled.md` (or the next free name), so the name can be typed over right away without a
+separate select-then-rename step. Enter accepts the typed name and updates both the tab label and
+the metadata row; Escape keeps the default name even if characters had been typed, and either way
+keyboard focus returns to the top of the editor buffer. On save, if the
 directory already contains a file with that name because the tab was never renamed and another
 new-file tab already saved to it first, the save silently writes to the next free name
 (`untitled-2.md`, `untitled-3.md`, …) instead of overwriting anything, so several new-file tabs can

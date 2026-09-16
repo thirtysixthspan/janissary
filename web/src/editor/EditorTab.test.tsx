@@ -57,7 +57,8 @@ function makeClient(saveError?: string) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.text();
   });
-  return { client: { saveFile, editorSync, request, send, readFile } as unknown as JanusClient, saveFile, request, send };
+  const renameEditorFile = vi.fn();
+  return { client: { saveFile, editorSync, request, send, readFile, renameEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {
@@ -67,6 +68,16 @@ async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTa
 }
 
 const textarea = () => screen.getByLabelText('Edit notes.txt');
+
+const textareaFor = (name: string) => screen.getByLabelText(`Edit ${name}`) as unknown as HTMLTextAreaElement;
+
+async function waitForContainerChild<T extends HTMLElement>(container: HTMLElement, selector: string): Promise<T> {
+  return await waitFor(() => {
+    const element = container.querySelector<T>(selector);
+    expect(element).not.toBeNull();
+    return element!;
+  });
+}
 
 const nameText = (container: HTMLElement) => container.querySelector('.editor-name')?.textContent ?? '';
 
@@ -139,6 +150,42 @@ describe('EditorTab', () => {
     const { client } = makeClient();
     await renderLoaded(client);
     await waitFor(() => expect(document.activeElement).toBe(textarea()));
+  });
+
+  it('a new-file tab opens its name already focused for renaming in the metadata row', async () => {
+    const { client } = makeClient();
+    const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
+    expect(input).toBe(document.activeElement);
+    expect(input.value).toBe('untitled.md');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('untitled.md'.length);
+    expect(textareaFor('untitled.md')).not.toBe(document.activeElement);
+  });
+
+  it('accepting the new name in the metadata row sends renameEditorFile and returns focus to the buffer', async () => {
+    const { client, renameEditorFile } = makeClient();
+    const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
+    fireEvent.change(input, { target: { value: 'plan.md' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(renameEditorFile).toHaveBeenCalledWith('/open/1', 'plan.md');
+    await waitFor(() => expect(document.activeElement).toBe(textareaFor('untitled.md')));
+  });
+
+  it('escape in the metadata row keeps the default name and returns focus to the buffer', async () => {
+    const { client, renameEditorFile } = makeClient();
+    const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
+    fireEvent.change(input, { target: { value: 'typed.md' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(renameEditorFile).not.toHaveBeenCalled();
+    await waitFor(() => expect(document.activeElement).toBe(textareaFor('untitled.md')));
+    await waitFor(() => expect(container.querySelector('.editor-name-input')).toBeNull());
+    expect(container.querySelector('.editor-name')?.textContent).toBe('untitled.md');
   });
 
   it('starts the cursor on the first line when opened without a target line', async () => {

@@ -96,6 +96,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'resyncEditorTab': { controller.resyncEditorTab(message.params.url); break;
     }
+    case 'renameEditorFile': { controller.renameEditorFile(message.params.url, message.params.name); break;
+    }
     case 'reportLayout': { controller.reportLayout(message.params); break;
     }
     case 'fileNavigatorToggle':
