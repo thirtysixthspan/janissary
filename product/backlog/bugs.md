@@ -2,6 +2,8 @@
 
 ## ready
 
+* investigate why opencode is repeatedly reporting a notification of "no harness transcript found" 
+
 * controller tests are intermittently failing in the CI due to timeout. 
  FAIL   server  src/controller.test.ts > Controller notifications feed > records an incoming message to a background tab when the notifications tab is open
 Error: Test timed out in 5000ms.
