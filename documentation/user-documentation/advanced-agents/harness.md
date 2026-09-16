@@ -48,7 +48,9 @@ menu again instead of the browser's. See
 
 The copy chords are taken only while something is selected. With nothing selected they go straight
 to the harness, so `Ctrl+C` never stops being the interrupt. An `Escape` pressed anywhere else —
-another tab, a menu, a dialog — never touches a held selection.
+another tab, a dialog — never touches a held selection, except the menu the drag or a right-click
+opened for it: `Escape` there closes that menu and dismisses the selection together, so one press
+always leaves you fully out of the pick.
 
 A selection you've made survives while you keep working in the tab, but clears if you switch tabs
 and back, if you resize the window, or if the harness exits. The frozen image covers the visible

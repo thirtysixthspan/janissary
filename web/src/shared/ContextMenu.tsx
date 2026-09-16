@@ -26,7 +26,7 @@ type Properties = {
   groups: ContextMenuItem[][];
   x: number;
   y: number;
-  onClose: () => void;
+  onClose: (reason?: 'escape') => void;
 };
 
 // A positioned menu of labelled actions, drawn in the picker's visual language with a separator
@@ -54,7 +54,7 @@ export function ContextMenu({ groups, x, y, onClose }: Properties) {
     case 'ArrowUp': { e.preventDefault(); setSelectedLabel(items[Math.max(0, selected - 1)]?.label); break; }
     case 'ArrowDown': { e.preventDefault(); setSelectedLabel(items[Math.min(items.length - 1, selected + 1)]?.label); break; }
     case 'Enter': { e.preventDefault(); activate(selected); break; }
-    case 'Escape': { e.preventDefault(); onClose(); break; }
+    case 'Escape': { e.preventDefault(); onClose('escape'); break; }
     }
   };
 
@@ -67,7 +67,7 @@ export function ContextMenu({ groups, x, y, onClose }: Properties) {
       style={contextMenuPosition(x, y, groups, { width: window.innerWidth, height: window.innerHeight })}
       onKeyDown={onKeyDown}
       onContextMenu={(event) => event.preventDefault()}
-      onBlur={onClose}
+      onBlur={() => onClose()}
     >
       {groups.map((group, groupIndex) => (
         <React.Fragment key={group[0]?.label ?? groupIndex}>

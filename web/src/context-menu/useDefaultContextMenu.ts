@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
-import { terminalSelectionText } from '../shared/terminal/terminal-selection';
+import { clearTerminalSelection, terminalSelectionText } from '../shared/terminal/terminal-selection';
 import type { DefaultMenuEntry } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 
@@ -88,9 +88,14 @@ export function useDefaultContextMenu(client?: JanusClient) {
 
   // The menu holds the keyboard while it is open, so whatever had focus gets it back on the way
   // out — otherwise a dismissed menu would leave the app's key handling pointed at the body.
-  const close = () => {
+  // Escape closing a menu that answered for a terminal's own selection exits copy mode with it:
+  // otherwise the frozen overlay outlives the menu that Escape looked like it dismissed.
+  const close = (reason?: 'escape') => {
     generation.current += 1;
     setContributed(null);
+    if (reason === 'escape' && pending?.selectionSource === 'terminal') {
+      clearTerminalSelection(pending.restoreFocus);
+    }
     pending?.restoreFocus?.focus();
     setPending(null);
   };

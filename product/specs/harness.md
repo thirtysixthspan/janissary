@@ -408,8 +408,13 @@ showed.
 While a selection is held the tab stays interactive: typing still reaches the harness. The layer
 claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection
 and still reaches the harness as its cancel key, and an Escape pressed anywhere else — another tab,
-a menu, a dialog — never touches the selection at all. A selection clears on **Escape** (in its own
-terminal), on
+a dialog — never touches the selection at all. The one exception is the default menu, whenever it
+answers for this terminal's own held selection — whether the drag's own release opened it or a
+later right-click did (see [[context-menu]]): Escape there closes that menu and clears the
+selection together, so a single Escape always leaves copy mode rather than needing a second press
+once the menu is gone. Escape on a menu answering for a DOM or editor selection only closes the
+menu. A selection clears on **Escape** (in its own terminal, or through a menu answering for it, as
+above), on
 a plain unmodified click anywhere in the terminal (a click that clears is consumed, not reported to
 the harness), on a tab switch away from the surface, on a resize, and on the PTY exiting. A Shift+drag
 shifts nothing, and the highlight follows the pointer exactly — including over the last column and

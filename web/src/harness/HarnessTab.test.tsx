@@ -490,6 +490,53 @@ describe('HarnessTab', () => {
       }
     });
 
+    it('exits copy mode when Escape closes the menu the drag itself opened', async () => {
+      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      screenLines = ['aa bb', 'cc dd'];
+      try {
+        const rendered = render(<>
+          <HarnessTab harness={makeHarness()} client={client} label="claude" />
+          <DefaultContextMenu client={client} />
+        </>);
+        const host = rendered.container.querySelector('.harness-body')!;
+        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
+        // the container it is opened into, which is what makes the auto-opened menu's restoreFocus
+        // resolve back into this terminal rather than the document body.
+        const focusTarget = document.createElement('textarea');
+        host.append(focusTarget);
+        focusTarget.focus();
+        shiftDrag(host, 5, 10, 45, 90);
+        await screen.findByRole('menu');
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+        fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
+      } finally {
+        domSelection.mockRestore();
+      }
+    });
+
+    it('leaves the selection held when the menu closes another way', async () => {
+      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      screenLines = ['aa bb', 'cc dd'];
+      try {
+        const rendered = render(<>
+          <HarnessTab harness={makeHarness()} client={client} label="claude" />
+          <DefaultContextMenu client={client} />
+        </>);
+        const host = rendered.container.querySelector('.harness-body')!;
+        shiftDrag(host, 5, 10, 45, 90);
+        const copy = await screen.findByText('Copy');
+        fireEvent.click(copy);
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+      } finally {
+        domSelection.mockRestore();
+      }
+    });
+
     it('creates the terminal without the emulator modifier-drag that would select too', () => {
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
       expect(capturedOptions.macOptionClickForcesSelection).toBeUndefined();

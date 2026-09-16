@@ -4,5 +4,3 @@
 
 *  the selection layer should be identical to the harness content including color and spacing of characters.
 
-* once the selection layer is drag is complete, hitting escape should exit the copy mode
-

@@ -49,7 +49,9 @@ key to its PTY, with two conditional exceptions: while a Shift+drag selection is
 pressed in that terminal clears the selection as it reaches the harness, and the terminal's copy
 chord (see [[harness]]) copies instead of reaching it. Both apply only while something is selected,
 so a selection-less terminal passes Escape, Ctrl+C, and everything else through unchanged. An Escape
-pressed anywhere other than the terminal that holds the selection never touches it.
+pressed anywhere other than the terminal that holds the selection never touches it, except the
+default menu while it is answering for that terminal's own selection: Escape there closes the menu
+and clears the selection together (see [[context-menu]]).
 
 ### Overlay priority
 

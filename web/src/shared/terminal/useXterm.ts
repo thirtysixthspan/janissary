@@ -63,6 +63,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       // readable, which is what keeps native drags on surfaces that never take the mouse working.
       hasSelection: () => selectionRef.current.holds() || term.hasSelection(),
       getSelection: () => (selectionRef.current.holds() ? selectionRef.current.text() : term.getSelection()),
+      clear: () => selectionRef.current.clear(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
