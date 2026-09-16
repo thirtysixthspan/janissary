@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that switching tabs clears every terminal selection.
-
-Existing Issue: The PR body says switching tabs clears a held selection on every terminal surface, while `TerminalCard` receives no active or tab-switch signal and the accompanying specification deliberately keeps a transcript card's selection until resize or PTY exit. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer or user expects a terminal-card overlay to disappear after changing tabs and can instead return to a still-frozen card whose behavior contradicts the stated feature contract.
-
-Proposal Risk: 1/10 - The description will accurately state the card exception, though readers still need to distinguish a transcript card from tab-owned terminal surfaces.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1129: correct the description's tab-switch clearing claim for terminal cards". Update the pull request description's clearing-trigger statements and behavior examples to distinguish harness tabs, SSH tabs, and interactive shell takeovers from `web/src/shared/transcript/TerminalCard.tsx`: the tab-owned surfaces clear when inactive, while a transcript terminal card clears on resize and PTY exit and has no tab-activity signal. Keep the implementation and the existing contract in `product/specs/harness.md` aligned; verify the description still accurately describes all other selection-layer clearing paths without editing source code for this documentation-fidelity item.
-
-
 * Split the new selection-layer hook tests into focused TypeScript modules that meet the repository's file-size rule.
 
 Existing Issue: The newly added `web/src/shared/terminal/useSelectionLayer.test.tsx` is 271 lines, exceeding the 200-line limit for JavaScript and TypeScript files in `ai/guidelines/code-guidelines.md`. Severity: 4/10
