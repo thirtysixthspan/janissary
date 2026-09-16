@@ -166,11 +166,11 @@ export type FileNavigatorView = {
   waitingFor?: string;
   // What the header's pull button is currently signalling: a pull in flight, or the outcome of one
   // that just settled. Absent is the button's resting state — no pull has run recently — which is
-  // also where a settled pull returns after its brief flash (see `manager-pull.ts`).
+  // also where a settled pull returns after its brief flash (see `manager-flash.ts`).
   pull?: FileNavigatorPullStatus;
   // What the header's commit button is currently signalling, on the same terms as `pull`: absent is
   // its resting state, which is also where a settled commit returns after its flash, and where a
-  // commit that found nothing to commit settles straight away (see `manager-commit.ts`).
+  // commit that found nothing to commit settles straight away (see `manager-flash.ts`).
   commit?: FileNavigatorCommitStatus;
   // Every file git considers changed under the tree's root, regardless of what is currently expanded
   // or visible — what the header commit button's whole-tree default message counts, since the commit

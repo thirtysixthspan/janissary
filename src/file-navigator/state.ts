@@ -58,12 +58,12 @@ export type FilesTabState = {
   // What this tab's header pull button is signalling. `pulling` is also the coalescing check: a
   // second click while it is set is ignored rather than spawning an overlapping `git pull` that
   // would collide on git's own lockfiles. `pullFlash` is the timer returning a settled `pulled` or
-  // `error` to the resting state (see `manager-pull.ts`).
+  // `error` to the resting state (see `manager-flash.ts`).
   pull?: FileNavigatorPullStatus;
   pullFlash?: ReturnType<typeof setTimeout>;
   // The same pair for the header's commit button. `committing` is likewise the coalescing check — a
   // commit holds git's index and `HEAD` at least as hard as a pull does — and `commitFlash` returns
-  // a settled `committed` or `error` to rest (see `manager-commit.ts`).
+  // a settled `committed` or `error` to rest (see `manager-flash.ts`).
   commit?: FileNavigatorCommitStatus;
   commitFlash?: ReturnType<typeof setTimeout>;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab
