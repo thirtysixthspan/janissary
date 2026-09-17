@@ -517,7 +517,7 @@ describe('HarnessTab', () => {
       }
     });
 
-    it('leaves the selection held when the menu closes another way', async () => {
+    it('releases the selection once the menu\'s Copy entry copies it', async () => {
       const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
       const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
       screenLines = ['aa bb', 'cc dd'];
@@ -527,11 +527,17 @@ describe('HarnessTab', () => {
           <DefaultContextMenu client={client} />
         </>);
         const host = rendered.container.querySelector('.harness-body')!;
+        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
+        // the container it is opened into, which is what lets `restoreFocus` resolve back into
+        // this terminal's own registration.
+        const focusTarget = document.createElement('textarea');
+        host.append(focusTarget);
+        focusTarget.focus();
         shiftDrag(host, 5, 10, 45, 90);
         const copy = await screen.findByText('Copy');
         fireEvent.click(copy);
         expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
-        expect(rendered.container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
       } finally {
         domSelection.mockRestore();
       }
@@ -634,12 +640,14 @@ describe('HarnessTab', () => {
         expect(overlay!.querySelectorAll('.editor-sel').length).toBeGreaterThan(0);
       });
 
-      it('copies the layer selection on the copy chord and leaves it held', () => {
+      it('copies the layer selection on the copy chord and releases it', () => {
         const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
         holdSelection(container.querySelector('.harness-body')!);
-        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        act(() => {
+          expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        });
         expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
-        expect(container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
       });
 
       it('lets the copy chord reach the harness after a drag through the blank region', () => {

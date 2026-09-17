@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultContextMenu } from './DefaultContextMenu';
+import { registerTerminalSelection, unregisterTerminalSelection } from '../shared/terminal/terminal-selection';
 
 function stubSelection(text: string) {
   vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => text } as Selection);
@@ -240,6 +241,42 @@ describe('DefaultContextMenu', () => {
   });
 
   it('writes the selected text to the clipboard when Copy is activated', () => {
+    stubSelection('selected text');
+    const writeText = stubClipboard();
+    render(<DefaultContextMenu />);
+    rightClick(field());
+    fireEvent.click(screen.getByText('Copy'));
+    expect(writeText).toHaveBeenCalledWith('selected text');
+  });
+
+  it('releases a terminal-sourced selection once Copy is activated', () => {
+    const clear = vi.fn();
+    const terminal = document.createElement('div');
+    // Stands in for xterm's own focus target, which lives inside the container that gets
+    // registered: `restoreFocus` resolves to whatever holds the keyboard, and that has to fall
+    // inside the terminal for the registry to find it again.
+    const focusTarget = document.createElement('textarea');
+    terminal.append(focusTarget);
+    document.body.append(terminal);
+    focusTarget.focus();
+    registerTerminalSelection(terminal, {
+      hasSelection: () => true,
+      getSelection: () => 'terminal text',
+      clear,
+    });
+    try {
+      const writeText = stubClipboard();
+      render(<DefaultContextMenu />);
+      rightClick(terminal);
+      fireEvent.click(screen.getByText('Copy'));
+      expect(writeText).toHaveBeenCalledWith('terminal text');
+      expect(clear).toHaveBeenCalledOnce();
+    } finally {
+      unregisterTerminalSelection(terminal);
+    }
+  });
+
+  it('leaves a dom selection alone once Copy is activated', () => {
     stubSelection('selected text');
     const writeText = stubClipboard();
     render(<DefaultContextMenu />);

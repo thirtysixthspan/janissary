@@ -4,6 +4,7 @@ import { ContextMenu } from '../shared/ContextMenu';
 import { defaultMenuGroups } from './default-menu-target';
 import { pasteInto } from './clipboard-commands';
 import { copyText } from '../shared/system-clipboard';
+import { clearTerminalSelection } from '../shared/terminal/terminal-selection';
 import { useDefaultContextMenu } from './useDefaultContextMenu';
 
 // The app's fallback right-click menu, mounted once by the shell. It draws Copy and Paste for any
@@ -17,7 +18,12 @@ export function DefaultContextMenu({ client }: { client?: JanusClient }) {
   if (!pending) return null;
 
   const groups = defaultMenuGroups(pending, {
-    copy: copyText,
+    // A terminal-sourced pick releases itself once it's been copied, the same way the copy chord
+    // does — a dom or editor selection is the browser's own and stays exactly where it was.
+    copy: (text) => {
+      copyText(text);
+      if (pending.selectionSource === 'terminal') clearTerminalSelection(pending.restoreFocus);
+    },
     paste: (element) => { void pasteInto(element); },
   });
   if (contributed) {

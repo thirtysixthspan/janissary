@@ -92,10 +92,11 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       if (keyFilterRef.current && !keyFilterRef.current(e)) return false;
       // Only claimed while something is selected, so Ctrl+C stays the harness's interrupt and a
       // selection-less Cmd+C reaches it unchanged. The layer answers before the emulator does, and
-      // copying from the layer leaves the selection held — the same pick can be used twice.
+      // copying from the layer releases the pick it just copied — the overlay clears with it.
       const layerHeld = selectionRef.current.holds();
       if (copySelectionChord(e, isMac) && (layerHeld || term.hasSelection())) {
         void navigator.clipboard.writeText(layerHeld ? selectionRef.current.text() : term.getSelection());
+        if (layerHeld) selectionRef.current.clear();
         return false;
       }
       const wordMotion = altArrowSequence(e, isMac);
