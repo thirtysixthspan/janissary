@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -81,6 +81,20 @@ export async function changedPaths(root: string): Promise<Map<string, GitFileSta
 export async function currentBranch(root: string): Promise<string | undefined> {
   try {
     const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root });
+    const branch = stdout.trim();
+    return branch || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// The synchronous counterpart to `currentBranch`, for a caller that resolves a file's branch once
+// at open time rather than holding it live across a refresh cycle (an editor tab's metadata, unlike
+// a file navigator's, see `openers/editor.ts`). Same behavior: `HEAD` for a detached checkout,
+// `undefined` — never throws — off a git repository or on any git failure.
+export function currentBranchSync(root: string): string | undefined {
+  try {
+    const stdout = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root, stdio: 'pipe' }).toString();
     const branch = stdout.trim();
     return branch || undefined;
   } catch {

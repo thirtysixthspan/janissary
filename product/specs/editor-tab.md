@@ -56,9 +56,12 @@ error shown — then stages just that one file, commits it with the navigator's 
 message (`sync: <filename>`), rebases onto whatever `origin` has moved to, and pushes to the current
 branch's own name. The icon says where the cycle is: it spins while committing, turns the success
 color when a commit lands and the error color when one fails, and returns to rest a few seconds
-after settling. Each outcome is reported as one line in the notifications feed, named the same way
-the navigator's commit is reported. A click while a commit is already running does nothing — the
-in-flight one is the one that counts. A file editor open on a remote tree's file cannot commit from
+after settling. Its tooltip names the branch the push will go to, exactly as the navigator's own
+commit button does, as `Commit to origin (branch <name>)`, with the committing/committed/failed
+state appended after it — and just `Commit to origin` when the branch can't be determined. Each
+outcome is reported as one line in the notifications feed, named the same way the navigator's commit
+is reported. A click while a commit is already running does nothing — the in-flight one is the one
+that counts. A file editor open on a remote tree's file cannot commit from
 here: the attempt is refused with a notifications line pointing at the navigator, since committing a
 remote file runs in that file's own navigator.
 - **Editor body** — fills the remaining space. Scrolls independently.

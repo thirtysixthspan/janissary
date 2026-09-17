@@ -2,6 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorCommitStatus } from '@shared/protocol';
 import { commitIcon } from '../icons';
+import { commitBranchTooltipSuffix } from '../shared/commit-branch-tooltip';
 
 const STATUS_NOTES: Record<FileNavigatorCommitStatus, string> = {
   committing: 'committing',
@@ -15,12 +16,6 @@ type Properties = {
   onClick: () => void;
 };
 
-// The tooltip's branch segment: the push goes to the checked-out branch's own name on `origin`,
-// so naming it tells the reader where the commit will land.
-function tooltipSuffix(branch?: string): string {
-  return branch ? ` (branch ${branch})` : '';
-}
-
 // The file navigator header's commit button: the pull button flipped. It opens the commit-message
 // field over the tree, and what that field sends commits and pushes every change in the tree's
 // repository — see the `fileNavigatorCommit` RPC. Shown only where the header already shows a
@@ -29,7 +24,7 @@ function tooltipSuffix(branch?: string): string {
 // for the same reason the pull button does: an overlapping click is already coalesced server-side,
 // so going inert would only cost the reader the tooltip.
 export function FileNavigatorCommitButton({ status, branch, onClick }: Properties) {
-  const target = tooltipSuffix(branch);
+  const target = commitBranchTooltipSuffix(branch);
   const state = status ? `: ${STATUS_NOTES[status]}` : '';
   return (
     <button

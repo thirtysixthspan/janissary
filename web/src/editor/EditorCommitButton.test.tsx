@@ -26,4 +26,19 @@ describe('EditorCommitButton', () => {
       expect(onClick).toHaveBeenCalledOnce();
     }
   });
+
+  it('names the target branch in the tooltip when given one', () => {
+    const { container } = render(<EditorCommitButton commit={undefined} branch="main" onClick={vi.fn()} />);
+    const button = container.querySelector('button')!;
+    expect(button.getAttribute('title')).toBe('Commit to origin (branch main)');
+    expect(button.getAttribute('aria-label')).toBe('Commit to origin (branch main)');
+  });
+
+  it('names the target branch in every status tooltip too', () => {
+    const { container } = render(
+      <EditorCommitButton commit="committing" branch="feature/x" onClick={vi.fn()} />,
+    );
+    const button = container.querySelector('button')!;
+    expect(button.getAttribute('title')).toBe('Commit to origin (branch feature/x): committing');
+  });
 });

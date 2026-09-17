@@ -44,7 +44,7 @@ export function EditorMetaRow({
       <span className="editor-actions">
         <EditorSyncIcon sync={editor.sync} onClick={onSyncClick} />
         <EditorSaveButton dirty={dirty} onSave={onSave} />
-        <EditorCommitButton commit={editor.commit} onClick={onCommitOrigin} />
+        <EditorCommitButton commit={editor.commit} branch={editor.branch} onClick={onCommitOrigin} />
         <StatusWindowButton
           icon={connectionsWindowIcon}
           className="tab-connections"
