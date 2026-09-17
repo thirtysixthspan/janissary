@@ -46,7 +46,8 @@ section navigation still escapes them.
 
 A focused terminal surface (harness tab, ssh tab, interactive PTY takeover, terminal card) gives every
 key to its PTY, with two conditional exceptions: while a Shift+drag selection is held, **Escape**
-pressed in that terminal clears the selection as it reaches the harness, and the terminal's copy
+pressed in that terminal is consumed by the selection layer — it clears the selection and does not
+additionally reach the harness — and the terminal's copy
 chord (see [[harness]]) copies instead of reaching it. Both apply only while something is selected,
 so a selection-less terminal passes Escape, Ctrl+C, and everything else through unchanged. An Escape
 pressed anywhere other than the terminal that holds the selection never touches it, except the
