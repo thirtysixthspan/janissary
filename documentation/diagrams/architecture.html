@@ -28,7 +28,7 @@
       padding: 3rem 2rem;
     }
 
-    .frame { max-width: 1200px; width: 100%; }
+    .frame { max-width: 1440px; width: 100%; }
 
     .eyebrow {
       font-family: var(--font-mono);
@@ -55,11 +55,12 @@
       font-size: 0.85rem;
       line-height: 1.5;
       color: var(--color-muted);
-      max-width: 66ch;
+      max-width: 72ch;
       margin-bottom: 1rem;
     }
 
-    .subtitle code { font-family: var(--font-mono); font-size: 0.92em; }
+    .subtitle a { color: var(--color-muted); }
+    .subtitle a:hover { color: var(--color-accent); }
 
     .nav {
       font-family: var(--font-mono);
@@ -84,23 +85,25 @@
     .nav a:hover { color: var(--color-accent); border-bottom-color: var(--color-accent); }
     .nav span { color: rgba(45,49,66,0.3); margin: 0 0.5rem; }
 
-    svg { width: 100%; min-width: 900px; display: block; }
+    .scroll { overflow-x: auto; }
+    svg { width: 100%; min-width: 1100px; display: block; }
   </style>
 </head>
 <body>
   <div class="frame">
     <p class="eyebrow">Architecture · janissary</p>
     <h1>One socket, one source of truth</h1>
-    <p class="subtitle">The Node server owns all state and renders every snapshot; the React client emits intents and draws what it is sent. For where these processes run and what carries the bytes between hosts, see <a href="deployment.html">deployment.html</a>.</p>
+    <p class="subtitle">The parts of Janissary and what talks to what. The server owns every piece of state and broadcasts the whole view after each change; the client holds one connection, renders what it is sent, and sends back intents. For where these processes run and what carries the bytes between hosts, see <a href="deployment.html">deployment.html</a>.</p>
 
     <nav class="nav">
       <b>Companion</b>
       <a href="deployment.html">deployment.html</a><span>·</span>hosts and wire protocols
     </nav>
 
-    <svg viewBox="0 0 960 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-title architecture-desc">
+    <div class="scroll">
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-title architecture-desc">
       <title id="architecture-title">Janissary architecture overview</title>
-      <desc id="architecture-desc">Overview diagram indexing six detail diagrams: four server components (platform boot and security, the dispatch path, the per-resource manager registry, and the tab plugin host), two web components (the app shell and the feature surfaces), and the shared wire contract in src/protocol.ts that both sides import.</desc>
+      <desc id="architecture-desc">Four zones: an entry and platform zone where the command line starts the server, binds it to the local machine and restores saved state; a server zone where a controller routes commands through a registry to command modules and a manager registry that owns tab records, agent sessions, terminals, files and schedules; a web client zone holding one socket client, the app shell, tab surfaces and a plugin registry; and a shared wire contract that both sides import. State is broadcast from server to client, intents travel back.</desc>
       <defs>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
         <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
@@ -110,128 +113,256 @@
       <rect width="100%" height="100%" fill="#f5f5f5"/>
 
       <!-- Zones -->
-      <rect x="40" y="64" width="568" height="368" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
-      <rect x="56" y="68" width="76" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="94" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SERVER · src/</text>
+      <rect x="40" y="72" width="200" height="384" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="56" y="76" width="112" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="112" y="85" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">ENTRY · PLATFORM</text>
 
-      <rect x="672" y="64" width="248" height="264" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
-      <rect x="688" y="68" width="88" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="732" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">WEB · web/src/</text>
+      <rect x="264" y="72" width="608" height="384" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="280" y="76" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="308" y="85" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SERVER</text>
 
-      <!-- Arrows -->
-      <line x1="296" y1="144" x2="352" y2="144" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <line x1="452" y1="184" x2="452" y2="216" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <path d="M 352,164 H 332 Q 324,164 324,172 V 248 Q 324,256 316,256 H 296" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <line x1="472" y1="296" x2="472" y2="328" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <line x1="688" y1="136" x2="592" y2="136" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
-      <line x1="592" y1="172" x2="688" y2="172" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
-      <line x1="796" y1="184" x2="796" y2="216" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
-      <path d="M 796,296 V 356 Q 796,364 788,364 H 592" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="936" y="72" width="304" height="384" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="952" y="76" width="76" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="990" y="85" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">WEB CLIENT</text>
+
+      <rect x="40" y="480" width="1200" height="104" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="56" y="484" width="112" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="112" y="493" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">SHARED CONTRACT</text>
+
+      <!-- Arrows (drawn before nodes so z-order puts them behind) -->
+      <line x1="140" y1="160" x2="140" y2="192" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="140" y1="248" x2="140" y2="280" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 224,220 H 244 Q 252,220 252,212 V 140 Q 252,132 260,132 H 280" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 224,396 H 244 Q 252,396 252,388 V 316 Q 252,308 260,308 H 280" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <line x1="440" y1="132" x2="488" y2="132" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 528,160 V 168 Q 528,176 520,176 H 408 Q 400,176 400,184 V 192" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="440" y1="220" x2="488" y2="220" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="568" y1="248" x2="568" y2="280" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <path d="M 648,226 H 664 Q 672,226 672,234 V 384 Q 672,392 680,392 H 696" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <line x1="856" y1="124" x2="952" y2="124" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <path d="M 952,144 H 912 Q 904,144 904,152 V 208 Q 904,216 896,216 H 856" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <line x1="1088" y1="160" x2="1088" y2="192" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="1088" y1="248" x2="1088" y2="280" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="1088" y1="336" x2="1088" y2="368" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="568" y1="424" x2="568" y2="512" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <line x1="1088" y1="424" x2="1088" y2="512" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
 
       <!-- Arrow labels -->
-      <rect x="306" y="124" width="36" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="324" y="133" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BOOT</text>
+      <rect x="150" y="170" width="44" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="172" y="179" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">STARTS</text>
 
-      <rect x="460" y="194" width="68" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="494" y="203" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DELEGATES</text>
+      <rect x="150" y="258" width="68" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="184" y="267" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">BINDS LOCAL</text>
 
-      <rect x="248" y="200" width="68" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="282" y="209" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">ACTIVATES</text>
+      <rect x="228" y="198" width="48" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="252" y="207" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">CREATES</text>
 
-      <rect x="480" y="306" width="56" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="508" y="315" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">IMPORTS</text>
+      <rect x="262" y="346" width="68" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="296" y="355" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">REHYDRATES</text>
 
-      <rect x="612" y="112" width="56" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="640" y="121" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WS · RPC</text>
+      <rect x="442" y="112" width="44" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="464" y="121" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ROUTES</text>
 
-      <rect x="620" y="152" width="40" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="640" y="161" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <rect x="446" y="156" width="36" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="464" y="165" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RUNS</text>
 
-      <rect x="804" y="194" width="56" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="832" y="203" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">MOUNTS</text>
+      <rect x="442" y="200" width="44" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="464" y="209" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">REACHES</text>
 
-      <rect x="640" y="342" width="56" height="12" rx="2" fill="#f5f5f5"/>
-      <text x="668" y="351" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">@SHARED</text>
+      <rect x="578" y="258" width="36" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="596" y="267" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OWNS</text>
 
-      <!-- Node: Server · platform -->
-      <rect x="56" y="104" width="240" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="56" y="104" width="240" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-      <rect x="64" y="112" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
-      <text x="80" y="121" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BOOT</text>
-      <text x="176" y="154" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Server · platform</text>
+      <rect x="680" y="346" width="60" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="710" y="355" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">ACTIVATES</text>
 
-      <!-- Node: Server · dispatch (focal) -->
-      <rect x="352" y="104" width="240" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="352" y="104" width="240" height="80" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
-      <rect x="360" y="112" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
-      <text x="376" y="121" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DISP</text>
-      <text x="472" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Server · dispatch</text>
-      <text x="472" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">src/index.ts · controller.ts</text>
+      <rect x="882" y="104" width="44" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="904" y="113" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">STATE</text>
 
-      <!-- Node: Server · plugins -->
-      <rect x="56" y="216" width="240" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="56" y="216" width="240" height="80" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
-      <rect x="64" y="224" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.20)" stroke-width="0.8"/>
-      <text x="80" y="233" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLUG</text>
-      <text x="176" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Server · plugins</text>
+      <rect x="836" y="174" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="864" y="183" fill="#2e5aa8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">INTENTS</text>
 
-      <!-- Node: Server · managers -->
-      <rect x="352" y="216" width="240" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="352" y="216" width="240" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
-      <rect x="360" y="224" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
-      <text x="376" y="233" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OWN</text>
-      <text x="472" y="262" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Server · managers</text>
-      <text x="472" y="278" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">src/managers.ts · 25 owners</text>
+      <rect x="1098" y="170" width="64" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="1130" y="179" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SNAPSHOTS</text>
 
-      <!-- Node: Shared protocol -->
-      <rect x="56" y="328" width="536" height="72" rx="6" fill="#f5f5f5"/>
-      <rect x="56" y="328" width="536" height="72" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
-      <rect x="64" y="336" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
-      <text x="80" y="345" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WIRE</text>
-      <text x="324" y="370" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Shared wire contract</text>
-      <text x="324" y="386" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">src/protocol.ts · src/protocol/ · @shared/protocol</text>
+      <rect x="1098" y="258" width="52" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="1124" y="267" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">RENDERS</text>
 
-      <!-- Node: Web · shell -->
-      <rect x="688" y="104" width="216" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="688" y="104" width="216" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-      <rect x="696" y="112" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
-      <text x="712" y="121" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
-      <text x="796" y="150" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Web · shell</text>
-      <text x="796" y="166" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">web/src/App.tsx · ws.ts</text>
+      <rect x="1098" y="346" width="48" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="1122" y="355" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">MOUNTS</text>
 
-      <!-- Node: Web · features -->
-      <rect x="688" y="216" width="216" height="80" rx="6" fill="#f5f5f5"/>
-      <rect x="688" y="216" width="216" height="80" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
-      <rect x="696" y="224" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
-      <text x="712" y="233" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FEAT</text>
-      <text x="796" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Web · features</text>
+      <rect x="578" y="462" width="52" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="604" y="471" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">IMPORTS</text>
+
+      <rect x="1098" y="462" width="52" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="1124" y="471" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">IMPORTS</text>
+
+      <!-- Entry · platform -->
+      <rect x="56" y="104" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="104" width="168" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <rect x="64" y="110" width="32" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.60)" stroke-width="0.8"/>
+      <text x="80" y="119" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">YOU</text>
+      <text x="140" y="142" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Command line</text>
+
+      <rect x="56" y="192" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="192" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="64" y="198" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="80" y="207" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">BOOT</text>
+      <text x="140" y="230" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Server boot</text>
+
+      <rect x="56" y="280" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="280" width="168" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="64" y="286" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="80" y="295" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">GUARD</text>
+      <text x="140" y="314" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Local-only guard</text>
+      <text x="140" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">token · same machine</text>
+
+      <rect x="56" y="368" width="168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="368" width="168" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="64" y="374" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="80" y="383" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">DISK</text>
+      <text x="140" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Saved state on disk</text>
+
+      <!-- Server -->
+      <rect x="280" y="104" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="104" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="288" y="110" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="304" y="119" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">HUB</text>
+      <text x="360" y="142" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Controller</text>
+
+      <rect x="488" y="104" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="104" width="160" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="496" y="110" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="512" y="119" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">REG</text>
+      <text x="568" y="142" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Command registry</text>
+
+      <rect x="696" y="104" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="104" width="160" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <rect x="704" y="110" width="32" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="720" y="119" fill="#eb6c36" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">STATE</text>
+      <text x="776" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">State broadcaster</text>
+      <text x="776" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">whole view, every change</text>
+
+      <rect x="280" y="192" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="192" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="288" y="198" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="304" y="207" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CMDS</text>
+      <text x="360" y="230" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Command modules</text>
+
+      <rect x="488" y="192" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="192" width="160" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="496" y="198" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="512" y="207" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">OWN</text>
+      <text x="568" y="226" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Manager registry</text>
+      <text x="568" y="240" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">one owner per resource</text>
+
+      <rect x="696" y="192" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="192" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="704" y="198" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="720" y="207" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">IN</text>
+      <text x="776" y="230" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Intent router</text>
+
+      <rect x="280" y="280" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="280" width="160" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="288" y="286" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="304" y="295" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">TABS</text>
+      <text x="360" y="314" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Tab records</text>
+      <text x="360" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">one per agent</text>
+
+      <rect x="488" y="280" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="280" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="496" y="286" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="512" y="295" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">AGENT</text>
+      <text x="568" y="318" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Agent sessions</text>
+
+      <rect x="696" y="280" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="280" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="704" y="286" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="720" y="295" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PROC</text>
+      <text x="776" y="318" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Terminals &amp; shells</text>
+
+      <rect x="280" y="368" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="280" y="368" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="288" y="374" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="304" y="383" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">FILES</text>
+      <text x="360" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Files &amp; editor</text>
+
+      <rect x="488" y="368" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="488" y="368" width="160" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="496" y="374" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="512" y="383" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">JOBS</text>
+      <text x="568" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Schedules &amp; messaging</text>
+
+      <rect x="696" y="368" width="160" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="696" y="368" width="160" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="704" y="374" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.20)" stroke-width="0.8"/>
+      <text x="720" y="383" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLUG</text>
+      <text x="776" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Plugin host</text>
+
+      <!-- Web client -->
+      <rect x="952" y="104" width="272" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="952" y="104" width="272" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="960" y="110" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="976" y="119" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">SOCK</text>
+      <text x="1088" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Socket client</text>
+      <text x="1088" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">one connection, reconnecting</text>
+
+      <rect x="952" y="192" width="272" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="952" y="192" width="272" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="960" y="198" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="976" y="207" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">APP</text>
+      <text x="1088" y="230" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">App shell</text>
+
+      <rect x="952" y="280" width="272" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="952" y="280" width="272" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="960" y="286" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.40)" stroke-width="0.8"/>
+      <text x="976" y="295" fill="#2d3142" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">VIEW</text>
+      <text x="1088" y="314" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Tab surfaces</text>
+      <text x="1088" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">agent · editor · files · monitor</text>
+
+      <rect x="952" y="368" width="272" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="952" y="368" width="272" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <rect x="960" y="374" width="32" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.20)" stroke-width="0.8"/>
+      <text x="976" y="383" fill="#7a8399" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">PLUG</text>
+      <text x="1088" y="406" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Plugin registry</text>
+
+      <!-- Shared contract -->
+      <rect x="56" y="512" width="1168" height="56" rx="6" fill="#f5f5f5"/>
+      <rect x="56" y="512" width="1168" height="56" rx="6" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="64" y="518" width="32" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.50)" stroke-width="0.8"/>
+      <text x="80" y="527" fill="#4f5d75" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">WIRE</text>
+      <text x="640" y="536" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Shared wire contract</text>
+      <text x="640" y="550" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">one definition of every event, call and view — imported by both sides, never mirrored</text>
 
       <!-- Legend strip -->
-      <line x1="40" y1="512" x2="920" y2="512" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
-      <text x="40" y="528" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
-      <text x="920" y="528" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.08em">READ 2026-09-17 · 61c6cac0</text>
+      <line x1="40" y1="632" x2="1240" y2="632" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="40" y="648" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND</text>
+      <text x="1240" y="648" fill="rgba(45,49,66,0.40)" font-size="8" font-family="'Geist Mono', monospace" text-anchor="end" letter-spacing="0.08em">READ 2026-09-17 · 3ca6d41a</text>
 
-      <rect x="40" y="544" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
-      <text x="60" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal / hub</text>
+      <rect x="40" y="664" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="60" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal — the authority</text>
 
-      <rect x="150" y="544" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-      <text x="170" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Component</text>
+      <rect x="200" y="664" width="14" height="10" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="220" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Component</text>
 
-      <rect x="272" y="544" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
-      <text x="292" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Registry / contract</text>
+      <rect x="300" y="664" width="14" height="10" rx="2" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <text x="320" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Registry, store or contract</text>
 
-      <rect x="420" y="544" width="14" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
-      <text x="440" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Lazy plugin host</text>
+      <rect x="452" y="664" width="14" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <text x="472" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Where a person types</text>
 
-      <line x1="560" y1="548" x2="588" y2="548" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
-      <text x="596" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Over the socket</text>
+      <rect x="592" y="664" width="14" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="612" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Loaded only when used</text>
 
-      <line x1="712" y1="548" x2="740" y2="548" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
-      <text x="748" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Authoritative state</text>
+      <line x1="752" y1="668" x2="780" y2="668" stroke="#eb6c36" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+      <text x="788" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Authoritative state out</text>
 
-      <line x1="864" y1="548" x2="892" y2="548" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <text x="900" y="552" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Import</text>
+      <line x1="932" y1="668" x2="960" y2="668" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="968" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Intents back</text>
+
+      <line x1="1060" y1="668" x2="1088" y2="668" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="1096" y="672" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Imports or activates</text>
     </svg>
+    </div>
   </div>
 </body>
 </html>
