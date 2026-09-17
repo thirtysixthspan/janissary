@@ -21,6 +21,9 @@ let diffCalls = 0;
 // make the two checks indistinguishable.
 let upstreamExists = true;
 let branchName = 'feature-branch';
+// What `git status --porcelain` reports once the commit has landed: empty means the tree has
+// nothing left beyond this action's own commit, so no stash pair runs at all.
+let statusPorcelain = '';
 
 vi.mock('node:child_process', () => ({
   execFile: (
@@ -44,6 +47,17 @@ vi.mock('node:child_process', () => ({
       callback(null, { stdout: `${branchName}\n`, stderr: '' });
       return;
     }
+    if (args[0] === 'status') {
+      callback(null, { stdout: statusPorcelain, stderr: '' });
+      return;
+    }
+    // `stash push` and `stash pop` can fail independently, so a forced rejection is matched
+    // against the full subcommand rather than just `stash`.
+    if (args[0] === 'stash') {
+      if (failing.has(args.join(' '))) callback(new Error(`git ${args.join(' ')} failed`), { stdout: '', stderr: '' });
+      else callback(null, { stdout: '', stderr: '' });
+      return;
+    }
     if (failing.has(args[0])) callback(new Error(`git ${args[0]} failed`), { stdout: '', stderr: '' });
     else callback(null, { stdout: args[0] === 'commit' ? commitStdout : '', stderr: '' });
   },
@@ -61,6 +75,7 @@ beforeEach(() => {
   diffCalls = 0;
   upstreamExists = true;
   branchName = 'feature-branch';
+  statusPorcelain = '';
 });
 
 describe('commitRoot', () => {
@@ -73,6 +88,7 @@ describe('commitRoot', () => {
       'diff --cached --quiet',
       'commit -m commit: notes.md',
       'rev-parse --abbrev-ref --symbolic-full-name @{u}',
+      'status --porcelain',
       'pull --rebase',
       'push origin HEAD',
     ]);
@@ -103,8 +119,8 @@ describe('commitRoot', () => {
 
     await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
 
-    expect(calls[5].args).toEqual(['pull', '--rebase']);
-    expect(calls[6].args).toEqual(['push', 'origin', 'HEAD']);
+    expect(calls[6].args).toEqual(['pull', '--rebase']);
+    expect(calls[7].args).toEqual(['push', 'origin', 'HEAD']);
   });
 
   it('creates the branch on origin when it has no upstream, skipping the pull since there is nothing to rebase against', async () => {
@@ -115,6 +131,7 @@ describe('commitRoot', () => {
 
     expect(subcommands()).not.toContain('pull --rebase');
     expect(subcommands()).not.toContain('rebase --abort');
+    expect(subcommands()).not.toContain('status --porcelain');
     expect(calls.at(-1)?.args).toEqual(['push', '--set-upstream', 'origin', 'throwaway']);
   });
 
@@ -153,6 +170,52 @@ describe('commitRoot', () => {
     failing = new Set(['pull', 'rebase']);
 
     await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git pull failed');
+  });
+
+  it('runs no stash at all when the tree has nothing left beyond the commit', async () => {
+    statusPorcelain = '';
+
+    await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
+
+    expect(subcommands()).not.toContain('stash push --include-untracked -m commit-to-origin');
+    expect(subcommands()).not.toContain('stash pop');
+  });
+
+  it('stashes what is left in the tree before rebasing and pops it back after', async () => {
+    statusPorcelain = ' M other-file.txt\n?? new-file.txt\n';
+
+    await commitRoot('/repo', 'commit: a.md', ['/repo/a.md']);
+
+    const order = subcommands();
+    const stashIndex = order.indexOf('stash push --include-untracked -m commit-to-origin');
+    const pullIndex = order.indexOf('pull --rebase');
+    const popIndex = order.indexOf('stash pop');
+    expect(stashIndex).toBeGreaterThanOrEqual(0);
+    expect(stashIndex).toBeLessThan(pullIndex);
+    expect(pullIndex).toBeLessThan(popIndex);
+  });
+
+  it('pops the stash back and still rejects with the rebase\'s own error when the rebase fails', async () => {
+    statusPorcelain = ' M other-file.txt\n';
+    failing = new Set(['pull']);
+
+    await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git pull failed');
+    expect(subcommands()).toContain('stash pop');
+  });
+
+  it('does not mask the rebase error when popping the stash back also fails', async () => {
+    statusPorcelain = ' M other-file.txt\n';
+    failing = new Set(['pull', 'stash pop']);
+
+    await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git pull failed');
+  });
+
+  it('rejects with the stash pop\'s own error when a successful rebase cannot be popped back', async () => {
+    statusPorcelain = ' M other-file.txt\n';
+    failing = new Set(['stash pop']);
+
+    await expect(commitRoot('/repo', 'commit: a.md', ['/repo/a.md'])).rejects.toThrow('git stash pop failed');
+    expect(subcommands()).not.toContain('push origin HEAD');
   });
 
   it('rejects with the git error when the push fails', async () => {

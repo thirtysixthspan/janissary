@@ -742,6 +742,11 @@ first is absorbed by the rebase and is not an error. A rebase that hits a confli
 branch is left exactly where it was, and the failure is reported; resolving that conflict is done in
 an editor or a terminal.
 
+Anything still uncommitted once the commit lands — a file the action was never asked to touch, dirty
+or brand new — is set aside before the rebase runs, and put back once the rebase settles, whether it
+lands or is abandoned, so the rebase never has to reconcile incoming history against content that
+has nothing to do with the commit just made. A tree with nothing left over runs no such step at all.
+
 The push goes to the current branch's own name on `origin`, never to any other branch, even when its
 configured upstream has a different name. That upstream remains the source for the rebase. When the
 current branch does not yet exist on `origin`, the push creates it there instead of failing, and no

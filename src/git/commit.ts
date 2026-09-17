@@ -34,6 +34,11 @@ export type CommitResult = { committed: true; summary: string } | { committed: f
 // flagged for `commitLeftStagingInPlace` instead. Once `git commit` itself has succeeded a real commit
 // object exists, so a `pull --rebase` or `push` failure after that point is never unwound: there is a
 // real, inspectable commit by then, and reporting the error untouched is already correct.
+//
+// Anything still dirty or untracked once the commit has landed belongs to the user, not to this
+// action, and `git pull --rebase` has no business running over it: it is stashed away first and
+// popped back once the rebase settles, whether it lands or is abandoned, so the rebase only ever
+// touches what this action itself just committed.
 export async function commitRoot(
   root: string, message: string, absolutePaths: string[],
 ): Promise<CommitResult> {
@@ -49,7 +54,7 @@ export async function commitRoot(
     throw error;
   }
   if (await hasUpstream(root)) {
-    await pullRebase(root);
+    await rebaseAsideExtraChanges(root);
     await execFileAsync('git', ['push', 'origin', 'HEAD'], { cwd: root });
   } else {
     const branch = await currentBranch(root);
@@ -136,4 +141,38 @@ async function pullRebase(root: string): Promise<void> {
     } catch { /* no rebase was in progress to abort */ }
     throw error;
   }
+}
+
+// Runs the rebase with anything the commit itself did not touch set aside first, so a `git pull
+// --rebase` never has to reconcile the incoming history against content the user never asked this
+// action to commit. Skips the stash pair entirely when the tree already has nothing left beyond the
+// commit — the ordinary case — so a clean tree costs no extra git process.
+async function rebaseAsideExtraChanges(root: string): Promise<void> {
+  if (!await hasExtraChanges(root)) {
+    await pullRebase(root);
+    return;
+  }
+  await execFileAsync('git', ['stash', 'push', '--include-untracked', '-m', 'commit-to-origin'], { cwd: root });
+  try {
+    await pullRebase(root);
+  } catch (error) {
+    // The rebase's own error is what the caller needs; a stash that will not pop back is a second
+    // failure about undoing, the same reasoning `pullRebase` already applies to `rebase --abort`.
+    try {
+      await popExtraChanges(root);
+    } catch { /* nothing more to do if the pop itself fails */ }
+    throw error;
+  }
+  await popExtraChanges(root);
+}
+
+// `git status --porcelain` prints one line per file with any change — staged, unstaged, or
+// untracked — and nothing at all for a clean tree.
+async function hasExtraChanges(root: string): Promise<boolean> {
+  const { stdout } = await execFileAsync('git', ['status', '--porcelain'], { cwd: root });
+  return stdout.trim().length > 0;
+}
+
+async function popExtraChanges(root: string): Promise<void> {
+  await execFileAsync('git', ['stash', 'pop'], { cwd: root });
 }
