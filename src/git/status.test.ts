@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  changedPaths, currentBranch, defaultBranch, isPrimaryBranch, remoteUrl,
+  changedPaths, currentBranch, currentBranchSync, defaultBranch, isPrimaryBranch, remoteUrl,
 } from './status.js';
 
 // The initial branch name comes from the machine's `init.defaultBranch`, so a test that checks a
@@ -145,6 +145,37 @@ describe('currentBranch', () => {
 
   it('resolves to undefined — never rejects — when the git invocation fails', async () => {
     await expect(currentBranch(path.join(root, 'does-not-exist'))).resolves.toBeUndefined();
+  });
+});
+
+describe('currentBranchSync', () => {
+  let root: string;
+
+  beforeEach(() => { root = mkdtempSync(path.join(tmpdir(), 'git-status-')); });
+  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+  it('returns the current branch name on a repo checked out to a named branch', () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one');
+    commitAll(root);
+    execSync('git checkout -b feature', { cwd: root, stdio: 'pipe' });
+    expect(currentBranchSync(root)).toBe('feature');
+  });
+
+  it("returns 'HEAD' for a detached-HEAD checkout", () => {
+    initRepo(root);
+    writeFileSync(path.join(root, 'a.txt'), 'one');
+    commitAll(root);
+    execSync('git checkout --detach HEAD', { cwd: root, stdio: 'pipe' });
+    expect(currentBranchSync(root)).toBe('HEAD');
+  });
+
+  it('resolves to undefined for a directory that is not a git repository', () => {
+    expect(currentBranchSync(root)).toBeUndefined();
+  });
+
+  it('resolves to undefined — never throws — when the git invocation fails', () => {
+    expect(currentBranchSync(path.join(root, 'does-not-exist'))).toBeUndefined();
   });
 });
 

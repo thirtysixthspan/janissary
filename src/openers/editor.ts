@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { Opener, OpenContext } from './types.js';
 import { humanSize } from './size.js';
 import { openInDefaultViewer } from './external-viewer.js';
+import { currentBranchSync } from '../git/status.js';
 
 // Refuse to open files above this size: the editor holds the whole buffer in memory and a
 // multi-megabyte file is almost certainly not something to hand-edit in-app.
@@ -30,7 +31,10 @@ export function openInEditor(file: string, context: OpenContext, line?: number):
     return undefined;
   }
   const size = bytes === undefined ? 'unknown' : humanSize(bytes);
-  return context.openEditorTab({ name, path: file, size, url: context.registerFile(file), line, newFile: bytes === undefined });
+  const branch = currentBranchSync(path.dirname(file));
+  return context.openEditorTab({
+    name, path: file, size, url: context.registerFile(file), line, newFile: bytes === undefined, branch,
+  });
 }
 
 export const opener: Opener = {

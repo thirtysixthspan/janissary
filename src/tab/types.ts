@@ -114,6 +114,11 @@ export type EditorView = {
   // cycle applied to this single file: a commit and push armed on the icon, one that landed, one
   // that failed. Held a few seconds after settling, then cleared back to rest.
   commit?: FileNavigatorCommitStatus;
+  // The git branch of the directory containing this file, resolved once at open time — undefined
+  // outside a git repository or when it can't be determined. Names the branch the commit-to-origin
+  // icon's tooltip pushes to, the same way `FileNavigatorView.branch` names it for the navigator's
+  // own commit button.
+  branch?: string;
 };
 
 // Which per-row detail a file navigator shows to the right of each name: none, a human-readable

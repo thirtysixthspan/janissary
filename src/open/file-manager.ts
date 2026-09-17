@@ -15,6 +15,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { isSyncedPath } from '../sync-path-match.js';
 import { isLaunchDirOnPrimaryBranch, refreshLaunchDirBranch } from './launch-dir-branch.js';
+import { currentBranchSync } from '../git/status.js';
 
 export type EditResult = { label: string };
 
@@ -183,7 +184,8 @@ export class OpenFileManager {
     }
     let size = 'unknown';
     try { size = humanSize(statSync(target).size); } catch { /* not yet created on disk */ }
-    tab.editor = { ...tab.editor, size, sync: 'synced' };
+    const branch = currentBranchSync(path.dirname(target));
+    tab.editor = { ...tab.editor, size, sync: 'synced', branch };
     this.managers.editorWatch.watch(tab.label, target);
     messageBus.emit('state', { type: 'dirty' });
   }

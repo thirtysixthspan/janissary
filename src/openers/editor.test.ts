@@ -1,11 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as editor, openInEditor, EDITOR_MAX_BYTES } from './editor.js';
 import type { OpenContext } from './index.js';
 import type { EditorView } from '../tab/types.js';
+
+// Mirrors `git/status.test.ts`'s helper: the initial branch name comes from the machine's
+// `init.defaultBranch`, so a test that checks a branch out by name can only rely on one the repo
+// was told to create.
+function initRepo(root: string): void {
+  execSync('git init -b master', { cwd: root, stdio: 'pipe' });
+  execSync('git config user.email test@test.com', { cwd: root, stdio: 'pipe' });
+  execSync('git config user.name test', { cwd: root, stdio: 'pipe' });
+}
 
 function fakeContext(overrides: Partial<OpenContext> = {}) {
   const notes: string[] = [];
@@ -87,6 +97,25 @@ describe('editor opener', () => {
     const { ctx, opened } = fakeContext();
     openInEditor(file, ctx);
     expect(opened[0].line).toBeUndefined();
+  });
+
+  it('openInEditor names the git branch of a file whose directory is a repo', () => {
+    const file = temporaryFile('notes.txt', 'hello\n');
+    const dir = path.dirname(file);
+    initRepo(dir);
+    execSync('git add -A', { cwd: dir, stdio: 'pipe' });
+    execSync('git commit -m snapshot', { cwd: dir, stdio: 'pipe' });
+    execSync('git checkout -b feature', { cwd: dir, stdio: 'pipe' });
+    const { ctx, opened } = fakeContext();
+    openInEditor(file, ctx);
+    expect(opened[0].branch).toBe('feature');
+  });
+
+  it('openInEditor leaves branch undefined outside a git repository', () => {
+    const file = temporaryFile('notes.txt', 'hello\n');
+    const { ctx, opened } = fakeContext();
+    openInEditor(file, ctx);
+    expect(opened[0].branch).toBeUndefined();
   });
 
   it('external launches the OS viewer and confirms', () => {
