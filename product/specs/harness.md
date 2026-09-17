@@ -410,9 +410,10 @@ cells, not character positions, and the copied text contains exactly the glyphs 
 showed.
 
 While a selection is held the tab stays interactive: typing still reaches the harness. The layer
-claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection
-and still reaches the harness as its cancel key, and an Escape pressed anywhere else — another tab,
-a dialog — never touches the selection at all. The one exception is the default menu, whenever it
+claims Escape while a selection is held: **Escape** pressed in that terminal is consumed by the
+layer, clearing the selection without additionally reaching the harness as a cancel keystroke, and
+an Escape pressed anywhere else — another tab, a dialog — never touches the selection at all. The
+one exception is the default menu, whenever it
 answers for this terminal's own held selection — whether the drag's own release opened it or a
 later right-click did (see [[context-menu]]): Escape there closes that menu and clears the
 selection together, so a single Escape always leaves copy mode rather than needing a second press

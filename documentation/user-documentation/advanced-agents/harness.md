@@ -41,8 +41,8 @@ tell the frozen screen from the live one.
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it releases it,
 unfreezing the screen the same as dismissing it does; make a new Shift+drag to copy again. Press
 `Escape` while the terminal has your keyboard, or click plain, to dismiss the selection without
-copying it (a dismiss click is consumed, not sent to the harness); the Escape key itself still
-reaches the harness either way. Releasing the drag over a pick opens the app's own menu
+copying it (both a dismiss click and the Escape key are consumed, not sent to the harness).
+Releasing the drag over a pick opens the app's own menu
 automatically, offering **Copy** alongside **Chat about this** (also `Cmd+I` on macOS, `Ctrl+I`
 elsewhere); right-clicking the held selection afterward opens the same menu again instead of the
 browser's. Copy releases the selection there too; choosing Chat about this does not. See
