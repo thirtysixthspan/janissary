@@ -146,9 +146,9 @@ with no browser variables at all, leaving a tab that comes up looking healthy in
 to connect to a browser fails with nothing to point at — so a stale remote is refused at the
 handshake, as with every other field of this kind.
 
-Reattachment moves it to 13. The handshake line now carries an optional session id, and the frame
+Reattachment moves it to 14. The handshake line now carries an optional session id, and the frame
 union gains `reattach` and `reattach-result` so a local side that lost its transport can find the
-same far-side session again over a fresh ssh connection. A version-12 peer neither publishes a
+same far-side session again over a fresh ssh connection. A version-13 peer neither publishes a
 session id nor answers a reattach request, so it would receive a frame it refuses as unknown and
 sit unreachable rather than falling back to a fresh launch — the mismatch is therefore refused at
 the handshake, as with every other version bump.

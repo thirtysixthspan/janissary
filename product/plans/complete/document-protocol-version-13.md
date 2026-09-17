@@ -17,3 +17,7 @@ Any code change. `src/remote/protocol.test.ts` already covers the version-13 rou
 ## Verification
 
 Read-through only; no `check-diff` needed for a markdown-only change, though it is run anyway per the standard workflow.
+
+## Adaptation note (conflict resolution)
+
+Rebasing this branch onto `master` surfaced that `master` had independently bumped `REMOTE_PROTOCOL_VERSION` to 13 for the `git-commit` filesystem operation (`commit-file-to-origin.md`) while this branch was in flight, so the two version-13 bumps collided. The reattach bump in `src/remote/protocol.ts` was renumbered to 14 to land after `master`'s, and `product/specs/remote-server.md`'s version-history paragraph now reads "Reattachment moves it to 14" against a version-13 peer, rather than the 13/12 numbers this plan and its title name. The plan's goal — narrating the reattach bump in that spec section — is unaffected; only the version number changed.

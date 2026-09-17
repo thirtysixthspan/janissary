@@ -10,7 +10,7 @@ Today every local teardown of a remote session — `RemoteManager.closeAll`, `Re
 
 **A new terminal `ClientFrame` member, not a repurposed signal.** SIGHUP already carries "transport lost" and SIGTERM/SIGINT already carry "kill me now" for a directly-signalled process, but nothing in the existing `ClientFrame` union crosses the wire to say "shut down" the way `kill`/`acp-close`/`filesystem-close` say it for one process. A `shutdown` frame with no payload is the minimal addition: its presence is the entire message.
 
-**Folded into the version-13 bump already in flight, not a new version.** This branch already moves `REMOTE_PROTOCOL_VERSION` to 13 for the reattach handshake. Adding `shutdown` to the same version is correct because both changes are unreleased together — there is no shipped version 13 peer yet that would need a fifteenth version to add this to. A version-12 peer already fails the handshake before any frame crosses, so it is never sent a frame it cannot decode.
+**Folded into the version-14 bump already in flight, not a new version.** This branch already moves `REMOTE_PROTOCOL_VERSION` to 14 for the reattach handshake. Adding `shutdown` to the same version is correct because both changes are unreleased together — there is no shipped version 14 peer yet that would need a sixteenth version to add this to. A version-13 peer already fails the handshake before any frame crosses, so it is never sent a frame it cannot decode.
 
 **Sent from the one place that already sweeps everything else at teardown.** `RemoteChannel.finish()` already sends `kill` for every spawned process, `acp-close` for every ACP session, and `filesystem-close` for every navigator, right before it marks the channel closed. Every deliberate-close call site (`RemoteManager.release`'s last-label path, `RemoteManager.closeAll`, and `terminateRemoteEntry` in `src/remote/reattach.ts`) already calls `finish()` before `close()`. Sending `shutdown` from inside `finish()`, after the existing sweep and before the state flips to `closed`, means every one of those call sites gets it for free with no new call site to add or forget.
 
@@ -42,3 +42,7 @@ Today every local teardown of a remote session — `RemoteManager.closeAll`, `Re
 ```
 $janissary/scripts/run.mjs check-diff
 ```
+
+## Adaptation note (conflict resolution)
+
+Rebasing onto `master` surfaced an independent `master` bump of `REMOTE_PROTOCOL_VERSION` to 13 (for `git-commit`) made while this branch was in flight, so this branch's own version-13 bump for reattach was renumbered to 14 to land after it. `shutdown` still rides that same bump — now 14 rather than 13 — for the same reason: both changes are unreleased together. The version numbers this plan names were updated in place to keep the prose accurate; the change itself is unaffected.
