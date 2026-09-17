@@ -245,6 +245,15 @@ describe('HarnessTab', () => {
     expect(getByText(/exited \(1\)/)).toBeInTheDocument();
   });
 
+  it('shows the remote session explanation while keeping the terminal mounted', () => {
+    const sessionEnded = "Remote harness 'claude' on host ended — start a new agent or shell to continue.";
+    const { getByText, container } = render(
+      <HarnessTab harness={makeHarness({ status: 'exited', sessionEnded })} client={mockClient} label="claude" />,
+    );
+    expect(getByText(sessionEnded)).toBeInTheDocument();
+    expect(container.querySelector('.harness-body')).toBeInTheDocument();
+  });
+
   it('does not show an exited banner while running', () => {
     const { queryByText } = render(
       <HarnessTab harness={makeHarness({ status: 'running' })} client={mockClient} label="claude" />,

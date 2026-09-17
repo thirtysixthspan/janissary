@@ -4,6 +4,8 @@ import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
+import { useConnectionStatus } from './useConnectionStatus';
+import { ConnectionStatusLabel } from './ConnectionStatusLabel';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
@@ -28,6 +30,7 @@ export function AppShell({
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
 }) {
+  const connectionStatus = useConnectionStatus(client);
   return (
     <div className="app">
       <Sidebar
@@ -36,7 +39,7 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
       />
-      <div className="app-center">{children}</div>
+      <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
       <Sidebar
         side="right" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef}
         targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}

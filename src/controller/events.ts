@@ -31,6 +31,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     const harnessTab = managers.tab.harnessTabByPtyId(event.id);
     if (harnessTab) {
       sinks.sendPtyExit(event.id, event.exitCode);
+      if (harnessTab.remote && harnessTab.harness?.sessionEnded) return;
       managers.tab.closeTab(managers.tab.tabs.indexOf(harnessTab));
       return;
     }

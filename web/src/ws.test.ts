@@ -23,6 +23,7 @@ describe('JanusClient', () => {
   let inst: ReturnType<typeof wsMockProps>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     messageHandler = undefined;
     closeHandler = undefined;
     inst = wsMockProps();
@@ -35,6 +36,8 @@ describe('JanusClient', () => {
   });
 
   afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -501,5 +504,116 @@ describe('JanusClient', () => {
     expect(inst.send).toHaveBeenCalledWith(
       expect.stringContaining('"navigators":[{"index":1,"selected":["second"]}]'),
     );
+  });
+});
+
+describe('JanusClient reconnection', () => {
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  function setup() {
+    vi.useFakeTimers();
+    const sockets: FakeSocket[] = [];
+    class FakeSocket extends EventTarget {
+      static OPEN = 1;
+      static CONNECTING = 0;
+      readyState = 0;
+      send = vi.fn();
+      constructor() { super(); sockets.push(this); }
+      open() { this.readyState = 1; this.dispatchEvent(new Event('open')); }
+      close() { this.readyState = 3; this.dispatchEvent(new Event('close')); }
+      message(data: unknown) { this.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(data) })); }
+    }
+    vi.stubGlobal('WebSocket', FakeSocket);
+    const client = new JanusClient();
+    sockets[0].open();
+    return { client, sockets };
+  }
+
+  it('resyncs without replay and preserves state, layout, exit, and terminal listeners', async () => {
+    const { client, sockets } = setup();
+    const state = vi.fn(), layout = vi.fn(), exit = vi.fn(), output = vi.fn(), status = vi.fn();
+    client.onState(state); client.onLayout(layout); client.onPtyExit(exit); client.attachPty('p', output);
+    const unsubscribe = client.onConnectionStatus(status);
+    const request = client.request({ method: 'toggleCollapse', params: {} });
+    const save = client.saveFile('/file', 'contents');
+    sockets[0].close();
+    await expect(request).resolves.toBeUndefined();
+    await expect(save).resolves.toBe('connection closed');
+    client.send({ method: 'toggleCollapse', params: {} });
+    vi.advanceTimersByTime(250);
+    expect(sockets).toHaveLength(2);
+    sockets[1].open();
+    expect(sockets[1].send).toHaveBeenCalledOnce();
+    expect(JSON.parse(sockets[1].send.mock.calls[0][0]).method).toBe('init');
+    sockets[1].message({ t: 'state', tabs: [] });
+    sockets[1].message({ t: 'layout', sidebarLeft: 100 });
+    sockets[1].message({ t: 'pty', id: 'p', data: 'after wake' });
+    sockets[1].message({ t: 'pty-exit', id: 'p', exitCode: 0 });
+    expect(state).toHaveBeenCalledOnce(); expect(layout).toHaveBeenCalledOnce();
+    expect(output).toHaveBeenCalledWith('after wake'); expect(exit).toHaveBeenCalledWith('p', 0);
+    expect(status.mock.calls.flat()).toEqual(['reconnecting', 'connected']);
+    unsubscribe(); client.dispose(); vi.advanceTimersByTime(60_000);
+    expect(sockets).toHaveLength(2); expect(status).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries immediately on wake only when down and ignores events from an old socket', () => {
+    const { client, sockets } = setup();
+    client.reconnect(); expect(sockets).toHaveLength(1);
+    sockets[0].close(); client.reconnect(); expect(sockets).toHaveLength(2);
+    sockets[1].open();
+    const state = vi.fn(); client.onState(state);
+    sockets[0].message({ t: 'state', tabs: [] }); sockets[0].close();
+    vi.advanceTimersByTime(5000);
+    expect(sockets).toHaveLength(2); expect(state).not.toHaveBeenCalled();
+    client.dispose();
+  });
+
+  it('probes an OPEN socket on wake and terminates it if nothing answers', () => {
+    const { client, sockets } = setup();
+    client.reconnect();
+    expect(sockets).toHaveLength(1);
+    const call = JSON.parse(sockets[0].send.mock.calls.at(-1)![0]);
+    expect(call.method).toBe('init');
+    vi.advanceTimersByTime(3999);
+    expect(sockets).toHaveLength(1);
+    vi.advanceTimersByTime(1);
+    expect(sockets[0].readyState).toBe(3);
+    vi.advanceTimersByTime(250);
+    expect(sockets).toHaveLength(2);
+    client.dispose();
+  });
+
+  it('does not reconnect an OPEN socket that answers the wake probe in time', async () => {
+    const { client, sockets } = setup();
+    client.reconnect();
+    const call = JSON.parse(sockets[0].send.mock.calls.at(-1)![0]);
+    sockets[0].message({ t: 'rpc-reply', id: call.id, result: 'ok' });
+    await Promise.resolve();
+    vi.advanceTimersByTime(5000);
+    expect(sockets).toHaveLength(1);
+    client.dispose();
+  });
+
+  it('settles outstanding work when wake replaces a closing socket before its close event', async () => {
+    const { client, sockets } = setup();
+    const pending = client.saveFile('/file', 'text');
+    sockets[0].readyState = 2;
+    client.reconnect();
+    await expect(pending).resolves.toBe('connection closed');
+    sockets[1].open();
+    expect(sockets[1].send).toHaveBeenCalledOnce();
+    client.dispose();
+  });
+
+  it('escalates repeated failures and cancels a pending retry when disposed', () => {
+    const { client, sockets } = setup();
+    for (let attempt = 0; attempt < 8; attempt++) {
+      sockets.at(-1)!.close(); vi.advanceTimersByTime(5000);
+    }
+    expect(client.connectionStatus).toBe('escalated');
+    sockets.at(-1)!.close();
+    const count = sockets.length;
+    client.dispose(); vi.advanceTimersByTime(60_000);
+    expect(sockets).toHaveLength(count);
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
@@ -45,16 +45,17 @@ describe('remoteServeCommand', () => {
   });
 });
 
-function managerHarness(ready = true) {
+function managerHarness(ready = true, session?: string) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
+  const write = vi.fn();
   const reassignTransports = vi.fn();
   const closeTab = vi.fn();
   const managers = {
     pty: {
       spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
         transport = handlers;
-        return { id: 'ssh1', program: 'ssh', write: vi.fn(), resize: vi.fn(), kill };
+        return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill };
       }),
       reassignTransports,
     },
@@ -69,13 +70,27 @@ function managerHarness(ready = true) {
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
   remote.open('creator', address('devbox'), '/local', handlers);
-  transport?.onData(`${encodeHandshake('/remote')}\n`);
+  transport?.onData(`${encodeHandshake('/remote', session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
-  return { remote, handlers, kill, reassignTransports, closeTab, transport: () => transport };
+  return { remote, handlers, kill, write, reassignTransports, closeTab, transport: () => transport };
 }
 
 describe('RemoteManager shared channels', () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.useRealTimers());
+
+  it('retains joined tabs and cached files when an established peer transport drops', () => {
+    vi.useFakeTimers();
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.attach('joined', 'creator');
+    const channel = h.remote.get('creator');
+    h.transport()?.onExit();
+    expect(h.remote.get('joined')).toBe(channel);
+    expect(h.remote.workspaceOf('joined')).toBe('/remote/ws');
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+    expect(clearRemoteFileCacheForWorkspace).not.toHaveBeenCalled();
+    h.remote.dispose();
+  });
 
   it('detaches survivors before callbacks after creator release and repeated exit', () => {
     const h = managerHarness();
@@ -94,7 +109,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.addressOf('joined')).toBeUndefined();
     expect(h.remote.transcriptSource('joined')).toBeUndefined();
     expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith('devbox', 'creator');
-    expect(notify).toHaveBeenCalledWith(expect.anything(), 'manual', 'joined', expect.any(String));
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session-ended', 'joined', expect.any(String));
   });
 
   it('keeps readiness and teardown on the old entry after creator-label reuse', async () => {
@@ -164,6 +179,24 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.get('joined')).toBeDefined();
     h.remote.release('joined');
     expect(h.kill).toHaveBeenCalledOnce();
+  });
+
+  it('writes a shutdown frame to the transport before killing it on the last release', () => {
+    const h = managerHarness();
+    h.remote.release('creator');
+    const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
+    expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
+  });
+
+  it('writes a shutdown frame to every transport before killing it on closeAll', () => {
+    const h = managerHarness();
+    h.remote.closeAll();
+    const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
+    expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });
 
   it('notifies every registered owner once when the transport drops', () => {

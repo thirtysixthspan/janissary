@@ -6,6 +6,12 @@ import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
+import { formatLateDuration } from './display.js';
+
+// Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
+// user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
+// five seconds regardless of what wall-clock gap counts as a resume.
+const SCHEDULE_LATE_THRESHOLD_MS = 5000;
 
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
@@ -14,6 +20,10 @@ export class ScheduleManager {
   private schedules = new Map<string, ScheduleEntry[]>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private launchDialogOpen = false;
+  // The wall-clock instant of the most recent resume, so a late entry is blamed on sleep only when
+  // it was already overdue at that moment — not whenever any resume has ever happened.
+  private lastResume = 0;
+  private resumeSubscription = messageBus.on('system', 'resumed', () => { this.lastResume = Date.now(); });
   constructor(private managers: Managers) {}
 
   // Open the "New schedule" dialog (bare `schedule`). Held as a flag, mirroring
@@ -50,6 +60,7 @@ export class ScheduleManager {
   // Stop the firing loop (app shutdown).
   stop(): void {
     clearInterval(this.timer);
+    this.resumeSubscription.unsubscribe();
   }
 
   dispose(): void {
@@ -157,6 +168,11 @@ export class ScheduleManager {
     for (const e of sched) {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
+      if (now - e.nextRun > SCHEDULE_LATE_THRESHOLD_MS) {
+        const duration = formatLateDuration(now - e.nextRun);
+        const cause = e.nextRun < this.lastResume ? ' (system was asleep)' : '';
+        notify(this.managers, 'schedule-late', tab.label, `${e.command} ran ${duration} late${cause}`);
+      }
       isChanged = true;
       if (e.recurring) remaining.push({ ...e, nextRun: computeNextRun(e, new Date()) });
     }
@@ -167,6 +183,7 @@ export class ScheduleManager {
   // through an agent tab's command pipeline. Returns false when delivery must wait (the harness
   // is not running), leaving the entry due so it retries on a later tick.
   private fire(tab: Tab, e: ScheduleEntry): boolean {
+    if (tab.sessionEnded || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
       // Sent as one write, a long command's trailing \r can land inside the same burst the harness's

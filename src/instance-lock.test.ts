@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { acquireLock, releaseLock, readLockPid } from './instance-lock.js';
+import { acquireLock, releaseLock, readLockPid, isPidAlive } from './instance-lock.js';
 
 let projectDir: string;
+
+it.each([['EPERM', true], ['ESRCH', false]] as const)('treats PID probe %s as alive=%s', (code, alive) => {
+  const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw Object.assign(new Error(code), { code }); });
+  try { expect(isPidAlive(123)).toBe(alive); } finally { kill.mockRestore(); }
+});
 
 beforeEach(() => {
   projectDir = mkdtempSync(path.join(tmpdir(), 'instance-lock-test-'));

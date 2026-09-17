@@ -66,6 +66,7 @@ export type HarnessView = {
   // renders that log — and a line written into the terminal would be painted over by the harness's
   // next repaint. The tab stays open: the harness is unaffected, only its browser is gone.
   browserError?: string;
+  sessionEnded?: string;
 };
 
 // A tab whose harness or agent runs on another host, reached over one ssh session (see
@@ -226,6 +227,7 @@ export type TabRuntime = {
 };
 
 export type Tab = {
+  sessionEnded?: string;
   label: string;
   dotColor: string;
   number: number;

@@ -3,6 +3,8 @@ import { SshManager } from './ssh-manager.js';
 import { makeTab } from './tab/index.js';
 import type { Managers } from './managers.js';
 import type { Tab } from './tab/types.js';
+import { wireControllerEvents } from './controller/events.js';
+import { messageBus } from './bus.js';
 
 function makeManagers(): { managers: Managers; tabs: Tab[] } {
   const creator = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
@@ -24,6 +26,20 @@ function makeManagers(): { managers: Managers; tabs: Tab[] } {
 }
 
 describe('SshManager.run', () => {
+  it('still closes a plain ssh tab on PTY exit without reconnecting', () => {
+    const { managers, tabs } = makeManagers();
+    const reconnect = vi.fn(), closeTab = vi.fn();
+    managers.tab.closeTab = closeTab;
+    managers.tab.harnessTabByPtyId = ((id: string) => tabs.find((tab) => tab.harness?.ptyId === id)) as Managers['tab']['harnessTabByPtyId'];
+    managers.remote = { open: reconnect } as unknown as Managers['remote'];
+    new SshManager(managers).run('ssh host');
+    wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
+    try {
+      messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 255 });
+      expect(closeTab).toHaveBeenCalledExactlyOnceWith(1);
+      expect(reconnect).not.toHaveBeenCalled();
+    } finally { messageBus.clear(); }
+  });
   it('records the invocation options on the tab, leaving destination untouched', () => {
     const { managers, tabs } = makeManagers();
 

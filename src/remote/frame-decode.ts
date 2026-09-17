@@ -190,6 +190,19 @@ function unhandledRemoteFrame(type: never): never {
 // before calling — so the switch is exhaustive over the union rather than open over `string`.
 export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
+  case 'reattach': {
+    return typeof record.session === 'string' && /^[a-f\d-]{36}$/.test(record.session)
+      ? { type, session: record.session } : malformed(type);
+  }
+  case 'reattach-result': {
+    if (typeof record.accepted !== 'boolean') return malformed(type);
+    if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);
+    return {
+      type, accepted: record.accepted,
+      ...(record.truncated !== undefined && { truncated: record.truncated }),
+    };
+  }
+  case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }
   case 'spawn': { return decodeSpawn(record); }
   case 'input': { return decodeAddressedData(type, record); }

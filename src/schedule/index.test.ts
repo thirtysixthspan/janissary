@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { formatLateDuration } from './display.js';
 import {
   parseTimeOfDay,
   parseInterval,
@@ -200,3 +201,6 @@ describe('formatSchedule', () => {
     expect(out).toContain('echo hi');
   });
 });
+it.each([[9000, '9s'], [125_000, '2m'], [7_500_000, '2h 5m'], [183_600_000, '2d 3h']])(
+  'formats lateness %s as %s', (duration, text) => { expect(formatLateDuration(duration as number)).toBe(text); },
+);

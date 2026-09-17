@@ -137,6 +137,7 @@ type FileNavigatorEvent = { type: 'collect'; id: number };
 type ScheduleEvent = { type: 'changed' };
 type ConversationsEvent = { type: 'changed' };
 export type BusChannels = {
+  system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
 };
