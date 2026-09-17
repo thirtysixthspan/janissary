@@ -115,6 +115,31 @@ Draw the model from Step 2 as a single self-contained HTML file with inline SVG 
 
 Give the file a short prose subtitle above the diagram naming what it is and linking `deployment.html`, and keep the SVG's `<title>` and `<desc>` ids prefixed `architecture-` so the file can share a directory with its sibling.
 
+### The provenance stamp
+
+Every diagram carries the date it was generated and the commit it was read from, **inside the `<svg>`**, right-aligned in the lower margin on the legend strip's header row. Inside the SVG and not in the HTML wrapper, because [`references/export.md`](../../../skills/diagram-design/references/export.md) drops editorial wrappers when exporting to PNG or SVG — a stamp in the wrapper would vanish exactly when the image is separated from this page and most needs to say where it came from.
+
+Read both values immediately before drawing:
+
+```bash
+git rev-parse --short HEAD
+date -u +%Y-%m-%d
+```
+
+Type the literals into the file; do not shell-capture them (see the hygiene rule in Step 0). The sha is **the commit the tree was read at**, not the commit that will contain the diagram — that one does not exist until Step 6, and a stamp cannot name its own commit without an amend. The `READ` prefix says so out loud, and the value is what lets a reader check the diagram against the tree it describes.
+
+```svg
+<!-- y = the same baseline as this file's own LEGEND eyebrow, whatever it is.
+     x = viewBox width minus the 40px outer margin (920 at doc-inline, 1240 at doc-wide). -->
+<text x="920" y="528" fill="rgba(45,49,66,0.40)" font-size="8"
+      font-family="'Geist Mono', monospace" text-anchor="end"
+      letter-spacing="0.08em">READ 2026-01-31 · 1a2b3c4d</text>
+```
+
+Do not copy the `y` from this snippet. The legend strip floats up when the zones end higher, so read the baseline off the `LEGEND` text element you just wrote and reuse it — the stamp and the eyebrow must sit on one line, or the strip reads as two ragged rows.
+
+This is a deliberate deviation from the safe-area rule in [`output-spec.md`](../../../skills/diagram-design/references/output-spec.md) §2, which reserves the bottom 60px for the legend and nothing else. The stamp shares that band with the `LEGEND` eyebrow, opposite it on the same baseline, and at 40% ink it reads as chrome rather than as a legend entry. Keep it there; do not give it its own row and do not grow the `viewBox` to make room.
+
 Save to `documentation/diagrams/architecture.html`, creating `documentation/diagrams/` if this is the first run. Overwrite whatever is there. Then:
 
 ```bash
@@ -135,7 +160,13 @@ ls documentation/diagrams/
 1. The only path that may appear is `documentation/diagrams/architecture.html` (or, on a first run, the new `documentation/diagrams/` directory containing it). `deployment.html` must be untouched. If anything else changed — a reference file under `skills/diagram-design/`, a style-guide profile, application source — revert it (`git checkout -- <file>`, or remove an untracked one with `git clean -f -- <file>`) before continuing. This task draws; it does not customize the skill's shipped style.
 2. **Delete stale detail diagrams.** If any `architecture-<component>.html` files are present, they are left over from the revision of this task that produced a diagram set. Remove them with `git rm` and name them in the Step 7 report. Check that `architecture.html` links to none of them.
 3. Read the file and sanity-check that it is a complete, well-formed HTML document: a `<!doctype html>` (or `<html>`) start, a closing `</html>`, and the diagram's `<svg>` present in between. A truncated or empty file means the draw step did not finish — go back to Step 4 rather than shipping a broken artifact.
-4. If the diff is empty, the architecture is unchanged since the last run at these settings. That is a valid, if uneventful, outcome. Skip Step 6 and report the run as a no-op in Step 7.
+4. **Check whether anything but the stamp changed.** The provenance stamp carries today's date, so the file now differs on every run whether or not the architecture moved. An empty diff is no longer the no-op signal; a diff confined to the stamp is.
+
+   ```bash
+   git diff -U0 documentation/diagrams/architecture.html
+   ```
+
+   If the only changed lines are the stamp's `<text>` element, the architecture is unchanged since the last run at these settings. Revert the file with `git checkout -- documentation/diagrams/architecture.html`, skip Step 6, and report the run as a no-op in Step 7. Re-stamping an otherwise identical diagram would put a commit in the history that claims a change it does not contain.
 
 ---
 

@@ -134,6 +134,31 @@ Two standing carve-outs from the type reference apply to this codebase. Both are
 
 **2. The accent budget.** The reference spends its two accent elements on the single point of failure. Here they go on the janus server node, since every path terminates there, and on the versioned framed channel riding the ssh session, since that is the one transport that can silently half-work when the two ends disagree about the contract version. That overrides the reference's rule that zone-crossing paths are link-blue, for that one path only. Keep the plain ssh path beside it blue so the host boundary still reads.
 
+### The provenance stamp
+
+Every diagram carries the date it was generated and the commit it was read from, **inside the `<svg>`**, right-aligned in the lower margin on the legend strip's header row. Inside the SVG and not in the HTML wrapper, because [`references/export.md`](../../../skills/diagram-design/references/export.md) drops editorial wrappers when exporting to PNG or SVG — a stamp in the wrapper would vanish exactly when the image is separated from this page and most needs to say where it came from.
+
+Read both values immediately before drawing:
+
+```bash
+git rev-parse --short HEAD
+date -u +%Y-%m-%d
+```
+
+Type the literals into the file; do not shell-capture them (see the hygiene rule in Step 0). The sha is **the commit the tree was read at**, not the commit that will contain the diagram — that one does not exist until Step 6, and a stamp cannot name its own commit without an amend. The `READ` prefix says so out loud, and the value is what lets a reader check the drawn protocol versions against the tree they came from. That matters more here than on the sibling diagram: `REMOTE_PROTOCOL_VERSION` and the package version are stamped into the artifact chips, and a reader needs to know which commit those numbers were true at.
+
+```svg
+<!-- y = the same baseline as this file's own LEGEND eyebrow, whatever it is.
+     x = viewBox width minus the 40px outer margin (920 at doc-inline, 1240 at doc-wide). -->
+<text x="920" y="528" fill="rgba(45,49,66,0.40)" font-size="8"
+      font-family="'Geist Mono', monospace" text-anchor="end"
+      letter-spacing="0.08em">READ 2026-01-31 · 1a2b3c4d</text>
+```
+
+Do not copy the `y` from this snippet. The legend strip floats up when the zones end higher, so read the baseline off the `LEGEND` text element you just wrote and reuse it — the stamp and the eyebrow must sit on one line, or the strip reads as two ragged rows.
+
+This is a deliberate deviation from the safe-area rule in [`output-spec.md`](../../../skills/diagram-design/references/output-spec.md) §2, which reserves the bottom 60px for the legend and nothing else. The stamp shares that band with the `LEGEND` eyebrow, opposite it on the same baseline, and at 40% ink it reads as chrome rather than as a legend entry. Keep it there; do not give it its own row and do not grow the `viewBox` to make room.
+
 Save to `documentation/diagrams/deployment.html`, creating `documentation/diagrams/` if this is the first run. Overwrite whatever is there.
 
 Then run the skill's own check:
@@ -154,7 +179,13 @@ git status --short
 
 1. The only path that may appear is `documentation/diagrams/deployment.html` (or, on a first run, the new `documentation/diagrams/` directory containing it). `architecture.html` must be untouched. If anything else changed, a reference file under `skills/diagram-design/`, a style-guide profile, application source, revert it (`git checkout -- <file>`, or remove an untracked one with `git clean -f -- <file>`) before continuing. This task draws. It does not customize the skill's shipped style or touch anything outside its one output file.
 2. Read the file and sanity-check that it is a complete, well-formed HTML document: a `<!doctype html>` (or `<html>`) start, a closing `</html>`, and the diagram's `<svg>` present in between. A truncated or empty file means the draw step did not finish. Go back to Step 4 rather than shipping a broken artifact.
-3. If the diff against the previous version is empty, the hosts and transports are unchanged since the last run. That is a valid, if uneventful, outcome. Skip Step 6 and report the run as a no-op in Step 7.
+3. **Check whether anything but the stamp changed.** The provenance stamp carries today's date, so the file now differs on every run whether or not the topology moved. An empty diff is no longer the no-op signal; a diff confined to the stamp is.
+
+   ```bash
+   git diff -U0 documentation/diagrams/deployment.html
+   ```
+
+   If the only changed lines are the stamp's `<text>` element, the hosts and transports are unchanged since the last run at these settings. Revert the file with `git checkout -- documentation/diagrams/deployment.html`, skip Step 6, and report the run as a no-op in Step 7. Re-stamping an otherwise identical diagram would put a commit in the history that claims a change it does not contain.
 
 ---
 
