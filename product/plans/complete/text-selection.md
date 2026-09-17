@@ -127,9 +127,7 @@ Boundaries the backlog text already draws, plus the ones the answered questions 
 
 ## Verification
 
-```
-$janissary/scripts/run.mjs check-diff
-```
+The diff-scoped lint, typecheck, and affected test suites complete successfully.
 
 Manual check: open a claude harness tab, give it work that keeps it drawing, and Shift+drag across several lines of its output. The screen freezes under the overlay, the highlight appears, and neither moves while the harness keeps repainting. Press the copy chord and paste elsewhere to confirm the exact text, and confirm the selection is still there afterwards. Right-click it and confirm **Chat about this** appears and opens a conversation carrying that text, that Cmd+I does the same without the menu, and that neither clears the selection. Press Escape and confirm the overlay drops and the live screen is visible and caught up, including everything that arrived while it was frozen. Repeat, clearing with a plain click instead, and confirm the harness did not act on that click.
 

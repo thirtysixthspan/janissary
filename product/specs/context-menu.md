@@ -10,8 +10,8 @@ Right-clicking the open menu itself does nothing and does not expose the browser
 
 An entry that cannot act is left out rather than shown greyed out, so the menu holds one entry, two, or none:
 
-- **Copy** appears only when page or editor text is selected, and writes that selection to the system clipboard.
-- **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret.
+- **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and writes that selection to the system clipboard.
+- **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard, since that menu answers a committed copy region rather than an invitation to paste elsewhere.
 
 When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
 
@@ -19,7 +19,7 @@ The editor is the exception: an empty-selection right-click there opens no menu,
 
 ### A contributed entry
 
-To select harness terminal output while the harness owns the mouse, hold Option while dragging on macOS or Shift while dragging elsewhere. Right-click that selection to offer **Chat about this**.
+To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Releasing that drag over a non-empty pick opens the default menu itself, offering **Copy** alongside **Chat about this** and never **Paste**; right-clicking the held selection afterward opens the same menu again. Escape on either of those menus is one case where dismissing the default menu does more than "return the keyboard to whatever had it before": it also clears the terminal's held selection, so a single Escape leaves copy mode entirely instead of just closing the menu on top of it. Activating Copy does the same — it releases the selection right after copying it — while Chat about this leaves the selection held, since choosing it is not itself a copy.
 
 Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
 
@@ -29,7 +29,7 @@ When an entry arrives while the menu is open, the highlighted action stays selec
 
 A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection, an editor's own selection, or, in a terminal, the selection that terminal itself holds — and renders as its own final group after Copy and Paste, separated by a divider. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly for the current selection. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.
 
-The terminal paragraph above is narrowed by that entry and only by it: the menu may read an xterm selection to answer **Chat about this**, but a terminal's menu still offers no Copy — the terminal's copy shortcut remains the way to copy from it, because the selection lives outside the page and Copy's contract is page or editor text.
+The terminal paragraph above is narrowed by that entry and only by it: the menu may read an xterm selection to answer **Chat about this**, and offers **Copy** for that same selection — the terminal's own copy shortcut still works too, unaffected by the menu.
 
 ### Surfaces that define their own menu
 
@@ -37,4 +37,4 @@ A surface with a menu of its own keeps it; the default never overrides or extend
 
 ### Relationship to the copy and paste shortcuts
 
-The menu is an addition, not a replacement. `Cmd+C`/`Cmd+V` in an editor tab, and the terminal's own copy shortcuts, behave exactly as before. A terminal's selection lives outside the page, so a terminal's right-click menu offers Paste but no Copy — the terminal's copy shortcut remains the way to copy from it.
+The menu is an addition, not a replacement. `Cmd+C`/`Cmd+V` in an editor tab, and the terminal's own copy shortcuts, behave exactly as before, and act on the same selection the menu's Copy would.

@@ -10,14 +10,14 @@ Right-click an editor tab, a terminal, the command line, or a transcript to open
 
 The menu only ever shows what it can actually do:
 
-- **Copy** appears only when page or editor text is selected, and copies that text.
-- **Paste** appears only where text can go — the field you clicked, or the field that already holds the keyboard. That second case is what makes right-clicking an editor tab or a terminal work, since the click lands on rendered output while the keyboard belongs to the tab as a whole. Activating it inserts the clipboard's text at the caret.
+- **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and copies that text.
+- **Paste** appears only where text can go — the field you clicked, or the field that already holds the keyboard. That second case is what makes right-clicking an editor tab or a terminal work, since the click lands on rendered output while the keyboard belongs to the tab as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard.
 
 ## When nothing applies
 
 If neither Copy nor Paste can act — nothing is selected and there's nowhere to type — no menu opens, and your browser's own menu appears instead. The editor is the exception: right-clicking it with nothing selected opens no menu at all, not even the browser's.
 
-A terminal's menu offers Paste but never Copy. A terminal's selection lives outside the page, so use the terminal's own copy shortcut to copy from it instead — see [Copying text out of a harness](/user-documentation/advanced-agents/harness#copying-text-out-of-a-harness).
+Finishing a Shift+drag selection in a terminal (see [Copying text out of a harness](/user-documentation/advanced-agents/harness#copying-text-out-of-a-harness)) opens this menu automatically, offering Copy for the text just picked; right-clicking the held selection afterward opens the same menu again.
 
 ## Chat about this
 

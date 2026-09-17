@@ -1,12 +1,14 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './shared/terminal/useXterm';
+import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from './shared/AgentTabMeta';
 import type { ShellTabHandle } from './tab-handles';
 import type { RemoteTarget } from '@shared/protocol';
 
 type Properties = {
   ptyId: string; client: JanusClient; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget;
+  active?: boolean;
   onSplit?: () => void;
 };
 
@@ -22,21 +24,24 @@ function shellKeyFilter(e: KeyboardEvent): boolean {
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
 // Unmounts when the program exits; the transcript is restored by the parent.
 export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({
-  ptyId, client, cwd, cwdDisplay, flags, remote, onSplit,
+  ptyId, client, cwd, cwdDisplay, flags, remote, active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
-  const focusTerm = useXterm({
+  const { focus: focusTerm, selection } = useXterm({
     ptyId,
     client,
     containerRef: hostReference,
     keyFilter: shellKeyFilter,
     onMount: (term) => { term.focus(); },
+    active,
   });
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (
     <div className="harness-tab">
       <AgentTabMeta cwd={cwd} cwdDisplay={cwdDisplay} flags={flags} remote={remote} onSplit={onSplit} />
-      <div className="harness-body" ref={hostReference} />
+      <div className="harness-body" ref={hostReference}>
+        <SelectionOverlay state={selection.view} screen={selection.screen} />
+      </div>
     </div>
   );
 });

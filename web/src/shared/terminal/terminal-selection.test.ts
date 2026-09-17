@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  registerTerminalSelection, terminalSelectionText, unregisterTerminalSelection,
+  clearTerminalSelection, registerTerminalSelection, terminalSelectionText, unregisterTerminalSelection,
 } from './terminal-selection';
 
 function container(): HTMLDivElement {
@@ -16,6 +16,7 @@ describe('terminal selection', () => {
     registerTerminalSelection(start, {
       hasSelection: () => true,
       getSelection: () => 'cache ls, error 404',
+      clear: () => {},
     });
 
     expect(terminalSelectionText(start)).toBe('cache ls, error 404');
@@ -27,6 +28,7 @@ describe('terminal selection', () => {
     registerTerminalSelection(start, {
       hasSelection: () => false,
       getSelection: () => 'should not be read',
+      clear: () => {},
     });
 
     expect(terminalSelectionText(start)).toBe('');
@@ -39,6 +41,7 @@ describe('terminal selection', () => {
     registerTerminalSelection(start, {
       hasSelection: () => true,
       getSelection: () => 'batch run',
+      clear: () => {},
     });
 
     expect(terminalSelectionText(child)).toBe('batch run');
@@ -51,6 +54,7 @@ describe('terminal selection', () => {
     registerTerminalSelection(start, {
       hasSelection: () => true,
       getSelection: () => 'batch run',
+      clear: () => {},
     });
 
     unregisterTerminalSelection(start);
@@ -66,13 +70,57 @@ describe('terminal selection', () => {
     registerTerminalSelection(outer, {
       hasSelection: () => false,
       getSelection: selection,
+      clear: () => {},
     });
     registerTerminalSelection(inner, {
       hasSelection: () => true,
       getSelection: () => 'inner selection',
+      clear: () => {},
     });
 
     expect(terminalSelectionText(inner)).toBe('inner selection');
     expect(selection).not.toHaveBeenCalled();
+  });
+
+  it('answers with the Shift+drag layer first and falls back to the emulator selection', () => {
+    const start = container();
+    let layerHeld = true;
+    let termHeld = false;
+    const term = { hasSelection: () => termHeld, getSelection: () => 'emulator selection' };
+    const layer = { holds: () => layerHeld, text: () => 'layer selection' };
+    registerTerminalSelection(start, {
+      hasSelection: () => layer.holds() || term.hasSelection(),
+      getSelection: () => (layer.holds() ? layer.text() : term.getSelection()),
+      clear: () => {},
+    });
+
+    expect(terminalSelectionText(start)).toBe('layer selection');
+    layerHeld = false;
+    termHeld = true;
+    expect(terminalSelectionText(start)).toBe('emulator selection');
+    termHeld = false;
+    expect(terminalSelectionText(start)).toBe('');
+  });
+
+  it('clears the registered terminal the target falls inside', () => {
+    const start = container();
+    const clear = vi.fn();
+    registerTerminalSelection(start, { hasSelection: () => true, getSelection: () => 'held', clear });
+
+    clearTerminalSelection(start);
+
+    expect(clear).toHaveBeenCalledOnce();
+  });
+
+  it('does nothing for a target outside every registration', () => {
+    const start = container();
+    const outside = container();
+    const clear = vi.fn();
+    registerTerminalSelection(start, { hasSelection: () => true, getSelection: () => 'held', clear });
+
+    clearTerminalSelection(outside);
+    clearTerminalSelection(null);
+
+    expect(clear).not.toHaveBeenCalled();
   });
 });

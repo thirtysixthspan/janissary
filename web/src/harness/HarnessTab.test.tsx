@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, createEvent, fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
@@ -7,6 +7,7 @@ import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../harness-drop-registry';
 import { DefaultContextMenu } from '../context-menu/DefaultContextMenu';
+import { terminalSelectionText } from '../shared/terminal/terminal-selection';
 
 // ---- xterm stubs -----------------------------------------------------------
 // xterm relies on canvas/WebGL which jsdom doesn't support. We mock both
@@ -22,12 +23,20 @@ vi.mock('@xterm/addon-fit', () => {
   return { FitAddon };
 });
 
-// jsdom doesn't include ResizeObserver — stub it via Vitest so no global mutation.
+// jsdom doesn't include ResizeObserver — stub it via Vitest so no global mutation. The stub keeps
+// the last callback so tests can replay a container resize on demand.
+const lastResizeCallback: { current: (() => void) | null } = { current: null };
 vi.stubGlobal('ResizeObserver', class {
+  constructor(callback: () => void) { lastResizeCallback.current = callback; }
   observe() {}
   unobserve() {}
   disconnect() {}
 });
+
+// Fires the live terminal's own resize observer — a held selection must not survive it.
+function replayResize(): void {
+  lastResizeCallback.current?.();
+}
 
 // ---- ws stub ---------------------------------------------------------------
 const mockClient = {
@@ -46,6 +55,17 @@ function makeKeyEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
   return { type: 'keydown', shiftKey: false, ctrlKey: false, key: 'a', ...overrides } as KeyboardEvent;
 }
 
+// The selection gesture over a surface whose container rect the tests provide, since jsdom lays
+// nothing out: Shift+pointerdown, a window-level move, and a release.
+function shiftDrag(host: Element, fromX: number, fromY: number, toX: number, toY: number): void {
+  vi.spyOn(host as HTMLElement, 'getBoundingClientRect').mockReturnValue({
+    x: 0, y: 0, left: 0, top: 0, right: 800, bottom: 480, width: 800, height: 480, toJSON: () => {},
+  } as DOMRect);
+  fireEvent.pointerDown(host, { clientX: fromX, clientY: fromY, button: 0, shiftKey: true });
+  fireEvent.pointerMove(host, { clientX: toX, clientY: toY, button: 0, shiftKey: true });
+  fireEvent.pointerUp(host, { clientX: toX, clientY: toY, button: 0, shiftKey: true });
+}
+
 // ---- tests -----------------------------------------------------------------
 
 describe('HarnessTab', () => {
@@ -53,6 +73,7 @@ describe('HarnessTab', () => {
   let capturedFocus: ReturnType<typeof vi.fn>;
   let capturedOptions: Record<string, unknown>;
   let capturedOscHandlers: Map<number, (data: string) => boolean>;
+  let screenLines: string[];
   let selection: string;
   let writeText: ReturnType<typeof vi.fn>;
 
@@ -61,6 +82,7 @@ describe('HarnessTab', () => {
     capturedFocus = vi.fn();
     capturedOptions = {};
     capturedOscHandlers = new Map();
+    screenLines = [];
     selection = '';
     writeText = vi.fn(() => Promise.resolve());
     // Defined on the real navigator rather than stubbed wholesale: jsdom ships no clipboard, but
@@ -79,6 +101,16 @@ describe('HarnessTab', () => {
         }),
         hasSelection: vi.fn(() => selection.length > 0),
         getSelection: vi.fn(() => selection),
+        buffer: {
+          active: {
+            viewportY: 0,
+            getLine: (index: number) => (screenLines[index] === undefined ? null : {
+              translateToString: (trim: boolean) => (trim ? screenLines[index].trimEnd() : screenLines[index]),
+            }),
+          },
+        },
+        cols: 80,
+        rows: 24,
         parser: {
           registerOscHandler: vi.fn((identifier: number, handler: (data: string) => boolean) => {
             capturedOscHandlers.set(identifier, handler);
@@ -87,8 +119,6 @@ describe('HarnessTab', () => {
         },
         focus: capturedFocus,
         dispose: vi.fn(),
-        cols: 80,
-        rows: 24,
       };
     } as unknown as typeof Terminal);
   });
@@ -415,38 +445,43 @@ describe('HarnessTab', () => {
     expect(queryByTitle('New agent here')).not.toBeInTheDocument();
   });
 
-  // A harness like claude turns on mouse reporting the moment it starts, which switches xterm's
-  // selection service off. Without the override below no drag can select anything, so every copy
-  // route — the chord and the terminal's right-click menu alike — has nothing to copy.
+  // A harness like claude turns on mouse reporting the moment it starts. The Shift+drag selection
+  // layer is what picks its output now — xterm's own Emulator-forcing drag is off, so the gesture
+  // means one thing on every surface while the harness keeps the mouse it asked for.
   describe('selecting and copying terminal text', () => {
-    it('offers Chat about this for a macOS terminal selection and sends only that selection', async () => {
+    it('offers Chat about this for a held layer selection and sends only that selection', async () => {
       const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
       const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
       const request = vi.fn().mockResolvedValue({ label: 'Chat about this' });
       const send = vi.fn();
       const client = { ...mockClient, request, send } as unknown as JanusClient;
+      screenLines = ['aa bb', 'cc dd      '];
       try {
         const rendered = render(<>
           <HarnessTab harness={makeHarness()} client={client} label="claude" />
           <DefaultContextMenu client={client} />
         </>);
-        expect(capturedOptions.macOptionClickForcesSelection).toBe(true);
-        selection = 'selected harness output';
+        const host = rendered.container.querySelector('.harness-body')!;
         const input = document.createElement('textarea');
-        rendered.container.querySelector('.harness-body')!.append(input);
+        shiftDrag(host, 5, 10, 45, 90);
+        // The drag's own release already opened the menu automatically; this test's focus is the
+        // menu a manual right-click resolves once something else holds the keyboard, so it starts
+        // fresh from there.
+        request.mockClear();
+        host.append(input);
         input.focus();
         send.mockClear();
         fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
         const entry = await screen.findByText('Chat about this');
         expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
-          .toEqual(['Paste', 'Chat about this']);
+          .toEqual(['Copy', 'Chat about this']);
         expect(request).toHaveBeenCalledExactlyOnceWith({
-          method: 'defaultMenuSelectionAction', params: { selection: 'selected harness output' },
+          method: 'defaultMenuSelectionAction', params: { selection: 'aa bb\ncc dd' },
         });
         fireEvent.click(entry);
         expect(send).toHaveBeenCalledExactlyOnceWith({
           method: 'runDefaultMenuSelectionAction',
-          params: { selection: 'selected harness output', action: 'Chat about this' },
+          params: { selection: 'aa bb\ncc dd', action: 'Chat about this' },
         });
         expect(writeText).not.toHaveBeenCalled();
       } finally {
@@ -455,9 +490,84 @@ describe('HarnessTab', () => {
       }
     });
 
-    it('creates the terminal so a modifier-drag still selects while the harness holds the mouse', () => {
+    it('exits copy mode when Escape closes the menu the drag itself opened', async () => {
+      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      screenLines = ['aa bb', 'cc dd'];
+      try {
+        const rendered = render(<>
+          <HarnessTab harness={makeHarness()} client={client} label="claude" />
+          <DefaultContextMenu client={client} />
+        </>);
+        const host = rendered.container.querySelector('.harness-body')!;
+        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
+        // the container it is opened into, which is what makes the auto-opened menu's restoreFocus
+        // resolve back into this terminal rather than the document body.
+        const focusTarget = document.createElement('textarea');
+        host.append(focusTarget);
+        focusTarget.focus();
+        shiftDrag(host, 5, 10, 45, 90);
+        await screen.findByRole('menu');
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+        fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
+      } finally {
+        domSelection.mockRestore();
+      }
+    });
+
+    it('releases the selection once the menu\'s Copy entry copies it', async () => {
+      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      screenLines = ['aa bb', 'cc dd'];
+      try {
+        const rendered = render(<>
+          <HarnessTab harness={makeHarness()} client={client} label="claude" />
+          <DefaultContextMenu client={client} />
+        </>);
+        const host = rendered.container.querySelector('.harness-body')!;
+        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
+        // the container it is opened into, which is what lets `restoreFocus` resolve back into
+        // this terminal's own registration.
+        const focusTarget = document.createElement('textarea');
+        host.append(focusTarget);
+        focusTarget.focus();
+        shiftDrag(host, 5, 10, 45, 90);
+        const copy = await screen.findByText('Copy');
+        fireEvent.click(copy);
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
+      } finally {
+        domSelection.mockRestore();
+      }
+    });
+
+    it('creates the terminal without the emulator modifier-drag that would select too', () => {
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
-      expect(capturedOptions.macOptionClickForcesSelection).toBe(true);
+      expect(capturedOptions.macOptionClickForcesSelection).toBeUndefined();
+    });
+
+    it('constructs the terminal with the two colours the theme stylesheet defines', () => {
+      render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+      // jsdom defines no stylesheet values, so these are the hook's literal fallbacks — the
+      // same values theme.css carries in every palette's --terminal-bg / --terminal-fg.
+      expect(capturedOptions.theme).toEqual({ background: '#17181b', foreground: '#e4e5e7' });
+    });
+
+    it('reads the terminal font size through its px unit instead of discarding it to the fallback', () => {
+      const computed = globalThis.getComputedStyle;
+      const spy = vi.spyOn(globalThis, 'getComputedStyle').mockImplementation((element, pseudo) => (
+        element === document.documentElement
+          ? { getPropertyValue: (name: string) => (name === '--terminal-font-size' ? '20px' : '') } as CSSStyleDeclaration
+          : computed(element, pseudo)
+      ));
+      try {
+        render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        expect(capturedOptions.fontSize).toBe(20);
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('copies the terminal selection on Cmd+C instead of passing it to the harness', () => {
@@ -512,6 +622,124 @@ describe('HarnessTab', () => {
       selection = 'selected harness output';
       expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
       expect(writeText).not.toHaveBeenCalled();
+    });
+
+    describe('the Shift+drag selection layer', () => {
+      function holdSelection(host: Element, screen: string[] = ['aa bb', 'cc dd']): void {
+        screenLines = [...screen];
+        shiftDrag(host, 5, 10, 45, 90);
+      }
+
+      it('freezes the screen and paints the picked run over it', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+        screenLines = ['aa bb', 'cc dd'];
+        shiftDrag(container.querySelector('.harness-body')!, 5, 10, 45, 90);
+        const overlay = container.querySelector('.terminal-selection-overlay');
+        expect(overlay).not.toBeNull();
+        expect(overlay!.querySelectorAll('.editor-sel').length).toBeGreaterThan(0);
+      });
+
+      it('copies the layer selection on the copy chord and releases it', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        act(() => {
+          expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        });
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+      });
+
+      it('lets the copy chord reach the harness after a drag through the blank region', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        const host = container.querySelector('.harness-body')!;
+        screenLines = ['aa bb', 'cc dd'];
+        // Rows 15 to 17 of the hand-laid grid lie in the popped/trailing blank area, so the pick
+        // resolves to no text and the chord stays out of the layer's hands.
+        shiftDrag(host, 300, 300, 400, 340);
+        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(true);
+        expect(writeText).not.toHaveBeenCalled();
+      });
+
+      it('keeps the harness answered by the layer on a right-click that lands on the overlay', () => {
+        const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        try {
+          const host = container.querySelector('.harness-body')!;
+          holdSelection(host);
+          const overlay = container.querySelector('.terminal-selection-overlay')!;
+          expect(terminalSelectionText(overlay)).toBe('aa bb\ncc dd');
+        } finally {
+          domSelection.mockRestore();
+        }
+      });
+
+      it('lets Escape reach the harness when nothing is selected', () => {
+        render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        expect(capturedKeyHandler!(makeKeyEvent({ key: 'Escape' }))).toBe(true);
+      });
+
+      it('lets typing reach the harness while a selection is held', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        expect(capturedKeyHandler!(makeKeyEvent({ key: 'x' }))).toBe(true);
+      });
+
+      it('keeps the held pick exactly what it was when the harness keeps drawing', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        screenLines = ['totally different output', 'now'];
+        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+      });
+
+      it('copies a pick made through the live layer after a re-render of the surface', () => {
+        // A re-render rebuilds the hook's return and the effect closure holds the first render's
+        // object; reading the current selection through a ref is what keeps this pick reachable.
+        const { container, rerender } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        rerender(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        expect(capturedKeyHandler!(makeKeyEvent({ ctrlKey: true, shiftKey: true, key: 'C' }))).toBe(false);
+        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
+      });
+
+      it('is consumed when a plain click clears it, so the harness sees no click', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        const down = createEvent.pointerDown(container.querySelector('.harness-body')!, { clientX: 10, clientY: 10 });
+        const preventDefault = vi.spyOn(down, 'preventDefault');
+        const stopPropagation = vi.spyOn(down, 'stopPropagation');
+        fireEvent(container.querySelector('.harness-body')!, down);
+        expect(preventDefault).toHaveBeenCalled();
+        expect(stopPropagation).toHaveBeenCalled();
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+      });
+
+      it('clears when the harness exits', () => {
+        const { container, rerender } = render(
+          <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
+        );
+        holdSelection(container.querySelector('.harness-body')!);
+        rerender(<HarnessTab harness={makeHarness({ status: 'exited' })} client={mockClient} label="claude" />);
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+      });
+
+      it('clears when the surface goes inactive', () => {
+        const { container, rerender } = render(
+          <HarnessTab harness={makeHarness()} client={mockClient} label="claude" active />,
+        );
+        holdSelection(container.querySelector('.harness-body')!);
+        rerender(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" active={false} />);
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+      });
+
+      it('clears on a container resize', () => {
+        const { container } = render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
+        holdSelection(container.querySelector('.harness-body')!);
+        expect(container.querySelector('.terminal-selection-overlay')).not.toBeNull();
+        act(() => { replayResize(); });
+        expect(container.querySelector('.terminal-selection-overlay')).toBeNull();
+      });
     });
   });
 

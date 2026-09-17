@@ -6,7 +6,7 @@ import type { JanusClient } from '../../ws';
 import { Transcript } from './Transcript';
 
 vi.mock('../terminal/useXterm', () => ({
-  useXterm: vi.fn(() => () => {}),
+  useXterm: vi.fn(() => ({ focus: () => {}, selection: { view: null } })),
 }));
 
 // jsdom doesn't include ResizeObserver — Transcript observes its content element. The stub keeps

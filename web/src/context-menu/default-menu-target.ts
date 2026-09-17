@@ -3,7 +3,7 @@ import type { ContextMenuItem } from '../shared/ContextMenu';
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, and the element focus belongs to once the menu closes again.
 // `selectionSource` records whether text belongs to the DOM, the editor, or an xterm terminal.
-// Copy can use DOM and editor text; a contributed entry can use every source.
+// Copy and a contributed entry can both use every source.
 export type DefaultMenuTarget = {
   selectionText: string;
   selectionSource?: 'dom' | 'editor' | 'terminal';
@@ -60,12 +60,15 @@ export function resolveDefaultMenuTarget(
 export function defaultMenuGroups(
   target: DefaultMenuTarget, actions: DefaultMenuActions,
 ): ContextMenuItem[][] {
-  const { selectionText, pasteTarget } = target;
-  const copyEntry: ContextMenuItem[] = selectionText !== ''
-    && (target.selectionSource ?? 'dom') !== 'terminal'
-    ? [{ label: 'Copy', onActivate: () => actions.copy(selectionText) }]
-    : [];
-  const pasteEntry: ContextMenuItem[] = pasteTarget
+  const { selectionText, selectionSource, pasteTarget } = target;
+  const copyEntry: ContextMenuItem[] = selectionText === ''
+    ? []
+    : [{ label: 'Copy', onActivate: () => actions.copy(selectionText) }];
+  // A live terminal copy region withholds Paste even when a field elsewhere holds focus and would
+  // otherwise resolve as the paste target — the drag committed to Copy, not to pasting into
+  // whatever had focus before it started.
+  const isTerminalCopyRegion = selectionSource === 'terminal' && selectionText !== '';
+  const pasteEntry: ContextMenuItem[] = pasteTarget && !isTerminalCopyRegion
     ? [{ label: 'Paste', onActivate: () => actions.paste(pasteTarget) }]
     : [];
   const items = [...copyEntry, ...pasteEntry];

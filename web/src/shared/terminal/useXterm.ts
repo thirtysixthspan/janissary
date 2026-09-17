@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from '../../ws';
@@ -6,6 +6,7 @@ import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence
 import { osc52ClipboardText } from './terminal-osc52';
 import { copyText } from '../system-clipboard';
 import { registerTerminalSelection, unregisterTerminalSelection } from './terminal-selection';
+import { useSelectionLayer } from './useSelectionLayer';
 
 type UseXtermOptions = {
   ptyId: string;
@@ -13,31 +14,57 @@ type UseXtermOptions = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   keyFilter?: (e: KeyboardEvent) => boolean;
   onMount?: (term: Terminal) => void;
+  active?: boolean;
+  exited?: boolean;
+};
+
+export type UseXtermResult = {
+  focus: () => void;
+  selection: ReturnType<typeof useSelectionLayer>;
 };
 
 // Shared xterm.js setup used by TerminalCard and HarnessTab. Creates a Terminal + FitAddon,
 // attaches the PTY stream, forwards input, and observes container resizes.
-// Returns a stable `focus` function that forwards to the live terminal.
-export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: UseXtermOptions): () => void {
+// Returns a stable `focus` function that forwards to the live terminal, plus the Shift+drag
+// selection layer's view and clear callback.
+export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, active, exited }: UseXtermOptions): UseXtermResult {
   const termRef = useRef<Terminal | null>(null);
   // Keep a ref to the latest filter so the handler closure never goes stale.
   const keyFilterRef = useRef(keyFilter);
   keyFilterRef.current = keyFilter;
+  const selection = useSelectionLayer({ containerRef, termRef, inactive: active === false, exited });
+  // Keep a ref to the latest selection object as well, for the same reason: the setup effect below
+  // must never depend on the layer's state, and its setup callbacks read the live layer here.
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
 
   useEffect(() => {
-    const fontFamily = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
+    const styles = getComputedStyle(document.documentElement);
+    const fontFamily = styles.getPropertyValue('--mono').trim();
+    // The terminal and the selection overlay above it both read the same custom properties, so a
+    // frozen snapshot is provably laid out and painted with what the live screen has.
+    const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5;
+    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2;
+    const theme = {
+      background: styles.getPropertyValue('--terminal-bg').trim() || '#17181b',
+      foreground: styles.getPropertyValue('--terminal-fg').trim() || '#e4e5e7',
+    };
     const term = new Terminal({
-      fontFamily: fontFamily || 'monospace', fontSize: 13.5, lineHeight: 1.2, cursorBlink: true,
-      theme: { background: '#17181b', foreground: '#e4e5e7' },
-      // A harness turns on mouse reporting the moment it starts, which switches xterm's selection
-      // service off so the program owns the mouse. Every emulator keeps a modifier that forces a
-      // selection anyway; xterm's is Shift off macOS, and Option on it — but only once this is set.
-      // Without it macOS has no gesture that selects harness output, so nothing can be copied.
-      macOptionClickForcesSelection: true,
+      fontFamily: fontFamily || 'monospace', fontSize, lineHeight, cursorBlink: true,
+      theme,
+      // Selection comes from the Shift+drag layer above the terminal, so xterm's own
+      // forcing-modifier drag (the old macOptionClickForcesSelection) stays off: leaving it set
+      // would give macOS a second selection that the harness's redraws could revoke.
     });
     termRef.current = term;
     const container = containerRef.current;
-    if (container) registerTerminalSelection(container, term);
+    if (container) registerTerminalSelection(container, {
+      // The layer answers first; with nothing held the emulator's own selection is still
+      // readable, which is what keeps native drags on surfaces that never take the mouse working.
+      hasSelection: () => selectionRef.current.holds() || term.hasSelection(),
+      getSelection: () => (selectionRef.current.holds() ? selectionRef.current.text() : term.getSelection()),
+      clear: () => selectionRef.current.clear(),
+    });
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(containerRef.current!);
@@ -64,9 +91,12 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
       }
       if (keyFilterRef.current && !keyFilterRef.current(e)) return false;
       // Only claimed while something is selected, so Ctrl+C stays the harness's interrupt and a
-      // selection-less Cmd+C reaches it unchanged.
-      if (copySelectionChord(e, isMac) && term.hasSelection()) {
-        void navigator.clipboard.writeText(term.getSelection());
+      // selection-less Cmd+C reaches it unchanged. The layer answers before the emulator does, and
+      // copying from the layer releases the pick it just copied — the overlay clears with it.
+      const layerHeld = selectionRef.current.holds();
+      if (copySelectionChord(e, isMac) && (layerHeld || term.hasSelection())) {
+        void navigator.clipboard.writeText(layerHeld ? selectionRef.current.text() : term.getSelection());
+        if (layerHeld) selectionRef.current.clear();
         return false;
       }
       const wordMotion = altArrowSequence(e, isMac);
@@ -86,7 +116,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
       return true;
     });
 
-    const ro = new ResizeObserver(() => syncSize());
+    // A resize leaves the selection anchored to a grid that no longer exists.
+    const ro = new ResizeObserver(() => { selectionRef.current.clear(); syncSize(); });
     ro.observe(containerRef.current!);
 
     onMount?.(term);
@@ -95,8 +126,9 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount }: Us
       termRef.current = null; detach(); onInput.dispose(); osc52.dispose(); ro.disconnect(); term.dispose();
       if (container) unregisterTerminalSelection(container);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter; setup callbacks apply per PTY/client
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter and selectionRef the latest selection layer; setup callbacks apply per PTY/client
   }, [ptyId, client]);
 
-  return useCallback(() => termRef.current?.focus(), []);
+  const focus = useCallback(() => termRef.current?.focus(), []);
+  return useMemo(() => ({ focus, selection }), [focus, selection]);
 }

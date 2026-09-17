@@ -6,7 +6,7 @@ import type { ShellTabHandle } from './tab-handles';
 import type { JanusClient } from './ws';
 
 vi.mock('./shared/terminal/useXterm', () => ({
-  useXterm: vi.fn(() => () => {}),
+  useXterm: vi.fn(() => ({ focus: () => {}, selection: { view: null, holds: () => false, text: () => '', clear: () => {} } })),
 }));
 
 import { useXterm } from './shared/terminal/useXterm';
@@ -32,6 +32,15 @@ describe('ShellTab', () => {
     const opts = mockedUseXterm.mock.calls[0][0];
     expect(opts.ptyId).toBe('my-pty');
     expect(opts.client).toBe(client);
+  });
+
+  it('passes the surface\'s activity to useXterm so a hidden tab clears its selection layer', () => {
+    mockedUseXterm.mockClear();
+    render(<ShellTab ptyId="pty1" client={fakeClient()} active />);
+    expect(mockedUseXterm.mock.calls[0][0].active).toBe(true);
+    mockedUseXterm.mockClear();
+    render(<ShellTab ptyId="pty2" client={fakeClient()} active={false} />);
+    expect(mockedUseXterm.mock.calls[0][0].active).toBe(false);
   });
 
   it('passes a keyFilter that blocks shift+arrow keys and allows other keys', () => {
@@ -68,7 +77,7 @@ describe('ShellTab', () => {
     const focus = vi.fn();
     mockedUseXterm.mockImplementationOnce(({ onMount }: { onMount?: (term: { focus: () => void }) => void }) => {
       onMount?.({ focus });
-      return () => {};
+      return { focus: () => {}, selection: { view: null } };
     });
     const client = fakeClient();
     render(<ShellTab ptyId="pty1" client={client} />);
@@ -77,7 +86,7 @@ describe('ShellTab', () => {
 
   it('exposes focus that delegates to useXterm focus', () => {
     const focusXterm = vi.fn();
-    mockedUseXterm.mockImplementationOnce(() => focusXterm);
+    mockedUseXterm.mockImplementationOnce(() => ({ focus: focusXterm, selection: { view: null } }));
     const ref = createRef<ShellTabHandle>();
     const client = fakeClient();
     render(<ShellTab ptyId="pty1" client={client} ref={ref} />);
@@ -99,6 +108,18 @@ describe('ShellTab', () => {
     );
     expect(getByLabelText('Remote')).toHaveTextContent('devbox');
     expect(getByLabelText('Remote')).toHaveAttribute('title', 'Remote: admin@devbox:/srv/proj');
+  });
+
+  it('renders the held selection over the terminal body', () => {
+    mockedUseXterm.mockImplementationOnce(() => ({
+      focus: () => {},
+      selection: { view: { snapshot: ['aa bb', 'cc dd'], anchor: { col: 0, row: 0 }, head: { col: 2, row: 1 } } },
+    }));
+    const { container } = render(<ShellTab ptyId="pty1" client={fakeClient()} />);
+    const overlay = container.querySelector('.terminal-selection-overlay');
+    expect(overlay).not.toBeNull();
+    expect(container.querySelector('.harness-body')!.contains(overlay)).toBe(true);
+    expect(container.querySelectorAll('.editor-sel').length).toBeGreaterThan(0);
   });
 
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {

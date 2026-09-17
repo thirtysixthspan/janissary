@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react
 import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTarget } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
+import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
@@ -11,6 +12,7 @@ import { registerHarnessDrop } from '../harness-drop-registry';
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget; label: string;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
+  active?: boolean;
   onSplit?: () => void;
 };
 
@@ -33,14 +35,16 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: bo
 // all bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({
   harness, client, taskPickerOpen, navOpen, cwd, cwdDisplay, flags, remote, label, connectionsButton, scheduleButton,
-  onSplit,
+  active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
-  const focusTerm = useXterm({
+  const { focus: focusTerm, selection } = useXterm({
     ptyId: harness.ptyId,
     client,
     containerRef: hostReference,
     keyFilter: (e) => harnessKeyFilter(e, !!taskPickerOpen, !!navOpen),
+    active: active !== false,
+    exited: harness.status === 'exited',
     onMount: (term) => { term.focus(); },
   });
 
@@ -90,7 +94,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
       {harness.browserError !== undefined && (
         <div className="harness-browser-gone">{harness.browserError}</div>
       )}
-      <div className="harness-body" data-harness-drop={ptyId || undefined} ref={hostReference} onClick={() => { /* focus handled by xterm */ }} />
+      <div className="harness-body" data-harness-drop={ptyId || undefined} ref={hostReference} onClick={() => { /* focus handled by xterm */ }}>
+        <SelectionOverlay state={selection.view} screen={selection.screen} />
+      </div>
     </div>
   );
 });

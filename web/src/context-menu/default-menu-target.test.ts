@@ -94,6 +94,28 @@ describe('defaultMenuGroups', () => {
     expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
   });
 
+  it('offers Copy for a terminal selection too', () => {
+    const groups = defaultMenuGroups(
+      target({ selectionText: 'aa bb', selectionSource: 'terminal' }), actions,
+    );
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+  });
+
+  it('omits Paste for a live terminal copy region even with a resolved paste target', () => {
+    const groups = defaultMenuGroups(
+      target({ selectionText: 'aa bb', selectionSource: 'terminal', pasteTarget: input('text') }),
+      actions,
+    );
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+  });
+
+  it('still offers Paste for a terminal target with no active copy region', () => {
+    const groups = defaultMenuGroups(
+      target({ selectionSource: 'terminal', pasteTarget: input('text') }), actions,
+    );
+    expect(groups[0].map((item) => item.label)).toEqual(['Paste']);
+  });
+
   it('yields no group at all when neither entry applies', () => {
     expect(defaultMenuGroups(target(), actions)).toEqual([]);
   });

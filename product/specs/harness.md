@@ -388,18 +388,59 @@ cards).
 ### Selecting and copying terminal text
 
 A harness normally takes the mouse for itself — claude and the other TUI harnesses ask the terminal
-to report every click, drag, and movement to them — so an ordinary drag across the terminal drives
-the harness rather than selecting anything. Holding the terminal's forcing modifier while dragging
-selects text instead: **Option+drag** on macOS, **Shift+drag** elsewhere. A drag that selects is not
-reported to the harness. On macOS this replaces Option+drag's block-column selection and
-Option+click's move-the-cursor behavior, neither of which is reachable while the harness owns the
-mouse anyway.
+to report every click, drag, and movement to them, and then repaint the screen continuously — so an
+ordinary drag across the terminal drives the harness and leaves nothing selected afterwards.
+**Holding Shift while dragging with the button down** (on every platform) selects text instead, with a
+selection Janissary owns rather than the harness's and not the terminal emulator's. The drag freezes
+the screen into an overlay drawn over the live terminal: the harness keeps running and its output
+keeps arriving underneath, but the frozen image and the highlight on it never move, change, or clear
+until the user dismisses the selection. The frozen image is the visible screen at the moment the
+drag started, one screenful — text that has scrolled off is selected by scrolling the terminal back
+first and then dragging again. The frozen image is the screen as it was drawn, not a re-drawing of
+its text: the harness's colours, its bold and dim runs, and its inverse video are all carried
+across as they were painted, on the terminal's own character grid and in its own position on
+screen. The cursor is carried across too, standing where it was rather than blinking, since the
+image is a still one. Apart from the highlight the overlay is indistinguishable from the screen it
+covers, and no other on-screen indicator is drawn. The gesture is
+taken outright: the harness never receives the Shift+drag's mouse events, and the surface takes
+keyboard focus as the gesture starts, so the copy chords and Chat about this act on the pick even
+when focus sat in another field when the drag began. Characters that occupy two terminal cells —
+CJK glyphs and emoji — are picked the way they are drawn on that grid: the highlight's columns name
+cells, not character positions, and the copied text contains exactly the glyphs the highlight
+showed.
+
+While a selection is held the tab stays interactive: typing still reaches the harness. The layer
+claims no keys: while a selection is held, **Escape** pressed in that terminal clears the selection
+and still reaches the harness as its cancel key, and an Escape pressed anywhere else — another tab,
+a dialog — never touches the selection at all. The one exception is the default menu, whenever it
+answers for this terminal's own held selection — whether the drag's own release opened it or a
+later right-click did (see [[context-menu]]): Escape there closes that menu and clears the
+selection together, so a single Escape always leaves copy mode rather than needing a second press
+once the menu is gone. Escape on a menu answering for a DOM or editor selection only closes the
+menu. A selection clears on **Escape** (in its own terminal, or through a menu answering for it, as
+above), on
+a plain unmodified click anywhere in the terminal (a click that clears is consumed, not reported to
+the harness), on being copied (see below), on a tab switch away from the surface, on a resize, and
+on the PTY exiting. A Shift+drag
+shifts nothing, and the highlight follows the pointer exactly — including over the last column and
+the bottom row of the screen, where the drag is still resolved against the visible grid. A Shift+drag
+that never leaves its starting cell picks nothing and unfreezes the screen as soon as the button
+releases. A second
+Shift+drag replaces it, re-freezing from the screen as it stands then.
 
 **Cmd+C** (macOS) and **Ctrl+Shift+C** (every platform) copy the terminal's current selection to the
-system clipboard. Both are held back from the harness only while something is selected; with an
-empty selection they reach it like any other key, so **Ctrl+C** remains the harness's interrupt and
-is never read as a copy. A picker overlay open over the tab still claims the chord first. Right-clicking
-a selection offers the browser's own Copy over the same text.
+system clipboard. Both are held back from the harness only while something is selected. A Shift+drag
+that crosses only blank screen — the region below a prompt's last output — picks nothing, though the
+screen still freezes while the drag runs: the copy chord reaches the harness unchanged (so `Ctrl+C`
+remains the harness's interrupt and is never read as a copy), and the clipboard keeps whatever was on
+it before the drag. A picker overlay open over the tab still claims the chord
+first. Copying a
+held selection releases it — the copy chord and the menu's **Copy** entry both clear it right
+after the clipboard write, so a second Shift+drag is needed to pick text again. Releasing a
+Shift+drag that picks text opens the default menu itself, at the point the drag ended, offering
+**Copy** alongside **Chat about this** (see [[context-menu]]); right-clicking the held selection
+afterward opens the same menu again. `Cmd+I`/`Ctrl+I` runs Chat about this directly without
+clearing the selection.
 
 A harness's own copy command reaches the system clipboard too. A harness copying something first
 tries the clipboard of the machine it is running on; when it cannot reach it — which is the case
@@ -413,8 +454,13 @@ Pasting needs no chord of its own: **Cmd+V** (macOS) and **Ctrl+V** (elsewhere) 
 browser's native paste and are delivered to the harness as typed input, bracketed when the harness
 has asked for bracketed paste.
 
-Selection and copy behave this way in every xterm.js terminal in the app — harness tabs, interactive
-PTY takeover, and terminal cards.
+Selection and copy behave this way in every xterm.js terminal in the app — harness tabs (including
+ssh tabs), interactive PTY takeover, and terminal cards — so the gesture means one thing everywhere;
+a plain shell that never took the mouse behaves consistently with the surfaces that did. The
+clearing triggers above are wired to the signal each surface carries: a harness or ssh tab, and a
+shell's interactive PTY takeover, clear on a tab switch away from the surface and on the PTY
+exiting; a terminal card inside a transcript clears on the PTY's exiting and on a resize, but has no
+tab identity of its own, so scrolling the transcript past it never clears it.
 
 ## Tab strip
 
