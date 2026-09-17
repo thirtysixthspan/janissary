@@ -15,7 +15,7 @@ Neither task touches the other's file. If a run of this task finds itself drawin
 
 **No AI attribution, anywhere.** Never credit an AI agent as an author or contributor. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines or badges, no AI authorship notes anywhere. The commit's configured git author is the only authorship ever recorded.
 
-**Run autonomously.** Do not ask the user questions or wait for feedback at any step, including the diagram skill's own confirmation prompts (SKILL.md §3 "Confirm before drawing" and the onboarding style-guide gate in §0). Steps 2 through 4 below tell you exactly what to choose in place of asking.
+**Ask once, then run to completion.** Step 3 puts one `AskUserQuestion` call in front of the user to settle the dials that change what the picture looks like. That is the only interruption. Never trigger the skill's own onboarding gate (SKILL.md §0) and never pause at its confirm-before-drawing prompt (SKILL.md §3) — Step 3 replaces both.
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process.
 
@@ -90,24 +90,41 @@ Assemble the model as notes, not as diagram markup yet.
 
 ---
 
-## Step 3 — Load the diagram-design skill and pin the type
+## Step 3 — Confirm the settings with the user
 
-Invoke the `diagram-design` skill (`skills/diagram-design/SKILL.md`, vendored from [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design), MIT-licensed, see `skills/diagram-design/LICENSE` and `THIRD_PARTY_LICENSES.md`) via the Skill tool.
+Make **one** `AskUserQuestion` call carrying the four questions below. Every question leads with the recommended default, and every option says what it does to the picture rather than naming a dial. The user can answer some and skip others; anything unanswered keeps its default.
 
-Fixed choices for this task. Do not ask, do not pause, do not deviate:
+**If the user is not reachable** — a scheduled run, a non-interactive session, or an explicit instruction to run unattended — skip the call, take every default, and say so on the `Settings` line in Step 7.
 
-- **Visual type:** [`references/type-deployment.md`](../../../skills/diagram-design/references/type-deployment.md). Load it before drawing, per SKILL.md §3. Do not substitute `type-architecture.md`. If a run genuinely finds no boundary worth drawing, no host placement decision, and no version that matters, that is a finding to report in Step 7, not a licence to redraw the logical architecture here.
-- **Style-guide gate (SKILL.md §0):** this task's explicit, standing choice is the shipped default style guide. Never trigger `references/onboarding.md`, never fetch a URL for brand tokens, never write a profile. If `references/style-guide.md` still carries the shipped tokens, that satisfies the gate as-is. Proceed.
-- **Confirm-before-drawing (SKILL.md §3):** skip the pause. This document *is* the confirmation. Type, content, and destination are pinned by Steps 2 and 4.
-- **Format, size, detail, audience:** `html` format, `doc-inline` size, `balanced` detail, `engineer` audience.
+| Question | Header | Options (default first) |
+| --- | --- | --- |
+| How large should the canvas be? | `Canvas` | **Body width** — 960×600, sits inline in a README or docs page at normal reading size. · **Full width** — 1280×720, more room for artifact chips and long protocol labels; better on a wiki page than in a narrow column. · **Slide** — 1280×720 with presentation type, readable projected, but bigger type means fewer hosts and chips fit. |
+| How much should it show? | `Detail` | **Balanced** — about 6 hosts and 8 transports, chips on the ones that matter; the whole topology without a guide. · **Simplified** — about 4 hosts, no chips; the local/remote split alone, losing the model provider and the harness processes. · **Faithful** — every host and transport found, in labelled zones; dense, and it will need a moment to read. |
+| How should the connections be labelled? | `Labels` | **Protocol and port** — `SSH:22`, `WS + HTTP`, `HTTPS:443`; the reason this diagram exists. · **Plain verbs** — `talks to`, `starts`, `streams from`; readable by a mixed audience, but the transports stop being the content. · **Capabilities** — what each hop achieves for the user, no protocols at all. |
+| Which hosts should be in scope? | `Scope` | **Local, remote and provider** — the full picture, including the ssh channel and the model API both harnesses call. · **Local host only** — the Chrome window, the server and its child processes; drops the remote host and the ssh frame contract entirely. · **Add persistence** — the full picture plus state directories and the sqlite databases; costs a node and a path, so something else gets cut. |
 
-The audience dial is the one that carries this task. `engineer` is what puts protocol and port on edge labels and technology on sublabels. The sibling task's `mixed` explicitly forbids ports and produces plain verbs instead, which would quietly hollow the diagram out. If a run ends up with edge labels reading `sends` and `connects to`, the dial got lost somewhere.
-
-Never generate `svg` or `png` for this task.
+The `Labels` answer is the one that decides whether this diagram is worth drawing at all. The default is what puts the transport on every edge. If a run ends up with edges reading `sends` and `connects to`, either the user asked for that or the dial got lost — check which before shipping.
 
 ---
 
-## Step 4 — Draw and save the diagram
+## Step 4 — Load the diagram-design skill and draw
+
+Invoke the `diagram-design` skill (`skills/diagram-design/SKILL.md`, vendored from [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design), MIT-licensed, see `skills/diagram-design/LICENSE` and `THIRD_PARTY_LICENSES.md`) via the Skill tool, then load [`references/type-deployment.md`](../../../skills/diagram-design/references/type-deployment.md) before drawing.
+
+Fixed choices, not up for negotiation in Step 3:
+
+- **Visual type:** `type-deployment.md`. Do not substitute `type-architecture.md`. If a run genuinely finds no boundary worth drawing, no host placement decision, and no version that matters, that is a finding to report in Step 7, not a licence to redraw the logical architecture here.
+- **Style-guide gate (SKILL.md §0):** this task's explicit, standing choice is the shipped default style guide. Never trigger `references/onboarding.md`, never fetch a URL for brand tokens, never write a profile. If `references/style-guide.md` still carries the shipped tokens, that satisfies the gate as-is. Proceed.
+- **Format:** `html`. Never generate `svg` or `png` for this task.
+
+Map the Step 3 answers onto the skill's dials in [`references/output-spec.md`](../../../skills/diagram-design/references/output-spec.md):
+
+| Step 3 answer | Dial |
+| --- | --- |
+| Body width / Full width / Slide | size `doc-inline` / `doc-wide` / `slide-16x9` |
+| Balanced / Simplified / Faithful | detail `balanced` / `simplified` / `faithful` |
+| Protocol and port / Plain verbs / Capabilities | audience `engineer` / `mixed` / `executive` |
+| Local, remote and provider / Local only / Add persistence | which nodes from Step 2's model survive |
 
 Follow `type-deployment.md` and the skill's general drawing guidance: the anti-pattern list in SKILL.md §4, the six mandatory connector rules in §6, and the complexity budget in §7. Zones are drawn first, then paths, then path labels, then nodes.
 
@@ -159,7 +176,8 @@ Give the user a short report in this exact shape:
 
 ```
 Diagram type:     deployment
-Zones / nodes:    <count> zones, <count> nodes, <count> paths, <count> chips   (budget 3 / 6 / 8 / 9)
+Settings:         <canvas> · <detail> · <labels> · <scope>   (defaults | user-chosen | defaults — user not reachable)
+Zones / nodes:    <count> zones, <count> nodes, <count> paths, <count> chips   (budget 3 / 6 / 8 / 9; faithful exceeds it by design)
 Transports drawn: <protocol list, comma separated>
 Version anchors:  janus v<version>, frame contract v<version>
 Left out:         none | <what the budget forced out, and why>
