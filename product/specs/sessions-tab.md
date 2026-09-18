@@ -118,8 +118,10 @@ Closing a reattached tab before running anything releases the same binding.
 Each action records one line in the notifications feed, so the change survives the tabs it happened
 to: `<what> on <host> detached — reattach it from the sessions tab.`, `<what> on <host> reattached.`,
 `<what> on <host> ended.`, and `<what> on <host> forgotten — its record was removed.` A refused
-detach records its own line naming why, so an action that declines to run is never silent. See
-[[notifications]].
+detach records its own line naming why, so an action that declines to run is never silent. A line is
+attributed to the sessions tab when it is open and to the active tab otherwise, so the feed's
+provenance header names the surface the change belongs to even when the action was raised from a
+metadata row. See [[notifications]].
 
 ### The control on a remote tab
 

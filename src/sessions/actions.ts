@@ -6,6 +6,10 @@ import { startSessionReattach } from './reattach.js';
 import type { SessionEnded } from './rows.js';
 import type { RemoteSessionRecord } from './store.js';
 
+// The sessions plugin's own id, which is what its open tab (if any) carries. Its label is what the
+// attribution resolves to.
+const PLUGIN_ID = 'sessions';
+
 // The four things a row can be asked to do, and the one shape they all answer in. An action never
 // touches the manager's state directly: it returns what changed and the manager applies it, so the
 // record file, the failure set, and the change signal can never disagree about what just happened.
@@ -40,8 +44,16 @@ function line(what: string, host: string, text: string): string {
   return `${what} on ${host} ${text}`;
 }
 
+// The tab a session line is attributed to, so the feed's provenance header names the surface the
+// change belongs to rather than whatever the user happens to be reading: the sessions tab when one
+// is open, the active tab otherwise.
+function attribution(managers: Managers): string {
+  const open = managers.tab.tabs.find((tab) => tab.plugin?.id === PLUGIN_ID);
+  return open?.label ?? managers.tab.cur().label;
+}
+
 function report(managers: Managers, text: string): void {
-  notify(managers, 'remote-session', managers.tab.cur().label, text);
+  notify(managers, 'remote-session', attribution(managers), text);
 }
 
 const REFUSED: SessionActionResult = { ran: false };

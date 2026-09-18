@@ -65,7 +65,7 @@ type Harness = {
 
 const created: SessionsManager[] = [];
 
-function harness(live: RemoteEntry[] = []): Harness {
+function harness(live: RemoteEntry[] = [], sessionsTab?: { label: string }): Harness {
   initRemoteSessionStore(mkdtempSync(path.join(tmpdir(), 'janus-sessions-mgr-')));
   const entries = [...live];
   const detach = vi.fn((label: string) => {
@@ -75,10 +75,14 @@ function harness(live: RemoteEntry[] = []): Harness {
     return true;
   });
   const closeTab = vi.fn();
+  const tabs: { label: string; view: string; dotColor?: string; group?: number; groupColor?: string; plugin?: { id: string } }[] = [
+    { label: 'claude', view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' },
+  ];
+  if (sessionsTab) tabs.push({ label: sessionsTab.label, view: 'plugin', plugin: { id: 'sessions' } });
   const managers = {
     remote: { liveEntries: () => entries, detach, close: vi.fn() },
     tab: {
-      tabs: [{ label: 'claude', view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' }],
+      tabs,
       byLabel: (label: string) => (label === 'claude'
         ? { label, view: 'harness', title: undefined }
         : undefined),
@@ -193,6 +197,17 @@ describe('SessionsManager detach', () => {
   it('is refused for a label it does not hold', () => {
     const h = harness([entry()]);
     expect(h.sessions.detach('nothing-here')).toBe(false);
+  });
+
+  // Plan item 12: the feed's provenance header names the surface the change belongs to, not
+  // whatever tab the user happens to be reading — so a detach raised from a metadata row while the
+  // sessions tab sits open but unfocused names the sessions tab.
+  it('attributes its line to the open sessions tab rather than the active tab', () => {
+    const h = harness([entry()], { label: 'sessions-2' });
+    h.sessions.detach('claude');
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(), 'remote-session', 'sessions-2', expect.anything(),
+    );
   });
 
   // The metadata-row path: it reaches the manager through the controller without the list ever being
