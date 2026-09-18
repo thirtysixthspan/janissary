@@ -17,6 +17,12 @@ export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/us
 // the tab strip and the file navigator already do.
 export { InlineEditInput } from '../InlineEditInput';
 
+// The host's terse confirmation, published for the same reason and on the same terms: a plugin that
+// asks the user to confirm something destructive should ask it the way the rest of the application
+// does, with the same wording shape and the same keyboard contract. It shipped as two identical
+// per-plugin copies before this, which is exactly the drift the published surface exists to prevent.
+export { ConfirmDialog } from '../shared/ConfirmDialog';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

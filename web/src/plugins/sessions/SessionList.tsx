@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction, SessionsPayload } from '@shared/plugins/sessions/shared';
-import type { TabPluginClientCapabilities } from '../api';
-import { ConfirmSessionDialog } from './ConfirmSessionDialog';
+import { ConfirmDialog, type TabPluginClientCapabilities } from '../api';
 import { SessionRowActions } from './SessionRowActions';
 import { openIntentFor, relativeActivity, sessionClickSelection, nextSessionSelection } from './sessions-keys';
 
@@ -125,7 +124,7 @@ export function SessionList({
         ))}
       </div>
       {pending && (
-        <ConfirmSessionDialog
+        <ConfirmDialog
           title={`${CONFIRMATIONS[pending.action]?.verb ?? ''} ${pending.row.name} on ${pending.row.host}?`}
           confirmLabel={CONFIRMATIONS[pending.action]?.button ?? ''}
           onCancel={() => { setPending(null); }}

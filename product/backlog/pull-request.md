@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Share one confirm dialog between the plugin lists instead of shipping a second verbatim copy of it.
-
-Existing Issue: `web/src/plugins/sessions/ConfirmSessionDialog.tsx` reproduces `web/src/plugins/conversations/DeleteConversationDialog.tsx` line for line — the same `selected` state, the same `actionsRef` key table, the same capture-phase `keydown` listener on `globalThis` that calls `preventDefault` and `stopPropagation` on every key, and the same markup against the host's modal CSS classes — differing only in that the title and confirm label arrive as props, so the two files are one component and a fix to either (the swallow-everything key handler being the obvious candidate) now has to be made twice. Severity: 3/10
-
-Existing Risk: 3/10 - The next plugin list copies whichever version it finds, and the keyboard behavior of janissary's modal confirmations drifts apart per plugin — one dialog answering Escape and another not — with nothing in the tree that would show the divergence.
-
-Proposal Risk: 2/10 - A shared component under the plugin tree becomes a de facto second API surface for plugins, so a change to it affects every list at once and the plugin boundary has to be explicit about what is shared and what is host UI.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the sessions confirm dialog is a verbatim copy of the conversations one". Promote the component to a shared plugin-side module beside `web/src/plugins/shared.css`, which already establishes that the plugin tree carries shared presentation without importing host UI — a `web/src/plugins/shared/ConfirmDialog.tsx` taking `title`, `confirmLabel`, `onConfirm`, and `onCancel` covers both call sites as written. Point `ConversationList` in `web/src/plugins/conversations/ConversationList.tsx` and `SessionList` in `web/src/plugins/sessions/SessionList.tsx` at it and delete both copies. Check `ai/guidelines/react-code-organization.md` and `ai/guidelines/plugins.md` first for where shared plugin presentation is meant to live and follow that if it names somewhere else. The conversations dialog's existing tests pin the keyboard contract and must keep passing against the shared component; move the sessions confirmation cases in `web/src/plugins/sessions/SessionList.test.tsx` to assert the wiring rather than re-testing the dialog's keys.
-
-
 * Hold replayed frames only for the reattach that needs them, so an ordinary channel stops accumulating output for ids nobody will claim.
 
 Existing Issue: `SessionRouter.output` and `.exit` in `src/remote/channel-sessions.ts` route any frame whose id has no listener into `PendingFrames`, unconditionally and for the whole life of the channel, and `discardUnclaimed` is called from exactly one place — `restoreSessionTabs` in `src/sessions/restore-tabs.ts` — so a channel that is not reattaching accumulates up to the 1 MB budget of output for ids whose listener has gone (a closed tab whose far side is still writing before its `kill` lands), re-encoding every held frame on each `claim` to recompute the byte total, and sets the `dropped` flag that makes the next unrelated `attach` report the truncated-replay line to the user. Severity: 4/10

@@ -5,9 +5,8 @@ import type {
   ConversationSummary,
   ConversationListPayload,
 } from '@shared/plugins/conversations/shared';
-import type { TabPluginClientCapabilities } from '../api';
+import { ConfirmDialog, type TabPluginClientCapabilities } from '../api';
 import { conversationClickSelection, nextConversationSelection } from './conversation-list-keys';
-import { DeleteConversationDialog } from './DeleteConversationDialog';
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
@@ -111,8 +110,9 @@ export function ConversationList({
         ))}
       </div>
       {pendingDelete && (
-        <DeleteConversationDialog
-          title={pendingDelete.title}
+        <ConfirmDialog
+          title={`Delete conversation "${pendingDelete.title}"?`}
+          confirmLabel="Delete"
           onCancel={() => { setPendingDelete(null); }}
           onConfirm={() => {
             void capabilities.intent('delete', { id: pendingDelete.id });
