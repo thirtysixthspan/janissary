@@ -75,6 +75,10 @@ export function startSessionReattach(
     const finish = (outcome: ReattachOutcome): void => {
       if (settled) return;
       settled = true;
+      // An outcome other than a live reattach leaves no shell bound to the adopted spawn id: ended
+      // means the session is over, and a failure means nothing was established — either way the id
+      // is dropped so no later tab granted this label can claim it.
+      if (outcome.kind !== 'reattached') managers.shell.releaseAdoptedShell(label);
       resolve(outcome);
     };
     const resume = {
@@ -112,7 +116,7 @@ export function startSessionReattach(
     // An agent-launched session: the tab is an ordinary agent tab whose shell runs on the far side,
     // and its shell binds to the recorded spawn id the moment something asks for one.
     const spawnId = spawnIdOf(record);
-    if (spawnId !== undefined) managers.shell.adoptRemoteShell(label, spawnId);
+    if (spawnId !== undefined) managers.shell.adoptRemoteShell(label, spawnId, record.session);
     startRemoteAgent(managers, {
       resolved: label, creator: managers.tab.cur(), address, offline: false,
       cwd: record.workspaceDir, resume: resumed,

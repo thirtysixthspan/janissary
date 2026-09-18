@@ -1,15 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
+import type { RemoteResume } from '../remote/resume.js';
 import { askSessionState } from '../remote/resume.js';
+import { startRemoteAgent } from '../profile/remote-agent.js';
 import { startSessionReattach } from './reattach.js';
 import { restoreSessionTabs } from './restore-tabs.js';
 import type { RemoteSessionRecord } from './store.js';
 
 // What this suite is about is how an accepted reattach settles — the peer's answer, an empty answer,
 // and no answer at all read differently on purpose, and the last of them used to not settle at all.
-// The connection itself is faked: `reattachRemote` hands back whichever answer the case is about.
+// The connection itself is faked: `reattachRemote` hands back whichever answer the case is about,
+// and the agent launch hands its resume straight back too.
 vi.mock('../remote/resume.js', () => ({ askSessionState: vi.fn() }));
 vi.mock('./restore-tabs.js', () => ({ restoreSessionTabs: vi.fn(() => []) }));
+vi.mock('../profile/remote-agent.js', () => ({ startRemoteAgent: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 
@@ -39,7 +43,7 @@ function harness() {
       }),
     },
     remote: { liveEntries: () => [entry], close: vi.fn() },
-    shell: { adoptRemoteShell: vi.fn() },
+    shell: { adoptRemoteShell: vi.fn(), releaseAdoptedShell: vi.fn() },
     tab: { tabs: [], cur: () => ({ label: 'janus', group: 1, groupColor: '#111' }) },
   } as unknown as Managers;
   return { managers };
@@ -91,5 +95,26 @@ describe('startSessionReattach', () => {
     const outcome = await startSessionReattach(h.managers, record());
     expect(outcome.kind).toBe('failed');
     expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
+  });
+
+  // The agent branch parks the recorded spawn id before the tab exists, so a reattach that does not
+  // come back must release it: the label is about to be freed, and a later tab granted the same
+  // label must bind its own shell, not a process id from a session that ended.
+  it('releases the adopted shell when an agent reattach ends instead of reattaching', async () => {
+    const h = harness();
+    vi.mocked(askSessionState).mockResolvedValue(undefined);
+    vi.mocked(startRemoteAgent).mockImplementation(
+      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
+    );
+    vi.mocked(askSessionState).mockResolvedValue(undefined);
+
+    const agentRecord: RemoteSessionRecord = {
+      ...record(),
+      launchKind: 'agent',
+      processes: [{ id: 'rsh1', label: 'claude', kind: 'agent' }],
+    };
+    await startSessionReattach(h.managers, agentRecord);
+    expect(h.managers.shell.adoptRemoteShell).toHaveBeenCalledWith('claude', 'rsh1', SESSION);
+    expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledWith('claude');
   });
 });

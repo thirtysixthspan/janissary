@@ -25,7 +25,7 @@ function restoreAgentTab(
   const creator = managers.tab.byLabel(launchLabel);
   if (!creator?.remote) return;
   if (!managers.remote.attach(label, launchLabel)) return;
-  managers.shell.adoptRemoteShell(label, spawnId);
+  managers.shell.adoptRemoteShell(label, spawnId, managers.remote.get(label)?.sessionId);
   placeAgent(managers, {
     resolved: label, creator, cwd: workspace, offline: false, remote: creator.remote,
   });

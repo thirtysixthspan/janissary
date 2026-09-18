@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Release an adopted remote spawn id when its reattach does not produce a shell, so a later tab cannot bind to a stale one.
-
-Existing Issue: `ShellManager.adoptRemoteShell` in `src/shell/manager.ts` parks a recorded spawn id in a map keyed by tab label, consumed only when `spawnFor` is next asked for that label's shell, and `startSessionReattach` in `src/sessions/reattach.ts` parks one before the tab exists — so a reattach that fails, or one whose tab is closed before any command runs, leaves the id in the map indefinitely, and because `uniqueLabel` frees the label the moment that tab closes, the next remote agent tab granted the same label binds its first shell to a spawn id belonging to a process on a different channel instead of starting its own. Severity: 4/10
-
-Existing Risk: 4/10 - The failure is silent by construction: the shell adapter registers under an id the far side never spawned, so the tab accepts commands and shows nothing back, and the user sees a remote agent tab that has simply stopped responding with no error anywhere to attribute it to.
-
-Proposal Risk: 2/10 - Releasing on tab close means a reattach whose tab is torn down and rebuilt within the same flow loses its adoption and starts a second shell on the far side beside the one still running there, which is the behavior the adoption exists to prevent.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: an adopted remote spawn id outlives its reattach and can be claimed by a later tab". Give the adoption a release: `ShellManager` in `src/shell/manager.ts` should drop a label's adopted id when that tab closes, alongside whatever `MANAGER_TAB_RELEASE` in `src/managers.ts` already routes there, and `startSessionReattach` in `src/sessions/reattach.ts` should drop it on every non-`reattached` outcome rather than only on success. Key the entry by more than the label if the label alone cannot be made safe — the record in `src/sessions/store.ts` carries the session id, so storing the channel's session id beside the spawn id and refusing to adopt when the tab's current channel does not match closes the reuse path outright. Add cases to `src/shell/manager.test.ts` that an adopted id is gone after the tab closes and that a tab on a different channel does not adopt it; the existing remote-shell case covering `rsh…` id minting is what pins the un-adopted path and must keep passing.
-
-
 * Deliver the reporting contract the pull request and its spec state on the reattach paths that end a session, which today record two notification lines.
 
 Existing Issue: An accepted reattach whose peer is holding nothing, and a reattach the peer refuses, each lands two lines in the notifications feed — the `<what> on <host> ended.` line the actions in `src/sessions/actions.ts` report through the new `remote-session` event, plus the pre-existing `Remote janus on <host> ended — start a new agent or shell to continue.` line that `terminateRemoteEntry` announces on both of those paths (directly from `handleReattachResult` in `src/remote/resume.ts` on a refusal, and via `RemoteManager.close` in `src/remote/manager.ts` from `settleAccepted` in `src/sessions/reattach.ts` when the peer came back empty) — while `product/specs/sessions-tab.md` states each action records one line and the pull request body says a notification names it. Severity: 3/10

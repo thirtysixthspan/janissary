@@ -106,7 +106,12 @@ establishes nothing: the row stays parked with its failure reported, the reattac
 pressed again, and the trash button appears beside it.
 
 A peer that accepts a reattach but reports nothing still running is told to shut down and its record
-dropped, rather than being left holding a remote workspace for a week with nothing in it.
+dropped, rather than being left holding a remote workspace for a week with nothing in it. A reattach
+that fails or ends also lets go of what it prepared for its tabs: a restored agent binds to the
+process still running on the far side when it is brought back, and that binding is dropped again once
+the attempt is over — so an agent tab recreated later under the same name starts its own shell on
+the connection it is actually on, never binding to a process belonging to a different session.
+Closing a reattached tab before running anything releases the same binding.
 
 ### Reporting
 

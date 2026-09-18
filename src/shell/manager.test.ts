@@ -140,6 +140,69 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(createRemoteShellMock).toHaveBeenCalledTimes(1);
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
+
+  // A reattached agent tab's shell is created lazily, so the recorded spawn id is parked here first
+  // — and only the channel the adoption was recorded against may claim it.
+  it('binds a remote tab\'s first shell to the adopted spawn id its channel still holds', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toBe('rsh9');
+  });
+
+  // Closing the tab frees the adoption with it: a later tab granted the same label starts its own
+  // shell instead of binding to a spawn id nobody recorded for it.
+  it('drops an adopted spawn id when the tab closes', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+    shellManager.closeTab('janus');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
+
+  // The label a tab holds is freed the moment it closes, and a fresh session that reuses it talks
+  // over a different channel — the adoption belongs to the old session and must not be claimed.
+  it('refuses an adoption whose recorded session no longer matches the tab\'s channel', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-2' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
+
+  it('releases an adopted spawn id when the reattach says there is no shell to come back to', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+    shellManager.releaseAdoptedShell('janus');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
 });
 
 describe('ShellManager — promotion to a terminal', () => {
