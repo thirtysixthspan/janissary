@@ -71,7 +71,16 @@ export function handleReattachResult(
     if (!entry.closed) entry.channel.discardUnclaimed();
     return;
   }
-  if (state.resuming && resume) { state.resuming = false; resume.onResult(false); }
+  if (state.resuming && resume) {
+    // A pressed reattach from a record: the sessions tab's reporter owns the narration (`<what> on
+    // <host> ended.`), so the generic announcement stays quiet here.
+    state.resuming = false;
+    resume.onResult(false);
+    terminateRemoteEntry(managers, entry, false);
+    return;
+  }
+  // An automatic reconnect's refusal is a session that ended on its own — nobody narrated it, so
+  // the generic announcement stands, exactly as it always read.
   terminateRemoteEntry(managers, entry);
 }
 

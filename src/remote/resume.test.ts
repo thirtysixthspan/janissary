@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
+import { notify } from '../notifications.js';
 import { detachRemoteEntry, terminateRemoteEntry, type RemoteEntry } from './reattach.js';
-import { answerSessionState, askSessionState, SESSION_STATE_TIMEOUT_MS } from './resume.js';
+import { answerSessionState, askSessionState, handleReattachResult, SESSION_STATE_TIMEOUT_MS, type ResumeState } from './resume.js';
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
@@ -87,5 +88,39 @@ describe('askSessionState', () => {
     await expect(query).resolves.toEqual([]);
     vi.advanceTimersByTime(SESSION_STATE_TIMEOUT_MS * 2);
     expect(target.sessionState).toBeUndefined();
+  });
+});
+
+// The remote-session-ended announcement is how the feed reports a session that ended on its own.
+// A reattach pressed from the sessions tab has its own narrator, so announcing here as well would
+// land two differently worded endings for one event.
+describe('handleReattachResult — who narrates a refusal', () => {
+  beforeEach(() => { notify.mockClear(); });
+
+  const narrating = {
+    tab: { byLabel: () => ({ label: 'claude', log: [], sessionEnded: undefined }) },
+  } as unknown as Managers;
+
+  function refusedReattach(resuming: boolean): void {
+    const target = entry();
+    const state: ResumeState = { resuming };
+    const resume = resuming
+      ? { session: 'session-1', workspaceDir: '/remote/ws', onResult: vi.fn() }
+      : undefined;
+    handleReattachResult(narrating, target,
+      { type: 'reattach-result', accepted: false }, 'creator', resume, state, vi.fn());
+  }
+
+  it('names the session once for a reattach pressed from a record, and not in the generic line', () => {
+    refusedReattach(true);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  // An automatic reconnect's refusal is a session that ended on its own, and nobody else
+  // narrates it — the generic announcement stands as it always read.
+  it('keeps the generic announcement for a refusal on the automatic reconnect path', () => {
+    refusedReattach(false);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify.mock.calls[0][1]).toBe('remote-session-ended');
   });
 });

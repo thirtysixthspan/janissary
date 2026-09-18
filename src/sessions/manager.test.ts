@@ -316,6 +316,19 @@ describe('SessionsManager reattach', () => {
     expect(loadRemoteSessions()).toEqual([]);
   });
 
+  // Exactly one line for the event: whatever the remote layer would have had to say about the same
+  // ending is muted, so the feed never teaches its lines cannot be taken at their word.
+  it('records exactly one notification for a reattach that ends the session', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    settle({ kind: 'ended', reason: 'claude on devbox is no longer running.' });
+    h.sessions.reattach(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session', 'janus', 'claude on devbox ended.');
+  });
+
   it('is refused for a session it has no record of', () => {
     expect(harness().sessions.reattach('no-such-session')).toBe(false);
     expect(startSessionReattach).not.toHaveBeenCalled();
@@ -331,6 +344,17 @@ describe('SessionsManager end', () => {
 
     await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
     expect(loadRemoteSessions()).toEqual([]);
+  });
+
+  // The end action is the narrator for an end it pressed, and one event is one line.
+  it('records exactly one notification for a successful end', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockResolvedValue({ ended: true } satisfies EndOutcome);
+    h.sessions.end(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    expect(notify).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the record when the host could not be reached', async () => {
