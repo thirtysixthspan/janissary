@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Reconcile the store's single-writer premise with the same pull request's narrower instance-lock rule.
-
-Existing Issue: `src/sessions/store.ts`'s justification for one shared `remote-sessions.json` is that `acquireLock` "already refuses a second janissary in one project directory — there is no second writer to race with", but the same pull request teaches the lock to treat a recorded pid it cannot signal as stale (`isOwnInstanceAlive`, `src/instance-lock.ts`), so two janissary instances running under different accounts in one shared directory are now both admitted, and each rewrites the other's record file out from under it at every mirror. Severity: 3/10
-
-Existing Risk: 3/10 - In the shared-directory case the record file becomes last-writer-wins, so one account's parked sessions vanish from the other's list exactly when the feature promises they outlive the process, and the rediscovered session count cannot be trusted there.
-
-Proposal Risk: 2/10 - Making the store's shape account-safe is a small change, but whichever option is taken records a decision about a directory layout two installations and one shared directory have to agree on, so it wants a deliberate answer rather than a incidental patch.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the sessions record's no-second-writer guarantee is narrower than the lock now enforcing it". Either corrupt-free tolerance or strict refusal, both of which are already shaped by the codebase: key the record file per user (`remote-sessions.<account-hash>.json`, discovered on load by reading every matching file in `.janissary/`), or make `saveRemoteSessions` in `src/sessions/store.ts` refuse to overwrite a file whose content has moved under it by reading-then-merging inside the write (the merge functions there are already pure and keyed by session id, and `loadRemoteSessions` already re-reads on every call via `manager.all()` in `src/sessions/manager.ts`). Whichever is chosen, state it in `acquireLock`'s comment in `src/instance-lock.ts`, where the deliberate cross-account cost is currently claimed but not followed to the record file it now enables, and extend `src/sessions/store.test.ts` with the two-writers scenario: a second set of records saved after a first one's load replaces or coexists with it as the chosen design says. `src/instance-lock.test.ts`'s recycled-pid case from `product/plans/complete/narrow-the-instance-lock-staleness-rule.md` pins the lock side and must keep passing.

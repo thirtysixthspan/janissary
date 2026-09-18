@@ -1,4 +1,6 @@
-import { mkdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, mkdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { userInfo } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
@@ -8,10 +10,14 @@ import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
 // `RemoteManager`, which is exactly why quitting used to make a live peer unreachable: the far side
 // waits `REMOTE_DETACH_TIMEOUT_MS` to be reattached and nothing local remembered its id.
 //
-// One file rather than one per session, because `acquireLock` already refuses a second janissary in
-// one project directory — there is no second writer to race with. It lives in the project's own
-// `.janissary/`, so opening janissary on another project lists only that project's sessions, which
-// matches what a remote launch is: a clone of *this* project's origin.
+// One file per account, in the project's own `.janissary/`, so opening janissary on another project
+// lists only that project's sessions, which matches what a remote launch is: a clone of *this*
+// project's origin. Per account because `acquireLock` admits a second janissary under a different
+// account in one shared directory — a recorded pid that account cannot signal reads as stale — and
+// a record file both such writers rename would be last-writer-wins at every mirror. Each writes its
+// own, and a load merges every writer's file back into one list, so the directory's janissaries
+// still describe one project's sessions. The pre-keying `remote-sessions.json` is read the same way,
+// so a parked session survives an upgrade without any migration step.
 
 export type RemoteProcessKind = 'harness' | 'agent';
 
@@ -46,9 +52,22 @@ export type RemoteSessionRecord = {
 };
 
 let recordFile = '';
+let recordDir = '';
+
+// The file's name carries a hash rather than the account's own spelling: the hash is filesystem-safe
+// by construction, and two accounts whose names differ only by case stay distinct on case-insensitive
+// filesystems. A platform without a usable account name — some embedded setups — shares 'unknown',
+// which collapses back to the pre-keying behavior: one file, one writer.
+function accountHash(): string {
+  let name;
+  try { name = userInfo().username; } catch { name = ''; }
+  return createHash('sha256').update(name || 'unknown').digest('hex').slice(0, 8);
+}
 
 export function initRemoteSessionStore(projectDirectory: string): void {
-  recordFile = path.join(projectDirectory, '.janissary', 'remote-sessions.json');
+  if (!projectDirectory) { recordDir = ''; recordFile = ''; return; }
+  recordDir = path.join(projectDirectory, '.janissary');
+  recordFile = path.join(recordDir, `remote-sessions.${accountHash()}.json`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -122,15 +141,41 @@ export function withoutRemoteSession(
   return records.filter((entry) => entry.session !== session);
 }
 
+function currentRecordFiles(): string[] {
+  if (!recordDir) return [];
+  let names;
+  try { names = readdirSync(recordDir); } catch { return []; }
+  const files = names
+    .filter((name) => name.startsWith('remote-sessions') && name.endsWith('.json'))
+    .map((name) => path.join(recordDir, name));
+  if (!files.includes(recordFile)) files.push(recordFile);
+  return files;
+}
+
 export function loadRemoteSessions(now = Date.now()): RemoteSessionRecord[] {
   if (!recordFile) return [];
-  let text: string;
-  try {
-    text = readFileSync(recordFile, 'utf8');
-  } catch {
-    return [];
+  const records: RemoteSessionRecord[] = [];
+  for (const file of currentRecordFiles()) {
+    let text: string;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+    records.push(...parseRemoteSessions(text));
   }
-  return pruneRemoteSessions(parseRemoteSessions(text), now);
+  return pruneRemoteSessions(dedupeBySession(records), now);
+}
+
+// Two writers under different accounts can both hold a record for the same session id — one mirror
+// each — and picking the newest keeps the search order that a single writer produced.
+function dedupeBySession(records: RemoteSessionRecord[]): RemoteSessionRecord[] {
+  const bySession = new Map<string, RemoteSessionRecord>();
+  for (const record of records) {
+    const existing = bySession.get(record.session);
+    if (!existing || record.activity > existing.activity) bySession.set(record.session, record);
+  }
+  return [...bySession.values()];
 }
 
 export function saveRemoteSessions(records: readonly RemoteSessionRecord[]): void {

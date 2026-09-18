@@ -1,4 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+
+// The store's file is keyed by account, so the two-writers scenario is testable by switching the
+// account the mocked `userInfo` reports between inits of the same directory.
+const account = vi.hoisted(() => ({ name: 'alphan' }));
+vi.mock('node:os', async (importOriginal) => ({
+  ...await importOriginal(),
+  userInfo: () => ({ username: account.name, uid: 1000, gid: 1000, homedir: '/home/x', shell: '' }),
+}));
+
+// The account hash in the file name is not predictable from the test, so the account-keyed files are
+// located by their shape: `remote-sessions.<hash>.json` beside the project's `.janissary/`.
+function recordFileNames(dir: string): string[] {
+  return readdirSync(path.join(dir, '.janissary'))
+    .filter((name) => name.startsWith('remote-sessions') && name.endsWith('.json'));
+}
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -48,8 +63,9 @@ describe('remote session store round trip', () => {
   it('writes the record under the project\'s own .janissary directory', () => {
     const dir = project();
     saveRemoteSessions([record({ activity: Date.now() })]);
-    const file = path.join(dir, '.janissary', 'remote-sessions.json');
-    expect(JSON.parse(readFileSync(file, 'utf8'))).toHaveLength(1);
+    const [name] = recordFileNames(dir);
+    expect(name).toMatch(/^remote-sessions\.[0-9a-f]{8}\.json$/);
+    expect(JSON.parse(readFileSync(path.join(dir, '.janissary', name), 'utf8'))).toHaveLength(1);
   });
 
   // The rename is what makes a half-written file impossible; asserting no temp sibling survives is
@@ -57,8 +73,8 @@ describe('remote session store round trip', () => {
   it('leaves no temporary file behind', () => {
     const dir = project();
     saveRemoteSessions([record()]);
-    const entries = readdirSync(path.join(dir, '.janissary'));
-    expect(entries).toEqual(['remote-sessions.json']);
+    expect(recordFileNames(dir)).toHaveLength(1);
+    expect(readdirSync(path.join(dir, '.janissary')).length).toBe(1);
   });
 
   it('reads no sessions before the store has been pointed at a project', () => {
@@ -151,5 +167,54 @@ describe('remote session store registration', () => {
     const entry = entries.find((candidate) => candidate.name === 'remoteSessions');
     expect(entry).toBeDefined();
     expect(entry?.clear).toBeUndefined();
+  });
+});
+
+// One shared directory holds every account's janissary: the lock admits the second account's
+// instance, so the record file is keyed per account and a load merges every writer's file back into
+// one list. Two writers must never rename each other's records out from under them.
+describe('remote session store across accounts', () => {
+  beforeEach(() => { account.name = 'alphan'; });
+
+  it('keeps a second account\'s records instead of overwriting them', () => {
+    const dir = project();
+    saveRemoteSessions([record({
+      session: 'aaaaaaaa-bbbb-cccc-dddd-aaaaaaaaaaaa', activity: Date.now(),
+    })]);
+    account.name = 'bekir';
+    initRemoteSessionStore(dir);
+    // Discovery merges the directory's files, so one account's list is one project's sessions.
+    expect(loadRemoteSessions().map((entry) => entry.session))
+      .toEqual(['aaaaaaaa-bbbb-cccc-dddd-aaaaaaaaaaaa']);
+    saveRemoteSessions([record({
+      session: 'aaaaaaaa-bbbb-cccc-dddd-bbbbbbbbbbbb', activity: Date.now(),
+    })]);
+    account.name = 'alphan';
+    initRemoteSessionStore(dir);
+    const sessions = loadRemoteSessions().map((entry) => entry.session)
+      .toSorted((a, b) => a.localeCompare(b));
+    expect(sessions).toEqual(['aaaaaaaa-bbbb-cccc-dddd-aaaaaaaaaaaa', 'aaaaaaaa-bbbb-cccc-dddd-bbbbbbbbbbbb']);
+    expect(recordFileNames(dir)).toHaveLength(2);
+  });
+
+  it('reads the pre-keying legacy file beside the account-keyed ones', () => {
+    const dir = project();
+    mkdirSync(path.join(dir, '.janissary'), { recursive: true });
+    writeFileSync(path.join(dir, '.janissary', 'remote-sessions.json'),
+      JSON.stringify([record({ activity: Date.now() })]));
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+
+  it('keeps the newest record when the legacy file duplicates a keyed one', () => {
+    const dir = project();
+    mkdirSync(path.join(dir, '.janissary'), { recursive: true });
+    const before = Date.now() - 1000;
+    const after = Date.now() - 500;
+    writeFileSync(path.join(dir, '.janissary', 'remote-sessions.json'),
+      JSON.stringify([record({ activity: before })]));
+    saveRemoteSessions([record({ activity: after })]);
+    const [loaded] = loadRemoteSessions();
+    expect(loaded.activity).toBe(after);
+    expect(loadRemoteSessions()).toHaveLength(1);
   });
 });

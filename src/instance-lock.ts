@@ -36,7 +36,10 @@ export function isPidAlive(pid: number): boolean {
  * The permission probe is the whole test, which keeps this portable and leaves the lock file a bare
  * pid. What it costs is a project directory shared between two accounts, where one user's janus no
  * longer blocks the other's — rarer than a recycled pid, and it fails toward starting rather than
- * toward a lock nobody can clear.
+ * toward a lock nobody can clear. That admitted second writer is deliberate and accounted for
+ * downstream: the remote-sessions store keys its record file per account (`remote-sessions.<hash>.json`),
+ * so each writer names its own file and a load merges the directory's files into one list, with
+ * nothing left that can be renamed out from under the other.
  */
 export function isOwnInstanceAlive(pid: number): boolean {
   try {
