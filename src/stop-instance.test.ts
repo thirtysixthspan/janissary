@@ -32,6 +32,24 @@ describe('stopInstance', () => {
     writeSpy.mockRestore();
   });
 
+  // A recycled pid owned by another account is not the instance the lock names, and a SIGTERM aimed
+  // at it would throw rather than stop anything.
+  it('reports no running instance when the locked pid belongs to another account', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '999999');
+    const kill = vi.spyOn(process, 'kill')
+      .mockImplementation(() => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); });
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    stopInstance(projectDir);
+
+    expect(writeSpy).toHaveBeenCalledWith(`no running janus instance for ${projectDir}\n`);
+    expect(kill).not.toHaveBeenCalledWith(999_999, 'SIGTERM');
+    kill.mockRestore();
+    writeSpy.mockRestore();
+  });
+
   it('reports no running instance when the locked pid is dead', () => {
     const dir = path.join(projectDir, '.janissary');
     mkdirSync(dir, { recursive: true });

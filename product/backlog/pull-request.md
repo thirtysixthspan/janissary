@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give `isPidAlive` a doc comment and decide deliberately whether the instance lock wants the same permission-denied answer the remote rendezvous does.
-
-Existing Issue: `isPidAlive` in `src/instance-lock.ts` changes from returning false on any `process.kill(pid, 0)` failure to returning true on `EPERM`, which is what the detached-peer rendezvous in `src/remote/serve-detach.ts` needs, but the function's other caller is `acquireLock` in the same file, where the question is not "does some process hold this pid" but "is my earlier janus still running", and the function carries no doc comment stating which question it answers. Severity: 3/10
-
-Existing Risk: 3/10 - A stale lock file in a project directory whose recorded pid has since been recycled by a process belonging to another user now reports alive, so `janus` refuses to start in that directory with an instruction to delete the lock file by hand, and nothing in the code or the specs records that this was a deliberate consequence of a change made for the remote peer.
-
-Proposal Risk: 1/10 - Each caller gets the answer it wants, but the two liveness questions are now distinguishable only by which helper is called, so a third caller has to read the comments to pick correctly.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: the isPidAlive EPERM change silently widened the instance lock's staleness rule". Add a doc comment to `isPidAlive` in `src/instance-lock.ts` stating that a permission-denied probe means the pid exists under another account and is therefore reported alive, and that a probe failing any other way is reported dead. Then decide the lock's case on its own terms: `acquireLock` records `process.pid` and reads it back, so a recycled pid owned by another user is definitionally not the janus instance the lock names, and the lock can distinguish them by checking ownership or by recording a start time alongside the pid — either narrows the lock without touching what `relayPeer` needs. If the widened rule is judged acceptable for the lock too, say so in the comment rather than leaving it implicit. `src/instance-lock.test.ts` already covers the `EPERM`/`ESRCH` pair added in this branch; extend its `acquireLock` cases with the recycled-pid scenario so whichever rule is chosen is pinned, since no existing test exercises a lock file whose pid belongs to someone else.
-
-
 * Write the session record before parking a peer, so a detach can never leave a live remote session with nothing to reattach it by.
 
 Existing Issue: `detach` in `src/sessions/actions.ts` resolves the record from the live channel's session id and, when `SessionsManager` is holding none, still parks the peer and answers `{ ran: true }` with no record — so a detach raised from a tab's metadata row, which reaches `SessionsManager.detach` through `src/controller.ts` without ever composing the list whose `mirror` step is the only thing that writes records, and a detach on a remote agent tab whose lazily-created shell has never been spawned, for which `recordOf` in `src/sessions/snapshot.ts` deliberately writes nothing, both drop the transport without `finish()` and leave the far side running with no local record, no row, and no reattach path. Severity: 9/10
