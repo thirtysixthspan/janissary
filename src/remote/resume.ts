@@ -60,7 +60,15 @@ export function handleReattachResult(
   if (frame.accepted) {
     entry.reconnect.accepted();
     if (frame.truncated) onTruncated();
-    if (state.resuming && resume) { state.resuming = false; settleResume(entry, resume, label); }
+    if (state.resuming && resume) {
+      state.resuming = false;
+      settleResume(entry, resume, label);
+      return;
+    }
+    // An automatic reconnect, not a resume: its tabs were already open when the transport went, so
+    // the replay went straight to their listeners and there is no restore pass coming to close the
+    // hold window — the channel is ordinary again the moment the reattach is accepted.
+    if (!entry.closed) entry.channel.discardUnclaimed();
     return;
   }
   if (state.resuming && resume) { state.resuming = false; resume.onResult(false); }

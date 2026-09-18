@@ -202,6 +202,10 @@ export class RemoteChannel {
     const handshake = parseHandshake(line);
     if ('error' in handshake) { this.fail(handshake.error); return; }
     this.state = this.sessionId ? 'reattaching' : 'attached';
+    // A handshake that speaks for an existing session opens the hold window: the peer is about to
+    // flush its replay and the tabs that will claim it may not exist yet. It closed by
+    // `discardUnclaimed` once those tabs are built — or by the settlement that ends the reattach.
+    if (this.state === 'reattaching') this.router.openHold();
     this.sessionId ??= handshake.session;
     this.handlers.onAttached(handshake);
   }

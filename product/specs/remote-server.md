@@ -227,7 +227,10 @@ claimed it meanwhile. Remote file navigators are not restored. A peer that comes
 nothing is told to shut down and its record dropped, rather than being left to hold a remote
 workspace for a week with nothing in it. Output the peer replays before its tabs exist is held and
 delivered to each tab as it is created, in the order the peer produced it, bounded by the same limit
-the peer's own buffer uses; an overflow is reported with the existing truncated-replay line.
+the peer's own buffer uses; an overflow is reported with the existing truncated-replay line. The hold
+lasts only for the reattach that needs it — once its tabs are built the connection is ordinary, and
+output arriving for a process no tab is listening to is dropped rather than collected for a later
+attach that is not coming.
 
 A session can be ended for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked

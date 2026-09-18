@@ -329,6 +329,9 @@ it('answers new filesystem requests during a disconnect without sending or repla
 describe('RemoteChannel — frames for an id with no listener yet', () => {
   function attachedChannel() {
     const h = harness();
+    // As a resume does: the session id is set before the handshake, so the channel enters its
+    // reattaching window and the state that opens the hold.
+    h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
     h.channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
     return h;
   }
@@ -427,7 +430,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
 
   // A transport lost by a session that can be reattached is not the end of anything: the peer is
   // still there and the frames it already sent are still owed to whichever tab claims them.
-  it('keeps what it is holding across a transport loss that will reconnect', () => {
+  it('holds what it is holding across a transport loss that will reconnect', () => {
     const h = attachedChannel();
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'held' })}\n`);
     h.channel.closed();
@@ -435,5 +438,33 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
     const chunks: string[] = [];
     h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
     expect(chunks).toEqual(['held']);
+  });
+
+  // A channel that is not reattaching has nothing to hold for: a frame whose listener is gone (a
+  // closed tab whose far side is still writing before its kill lands) stays dropped, and no
+  // truncated-replay line is raised into a tab that was never disconnected.
+  it('drops an unlistened frame on a live channel with no reattach in flight', () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'exit', id: 'r9', exitCode: 1 })}\n`);
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+    expect(h.truncated).not.toHaveBeenCalled();
+  });
+
+  // The window brackets the whole reattach, and once it closes the channel is ordinary again:
+  // nothing arriving afterwards is held for an id nobody claims.
+  it('stops holding once the reattach window closes', () => {
+    const h = attachedChannel();
+    h.channel.discardUnclaimed();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+    expect(h.truncated).not.toHaveBeenCalled();
   });
 });

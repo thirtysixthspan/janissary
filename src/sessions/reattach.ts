@@ -34,6 +34,9 @@ async function settleAccepted(
   // announces the new version from the relaying process and hands the query to an older peer behind
   // it — and without this the promise never settled and the placeholder tab sat open for good.
   if (processes === undefined) {
+    // The reattach settles without a restore pass, so the hold window closes here: the entry lives
+    // on to be tried again, and must not accumulate replay for ids nothing will claim.
+    entry.channel.discardUnclaimed();
     return { kind: 'failed', reason: `${record.host} accepted the reattach but never said what was running.` };
   }
   if (processes.length === 0) {

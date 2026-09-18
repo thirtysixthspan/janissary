@@ -15,18 +15,23 @@ import { PENDING_BUFFER_BUDGET_BYTES } from './serve-detach.js';
 
 type PendingFrame = Extract<ServerFrame, { type: 'output' | 'exit' }>;
 
+// The encoded length is kept beside each frame so a claim subtracts only what left, instead of
+// re-encoding every survivor to recompute the total.
+type HeldFrame = { frame: PendingFrame; bytes: number };
+
 export class PendingFrames {
-  private frames: PendingFrame[] = [];
+  private frames: HeldFrame[] = [];
   private bytes = 0;
   private dropped = false;
 
   hold(frame: PendingFrame): void {
-    this.frames.push(frame);
-    this.bytes += encodeFrame(frame).length;
+    const bytes = encodeFrame(frame).length;
+    this.frames.push({ frame, bytes });
+    this.bytes += bytes;
     while (this.bytes > PENDING_BUFFER_BUDGET_BYTES) {
       const removed = this.frames.shift();
       if (!removed) break;
-      this.bytes -= encodeFrame(removed).length;
+      this.bytes -= removed.bytes;
       this.dropped = true;
     }
   }
@@ -35,11 +40,11 @@ export class PendingFrames {
   // whole point: a process's output and the exit that ends it must reach its tab in the sequence the
   // far side produced them, or the tab shows a session that ended before it spoke.
   claim(id: string): PendingFrame[] {
-    const claimed = this.frames.filter((frame) => frame.id === id);
+    const claimed = this.frames.filter((held) => held.frame.id === id);
     if (claimed.length === 0) return [];
-    this.frames = this.frames.filter((frame) => frame.id !== id);
-    this.bytes = this.frames.reduce((total, frame) => total + encodeFrame(frame).length, 0);
-    return claimed;
+    this.frames = this.frames.filter((held) => held.frame.id !== id);
+    this.bytes -= claimed.reduce((total, held) => total + held.bytes, 0);
+    return claimed.map((held) => held.frame);
   }
 
   // Whether anything was dropped since this was last asked, clearing the flag so one overflow is

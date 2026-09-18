@@ -26,8 +26,18 @@ export class SessionRouter {
   private sessions = new Map<string, SessionListener>();
   private spawned = new Map<string, SpawnFrame>();
   private pending = new PendingFrames();
+  // Whether a reattach is settling on this channel and the hold is therefore earning its memory.
+  // Frames arrive between the accepted result and the tabs it builds, and between the answer and
+  // `discardUnclaimed`, so the gate is a window that brackets the whole reattach rather than a live
+  // read of the channel's state — an ordinary channel (no reattach in flight) drops instead.
+  private holding = false;
 
   constructor(private handlers: SessionRouterHandlers) {}
+
+  // A reattach is under way: hold what arrives for ids whose tabs are still being built. Opened by
+  // the channel the moment its handshake will speak for an existing session, closed by
+  // `discardUnclaimed`, by a settlement that ends the reattach, or by the channel's own clear.
+  openHold(): void { this.holding = true; }
 
   // Anything the far side already sent for this id is delivered here, in arrival order, before the
   // listener sees anything new — a reattach after a restart replays into tabs that did not exist
@@ -44,10 +54,13 @@ export class SessionRouter {
 
   detach(id: string): void { this.sessions.delete(id); }
 
-  // Everything still held for a process no tab was built for. Called once a reattach has created the
-  // tabs the far side's answer named, so a peer describing a process this side chose not to restore
-  // does not leave its replay in memory for the life of the channel.
-  discardUnclaimed(): void { this.pending.clear(); }
+  // Everything still held for a process no tab was built for, and the window with it: once a
+  // reattach has created the tabs the far side's answer named, the channel is ordinary again and a
+  // later frame with no listener is dropped, not held.
+  discardUnclaimed(): void {
+    this.pending.clear();
+    this.holding = false;
+  }
 
   record(frame: SpawnFrame): void { this.spawned.set(frame.id, frame); }
 
@@ -71,15 +84,19 @@ export class SessionRouter {
   output(frame: OutputFrame): void {
     const listener = this.sessions.get(frame.id);
     if (listener) listener.onOutput(frame.data);
-    else this.pending.hold(frame);
+    else if (this.holding) this.pending.hold(frame);
   }
 
   exit(frame: ExitFrame): void {
     const listener = this.sessions.get(frame.id);
     const spawned = this.spawned.get(frame.id);
     // An id this channel neither has a listener for nor spawned itself belongs to a process started
-    // before this janissary existed — a reattach whose tabs are still being built.
-    if (!listener && !spawned) { this.pending.hold(frame); return; }
+    // before this janissary existed — a reattach whose tabs are still being built. Outside that
+    // window there is nothing the frame could be delivered to, so it is dropped.
+    if (!listener && !spawned) {
+      if (this.holding) this.pending.hold(frame);
+      return;
+    }
     this.sessions.delete(frame.id);
     this.spawned.delete(frame.id);
     if (spawned && (spawned.harness || spawned.mode === 'pipe')) {
@@ -99,5 +116,6 @@ export class SessionRouter {
     this.sessions.clear();
     this.spawned.clear();
     this.pending.clear();
+    this.holding = false;
   }
 }

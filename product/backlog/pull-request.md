@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Hold replayed frames only for the reattach that needs them, so an ordinary channel stops accumulating output for ids nobody will claim.
-
-Existing Issue: `SessionRouter.output` and `.exit` in `src/remote/channel-sessions.ts` route any frame whose id has no listener into `PendingFrames`, unconditionally and for the whole life of the channel, and `discardUnclaimed` is called from exactly one place — `restoreSessionTabs` in `src/sessions/restore-tabs.ts` — so a channel that is not reattaching accumulates up to the 1 MB budget of output for ids whose listener has gone (a closed tab whose far side is still writing before its `kill` lands), re-encoding every held frame on each `claim` to recompute the byte total, and sets the `dropped` flag that makes the next unrelated `attach` report the truncated-replay line to the user. Severity: 4/10
-
-Existing Risk: 4/10 - A long-lived remote channel grows a megabyte of output that will never be delivered and reports `Some remote output produced while disconnected was dropped to limit memory use.` into a tab that was never disconnected, which is a message the user cannot act on and cannot distinguish from the real one it borrows.
-
-Proposal Risk: 2/10 - Holding only while a reattach is in flight means a frame arriving a moment after the window closes is dropped as before, so the window's start and end have to bracket the whole reattach rather than just its query.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the channel holds output for unclaimed ids on every channel, not only during a reattach". Gate the hold on the state that motivates it: `RemoteChannel` in `src/remote/channel.ts` already knows it is `reattaching`, and `RemoteManager.open` in `src/remote/manager.ts` knows a `resume` was supplied, so pass that through to `SessionRouter` and have `output`/`exit` fall back to today's drop when no reattach is settling. Bound the window at both ends — `restoreSessionTabs` already closes it — and scope `overflowed()` in `src/remote/channel-pending.ts` so the truncation line is reported only for the attach that actually lost frames. While there, keep a running byte total rather than re-encoding the whole buffer in `claim`. The held-frame cases in `src/remote/channel.test.ts` cover the reattach path and must keep passing; add one that a live channel with no reattach in flight drops an unlistened frame and raises no truncation report.
-
-
 * Release an adopted remote spawn id when its reattach does not produce a shell, so a later tab cannot bind to a stale one.
 
 Existing Issue: `ShellManager.adoptRemoteShell` in `src/shell/manager.ts` parks a recorded spawn id in a map keyed by tab label, consumed only when `spawnFor` is next asked for that label's shell, and `startSessionReattach` in `src/sessions/reattach.ts` parks one before the tab exists — so a reattach that fails, or one whose tab is closed before any command runs, leaves the id in the map indefinitely, and because `uniqueLabel` frees the label the moment that tab closes, the next remote agent tab granted the same label binds its first shell to a spawn id belonging to a process on a different channel instead of starting its own. Severity: 4/10

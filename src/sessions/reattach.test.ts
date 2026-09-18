@@ -31,7 +31,7 @@ function record(): RemoteSessionRecord {
 // The launch accepts, which is the state every case here starts from: the peer is there, the tab
 // exists, and what is left is the query about what survived.
 function harness() {
-  const entry = { labels: new Set(['claude']) };
+  const entry = { labels: new Set(['claude']), channel: { discardUnclaimed: vi.fn() } };
   const managers = {
     harness: {
       reattachRemote: vi.fn((options: { resume: { onResult: (accepted: boolean) => void } }) => {
