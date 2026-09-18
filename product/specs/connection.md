@@ -55,3 +55,10 @@ Every ACP connection row in the connections window — the tab's own agent (`acp
 ### `connection` command
 
 `connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connection list` shows every open connection; `connection close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, or `ssh`. Malformed invocations return a `Usage:` message.
+
+### Parked remote sessions
+
+This surface describes connections open *now*, so a remote session that has been detached appears in
+neither `connection list` nor the connections window — it has no open connection to list. Those are
+listed in the sessions tab, which shows both the remote sessions this janissary is attached to and
+the ones still running on their hosts awaiting reattachment. See [[sessions-tab]].

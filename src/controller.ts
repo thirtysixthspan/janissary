@@ -26,11 +26,16 @@ export class ControllerCore {
   }
 
   // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
+  //
+  // Every parked remote session is reattached as part of the same restore, each on its own: a
+  // refusing peer is marked ended, an unreachable host stays detached with its failure on its row,
+  // and neither holds the rest of the restore up — which is why nothing here is awaited.
   rehydrate(): void {
     this.managers.tab.rehydrate(
       (name) => TranscriptStore.load(name),
       (s) => { if (s.schedule) this.managers.schedule.set(s.name, s.schedule); },
     );
+    this.managers.sessions.restoreAll();
   }
 
   view(): TabView[] {
@@ -55,6 +60,13 @@ export class ControllerCore {
   closeHarnessLaunch(): void { this.managers.harness.closeLaunchDialog(); }
   scheduleLaunchView() { return this.managers.schedule.scheduleLaunchView(); }
   closeScheduleLaunch(): void { this.managers.schedule.closeScheduleLaunch(); }
+
+  // The metadata row's detach/reattach control. One method behind two verbs, delegating to the same
+  // manager methods the sessions tab's topic actions call — one implementation, two front doors.
+  remoteSession(action: 'detach' | 'reattach', label: string): void {
+    if (action === 'detach') this.managers.sessions.detach(label);
+    else this.managers.sessions.reattachTab(label);
+  }
 
   answerQuestion(tab: string, id: string, answer: string | null): void {
     if (!this.managers.questions.answer(tab, id, answer)) throw new Error('question not found');

@@ -10,6 +10,7 @@ import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { statusButton } from '../shared/status-windows/status-button';
 import { tabBodyBorder } from '../tab-body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
+import { remoteSessionControl } from '../shared/remote-session-control';
 
 type Properties = {
   tab: TabView;
@@ -43,6 +44,9 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
         connectionsButton={statusButton(tab.connections.length > 0, statusWindows.connections)}
         scheduleButton={statusButton(tab.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
+        remoteSession={tab.remote === undefined
+          ? undefined
+          : remoteSessionControl(client, tab.label, tab.busy && tab.cwd === undefined)}
       />
       <div className="main">
         <Transcript

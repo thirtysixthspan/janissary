@@ -5,6 +5,7 @@ import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
+import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../tab-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
@@ -82,6 +83,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         connectionsButton={connectionsButton}
         scheduleButton={scheduleButton}
         onSplit={onSplit}
+        remoteSession={remote === undefined
+          ? undefined
+          : remoteSessionControl(client, label, harness.status === 'provisioning')}
       />
       {isExited && (
         <div className="harness-exited">

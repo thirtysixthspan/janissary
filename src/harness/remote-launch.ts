@@ -2,6 +2,7 @@ import { messageBus } from '../bus.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import type { Managers } from '../managers.js';
 import type { RemoteAddress } from '../remote/address.js';
+import type { RemoteResume } from '../remote/resume.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 
 // The "open a channel, insert the placeholder, resolve `ready` from frames" sequence, kept out of
@@ -38,7 +39,7 @@ function closeTab(managers: Managers, label: string): void {
  * harness tab closes when its process exits.
  */
 export function startRemoteLaunch(
-  managers: Managers, label: string, address: RemoteAddress, cwd: string,
+  managers: Managers, label: string, address: RemoteAddress, cwd: string, resume?: RemoteResume,
 ): RemoteLaunchState {
   // The channel is opened inside the executor, which runs synchronously, so `ptyId` is filled in
   // before this function returns and no resolver has to be lifted out of the promise.
@@ -51,17 +52,22 @@ export function startRemoteLaunch(
         state.settled = true;
         resolve();
       },
+      // A reattach hears about a launch that never reached an answer here, at the launch's own
+      // failure funnel, rather than through a second path of its own.
       onFailed: (message) => {
         if (state.settled) { closeTab(managers, label); return; }
         state.settled = true;
+        resume?.onFailed?.(message);
         reject(new Error(message));
       },
       onClosed: () => {
         if (state.settled) { closeTab(managers, label); return; }
         state.settled = true;
-        reject(new Error(`Remote session to ${address.host} ended before its workspace was ready.`));
+        const message = `Remote session to ${address.host} ended before its workspace was ready.`;
+        resume?.onFailed?.(message);
+        reject(new Error(message));
       },
-    });
+    }, resume);
     state.ptyId = channel.ptyId;
   });
 
@@ -81,7 +87,7 @@ export function startRemoteTab(
   onFailed: (message: string) => void,
 ): void {
   const { label, cwd } = options;
-  const launch = startRemoteLaunch(managers, label, remote, cwd);
+  const launch = startRemoteLaunch(managers, label, remote, cwd, options.resume);
   const liveTab = managers.tab.byLabel(label);
   if (liveTab?.harness) liveTab.harness.ptyId = launch.ptyId;
   messageBus.emit('state', { type: 'dirty' });

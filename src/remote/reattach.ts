@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 import type { RemoteChannel } from './channel.js';
+import type { RemoteProcessState } from './protocol.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteLaunchHandlers } from './manager.js';
@@ -21,6 +22,9 @@ export type RemoteEntry = {
   closed: boolean;
   workspaceLabel: string;
   reconnect: Reattach;
+  // The resolver of a `session-state` query waiting for its answer. One at a time: the only thing
+  // that asks is a reattach settling its tabs, and a channel has one of those in flight at most.
+  sessionState?: (processes: RemoteProcessState[]) => void;
 };
 
 export class Reattach {
@@ -98,6 +102,27 @@ export function endRemoteProcess(managers: Managers, entry: RemoteEntry, label: 
     return tab && tab.view !== 'files' && !tab.sessionEnded;
   });
   if (!live) terminateRemoteEntry(managers, entry, false);
+}
+
+/**
+ * Give up a live session locally while deliberately leaving it running on its host — the sibling of
+ * `terminateRemoteEntry`, and the opposite decision. Everything the ordinary last-label release does
+ * happens here except the one thing that matters: `finish()` is never called, so no `kill`,
+ * `acp-close`, `filesystem-close`, or `shutdown` frame is sent. The far side sees only its transport
+ * go, which is the SIGHUP path that parks a peer for `REMOTE_DETACH_TIMEOUT_MS`.
+ *
+ * Refused for an entry with no workspace directory or no session id: there is nothing to come back
+ * to yet, which is the same test the automatic recovery applies before treating a lost transport as
+ * recoverable rather than as a failed launch.
+ */
+export function detachRemoteEntry(entry: RemoteEntry): boolean {
+  if (entry.closed || !entry.workspaceDir || !entry.channel.sessionId) return false;
+  entry.closed = true;
+  entry.reconnect.stop();
+  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
+  entry.handlers.clear();
+  entry.channel.close();
+  return true;
 }
 
 export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, announce = true): void {

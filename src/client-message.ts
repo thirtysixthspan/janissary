@@ -63,6 +63,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   pluginIntent: 'deferred',
   rateSuggestion: 'ack',
   redoFileNavigatorItem: 'result',
+  remoteSession: 'ack',
   renameEditorFile: 'ack',
   renameFileNavigatorItem: 'ack',
   renameTab: 'ack',

@@ -20,7 +20,7 @@ function fakeClient(): JanusClient {
 describe('ShellTab', () => {
   it('renders harness-tab and harness-body divs', () => {
     const client = fakeClient();
-    const { container } = render(<ShellTab ptyId="pty1" client={client} />);
+    const { container } = render(<ShellTab ptyId="pty1" label="shell" client={client} />);
     expect(container.querySelector('.harness-tab')).toBeInTheDocument();
     expect(container.querySelector('.harness-body')).toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ describe('ShellTab', () => {
   it('passes ptyId and client to useXterm', () => {
     const client = fakeClient();
     mockedUseXterm.mockClear();
-    render(<ShellTab ptyId="my-pty" client={client} />);
+    render(<ShellTab ptyId="my-pty" label="shell" client={client} />);
     const opts = mockedUseXterm.mock.calls[0][0];
     expect(opts.ptyId).toBe('my-pty');
     expect(opts.client).toBe(client);
@@ -36,17 +36,17 @@ describe('ShellTab', () => {
 
   it('passes the surface\'s activity to useXterm so a hidden tab clears its selection layer', () => {
     mockedUseXterm.mockClear();
-    render(<ShellTab ptyId="pty1" client={fakeClient()} active />);
+    render(<ShellTab ptyId="pty1" label="shell" client={fakeClient()} active />);
     expect(mockedUseXterm.mock.calls[0][0].active).toBe(true);
     mockedUseXterm.mockClear();
-    render(<ShellTab ptyId="pty2" client={fakeClient()} active={false} />);
+    render(<ShellTab ptyId="pty2" label="shell" client={fakeClient()} active={false} />);
     expect(mockedUseXterm.mock.calls[0][0].active).toBe(false);
   });
 
   it('passes a keyFilter that blocks shift+arrow keys and allows other keys', () => {
     const client = fakeClient();
     mockedUseXterm.mockClear();
-    render(<ShellTab ptyId="pty1" client={client} />);
+    render(<ShellTab ptyId="pty1" label="shell" client={client} />);
     const opts = mockedUseXterm.mock.calls[0][0];
     const filter = opts.keyFilter as (e: KeyboardEvent) => boolean;
 
@@ -61,7 +61,7 @@ describe('ShellTab', () => {
   it('passes a keyFilter that blocks Cmd+Shift+[/] and allows plain Cmd+[/]', () => {
     const client = fakeClient();
     mockedUseXterm.mockClear();
-    render(<ShellTab ptyId="pty1" client={client} />);
+    render(<ShellTab ptyId="pty1" label="shell" client={client} />);
     const opts = mockedUseXterm.mock.calls[0][0];
     const filter = opts.keyFilter as (e: KeyboardEvent) => boolean;
 
@@ -80,7 +80,7 @@ describe('ShellTab', () => {
       return { focus: () => {}, selection: { view: null } };
     });
     const client = fakeClient();
-    render(<ShellTab ptyId="pty1" client={client} />);
+    render(<ShellTab ptyId="pty1" label="shell" client={client} />);
     expect(focus).toHaveBeenCalled();
   });
 
@@ -89,14 +89,14 @@ describe('ShellTab', () => {
     mockedUseXterm.mockImplementationOnce(() => ({ focus: focusXterm, selection: { view: null } }));
     const ref = createRef<ShellTabHandle>();
     const client = fakeClient();
-    render(<ShellTab ptyId="pty1" client={client} ref={ref} />);
+    render(<ShellTab ptyId="pty1" label="shell" client={client} ref={ref} />);
     ref.current?.focus();
     expect(focusXterm).toHaveBeenCalled();
   });
 
   it('shows the given cwd in the metadata row', () => {
     const client = fakeClient();
-    const { getByText } = render(<ShellTab ptyId="pty1" client={client} cwd="~/project" />);
+    const { getByText } = render(<ShellTab ptyId="pty1" label="shell" client={client} cwd="~/project" />);
     expect(getByText('~/project')).toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe('ShellTab', () => {
     const client = fakeClient();
     const remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
     const { getByLabelText } = render(
-      <ShellTab ptyId="pty1" client={client} cwd="/srv/proj" remote={remote} />,
+      <ShellTab ptyId="pty1" label="shell" client={client} cwd="/srv/proj" remote={remote} />,
     );
     expect(getByLabelText('Remote')).toHaveTextContent('devbox');
     expect(getByLabelText('Remote')).toHaveAttribute('title', 'Remote: admin@devbox:/srv/proj');
@@ -115,7 +115,7 @@ describe('ShellTab', () => {
       focus: () => {},
       selection: { view: { snapshot: ['aa bb', 'cc dd'], anchor: { col: 0, row: 0 }, head: { col: 2, row: 1 } } },
     }));
-    const { container } = render(<ShellTab ptyId="pty1" client={fakeClient()} />);
+    const { container } = render(<ShellTab ptyId="pty1" label="shell" client={fakeClient()} />);
     const overlay = container.querySelector('.terminal-selection-overlay');
     expect(overlay).not.toBeNull();
     expect(container.querySelector('.harness-body')!.contains(overlay)).toBe(true);
@@ -124,7 +124,7 @@ describe('ShellTab', () => {
 
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const client = fakeClient();
-    const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced']} />);
+    const { getByRole } = render(<ShellTab ptyId="pty1" label="shell" client={client} flags={['workspaced']} />);
     const badge = getByRole('img', { name: 'Workspaced' });
     expect(badge).toBeInTheDocument();
     expect(badge.querySelector('svg[data-icon="box"]')).not.toBeNull();
@@ -133,13 +133,13 @@ describe('ShellTab', () => {
 
   it('renders no flag emoji when flags is empty', () => {
     const client = fakeClient();
-    const { container } = render(<ShellTab ptyId="pty1" client={client} flags={[]} />);
+    const { container } = render(<ShellTab ptyId="pty1" label="shell" client={client} flags={[]} />);
     expect(container.querySelectorAll('.tab-flag').length).toBe(0);
   });
 
   it('renders both flag emoji when both are present', () => {
     const client = fakeClient();
-    const { getByRole } = render(<ShellTab ptyId="pty1" client={client} flags={['workspaced', 'autoApprove']} />);
+    const { getByRole } = render(<ShellTab ptyId="pty1" label="shell" client={client} flags={['workspaced', 'autoApprove']} />);
     expect(getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
     expect(getByRole('img', { name: 'Auto-permitting' })).toBeInTheDocument();
   });

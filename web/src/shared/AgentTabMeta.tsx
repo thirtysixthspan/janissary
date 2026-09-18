@@ -7,12 +7,20 @@ import { SplitTabButton } from '../SplitTabButton';
 import type { StatusWindowButtonProps } from './status-windows/status-button';
 import type { RemoteTarget } from '@shared/protocol';
 import { RemoteChip } from './RemoteChip';
+import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionButton';
 
 type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTarget;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
+  // Set only for a remote tab: what its channel is doing, whether an action is in flight, and where
+  // to send the detach or reattach the control raises.
+  remoteSession?: {
+    state: RemoteSessionState;
+    inFlight?: boolean;
+    onAction(action: 'detach' | 'reattach'): void;
+  };
 };
 
 function MetaChip({ label, value }: { label: string; value: string }) {
@@ -25,12 +33,20 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 
 export function AgentTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
-  connectionsButton, scheduleButton, onSplit,
+  connectionsButton, scheduleButton, onSplit, remoteSession,
 }: Properties) {
   const workspaced = flags?.includes('workspaced') ?? false;
   return (
     <div className="tab-meta">
       {remote !== undefined && <RemoteChip remote={remote} />}
+      {remote !== undefined && remoteSession !== undefined && (
+        <RemoteSessionButton
+          state={remoteSession.state}
+          host={remote.host}
+          inFlight={remoteSession.inFlight}
+          onAction={remoteSession.onAction}
+        />
+      )}
       <span className="tab-cwd">{cwdDisplay ?? cwd}</span>
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}

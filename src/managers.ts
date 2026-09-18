@@ -23,6 +23,7 @@ import type { EditorAcpManager } from './editor/acp-manager.js';
 import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
+import type { SessionsManager } from './sessions/manager.js';
 
 export type ManagerLifecycle = {
   dispose?(): void;
@@ -54,6 +55,7 @@ type ManagerRegistry = {
   questions: Questions;
   plugins: TabPluginHost;
   conversations: ConversationsManager;
+  sessions: SessionsManager;
 };
 
 export type Managers = {
@@ -98,6 +100,9 @@ export const MANAGER_DISPOSE_ORDER = [
   'workspace',
   'plugins',
   'conversations',
+  // Before `remote`, because it reads channels — their addresses, workspaces, and session ids —
+  // while tearing down, and after them there would be nothing left to read.
+  'sessions',
   'remote',
   'questions',
   'tab',

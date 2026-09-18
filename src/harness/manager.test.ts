@@ -1020,7 +1020,7 @@ describe('HarnessManager remote launch', () => {
 
     expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({
       program: 'claude', harness: 'claude',
-    }));
+    }), undefined);
     expect(managers.pty.spawn).not.toHaveBeenCalled();
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'rpty1', status: 'running' });
   });

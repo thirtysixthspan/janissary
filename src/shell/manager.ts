@@ -30,6 +30,10 @@ export class ShellManager {
   // Distinguishes a remote tab's shell ids from the local `pty…` ids, so both can key the same
   // remote channel without colliding.
   private remoteShellCounter = 0;
+  // Spawn ids a reattach recorded for tabs whose shells have not been asked for yet. A remote agent
+  // tab's shell is created lazily, on its first command, so the id cannot be handed to a constructor
+  // — it waits here until `spawnFor` needs one, and is consumed exactly once.
+  private adopted = new Map<string, string>();
   // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
   // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
   // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
@@ -45,6 +49,10 @@ export class ShellManager {
   private promotions = new Map<string, ShellPromotion>();
 
   constructor(private managers: Managers) {}
+
+  // Tell this tab's next remote shell to bind to a spawn id the far side already holds, rather than
+  // starting a second shell beside the one still running there.
+  adoptRemoteShell(label: string, id: string): void { this.adopted.set(label, id); }
 
   // Whether a tab currently has a live shell. Drives the connections panel and completion.
   has(label: string): boolean {
@@ -76,7 +84,11 @@ export class ShellManager {
     const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
+      // A reattached tab adopts the spawn id the far side already knows it by, so the adapter binds
+      // to the shell still running there rather than starting a second one beside it.
+      const id = this.adopted.get(label) ?? `rsh${++this.remoteShellCounter}`;
+      this.adopted.delete(label);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,

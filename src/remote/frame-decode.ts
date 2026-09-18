@@ -2,6 +2,7 @@ import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RemoteFrame } from './protocol.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
+import { decodeSessionStateResult } from './frame-decode-sessions.js';
 
 type DecodeResult = RemoteFrame | { error: string };
 
@@ -202,6 +203,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
       ...(record.truncated !== undefined && { truncated: record.truncated }),
     };
   }
+  case 'session-state': { return { type }; }
+  case 'session-state-result': { return decodeSessionStateResult(record); }
   case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }
   case 'spawn': { return decodeSpawn(record); }

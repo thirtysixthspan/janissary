@@ -259,6 +259,69 @@ describe('frame codec', () => {
   });
 });
 
+describe('session-state frames', () => {
+  it('round-trips the query', () => {
+    expect(roundTrip({ type: 'session-state' })).toEqual({ type: 'session-state' });
+  });
+
+  it('round-trips an answer describing a harness and an agent shell', () => {
+    const frame = {
+      type: 'session-state-result',
+      processes: [
+        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude' },
+        { id: 'spawn-2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
+      ],
+    } as const;
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips an empty answer, which is a peer holding nothing', () => {
+    const frame = { type: 'session-state-result', processes: [] } as const;
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    { what: 'a missing process list', record: { type: 'session-state-result' } },
+    { what: 'a process list that is not an array', record: { type: 'session-state-result', processes: {} } },
+    {
+      what: 'an empty spawn id',
+      record: { type: 'session-state-result', processes: [{ id: '', program: 'claude', mode: 'pty' }] },
+    },
+    {
+      what: 'a mode outside the declared values',
+      record: { type: 'session-state-result', processes: [{ id: 'a', program: 'claude', mode: 'tty' }] },
+    },
+    {
+      what: 'a process that is not an object',
+      record: { type: 'session-state-result', processes: ['spawn-1'] },
+    },
+  ])('refuses $what by name', ({ record }) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining('Malformed remote frame "session-state-result"'),
+    });
+  });
+
+  // One malformed entry makes the whole answer malformed: a silently shortened list is
+  // indistinguishable from a process that exited, and an empty one ends the session.
+  it('refuses the whole answer when one entry among several is malformed', () => {
+    const record = {
+      type: 'session-state-result',
+      processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty' }, { id: 'spawn-2', mode: 'pipe' }],
+    };
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining('Malformed remote frame "session-state-result"'),
+    });
+  });
+});
+
+describe('protocol version', () => {
+  // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
+  // agreeing on a version number while disagreeing about what it covers.
+  it('is 15', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(15);
+  });
+});
+
 // The records are keyed by the frame unions, so the compiler already refuses an entry the union does
 // not declare and demands one for every member it does. The edit it cannot see is a member and its
 // entry deleted together — the contract silently shrinking — which is what these pin.
@@ -267,7 +330,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-close', 'acp-open', 'acp-prompt',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'reattach', 'resize', 'shutdown', 'spawn',
+      'input', 'kill', 'provision', 'reattach', 'resize', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
@@ -275,7 +338,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'browser-exited',
       'exit', 'filesystem-event', 'filesystem-reply', 'output', 'reattach-result',
-      'transcript', 'workspace-failed', 'workspace-ready',
+      'session-state-result', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });
 
@@ -288,9 +351,11 @@ describe('admitted frame types', () => {
     const admitted = [...Object.keys(CLIENT_FRAME_TYPES), ...Object.keys(SERVER_FRAME_TYPES)];
     // Each is sent with no fields, so every decoder rejects it as malformed — the point is that
     // none comes back as *unknown*, which is what an admitted-but-undecoded type would produce.
-    // `shutdown` carries no fields at all, so it is the one type that decodes cleanly on its own.
+    // `shutdown` and `session-state` carry no fields at all — one workspace per peer leaves nothing
+    // to address — so they are the two types that decode cleanly on their own.
+    const payloadFree = new Set(['shutdown', 'session-state']);
     for (const type of admitted) {
-      if (type === 'shutdown') { expect(decodeFrame(JSON.stringify({ type }))).toEqual({ type }); continue; }
+      if (payloadFree.has(type)) { expect(decodeFrame(JSON.stringify({ type }))).toEqual({ type }); continue; }
       expect(decodeFrame(JSON.stringify({ type }))).toEqual({
         error: expect.stringContaining(`Malformed remote frame "${type}"`),
       });

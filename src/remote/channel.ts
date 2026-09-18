@@ -1,7 +1,8 @@
 import {
   HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteFrame, type RemoteHandshake, type ServerFrame,
+  type ClientFrame, type RemoteFrame, type RemoteHandshake, type RemoteProcessState, type ServerFrame,
 } from './protocol.js';
+import { SessionRouter, type SessionListener } from './channel-sessions.js';
 
 // One ssh session's lifetime and its state machine. Until `remote-serve` announces itself the
 // session is a plain terminal: bytes pass through to the tab's terminal and keystrokes pass through
@@ -17,12 +18,7 @@ export type ChannelTransport = {
   kill: () => void;
 };
 
-// What one remote process id wants from the inbound stream. Registered by the remote `PtySession`
-// and the remote shell adapter, which are the only two shapes local code consumes.
-export type SessionListener = {
-  onOutput: (data: string) => void;
-  onExit: (exitCode: number) => void;
-};
+export type { SessionListener } from './channel-sessions.js';
 
 export type NavigatorListener = {
   onReply: (frame: Extract<ServerFrame, { type: 'filesystem-reply' }>) => void;
@@ -45,7 +41,7 @@ export type AcpSessionListener = {
 // transcript pushes, and the browser-gone report. Everything else inbound is routed to a
 // `SessionListener` instead. `browser-exited` carries a session id but is not that session's
 // output — the tab it names is resolved by the manager, since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'reattach-result' }>;
+export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'reattach-result' | 'session-state-result' }>;
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.
@@ -56,6 +52,9 @@ export type RemoteChannelHandlers = {
   onError: (message: string) => void;
   onClose: () => void;
   onSessionExit?: (id: string, label: string | undefined, harness: boolean) => void;
+  // The held-frame buffer overflowed and dropped its oldest frames. Reported through the same line
+  // a truncated replay already has, since it is the same fact one layer further in.
+  onTruncatedReplay?: () => void;
 };
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'reattaching';
@@ -63,14 +62,18 @@ type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 
 export class RemoteChannel {
   private state: ChannelState = 'authenticating';
   private buffer = '';
-  private sessions = new Map<string, SessionListener>();
   private navigators = new Map<string, NavigatorListener>();
   private acpSessions = new Map<string, AcpSessionListener>();
   private notifiedClose = false;
   sessionId: string | undefined;
-  private spawned = new Map<string, Extract<ClientFrame, { type: 'spawn' }>>();
+  private router: SessionRouter;
 
-  constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {}
+  constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {
+    this.router = new SessionRouter({
+      onSessionExit: handlers.onSessionExit,
+      onTruncatedReplay: handlers.onTruncatedReplay,
+    });
+  }
 
   // The transport's PTY id: what the tab's terminal is attached to while the channel authenticates.
   get ptyId(): string { return this.transport.id; }
@@ -79,9 +82,14 @@ export class RemoteChannel {
 
   // Route this process id's output and exit frames. The id is chosen by the caller and is the same
   // id the spawn frame carries.
-  attach(id: string, listener: SessionListener): void { this.sessions.set(id, listener); }
+  attach(id: string, listener: SessionListener): void { this.router.attach(id, listener); }
 
-  detach(id: string): void { this.sessions.delete(id); }
+  detach(id: string): void { this.router.detach(id); }
+
+  discardUnclaimed(): void { this.router.discardUnclaimed(); }
+
+  // What this channel started, for the session record to be written from.
+  spawnedProcesses(): RemoteProcessState[] { return this.router.spawnedProcesses(); }
 
   attachNavigator(id: string, listener: NavigatorListener): void {
     this.navigators.set(id, listener);
@@ -105,8 +113,8 @@ export class RemoteChannel {
       }
       return;
     }
-    if (frame.type === 'spawn') this.spawned.set(frame.id, frame);
-    else if (frame.type === 'kill') this.spawned.delete(frame.id);
+    if (frame.type === 'spawn') this.router.record(frame);
+    else if (frame.type === 'kill') this.router.forget(frame.id);
     this.transport.write(`${encodeFrame(frame)}\n`);
   }
 
@@ -126,19 +134,17 @@ export class RemoteChannel {
   }
 
   finish(): void {
-    for (const id of this.spawned.keys()) this.send({ type: 'kill', id });
+    for (const id of this.router.spawnedIds()) this.send({ type: 'kill', id });
     for (const id of this.acpSessions.keys()) this.send({ type: 'acp-close', id });
     for (const session of this.navigators.keys()) this.send({ type: 'filesystem-close', session });
     this.send({ type: 'shutdown' });
     this.state = 'closed';
     this.sessionId = undefined;
-    for (const listener of this.sessions.values()) listener.onExit(1);
-    this.sessions.clear();
+    this.router.finish();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
     for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
-    this.spawned.clear();
     this.state = 'closed';
   }
 
@@ -163,7 +169,7 @@ export class RemoteChannel {
       return;
     }
     this.state = 'closed';
-    this.sessions.clear();
+    this.router.clear();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
     this.acpSessions.clear();
@@ -211,18 +217,8 @@ export class RemoteChannel {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'reattach-result' && frame.accepted) this.state = 'attached';
-    if (frame.type === 'output') { this.sessions.get(frame.id)?.onOutput(frame.data); return; }
-    if (frame.type === 'exit') {
-      const listener = this.sessions.get(frame.id);
-      this.sessions.delete(frame.id);
-      const spawned = this.spawned.get(frame.id);
-      this.spawned.delete(frame.id);
-      if (spawned && (spawned.harness || spawned.mode === 'pipe')) {
-        this.handlers.onSessionExit?.(frame.id, spawned.agentName, spawned.harness !== undefined);
-      }
-      listener?.onExit(frame.exitCode);
-      return;
-    }
+    if (frame.type === 'output') { this.router.output(frame); return; }
+    if (frame.type === 'exit') { this.router.exit(frame); return; }
     if (frame.type === 'filesystem-reply') {
       this.navigators.get(frame.session)?.onReply(frame);
       return;
@@ -235,6 +231,7 @@ export class RemoteChannel {
     switch (frame.type) {
     case 'workspace-ready':
     case 'reattach-result':
+    case 'session-state-result':
     case 'workspace-failed':
     case 'browser-exited':
     case 'transcript': { this.handlers.onFrame(frame); return; }

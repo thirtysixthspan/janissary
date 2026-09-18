@@ -99,7 +99,7 @@ describe('initStateDirectories', () => {
 
   it('covers exactly the keys the registry is pinned against', () => {
     expect(STATE_DIRECTORY_ORDER_IS_COMPLETE).toBe(true);
-    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(12);
+    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(13);
   });
 });
 

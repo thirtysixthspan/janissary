@@ -1,0 +1,318 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { messageBus } from '../bus.js';
+import type { Managers } from '../managers.js';
+import type { RemoteEntry } from '../remote/reattach.js';
+import { SessionsManager } from './manager.js';
+import { startSessionReattach, type ReattachOutcome } from './reattach.js';
+import { endParkedSession, type EndOutcome } from './end-session.js';
+import { initRemoteSessionStore, loadRemoteSessions, saveRemoteSessions, type RemoteSessionRecord } from './store.js';
+
+// The reattach and end flows open real ssh connections, so they are faked here: what this suite is
+// about is the manager's own bookkeeping — which record survives which outcome, what the row set
+// says afterwards, and whether the change signal fired.
+vi.mock('./reattach.js', () => ({ startSessionReattach: vi.fn() }));
+vi.mock('./end-session.js', () => ({ endParkedSession: vi.fn() }));
+vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+
+const SESSION = '11111111-2222-3333-4444-555555555555';
+
+function record(overrides: Partial<RemoteSessionRecord> = {}): RemoteSessionRecord {
+  return {
+    session: SESSION,
+    address: 'devbox',
+    destination: 'devbox',
+    host: 'devbox',
+    workspaceLabel: 'claude',
+    workspaceDir: '/srv/proj/.janissary/workspace/claude',
+    launchLabel: 'claude',
+    launchKind: 'harness',
+    processes: [{ id: 'rpty1', label: 'claude', kind: 'harness', harness: 'claude' }],
+    activity: Date.now(),
+    ...overrides,
+  };
+}
+
+function entry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
+  return {
+    channel: {
+      sessionId: SESSION,
+      spawnedProcesses: () => [{ id: 'rpty1', program: 'claude', mode: 'pty', harness: 'claude' }],
+    },
+    address: { address: 'devbox', destination: 'devbox', host: 'devbox' },
+    labels: new Set(['claude']),
+    workspaceLabel: 'claude',
+    workspaceDir: '/srv/proj/.janissary/workspace/claude',
+    reconnect: { active: false },
+    ...overrides,
+  } as unknown as RemoteEntry;
+}
+
+type Harness = {
+  sessions: SessionsManager;
+  detach: ReturnType<typeof vi.fn>;
+  closeTab: ReturnType<typeof vi.fn>;
+  entries: RemoteEntry[];
+};
+
+function harness(live: RemoteEntry[] = []): Harness {
+  initRemoteSessionStore(mkdtempSync(path.join(tmpdir(), 'janus-sessions-mgr-')));
+  const entries = [...live];
+  const detach = vi.fn((label: string) => {
+    const index = entries.findIndex((candidate) => candidate.labels.has(label));
+    if (index === -1 || !entries[index].workspaceDir) return false;
+    entries.splice(index, 1);
+    return true;
+  });
+  const closeTab = vi.fn();
+  const managers = {
+    remote: { liveEntries: () => entries, detach, close: vi.fn() },
+    tab: {
+      tabs: [{ label: 'claude', view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' }],
+      byLabel: (label: string) => (label === 'claude'
+        ? { label, view: 'harness', title: undefined }
+        : undefined),
+      findIndex: (label: string) => (label === 'claude' ? 0 : -1),
+      closeTab,
+      setActiveTab: vi.fn(),
+      cur: () => ({ label: 'janus' }),
+    },
+  } as unknown as Managers;
+  return { sessions: new SessionsManager(managers), detach, closeTab, entries };
+}
+
+function settle(outcome: ReattachOutcome): void {
+  vi.mocked(startSessionReattach).mockResolvedValue(outcome);
+}
+
+beforeEach(() => { vi.clearAllMocks(); });
+
+describe('SessionsManager view', () => {
+  it('lists a live channel as an active row', () => {
+    const h = harness([entry()]);
+    const rows = h.sessions.view();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ label: 'claude', state: 'active', kind: 'harness' });
+  });
+
+  it('lists a record with no live channel as detached', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', session: SESSION });
+  });
+
+  // The record is a mirror of what is live, so there is no separate "remember this" step that a
+  // crash could land in front of.
+  it('writes a record for a live channel as a side effect of composing the list', () => {
+    const h = harness([entry()]);
+    h.sessions.view();
+    expect(loadRemoteSessions()).toMatchObject([{ session: SESSION, launchLabel: 'claude' }]);
+  });
+
+  it('writes no record for a channel still provisioning', () => {
+    const h = harness([entry({ workspaceDir: undefined })]);
+    h.sessions.view();
+    expect(loadRemoteSessions()).toEqual([]);
+  });
+
+  it('shows a live session once, never as both active and detached', () => {
+    const h = harness([entry()]);
+    saveRemoteSessions([record()]);
+    const rows = h.sessions.view();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].state).toBe('active');
+  });
+});
+
+describe('SessionsManager detach', () => {
+  it('parks the session and closes every tab holding it', () => {
+    const h = harness([entry({ labels: new Set(['claude', 'bekir']) })]);
+    h.sessions.view();
+
+    expect(h.sessions.detach('claude')).toBe(true);
+    expect(h.detach).toHaveBeenCalledWith('claude');
+    expect(h.closeTab).toHaveBeenCalled();
+  });
+
+  // The frames `finish()` sends are exactly what a detach must not send. The manager reaches them
+  // only through `RemoteManager.detach`, which withholds them — so asserting the call went there,
+  // and that no tab close preceded it, is what pins the order that makes it true.
+  it('takes the entry out of the table before closing any tab', () => {
+    const order: string[] = [];
+    const h = harness([entry()]);
+    h.detach.mockImplementation(() => { order.push('detach'); return true; });
+    h.closeTab.mockImplementation(() => { order.push('closeTab'); });
+    h.sessions.detach('claude');
+    expect(order).toEqual(['detach', 'closeTab']);
+  });
+
+  it('leaves the record in place, so the row becomes detached rather than disappearing', () => {
+    const h = harness([entry()]);
+    h.sessions.view();
+    h.sessions.detach('claude');
+    expect(loadRemoteSessions()).toHaveLength(1);
+    expect(h.sessions.view()[0].state).toBe('detached');
+  });
+
+  // Decision 12: there is nothing to come back to yet.
+  it('is refused while the workspace is still provisioning', () => {
+    const h = harness([entry({ workspaceDir: undefined })]);
+    expect(h.sessions.detach('claude')).toBe(false);
+    expect(h.closeTab).not.toHaveBeenCalled();
+  });
+
+  it('is refused for a label it does not hold', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.detach('nothing-here')).toBe(false);
+  });
+});
+
+describe('SessionsManager reattach', () => {
+  it('clears a recorded failure once the peer takes it back', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    settle({ kind: 'failed', reason: 'devbox: Connection timed out' });
+    h.sessions.reattach(SESSION);
+    await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: Connection timed out'));
+
+    settle({ kind: 'reattached', label: 'claude' });
+    h.sessions.reattach(SESSION);
+    await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBeUndefined());
+  });
+
+  // A connection that never gets an answer establishes nothing, so the record survives and the row
+  // keeps its reattach button — with a trash button now beside it.
+  it('leaves a failed attempt detached, with its reason and a trash button on the row', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    settle({ kind: 'failed', reason: 'devbox: No route to host' });
+    h.sessions.reattach(SESSION);
+
+    await vi.waitFor(() => {
+      const row = h.sessions.view()[0];
+      expect(row.state).toBe('detached');
+      expect(row.failure).toBe('devbox: No route to host');
+      expect(row.actions).toContain('forget');
+    });
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+
+  // A peer that answers is a peer that is there; refusing establishes the session is over.
+  it('drops the record and leaves an ended row when the peer refuses', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    settle({ kind: 'ended', reason: 'claude on devbox is no longer running.' });
+    h.sessions.reattach(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    expect(loadRemoteSessions()).toEqual([]);
+  });
+
+  it('is refused for a session it has no record of', () => {
+    expect(harness().sessions.reattach('no-such-session')).toBe(false);
+    expect(startSessionReattach).not.toHaveBeenCalled();
+  });
+});
+
+describe('SessionsManager end', () => {
+  it('drops the record and leaves an ended row when the peer is stopped', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockResolvedValue({ ended: true } satisfies EndOutcome);
+    h.sessions.end(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    expect(loadRemoteSessions()).toEqual([]);
+  });
+
+  it('keeps the record when the host could not be reached', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockResolvedValue({ ended: false, reason: 'devbox: timed out' });
+    h.sessions.end(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: timed out'));
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+});
+
+describe('SessionsManager forget', () => {
+  // Forgetting removes janissary's own record and touches nothing on the far side.
+  it('drops the record and the row without speaking to the host', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    expect(h.sessions.forget(SESSION)).toBe(true);
+    expect(loadRemoteSessions()).toEqual([]);
+    expect(h.sessions.view()).toEqual([]);
+    expect(endParkedSession).not.toHaveBeenCalled();
+    expect(startSessionReattach).not.toHaveBeenCalled();
+  });
+
+  it('clears an ended row too, which is the only thing left to clear', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    settle({ kind: 'ended', reason: 'gone' });
+    h.sessions.reattach(SESSION);
+    await vi.waitFor(() => expect(h.sessions.view()).toHaveLength(1));
+
+    h.sessions.forget(SESSION);
+    expect(h.sessions.view()).toEqual([]);
+  });
+});
+
+describe('SessionsManager change signal', () => {
+  function listen(): () => number {
+    let count = 0;
+    const subscription = messageBus.on('sessions', 'changed', () => { count++; });
+    return () => { subscription.unsubscribe(); return count; };
+  }
+
+  it('fires on a detach', () => {
+    const h = harness([entry()]);
+    const stop = listen();
+    h.sessions.detach('claude');
+    expect(stop()).toBe(1);
+  });
+
+  it('fires on a forget', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    const stop = listen();
+    h.sessions.forget(SESSION);
+    expect(stop()).toBe(1);
+  });
+
+  it('fires on a refresh, which speaks to no host', () => {
+    const h = harness();
+    const stop = listen();
+    h.sessions.refresh();
+    expect(stop()).toBe(1);
+  });
+
+  it('does not fire for an action naming something it does not hold', () => {
+    const h = harness();
+    const stop = listen();
+    h.sessions.detach('nothing-here');
+    expect(stop()).toBe(0);
+  });
+});
+
+describe('SessionsManager restoreAll', () => {
+  // Each session is reattached on its own: a refusing peer is marked ended and an unreachable host
+  // stays detached, and neither holds the restore up.
+  it('reattaches every recorded session independently', () => {
+    const h = harness();
+    saveRemoteSessions([record(), record({ session: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' })]);
+    settle({ kind: 'reattached', label: 'claude' });
+
+    h.sessions.restoreAll();
+    expect(startSessionReattach).toHaveBeenCalledTimes(2);
+  });
+
+  it('does nothing when nothing is parked', () => {
+    harness().sessions.restoreAll();
+    expect(startSessionReattach).not.toHaveBeenCalled();
+  });
+});

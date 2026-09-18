@@ -12,6 +12,7 @@ import type { EditorRpcCall } from './protocol/editor.js';
 import type { MonitorRpcCall } from './protocol/monitor.js';
 import type { ScheduleRpcCall } from './protocol/schedule.js';
 import type { PluginRpcCall } from './protocol/plugin.js';
+import type { RemoteSessionRpcCall } from './protocol/sessions.js';
 
 export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorPullStatus, FileNavigatorCommitStatus, FileNavigatorRow, TaskRow } from './tab/types.js';
 export type { CompletionResult } from './completion/types.js';
@@ -55,6 +56,13 @@ export type ConversationsView = {
 
 export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
+export type {
+  RemoteSessionAction,
+  RemoteSessionKind,
+  RemoteSessionRpcCall,
+  RemoteSessionState,
+  RemoteSessionView,
+} from './protocol/sessions.js';
 export type { SuggestionView, MonitorRpcCall } from './protocol/monitor.js';
 export type { SuggestHunk, EditorRpcCall } from './protocol/editor.js';
 export type {
@@ -97,6 +105,7 @@ export type RpcCall =
   | EditorRpcCall
   | MonitorRpcCall
   | ScheduleRpcCall
-  | PluginRpcCall;
+  | PluginRpcCall
+  | RemoteSessionRpcCall;
 
 export type ClientMessage = { t: 'rpc'; id: number } & RpcCall;

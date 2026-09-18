@@ -169,7 +169,7 @@ describe('agent on <address> — command and profile entry points', () => {
     newAgentOp(h.managers, 'agent bekir on devbox');
 
     expect(h.createWorkspace).not.toHaveBeenCalled();
-    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ host: 'devbox' }), '/proj', expect.anything());
+    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ host: 'devbox' }), '/proj', expect.anything(), undefined);
     expect(h.tabs.at(-1)).toMatchObject({ label: 'bekir', remote: { host: 'devbox' } });
   });
 
@@ -192,7 +192,7 @@ describe('agent on <address> — command and profile entry points', () => {
     );
 
     expect(error).toBeUndefined();
-    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ destination: 'admin@devbox' }), '/proj', expect.anything());
+    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ destination: 'admin@devbox' }), '/proj', expect.anything(), undefined);
     expect(h.tabs.at(-1)).toMatchObject({ group: 4, groupColor: '#bbb', dotColor: '#aaa' });
   });
 

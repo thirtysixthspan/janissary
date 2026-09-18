@@ -117,6 +117,12 @@ export class RemoteServer {
       });
       return;
     }
+    // Answered before the workspace exists too, with an empty list: a peer that has not provisioned
+    // is holding nothing, which is a fact worth stating rather than a refusal to explain.
+    case 'session-state': {
+      this.emit({ type: 'session-state-result', processes: this.processes?.states() ?? [] });
+      return;
+    }
     case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }

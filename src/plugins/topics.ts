@@ -68,6 +68,39 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
   }
 }
 
+// Every session action is refused when it names a row the current view does not hold, which keeps
+// the grant as narrow as the list that motivates it: a plugin may act on what the host already
+// agreed to show it, and on nothing else.
+function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'sessions') return;
+  switch (action.action) {
+    case 'refresh': { managers.sessions.refresh(); return; }
+    case 'detach': {
+      if (managers.sessions.holds({ label: action.label })) managers.sessions.detach(action.label);
+      return;
+    }
+    case 'focus': {
+      if (managers.sessions.holds({ label: action.label })) managers.sessions.focus(action.label);
+      return;
+    }
+    case 'close': {
+      if (managers.sessions.holds({ label: action.label })) managers.sessions.close(action.label);
+      return;
+    }
+    case 'reattach': {
+      if (managers.sessions.holds({ session: action.session })) managers.sessions.reattach(action.session);
+      return;
+    }
+    case 'end': {
+      if (managers.sessions.holds({ session: action.session })) managers.sessions.end(action.session);
+      return;
+    }
+    case 'forget': {
+      if (managers.sessions.holds({ session: action.session })) managers.sessions.forget(action.session);
+    }
+  }
+}
+
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
@@ -80,6 +113,12 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => managers.conversations.view(),
     act: actOnConversations,
     empty: { summaries: [], windows: [], models: [] },
+  },
+  sessions: {
+    subscribe: (fire) => messageBus.on('sessions', 'changed', fire),
+    read: (managers) => managers.sessions.view(),
+    act: actOnSessions,
+    empty: [],
   },
 };
 

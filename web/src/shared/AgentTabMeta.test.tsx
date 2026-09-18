@@ -241,4 +241,85 @@ describe('AgentTabMeta', () => {
       expect(getByLabelText('Effort')).toHaveTextContent('high');
     });
   });
+
+  // One placement covers every remote tab, because this is the one metadata row agent, shell, and
+  // harness tabs all render.
+  describe('the remote session control', () => {
+    const remote = { address: 'devbox:/srv/proj', host: 'devbox' };
+
+    function control(state: 'provisioning' | 'active' | 'reconnecting' = 'active') {
+      const onAction = vi.fn();
+      const view = render(
+        <AgentTabMeta cwd="/srv/proj" remote={remote} remoteSession={{ state, onAction }} />,
+      );
+      return { onAction, ...view };
+    }
+
+    it('renders only for a remote tab', () => {
+      const onAction = vi.fn();
+      render(<AgentTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />);
+      expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
+    });
+
+    it('renders nothing for a remote tab that was given no control', () => {
+      render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
+    });
+
+    it('sits beside the host chip', () => {
+      const { getByLabelText } = control();
+      const chip = getByLabelText('Remote');
+      const button = getByLabelText('Detach session on devbox');
+      expect(chip.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    // There is nothing to come back to until the workspace clone has landed.
+    it('is disabled while the tab is provisioning', () => {
+      const { getByLabelText } = control('provisioning');
+      expect(getByLabelText('Detach session on devbox')).toBeDisabled();
+    });
+
+    it('asks before detaching, naming what will go', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Its tabs will close');
+      expect(onAction).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+      expect(onAction).toHaveBeenCalledWith('detach');
+    });
+
+    it('raises nothing when the confirmation is cancelled', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Cancel', { selector: '.modal-button' }));
+
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    // A detach has to reach the far side, which is not instant; the tab goes away on success, which
+    // is what clears this without a second signal to wait for.
+    it('spins and refuses a second press once an action is in flight', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+
+      const button = getByLabelText('Detach session on devbox');
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    // On a live tab whose transport is gone, reattach means "try now" — it collapses the backoff
+    // rather than opening a connection of its own, so it needs no confirmation.
+    it('offers reattach without a dialog while the transport is reconnecting', () => {
+      const { onAction, getByLabelText } = control('reconnecting');
+      fireEvent.click(getByLabelText('Reattach session on devbox'));
+
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(onAction).toHaveBeenCalledWith('reattach');
+    });
+  });
 });

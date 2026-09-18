@@ -57,7 +57,16 @@
 // laptop sleep. A version-13 remote has no rendezvous to answer a reattach request against, so the
 // handshake check above is what turns a stale far side into a clear refusal instead of a reattach
 // request nobody on the other end recognizes.
-export const REMOTE_PROTOCOL_VERSION = 14;
+//
+// Version 15 adds the session-state query (`session-state` out, `session-state-result` back), which
+// asks a peer to describe the processes still alive in its workspace. It is what turns an accepted
+// reattach into tabs: a janissary that was restarted since the launch holds a record of what it
+// started, but only the far side knows what is still running, and the sessions tab has to open one
+// tab per surviving process rather than a single representative one. A version-14 remote recognizes
+// neither frame — it would refuse the query as unknown while the reattach that just succeeded sat
+// waiting for an answer that never came, which is exactly the "looks healthy while doing the wrong
+// thing" failure this check exists to prevent.
+export const REMOTE_PROTOCOL_VERSION = 15;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -104,6 +113,9 @@ import { decodeKnownFrame } from './frame-decode.js';
 // only other thing the local side ever asks for.
 export type ClientFrame =
   | { type: 'reattach'; session: string }
+  // No payload: there is one workspace per peer, so "which processes are alive" has a single
+  // answer and nothing to address it by.
+  | { type: 'session-state' }
   // No payload: the far side removes its workspace and exits, exactly as SIGTERM does — sent by
   // every local path that ends a session on purpose rather than losing its transport.
   | { type: 'shutdown' }
@@ -150,6 +162,10 @@ export type ClientFrame =
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
   | { type: 'reattach-result'; accepted: boolean; truncated?: boolean }
+  // The answer to `session-state`: one entry per process still running in the workspace. An empty
+  // list is a real answer and not a failure — it says the peer is holding a workspace with nothing
+  // in it, which is the one case the local side ends rather than reattaches.
+  | { type: 'session-state-result'; processes: RemoteProcessState[] }
   // `notice` is what the remote knows about the workspace it just made and the local side cannot
   // work out for itself: whether its processes are actually confined, and which GitHub credential
   // it ended up with. Both are facts about the machine they hold on, so they are reported from
@@ -182,6 +198,17 @@ export type ServerFrame =
   // means the next prompt writes into a corpse.
   | { type: 'acp-error'; id: string; message: string; fatal: boolean };
 
+// One live process as the far side describes it. The fields are exactly what the local side needs to
+// rebuild the tab that was driving it: the spawn id its output is routed by, what is running, how it
+// was started, and the harness or agent name that decides which kind of tab it belongs in.
+export type RemoteProcessState = {
+  id: string;
+  program: string;
+  mode: 'pty' | 'pipe';
+  harness?: string;
+  agentName?: string;
+};
+
 export type RemoteFrame = ClientFrame | ServerFrame;
 
 // The admitted frame types as data, keyed by the unions above rather than re-listed as strings —
@@ -189,13 +216,13 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // or `ServerFrame` without an entry here is a compile error, instead of a frame type that encodes,
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
-  reattach: true, shutdown: true,
+  reattach: true, 'session-state': true, shutdown: true,
   provision: true, spawn: true, input: true, resize: true, kill: true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
-  'reattach-result': true,
+  'reattach-result': true, 'session-state-result': true,
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
   'browser-exited': true,
   'filesystem-reply': true, 'filesystem-event': true,
