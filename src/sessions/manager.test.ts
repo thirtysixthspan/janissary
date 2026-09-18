@@ -230,6 +230,33 @@ describe('SessionsManager detach', () => {
   });
 });
 
+// A row authorises a verb only when it offers it. Recorded labels are ordinary harness names, so a
+// parked row named `claude` sitting beside a live tab named `claude` is a likely collision rather
+// than a contrived one — and the parked row offers reattach, never close.
+describe('SessionsManager offers', () => {
+  it('authorises a verb the matching row lists', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.offers('detach', { label: 'claude' })).toMatchObject({ label: 'claude' });
+  });
+
+  it('refuses close on a parked row whose label a live tab shares', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', label: 'claude' });
+    expect(h.sessions.offers('close', { label: 'claude' })).toBeUndefined();
+  });
+
+  it('refuses detach on a row that is not the launching one', () => {
+    const h = harness([entry({ labels: new Set(['claude', 'bekir']) })]);
+    expect(h.sessions.offers('detach', { label: 'bekir' })).toBeUndefined();
+  });
+
+  it('refuses a verb for a label no row names at all', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.offers('focus', { label: 'nothing-here' })).toBeUndefined();
+  });
+});
+
 describe('SessionsManager reattachTab', () => {
   it('collapses the backoff on a live entry', () => {
     const h = harness([entry()]);

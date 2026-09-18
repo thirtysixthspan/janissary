@@ -17,11 +17,24 @@ const ROWS: AggregatedScheduleView[] = [
   { tab: 'agent-1', id: 'fetch', spec: 'every 5m', next: 'Jan 1 3:00pm', recurring: true, command: 'echo hi' },
 ];
 
+// Two rows offering disjoint verbs, which is what the list actually composes: a live launching row
+// carries `focus` and `detach`, a parked one carries `reattach`, `end`, and `forget`. A single row
+// claiming every verb would let a topic action pass no matter which arm authorised it.
 const SESSION_ROWS: RemoteSessionView[] = [
   {
     id: 'claude', host: 'devbox', name: 'claude', kind: 'harness', state: 'active',
     activity: 1000, destination: 'devbox', workspace: '/srv/ws', joined: false,
     actions: ['focus', 'detach'], label: 'claude', session: 'session-1',
+  },
+  {
+    id: 'bekir', host: 'devbox', name: 'bekir', kind: 'agent', state: 'active',
+    activity: 950, destination: 'devbox', workspace: '/srv/ws', joined: true,
+    actions: ['focus', 'close'], label: 'bekir', session: 'session-1',
+  },
+  {
+    id: 'session-1:rpty1', host: 'devbox', name: 'parked', kind: 'harness', state: 'detached',
+    activity: 900, destination: 'devbox', workspace: '/srv/ws', joined: false,
+    actions: ['reattach', 'end', 'forget'], label: 'parked', session: 'session-1',
   },
 ];
 
@@ -57,8 +70,10 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     },
     sessions: {
       view: vi.fn(() => SESSION_ROWS),
-      holds: vi.fn(({ label, session }: { label?: string; session?: string }) => SESSION_ROWS.some(
-        (row) => (label === undefined || row.label === label)
+      // The real predicate's shape: a row has to name the target *and* offer the verb.
+      offers: vi.fn((verb: string, { label, session }: { label?: string; session?: string }) => SESSION_ROWS.find(
+        (row) => row.actions.includes(verb as RemoteSessionView['actions'][number])
+          && (label === undefined || row.label === label)
           && (session === undefined || row.session === session),
       )),
       refresh: vi.fn(), detach: vi.fn(), reattach: vi.fn(), end: vi.fn(), forget: vi.fn(),
@@ -162,7 +177,7 @@ describe('the sessions topic source', () => {
   it.each([
     { action: { topic: 'sessions', action: 'detach', label: 'claude' }, method: 'detach' },
     { action: { topic: 'sessions', action: 'focus', label: 'claude' }, method: 'focus' },
-    { action: { topic: 'sessions', action: 'close', label: 'claude' }, method: 'close' },
+    { action: { topic: 'sessions', action: 'close', label: 'bekir' }, method: 'close' },
     { action: { topic: 'sessions', action: 'reattach', session: 'session-1' }, method: 'reattach' },
     { action: { topic: 'sessions', action: 'end', session: 'session-1' }, method: 'end' },
     { action: { topic: 'sessions', action: 'forget', session: 'session-1' }, method: 'forget' },
@@ -188,6 +203,20 @@ describe('the sessions topic source', () => {
     { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'end', session: 'ghost' }, method: 'end' },
     { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'forget', session: 'ghost' }, method: 'forget' },
   ] as const)('refuses $method naming $what', ({ action, method }) => {
+    const { managers } = makeManagers();
+    runTopicAction(managers, action as TabPluginTopicAction);
+    expect(managers.sessions[method]).not.toHaveBeenCalled();
+  });
+
+  // Naming a row the view holds is not enough — the row has to offer the verb. A parked row's label
+  // is a recorded name belonging to no live tab, so `close` on one used to reach whatever tab
+  // happened to share it, even though that row offers only `reattach`.
+  it.each([
+    { what: 'close on a parked row', action: { topic: 'sessions', action: 'close', label: 'parked' }, method: 'close' },
+    { what: 'detach on a parked row', action: { topic: 'sessions', action: 'detach', label: 'parked' }, method: 'detach' },
+    { what: 'close on a launching row', action: { topic: 'sessions', action: 'close', label: 'claude' }, method: 'close' },
+    { what: 'detach on a joined row', action: { topic: 'sessions', action: 'detach', label: 'bekir' }, method: 'detach' },
+  ] as const)('refuses $what, which that row does not offer', ({ action, method }) => {
     const { managers } = makeManagers();
     runTopicAction(managers, action as TabPluginTopicAction);
     expect(managers.sessions[method]).not.toHaveBeenCalled();

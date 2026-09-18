@@ -68,35 +68,43 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
   }
 }
 
-// Every session action is refused when it names a row the current view does not hold, which keeps
-// the grant as narrow as the list that motivates it: a plugin may act on what the host already
-// agreed to show it, and on nothing else.
+// Every session action is refused unless a row both names the target and offers that verb, which
+// keeps the grant as narrow as the list that motivates it: a plugin may do what the host already
+// showed it could be done, and nothing else. Matching the name alone was wider — a recorded row's
+// label belongs to no live tab, so `close` on one reached whatever tab happened to share the name.
+//
+// Each arm acts through the row that authorised it rather than looking the target up a second time.
 function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
   if (action.topic !== 'sessions') return;
   switch (action.action) {
     case 'refresh': { managers.sessions.refresh(); return; }
     case 'detach': {
-      if (managers.sessions.holds({ label: action.label })) managers.sessions.detach(action.label);
+      const row = managers.sessions.offers('detach', { label: action.label });
+      if (row) managers.sessions.detach(row.label);
       return;
     }
     case 'focus': {
-      if (managers.sessions.holds({ label: action.label })) managers.sessions.focus(action.label);
+      const row = managers.sessions.offers('focus', { label: action.label });
+      if (row) managers.sessions.focus(row.label);
       return;
     }
     case 'close': {
-      if (managers.sessions.holds({ label: action.label })) managers.sessions.close(action.label);
+      const row = managers.sessions.offers('close', { label: action.label });
+      if (row) managers.sessions.close(row.label);
       return;
     }
     case 'reattach': {
-      if (managers.sessions.holds({ session: action.session })) managers.sessions.reattach(action.session);
+      if (managers.sessions.offers('reattach', { session: action.session })) {
+        managers.sessions.reattach(action.session);
+      }
       return;
     }
     case 'end': {
-      if (managers.sessions.holds({ session: action.session })) managers.sessions.end(action.session);
+      if (managers.sessions.offers('end', { session: action.session })) managers.sessions.end(action.session);
       return;
     }
     case 'forget': {
-      if (managers.sessions.holds({ session: action.session })) managers.sessions.forget(action.session);
+      if (managers.sessions.offers('forget', { session: action.session })) managers.sessions.forget(action.session);
     }
   }
 }

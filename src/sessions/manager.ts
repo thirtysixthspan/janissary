@@ -1,7 +1,7 @@
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
-import type { RemoteSessionView } from '../protocol.js';
+import type { RemoteSessionAction, RemoteSessionView } from '../protocol.js';
 import { resumeRemote } from '../remote/reattach.js';
 import { runSessionAction, type SessionAction, type SessionActionResult } from './actions.js';
 import { isEndSessionLabel } from './end-session.js';
@@ -106,11 +106,22 @@ export class SessionsManager {
     for (const record of this.all()) this.reattach(record.session);
   }
 
-  // Whether a session id or a tab label names something the current view holds. Every action is
-  // refused for anything else, which keeps the grant as narrow as the list that motivates it.
-  holds(target: { label?: string; session?: string }): boolean {
-    return this.view().some((row) => (
-      (target.label === undefined || row.label === target.label)
+  /**
+   * The row that authorises `verb` on `target`, or nothing.
+   *
+   * A row has to both match the target *and* list the verb among its own actions — the list this
+   * manager composed and already publishes. Matching on the name alone was wider than the list that
+   * motivates it: a `detached` or `ended` row's `label` is a recorded name belonging to no live tab,
+   * and recorded labels are ordinary harness names like `claude`, so a plugin could send `close` for
+   * a row offering only `reattach` and take out whatever tab happened to bear that name.
+   *
+   * The row comes back rather than a boolean so the caller acts on what authorised it instead of
+   * searching the tab table again for the same string.
+   */
+  offers(verb: RemoteSessionAction, target: { label?: string; session?: string }): RemoteSessionView | undefined {
+    return this.view().find((row) => (
+      row.actions.includes(verb)
+      && (target.label === undefined || row.label === target.label)
       && (target.session === undefined || row.session === target.session)
     ));
   }

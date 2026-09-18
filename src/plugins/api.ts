@@ -130,8 +130,10 @@ export type TabPluginTopicAction =
   // The four things a session row offers, plus the two a row that cannot be parked offers instead.
   // Addressed by tab label or by session id depending on what the verb acts on: `detach`, `focus`,
   // and `close` act on a tab this janissary holds, while `reattach`, `end`, and `forget` act on a
-  // session that may have no tab at all. Every one is refused when it names something the topic's
-  // current data does not hold, the same narrowing `focusOwner` applies.
+  // session that may have no tab at all. Every one is refused unless a row in the topic's current
+  // data both names the target *and* offers that verb — presence alone is not enough, since a
+  // recorded row's label is a name belonging to no live tab and would otherwise let `close` reach
+  // whatever tab happened to share it.
   | { topic: 'sessions'; action: 'detach' | 'focus' | 'close'; label: string }
   | { topic: 'sessions'; action: 'reattach' | 'end' | 'forget'; session: string }
   // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
