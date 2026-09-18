@@ -27,6 +27,14 @@ import { DetachedPeer, relayPeer } from './serve-detach.js';
 // cadence (`src/harness/transcript/tailer.ts`).
 const TRANSCRIPT_POLL_MS = 2000;
 
+// SIGHUP is what arrives when the ssh channel drops; the other two cover an ordinary kill. The two
+// facts used to be one — all three meant the session was over and its workspace clone went with it —
+// and are now deliberately different. A dropped channel is not evidence the user is finished with
+// the session, only that the transport went, so SIGHUP parks the peer and waits to be reattached
+// (`DetachedPeer`, `REMOTE_DETACH_TIMEOUT_MS`). A signal aimed at this process is evidence: SIGTERM
+// and SIGINT still end the session and remove the clone, as does the local side's explicit
+// `shutdown` frame. Removing the SIGHUP branch would silently restore destroy-on-disconnect, which
+// is the behavior detachable sessions exist to end.
 export const CHANNEL_SIGNALS = ['SIGHUP', 'SIGTERM', 'SIGINT'] as const;
 
 function writeFrame(frame: ServerFrame): void {
@@ -117,6 +125,12 @@ export class RemoteServer {
       });
       return;
     }
+    // Answered before the workspace exists too, with an empty list: a peer that has not provisioned
+    // is holding nothing, which is a fact worth stating rather than a refusal to explain.
+    case 'session-state': {
+      this.emit({ type: 'session-state-result', processes: this.processes?.states() ?? [] });
+      return;
+    }
     case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
@@ -186,6 +200,12 @@ export class RemoteServer {
     if (frame.harness !== undefined) this.followTranscript(frame.harness);
   }
 
+  // Give up the transport while leaving the session running: the peer holds its workspace and its
+  // processes and waits out `REMOTE_DETACH_TIMEOUT_MS` for someone to reattach. Raised by SIGHUP and
+  // by stdin/stdout going away, which are the same event seen from two directions.
+  //
+  // A process that is relaying into someone else's parked peer has no session of its own to park, so
+  // it exits instead — the peer it was relaying to keeps waiting, untouched.
   detach(): void {
     if (this.relay) { this.shutdown(0); return; }
     this.buffer = '';
@@ -221,6 +241,8 @@ export function wireShutdown(
   on: (signal: string, handler: () => void) => void = (signal, handler) => { process.on(signal as NodeJS.Signals, handler); },
 ): void {
   for (const signal of CHANNEL_SIGNALS) on(signal, () => {
+    // The lost-transport signal parks the session; the two that mean someone ended this process end
+    // it. See `CHANNEL_SIGNALS` above for why those stopped being the same answer.
     if (signal === 'SIGHUP') server.detach();
     else server.shutdown(0);
   });

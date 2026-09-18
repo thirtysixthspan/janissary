@@ -153,6 +153,23 @@ session id nor answers a reattach request, so it would receive a frame it refuse
 sit unreachable rather than falling back to a fresh launch — the mismatch is therefore refused at
 the handshake, as with every other version bump.
 
+Asking a peer what is still running in its workspace moves it to 15. A query frame carries no
+payload — there is one workspace per peer, so the question has a single answer — and the reply names
+one entry per live process with its spawn id, the program, how it was started, and the harness or
+agent name it belongs to. It is what turns an accepted reattach into tabs: a janissary restarted
+since the launch remembers what it started, and only the far side knows what survived. A version-14
+peer recognizes neither frame and is refused at the handshake like any other mismatch. An
+empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
+nothing in it, which is the one case janissary ends rather than reattaches.
+
+The handshake check is narrower for a reattach than for a launch. A reattach is answered by the
+freshly started remote server that then relays into the parked peer, so the version it announces is
+whatever is installed on that host now — not the version of the peer waiting behind it. A session
+parked while the remote installation was upgraded therefore passes the handshake and is then refused
+by name by the older peer. The query is bounded rather than open-ended so that case settles: no
+answer within the wait establishes nothing, so the session stays parked with its failure reported and
+its reattach button, exactly as an unreachable host does.
+
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
 optional flags must use their declared values; exit codes must be integers; transcript blocks must
@@ -166,7 +183,10 @@ object of string values — an array or a null is refused. A reply chunk may be 
 can legitimately stream one; a stop reason and an error message may not. An error frame's fatal flag
 is required rather than optional, because an absent flag would default a dead session to recoverable.
 A browser-exit frame's message is optional but, when present, must be a nonempty string; it carries
-newlines, which JSON escaping keeps from being read as the end of a frame.
+newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
+must carry an array of process entries, each with a nonempty spawn id and program and a declared
+mode; one malformed entry makes the whole reply malformed rather than shortening the list, because a
+short list is indistinguishable from a process that exited and an empty one ends the session.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.
@@ -185,9 +205,36 @@ Reusing the launching tab's name for a new launch does not let the earlier sessi
 
 On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait — the wait exists only for a connection that is lost rather than deliberately ended.
 
-A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection also ends recovery and leaves its tabs showing the ended session.
+A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection is the one ending that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the end was the user's own instruction rather than news about the session.
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
+
+A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
+channel and drops the transport without telling the peer anything, so the far side runs the same
+path a lost connection produces and starts its seven-day wait with its processes still running.
+Detaching is refused while a session is still provisioning: there is nothing to come back to yet.
+Janissary records what it launched — the session id, the address, the workspace, and each live
+process with its own label — in the project's own state directory, so a peer stays findable after the
+application has been closed and reopened. That record outlives an ordinary start rather than being
+swept with the rest of the state directory, and a record older than the seven-day wait is dropped
+when it is read, since it describes a peer that cannot still exist.
+
+Reattaching a parked session opens one ssh connection and asks the peer to take it back. The
+recorded launching tab is created first, so ssh's own password, passphrase, and host-key prompts
+render there, and the remaining tabs are created once the peer has accepted and said what is still
+running. Each reattached tab takes its recorded label back, de-duplicated if something else has
+claimed it meanwhile. Remote file navigators are not restored. A peer that comes back holding
+nothing is told to shut down and its record dropped, rather than being left to hold a remote
+workspace for a week with nothing in it. Output the peer replays before its tabs exist is held and
+delivered to each tab as it is created, in the order the peer produced it, bounded by the same limit
+the peer's own buffer uses; an overflow is reported with the existing truncated-replay line. The hold
+lasts only for the reattach that needs it — once its tabs are built the connection is ordinary, and
+output arriving for a process no tab is listening to is dropped rather than collected for a later
+attach that is not coming.
+
+A session can be ended for good from its parked state: janissary reconnects far enough to tell the
+peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked
+session removes janissary's own record and touches nothing on the far side.
 
 When the application itself quits, each remote process, ACP session, and navigator session is told
 to stop before the channel carrying that instruction is closed. Closing the channel first would
@@ -322,7 +369,6 @@ a shared channel's server holds one agent per tab using it.
 ### Out of scope
 
 - Non-workspaced remote launches — `on <address>` always implies a workspace clone.
-- Reconnect, resume, or reattach after a dropped channel.
 - Multiplexing independent workspaces or independent `on <address>` launches onto one connection.
 - Shipping or installing janissary on the remote.
 - ssh options on the clause.
@@ -332,8 +378,11 @@ a shared channel's server holds one agent per tab using it.
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
-- Restoring a remote agent tab on `--relaunch`.
-- Restoring a remote file navigator through a profile or `--relaunch`.
+- Restoring a remote file navigator through a profile, a reattach, or `--relaunch`.
+- Probing hosts on janissary's own initiative: nothing opens an ssh connection except a pressed
+  reattach, a pressed end, or a `--relaunch` restore.
+- Arbitrating two janissary instances reattaching one peer — last attach wins, and the loser enters
+  its own reconnect backoff.
 - `acp` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
 - Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; the tool loop
   stays local.

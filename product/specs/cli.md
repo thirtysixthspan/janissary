@@ -54,7 +54,7 @@ For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command 
 
 The detached server itself boots the full application against its target directory (the current directory, or the resolved `<project-dir>` argument):
 
-1. Acquire an instance lock on the target directory, failing fast if another live `janus` process already holds it.
+1. Acquire an instance lock on the target directory, failing fast if another live `janus` process already holds it. A lock naming a process the current user cannot signal is treated as stale and taken over, since a recorded process ID that has been recycled by another account's process cannot be the instance that recorded it.
 2. Initialize `.janissary/` subdirectories (agent state, database, profiles, workspace).
 3. Start the transcript logger and transcript store.
 4. Load application config from `.janissary/config.json`.
@@ -83,7 +83,7 @@ When the last client disconnects, the server waits one second before beginning s
 
 ### Stopping a running instance
 
-`janus stop [<project-dir>]` runs attached, printing straight to the terminal. It reads the instance lock (`.janissary/lock`) for the target directory (current directory by default) and, if the recorded process ID is alive, sends it SIGTERM — triggering the same graceful shutdown sequence above. If no lock file exists for that directory, or the recorded process is no longer alive, it prints `no running janus instance for <dir>` and exits 0 (there being nothing to stop is not an error).
+`janus stop [<project-dir>]` runs attached, printing straight to the terminal. It reads the instance lock (`.janissary/lock`) for the target directory (current directory by default) and, if the recorded process ID is alive, sends it SIGTERM — triggering the same graceful shutdown sequence above. If no lock file exists for that directory, or the recorded process is no longer alive — or is alive but belongs to another account, and so is not the instance the lock names — it prints `no running janus instance for <dir>` and exits 0 (there being nothing to stop is not an error).
 
 ### Scaffolding a new project
 

@@ -410,6 +410,43 @@ describe('RemoteServer', () => {
     server.receive(`${line.slice(5)}\n`);
     expect(frames).toHaveLength(1);
   });
+
+  // The question a reattaching janissary asks, and the only way it learns what to open a tab for.
+  it('answers session-state with one entry per live process', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-state' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    server.receive(`${encodeFrame({ ...SPAWN_FRAME, harness: 'claude' })}\n`);
+    server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
+
+    const answer = frames.find((frame) => frame.type === 'session-state-result');
+    expect(answer?.processes).toEqual([
+      { id: 'r1', program: 'claude', mode: 'pty', harness: 'claude' },
+    ]);
+    server.shutdown(0);
+  });
+
+  it('answers an empty list once every process has exited', async () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-empty' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    server.receive(`${encodeFrame(SPAWN_FRAME)}\n`);
+    const handlers = vi.mocked(spawnPty).mock.calls.at(-1)![3];
+    handlers.onExit('pty1', 0);
+    server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
+
+    const answer = frames.find((frame) => frame.type === 'session-state-result');
+    expect(answer?.processes).toEqual([]);
+    server.shutdown(0);
+  });
+
+  // A peer that has not provisioned is holding nothing, which is a fact worth stating: answering
+  // with the provisioning refusal instead would read to the local side as an unreachable host.
+  it('answers an empty list before a workspace exists rather than refusing', () => {
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
+    expect(frames).toEqual([{ type: 'session-state-result', processes: [] }]);
+  });
 });
 describe('detached peer rendezvous', () => {
   it('keeps a real shell and workspace through EOF and SIGHUP and a fresh remote-serve process', async () => {

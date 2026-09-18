@@ -1,4 +1,5 @@
 import type { RemoteAddress } from '../remote/address.js';
+import type { RemoteResume } from '../remote/resume.js';
 
 // The full set of decisions a harness tab is created from, grouped into one object so
 // `HarnessManager`'s two launch paths (`open` and `openFromProfile`) name every field instead of
@@ -25,4 +26,10 @@ export interface SpawnTabOptions {
   // Set for an `on <address>` launch: the harness runs on another host, `workspaceDir` stays
   // undefined (the clone is the remote's, and so is its cleanup), and the PTY is a remote session.
   remote?: RemoteAddress;
+  // Set when this launch is really a reattach to a peer that is already running the harness: the
+  // channel asks to reattach instead of asking for a clone, and the PTY adopts the recorded spawn id
+  // rather than minting a new one, so it binds to the process already out there.
+  resume?: RemoteResume;
+  // The spawn id the far side already knows this process by. Only meaningful alongside `resume`.
+  resumePtyId?: string;
 }

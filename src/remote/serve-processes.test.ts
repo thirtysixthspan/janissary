@@ -91,3 +91,50 @@ describe('RemoteProcesses forwarded credentials', () => {
     });
   });
 });
+
+// What a reattaching janissary asks for. The local side knows what it once started; only this side
+// knows what survived, so the table describing itself is the whole answer.
+describe('RemoteProcesses session state', () => {
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockReset().mockReturnValue({
+      id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+    });
+    vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
+    vi.mocked(harnessSpawnEnv).mockReset().mockReturnValue({ env: undefined });
+  });
+
+  it('describes nothing before anything has been spawned', () => {
+    expect(new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude').states()).toEqual([]);
+  });
+
+  it('answers one entry per live process, carrying its program, mode, and harness or agent name', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+      harness: 'claude',
+    });
+    processes.spawn({
+      type: 'spawn', id: 'r2', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
+      agentName: 'bekir',
+    });
+
+    expect(processes.states()).toEqual([
+      { id: 'r1', program: 'claude', mode: 'pty', harness: 'claude' },
+      { id: 'r2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
+    ]);
+  });
+
+  // The entry goes when the process does, so the answer is the live set rather than the launch
+  // history — an empty one is what tells the local side to end the session instead of reattaching.
+  it('answers an empty list once every process has exited', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+      harness: 'claude',
+    });
+    const onExit = vi.mocked(spawnPty).mock.calls[0]?.[3] as { onExit: (id: string, code: number) => void };
+    onExit.onExit('pty1', 0);
+
+    expect(processes.states()).toEqual([]);
+  });
+});

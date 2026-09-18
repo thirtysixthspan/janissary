@@ -3,11 +3,12 @@ import type { JanusClient } from './ws';
 import { useXterm } from './shared/terminal/useXterm';
 import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from './shared/AgentTabMeta';
+import { remoteSessionControl } from './shared/remote-session-control';
 import type { ShellTabHandle } from './tab-handles';
-import type { RemoteTarget } from '@shared/protocol';
+import type { RemoteTargetView } from '@shared/protocol';
 
 type Properties = {
-  ptyId: string; client: JanusClient; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget;
+  ptyId: string; client: JanusClient; label: string; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView;
   active?: boolean;
   onSplit?: () => void;
 };
@@ -24,7 +25,7 @@ function shellKeyFilter(e: KeyboardEvent): boolean {
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
 // Unmounts when the program exits; the transcript is restored by the parent.
 export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab({
-  ptyId, client, cwd, cwdDisplay, flags, remote, active, onSplit,
+  ptyId, client, label, cwd, cwdDisplay, flags, remote, active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
   const { focus: focusTerm, selection } = useXterm({
@@ -38,7 +39,14 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
   return (
     <div className="harness-tab">
-      <AgentTabMeta cwd={cwd} cwdDisplay={cwdDisplay} flags={flags} remote={remote} onSplit={onSplit} />
+      <AgentTabMeta
+        cwd={cwd}
+        cwdDisplay={cwdDisplay}
+        flags={flags}
+        remote={remote}
+        onSplit={onSplit}
+        remoteSession={remote === undefined ? undefined : remoteSessionControl(client, label, remote)}
+      />
       <div className="harness-body" ref={hostReference}>
         <SelectionOverlay state={selection.view} screen={selection.screen} />
       </div>

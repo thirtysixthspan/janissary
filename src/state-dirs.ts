@@ -8,6 +8,7 @@ import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
 import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remote-file-cache.js';
+import { initRemoteSessionStore } from './sessions/store.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
 
@@ -81,6 +82,14 @@ export const STATE_DIRECTORY_ENTRIES = [
     always: true,
   },
   {
+    // No `clear`, deliberately: outliving the process is the whole point of the record, so a fresh
+    // start must not sweep it. An entry with no clear is never swept (see `clearStateDirectories`),
+    // and a record describing a peer that can no longer exist is pruned when the store loads it.
+    name: 'remoteSessions',
+    init: (projectDir: string): void => { initRemoteSessionStore(projectDir); },
+    always: false,
+  },
+  {
     name: 'transcriptLog',
     init: (projectDir: string): void => { new TranscriptLogger(projectDir); },
     always: false,
@@ -99,7 +108,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 export const KNOWN_STATE_DIRECTORY_KEYS = [
   'agentState', 'harnessCapture', 'harnessRecording', 'harnessTranscript',
   'browserLog', 'globalHistory', 'connections', 'profiles', 'workspace',
-  'remoteFileCache', 'transcriptLog', 'transcriptStore',
+  'remoteFileCache', 'remoteSessions', 'transcriptLog', 'transcriptStore',
 ] as const;
 
 type RegisteredKey = (typeof STATE_DIRECTORY_ENTRIES)[number]['name'];

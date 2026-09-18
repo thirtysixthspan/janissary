@@ -30,6 +30,14 @@ export class ShellManager {
   // Distinguishes a remote tab's shell ids from the local `pty…` ids, so both can key the same
   // remote channel without colliding.
   private remoteShellCounter = 0;
+  // Spawn ids a reattach recorded for tabs whose shells have not been asked for yet. A remote agent
+  // tab's shell is created lazily, on its first command, so the id cannot be handed to a constructor
+  // — it waits here until `spawnFor` needs one, and is consumed exactly once. The session id the
+  // record carried is kept beside the spawn id so an adoption can never be claimed by a tab talking
+  // over a different channel: the label a tab holds is freed the moment it closes, and a later tab
+  // granted the same label must start its own shell rather than bind to a process on a session that
+  // has nothing to do with it.
+  private adopted = new Map<string, { id: string; session: string | undefined }>();
   // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
   // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
   // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
@@ -45,6 +53,18 @@ export class ShellManager {
   private promotions = new Map<string, ShellPromotion>();
 
   constructor(private managers: Managers) {}
+
+  // Tell this tab's next remote shell to bind to a spawn id the far side already holds, rather than
+  // starting a second shell beside the one still running there. `session` is the session id the
+  // record of the reattach carried, checked against the tab's channel when the shell is finally
+  // asked for.
+  adoptRemoteShell(label: string, id: string, session?: string): void {
+    this.adopted.set(label, { id, session });
+  }
+
+  // Forget a label's adoption before anything bound to it — a reattach that failed, or whose
+  // session turned out to be over, has no shell out there worth binding to.
+  releaseAdoptedShell(label: string): void { this.adopted.delete(label); }
 
   // Whether a tab currently has a live shell. Drives the connections panel and completion.
   has(label: string): boolean {
@@ -76,7 +96,16 @@ export class ShellManager {
     const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
+      // A reattached tab adopts the spawn id the far side already knows it by, so the adapter binds
+      // to the shell still running there rather than starting a second one beside it — but only
+      // while its channel is still the session the adoption was recorded against, and never past a
+      // tab close that freed its label.
+      const adoption = this.adopted.get(label);
+      const id = adoption && this.managers.remote.get(label)?.sessionId === adoption.session
+        ? adoption.id
+        : `rsh${++this.remoteShellCounter}`;
+      this.adopted.delete(label);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,
@@ -197,6 +226,7 @@ export class ShellManager {
   // `connection close shell` result message). On `connection close shell` and tab close.
   close(label: string): boolean {
     const shell = this.shells.get(label);
+    this.adopted.delete(label);
     if (!shell) return false;
     shell.kill();
     this.shells.delete(label);
@@ -215,6 +245,7 @@ export class ShellManager {
     this.shellQueues.clear();
     this.shellPtyIds.clear();
     this.promotions.clear();
+    this.adopted.clear();
   }
 
   dispose(): void {

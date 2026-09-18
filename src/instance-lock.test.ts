@@ -2,13 +2,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { mkdtempSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { acquireLock, releaseLock, readLockPid, isPidAlive } from './instance-lock.js';
+import { acquireLock, releaseLock, readLockPid, isPidAlive, isOwnInstanceAlive } from './instance-lock.js';
 
 let projectDir: string;
 
 it.each([['EPERM', true], ['ESRCH', false]] as const)('treats PID probe %s as alive=%s', (code, alive) => {
   const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw Object.assign(new Error(code), { code }); });
   try { expect(isPidAlive(123)).toBe(alive); } finally { kill.mockRestore(); }
+});
+
+// The narrow question: a pid this user cannot signal is somebody else's process, so it can never be
+// the janus instance that wrote its own pid into the lock.
+it.each([['EPERM'], ['ESRCH']] as const)('treats PID probe %s as not our own instance', (code) => {
+  const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw Object.assign(new Error(code), { code }); });
+  try { expect(isOwnInstanceAlive(123)).toBe(false); } finally { kill.mockRestore(); }
+});
+
+it('treats a pid it can signal as our own instance', () => {
+  const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+  try { expect(isOwnInstanceAlive(123)).toBe(true); } finally { kill.mockRestore(); }
 });
 
 beforeEach(() => {
@@ -32,6 +44,18 @@ describe('acquireLock', () => {
     acquireLock(projectDir);
     const file = path.join(projectDir, '.janissary', 'lock');
     expect(() => acquireLock(projectDir)).toThrow(`delete ${file} to clear the lock`);
+  });
+
+  // A pid recycled by a process belonging to another account: live, but not the janus this lock
+  // names, so the lock is stale and taking it must not need the user to delete the file by hand.
+  it('takes a stale lock over a recycled pid owned by another account', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '999999');
+    const kill = vi.spyOn(process, 'kill')
+      .mockImplementation(() => { throw Object.assign(new Error('EPERM'), { code: 'EPERM' }); });
+    try { acquireLock(projectDir); } finally { kill.mockRestore(); }
+    expect(readFileSync(path.join(dir, 'lock'), 'utf8').trim()).toBe(String(process.pid));
   });
 
   it('succeeds when the lock file contains a pid that is not alive', () => {

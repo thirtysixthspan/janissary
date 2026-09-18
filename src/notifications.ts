@@ -21,9 +21,14 @@ import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from 
 // `-b` tab's browser is no longer there — a failed launch, a browser that exited, or a guard that
 // died are one event to the user, since the consequence is the same: `connect()` now fails.
 // Explicit events are always eligible and bypass focus suppression.
+// `remote-session` reports what the sessions tab just did to a remote session — detached,
+// reattached, ended, forgotten — so the change is on the record even when the tab is closed. It
+// carries its line verbatim, exactly as `remote-session-ended` does, and is deliberately distinct
+// from it: that one reports a session ending on its own, this one reports a decision the user made.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-ended'
+  | 'remote-session'
   | 'state-change'
   | 'incoming-message'
   | 'schedule-fire'
@@ -79,6 +84,7 @@ export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof Notification
 export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'schedule-late': true,
   'remote-session-ended': true,
+  'remote-session': true,
   manual: true,
   'auto-approve': true,
   'editor-suggest': true,
@@ -131,6 +137,7 @@ export function formatTimestamp(date: Date): string {
 export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
   switch (event) {
     case 'schedule-late':
+    case 'remote-session':
     case 'remote-session-ended': { return detail ?? ''; }
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }

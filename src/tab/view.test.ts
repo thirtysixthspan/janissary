@@ -19,6 +19,73 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
+  // The two `sessionEnded` fields hold the same text for different purposes: the tab's copy is the
+  // server's own gate on a dead session and has no client reader, while the harness view's copy is
+  // what the tab shows in place of `exited`.
+  it('keeps the tab-level sessionEnded off the wire while the harness view carries it', () => {
+    const tab = makeTab('claude', '#fff');
+    const ended = 'Remote janus on devbox ended — start a new agent or shell to continue.';
+    tab.view = 'harness';
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'exited', sessionEnded: ended };
+    tab.sessionEnded = ended;
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
+    expect('sessionEnded' in view).toBe(false);
+    expect(view.harness?.sessionEnded).toBe(ended);
+  });
+
+  // The metadata row's reattach control exists to be offered while a transport is being retried, and
+  // the only thing that knows a transport is being retried is the channel. Resolved at view time so
+  // there is no copy of it on the tab to outlive the recovery.
+  it('carries the channel\'s reconnecting state onto the remote target', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/ws', () => true,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox', reconnecting: true });
+  });
+
+  it('leaves the key off a remote target whose channel is healthy', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/ws', () => false,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox' });
+  });
+
+  // The provisioning test is the channel's own workspace-absence test — the one detach refuses on —
+  // so a busy cwd-less stretch on a live session can never read as still provisioning.
+  it('carries the channel\'s provisioning state onto the remote target', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      (label: string) => ({ [label]: undefined })[label], () => false,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox', provisioning: true });
+  });
+
+  it('drops the provisioning key once the channel\'s workspace has landed', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/proj/.janissary/workspace/claude',
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox' });
+  });
+
+  it('never marks a non-remote tab provisioning, even with a local workspace', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
+    expect(view.remote).toBeUndefined();
+    expect('provisioning' in (view.remote ?? {})).toBe(false);
+  });
+
   it('projects only the public plugin envelope onto the wire', () => {
     const tab = makeTab('video', '#fff');
     tab.view = 'plugin';

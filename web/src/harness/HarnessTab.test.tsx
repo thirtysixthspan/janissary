@@ -254,6 +254,29 @@ describe('HarnessTab', () => {
     expect(container.querySelector('.harness-body')).toBeInTheDocument();
   });
 
+  // The wiring assertion. `AgentTabMeta.test.tsx` pins what the control does when it is *handed*
+  // the reconnecting state, which is why a control no call site could ever reach that state read as
+  // covered. This drives it from the tab view, the way the running application does.
+  it('offers reattach on a tab whose remote target reports reconnecting', () => {
+    const { getByLabelText } = render(
+      <HarnessTab
+        harness={makeHarness({ status: 'running' })} client={mockClient} label="claude"
+        remote={{ address: 'devbox', host: 'devbox', reconnecting: true }}
+      />,
+    );
+    expect(getByLabelText('Reattach session on devbox')).toBeInTheDocument();
+  });
+
+  it('offers detach on a tab whose remote target is healthy', () => {
+    const { getByLabelText } = render(
+      <HarnessTab
+        harness={makeHarness({ status: 'running' })} client={mockClient} label="claude"
+        remote={{ address: 'devbox', host: 'devbox' }}
+      />,
+    );
+    expect(getByLabelText('Detach session on devbox')).toBeInTheDocument();
+  });
+
   it('does not show an exited banner while running', () => {
     const { queryByText } = render(
       <HarnessTab harness={makeHarness({ status: 'running' })} client={mockClient} label="claude" />,

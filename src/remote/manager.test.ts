@@ -3,6 +3,7 @@ import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications.js';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
@@ -162,6 +163,18 @@ describe('RemoteManager shared channels', () => {
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });
 
+  // What the metadata row's reattach control is offered from. Read off the channel rather than
+  // marked onto the tab, so it cannot report a recovery that has already finished.
+  it('reports a channel mid-backoff as reconnecting and a healthy one as not', () => {
+    vi.useFakeTimers();
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    expect(h.remote.reconnectingOf('creator')).toBe(false);
+    expect(h.remote.reconnectingOf('nothing-here')).toBe(false);
+    h.transport()?.onExit();
+    expect(h.remote.reconnectingOf('creator')).toBe(true);
+    h.remote.dispose();
+  });
+
   it('aliases a joined tab onto the existing channel and readiness', async () => {
     const h = managerHarness();
     expect(h.remote.attach('joined', 'creator')).toBe(true);
@@ -210,6 +223,63 @@ describe('RemoteManager shared channels', () => {
     expect(joinedHandlers.onClosed).toHaveBeenCalledOnce();
     expect(h.remote.get('creator')).toBeUndefined();
     expect(h.remote.get('joined')).toBeUndefined();
+  });
+
+  // `connection close ssh:<id>` is the user ending the session, not something that happened to it,
+  // so the tabs go rather than sitting open in an exited state and the feed records nothing.
+  it('closes every tab on the channel without announcing an ended session', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    const joinedHandlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+    h.remote.attach('joined', 'creator', joinedHandlers);
+    expect(h.remote.close('creator')).toBe(true);
+    expect(notify).not.toHaveBeenCalled();
+    expect(h.handlers.onClosed).toHaveBeenCalledOnce();
+    expect(joinedHandlers.onClosed).toHaveBeenCalledOnce();
+    expect(h.remote.get('creator')).toBeUndefined();
+    expect(h.remote.get('joined')).toBeUndefined();
+  });
+
+  // The sessions list has to notice a launch, a workspace arriving, a process starting, a join, and
+  // a release on its own. Waiting for Refresh made an open list look live while saying nothing, and
+  // a session launched with the tab shut was never recorded at all.
+  it('signals the sessions channel at every move of the live set', () => {
+    let signals = 0;
+    const subscription = messageBus.on('sessions', 'changed', () => { signals += 1; });
+    try {
+      const h = managerHarness(false);
+      const afterOpen = signals;
+      expect(afterOpen).toBeGreaterThan(0);
+
+      h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+      const afterReady = signals;
+      expect(afterReady).toBeGreaterThan(afterOpen);
+
+      h.remote.get('creator')?.send({
+        type: 'spawn', id: 'rpty1', program: 'claude', command: 'claude',
+        mode: 'pty', harness: 'claude', cols: 80, rows: 24,
+      });
+      const afterSpawn = signals;
+      expect(afterSpawn).toBeGreaterThan(afterReady);
+
+      h.remote.attach('joined', 'creator');
+      const afterAttach = signals;
+      expect(afterAttach).toBeGreaterThan(afterSpawn);
+
+      h.remote.release('joined');
+      expect(signals).toBeGreaterThan(afterAttach);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  // The opposite of `detach`: an explicit close finishes the peer off instead of parking it.
+  it('sends a shutdown frame on an explicit close before killing the transport', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.close('creator');
+    const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
+    expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });
 });
 
@@ -315,5 +385,144 @@ describe('RemoteManager browser-exited frames', () => {
     const tab = harnessTab('creator', 'rpty1');
     browserHarness([tab]).send('gone-session', 'e2e browser exited');
     expect(tab.harness?.browserError).toBeUndefined();
+  });
+});
+
+const RECORDED_SESSION = '12345678-1234-1234-1234-123456789abc';
+
+// Opening with a record is a reattach, and the whole point is that it is the same routine: the
+// channel carries the session id from the start, so the handshake asks to reattach instead of asking
+// for a clone nobody wants a second copy of.
+describe('RemoteManager reattach from a record', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  function resumeHarness() {
+    let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
+    const write = vi.fn();
+    const kill = vi.fn();
+    const managers = {
+      pty: {
+        spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+          transport = handlers;
+          return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill };
+        }),
+        reassignTransports: vi.fn(),
+      },
+      tab: { findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs: [], byLabel: vi.fn(), cur: () => ({ label: 'creator' }) },
+    } as unknown as Managers;
+    const remote = new RemoteManager(managers);
+    const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+    const onResult = vi.fn();
+    remote.open('creator', address('devbox'), '/local', handlers, {
+      session: RECORDED_SESSION, workspaceDir: '/remote/ws', onResult,
+    });
+    return { remote, handlers, onResult, write, kill, transport: () => transport };
+  }
+
+  it('sends reattach carrying the recorded session id, and never provision', () => {
+    const h = resumeHarness();
+    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
+    expect(sent.map((frame) => frame.type)).toEqual(['reattach']);
+    expect(sent[0]).toEqual({ type: 'reattach', session: RECORDED_SESSION });
+  });
+
+  // No `workspace-ready` ever comes for a reattach, so the recorded directory is what settles the
+  // placeholder tab. Without it the tab would sit as a placeholder and close over a live session.
+  it('settles the tab from the recorded workspace directory on an accepted reattach', async () => {
+    const h = resumeHarness();
+    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+
+    await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
+    expect(h.remote.workspaceOf('creator')).toBe('/remote/ws');
+    expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws');
+    expect(h.onResult).toHaveBeenCalledExactlyOnceWith(true);
+  });
+
+  // A peer that answers is a peer that is there; refusing establishes the session is over, which is
+  // a different fact from an unreachable host and has to be reported as one.
+  it('reports a refused reattach as refused rather than retrying it', () => {
+    const h = resumeHarness();
+    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: false })}\n`);
+
+    expect(h.onResult).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it('answers the caller once, leaving a later transport loss to the ordinary reconnect path', () => {
+    const h = resumeHarness();
+    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+
+    expect(h.onResult).toHaveBeenCalledTimes(1);
+    h.remote.dispose();
+  });
+
+  it('asks for a clone when no record is supplied, exactly as before', () => {
+    const h = managerHarness(false);
+    const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
+    expect(sent.map((frame) => frame.type)).toEqual(['provision']);
+  });
+});
+
+describe('RemoteManager detach', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // The frames `finish()` sends are exactly what a detach must not send: `kill` stops the processes
+  // and `shutdown` removes the remote workspace, which is the session the user asked to keep.
+  it('drops the transport without sending kill, acp-close, or shutdown', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.write.mockClear();
+
+    expect(h.remote.detach('creator')).toBe(true);
+    expect(h.write).not.toHaveBeenCalled();
+    expect(h.kill).toHaveBeenCalled();
+  });
+
+  it('releases every label riding the channel', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.remote.attach('joined', 'creator');
+    expect([...h.remote.liveEntries()[0].labels]).toEqual(['creator', 'joined']);
+
+    h.remote.detach('creator');
+    expect(h.remote.get('creator')).toBeUndefined();
+    expect(h.remote.get('joined')).toBeUndefined();
+  });
+
+  // The tab-close walk runs after the detach and must find nothing: a `release` that still saw the
+  // entry would take the last-label branch and send the shutdown the detach withheld.
+  it('leaves the tab-close walk nothing to release', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.remote.detach('creator');
+    h.write.mockClear();
+
+    expect(h.remote.release('creator')).toBe(false);
+    expect(h.write).not.toHaveBeenCalled();
+  });
+
+  it('reports no session-ended line, since the session did not end', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.remote.detach('creator');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  // Decision 12: a session still provisioning has nothing to come back to, which is the same test
+  // the automatic recovery applies before treating a lost transport as recoverable.
+  it('refuses a session whose workspace is not ready', () => {
+    const h = managerHarness(false, RECORDED_SESSION);
+    expect(h.remote.detach('creator')).toBe(false);
+    expect(h.remote.get('creator')).toBeDefined();
+  });
+
+  it('refuses a session the far side gave no id for', () => {
+    const h = managerHarness(true);
+    expect(h.remote.detach('creator')).toBe(false);
+  });
+
+  it('refuses a label it does not hold', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    expect(h.remote.detach('nothing-here')).toBe(false);
   });
 });

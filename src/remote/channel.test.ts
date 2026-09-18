@@ -11,14 +11,16 @@ function harness() {
   const errors: string[] = [];
   const closes = vi.fn();
   const attached = vi.fn();
+  const truncated = vi.fn();
   const channel = new RemoteChannel(transport, {
     onTerminalData: (d) => { terminal.push(d); },
     onAttached: attached,
     onFrame: (f) => { frames.push(f); },
     onError: (m) => { errors.push(m); },
     onClose: closes,
+    onTruncatedReplay: truncated,
   });
-  return { channel, written, terminal, frames, errors, closes, attached, kill };
+  return { channel, written, terminal, frames, errors, closes, attached, truncated, kill };
 }
 
 describe('RemoteChannel — authenticating', () => {
@@ -318,4 +320,151 @@ it('answers new filesystem requests during a disconnect without sending or repla
   h.channel.send({ type: 'filesystem-request', session: 'n', request: 'q', operation: 'read-directory', args: {} });
   expect(reply).toHaveBeenCalledWith(expect.objectContaining({ request: 'q', error: 'Remote connection unavailable.' }));
   expect(h.written).toEqual([]);
+});
+
+// A session reattached after janissary restarted has no tabs at all when the far side's replay burst
+// arrives: the peer flushes everything the instant it accepts the reattach, and the tabs are built
+// from the answer that follows. Dropping what has no listener would lose every reattached process's
+// first words.
+describe('RemoteChannel — frames for an id with no listener yet', () => {
+  function attachedChannel() {
+    const h = harness();
+    // As a resume does: the session id is set before the handshake, so the channel enters its
+    // reattaching window and the state that opens the hold.
+    h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+    h.channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
+    return h;
+  }
+
+  it('holds output until a listener attaches, then delivers it in arrival order', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'first' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'second' })}\n`);
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual(['first', 'second']);
+  });
+
+  it('holds an exit for an id it never spawned and delivers it on attach', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'exit', id: 'r1', exitCode: 3 })}\n`);
+
+    const onExit = vi.fn();
+    h.channel.attach('r1', { onOutput: vi.fn(), onExit });
+    expect(onExit).toHaveBeenCalledWith(3);
+  });
+
+  it('delivers output and the exit that ends it in the order the far side produced them', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'bye' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'exit', id: 'r1', exitCode: 0 })}\n`);
+
+    const events: string[] = [];
+    h.channel.attach('r1', {
+      onOutput: (d) => { events.push(`out:${d}`); },
+      onExit: (code) => { events.push(`exit:${code}`); },
+    });
+    expect(events).toEqual(['out:bye', 'exit:0']);
+  });
+
+  it('holds each id separately, so one attach claims only its own frames', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'one' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r2', data: 'two' })}\n`);
+
+    const first: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { first.push(d); }, onExit: vi.fn() });
+    expect(first).toEqual(['one']);
+
+    const second: string[] = [];
+    h.channel.attach('r2', { onOutput: (d) => { second.push(d); }, onExit: vi.fn() });
+    expect(second).toEqual(['two']);
+  });
+
+  it('leaves a listener that is already attached on the live path, holding nothing', () => {
+    const h = attachedChannel();
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'live' })}\n`);
+    expect(chunks).toEqual(['live']);
+    expect(h.truncated).not.toHaveBeenCalled();
+  });
+
+  it('reports truncation once when the buffer overflows its budget', () => {
+    const h = attachedChannel();
+    const chunk = 'x'.repeat(200_000);
+    for (let index = 0; index < 8; index++) {
+      h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: chunk })}\n`);
+    }
+
+    h.channel.attach('r1', { onOutput: vi.fn(), onExit: vi.fn() });
+    expect(h.truncated).toHaveBeenCalledTimes(1);
+
+    h.channel.attach('r2', { onOutput: vi.fn(), onExit: vi.fn() });
+    expect(h.truncated).toHaveBeenCalledTimes(1);
+  });
+
+  // A peer may describe a process this side chose not to restore — a navigator's, or one whose tab
+  // the user closed meanwhile. Its replay must not sit in memory for the life of the channel.
+  it('discards what no tab claimed once the reattach has built its tabs', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r9', data: 'orphan' })}\n`);
+    h.channel.discardUnclaimed();
+
+    const chunks: string[] = [];
+    h.channel.attach('r9', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+  });
+
+  it('drops what it is holding when the channel ends for good', () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'held' })}\n`);
+    h.channel.closed();
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+  });
+
+  // A transport lost by a session that can be reattached is not the end of anything: the peer is
+  // still there and the frames it already sent are still owed to whichever tab claims them.
+  it('holds what it is holding across a transport loss that will reconnect', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'held' })}\n`);
+    h.channel.closed();
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual(['held']);
+  });
+
+  // A channel that is not reattaching has nothing to hold for: a frame whose listener is gone (a
+  // closed tab whose far side is still writing before its kill lands) stays dropped, and no
+  // truncated-replay line is raised into a tab that was never disconnected.
+  it('drops an unlistened frame on a live channel with no reattach in flight', () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'exit', id: 'r9', exitCode: 1 })}\n`);
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+    expect(h.truncated).not.toHaveBeenCalled();
+  });
+
+  // The window brackets the whole reattach, and once it closes the channel is ordinary again:
+  // nothing arriving afterwards is held for an id nobody claims.
+  it('stops holding once the reattach window closes', () => {
+    const h = attachedChannel();
+    h.channel.discardUnclaimed();
+    h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
+
+    const chunks: string[] = [];
+    h.channel.attach('r1', { onOutput: (d) => { chunks.push(d); }, onExit: vi.fn() });
+    expect(chunks).toEqual([]);
+    expect(h.truncated).not.toHaveBeenCalled();
+  });
 });

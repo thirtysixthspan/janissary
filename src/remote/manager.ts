@@ -6,9 +6,10 @@ import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
 import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
-import { notify } from '../notifications.js';
-import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
-import { Reattach, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
+import { Reattach, detachRemoteEntry, dropRemoteLabels, emitSessionsChanged, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
+import { answerSessionState, handleReattachResult, type RemoteResume } from './resume.js';
+import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
+import { remoteChannelClosed } from './manager-closed.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
 // and its channel has gone away.
@@ -19,6 +20,7 @@ export type RemoteLaunchHandlers = {
   onFailed: (message: string) => void;
   onClosed: () => void;
 };
+
 
 // The local side runs `ssh -t <destination> '$SHELL -ic "janus remote-serve [<path>]"'`. Nothing is
 // shipped over the wire: the remote must already have `janus` on its PATH, and a missing binary
@@ -52,7 +54,16 @@ export class RemoteManager {
   // Open a channel for `label` and start provisioning its remote workspace as soon as the handshake
   // lands. The tab is expected to already exist as a placeholder attached to the returned channel's
   // PTY, so ssh's prompts are answerable in it.
-  open(label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers): RemoteChannel {
+  //
+  // With `resume`, the very same routine is a reattach: the channel is created with its session id
+  // already set, so the handshake takes the branch that sends `reattach` rather than `provision` and
+  // `reattach-result` is handled by the code that already handles it. One connection routine serves
+  // launches and reattaches alike.
+  open(
+    label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers,
+    resume?: RemoteResume,
+  ): RemoteChannel {
+    const state = { resuming: resume !== undefined };
     const transcript = createRemoteTranscriptSource();
     let resolveReady = (_dir: string) => {};
     let rejectReady = (_error: Error) => {};
@@ -73,22 +84,21 @@ export class RemoteManager {
       {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
         onAttached: () => {
-          if (entry.reconnect.active && channel.sessionId) {
+          if ((entry.reconnect.active || state.resuming) && channel.sessionId) {
             channel.send({ type: 'reattach', session: channel.sessionId });
           } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
         },
         onFrame: (frame) => {
           switch (frame.type) {
           case 'reattach-result': {
-            if (frame.accepted) {
-              entry.reconnect.accepted();
-              if (frame.truncated) this.reportTruncatedReplay(entry);
-            } else terminateRemoteEntry(this.managers, entry);
+            handleReattachResult(this.managers, entry, frame, label, resume, state,
+              () => reportTruncatedReplay(this.managers, entry));
             break;
           }
           case 'workspace-ready': {
             if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
             entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
+            this.sessionsChanged();
             break;
           }
           case 'workspace-failed': {
@@ -96,7 +106,8 @@ export class RemoteManager {
             entry.handlers.get(label)?.onFailed(frame.message);
             break;
           }
-          case 'browser-exited': { this.notifyBrowserGone(frame.id, frame.message); break; }
+          case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
+          case 'browser-exited': { notifyBrowserGone(this.managers, frame.id, frame.message); break; }
           default: { transcript.push(frame.blocks); }
           }
         },
@@ -106,12 +117,19 @@ export class RemoteManager {
           entry.handlers.get(label)?.onFailed(message);
         },
         onClose: () => this.channelClosed(entry),
+        // The spawned set is what `recordOf` reads, so a session becomes recordable on the first
+        // spawn and stops being on the last exit. Per process, not per byte.
+        onProcesses: () => this.sessionsChanged(),
         onSessionExit: (_id, owner, harness) => {
           endRemoteProcess(this.managers, entry, owner ?? label, harness);
+          this.sessionsChanged();
         },
       },
     );
     deferred.channel = channel;
+    // Set before the first handshake, which is what makes `consumeTerminalPhase` treat the incoming
+    // session as one to reattach to rather than one to adopt.
+    if (resume) channel.sessionId = resume.session;
 
     const entry: Entry = {
       channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
@@ -134,6 +152,7 @@ export class RemoteManager {
         });
     };
     connect();
+    this.sessionsChanged();
     return channel;
   }
 
@@ -145,6 +164,7 @@ export class RemoteManager {
     entry.labels.add(label);
     entry.handlers.set(label, handlers ?? this.joinedHandlers(label));
     this.entries.set(label, entry);
+    this.sessionsChanged();
     return true;
   }
 
@@ -152,6 +172,11 @@ export class RemoteManager {
 
   // The tab's remote address, for the connections panel's `ssh:<destination>` row.
   addressOf(label: string): RemoteAddress | undefined { return this.entries.get(label)?.address; }
+
+  // Whether this tab's channel has lost its transport and is retrying. Read when the tab view is
+  // built rather than marked onto the tab, so the metadata row's reattach control can never be
+  // showing a recovery that has already finished.
+  reconnectingOf(label: string): boolean { return this.entries.get(label)?.reconnect.active ?? false; }
 
   // The tab's local transcript source: what the remote's own `createTranscriptSource` pushes into.
   transcriptSource(label: string): RemoteTranscriptSource | undefined { return this.entries.get(label)?.transcript; }
@@ -162,14 +187,35 @@ export class RemoteManager {
 
   workspaceLabelOf(label: string): string | undefined { return this.entries.get(label)?.workspaceLabel; }
 
-  // Explicit connection close kills every user of the shared channel.
+  // `connection close ssh:<id>` — the user ending the shared session on purpose. The far side is
+  // genuinely finished (`terminateRemoteEntry` sends the shutdown frames), recovery stops, and every
+  // tab and navigator holding the channel closes, which is the only reason a remote tab's `ssh:` row
+  // is separately closable at all. Nothing reaches the notifications feed: `remote-session-ended`
+  // exists to report a session the user did not end, and this is the opposite case.
   close(label: string): boolean {
     const entry = this.entries.get(label);
     if (!entry) return false;
-    terminateRemoteEntry(this.managers, entry);
-    entry.channel.close();
+    const handlers = terminateRemoteEntry(this.managers, entry, false);
+    dropRemoteLabels(this.entries, entry);
+    for (const handler of handlers) handler.onClosed();
+    this.sessionsChanged();
     return true;
   }
+
+  // Park this label's session on its host and give up the local hold (see `detachRemoteEntry`). The
+  // entry leaves the table before the caller closes the tabs, so the tab-close walk's own `release`
+  // finds nothing and cannot send the shutdown frames a detach exists to withhold.
+  detach(label: string): boolean {
+    const entry = this.entries.get(label);
+    if (!entry || !detachRemoteEntry(entry)) return false;
+    dropRemoteLabels(this.entries, entry);
+    this.sessionsChanged();
+    return true;
+  }
+
+  // Every live channel, once each — the table is keyed by label and a shared channel appears under
+  // every one of them. What the sessions list is composed from (see `src/sessions/snapshot.ts`).
+  liveEntries(): Entry[] { return [...new Set(this.entries.values())]; }
 
   // Drop one tab/navigator's reference, closing the transport only when it was the final user.
   release(label: string): boolean {
@@ -186,6 +232,7 @@ export class RemoteManager {
       this.channelClosed(entry);
       entry.channel.close();
     }
+    this.sessionsChanged();
     return true;
   }
 
@@ -210,53 +257,14 @@ export class RemoteManager {
     };
   }
 
-  // A remote `-b` tab's browser is gone. The tab is resolved from the frame's session id rather than
-  // from the channel's label, because joined tabs share a channel and the channel label would name
-  // the wrong one. A frame for an already-closed tab is dropped.
-  //
-  // Delivered onto the tab as well as into the notifications tab, for the same reason the local
-  // path does it: the agent whose next `connect()` is about to fail is working in that tab, and a
-  // notification is worth nothing to a user who keeps the feed closed.
-  private notifyBrowserGone(sessionId: string, message?: string): void {
-    const tab = this.managers.tab.harnessTabByPtyId(sessionId);
-    if (!tab?.harness) return;
-    const text = message ?? 'e2e browser stopped on the remote host';
-    notify(this.managers, 'e2e-browser-gone', tab.label, text);
-    tab.harness.browserError = text;
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
-  // The detached peer's replay buffer overflowed and dropped its oldest frames. A harness tab's
-  // body is its PTY and nothing renders `tab.log` there, so only a non-harness (agent) tab gets a
-  // visible line — the same reasoning `endRemoteSession`'s non-harness branch already uses.
-  private reportTruncatedReplay(entry: Entry): void {
-    for (const label of entry.labels) {
-      const tab = this.managers.tab.byLabel(label);
-      if (!tab || tab.harness) continue;
-      tab.log = [...tab.log, { input: '', output: 'Some remote output produced while disconnected was dropped to limit memory use.' }];
-    }
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
   private channelClosed(entry: Entry): void {
-    if (entry.closed) return;
-    if (entry.channel.sessionId && entry.workspaceDir) { entry.reconnect.lost(); return; }
-    entry.closed = true;
-    if (!entry.settled) {
-      entry.settled = true;
-      entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
-    } else if (entry.workspaceDir && entry.labels.size > 0) {
-      notify(this.managers, 'remote-session-ended', entry.labels.values().next().value!,
-        `Remote janus on ${entry.address.host} ended — start a new agent or shell to continue.`);
-    }
-    clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
-    for (const label of entry.labels) {
-      if (this.entries.get(label) === entry) this.entries.delete(label);
-    }
-    const handlers = [...entry.handlers.values()];
-    entry.labels.clear();
-    entry.handlers.clear();
-    for (const handler of handlers) handler.onClosed();
+    remoteChannelClosed(this.managers, this.entries, entry);
+    this.sessionsChanged();
   }
 
+  // The live set moved: a channel opened, joined, spawned, released, parked, or lost its transport.
+  // Emitted from the lifecycle rather than from a read, so `SessionsManager` records a session the
+  // moment it becomes recordable instead of the next time someone composes the list, and an open
+  // list notices the change instead of waiting for Refresh.
+  private sessionsChanged(): void { emitSessionsChanged(); }
 }

@@ -1,0 +1,34 @@
+/* Sessions tab: the remote sessions this janissary holds — active, reconnecting, detached, ended.
+   A scrollable flex column of five-column rows, with rows that share a channel indented under the
+   row that launched it, so one glance shows what a single detach would take with it. */
+.session-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
+.session-empty { padding: 8px 12px; color: var(--muted); }
+.session-list-header { justify-content: flex-end; }
+.session-rows { display: flex; flex-direction: column; }
+.session-row {
+  display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
+  gap: 12px; align-items: baseline; width: 100%; text-align: left;
+  padding: 4px 12px; white-space: nowrap; cursor: pointer; color: var(--fg);
+}
+.session-row:hover { background: var(--border); }
+.session-row.selected { background: var(--bg-soft); }
+/* The indent is the grouping: a joined row belongs to the launching row above it, and its host
+   column is left empty because it is the same host by construction. */
+.session-row.joined { padding-left: 28px; }
+.session-row-host { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.session-row-name { overflow: hidden; text-overflow: ellipsis; }
+.session-row-kind { color: var(--muted); }
+.session-row-state { color: var(--muted); }
+.session-row-activity { color: var(--faint); }
+/* A session that is parked, retrying, or over reads differently from one that is working. */
+.session-row[data-state='detached'] .session-row-state { color: var(--accent); }
+.session-row[data-state='reconnecting'] .session-row-state,
+.session-row[data-state='provisioning'] .session-row-state { color: var(--warn, var(--accent)); }
+.session-row[data-state='ended'] { color: var(--muted); }
+.session-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.session-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.session-row-actions button:hover { color: var(--fg); }
+.session-row-actions button:disabled { color: var(--faint); cursor: default; }

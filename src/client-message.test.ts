@@ -61,6 +61,7 @@ describe('isClientMessage', () => {
       'moveFileNavigatorItems',
       'pasteFileNavigatorItems',
       'redoFileNavigatorItem',
+      'remoteSession',
       'undoFileNavigatorItem',
     ]);
     expect(methodsByMode.deferred?.map(([method]) => method)).toEqual([

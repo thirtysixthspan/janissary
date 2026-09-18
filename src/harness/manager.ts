@@ -154,6 +154,12 @@ export class HarnessManager {
     return undefined;
   }
 
+  // Reopen a harness tab for a process already running on a peer being reattached. Everything a
+  // fresh `on <address>` launch does, with two facts carried in from the record: the channel asks to
+  // reattach rather than to provision, and the PTY adopts the spawn id the far side already knows
+  // the harness by. No workspace is cloned — the one this tab had is still there.
+  reattachRemote(options: SpawnTabOptions): void { this.spawnTab(options); }
+
   // Shared core: create the harness tab and focus it. With no `ready` (no workspace, or a
   // workspace already provisioned by the caller), the PTY spawns immediately, exactly as before —
   // `spawnPty` runs synchronously. With `ready` (a `-w` launch's clone still in flight), the tab
@@ -209,9 +215,10 @@ export class HarnessManager {
   // For a remote tab the PTY is a session on the other host and `remoteNotice` is that host's own
   // isolation notice; everything downstream of the spawn is identical either way.
   private finishSpawn(
-    { name, label, cwd, workspaceDir, offline, autoApprove, browser, model, effort, remote }: SpawnTabOptions,
+    options: SpawnTabOptions,
     remoteNotice?: string,
   ): void {
+    const { name, label, cwd, workspaceDir, offline, autoApprove, browser, model, effort, remote } = options;
     const program = HARNESS_COMMANDS[name];
     const command = buildHarnessCommand(name, model, effort);
     const channel = remote ? this.managers.remote.get(label) : undefined;
@@ -227,7 +234,7 @@ export class HarnessManager {
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
       const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser })
+        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
       this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
       this.markRunning(label, id);

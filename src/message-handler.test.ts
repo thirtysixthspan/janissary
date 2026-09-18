@@ -43,6 +43,7 @@ const makeController = () =>
     runSuggestion: vi.fn(),
     rateSuggestion: vi.fn(),
     saveFile: vi.fn(),
+    remoteSession: vi.fn(),
     pluginIntent: vi.fn(async () => ({ echoed: true })),
     pluginFailed: vi.fn(),
     fileNavigatorToggle: vi.fn(),
@@ -120,6 +121,29 @@ describe('handle', () => {
     });
 
     expect(replies).toEqual([{ t: 'rpc-reply', id: 50, error: 'completion failed' }]);
+  });
+
+  // One method carries both verbs, so the dispatcher has one arm and the verb rides the params —
+  // there is no second decoder and no second controller method saying the same thing.
+  it.each(['detach', 'reattach'] as const)('routes remoteSession %s to the controller', (action) => {
+    const controller = makeController();
+    vi.mocked(controller.remoteSession).mockReturnValue(true);
+    const replies = dispatchCall(controller, 71, {
+      method: 'remoteSession', params: { action, label: 'claude' },
+    });
+    expect(controller.remoteSession).toHaveBeenCalledWith(action, 'claude');
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 71, result: true }]);
+  });
+
+  // The control on the other end spins until this answers, so a refusal has to be distinguishable
+  // from a success on the wire. An `ack` replied `'ok'` to both, which is what left it spinning.
+  it('answers remoteSession with the refusal rather than a blanket ok', () => {
+    const controller = makeController();
+    vi.mocked(controller.remoteSession).mockReturnValue(false);
+    const replies = dispatchCall(controller, 72, {
+      method: 'remoteSession', params: { action: 'detach', label: 'claude' },
+    });
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 72, result: false }]);
   });
 
   it('focuses a tab through the controller façade', () => {

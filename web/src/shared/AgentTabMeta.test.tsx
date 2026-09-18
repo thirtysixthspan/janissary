@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
@@ -239,6 +239,160 @@ describe('AgentTabMeta', () => {
       expect(getByLabelText('Remote')).toHaveTextContent('devbox');
       expect(getByLabelText('Model')).toHaveTextContent('opus');
       expect(getByLabelText('Effort')).toHaveTextContent('high');
+    });
+  });
+
+  // One placement covers every remote tab, because this is the one metadata row agent, shell, and
+  // harness tabs all render.
+  describe('the remote session control', () => {
+    const remote = { address: 'devbox:/srv/proj', host: 'devbox' };
+
+    // The action answers whether it ran, and the control spins until it does. The default answer is
+    // a promise that never settles, so every case below that does not care about the outcome sees
+    // the action genuinely in flight rather than already finished.
+    const pending = () => new Promise<boolean>(() => {});
+
+    function control(
+      state: 'provisioning' | 'active' | 'reconnecting' = 'active',
+      answer: () => Promise<boolean> = pending,
+    ) {
+      const onAction = vi.fn(answer);
+      const view = render(
+        <AgentTabMeta cwd="/srv/proj" remote={remote} remoteSession={{ state, onAction }} />,
+      );
+      return { onAction, ...view };
+    }
+
+    it('renders only for a remote tab', () => {
+      const onAction = vi.fn();
+      render(<AgentTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />);
+      expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
+    });
+
+    it('renders nothing for a remote tab that was given no control', () => {
+      render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
+    });
+
+    it('sits beside the host chip', () => {
+      const { getByLabelText } = control();
+      const chip = getByLabelText('Remote');
+      const button = getByLabelText('Detach session on devbox');
+      expect(chip.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    // There is nothing to come back to until the workspace clone has landed.
+    it('is disabled while the tab is provisioning', () => {
+      const { getByLabelText } = control('provisioning');
+      expect(getByLabelText('Detach session on devbox')).toBeDisabled();
+    });
+
+    it('asks before detaching, naming what will go', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Its tabs will close');
+      expect(onAction).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+      expect(onAction).toHaveBeenCalledWith('detach');
+    });
+
+    it('raises nothing when the confirmation is cancelled', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Cancel', { selector: '.modal-button' }));
+
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    // The contract the plugin lists' shared ConfirmDialog implements: Escape cancels, y or
+    // arrow-toggled Enter confirms, and the focus lands inside the dialog so a keyboard user is
+    // never stranded outside the question it opened.
+    it('cancels on Escape', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('confirms with y and cancels with n', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      fireEvent.keyDown(document, { key: 'y' });
+      expect(onAction).toHaveBeenCalledWith('detach');
+
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.keyDown(document, { key: 'n' });
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('moves the selection with the arrow keys and takes it with Enter', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      // Cancel is selected first, so a reflexive Enter does nothing.
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.keyDown(document, { key: 'ArrowRight' });
+      expect(screen.getByText('Detach', { selector: '.modal-button' })).toHaveClass('selected');
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('focuses the dialog when it opens', () => {
+      const { getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      expect(screen.getByRole('alertdialog')).toHaveFocus();
+    });
+
+    // A detach has to reach the far side, which is not instant.
+    it('spins and refuses a second press once an action is in flight', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+
+      const button = getByLabelText('Detach session on devbox');
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    // On a live tab whose transport is gone, reattach means "try now" — it collapses the backoff
+    // rather than opening a connection of its own, so it needs no confirmation.
+    it('offers reattach without a dialog while the transport is reconnecting', () => {
+      const { onAction, getByLabelText } = control('reconnecting');
+      fireEvent.click(getByLabelText('Reattach session on devbox'));
+
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(onAction).toHaveBeenCalledWith('reattach');
+    });
+
+    // A detach the server refuses — one whose session could not be recorded, say — leaves the tab
+    // open, so nothing unmounts to clear the spinner. Without an answer to settle on, the control
+    // stayed disabled for the life of the tab with no message anywhere explaining it.
+    it('returns to its pressable state when an action is refused', async () => {
+      const { getByLabelText } = control('active', () => Promise.resolve(false));
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+
+      await waitFor(() => { expect(getByLabelText('Detach session on devbox')).toBeEnabled(); });
+    });
+
+    // Reattach never takes its tab with it, so it has to un-spin on its own answer.
+    it('clears the spinner on a reattach without the tab unmounting', async () => {
+      const { getByLabelText } = control('reconnecting', () => Promise.resolve(true));
+      fireEvent.click(getByLabelText('Reattach session on devbox'));
+
+      await waitFor(() => { expect(getByLabelText('Reattach session on devbox')).toBeEnabled(); });
     });
   });
 });

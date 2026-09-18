@@ -62,8 +62,16 @@ export class PseudoterminalManager {
   // it unchanged; an inbound exit frame is routed into the same private `handleExit` a local PTY's
   // own exit handler calls, so the exit bus event, the `activePty` clear, and the inline-card status
   // update all happen identically.
-  registerRemotePty(label: string, channel: RemoteChannel, options: Omit<RemotePtyOptions, 'id' | 'cols' | 'rows'>): string {
-    const id = `rpty${++this.remoteCounter}`;
+  //
+  // `recordedId` adopts a spawn id the far side already knows instead of minting one. That is what
+  // makes a reattach bind to the process already running out there: the channel attaches under the
+  // recorded id — claiming whatever the peer replayed for it — and the `spawn` frame that follows is
+  // one `RemoteProcesses.spawn` ignores, because an id it already holds is not spawned twice.
+  registerRemotePty(
+    label: string, channel: RemoteChannel, options: Omit<RemotePtyOptions, 'id' | 'cols' | 'rows'>,
+    recordedId?: string,
+  ): string {
+    const id = recordedId ?? `rpty${++this.remoteCounter}`;
     const session = createRemotePtySession(
       channel,
       { ...options, id, cols: this.cols, rows: this.rows, agentName: label },

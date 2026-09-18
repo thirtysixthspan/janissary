@@ -136,9 +136,21 @@ type FileNavigatorEvent = { type: 'collect'; id: number };
 // signal a tab plugin may subscribe to (see src/plugins/notifications.ts).
 type ScheduleEvent = { type: 'changed' };
 type ConversationsEvent = { type: 'changed' };
+// The remote-session set changed: one was launched, joined, detached, reattached, ended, forgotten,
+// or lost its transport. Its own channel for the same reason `schedules` has one — a named,
+// low-frequency signal a tab plugin may subscribe to, rather than a reason carried on `state: dirty`,
+// which fires on every mutation.
+//
+// Low-frequency still holds now that `RemoteManager` raises it from the channel lifecycle: what is
+// reported here is per channel and per process — a launch, a join, a spawn, an exit, a release, a
+// park, a transport loss — never per frame or per byte. A channel's own output does not come through
+// this at all, and `SessionsManager`'s record comparison keeps a burst of transitions from becoming
+// a write apiece.
+type SessionsEvent = { type: 'changed' };
 export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
+  sessions: SessionsEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();
