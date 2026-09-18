@@ -225,6 +225,24 @@ describe('SessionsManager detach', () => {
   });
 });
 
+describe('SessionsManager reattachTab', () => {
+  it('collapses the backoff on a live entry', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.reattachTab('claude')).toBe(true);
+  });
+
+  // The only way to press this and hit no live entry is a tab whose channel has already gone, which
+  // is exactly when the user needs telling: a control that declines without a word reads as broken.
+  it('reports a refusal for a tab whose channel is gone', () => {
+    const h = harness();
+    expect(h.sessions.reattachTab('claude')).toBe(false);
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(), 'remote-session', 'claude',
+      'claude cannot be reattached — its remote connection is gone.',
+    );
+  });
+});
+
 describe('SessionsManager reattach', () => {
   it('clears a recorded failure once the peer takes it back', async () => {
     const h = harness();

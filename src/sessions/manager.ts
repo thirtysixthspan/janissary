@@ -1,4 +1,5 @@
 import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { resumeRemote } from '../remote/reattach.js';
@@ -62,7 +63,13 @@ export class SessionsManager {
   // means "try now": it collapses the reconnect backoff exactly as the system resume signal does.
   reattachTab(label: string): boolean {
     const entry = this.managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
-    if (!entry) return false;
+    // The only way to get here is a tab whose channel has already gone, which is exactly when the
+    // user needs telling: a control that declines without a word reads as one that is broken.
+    if (!entry) {
+      notify(this.managers, 'remote-session', label,
+        `${label} cannot be reattached — its remote connection is gone.`);
+      return false;
+    }
     resumeRemote(entry);
     this.changed();
     return true;

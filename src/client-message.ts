@@ -63,7 +63,9 @@ export const CLIENT_METHOD_CONTRACTS = {
   pluginIntent: 'deferred',
   rateSuggestion: 'ack',
   redoFileNavigatorItem: 'result',
-  remoteSession: 'ack',
+  // Answers whether the action ran. An `ack` here would reply `'ok'` to a refused detach, which is
+  // both untrue and the reason the control had nothing to stop spinning on.
+  remoteSession: 'result',
   renameEditorFile: 'ack',
   renameFileNavigatorItem: 'ack',
   renameTab: 'ack',

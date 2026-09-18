@@ -15,14 +15,25 @@ function stateOf(provisioning: boolean, remote: RemoteTargetView): RemoteSession
   return remote.reconnecting === true ? 'reconnecting' : 'active';
 }
 
+// Raised as a request rather than a fire-and-forget send, so the control has something to stop
+// spinning on. The promise settles in every case: on the server's answer, and — because `request`
+// resolves `undefined` for a socket that is not open or a connection that ends first — on a request
+// nobody answers. It resolves to whether the action actually ran, which is what the feed's line
+// explains when it did not.
+async function raise(client: JanusClient, action: 'detach' | 'reattach', label: string): Promise<boolean> {
+  const call = { method: 'remoteSession' as const, params: { action, label } };
+  if (typeof client.request !== 'function') { client.send(call); return false; }
+  return await client.request<boolean>(call) === true;
+}
+
 export function remoteSessionControl(
   client: JanusClient,
   label: string,
   remote: RemoteTargetView,
   provisioning: boolean,
-): { state: RemoteSessionState; onAction(action: 'detach' | 'reattach'): void } {
+): { state: RemoteSessionState; onAction(action: 'detach' | 'reattach'): Promise<boolean> } {
   return {
     state: stateOf(provisioning, remote),
-    onAction: (action) => { client.send({ method: 'remoteSession', params: { action, label } }); },
+    onAction: (action) => raise(client, action, label),
   };
 }

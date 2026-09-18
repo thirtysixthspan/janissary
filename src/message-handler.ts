@@ -63,8 +63,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'closeScheduleLaunch': { controller.closeScheduleLaunch(); break;
     }
     case 'remoteSession': {
-      controller.remoteSession(message.params.action, message.params.label);
-      break;
+      return controller.remoteSession(message.params.action, message.params.label);
     }
     case 'answerQuestion': {
       controller.answerQuestion(message.params.tab, message.params.id, message.params.answer);

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear the metadata-row control's spinner when an action does not take the tab with it.
-
-Existing Issue: `RemoteSessionButton` in `web/src/shared/RemoteSessionButton.tsx` sets `pressed` when an action is raised and never clears it, relying on the tab unmounting on a successful detach, so every outcome that leaves the tab open — a detach `RemoteManager.detach` refuses because the entry has no session id yet, the `reattach` verb once it is reachable, or a request the server drops, all of which are silent because `remoteSession` is an `ack` method with no answer wired back — leaves the control spinning and disabled for the life of the tab. Severity: 4/10
-
-Existing Risk: 4/10 - A user whose detach was refused is left with a permanently spinning, permanently disabled control and no message anywhere, so the tab reads as mid-operation forever and the only way back is to close and reopen it; the same shape hides every future failure of this control rather than reporting it.
-
-Proposal Risk: 2/10 - Clearing on an answer means a slow but successful detach can un-spin a moment before its tabs close, so the control briefly looks pressable again on a session that is already going.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the remote session control spins forever when its action does not close the tab". Give the action an outcome to clear on: either change `remoteSession` in `src/client-message.ts` from `ack` to `result` and have `ControllerCore.remoteSession` in `src/controller.ts` return what `SessionsManager.detach`/`reattachTab` already answer (both return a boolean), with `remoteSessionControl` in `web/src/shared/remote-session-control.ts` resolving a promise the button awaits; or keep `ack` and clear `pressed` when the tab's remote state changes, which is the same signal the previous entry's reconnecting flag provides. Report a refusal rather than swallowing it — a refused detach should reach the notifications feed through `notify` in `src/notifications.ts` the way the successful one does in `src/sessions/actions.ts`. Add cases to `web/src/shared/AgentTabMeta.test.tsx` beside the existing `spins and refuses a second press once an action is in flight` case: one that a refused action returns the control to its pressable state, and one that a reattach clears the spinner without the tab unmounting.
-
-
 * Keep a parked session's row on screen while an end attempt is in flight instead of making it disappear.
 
 Existing Issue: `endParkedSession` in `src/sessions/end-session.ts` opens a `RemoteManager` entry under the synthetic label `end-session:<session>` with the record's session id set as the channel's, and `SessionsManager.snapshot` in `src/sessions/manager.ts` treats every live entry's session id as live and filters the matching record out of `detached`, while `channelOf` in `src/sessions/snapshot.ts` finds no tab for that label and yields a member-less group that `composeSessionRows` drops — so pressing End removes the row entirely for as long as the attempt lasts, and `product/specs/sessions-tab.md` says the opposite for the failure case ("the row stays parked with its failure reported"). Severity: 4/10

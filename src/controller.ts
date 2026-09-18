@@ -63,9 +63,12 @@ export class ControllerCore {
 
   // The metadata row's detach/reattach control. One method behind two verbs, delegating to the same
   // manager methods the sessions tab's topic actions call — one implementation, two front doors.
-  remoteSession(action: 'detach' | 'reattach', label: string): void {
-    if (action === 'detach') this.managers.sessions.detach(label);
-    else this.managers.sessions.reattachTab(label);
+  //
+  // Answers whether the action ran. Both managers already know; discarding it left the control with
+  // no outcome to clear its spinner on, so a refusal read as an operation still in progress forever.
+  remoteSession(action: 'detach' | 'reattach', label: string): boolean {
+    if (action === 'detach') return this.managers.sessions.detach(label);
+    return this.managers.sessions.reattachTab(label);
   }
 
   answerQuestion(tab: string, id: string, answer: string | null): void {

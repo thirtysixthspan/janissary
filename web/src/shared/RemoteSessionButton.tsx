@@ -27,12 +27,13 @@ export function RemoteSessionButton({
 }: {
   state: RemoteSessionState;
   host: string;
-  onAction(action: 'detach' | 'reattach'): void;
+  onAction(action: 'detach' | 'reattach'): void | Promise<boolean>;
 }) {
   const [confirming, setConfirming] = useState(false);
   // An action is in flight from the moment it is raised: a detach has to reach the far side and a
-  // reattach has to authenticate, and neither is instant. The tab goes away on a successful detach,
-  // which is what clears this without a second signal to wait for.
+  // reattach has to authenticate, and neither is instant. It stops being in flight when the action
+  // answers — including when it answers that it was refused. Waiting for the tab to unmount instead
+  // left every outcome that leaves the tab open spinning for the life of that tab.
   const [pressed, setPressed] = useState(false);
   const { action, icon, label } = presentation(state);
   const busy = pressed;
@@ -42,7 +43,10 @@ export function RemoteSessionButton({
 
   const raise = (verb: 'detach' | 'reattach') => {
     setPressed(true);
-    onAction(verb);
+    // A successful detach un-spins a moment before its tabs close, which looks briefly pressable on
+    // a session that is already going. That is the cost of the control answering for every other
+    // outcome instead of for none of them.
+    void Promise.resolve(onAction(verb)).then(() => { setPressed(false); }, () => { setPressed(false); });
   };
 
   const press = () => {

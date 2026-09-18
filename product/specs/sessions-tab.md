@@ -116,8 +116,11 @@ detach records its own line naming why, so an action that declines to run is nev
 
 Every remote tab's metadata row carries the same control beside its host chip: detach while the
 session is healthy, reattach while its transport is being retried. It is disabled while the tab is
-provisioning and shows a spinner while an action is in flight. Pressing detach there acts on the
-whole shared connection and asks the same confirmation the list does. A remote file navigator's
+provisioning and shows a spinner while an action is in flight. The spinner clears when the action is
+answered — including when it was refused, and including when nothing answers at all — so the control
+is never left reading as mid-operation on a tab that is still open. A reattach pressed on a tab whose
+connection has already gone is refused with its reason recorded, like a refused detach. Pressing
+detach there acts on the whole shared connection and asks the same confirmation the list does. A remote file navigator's
 header keeps its host chip and gains no control, matching what its row offers.
 
 ### Scope

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
@@ -247,8 +247,16 @@ describe('AgentTabMeta', () => {
   describe('the remote session control', () => {
     const remote = { address: 'devbox:/srv/proj', host: 'devbox' };
 
-    function control(state: 'provisioning' | 'active' | 'reconnecting' = 'active') {
-      const onAction = vi.fn();
+    // The action answers whether it ran, and the control spins until it does. The default answer is
+    // a promise that never settles, so every case below that does not care about the outcome sees
+    // the action genuinely in flight rather than already finished.
+    const pending = () => new Promise<boolean>(() => {});
+
+    function control(
+      state: 'provisioning' | 'active' | 'reconnecting' = 'active',
+      answer: () => Promise<boolean> = pending,
+    ) {
+      const onAction = vi.fn(answer);
       const view = render(
         <AgentTabMeta cwd="/srv/proj" remote={remote} remoteSession={{ state, onAction }} />,
       );
@@ -299,8 +307,7 @@ describe('AgentTabMeta', () => {
       expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
-    // A detach has to reach the far side, which is not instant; the tab goes away on success, which
-    // is what clears this without a second signal to wait for.
+    // A detach has to reach the far side, which is not instant.
     it('spins and refuses a second press once an action is in flight', () => {
       const { onAction, getByLabelText } = control();
       fireEvent.click(getByLabelText('Detach session on devbox'));
@@ -320,6 +327,25 @@ describe('AgentTabMeta', () => {
 
       expect(screen.queryByRole('alertdialog')).toBeNull();
       expect(onAction).toHaveBeenCalledWith('reattach');
+    });
+
+    // A detach the server refuses — one whose session could not be recorded, say — leaves the tab
+    // open, so nothing unmounts to clear the spinner. Without an answer to settle on, the control
+    // stayed disabled for the life of the tab with no message anywhere explaining it.
+    it('returns to its pressable state when an action is refused', async () => {
+      const { getByLabelText } = control('active', () => Promise.resolve(false));
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+
+      await waitFor(() => { expect(getByLabelText('Detach session on devbox')).toBeEnabled(); });
+    });
+
+    // Reattach never takes its tab with it, so it has to un-spin on its own answer.
+    it('clears the spinner on a reattach without the tab unmounting', async () => {
+      const { getByLabelText } = control('reconnecting', () => Promise.resolve(true));
+      fireEvent.click(getByLabelText('Reattach session on devbox'));
+
+      await waitFor(() => { expect(getByLabelText('Reattach session on devbox')).toBeEnabled(); });
     });
   });
 });
