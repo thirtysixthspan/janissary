@@ -211,6 +211,30 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.get('creator')).toBeUndefined();
     expect(h.remote.get('joined')).toBeUndefined();
   });
+
+  // `connection close ssh:<id>` is the user ending the session, not something that happened to it,
+  // so the tabs go rather than sitting open in an exited state and the feed records nothing.
+  it('closes every tab on the channel without announcing an ended session', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    const joinedHandlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+    h.remote.attach('joined', 'creator', joinedHandlers);
+    expect(h.remote.close('creator')).toBe(true);
+    expect(notify).not.toHaveBeenCalled();
+    expect(h.handlers.onClosed).toHaveBeenCalledOnce();
+    expect(joinedHandlers.onClosed).toHaveBeenCalledOnce();
+    expect(h.remote.get('creator')).toBeUndefined();
+    expect(h.remote.get('joined')).toBeUndefined();
+  });
+
+  // The opposite of `detach`: an explicit close finishes the peer off instead of parking it.
+  it('sends a shutdown frame on an explicit close before killing the transport', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.close('creator');
+    const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
+    expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
+  });
 });
 
 // A remote `-b` tab's browser dying is reported by the far side as a `browser-exited` frame. The

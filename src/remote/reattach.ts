@@ -63,6 +63,16 @@ export class Reattach {
   stop(): void { this.accepted(); this.stopped = true; }
 }
 
+// A shared channel sits in the manager's table under every label holding it, so letting go of the
+// entry means letting go of all of them — but only where the label still points at this entry, since
+// a label reused for a fresh launch already names a different one.
+export function dropRemoteLabels(entries: Map<string, RemoteEntry>, entry: RemoteEntry): void {
+  for (const label of entry.labels) {
+    if (entries.get(label) === entry) entries.delete(label);
+  }
+  entry.labels.clear();
+}
+
 // Only an entry already mid-backoff after losing its transport benefits from a resume: it has
 // something to collapse the wait on. An attached channel's transport is healthy by definition — a
 // resume signal has nothing to fix there, so forcing a replacement would only discard an
@@ -125,13 +135,24 @@ export function detachRemoteEntry(entry: RemoteEntry): boolean {
   return true;
 }
 
-export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, announce = true): void {
-  if (entry.closed) return;
+/**
+ * End a live session for good: recovery stops, the shutdown frames go out, and the tabs are marked
+ * and told about it unless `announce` is off.
+ *
+ * The entry's launch handlers are returned rather than called. Most terminations are something that
+ * happened to the session, and their tabs stay open holding the transcript that explains it — but an
+ * explicit `RemoteManager.close` is the user ending the session on purpose, and its tabs close. That
+ * caller runs the returned `onClosed` sweep; every other one drops the value.
+ */
+export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, announce = true): RemoteLaunchHandlers[] {
+  if (entry.closed) return [];
   entry.closed = true;
   entry.reconnect.stop();
   if (announce) endRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.channel.finish();
   entry.channel.close();
+  const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
+  return handlers;
 }

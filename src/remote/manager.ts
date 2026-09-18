@@ -8,7 +8,7 @@ import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
 import { notify } from '../notifications.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
-import { Reattach, detachRemoteEntry, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
+import { Reattach, detachRemoteEntry, dropRemoteLabels, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
 import { answerSessionState, handleReattachResult, type RemoteResume } from './resume.js';
 import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
 
@@ -176,12 +176,17 @@ export class RemoteManager {
 
   workspaceLabelOf(label: string): string | undefined { return this.entries.get(label)?.workspaceLabel; }
 
-  // Explicit connection close kills every user of the shared channel.
+  // `connection close ssh:<id>` — the user ending the shared session on purpose. The far side is
+  // genuinely finished (`terminateRemoteEntry` sends the shutdown frames), recovery stops, and every
+  // tab and navigator holding the channel closes, which is the only reason a remote tab's `ssh:` row
+  // is separately closable at all. Nothing reaches the notifications feed: `remote-session-ended`
+  // exists to report a session the user did not end, and this is the opposite case.
   close(label: string): boolean {
     const entry = this.entries.get(label);
     if (!entry) return false;
-    terminateRemoteEntry(this.managers, entry);
-    entry.channel.close();
+    const handlers = terminateRemoteEntry(this.managers, entry, false);
+    dropRemoteLabels(this.entries, entry);
+    for (const handler of handlers) handler.onClosed();
     return true;
   }
 
@@ -191,10 +196,7 @@ export class RemoteManager {
   detach(label: string): boolean {
     const entry = this.entries.get(label);
     if (!entry || !detachRemoteEntry(entry)) return false;
-    for (const held of entry.labels) {
-      if (this.entries.get(held) === entry) this.entries.delete(held);
-    }
-    entry.labels.clear();
+    dropRemoteLabels(this.entries, entry);
     return true;
   }
 
@@ -253,11 +255,8 @@ export class RemoteManager {
         `Remote janus on ${entry.address.host} ended — start a new agent or shell to continue.`);
     }
     clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
-    for (const label of entry.labels) {
-      if (this.entries.get(label) === entry) this.entries.delete(label);
-    }
     const handlers = [...entry.handlers.values()];
-    entry.labels.clear();
+    dropRemoteLabels(this.entries, entry);
     entry.handlers.clear();
     for (const handler of handlers) handler.onClosed();
   }

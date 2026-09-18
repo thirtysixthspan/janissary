@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop announcing an unexpected session end when the user closes a remote connection themselves.
-
-Existing Issue: `RemoteManager.close`, whose own doc comment still reads "Explicit connection close kills every user of the shared channel", now calls `terminateRemoteEntry` with announcing left on, so a user running `connection close` on a remote tab gets a `remote-session-ended` notification reading `Remote janus on <host> ended — start a new agent or shell to continue.` and finds every affected tab left open in an exited state rather than closed, and neither the pull request description nor its behavior examples mention that this command's outcome changed. Severity: 4/10
-
-Existing Risk: 4/10 - The feed tells the user something ended unexpectedly and suggests a remedy for an action they just deliberately took, and because `remote-session-ended` is classified in `EXPLICIT_EVENTS` it bypasses both the config toggle and focus suppression, so the misleading line cannot be turned off.
-
-Proposal Risk: 2/10 - Suppressing the announcement for the explicit path means a close that races a genuine far-side termination reports neither, so the user sees the tabs settle without being told which of the two happened.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: an explicit connection close raises an unexpected-session-ended notification and leaves its tabs open". Pass `announce = false` from `RemoteManager.close` in `src/remote/manager.ts` so `terminateRemoteEntry` in `src/remote/reattach.ts` marks the tabs and stops recovery without notifying, and decide deliberately whether those tabs should close as they did before this branch or stay open in an exited state: `product/specs/remote-server.md` now says explicitly closing the shared connection "leaves its tabs showing the ended session", so if that is the intent, keep it and rewrite `close`'s doc comment, which currently states the opposite; if closing is the intent, restore the `handler.onClosed()` sweep for this path only and correct the spec sentence. Whichever is chosen, add the outcome to the pull request description's behavior examples, since `connection close` is a documented user command whose result this branch changes. Add a case to `src/remote/manager.test.ts` asserting `close` raises no notification and leaves the tabs in the chosen state; `src/connection/close.ts` and its tests cover the command's result message and must keep passing.
-
-
 * Style the connection indicator through the stylesheet and keep it out of the center column's flow, as the plan's chosen visual precedent does.
 
 Existing Issue: `web/src/ConnectionStatusLabel.tsx` hardcodes its font size, padding, and color in an inline `style` object rather than a class in `web/src/theme.css`, where every comparable piece of muted chrome in this app is defined, and `web/src/AppShell.tsx` renders it as an ordinary first child of `.app-center`, a `flex-direction: column` container, so the element occupies flow space and pushes the active tab's body down whenever the socket drops — while the plan named `CommandBarShell`'s class-styled `label` slot as the precedent to match and stated that the rest of the UI is left alone. Severity: 3/10
