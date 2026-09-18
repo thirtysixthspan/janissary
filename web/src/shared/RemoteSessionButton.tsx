@@ -23,12 +23,10 @@ function presentation(state: RemoteSessionState) {
 export function RemoteSessionButton({
   state,
   host,
-  inFlight,
   onAction,
 }: {
   state: RemoteSessionState;
   host: string;
-  inFlight?: boolean;
   onAction(action: 'detach' | 'reattach'): void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -37,7 +35,7 @@ export function RemoteSessionButton({
   // which is what clears this without a second signal to wait for.
   const [pressed, setPressed] = useState(false);
   const { action, icon, label } = presentation(state);
-  const busy = inFlight === true || pressed;
+  const busy = pressed;
   // There is nothing to come back to until the workspace clone has landed, so the control stays
   // where the eye expects it and is simply not pressable yet.
   const disabled = state === 'provisioning' || busy;

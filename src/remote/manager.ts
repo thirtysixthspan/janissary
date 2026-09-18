@@ -173,6 +173,11 @@ export class RemoteManager {
   // The tab's remote address, for the connections panel's `ssh:<destination>` row.
   addressOf(label: string): RemoteAddress | undefined { return this.entries.get(label)?.address; }
 
+  // Whether this tab's channel has lost its transport and is retrying. Read when the tab view is
+  // built rather than marked onto the tab, so the metadata row's reattach control can never be
+  // showing a recovery that has already finished.
+  reconnectingOf(label: string): boolean { return this.entries.get(label)?.reconnect.active ?? false; }
+
   // The tab's local transcript source: what the remote's own `createTranscriptSource` pushes into.
   transcriptSource(label: string): RemoteTranscriptSource | undefined { return this.entries.get(label)?.transcript; }
 

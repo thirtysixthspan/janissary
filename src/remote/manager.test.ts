@@ -163,6 +163,18 @@ describe('RemoteManager shared channels', () => {
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });
 
+  // What the metadata row's reattach control is offered from. Read off the channel rather than
+  // marked onto the tab, so it cannot report a recovery that has already finished.
+  it('reports a channel mid-backoff as reconnecting and a healthy one as not', () => {
+    vi.useFakeTimers();
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    expect(h.remote.reconnectingOf('creator')).toBe(false);
+    expect(h.remote.reconnectingOf('nothing-here')).toBe(false);
+    h.transport()?.onExit();
+    expect(h.remote.reconnectingOf('creator')).toBe(true);
+    h.remote.dispose();
+  });
+
   it('aliases a joined tab onto the existing channel and readiness', async () => {
     const h = managerHarness();
     expect(h.remote.attach('joined', 'creator')).toBe(true);

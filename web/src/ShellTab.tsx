@@ -5,10 +5,10 @@ import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from './shared/AgentTabMeta';
 import { remoteSessionControl } from './shared/remote-session-control';
 import type { ShellTabHandle } from './tab-handles';
-import type { RemoteTarget } from '@shared/protocol';
+import type { RemoteTargetView } from '@shared/protocol';
 
 type Properties = {
-  ptyId: string; client: JanusClient; label: string; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget;
+  ptyId: string; client: JanusClient; label: string; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView;
   active?: boolean;
   onSplit?: () => void;
 };
@@ -45,7 +45,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
         flags={flags}
         remote={remote}
         onSplit={onSplit}
-        remoteSession={remote === undefined ? undefined : remoteSessionControl(client, label, false)}
+        remoteSession={remote === undefined ? undefined : remoteSessionControl(client, label, remote, false)}
       />
       <div className="harness-body" ref={hostReference}>
         <SelectionOverlay state={selection.view} screen={selection.screen} />

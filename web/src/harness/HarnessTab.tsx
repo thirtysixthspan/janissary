@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from '../ws';
-import type { HarnessView, RemoteTarget } from '@shared/protocol';
+import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
@@ -11,7 +11,7 @@ import type { HarnessTabHandle } from '../tab-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
 
 type Properties = {
-  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTarget; label: string;
+  harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView; label: string;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   active?: boolean;
   onSplit?: () => void;
@@ -85,7 +85,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         onSplit={onSplit}
         remoteSession={remote === undefined
           ? undefined
-          : remoteSessionControl(client, label, harness.status === 'provisioning')}
+          : remoteSessionControl(client, label, remote, harness.status === 'provisioning')}
       />
       {isExited && (
         <div className="harness-exited">

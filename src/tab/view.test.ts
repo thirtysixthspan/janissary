@@ -33,6 +33,27 @@ describe('buildTabView', () => {
     expect(view.harness?.sessionEnded).toBe(ended);
   });
 
+  // The metadata row's reattach control exists to be offered while a transport is being retried, and
+  // the only thing that knows a transport is being retried is the channel. Resolved at view time so
+  // there is no copy of it on the tab to outlive the recovery.
+  it('carries the channel\'s reconnecting state onto the remote target', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined, undefined, () => true,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox', reconnecting: true });
+  });
+
+  it('leaves the key off a remote target whose channel is healthy', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined, undefined, () => false,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox' });
+  });
+
   it('projects only the public plugin envelope onto the wire', () => {
     const tab = makeTab('video', '#fff');
     tab.view = 'plugin';

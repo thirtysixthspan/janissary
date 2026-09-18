@@ -23,6 +23,7 @@ export function buildTabViews(
     shorten,
     managers.questions.pendingFor(tab.label),
     (label) => managers.remote.workspaceOf(label),
+    (label) => managers.remote.reconnectingOf(label),
   ));
 }
 
@@ -39,6 +40,9 @@ export function buildTabView(
   shorten: (path: string) => string,
   pendingQuestion?: PendingQuestionView,
   workspaceOf?: (label: string) => string | undefined,
+  // Resolved here rather than marked onto the tab: the channel's recovery state belongs to
+  // `RemoteManager`, and a copy of it on the tab is a copy that can outlive the recovery.
+  reconnectingOf?: (label: string) => boolean,
 ): TabView {
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   return {
@@ -62,7 +66,11 @@ export function buildTabView(
       ...(tab.autoApprove ? ['autoApprove'] : []),
       ...(tab.browser && !tab.harness?.browserError ? ['browser'] : []),
     ],
-    remote: tab.remote,
+    // Present only when true, so a healthy tab's target is exactly what it was before the flag.
+    remote: tab.remote && {
+      ...tab.remote,
+      ...(reconnectingOf?.(tab.label) === true && { reconnecting: true }),
+    },
     acp,
     connections,
     schedule,

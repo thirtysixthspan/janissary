@@ -84,6 +84,7 @@ export type {
   HarnessLaunchView,
   QuestionKind,
   PendingQuestionView,
+  RemoteTargetView,
   TabView,
 } from './protocol/tab.js';
 export type {
