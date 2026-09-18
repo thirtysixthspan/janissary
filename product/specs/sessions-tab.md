@@ -70,7 +70,10 @@ session carries no end button, because closing its tabs already does that.
 
 The row stays on screen while the attempt runs, marked as ending, with its end and reattach controls
 not pressable until it settles — reaching a slow or unreachable host takes minutes, and a row that
-disappeared for the duration would read as an end that had already succeeded.
+disappeared for the duration would read as an end that had already succeeded. A peer that answers —
+accepting the reattach or refusing it because the session is already gone — ends the session: the
+record is dropped and the row becomes ended. A connection that never gets an answer establishes
+nothing: the row stays parked with the failure reported and the reattach button beside it.
 
 **Forget** removes janissary's own record and touches nothing on the far side. It is earned rather
 than always present: it appears on a parked row only after a reattach or an end has failed to reach

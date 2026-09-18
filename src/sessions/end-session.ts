@@ -56,10 +56,12 @@ export function endParkedSession(
       session: record.session,
       workspaceDir: record.workspaceDir,
       onResult: (accepted: boolean) => {
-        // `close` is the explicit-close path: it kills every process on the channel and sends
-        // `shutdown`, which is what removes the remote workspace.
-        if (accepted) managers.remote.close(label);
+        // Settle the outcome first: `close` is the explicit-close path — it kills every process on
+        // the channel, sends `shutdown`, and runs the launch handlers' `onClosed` sweep
+        // synchronously — so letting it speak first would settle this promise as an ordinary
+        // connection gone. `settled` makes that sweep a no-op.
         finish({ ended: true });
+        if (accepted) managers.remote.close(label);
       },
       onFailed: (message) => { finish({ ended: false, reason: message }); },
     });
