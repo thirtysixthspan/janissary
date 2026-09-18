@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Restore the explanation of what the channel signals mean now that SIGHUP no longer means shutdown, and document the two new protocol frames.
-
-Existing Issue: `src/remote/serve.ts` deletes the three-line comment above `CHANNEL_SIGNALS` that explained SIGHUP is what a dropped ssh channel delivers and why all three signals meant one thing, replaces the behavior it described with the opposite in `wireShutdown`, and puts nothing in its place, leaving a bare exported array and a branch on `SIGHUP` with no stated reason; the `reattach` and `reattach-result` members added to `src/remote/protocol.ts` are likewise the only entries in either frame union with no doc comment. Severity: 3/10
-
-Existing Risk: 3/10 - The single most consequential decision on the far side — that a hangup now preserves a workspace rather than removing it — is recorded nowhere near the code that implements it, so a future contributor reading `wireShutdown` sees an unexplained special case and is as likely to remove it as to preserve it, which would silently reintroduce the destroy-on-disconnect behavior this branch exists to end.
-
-Proposal Risk: 1/10 - The reasoning is recorded, but it lives in a comment that can drift from the behavior the same way the deleted one did.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: the comment explaining the remote channel signals was deleted rather than rewritten". Write a new comment above `CHANNEL_SIGNALS` in `src/remote/serve.ts` stating what the old one stated and what changed: SIGHUP is what a dropped ssh channel delivers and now means detach-and-wait, while SIGTERM and SIGINT still mean the session is over and its clone goes with it, with the reason the two are no longer the same fact. Put the corresponding half beside the `SIGHUP` branch in `wireShutdown` or in `RemoteServer.detach`'s own comment, so the reader of either meets it. In `src/remote/protocol.ts`, give the `reattach` and `reattach-result` members doc comments matching the density of their neighbours — what the session id identifies, that it is the only credential the far side checks, and that a refusal is the terminal signal rather than a retryable error, which is the distinction `src/remote/reattach.ts` depends on. No behavior changes and no new tests; `src/remote/serve.test.ts`'s signal cases already pin the behavior being described.
-
-
 * Give `isPidAlive` a doc comment and decide deliberately whether the instance lock wants the same permission-denied answer the remote rendezvous does.
 
 Existing Issue: `isPidAlive` in `src/instance-lock.ts` changes from returning false on any `process.kill(pid, 0)` failure to returning true on `EPERM`, which is what the detached-peer rendezvous in `src/remote/serve-detach.ts` needs, but the function's other caller is `acquireLock` in the same file, where the question is not "does some process hold this pid" but "is my earlier janus still running", and the function carries no doc comment stating which question it answers. Severity: 3/10

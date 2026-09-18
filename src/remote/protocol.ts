@@ -112,6 +112,9 @@ import { decodeKnownFrame } from './frame-decode.js';
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
+  // Ask to take over a session that outlived its transport. `session` is the id the handshake
+  // announced when the peer was first created, and it is the only credential the far side checks:
+  // `relayPeer` refuses any `reattach` whose id does not match the peer it found.
   | { type: 'reattach'; session: string }
   // No payload: there is one workspace per peer, so "which processes are alive" has a single
   // answer and nothing to address it by.
@@ -161,6 +164,10 @@ export type ClientFrame =
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
+  // The answer to `reattach`. A refusal is terminal rather than retryable — it says that session is
+  // gone, not that this attempt failed — which is the distinction `src/remote/reattach.ts` turns
+  // into an ended tab instead of another round of backoff. `truncated` says the peer's replay buffer
+  // overflowed while it waited, so what follows is missing its oldest output.
   | { type: 'reattach-result'; accepted: boolean; truncated?: boolean }
   // The answer to `session-state`: one entry per process still running in the workspace. An empty
   // list is a real answer and not a failure — it says the peer is holding a workspace with nothing
