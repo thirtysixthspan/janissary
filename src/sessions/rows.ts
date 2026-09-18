@@ -42,6 +42,9 @@ export type SessionSsh = {
 export type SessionDetached = {
   record: RemoteSessionRecord;
   failure?: string;
+  // An end attempt on this session is running. The row stays on screen for the duration, saying so,
+  // rather than disappearing until the host answers.
+  ending?: boolean;
 };
 
 // A session a refused reattach or an emptied peer established is over. Its record is already gone;
@@ -128,7 +131,7 @@ function detachedActions(launching: boolean, failed: boolean): RemoteSessionActi
 }
 
 function detachedRows(entry: SessionDetached): RemoteSessionView[] {
-  const { record, failure } = entry;
+  const { record, failure, ending } = entry;
   return record.processes.map((process) => ({
     id: `${record.session}:${process.id}`,
     host: record.host,
@@ -143,6 +146,7 @@ function detachedRows(entry: SessionDetached): RemoteSessionView[] {
     label: process.label,
     session: record.session,
     ...(failure !== undefined && { failure }),
+    ...(ending === true && { ending: true }),
   }));
 }
 

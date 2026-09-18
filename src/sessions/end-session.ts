@@ -16,8 +16,17 @@ export type EndOutcome =
 
 // A label no tab can collide with, so the channel this opens is addressable without ever appearing
 // in the tab strip. `RemoteManager` keys entries by label alone and asks nothing else of them.
+const END_LABEL_PREFIX = 'end-session:';
+
 function endLabel(session: string): string {
-  return `end-session:${session}`;
+  return `${END_LABEL_PREFIX}${session}`;
+}
+
+// The channel an end attempt opens is not a session anyone is attached to — it exists to send one
+// frame and go — so `SessionsManager` has to tell it apart from a live entry. Recognized here, beside
+// the one place the label is minted, so the two cannot drift.
+export function isEndSessionLabel(label: string): boolean {
+  return label.startsWith(END_LABEL_PREFIX);
 }
 
 /**

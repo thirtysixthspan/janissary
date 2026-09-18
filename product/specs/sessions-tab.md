@@ -68,6 +68,10 @@ session stays exactly as it was: nothing is given up locally and nothing is park
 the peer to stop its processes and remove its remote workspace. It asks for confirmation. A live
 session carries no end button, because closing its tabs already does that.
 
+The row stays on screen while the attempt runs, marked as ending, with its end and reattach controls
+not pressable until it settles — reaching a slow or unreachable host takes minutes, and a row that
+disappeared for the duration would read as an end that had already succeeded.
+
 **Forget** removes janissary's own record and touches nothing on the far side. It is earned rather
 than always present: it appears on a parked row only after a reattach or an end has failed to reach
 that host, so it cannot be the easy way past a session that is merely slow to answer. An ended row

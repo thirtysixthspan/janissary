@@ -46,6 +46,9 @@ export type RemoteSessionView = {
   // What the last reattach or end reported, when one failed. It is also what earns the row its trash
   // button: forgetting a session must not be the easy way past a host that is merely slow.
   failure?: string;
+  // An end attempt on this session is in flight. Set only on a detached row, and what keeps its
+  // destructive controls from being pressed a second time while the first is still reaching the host.
+  ending?: boolean;
 };
 
 export type RemoteSessionRpcCall =

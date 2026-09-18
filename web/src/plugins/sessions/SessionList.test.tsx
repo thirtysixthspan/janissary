@@ -105,6 +105,22 @@ describe('SessionList buttons', () => {
     expect(screen.getByLabelText('Detach claude')).toBeDisabled();
   });
 
+  // A second End would open a second ssh connection to the same peer and leak the first, since the
+  // end channel is keyed by a label the second attempt overwrites.
+  it('holds the destructive buttons while an end attempt is in flight', () => {
+    list([row({
+      state: 'detached', actions: ['reattach', 'end', 'forget'], session: 's1', ending: true,
+    })]);
+    expect(screen.getByLabelText('End session claude')).toBeDisabled();
+    expect(screen.getByLabelText('Reattach claude')).toBeDisabled();
+  });
+
+  it('leaves them pressable on a parked row with no attempt running', () => {
+    list([row({ state: 'detached', actions: ['reattach', 'end'], session: 's1' })]);
+    expect(screen.getByLabelText('End session claude')).toBeEnabled();
+    expect(screen.getByLabelText('Reattach claude')).toBeEnabled();
+  });
+
   it('raises reattach straight away, with no confirmation', () => {
     const fixture = capabilities();
     list([row({ state: 'detached', actions: ['reattach'], session: 's1' })], fixture.value);

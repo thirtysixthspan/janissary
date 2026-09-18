@@ -35,7 +35,12 @@ export function SessionRowActions({
         const { icon, label } = PRESENTATION[action];
         // Decision 12: while a workspace is still landing there is nothing to come back to, so the
         // control stays where the eye expects it and is simply not pressable yet.
-        const disabled = action === 'detach' && row.state === 'provisioning';
+        //
+        // The same shape covers an end attempt already reaching the host: pressing End again would
+        // open a second ssh connection to the same peer and leak the first, since the end channel is
+        // keyed by a label the second attempt overwrites.
+        const inFlight = row.ending === true && (action === 'end' || action === 'reattach');
+        const disabled = (action === 'detach' && row.state === 'provisioning') || inFlight;
         return (
           <button
             key={action}

@@ -24,6 +24,11 @@ export type SessionActionResult = {
   drop?: string;
   failure?: { session: string; reason: string };
   clearFailure?: string;
+  // An end attempt started on this session, and settled on it. Raised before the attempt is awaited
+  // so the row never renders without it, and cleared on every exit — a row left claiming to be
+  // mid-end is exactly as misleading as the vanished row this replaced.
+  ending?: string;
+  endingDone?: string;
   ended?: SessionEnded;
   forgetEnded?: string;
 };
@@ -124,16 +129,29 @@ function reattach(managers: Managers, record: RemoteSessionRecord, apply: ApplyR
   return { ran: true };
 }
 
+/**
+ * Destroy a parked session, and keep its row on screen while that runs.
+ *
+ * The attempt has to reconnect to the host before it can say anything, which on a slow or unreachable
+ * one is minutes. The row stays, marked as ending: a row that disappeared for the duration read as a
+ * completed end, and reappeared later holding a workspace the user believed was gone.
+ */
 function end(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
   void endParkedSession(managers, record).then((outcome) => {
     if (outcome.ended) {
       report(managers, line(record.launchLabel, record.host, 'ended.'));
-      apply({ ran: true, drop: record.session, clearFailure: record.session, ended: endedRowFrom(record) });
+      apply({
+        ran: true, drop: record.session, clearFailure: record.session,
+        endingDone: record.session, ended: endedRowFrom(record),
+      });
       return;
     }
-    apply({ ran: true, failure: { session: record.session, reason: outcome.reason } });
+    apply({
+      ran: true, endingDone: record.session,
+      failure: { session: record.session, reason: outcome.reason },
+    });
   });
-  return { ran: true };
+  return { ran: true, ending: record.session };
 }
 
 // Forgetting removes janissary's own record and touches nothing on the far side.

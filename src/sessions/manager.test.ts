@@ -15,7 +15,12 @@ import { initRemoteSessionStore, loadRemoteSessions, saveRemoteSessions, type Re
 // about is the manager's own bookkeeping — which record survives which outcome, what the row set
 // says afterwards, and whether the change signal fired.
 vi.mock('./reattach.js', () => ({ startSessionReattach: vi.fn() }));
-vi.mock('./end-session.js', () => ({ endParkedSession: vi.fn() }));
+// `isEndSessionLabel` is the real one: it is the pure half of that module, and the manager's ability
+// to tell an end channel from a live session depends on it agreeing with the label the module mints.
+vi.mock(import('./end-session.js'), async (importOriginal) => ({
+  ...await importOriginal(),
+  endParkedSession: vi.fn(),
+}));
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
@@ -309,6 +314,46 @@ describe('SessionsManager end', () => {
 
     await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: timed out'));
     expect(loadRemoteSessions()).toHaveLength(1);
+  });
+
+  // The attempt has to reach the host before it can say anything, which on a slow one is minutes. A
+  // row that vanished for the duration read as a completed end, and came back later holding a
+  // workspace the user believed was gone.
+  it('keeps the row on screen, marked ending, while the attempt is unresolved', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockReturnValue(new Promise(() => {}));
+    h.sessions.end(SESSION);
+
+    const rows = h.sessions.view();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ state: 'detached', session: SESSION, ending: true });
+  });
+
+  // The end channel is opened under a synthetic label carrying the record's session id. Counted as a
+  // live session it filtered the record out, and holding no tab it composed a group the list drops.
+  it('does not list the end attempt\'s own channel as a live session', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockImplementation(() => {
+      h.entries.push(entry({ labels: new Set([`end-session:${SESSION}`]) }));
+      return new Promise(() => {});
+    });
+    h.sessions.end(SESSION);
+
+    const rows = h.sessions.view();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].state).toBe('detached');
+  });
+
+  it('stops claiming to be ending once the attempt fails', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(endParkedSession).mockResolvedValue({ ended: false, reason: 'devbox: timed out' });
+    h.sessions.end(SESSION);
+
+    await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: timed out'));
+    expect(h.sessions.view()[0].ending).toBeUndefined();
   });
 });
 

@@ -27,6 +27,8 @@ export type SessionRow = {
   label: string;
   session?: string;
   failure?: string;
+  // An end attempt on this session is in flight: the row says so and its destructive buttons wait.
+  ending?: boolean;
 };
 
 export type SessionsPayload = { entries: SessionRow[] };
@@ -62,7 +64,8 @@ function isSessionRow(value: unknown): value is SessionRow {
     && value.actions.every((action) => typeof action === 'string' && ACTIONS.has(action))
     && typeof value.label === 'string'
     && isOptionalString(value.session)
-    && isOptionalString(value.failure);
+    && isOptionalString(value.failure)
+    && (value.ending === undefined || typeof value.ending === 'boolean');
 }
 
 export function isSessionsPayload(value: unknown): value is SessionsPayload {

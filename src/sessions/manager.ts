@@ -4,6 +4,7 @@ import type { Managers } from '../managers.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { resumeRemote } from '../remote/reattach.js';
 import { runSessionAction, type SessionAction, type SessionActionResult } from './actions.js';
+import { isEndSessionLabel } from './end-session.js';
 import { composeSessionRows, type SessionEnded, type SessionsSnapshot } from './rows.js';
 import { channelOf, recordOf, sshTabs } from './snapshot.js';
 import {
@@ -24,6 +25,10 @@ export class SessionsManager {
   // What the last attempt on a parked session reported, by session id. Kept in memory rather than in
   // the record: it describes this process's experience of a host, not the session.
   private failures = new Map<string, string>();
+  // Sessions with an end attempt in flight, by session id. In memory for the same reason `failures`
+  // is: it describes this process's attempt, not the session. Cleared however the attempt settles —
+  // a flag left set leaves a row permanently claiming to be mid-end.
+  private ending = new Set<string>();
   private ended: SessionEnded[] = [];
   // When each row was first seen. A remote session has no cheap per-byte activity signal — output
   // arrives per keystroke, and stamping on it would make this a high-frequency broadcast (principle
@@ -114,7 +119,7 @@ export class SessionsManager {
     return this.all().find((record) => record.session === session);
   }
 
-  dispose(): void { this.live.unsubscribe(); this.stamps.clear(); }
+  dispose(): void { this.live.unsubscribe(); this.stamps.clear(); this.ending.clear(); }
 
   private act(action: SessionAction): boolean {
     // Every verb resolves a record, and the record has to describe what is live *now* rather than
@@ -134,6 +139,8 @@ export class SessionsManager {
     if (result.record !== undefined) this.records = mergeRemoteSession(this.all(), result.record);
     if (result.failure !== undefined) this.failures.set(result.failure.session, result.failure.reason);
     if (result.clearFailure !== undefined) this.failures.delete(result.clearFailure);
+    if (result.ending !== undefined) this.ending.add(result.ending);
+    if (result.endingDone !== undefined) this.ending.delete(result.endingDone);
     if (result.ended !== undefined) this.ended = [...this.ended, result.ended];
     if (result.forgetEnded !== undefined) {
       this.ended = this.ended.filter((entry) => entry.session !== result.forgetEnded);
@@ -174,15 +181,26 @@ export class SessionsManager {
       this.stamps.set(label, stamp);
       return stamp;
     };
-    const channels = this.managers.remote.liveEntries().map((entry) => {
-      if (entry.channel.sessionId) live.add(entry.channel.sessionId);
-      return channelOf(this.managers, entry, activity);
-    });
+    // The channel an end attempt opens carries the record's session id, but it is nobody's session:
+    // it holds no tab, so it composes a member-less group the list drops, and counting its id as live
+    // would filter the record out too — between them the row simply vanished for the length of the
+    // attempt, which is when the user most needs to see it.
+    const channels = this.managers.remote.liveEntries()
+      .filter((entry) => [...entry.labels].some((label) => !isEndSessionLabel(label)))
+      .map((entry) => {
+        if (entry.channel.sessionId) live.add(entry.channel.sessionId);
+        return channelOf(this.managers, entry, activity);
+      });
     const detached = this.all()
       .filter((record) => !live.has(record.session))
       .map((record) => {
         const failure = this.failures.get(record.session);
-        return failure === undefined ? { record } : { record, failure };
+        const ending = this.ending.has(record.session);
+        return {
+          record,
+          ...(failure !== undefined && { failure }),
+          ...(ending && { ending }),
+        };
       });
     return { channels, ssh: sshTabs(this.managers, activity), detached, ended: this.ended };
   }
