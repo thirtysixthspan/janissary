@@ -10,6 +10,7 @@ import {
 } from './api.js';
 import { createPluginContext } from './context.js';
 import { readTopicData, runTopicAction, subscribeTopic } from './topics.js';
+import { emitSessionsChanged } from '../remote/reattach.js';
 import { messageBus } from '../bus.js';
 
 const ROWS: AggregatedScheduleView[] = [
@@ -143,6 +144,17 @@ describe('the sessions topic source', () => {
     const fire = vi.fn();
     const subscription = subscribeTopic('sessions', fire);
     messageBus.emit('sessions', { type: 'changed' });
+    expect(fire).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+  });
+
+  // What makes an open list live rather than merely correct at the moment it was drawn: the channel
+  // lifecycle raises the same signal the row actions do, so a launch, a join, or a lost transport
+  // reaches the tab without anyone pressing Refresh.
+  it('fires for a channel lifecycle signal, not only for a row action', () => {
+    const fire = vi.fn();
+    const subscription = subscribeTopic('sessions', fire);
+    emitSessionsChanged();
     expect(fire).toHaveBeenCalledTimes(1);
     subscription.unsubscribe();
   });

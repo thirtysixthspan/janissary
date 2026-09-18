@@ -87,8 +87,10 @@ Up and Down move between rows without wrapping; Home and End jump to the ends.
 
 ### Refresh
 
-The header carries a refresh button, which re-reads local state and rebuilds the rows. It opens no
-ssh connection. Reachability is learned only by pressing reattach or end, so a parked row claims
+The list keeps itself current: a session being launched, joined, released, parked, or losing its
+transport updates the rows as it happens, and a session is recorded as reattachable the moment it has
+a workspace with something running in it — whether or not this tab is open. The header's refresh
+button is therefore for re-reading rather than for noticing. It opens no ssh connection. Reachability is learned only by pressing reattach or end, so a parked row claims
 nothing about its host beyond what the record says and what the last attempt reported — a peer that
 expired while janissary was closed still reads as detached until something tries it.
 

@@ -28,6 +28,12 @@ export class SessionsManager {
   // arrives per keystroke, and stamping on it would make this a high-frequency broadcast (principle
   // 8) — so what the column reports is when the session last changed state.
   private stamps = new Map<string, number>();
+  // The record follows what is live, so it is written when the live set moves rather than when
+  // someone happens to read the list. `RemoteManager` raises this on every channel transition — a
+  // launch, a join, a spawn, an exit, a release, a park, a lost transport — so a session opened with
+  // this tab shut is recorded all the same, and an open tab needs no Refresh to notice. `mirror`
+  // raises nothing itself, so an action's own change signal re-enters it once and stops.
+  private live = messageBus.on('sessions', 'changed', () => this.mirror());
 
   constructor(private managers: Managers) {}
 
@@ -101,7 +107,7 @@ export class SessionsManager {
     return this.all().find((record) => record.session === session);
   }
 
-  dispose(): void { this.stamps.clear(); }
+  dispose(): void { this.live.unsubscribe(); this.stamps.clear(); }
 
   private act(action: SessionAction): boolean {
     // Every verb resolves a record, and the record has to describe what is live *now* rather than

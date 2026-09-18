@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -58,6 +58,8 @@ type Harness = {
   entries: RemoteEntry[];
 };
 
+const created: SessionsManager[] = [];
+
 function harness(live: RemoteEntry[] = []): Harness {
   initRemoteSessionStore(mkdtempSync(path.join(tmpdir(), 'janus-sessions-mgr-')));
   const entries = [...live];
@@ -81,7 +83,11 @@ function harness(live: RemoteEntry[] = []): Harness {
       cur: () => ({ label: 'janus' }),
     },
   } as unknown as Managers;
-  return { sessions: new SessionsManager(managers), detach, closeTab, entries };
+  const sessions = new SessionsManager(managers);
+  // Every manager subscribes to the global bus, so one left alive would mirror its own entries into
+  // the next case's store the moment that case raises the signal.
+  created.push(sessions);
+  return { sessions, detach, closeTab, entries };
 }
 
 function settle(outcome: ReattachOutcome): void {
@@ -89,6 +95,7 @@ function settle(outcome: ReattachOutcome): void {
 }
 
 beforeEach(() => { vi.clearAllMocks(); });
+afterEach(() => { for (const sessions of created) sessions.dispose(); created.length = 0; });
 
 describe('SessionsManager view', () => {
   it('lists a live channel as an active row', () => {
@@ -115,6 +122,20 @@ describe('SessionsManager view', () => {
   it('writes no record for a channel still provisioning', () => {
     const h = harness([entry({ workspaceDir: undefined })]);
     h.sessions.view();
+    expect(loadRemoteSessions()).toEqual([]);
+  });
+
+  // The record follows the live set rather than a read of the list: a session launched while this
+  // tab is shut has to be recorded all the same, or a crash leaves a peer nothing can find.
+  it('writes a record when the live set moves, with no call to view()', () => {
+    harness([entry()]);
+    messageBus.emit('sessions', { type: 'changed' });
+    expect(loadRemoteSessions()).toMatchObject([{ session: SESSION, launchLabel: 'claude' }]);
+  });
+
+  it('writes no record for a still-provisioning channel when the live set moves', () => {
+    harness([entry({ workspaceDir: undefined })]);
+    messageBus.emit('sessions', { type: 'changed' });
     expect(loadRemoteSessions()).toEqual([]);
   });
 

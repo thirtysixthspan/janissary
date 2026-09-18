@@ -27,6 +27,11 @@ export type RemoteEntry = {
   sessionState?: (processes: RemoteProcessState[]) => void;
 };
 
+// The live remote-session set moved. Raised from the channel lifecycle rather than from a read of
+// the list, which is what lets `SessionsManager` write its record the moment a session becomes
+// recordable and lets an open sessions tab notice a change without a Refresh.
+export function emitSessionsChanged(): void { messageBus.emit('sessions', { type: 'changed' }); }
+
 export class Reattach {
   active = false;
   private stopped = false;
@@ -41,6 +46,7 @@ export class Reattach {
     this.active = true;
     clearTimeout(this.deadline);
     this.timer = setTimeout(() => this.retry(), Math.min(250 * 2 ** Math.min(this.attempt++, 7), 30_000));
+    emitSessionsChanged();
   }
 
   retry(): void {
@@ -53,11 +59,15 @@ export class Reattach {
   }
 
   accepted(): void {
+    const wasActive = this.active;
     this.active = false;
     this.attempt = 0;
     clearTimeout(this.timer);
     clearTimeout(this.deadline);
     this.timer = undefined;
+    // Only a real transition. `stop()` funnels through here on entries that were never reconnecting,
+    // and a row that has not moved is not news.
+    if (wasActive) emitSessionsChanged();
   }
 
   stop(): void { this.accepted(); this.stopped = true; }

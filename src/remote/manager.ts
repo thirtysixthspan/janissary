@@ -6,11 +6,10 @@ import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
 import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
-import { notify } from '../notifications.js';
-import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
-import { Reattach, detachRemoteEntry, dropRemoteLabels, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
+import { Reattach, detachRemoteEntry, dropRemoteLabels, emitSessionsChanged, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
 import { answerSessionState, handleReattachResult, type RemoteResume } from './resume.js';
 import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
+import { remoteChannelClosed } from './manager-closed.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
 // and its channel has gone away.
@@ -99,6 +98,7 @@ export class RemoteManager {
           case 'workspace-ready': {
             if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
             entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
+            this.sessionsChanged();
             break;
           }
           case 'workspace-failed': {
@@ -117,8 +117,12 @@ export class RemoteManager {
           entry.handlers.get(label)?.onFailed(message);
         },
         onClose: () => this.channelClosed(entry),
+        // The spawned set is what `recordOf` reads, so a session becomes recordable on the first
+        // spawn and stops being on the last exit. Per process, not per byte.
+        onProcesses: () => this.sessionsChanged(),
         onSessionExit: (_id, owner, harness) => {
           endRemoteProcess(this.managers, entry, owner ?? label, harness);
+          this.sessionsChanged();
         },
       },
     );
@@ -148,6 +152,7 @@ export class RemoteManager {
         });
     };
     connect();
+    this.sessionsChanged();
     return channel;
   }
 
@@ -159,6 +164,7 @@ export class RemoteManager {
     entry.labels.add(label);
     entry.handlers.set(label, handlers ?? this.joinedHandlers(label));
     this.entries.set(label, entry);
+    this.sessionsChanged();
     return true;
   }
 
@@ -187,6 +193,7 @@ export class RemoteManager {
     const handlers = terminateRemoteEntry(this.managers, entry, false);
     dropRemoteLabels(this.entries, entry);
     for (const handler of handlers) handler.onClosed();
+    this.sessionsChanged();
     return true;
   }
 
@@ -197,6 +204,7 @@ export class RemoteManager {
     const entry = this.entries.get(label);
     if (!entry || !detachRemoteEntry(entry)) return false;
     dropRemoteLabels(this.entries, entry);
+    this.sessionsChanged();
     return true;
   }
 
@@ -219,6 +227,7 @@ export class RemoteManager {
       this.channelClosed(entry);
       entry.channel.close();
     }
+    this.sessionsChanged();
     return true;
   }
 
@@ -244,21 +253,13 @@ export class RemoteManager {
   }
 
   private channelClosed(entry: Entry): void {
-    if (entry.closed) return;
-    if (entry.channel.sessionId && entry.workspaceDir) { entry.reconnect.lost(); return; }
-    entry.closed = true;
-    if (!entry.settled) {
-      entry.settled = true;
-      entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
-    } else if (entry.workspaceDir && entry.labels.size > 0) {
-      notify(this.managers, 'remote-session-ended', entry.labels.values().next().value!,
-        `Remote janus on ${entry.address.host} ended — start a new agent or shell to continue.`);
-    }
-    clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
-    const handlers = [...entry.handlers.values()];
-    dropRemoteLabels(this.entries, entry);
-    entry.handlers.clear();
-    for (const handler of handlers) handler.onClosed();
+    remoteChannelClosed(this.managers, this.entries, entry);
+    this.sessionsChanged();
   }
 
+  // The live set moved: a channel opened, joined, spawned, released, parked, or lost its transport.
+  // Emitted from the lifecycle rather than from a read, so `SessionsManager` records a session the
+  // moment it becomes recordable instead of the next time someone composes the list, and an open
+  // list notices the change instead of waiting for Refresh.
+  private sessionsChanged(): void { emitSessionsChanged(); }
 }

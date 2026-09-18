@@ -3,6 +3,7 @@ import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications.js';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
@@ -224,6 +225,39 @@ describe('RemoteManager shared channels', () => {
     expect(joinedHandlers.onClosed).toHaveBeenCalledOnce();
     expect(h.remote.get('creator')).toBeUndefined();
     expect(h.remote.get('joined')).toBeUndefined();
+  });
+
+  // The sessions list has to notice a launch, a workspace arriving, a process starting, a join, and
+  // a release on its own. Waiting for Refresh made an open list look live while saying nothing, and
+  // a session launched with the tab shut was never recorded at all.
+  it('signals the sessions channel at every move of the live set', () => {
+    let signals = 0;
+    const subscription = messageBus.on('sessions', 'changed', () => { signals += 1; });
+    try {
+      const h = managerHarness(false);
+      const afterOpen = signals;
+      expect(afterOpen).toBeGreaterThan(0);
+
+      h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+      const afterReady = signals;
+      expect(afterReady).toBeGreaterThan(afterOpen);
+
+      h.remote.get('creator')?.send({
+        type: 'spawn', id: 'rpty1', program: 'claude', command: 'claude',
+        mode: 'pty', harness: 'claude', cols: 80, rows: 24,
+      });
+      const afterSpawn = signals;
+      expect(afterSpawn).toBeGreaterThan(afterReady);
+
+      h.remote.attach('joined', 'creator');
+      const afterAttach = signals;
+      expect(afterAttach).toBeGreaterThan(afterSpawn);
+
+      h.remote.release('joined');
+      expect(signals).toBeGreaterThan(afterAttach);
+    } finally {
+      subscription.unsubscribe();
+    }
   });
 
   // The opposite of `detach`: an explicit close finishes the peer off instead of parking it.

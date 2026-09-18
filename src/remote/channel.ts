@@ -52,6 +52,10 @@ export type RemoteChannelHandlers = {
   onError: (message: string) => void;
   onClose: () => void;
   onSessionExit?: (id: string, label: string | undefined, harness: boolean) => void;
+  // The set of processes this channel has spawned changed — a `spawn` went out, or a `kill` did.
+  // What makes a session recordable is having something running in its workspace, so this is the
+  // moment a launch becomes reattachable. Per process, never per byte.
+  onProcesses?: () => void;
   // The held-frame buffer overflowed and dropped its oldest frames. Reported through the same line
   // a truncated replay already has, since it is the same fact one layer further in.
   onTruncatedReplay?: () => void;
@@ -113,8 +117,8 @@ export class RemoteChannel {
       }
       return;
     }
-    if (frame.type === 'spawn') this.router.record(frame);
-    else if (frame.type === 'kill') this.router.forget(frame.id);
+    if (frame.type === 'spawn') { this.router.record(frame); this.handlers.onProcesses?.(); }
+    else if (frame.type === 'kill') { this.router.forget(frame.id); this.handlers.onProcesses?.(); }
     this.transport.write(`${encodeFrame(frame)}\n`);
   }
 
