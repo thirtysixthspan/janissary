@@ -19,6 +19,20 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
+  // The two `sessionEnded` fields hold the same text for different purposes: the tab's copy is the
+  // server's own gate on a dead session and has no client reader, while the harness view's copy is
+  // what the tab shows in place of `exited`.
+  it('keeps the tab-level sessionEnded off the wire while the harness view carries it', () => {
+    const tab = makeTab('claude', '#fff');
+    const ended = 'Remote janus on devbox ended — start a new agent or shell to continue.';
+    tab.view = 'harness';
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'exited', sessionEnded: ended };
+    tab.sessionEnded = ended;
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
+    expect('sessionEnded' in view).toBe(false);
+    expect(view.harness?.sessionEnded).toBe(ended);
+  });
+
   it('projects only the public plugin envelope onto the wire', () => {
     const tab = makeTab('video', '#fff');
     tab.view = 'plugin';

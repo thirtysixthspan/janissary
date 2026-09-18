@@ -66,6 +66,13 @@ export type HarnessView = {
   // renders that log — and a line written into the terminal would be painted over by the harness's
   // next repaint. The tab stays open: the harness is unaffected, only its browser is gone.
   browserError?: string;
+  // Set when the remote session behind this tab has ended, carrying the line that says so. It rides
+  // the view for `browserError`'s reason — a harness tab's body is its PTY, so a line written into
+  // the transcript would never be seen and one written into the terminal would be painted over.
+  // Two readers: `HarnessTab` in `web/src/harness/HarnessTab.tsx` shows it in place of the ordinary
+  // `exited` status, and `wireControllerEvents` in `src/controller/events.ts` keeps the tab open
+  // when its PTY exits rather than closing it, so the transcript survives to explain what happened.
+  // `endRemoteSession` in `src/remote/reattach.ts` is the only writer of this field or `Tab`'s.
   sessionEnded?: string;
 };
 
@@ -227,7 +234,6 @@ export type TabRuntime = {
 };
 
 export type Tab = {
-  sessionEnded?: string;
   label: string;
   dotColor: string;
   number: number;
@@ -279,6 +285,15 @@ export type Tab = {
   // removed by the remote server, so `workspaceDir` deliberately stays undefined — `src/tab/cleanup.ts`
   // reads that field to schedule a recursive delete against the **local** filesystem.
   remote?: RemoteTarget;
+  // The server-side record that this tab's remote session has ended, set only on a `remote` tab and
+  // holding the same line the user is shown. Distinct from `HarnessView.sessionEnded`, which exists
+  // to be displayed: this one is a gate, read by `ScheduleManager.fire` in `src/schedule/manager.ts`
+  // so a scheduled command is not fired into a dead session, and by the `live` check in
+  // `endRemoteProcess` in `src/remote/reattach.ts` so the shared channel is torn down once every tab
+  // on it has ended. Both are written together by `endRemoteSession`, the only writer of either, and
+  // an agent or shell tab has only this one — its user-visible copy is a line in `log`, not a field.
+  // Server-only: `toTabView` never puts it on the wire.
+  sessionEnded?: string;
   // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
   // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.
   offline?: boolean;

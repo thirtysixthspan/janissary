@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Document the two `sessionEnded` fields in the tab types, or collapse them into one.
-
-Existing Issue: `src/tab/types.ts` gains `sessionEnded?: string` on both `HarnessView` and `Tab`, neither carrying a doc comment, in a file where every neighbouring optional field — `browserError` directly above the first of them — carries several lines explaining why it exists and why it rides the type it does; the two hold the same text but serve different purposes, since only the `HarnessView` copy reaches the client and is read by `web/src/harness/HarnessTab.tsx`, while the `Tab` copy is a server-side gate consumed by `ScheduleManager.fire`, `wireControllerEvents`, and the `live` check in `endRemoteProcess`, and it is declared ahead of `label` at the top of the type rather than among the optional fields. Severity: 3/10
-
-Existing Risk: 3/10 - The next contributor sets one of the two and not the other, and gets a tab that reports an ended session in the terminal but keeps firing scheduled commands into it, or the reverse — a silently half-applied state that no type error and no test would catch.
-
-Proposal Risk: 1/10 - The fields are documented but still duplicated, so the invariant that they are written together is held by a comment rather than by the type.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: two undocumented sessionEnded fields were added to the tab types". In `src/tab/types.ts`, move `Tab.sessionEnded` down among the type's other optional fields and give both it and `HarnessView.sessionEnded` doc comments in the register the file already uses: the `HarnessView` one says what `browserError`'s comment says about riding the view rather than the PTY log, and the `Tab` one says it is the server-side record that a session has ended, naming its three readers — the schedule gate in `src/schedule/manager.ts`, the tab-retention branch in `src/controller/events.ts`, and the `live` check in `src/remote/reattach.ts` — and stating that `endRemoteSession` is the only writer of either. If the duplication is avoidable, prefer that: check whether the three server-side readers can consult the harness field plus the agent-tab case directly, and collapse to one field if they can. Confirm whether `Tab.sessionEnded` is serialized into the client state snapshot through `src/tab/` view mapping, and drop it from the wire if the client has no use for it. `src/controller/events.test.ts` and `src/schedule/manager.test.ts` cover both readers and must keep passing.
-
-
 * Restore the explanation of what the channel signals mean now that SIGHUP no longer means shutdown, and document the two new protocol frames.
 
 Existing Issue: `src/remote/serve.ts` deletes the three-line comment above `CHANNEL_SIGNALS` that explained SIGHUP is what a dropped ssh channel delivers and why all three signals meant one thing, replaces the behavior it described with the opposite in `wireShutdown`, and puts nothing in its place, leaving a bare exported array and a branch on `SIGHUP` with no stated reason; the `reattach` and `reattach-result` members added to `src/remote/protocol.ts` are likewise the only entries in either frame union with no doc comment. Severity: 3/10
