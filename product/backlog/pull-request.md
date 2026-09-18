@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Style the connection indicator through the stylesheet and keep it out of the center column's flow, as the plan's chosen visual precedent does.
-
-Existing Issue: `web/src/ConnectionStatusLabel.tsx` hardcodes its font size, padding, and color in an inline `style` object rather than a class in `web/src/theme.css`, where every comparable piece of muted chrome in this app is defined, and `web/src/AppShell.tsx` renders it as an ordinary first child of `.app-center`, a `flex-direction: column` container, so the element occupies flow space and pushes the active tab's body down whenever the socket drops — while the plan named `CommandBarShell`'s class-styled `label` slot as the precedent to match and stated that the rest of the UI is left alone. Severity: 3/10
-
-Existing Risk: 3/10 - Every disconnect resizes the center column, which for a harness or ssh tab means the terminal is reflowed at exactly the moment its output cannot be redelivered, and the label cannot be restyled or themed with the rest of the chrome because its appearance lives outside the stylesheet the themes are defined in.
-
-Proposal Risk: 1/10 - The indicator matches its siblings and no longer moves the layout, but overlaying it means it sits on top of whatever the active tab renders in that corner, so a tab with its own content there needs checking.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1131: the connection indicator is inline-styled and shifts the center column when it appears". Add a class to `web/src/theme.css` beside the other muted chrome rules — `.panel-title` and the `color: var(--muted); font-size: 12px` status rules are the nearest neighbours — and have `ConnectionStatusLabel` render `className` instead of a `style` object, keeping `role="status"` and the null return for the connected phase. Make the element not participate in the column's flow: `.app-center` already carries `position: relative`, so absolute positioning in a corner is a one-rule change and removes the resize entirely. Verify against the phases rather than by eye — `web/src/ConnectionStatusLabel.test.tsx` already asserts the three fixed strings and the empty render, so extend it with the class name, and check `web/src/App.test.tsx`'s case that the indicator renders regardless of the active tab's view still holds. The step that could regress something nothing covers is the positioning: no test asserts the center column's height, so confirm by hand that a harness terminal does not reflow when the label appears and disappears.
-
-
 * Document the two `sessionEnded` fields in the tab types, or collapse them into one.
 
 Existing Issue: `src/tab/types.ts` gains `sessionEnded?: string` on both `HarnessView` and `Tab`, neither carrying a doc comment, in a file where every neighbouring optional field — `browserError` directly above the first of them — carries several lines explaining why it exists and why it rides the type it does; the two hold the same text but serve different purposes, since only the `HarnessView` copy reaches the client and is read by `web/src/harness/HarnessTab.tsx`, while the `Tab` copy is a server-side gate consumed by `ScheduleManager.fire`, `wireControllerEvents`, and the `live` check in `endRemoteProcess`, and it is declared ahead of `label` at the top of the type rather than among the optional fields. Severity: 3/10

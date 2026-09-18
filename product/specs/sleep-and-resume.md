@@ -8,7 +8,7 @@ The window reconnects automatically, retrying indefinitely with delays increasin
 
 ### Connection status
 
-A small announcement in the center column appears for every tab type. It reads `Reconnecting…`, escalates to `Cannot reach session` after six unsuccessful retries, and shows `Reconnected` for two seconds after recovery. A session that remains unreachable leaves the window open and keeps retrying. Reconnection never forces a reload or starts a replacement session.
+A small announcement in the center column appears for every tab type. It reads `Reconnecting…`, escalates to `Cannot reach session` after six unsuccessful retries, and shows `Reconnected` for two seconds after recovery. It is overlaid in the column's top-right corner rather than placed above the tab's content, so appearing and disappearing never moves or resizes what the tab is showing. A session that remains unreachable leaves the window open and keeps retrying. Reconnection never forces a reload or starts a replacement session.
 
 Requests outstanding when the local connection closes fail and are never resent. Input during a disconnected period is not queued. Terminal output produced while disconnected is not replayed, so a terminal can show a gap even though its process continued running.
 
