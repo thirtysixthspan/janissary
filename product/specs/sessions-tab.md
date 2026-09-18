@@ -129,7 +129,9 @@ provisioning and shows a spinner while an action is in flight. The spinner clear
 answered — including when it was refused, and including when nothing answers at all — so the control
 is never left reading as mid-operation on a tab that is still open. A reattach pressed on a tab whose
 connection has already gone is refused with its reason recorded, like a refused detach. Pressing
-detach there acts on the whole shared connection and asks the same confirmation the list does. A remote file navigator's
+detach there acts on the whole shared connection and asks the same confirmation the list does — the
+one dialog, with the same keyboard behavior on both front doors: Escape cancels, `y` or an
+arrow-toggle and Enter confirms, and the focus lands inside the dialog when it opens. A remote file navigator's
 header keeps its host chip and gains no control, matching what its row offers.
 
 ### Scope

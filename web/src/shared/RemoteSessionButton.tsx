@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLinkSlash, faPlug, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { ConfirmDialog } from './ConfirmDialog';
 
 // The detach/reattach control beside a remote tab's host chip — the second front door onto the same
 // manager methods the sessions tab's rows use. It sits on `AgentTabMeta` because that is the one
@@ -67,22 +68,15 @@ export function RemoteSessionButton({
         <FontAwesomeIcon icon={busy ? faSpinner : icon} spin={busy} />
       </button>
       {confirming && (
-        <div className="modal-backdrop">
-          <div className="modal" role="alertdialog" aria-modal="true">
-            <div className="modal-title">{`Detach this session on ${host}? Its tabs will close.`}</div>
-            <div className="modal-actions">
-              <button
-                className="modal-button"
-                onClick={() => { setConfirming(false); raise('detach'); }}
-              >
-                Detach
-              </button>
-              <button className="modal-button selected" onClick={() => { setConfirming(false); }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title={`Detach this session on ${host}? Its tabs will close.`}
+          confirmLabel="Detach"
+          onCancel={() => { setConfirming(false); }}
+          onConfirm={() => {
+            setConfirming(false);
+            raise('detach');
+          }}
+        />
       )}
     </>
   );

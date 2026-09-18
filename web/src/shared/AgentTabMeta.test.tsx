@@ -307,6 +307,53 @@ describe('AgentTabMeta', () => {
       expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
+    // The contract the plugin lists' shared ConfirmDialog implements: Escape cancels, y or
+    // arrow-toggled Enter confirms, and the focus lands inside the dialog so a keyboard user is
+    // never stranded outside the question it opened.
+    it('cancels on Escape', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('confirms with y and cancels with n', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      fireEvent.keyDown(document, { key: 'y' });
+      expect(onAction).toHaveBeenCalledWith('detach');
+
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.keyDown(document, { key: 'n' });
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('moves the selection with the arrow keys and takes it with Enter', () => {
+      const { onAction, getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      // Cancel is selected first, so a reflexive Enter does nothing.
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(onAction).not.toHaveBeenCalled();
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+      fireEvent.keyDown(document, { key: 'ArrowRight' });
+      expect(screen.getByText('Detach', { selector: '.modal-button' })).toHaveClass('selected');
+      fireEvent.keyDown(document, { key: 'Enter' });
+      expect(onAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('focuses the dialog when it opens', () => {
+      const { getByLabelText } = control();
+      fireEvent.click(getByLabelText('Detach session on devbox'));
+
+      expect(screen.getByRole('alertdialog')).toHaveFocus();
+    });
+
     // A detach has to reach the far side, which is not instant.
     it('spins and refuses a second press once an action is in flight', () => {
       const { onAction, getByLabelText } = control();

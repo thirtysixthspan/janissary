@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give the metadata row's detach confirmation the keyboard handling its sibling dialog on the sessions tab already has.
-
-Existing Issue: The confirmation `RemoteSessionButton` in `web/src/shared/RemoteSessionButton.tsx` renders for a detach raised from a remote tab's metadata row is bare modal markup — nothing is focused into it and no keydown listener exists, so Escape cannot cancel, Enter cannot confirm, and a keyboard user who opens it has no way out but the mouse — while `ConfirmSessionDialog` in `web/src/plugins/sessions/`, shipped by the same pull request for the same feature's other front door, implements the full y/n/Enter/Escape/arrow contract on the same host modal CSS classes. Severity: 3/10
-
-Existing Risk: 3/10 - The one destructive action every remote tab carries opens a dialog a keyboard-only user cannot answer, and because the two front doors of the same detach behave differently, the next contributor has no single contract to preserve and will copy whichever version they find.
-
-Proposal Risk: 1/10 - The dialog gains the keyboard behavior its sibling already pins in tests, but a capture-phase listener that swallows every key while open means a dialog rendered on top of another one at the same moment needs checking.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the metadata row's detach confirmation cannot be answered from the keyboard". Bring the confirmation in `web/src/shared/RemoteSessionButton.tsx` up to the contract `web/src/plugins/sessions/ConfirmSessionDialog.tsx` implements: move focus into the dialog on mount, add the capture-phase keydown listener answering y, n, Enter, Escape, and the arrow-key toggle between the two buttons, and highlight whichever one is selected. The plugin-side component sits across the plugin import boundary and cannot be consumed by host code, so either extract the shared shape into a host-side module under `web/src/shared/` that both render, or implement the contract here deliberately and say so in the component's comment — check `ai/guidelines/react-code-organization.md` first and follow wherever it places shared presentation. Extend the remote-session-control cases in `web/src/shared/AgentTabMeta.test.tsx` with Escape cancelling, Enter confirming, and focus landing inside the dialog; the confirmation cases in `web/src/plugins/sessions/SessionList.test.tsx` pin the sibling contract and must keep passing.
-
-
 * Attribute the sessions tab's notification lines to the sessions tab when it is open, as the plan specifies, rather than always to the active tab.
 
 Existing Issue: Plan item 12 states the `remote-session` lines are "attributed to the sessions tab when it is open and to the active tab otherwise", but `report` in `src/sessions/actions.ts` always passes `managers.tab.cur().label` to `notify`, so with the sessions tab open but not focused, a detach raised from a metadata row is attributed to whatever tab the user happens to be reading. Severity: 2/10
