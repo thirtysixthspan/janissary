@@ -7,6 +7,7 @@ import type { RemoteProcessState } from './protocol.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteLaunchHandlers } from './manager.js';
+import { cancelSessionState } from './resume.js';
 
 export type RemoteEntry = {
   channel: RemoteChannel;
@@ -24,7 +25,8 @@ export type RemoteEntry = {
   reconnect: Reattach;
   // The resolver of a `session-state` query waiting for its answer. One at a time: the only thing
   // that asks is a reattach settling its tabs, and a channel has one of those in flight at most.
-  sessionState?: (processes: RemoteProcessState[]) => void;
+  // `undefined` is how it is told no answer is coming — see `cancelSessionState`.
+  sessionState?: (processes: RemoteProcessState[] | undefined) => void;
 };
 
 // The live remote-session set moved. Raised from the channel lifecycle rather than from a read of
@@ -139,6 +141,7 @@ export function detachRemoteEntry(entry: RemoteEntry): boolean {
   if (entry.closed || !entry.workspaceDir || !entry.channel.sessionId) return false;
   entry.closed = true;
   entry.reconnect.stop();
+  cancelSessionState(entry);
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.handlers.clear();
   entry.channel.close();
@@ -158,6 +161,7 @@ export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, ann
   if (entry.closed) return [];
   entry.closed = true;
   entry.reconnect.stop();
+  cancelSessionState(entry);
   if (announce) endRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.channel.finish();

@@ -158,10 +158,17 @@ payload — there is one workspace per peer, so the question has a single answer
 one entry per live process with its spawn id, the program, how it was started, and the harness or
 agent name it belongs to. It is what turns an accepted reattach into tabs: a janissary restarted
 since the launch remembers what it started, and only the far side knows what survived. A version-14
-peer recognizes neither frame and would refuse the query as unknown while the reattach that just
-succeeded waited for an answer that never came, so the mismatch is refused at the handshake. An
+peer recognizes neither frame and is refused at the handshake like any other mismatch. An
 empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
 nothing in it, which is the one case janissary ends rather than reattaches.
+
+The handshake check is narrower for a reattach than for a launch. A reattach is answered by the
+freshly started remote server that then relays into the parked peer, so the version it announces is
+whatever is installed on that host now — not the version of the peer waiting behind it. A session
+parked while the remote installation was upgraded therefore passes the handshake and is then refused
+by name by the older peer. The query is bounded rather than open-ended so that case settles: no
+answer within the wait establishes nothing, so the session stays parked with its failure reported and
+its reattach button, exactly as an unreachable host does.
 
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and

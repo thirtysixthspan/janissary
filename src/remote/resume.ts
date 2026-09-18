@@ -67,18 +67,30 @@ export function handleReattachResult(
   terminateRemoteEntry(managers, entry);
 }
 
+// How long a peer that has already accepted the reattach has to answer what is running in its
+// workspace. The ssh connection is up and the handshake is done by this point, so what is being
+// waited on is one frame from a local process on the far host. Deliberately looser than the
+// reconnect backoff's 15-second connect deadline: a peer under load answering slowly is not a dead
+// one, and calling it dead would park a session that was about to come back.
+export const SESSION_STATE_TIMEOUT_MS = 30_000;
+
 /**
  * Ask the peer what is still running in its workspace. The local side knows what it once started;
  * only the far side knows what survived, and a reattach has to open one tab per surviving process
  * rather than a single representative one.
  *
- * A peer that never answers leaves the promise unresolved on purpose: the caller is a reattach whose
- * transport is already being watched, and a channel that dies takes its tabs with it through the
- * paths that already handle that. There is nothing a timeout here could do that is not already done.
+ * Resolves `undefined` when no answer comes — the deadline passes, or the entry stops being able to
+ * answer. That is deliberately distinguishable from an empty list: an empty list is the peer saying
+ * its workspace is empty, which ends the session, while no answer establishes nothing and leaves the
+ * row parked with its reattach button. A peer can accept a reattach and then never answer this —
+ * most concretely when a remote `janus` was upgraded while the session sat detached, since the
+ * handshake is answered by the relaying process rather than by the parked peer behind it.
  */
-export function askSessionState(entry: RemoteEntry): Promise<RemoteProcessState[]> {
+export function askSessionState(entry: RemoteEntry): Promise<RemoteProcessState[] | undefined> {
   return new Promise((resolve) => {
-    entry.sessionState = resolve;
+    const deadline = setTimeout(() => { entry.sessionState = undefined; resolve(undefined); },
+      SESSION_STATE_TIMEOUT_MS);
+    entry.sessionState = (processes) => { clearTimeout(deadline); resolve(processes); };
     entry.channel.send({ type: 'session-state' });
   });
 }
@@ -87,4 +99,12 @@ export function answerSessionState(entry: RemoteEntry, processes: RemoteProcessS
   const resolve = entry.sessionState;
   entry.sessionState = undefined;
   resolve?.(processes);
+}
+
+// The entry can no longer answer — it was terminated or detached — so a waiter is released now
+// rather than left to wait out a deadline for something that can never arrive.
+export function cancelSessionState(entry: RemoteEntry): void {
+  const resolve = entry.sessionState;
+  entry.sessionState = undefined;
+  resolve?.(undefined);
 }

@@ -63,9 +63,15 @@
 // reattach into tabs: a janissary that was restarted since the launch holds a record of what it
 // started, but only the far side knows what is still running, and the sessions tab has to open one
 // tab per surviving process rather than a single representative one. A version-14 remote recognizes
-// neither frame — it would refuse the query as unknown while the reattach that just succeeded sat
-// waiting for an answer that never came, which is exactly the "looks healthy while doing the wrong
-// thing" failure this check exists to prevent.
+// neither frame and is refused at the handshake like any other mismatch.
+//
+// That check is narrower here than elsewhere, and deliberately so. A reattach's handshake is written
+// by the freshly started `janus remote-serve` that then relays into the parked peer (`relayPeer` in
+// `./serve-detach.ts`), not by the parked peer itself — so it binds the relaying process's version,
+// which is whatever is installed on the host now. A peer parked across a remote upgrade therefore
+// announces 15 and hands the query to a 14 that refuses it by name. Nothing in the handshake can see
+// that, so the bounded wait in `askSessionState` is what catches it: the reattach reports a failure
+// and the session stays parked, rather than waiting for an answer that will never come.
 export const REMOTE_PROTOCOL_VERSION = 15;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
