@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Offer the park-and-return path on the rows that survive their launching tab being closed, which today can only ever be destroyed.
-
-Existing Issue: A remote session's detach verb lives on its launching row alone (`liveActions` in `src/sessions/rows.ts` keys on the launching label), but the launching tab can be closed while joined tabs keep the channel alive — `RemoteManager.release` in `src/remote/manager.ts` carries the entry on a surviving label — so the remaining agent and navigator rows offer only `focus` and `close`, and the only way to leave a healthy shared connection is destroying it: closing the last tab sends `finish()`, killing every process and removing the remote workspace. Severity: 4/10
-
-Existing Risk: 4/10 - The one way to leave a still-used channel without destroying it is available only while a tab on it is a launching tab, so the detaching workflow silently stops working the moment the user tidies up the tab that started it, and the destroy-on-last-close behavior takes over the session the user meant to park.
-
-Proposal Risk: 2/10 - Offering the channel-level verbs on rows whose launching member is gone means deciding which row earns them, and whatever rule is chosen has to hold when the launching tab later reappears, so the row set for the launch-label-less channel needs its own tests.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: a channel whose launching tab was closed offers no way to park it". Decide where the channel-level verbs go when the launching tab is gone: either `liveActions` in `src/sessions/rows.ts` grants `detach` (and `end`) on every live row of a channel that cannot present its launching row, or `SessionChannel` in `src/sessions/rows.ts` carries a `launching`-with-members-missing state the rows read. The data already exists — `channelOf` in `src/sessions/snapshot.ts` builds members from the entry's label set dropping closed tabs, and `entry.workspaceLabel`'s name is not among them — so extend `composeSessionRows` with that case and authorize through `SessionsManager.offers` in `src/sessions/manager.ts`, which keeps the plugin grant narrow by construction. The existing `src/sessions/rows.test.ts` pins a launching row's action set and a joined row's, which keep passing; add the launch-member-absent channel to the recorded snapshot cases, and assert in `src/sessions/manager.test.ts` that a detach raised on the surviving row parks the channel without sending `finish()`'s frames — the ordering `RemoteManager.detach` in `src/remote/manager.ts` already guarantees.
-
 * Derive the metadata-row detach control's provisioning state from the live channel, which today is guessed from busy-and-cwd-less on the client.
 
 Existing Issue: `AgentTabBody` in `web/src/agent-tabs/AgentTabBody.tsx` passes `current.busy && current.cwd === undefined` as the control's provisioning signal, so a remote agent tab is treated as "still provisioning" whenever it has a command in flight with no working directory recorded — a state that post-provisioning is nowhere near provisioning, and which leaves the detach control disabled on exactly the live session a user is trying to park. Severity: 4/10

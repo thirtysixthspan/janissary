@@ -65,7 +65,9 @@ type Harness = {
 
 const created: SessionsManager[] = [];
 
-function harness(live: RemoteEntry[] = [], sessionsTab?: { label: string }): Harness {
+function harness(
+  live: RemoteEntry[] = [], sessionsTab?: { label: string }, open: string[] = ['claude'],
+): Harness {
   initRemoteSessionStore(mkdtempSync(path.join(tmpdir(), 'janus-sessions-mgr-')));
   const entries = [...live];
   const detach = vi.fn((label: string) => {
@@ -75,18 +77,17 @@ function harness(live: RemoteEntry[] = [], sessionsTab?: { label: string }): Har
     return true;
   });
   const closeTab = vi.fn();
-  const tabs: { label: string; view: string; dotColor?: string; group?: number; groupColor?: string; plugin?: { id: string } }[] = [
-    { label: 'claude', view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' },
-  ];
+  const tabs: { label: string; view: string; dotColor?: string; group?: number; groupColor?: string; plugin?: { id: string } }[] = open
+    .map((label) => ({ label, view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' }));
   if (sessionsTab) tabs.push({ label: sessionsTab.label, view: 'plugin', plugin: { id: 'sessions' } });
   const managers = {
     remote: { liveEntries: () => entries, detach, close: vi.fn() },
     tab: {
       tabs,
-      byLabel: (label: string) => (label === 'claude'
+      byLabel: (label: string) => (open.includes(label)
         ? { label, view: 'harness', title: undefined }
         : undefined),
-      findIndex: (label: string) => (label === 'claude' ? 0 : -1),
+      findIndex: (label: string) => (open.includes(label) ? open.indexOf(label) : -1),
       closeTab,
       setActiveTab: vi.fn(),
       cur: () => ({ label: 'janus' }),
@@ -179,6 +180,27 @@ describe('SessionsManager detach', () => {
     expect(order).toEqual(['detach', 'closeTab']);
   });
 
+  // The launching tab is closed; the joined one keeps the channel alive. The detach raised on the
+  // surviving row must reach `RemoteManager.detach` — which withholds `finish()`'s frames — before
+  // any tab close, exactly as a detach from the launching row does.
+  it('parks from a surviving row with the frames withheld, when the launching tab is gone', () => {
+    const order: string[] = [];
+    const h = harness([entry({ labels: new Set(['claude', 'bekir']) })], undefined, ['bekir']);
+    h.sessions.view();
+    expect(h.sessions.view().map((row) => row.label)).toEqual(['bekir']);
+    h.detach.mockImplementation((label: string) => {
+      order.push(`detach:${label}`);
+      const index = h.entries.findIndex((candidate) => candidate.labels.has(label));
+      if (index !== -1) h.entries.splice(index, 1);
+      return true;
+    });
+    h.closeTab.mockImplementation(() => { order.push('closeTab'); });
+    expect(h.sessions.detach('bekir')).toBe(true);
+    expect(order).toEqual(['detach:bekir', 'closeTab']);
+    expect(loadRemoteSessions()).toHaveLength(1);
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached' });
+  });
+
   it('leaves the record in place, so the row becomes detached rather than disappearing', () => {
     const h = harness([entry()]);
     h.sessions.view();
@@ -264,6 +286,11 @@ describe('SessionsManager offers', () => {
   it('refuses detach on a row that is not the launching one', () => {
     const h = harness([entry({ labels: new Set(['claude', 'bekir']) })]);
     expect(h.sessions.offers('detach', { label: 'bekir' })).toBeUndefined();
+  });
+
+  it('hands the channel verbs to a surviving row when the launching tab is closed', () => {
+    const h = harness([entry({ labels: new Set(['claude', 'bekir']) })], undefined, ['bekir']);
+    expect(h.sessions.offers('detach', { label: 'bekir' })).toMatchObject({ label: 'bekir' });
   });
 
   it('refuses a verb for a label no row names at all', () => {

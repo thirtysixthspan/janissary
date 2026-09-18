@@ -130,6 +130,41 @@ describe('composeSessionRows live channels', () => {
   });
 });
 
+// The channel survives its launching tab's closure while joined tabs keep it alive; the destroy-only
+// path this replaces closed the last tab and took the park option with it.
+describe('composeSessionRows channels without their launching member', () => {
+  function launchAbsent(overrides: Partial<SessionChannel> = {}): SessionChannel {
+    return channel({
+      members: [{ label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 }],
+      ...overrides,
+    });
+  }
+
+  it('offers the park path on a surviving row of a launch-member-less channel', () => {
+    const [row] = composeSessionRows(snapshot({ channels: [launchAbsent()] }));
+    expect(row.actions).toEqual(['focus', 'detach']);
+    expect(row.joined).toBe(true);
+  });
+
+  it('offers try-now detach on a surviving row while the channel is reconnecting', () => {
+    const [row] = composeSessionRows(snapshot({ channels: [launchAbsent({ reconnecting: true })] }));
+    expect(row.actions).toEqual(['focus', 'reattach', 'detach']);
+  });
+
+  it('keeps a channel with its launching member present at per-member actions', () => {
+    const rows = composeSessionRows(snapshot({
+      channels: [channel({
+        members: [
+          { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
+          { label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 },
+        ],
+      })],
+    }));
+    expect(rows[0].actions).toEqual(['focus', 'detach']);
+    expect(rows[1].actions).toEqual(['focus', 'close']);
+  });
+});
+
 describe('composeSessionRows ssh tabs', () => {
   it('lists an ssh tab as its own active row with no session', () => {
     const [row] = composeSessionRows(snapshot({

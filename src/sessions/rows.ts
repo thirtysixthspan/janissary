@@ -72,9 +72,12 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
   return channel.reconnecting ? 'reconnecting' : 'active';
 }
 
-// The launching row of a live channel is the only one that offers `detach`, because a detach acts on
-// the whole channel: one ssh connection serves every tab riding it, so a per-tab detach would have
-// to keep the connection up for the others and would mean nothing.
+// The launching row of a live channel is where the channel-level verbs live, because a detach acts
+// on the whole channel: one ssh connection serves every tab riding it, so a per-tab detach would
+// have to keep the connection up for the others and would mean nothing. On a channel that cannot
+// present its launching row — its tab was closed while the joined ones keep the channel alive —
+// those verbs belong on every surviving row: each is by definition a survivor, and the rows are a
+// view of one thing.
 //
 // `detach` is offered even while provisioning. The row's state is what says it cannot be pressed
 // yet, so the control stays where the eye expects it rather than appearing once the clone lands.
@@ -90,6 +93,7 @@ function liveActions(launching: boolean, reconnecting: boolean): RemoteSessionAc
 
 function liveRows(channel: SessionChannel): RemoteSessionView[] {
   const state = liveState(channel);
+  const launchAbsent = channel.members.every((member) => member.label !== channel.launchLabel);
   return channel.members.map((member) => ({
     id: member.label,
     host: channel.host,
@@ -100,7 +104,7 @@ function liveRows(channel: SessionChannel): RemoteSessionView[] {
     destination: channel.destination,
     workspace: channel.workspace,
     joined: member.label !== channel.launchLabel,
-    actions: liveActions(member.label === channel.launchLabel, state === 'reconnecting'),
+    actions: liveActions(launchAbsent || member.label === channel.launchLabel, state === 'reconnecting'),
     label: member.label,
     ...(channel.session !== undefined && { session: channel.session }),
   }));

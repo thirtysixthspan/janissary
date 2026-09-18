@@ -57,7 +57,11 @@ backoff wait.
 It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up
 for the others and would mean nothing — so it sits on the launching row alone. It is unavailable
-while the session is still provisioning: there is nothing to come back to yet.
+while the session is still provisioning: there is nothing to come back to yet. When the launching tab
+has been closed while joined tabs keep the connection alive, the launching row cannot be presented
+and the whole connection would otherwise be destructible only — so the surviving rows carry the
+launching row's actions instead, and raising detach on any of them parks the shared session the same
+way.
 
 A detach is refused outright for any session that could not be listed afterwards — one still being
 prepared, one the host never named, or one whose workspace has nothing running in it — and the
