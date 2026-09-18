@@ -72,7 +72,7 @@ export function AgentTabBody({
         onSplit={onSplit}
         remoteSession={current.remote === undefined
           ? undefined
-          : remoteSessionControl(client, current.label, current.remote, current.busy && current.cwd === undefined)}
+          : remoteSessionControl(client, current.label, current.remote)}
       />
       <div className="main">
         <Transcript

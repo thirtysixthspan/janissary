@@ -46,7 +46,7 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
         onSplit={onSplit}
         remoteSession={tab.remote === undefined
           ? undefined
-          : remoteSessionControl(client, tab.label, tab.remote, tab.busy && tab.cwd === undefined)}
+          : remoteSessionControl(client, tab.label, tab.remote)}
       />
       <div className="main">
         <Transcript

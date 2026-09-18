@@ -85,7 +85,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         onSplit={onSplit}
         remoteSession={remote === undefined
           ? undefined
-          : remoteSessionControl(client, label, remote, harness.status === 'provisioning')}
+          : remoteSessionControl(client, label, remote)}
       />
       {isExited && (
         <div className="harness-exited">

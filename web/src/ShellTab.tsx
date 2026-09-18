@@ -45,7 +45,7 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
         flags={flags}
         remote={remote}
         onSplit={onSplit}
-        remoteSession={remote === undefined ? undefined : remoteSessionControl(client, label, remote, false)}
+        remoteSession={remote === undefined ? undefined : remoteSessionControl(client, label, remote)}
       />
       <div className="harness-body" ref={hostReference}>
         <SelectionOverlay state={selection.view} screen={selection.screen} />

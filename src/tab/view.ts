@@ -69,7 +69,13 @@ export function buildTabView(
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
     remote: tab.remote && {
       ...tab.remote,
+      // Recovery-ish channel facts: neither belongs on what `profile save` persists, and neither can
+      // be answered from the tab. `provisioning` is the channel's own workspace-absence test — the
+      // one detach refuses on — read beside `reconnectingOf` from the same lookup the workspace
+      // prefix already uses.
       ...(reconnectingOf?.(tab.label) === true && { reconnecting: true }),
+      ...(workspaceOf !== undefined && tab.remote !== undefined
+        && workspaceOf(tab.label) === undefined && { provisioning: true }),
     },
     acp,
     connections,

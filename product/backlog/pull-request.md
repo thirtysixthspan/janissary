@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Derive the metadata-row detach control's provisioning state from the live channel, which today is guessed from busy-and-cwd-less on the client.
-
-Existing Issue: `AgentTabBody` in `web/src/agent-tabs/AgentTabBody.tsx` passes `current.busy && current.cwd === undefined` as the control's provisioning signal, so a remote agent tab is treated as "still provisioning" whenever it has a command in flight with no working directory recorded — a state that post-provisioning is nowhere near provisioning, and which leaves the detach control disabled on exactly the live session a user is trying to park. Severity: 4/10
-
-Existing Risk: 4/10 - The detach control on a remote agent tab stays disabled until the tab's first command completes and records a `cwd`, and reappears as disabled again for any later busy cwd-less stretch, so the metadata-row front door of the feature is press-at-nothing exactly when the sessions tab is not open.
-
-Proposal Risk: 2/10 - The control's state source moves to the server and to the same view already carrying `reconnecting`, but a close of the window between channel changes can keep a tab's view stale for the network round trip, so an answered no only proves the state as of the send.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1143: the metadata row's detach control derives provisioning from busy-instead-of-a-remote-fact". Resolve provisioning like `reconnecting` already is: `RemoteTargetView` in `src/protocol/tab.ts` gains an optional `provisioning`, present only when the channel has no workspace directory — the same test `detachRemoteEntry` in `src/remote/reattach.ts` applies before refusing the action — filled in `buildTabView` in `src/tab/view.ts` from `RemoteManager`'s own state beside the `reconnectingOf` read, with its `RemoteTargetView` doc comment extended to explain why both recovery-ish facts are resolved server-side rather than stored on the tab. Then `remoteSessionControl` in `web/src/shared/remote-session-control.ts` takes its provisioning answer from the view instead of its own parameter, and the `provisioning` boolean threaded through `AgentTabBody` in `web/src/agent-tabs/AgentTabBody.tsx`, `HarnessTab`'s `harness.status === 'provisioning'` and `ShellTab` call sites collapses to one source. Extend `src/tab/view.test.ts` with the flag only-when-true and only-for-absent-workspace cases; the harness-path coverage in `web/src/harness/HarnessTab.test.tsx` and the `AgentTabMeta` control cases keep passing. The one regression nothing covers today is the shell-tab path, which currently passes `false` unconditionally — verify it against the same state, not by hand.
-
 * Reconcile the store's single-writer premise with the same pull request's narrower instance-lock rule.
 
 Existing Issue: `src/sessions/store.ts`'s justification for one shared `remote-sessions.json` is that `acquireLock` "already refuses a second janissary in one project directory — there is no second writer to race with", but the same pull request teaches the lock to treat a recorded pid it cannot signal as stale (`isOwnInstanceAlive`, `src/instance-lock.ts`), so two janissary instances running under different accounts in one shared directory are now both admitted, and each rewrites the other's record file out from under it at every mirror. Severity: 3/10

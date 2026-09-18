@@ -40,7 +40,8 @@ describe('buildTabView', () => {
     const tab = makeTab('claude', '#fff');
     tab.remote = { address: 'devbox', host: 'devbox' };
     const view = buildTabView(
-      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined, undefined, () => true,
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/ws', () => true,
     );
     expect(view.remote).toEqual({ address: 'devbox', host: 'devbox', reconnecting: true });
   });
@@ -49,9 +50,40 @@ describe('buildTabView', () => {
     const tab = makeTab('claude', '#fff');
     tab.remote = { address: 'devbox', host: 'devbox' };
     const view = buildTabView(
-      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined, undefined, () => false,
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/ws', () => false,
     );
     expect(view.remote).toEqual({ address: 'devbox', host: 'devbox' });
+  });
+
+  // The provisioning test is the channel's own workspace-absence test — the one detach refuses on —
+  // so a busy cwd-less stretch on a live session can never read as still provisioning.
+  it('carries the channel\'s provisioning state onto the remote target', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      (label: string) => ({ [label]: undefined })[label], () => false,
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox', provisioning: true });
+  });
+
+  it('drops the provisioning key once the channel\'s workspace has landed', () => {
+    const tab = makeTab('claude', '#fff');
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (path) => path, undefined,
+      () => '/srv/proj/.janissary/workspace/claude',
+    );
+    expect(view.remote).toEqual({ address: 'devbox', host: 'devbox' });
+  });
+
+  it('never marks a non-remote tab provisioning, even with a local workspace', () => {
+    const tab = makeTab('agent-1', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
+    expect(view.remote).toBeUndefined();
+    expect('provisioning' in (view.remote ?? {})).toBe(false);
   });
 
   it('projects only the public plugin envelope onto the wire', () => {
