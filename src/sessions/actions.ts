@@ -58,9 +58,25 @@ function park(
   return managers.remote.detach(label) ? { held, host, what } : undefined;
 }
 
+// Why a live channel has no record, in the user's terms. These are the three things `recordOf`
+// declines for, and they read differently: one is a wait, one is a fault, one is a session there
+// would be no way to describe.
+function detachRefusal(entry: RemoteEntry): string {
+  if (entry.workspaceDir === undefined) return 'cannot be detached yet — its workspace is still being prepared.';
+  if (!entry.channel.sessionId) return 'cannot be detached — the host never named the session.';
+  return 'cannot be detached — nothing is running in its workspace to come back to.';
+}
+
 function detach(managers: Managers, record: RemoteSessionRecord | undefined, label: string): SessionActionResult {
   const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
   if (!entry) return REFUSED;
+  // Refused before anything is dropped. A session parked with no record left the peer holding its
+  // workspace on the far side for the whole seven-day expiry with no row, no reattach path, and
+  // nothing to end it by — the invisible infrastructure this feature exists to end.
+  if (!record) {
+    report(managers, line(entry.workspaceLabel, entry.address.host, detachRefusal(entry)));
+    return REFUSED;
+  }
   const parked = park(managers, entry, label);
   if (!parked) return REFUSED;
   for (const owner of parked.held) {
@@ -68,9 +84,7 @@ function detach(managers: Managers, record: RemoteSessionRecord | undefined, lab
     if (index !== -1) managers.tab.closeTab(index);
   }
   report(managers, line(parked.what, parked.host, 'detached — reattach it from the sessions tab.'));
-  return record === undefined
-    ? { ran: true }
-    : { ran: true, record: { ...record, activity: Date.now() }, clearFailure: record.session };
+  return { ran: true, record: { ...record, activity: Date.now() }, clearFailure: record.session };
 }
 
 function endedRowFrom(record: RemoteSessionRecord): SessionEnded {

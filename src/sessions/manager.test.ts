@@ -3,6 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
 import type { RemoteEntry } from '../remote/reattach.js';
 import { SessionsManager } from './manager.js';
@@ -166,6 +167,40 @@ describe('SessionsManager detach', () => {
   it('is refused for a label it does not hold', () => {
     const h = harness([entry()]);
     expect(h.sessions.detach('nothing-here')).toBe(false);
+  });
+
+  // The metadata-row path: it reaches the manager through the controller without the list ever being
+  // composed, and composing the list is what used to be the only thing that wrote the record. Parked
+  // with none, the peer would hold its workspace for a week with nothing able to list it.
+  it('records the session even when the list was never composed', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.detach('claude')).toBe(true);
+    expect(loadRemoteSessions()).toMatchObject([{ session: SESSION, launchLabel: 'claude' }]);
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', session: SESSION });
+  });
+
+  // A peer whose workspace holds nothing answers `session-state` with an empty list, which a reattach
+  // reads as "this session is over" — so there is nothing to come back to and the transport stays.
+  it('is refused for a channel with nothing running in its workspace', () => {
+    const h = harness([entry({
+      channel: { sessionId: SESSION, spawnedProcesses: () => [] },
+    } as unknown as Partial<RemoteEntry>)]);
+    expect(h.sessions.detach('claude')).toBe(false);
+    expect(h.detach).not.toHaveBeenCalled();
+    expect(h.closeTab).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(), 'remote-session', 'janus',
+      'claude on devbox cannot be detached — nothing is running in its workspace to come back to.',
+    );
+  });
+
+  it('gives a still-provisioning session its own refusal wording', () => {
+    const h = harness([entry({ workspaceDir: undefined })]);
+    expect(h.sessions.detach('claude')).toBe(false);
+    expect(notify).toHaveBeenCalledWith(
+      expect.anything(), 'remote-session', 'janus',
+      'claude on devbox cannot be detached yet — its workspace is still being prepared.',
+    );
   });
 });
 

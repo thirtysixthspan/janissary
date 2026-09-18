@@ -59,6 +59,11 @@ what will go. It acts on the whole connection — a per-tab detach would have to
 for the others and would mean nothing — so it sits on the launching row alone. It is unavailable
 while the session is still provisioning: there is nothing to come back to yet.
 
+A detach is refused outright for any session that could not be listed afterwards — one still being
+prepared, one the host never named, or one whose workspace has nothing running in it — and the
+reason is recorded in the notifications feed rather than left as a control that does nothing. The
+session stays exactly as it was: nothing is given up locally and nothing is parked on the host.
+
 **End session** applies to a parked session and destroys it: janissary reconnects far enough to tell
 the peer to stop its processes and remove its remote workspace. It asks for confirmation. A live
 session carries no end button, because closing its tabs already does that.
@@ -101,7 +106,8 @@ dropped, rather than being left holding a remote workspace for a week with nothi
 
 Each action records one line in the notifications feed, so the change survives the tabs it happened
 to: `<what> on <host> detached — reattach it from the sessions tab.`, `<what> on <host> reattached.`,
-`<what> on <host> ended.`, and `<what> on <host> forgotten — its record was removed.` See
+`<what> on <host> ended.`, and `<what> on <host> forgotten — its record was removed.` A refused
+detach records its own line naming why, so an action that declines to run is never silent. See
 [[notifications]].
 
 ### The control on a remote tab

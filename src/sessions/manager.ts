@@ -104,6 +104,11 @@ export class SessionsManager {
   dispose(): void { this.stamps.clear(); }
 
   private act(action: SessionAction): boolean {
+    // Every verb resolves a record, and the record has to describe what is live *now* rather than
+    // what the last read of the list happened to see. A detach raised from a tab's metadata row
+    // never composes the list at all, and parking a session with no record written would leave the
+    // peer holding its workspace on its host with nothing able to list it or reach it.
+    this.mirror();
     const result = runSessionAction(this.managers, this, action, (later) => this.apply(later));
     this.apply(result);
     return result.ran;
