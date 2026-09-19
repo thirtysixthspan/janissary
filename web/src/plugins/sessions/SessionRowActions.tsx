@@ -1,18 +1,18 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faLinkSlash, faPlug, faStop, faTrash, faXmark,
+  faLink, faStop, faTrash, faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction } from '@shared/plugins/sessions/shared';
 
 // The per-row buttons. Icon-only and right-aligned, the way the conversations list's are, with the
 // verb in the accessible label so a row reads correctly without the icon.
 
-type Presentation = { icon: typeof faPlug; label: string };
+type Presentation = { icon: typeof faLink; label: string };
 
 const PRESENTATION: Record<Exclude<SessionRowAction, 'focus'>, Presentation> = {
-  reattach: { icon: faPlug, label: 'Reattach' },
-  detach: { icon: faLinkSlash, label: 'Detach' },
+  reattach: { icon: faLink, label: 'Reconnect' },
+  detach: { icon: faLink, label: 'Disconnect' },
   end: { icon: faStop, label: 'End session' },
   forget: { icon: faTrash, label: 'Forget session' },
   close: { icon: faXmark, label: 'Close' },
@@ -46,6 +46,7 @@ export function SessionRowActions({
             key={action}
             type="button"
             disabled={disabled}
+            data-action={action}
             title={label}
             aria-label={`${label} ${row.name}`}
             onClick={(event) => { event.stopPropagation(); onAction(action); }}

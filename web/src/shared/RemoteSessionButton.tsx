@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLinkSlash, faPlug, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { faLink, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // The detach/reattach control beside a remote tab's host chip — the second front door onto the same
@@ -14,11 +14,12 @@ import { ConfirmDialog } from './ConfirmDialog';
 export type RemoteSessionState = 'provisioning' | 'active' | 'reconnecting';
 
 // Reattach on a live tab means "try now" — it collapses the reconnect backoff rather than opening a
-// connection of its own.
+// connection of its own. Both states carry the link icon: green would be redundant here, since the
+// entry asks for the metadata row's control to be light on dark.
 function presentation(state: RemoteSessionState) {
   return state === 'reconnecting'
-    ? { action: 'reattach' as const, icon: faPlug, label: 'Reattach' }
-    : { action: 'detach' as const, icon: faLinkSlash, label: 'Detach' };
+    ? { action: 'reattach' as const, icon: faLink, label: 'Reconnect' }
+    : { action: 'detach' as const, icon: faLink, label: 'Disconnect' };
 }
 
 export function RemoteSessionButton({
@@ -69,8 +70,8 @@ export function RemoteSessionButton({
       </button>
       {confirming && (
         <ConfirmDialog
-          title={`Detach this session on ${host}? Its tabs will close.`}
-          confirmLabel="Detach"
+          title={`Disconnect this session on ${host}? Its tabs will close.`}
+          confirmLabel="Disconnect"
           onCancel={() => { setConfirming(false); }}
           onConfirm={() => {
             setConfirming(false);

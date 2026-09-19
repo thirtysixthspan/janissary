@@ -46,7 +46,10 @@ shows what a single detach would take with it.
 
 ### Actions
 
-Every row offers what it can actually do, and nothing else.
+Every row offers what it can actually do, and nothing else. The give-and-take copy of the link
+control reads Disconnect — green, because taking a session away is the deliberate, recoverable
+direction — and Reconnect — red, because it reaches for a session that is not here. The other
+row buttons keep their own verbs.
 
 **Reattach** applies to a parked session, and to a live one whose transport is being retried. On a
 parked session it opens one ssh connection and brings the whole peer back, opening a tab for each
@@ -133,7 +136,8 @@ metadata row. See [[notifications]].
 
 ### The control on a remote tab
 
-Every remote tab's metadata row carries the same control beside its host chip: detach while the
+Every remote tab's metadata row carries the same control, right-aligned among the row's other
+buttons and light on dark: detach while the
 session is healthy, reattach while its transport is being retried. It is disabled while the tab is
 provisioning and shows a spinner while an action is in flight. The spinner clears when the action is
 answered — including when it was refused, and including when nothing answers at all — so the control

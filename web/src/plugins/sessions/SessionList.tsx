@@ -11,7 +11,7 @@ const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 // Detach and end are the two that take something away — tabs in one case, a remote workspace in the
 // other — so both ask first. Forget has no dialog: it removes a record and touches nothing.
 const CONFIRMATIONS: Partial<Record<SessionRowAction, { verb: string; button: string }>> = {
-  detach: { verb: 'Detach', button: 'Detach' },
+  detach: { verb: 'Disconnect', button: 'Disconnect' },
   end: { verb: 'End', button: 'End session' },
 };
 

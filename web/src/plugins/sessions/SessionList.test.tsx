@@ -97,8 +97,8 @@ describe('SessionList rendering', () => {
 describe('SessionList buttons', () => {
   it('offers only the verbs the row carries', () => {
     list([row({ actions: ['focus', 'detach'] })]);
-    expect(screen.getByLabelText('Detach claude')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Reattach claude')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Disconnect claude')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Reconnect claude')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('End session claude')).not.toBeInTheDocument();
   });
 
@@ -110,7 +110,7 @@ describe('SessionList buttons', () => {
 
   it('disables detach while the workspace is still provisioning', () => {
     list([row({ state: 'provisioning' })]);
-    expect(screen.getByLabelText('Detach claude')).toBeDisabled();
+    expect(screen.getByLabelText('Disconnect claude')).toBeDisabled();
   });
 
   // A second End would open a second ssh connection to the same peer and leak the first, since the
@@ -120,19 +120,19 @@ describe('SessionList buttons', () => {
       state: 'detached', actions: ['reattach', 'end', 'forget'], session: 's1', ending: true,
     })]);
     expect(screen.getByLabelText('End session claude')).toBeDisabled();
-    expect(screen.getByLabelText('Reattach claude')).toBeDisabled();
+    expect(screen.getByLabelText('Reconnect claude')).toBeDisabled();
   });
 
   it('leaves them pressable on a parked row with no attempt running', () => {
     list([row({ state: 'detached', actions: ['reattach', 'end'], session: 's1' })]);
     expect(screen.getByLabelText('End session claude')).toBeEnabled();
-    expect(screen.getByLabelText('Reattach claude')).toBeEnabled();
+    expect(screen.getByLabelText('Reconnect claude')).toBeEnabled();
   });
 
   it('raises reattach straight away, with no confirmation', () => {
     const fixture = capabilities();
     list([row({ state: 'detached', actions: ['reattach'], session: 's1' })], fixture.value);
-    fireEvent.click(screen.getByLabelText('Reattach claude'));
+    fireEvent.click(screen.getByLabelText('Reconnect claude'));
     expect(fixture.intent).toHaveBeenCalledWith('reattach', { id: 'claude' });
   });
 
@@ -163,12 +163,12 @@ describe('SessionList confirmations', () => {
   it('asks before detaching, since tabs disappear', () => {
     const fixture = capabilities();
     list([row()], fixture.value);
-    fireEvent.click(screen.getByLabelText('Detach claude'));
+    fireEvent.click(screen.getByLabelText('Disconnect claude'));
 
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('Detach claude on devbox?');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Disconnect claude on devbox?');
     expect(fixture.intent).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+    fireEvent.click(screen.getByText('Disconnect', { selector: '.modal-button' }));
     expect(fixture.intent).toHaveBeenCalledWith('detach', { id: 'claude' });
   });
 
@@ -185,7 +185,7 @@ describe('SessionList confirmations', () => {
   it('raises nothing when the confirmation is cancelled', () => {
     const fixture = capabilities();
     list([row()], fixture.value);
-    fireEvent.click(screen.getByLabelText('Detach claude'));
+    fireEvent.click(screen.getByLabelText('Disconnect claude'));
     fireEvent.click(screen.getByText('Cancel', { selector: '.modal-button' }));
 
     expect(fixture.intent).not.toHaveBeenCalled();

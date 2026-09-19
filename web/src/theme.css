@@ -257,6 +257,12 @@ html, body, #root {
   font-size: 13px; padding: 0 4px; line-height: 1;
 }
 .tab-connections:hover, .tab-schedule:hover { color: var(--fg); }
+.tab-remote-session {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.tab-remote-session:hover { color: var(--fg); }
+.tab-remote-session:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
 .tab-connections.status-window-button-empty, .tab-schedule.status-window-button-empty {
   color: var(--faint); cursor: default;
 }

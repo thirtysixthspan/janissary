@@ -264,7 +264,7 @@ describe('HarnessTab', () => {
         remote={{ address: 'devbox', host: 'devbox', reconnecting: true }}
       />,
     );
-    expect(getByLabelText('Reattach session on devbox')).toBeInTheDocument();
+    expect(getByLabelText('Reconnect session on devbox')).toBeInTheDocument();
   });
 
   it('offers detach on a tab whose remote target is healthy', () => {
@@ -274,7 +274,7 @@ describe('HarnessTab', () => {
         remote={{ address: 'devbox', host: 'devbox' }}
       />,
     );
-    expect(getByLabelText('Detach session on devbox')).toBeInTheDocument();
+    expect(getByLabelText('Disconnect session on devbox')).toBeInTheDocument();
   });
 
   it('does not show an exited banner while running', () => {

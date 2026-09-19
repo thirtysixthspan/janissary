@@ -15,4 +15,11 @@ describe('sessions stylesheet', () => {
     expect(buttons).toContain('color: var(--muted)');
     expect(sessions).toContain('.session-list-header .plugin-actions button:hover { color: var(--fg); }');
   });
+
+  it('colors the row link buttons by what pressing them would do', () => {
+    expect(sessions)
+      .toContain(".session-row-actions button[data-action='detach'] { color: var(--success); }");
+    expect(sessions)
+      .toContain(".session-row-actions button[data-action='reattach'] { color: var(--error); }");
+  });
 });

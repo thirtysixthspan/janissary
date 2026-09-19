@@ -39,13 +39,6 @@ export function AgentTabMeta({
   return (
     <div className="tab-meta">
       {remote !== undefined && <RemoteChip remote={remote} />}
-      {remote !== undefined && remoteSession !== undefined && (
-        <RemoteSessionButton
-          state={remoteSession.state}
-          host={remote.host}
-          onAction={remoteSession.onAction}
-        />
-      )}
       <span className="tab-cwd">{cwdDisplay ?? cwd}</span>
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}
@@ -117,6 +110,13 @@ export function AgentTabMeta({
           />
         )}
         {onSplit && <SplitTabButton onClick={onSplit} />}
+        {remote !== undefined && remoteSession !== undefined && (
+          <RemoteSessionButton
+            state={remoteSession.state}
+            host={remote.host}
+            onAction={remoteSession.onAction}
+          />
+        )}
       </span>
     </div>
   );

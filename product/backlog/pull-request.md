@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the detach icon should use the font awesome link icon. When connected it should be green and when disconnected it should be red. in the green state the tool tip should say disconnect. in the red state the tool tip should say reconnect.  in the metadatarow row of an agent or harness the detach icon should be light on dark and be right aligned with the other buttons in the row.
-
 * when a the remote channel has no more dependencies (agents, harnesses, file navigators) it should be closed and the remote-serve instance terminated so as not to have any dangling servers.
 
 * the sessions tab should be auto refreshed when the tab receives focus
