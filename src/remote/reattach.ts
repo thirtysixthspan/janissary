@@ -140,6 +140,14 @@ export function endRemoteProcess(managers: Managers, entry: RemoteEntry, label: 
   if (!live) terminateRemoteEntry(managers, entry, false);
 }
 
+// The session no longer exists, so its list record does not survive it either — otherwise a closed
+// harness would leave a detached row for a peer that was actually shut down, and the same session
+// would read as two lines in the list. Guarded because a `Managers` without a settled sessions
+// manager (test harnesses) keeps working.
+export function dropEndedSessionRecord(managers: Managers, session: string | undefined): void {
+  if (session !== undefined) managers.sessions?.dropSession(session);
+}
+
 /**
  * Give up a live session locally while deliberately leaving it running on its host — the sibling of
  * `terminateRemoteEntry`, and the opposite decision. Everything the ordinary last-label release does
@@ -182,9 +190,11 @@ export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, ann
   // event is one line however many exits it passes through.
   else entry.announceEnds = false;
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
+  const session = entry.channel.sessionId;
   entry.channel.finish();
   entry.channel.close();
   const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
+  dropEndedSessionRecord(managers, session);
   return handlers;
 }

@@ -130,6 +130,17 @@ export class SessionsManager {
     return this.all().find((record) => record.session === session);
   }
 
+  // The session is over — its channel reached a genuine end through the remote lifecycle, not
+  // through a sessions action narrating itself. The record goes, so the list carries no detached row
+  // for a peer that was actually shut down; a session the action layer narrated drops its own record.
+  dropSession(session: string): void {
+    if (this.all().every((record) => record.session !== session)) return;
+    this.records = withoutRemoteSession(this.all(), session);
+    this.failures.delete(session);
+    this.persist();
+    this.changed();
+  }
+
   dispose(): void { this.live.unsubscribe(); this.stamps.clear(); this.ending.clear(); }
 
   private act(action: SessionAction): boolean {
@@ -172,6 +183,7 @@ export class SessionsManager {
     const now = Date.now();
     let changed = false;
     for (const entry of this.managers.remote.liveEntries()) {
+      if (entry.closed) continue;
       const record = recordOf(entry, now);
       if (!record) continue;
       const existing = this.all().find((candidate) => candidate.session === record.session);
@@ -197,6 +209,7 @@ export class SessionsManager {
     // would filter the record out too — between them the row simply vanished for the length of the
     // attempt, which is when the user most needs to see it.
     const channels = this.managers.remote.liveEntries()
+      .filter((entry) => !entry.closed)
       .filter((entry) => [...entry.labels].some((label) => !isEndSessionLabel(label)))
       .map((entry) => {
         if (entry.channel.sessionId) live.add(entry.channel.sessionId);

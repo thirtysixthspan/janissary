@@ -52,6 +52,7 @@ function managerHarness(ready = true, session?: string) {
   const write = vi.fn();
   const reassignTransports = vi.fn();
   const closeTab = vi.fn();
+  const dropSession = vi.fn();
   const managers = {
     pty: {
       spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
@@ -60,6 +61,7 @@ function managerHarness(ready = true, session?: string) {
       }),
       reassignTransports,
     },
+    sessions: { dropSession },
     tab: {
       findIndex: vi.fn(() => -1),
       closeTab,
@@ -73,7 +75,7 @@ function managerHarness(ready = true, session?: string) {
   remote.open('creator', address('devbox'), '/local', handlers);
   transport?.onData(`${encodeHandshake('/remote', session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
-  return { remote, handlers, kill, write, reassignTransports, closeTab, transport: () => transport };
+  return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, transport: () => transport };
 }
 
 describe('RemoteManager shared channels', () => {
@@ -201,6 +203,27 @@ describe('RemoteManager shared channels', () => {
     expect(shutdownIndex).toBeGreaterThanOrEqual(0);
     expect(h.kill).toHaveBeenCalledOnce();
     expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
+  });
+
+  // The session record outlives a launch so it can be reattached or ended — but not outlive the
+  // session itself. Without the drop, a closed harness leaves a detached row behind a peer that was
+  // actually shut down, and the same session reads as two lines in the list.
+  it('drops the session record when the last release ends the channel', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.release('creator');
+    expect(h.dropSession).toHaveBeenCalledWith('12345678-1234-1234-1234-123456789abc');
+  });
+
+  it('drops no record when the channel was never given a session id', () => {
+    const h = managerHarness();
+    h.remote.release('creator');
+    expect(h.dropSession).not.toHaveBeenCalled();
+  });
+
+  it('drops the session record on an explicit close', () => {
+    const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
+    h.remote.close('creator');
+    expect(h.dropSession).toHaveBeenCalledWith('12345678-1234-1234-1234-123456789abc');
   });
 
   it('writes a shutdown frame to every transport before killing it on closeAll', () => {

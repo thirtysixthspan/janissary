@@ -156,6 +156,33 @@ describe('SessionsManager view', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].state).toBe('active');
   });
+
+  // A closed entry is nobody's session — its channel finished, and `terminateRemoteEntry` was the
+  // one to drop the record. Re-mirroring it would undo that drop and put the detached row back.
+  it('lets a closed entry write no record and resurrect none', () => {
+    const h = harness([entry({ closed: true }) as unknown as RemoteEntry]);
+    saveRemoteSessions([record()]);
+    expect(h.sessions.view()).toHaveLength(1);
+    expect(h.sessions.view()[0].state).toBe('detached');
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+});
+
+describe('SessionsManager dropSession', () => {
+  it('removes the record from memory and from the file, and the row with it', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    h.sessions.dropSession(SESSION);
+    expect(loadRemoteSessions()).toEqual([]);
+    expect(h.sessions.view()).toEqual([]);
+  });
+
+  it('does nothing for a session it holds no record of', () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    h.sessions.dropSession('other-session');
+    expect(loadRemoteSessions()).toMatchObject([{ session: SESSION }]);
+  });
 });
 
 describe('SessionsManager detach', () => {

@@ -6,7 +6,7 @@ import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
 import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
-import { Reattach, detachRemoteEntry, dropRemoteLabels, emitSessionsChanged, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
+import { Reattach, detachRemoteEntry, dropEndedSessionRecord, dropRemoteLabels, emitSessionsChanged, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
 import { answerSessionState, handleReattachResult, type RemoteResume } from './resume.js';
 import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
 import { remoteChannelClosed } from './manager-closed.js';
@@ -227,10 +227,14 @@ export class RemoteManager {
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
     else {
+      // Captured before `finish()` — fifteen lines below, the channel forgets its own session id as
+      // part of closing.
+      const session = entry.channel.sessionId;
       entry.reconnect.stop();
       entry.channel.finish();
       this.channelClosed(entry);
       entry.channel.close();
+      dropEndedSessionRecord(this.managers, session);
     }
     this.sessionsChanged();
     return true;

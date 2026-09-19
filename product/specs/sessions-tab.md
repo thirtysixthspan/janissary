@@ -40,6 +40,10 @@ The state is one of `provisioning` (a remote tab whose workspace clone has not l
 `detached` (parked on its host, awaiting reattachment), or `ended` (a session established to be
 over).
 
+A session the channel lifecycle ends outright leaves no row at all: its record is dropped with the
+channel, so a harness the user closes reads as one ending — never as a second, detached line for a
+peer that was already shut down. Only a session parked while its peer stays alive keeps a row.
+
 Rows are ordered by most recent activity, newest first. Rows sharing a connection are indented under
 the row that launched it, and a group stays together wherever its launching row sorts — so one glance
 shows what a single detach would take with it.
