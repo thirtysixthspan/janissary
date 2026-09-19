@@ -2,8 +2,6 @@
 
 # pull-request
 
-* sessions table should be keyboard and mouse navigatable with a mouse hover highlight row and a keyboard caret highlight row.
-
 * label the sessions tab 'sessions' not 'Sessions'
 
 * the refresh icon in the metadata row should be light on dark.
