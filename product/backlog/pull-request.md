@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the refresh icon in the metadata row should be light on dark.
-
 * it should require a mouse double-click on a session row to cause the related tab to be focused, not a single click. A return should cause the tab indicated by the current keyboard caret highlighted to be focused.
 
 * the conversations table should be organized host, type, tab name, state, time, actions. provide column names in the table

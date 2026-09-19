@@ -4,6 +4,14 @@
 .session-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
 .session-empty { padding: 8px 12px; color: var(--muted); }
 .session-list-header { justify-content: flex-end; }
+/* The header's refresh and split buttons, styled like the host icon buttons they sit beside — as the
+   conversation list styles its own metadata-row buttons. Without this the refresh icon arrives with
+   the browser's default button chrome and reads bright against the dark header. */
+.session-list-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.session-list-header .plugin-actions button:hover { color: var(--fg); }
 .session-rows { display: flex; flex-direction: column; }
 .session-row {
   display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
