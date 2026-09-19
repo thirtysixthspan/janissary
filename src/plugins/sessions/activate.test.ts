@@ -56,14 +56,14 @@ function payloadOf(rows: RemoteSessionView[] = ROWS): { entries: SessionRow[] } 
 }
 
 describe('sessions plugin command', () => {
-  it('opens the singleton list titled Sessions with the rows the topic carries', () => {
+  it("opens the singleton list titled 'sessions' with the rows the topic carries", () => {
     const fixture = fakeCapabilities();
 
     activate().command?.('', fixture.capabilities);
 
     expect(fixture.opened).toHaveLength(1);
     expect(fixture.opened[0].key).toBe('sessions');
-    expect(fixture.opened[0].value.title).toBe('Sessions');
+    expect(fixture.opened[0].value.title).toBe('sessions');
     expect(payloadOf().entries.map((row) => row.id)).toEqual(['claude', 'session-2:rpty1']);
   });
 

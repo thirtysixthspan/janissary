@@ -16,7 +16,7 @@ import {
 // `openOrFocusTab` reuses the open tab, `updateTab` and `dockTab` address it, and a second
 // `sessions` focuses what is already there instead of opening a second list.
 const INSTANCE_KEY = 'sessions';
-const TAB_TITLE = 'Sessions';
+const TAB_TITLE = 'sessions';
 const USAGE = 'Usage: sessions [left|right]';
 
 function toPayload(rows: readonly RemoteSessionView[]): SessionsPayload {

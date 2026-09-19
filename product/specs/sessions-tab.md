@@ -13,7 +13,7 @@ park, and pick back up — the way tmux sessions are listed, detached, and reatt
 `sessions` opens the list, or focuses it when it is already open — there is only ever one. `sessions
 left` and `sessions right` dock it into that sidebar, and a bare `sessions` on a docked list returns
 it to the centre. Any other argument is rejected with `Usage: sessions [left|right]`. The tab is
-titled **Sessions**.
+titled **sessions**.
 
 ### What is listed
 
