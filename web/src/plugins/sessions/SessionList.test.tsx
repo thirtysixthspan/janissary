@@ -42,7 +42,7 @@ describe('SessionList rendering', () => {
     expect(screen.getByText('No remote sessions')).toBeInTheDocument();
   });
 
-  it('renders the five columns in the host-provided order', () => {
+  it('renders the rows host, type, tab name, state, time, actions', () => {
     const { container } = list([
       row({ id: 'a', name: 'claude' }),
       row({ id: 'b', name: 'bekir', kind: 'agent' }),
@@ -54,6 +54,14 @@ describe('SessionList rendering', () => {
     expect(container.querySelectorAll('.session-row-host')).toHaveLength(2);
     expect(container.querySelectorAll('.session-row-state')).toHaveLength(2);
     expect(container.querySelectorAll('time')).toHaveLength(2);
+  });
+
+  it('names the columns above the rows, leaving the action column unlabeled', () => {
+    const { container } = list([row()]);
+    const columns = container.querySelector('.session-columns');
+    expect(columns).not.toBeNull();
+    expect([...columns!.querySelectorAll('span')].map((node) => node.textContent))
+      .toEqual(['Host', 'Type', 'Tab', 'State', 'Last activity', '']);
   });
 
   it.each(['provisioning', 'active', 'reconnecting', 'detached', 'ended'] as const)(

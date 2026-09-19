@@ -28,10 +28,11 @@ An empty list reads `No remote sessions`.
 
 ### Row content
 
-Five columns: the bare host, what the row is running, its kind, its state, and how long ago it last
-changed. The second column shows the tab's own name — a harness or agent label, `ssh`, or a
-navigator's abbreviated root. The kind is what the row *is*: `harness`, `agent`, `ssh`, or
-`navigator`, matching the tab it opens or would open. The row's tooltip carries the full destination
+Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
+the bare host, what the row is running, its kind, its state, and how long ago it last changed. The
+third column shows the tab's own name — a harness or agent label, `ssh`, or a navigator's abbreviated
+root. The type is what the row *is*: `harness`, `agent`, `ssh`, or `navigator`, matching the tab it
+opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 
 The state is one of `provisioning` (a remote tab whose workspace clone has not landed yet), `active`,

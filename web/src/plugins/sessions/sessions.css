@@ -13,6 +13,11 @@
 }
 .session-list-header .plugin-actions button:hover { color: var(--fg); }
 .session-rows { display: flex; flex-direction: column; }
+/* The column names sit over the rows in the same grid, so each label lines up with its column. */
+.session-columns {
+  display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px;
+}
 .session-row {
   display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
   gap: 12px; align-items: baseline; width: 100%; text-align: left;
