@@ -159,6 +159,37 @@ describe('SessionList buttons', () => {
   });
 });
 
+describe('SessionList refresh on focus', () => {
+  it('re-reads each time the tab becomes active again, not on mount', () => {
+    const fixture = capabilities();
+    const { rerender } = list([row()], fixture.value);
+    expect(fixture.intent).not.toHaveBeenCalled();
+
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...fixture.value, active: false }} />);
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...fixture.value, active: true }} />);
+    expect(fixture.intent).toHaveBeenCalledWith('refresh', {});
+    expect(fixture.intent).toHaveBeenCalledTimes(1);
+
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...fixture.value, active: false }} />);
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...fixture.value, active: true }} />);
+    expect(fixture.intent).toHaveBeenCalledWith('refresh', {});
+    expect(fixture.intent).toHaveBeenCalledTimes(2);
+  });
+
+  it('sends the intent once per return to the tab', () => {
+    const first = capabilities();
+    const { rerender } = list([row()], first.value);
+    expect(first.intent).not.toHaveBeenCalled();
+
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...first.value, active: false }} />);
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={first.value} />);
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={{ ...first.value, active: false }} />);
+    rerender(<SessionList payload={{ entries: [row()] }} capabilities={first.value} />);
+    expect(first.intent).toHaveBeenCalledTimes(2);
+    expect(first.intent).toHaveBeenCalledWith('refresh', {});
+  });
+});
+
 describe('SessionList confirmations', () => {
   it('asks before detaching, since tabs disappear', () => {
     const fixture = capabilities();

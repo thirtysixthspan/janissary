@@ -29,9 +29,18 @@ export function SessionList({
   const [pending, setPending] = useState<{ row: SessionRow; action: SessionRowAction } | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Focus and refresh ride the same transition: becoming the active tab. The value the list first
+  // renders with is what the command that opened it just read, so re-reading it on mount would be a
+  // refresh nobody asked for — only a later return to the tab is news.
+  const wasActive = useRef(capabilities.active);
+  const { active, intent } = capabilities;
   useEffect(() => {
-    if (capabilities.active) listRef.current?.focus();
-  }, [capabilities.active]);
+    if (active) {
+      listRef.current?.focus();
+      if (!wasActive.current) void intent('refresh', {});
+    }
+    wasActive.current = active;
+  }, [active, intent]);
 
   useEffect(() => {
     if (selected === null) return;
