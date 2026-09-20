@@ -2,9 +2,6 @@
 
 # pull-request
 
-* when an agent is detached - the remote shell is terminated and when reattaching an error occurs:
-Remote shell on 10.27.1.94 ended — start a new agent or shell to continue.
-
 * closing a harness tab generates the following error
 Unhandled pty write error [Error: EIO: i/o error, write] {
   errno: -5,
@@ -12,4 +9,3 @@ Unhandled pty write error [Error: EIO: i/o error, write] {
   syscall: 'write'
 }
 and fails to stop the remote harness or clear the workspace
-

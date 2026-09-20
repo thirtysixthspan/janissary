@@ -154,6 +154,7 @@ describe('ShellManager — which shell a tab gets', () => {
     await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
 
     expect(createRemoteShellMock.mock.calls[0][1]).toBe('rsh9');
+    expect(createRemoteShellMock.mock.calls[0][5]).toBe(true);
   });
 
   // Closing the tab frees the adoption with it: a later tab granted the same label starts its own

@@ -105,11 +105,12 @@ export class ShellManager {
       // while its channel is still the session the adoption was recorded against, and never past a
       // tab close that freed its label.
       const adoption = this.adopted.get(label);
-      const id = adoption && this.managers.remote.get(label)?.sessionId === adoption.session
+      const adopted = adoption !== undefined && this.managers.remote.get(label)?.sessionId === adoption.session;
+      const id = adopted
         ? adoption.id
         : `rsh${++this.remoteShellCounter}`;
       this.adopted.delete(label);
-      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,

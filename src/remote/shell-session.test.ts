@@ -45,6 +45,15 @@ describe('createRemoteShell', () => {
     ]);
   });
 
+  it('attaches to an adopted shell without spawning it again', () => {
+    const { channel, sent } = attachedChannel();
+    const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true);
+
+    expect(sent).toEqual([]);
+    shell.stdin?.write('echo retained\n');
+    expect(sent).toEqual([{ type: 'input', id: 'rsh1', data: 'echo retained\n' }]);
+  });
+
   it('presents a writable stdin and non-emitting stderr', () => {
     const { channel } = attachedChannel();
     const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash');
