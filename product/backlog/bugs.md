@@ -2,6 +2,8 @@
 
 ## ready
 
+* scheduled commands into codex dont cause codex to execute the command although the command is pasted into the harness with a carriage return leaving a multi-line entry awaiting a manual crriage return.
+
 * investigate why opencode is repeatedly reporting a notification of "no harness transcript found" 
 
 ## development
