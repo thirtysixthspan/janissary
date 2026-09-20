@@ -24,7 +24,7 @@ the same file.
 
 | Target tab kind | Delivery |
 | --- | --- |
-| Harness (`view === 'harness'`, `harness.status === 'running'`) | `ptyInput(harness.ptyId, text + '\r')` — raw keystrokes into the PTY, followed by a carriage return so the harness executes the line (matches xterm's own Enter key). |
+| Harness (`view === 'harness'`, `harness.status === 'running'`) | the text typed into the PTY as one burst write, followed by a separately delayed carriage return so the harness executes the line (matches xterm's own Enter key). For codex, whose composer otherwise classifies the burst as a paste and suppresses a quick Enter as a newline, the write is framed with bracketed-paste markers (`ESC[200~ … ESC[201~`) so it takes the explicit-paste path and the delayed Enter always submits. |
 | Agent (`view` undefined or `'agent'`) | `dispatchTo(label, text)` — runs `text` as a command in that tab's own command pipeline; queues behind whatever else is queued if the target is currently busy (see [[agent-command-queue]]). |
 | Harness that has exited | error: `Tab "<label>" is not a running harness.` |
 | Image / page / markdown view | error: `Tab "<label>" does not accept input.` |

@@ -268,6 +268,26 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
     mgr.stop();
   });
 
+  // codex's composer classifies a burst write as a paste and suppresses the quick Enter that
+  // follows it (inserting a newline instead of submitting), so the command is framed as a
+  // bracketed paste — its explicit-paste path clears that state and the delayed Enter submits.
+  it('frames a codex harness prompt as a bracketed paste, then submits with a delayed Enter', () => {
+    const { managers, input } = runningHarness({
+      harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
+    });
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [promptEntry('fix the tests')]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(input).toHaveBeenCalledWith('p1', '\u{1B}[200~fix the tests\u{1B}[201~');
+    expect(input).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(50);
+    expect(input).toHaveBeenCalledWith('p1', '\r');
+    expect(mgr.get('janus')).toEqual([]);
+    mgr.stop();
+  });
+
   // Two entries due on the same tick must not both write their text before either delayed Enter:
   // the harness would read one concatenated prompt followed by an empty submission while both
   // entries counted as fired. At most one is delivered per harness tab per tick.
@@ -336,7 +356,7 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
 
     vi.advanceTimersByTime(1000);
     expect(input).toHaveBeenCalledWith('p1', 'first tab command');
-    expect(input).toHaveBeenCalledWith('p2', 'second tab command');
+    expect(input).toHaveBeenCalledWith('p2', '\u{1B}[200~second tab command\u{1B}[201~');
     mgr.stop();
   });
 
