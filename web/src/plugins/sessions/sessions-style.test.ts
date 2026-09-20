@@ -29,4 +29,10 @@ describe('sessions stylesheet', () => {
     expect(sessions)
       .toContain(".session-row-actions button[data-action='reattach'] { color: var(--error); }");
   });
+
+  it('shares a six-column grid between headings and rows', () => {
+    expect(sessions).toContain('.session-columns, .session-row {');
+    expect(sessions).toContain('grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) 6em 7em 6em auto');
+    expect(sessions).toContain('.session-row.joined .session-row-host { padding-left: 16px; }');
+  });
 });

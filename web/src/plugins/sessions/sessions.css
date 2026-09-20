@@ -15,20 +15,18 @@
 .session-list-header .plugin-actions button:hover { color: var(--fg); }
 .session-rows { display: flex; flex-direction: column; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column. */
-.session-columns {
-  display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
+.session-columns, .session-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) 6em 7em 6em auto;
   gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px;
 }
 .session-row {
-  display: grid; grid-template-columns: 1fr 1.5fr 6em 7em 6em auto;
-  gap: 12px; align-items: baseline; width: 100%; text-align: left;
-  padding: 4px 12px; white-space: nowrap; cursor: pointer; color: var(--fg);
+  width: 100%; text-align: left; padding: 4px 12px; white-space: nowrap; cursor: pointer; color: var(--fg);
 }
 .session-row:hover { background: var(--border); }
 .session-row.selected { background: var(--bg-soft); }
 /* The indent is the grouping: a joined row belongs to the launching row above it, and its host
    column is left empty because it is the same host by construction. */
-.session-row.joined { padding-left: 28px; }
+.session-row.joined .session-row-host { padding-left: 16px; }
 .session-row-host { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .session-row-name { overflow: hidden; text-overflow: ellipsis; }
 .session-row-kind { color: var(--muted); }
