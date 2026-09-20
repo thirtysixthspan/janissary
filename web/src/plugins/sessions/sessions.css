@@ -2,8 +2,9 @@
    A scrollable flex column of five-column rows, with rows that share a channel indented under the
    row that launched it, so one glance shows what a single detach would take with it. */
 .session-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
+.session-list.plugin-tab { padding: 0; gap: 0; }
 .session-empty { padding: 8px 12px; color: var(--muted); }
-.session-list-header { justify-content: flex-end; }
+.session-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
 /* The header's refresh and split buttons, styled like the host icon buttons they sit beside — as the
    conversation list styles its own metadata-row buttons. Without this the refresh icon arrives with
    the browser's default button chrome and reads bright against the dark header. */

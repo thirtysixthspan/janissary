@@ -26,6 +26,8 @@ itself by grouping, not by a row of its own.
 
 An empty list reads `No remote sessions`.
 
+The list header is a full-width metadata bar matching other tabs. Its Refresh and Split controls sit together at the right edge.
+
 ### Row content
 
 Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list

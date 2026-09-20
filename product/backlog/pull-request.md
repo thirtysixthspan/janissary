@@ -2,8 +2,6 @@
 
 # pull-request
 
-* in the sessions tab, the buttons (refresh and split) should be floated right on the metadata bar, like on the other tabs. the metadata bar on the sessions tab should be styled similar to on agent tabs.
-
 * the table headings and row entries on the sessions tab should be aligned. the action buttons on each row should be in their own column.
 
 * detaching an agent on a remote host results in the followign error
