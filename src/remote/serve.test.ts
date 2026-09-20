@@ -10,7 +10,8 @@ import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
-import { encodeFrame, decodeFrame, parseHandshake } from './protocol.js';
+import { RemoteChannel } from './channel.js';
+import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake } from './protocol.js';
 import type { ServerFrame } from './protocol.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { randomUUID } from 'node:crypto';
@@ -503,6 +504,14 @@ describe('detached peer rendezvous', () => {
       await vi.waitFor(() => expect(outputs(restored.lines)).toContain(`after:${shellPid}`));
       expect(() => process.kill(peer.child.pid, 0)).not.toThrow();
       expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(true);
+      const channel = new RemoteChannel({
+        id: 'closing-ssh', write: (data) => restored.child.write(data), kill: () => restored.child.kill(),
+      }, { onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn() });
+      restored.child.onExit(() => channel.closed());
+      channel.receive(`${encodeHandshake(repoDir)}\n`);
+      channel.finish();
+      channel.close();
+      await vi.waitFor(() => expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false));
     } finally {
       if (proxy) await stop(proxy.child);
       await stop(peer.child);

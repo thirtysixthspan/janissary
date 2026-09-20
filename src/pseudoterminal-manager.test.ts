@@ -167,6 +167,20 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('main')).toEqual([]);
   });
 
+  it.each(['closeTab', 'closeAll'] as const)('%s leaves remote-owned transports to remote teardown', (method) => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    managers.remote = { get: vi.fn(() => ({ ptyId: 'pty1' })) } as unknown as Managers['remote'];
+    const manager = new PseudoterminalManager(managers);
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+    manager[method]('main');
+    expect(kill).not.toHaveBeenCalled();
+    manager.input('pty1', 'shutdown');
+    expect(write).toHaveBeenCalledWith('shutdown');
+    vi.mocked(managers.remote.get).mockReturnValue(undefined);
+    manager.closeAll();
+    expect(kill).toHaveBeenCalledOnce();
+  });
+
   it('handleExit (via onExit) clears activePty on full-tab takeovers', () => {
     const tab = makeTab('main', 'red');
     const { managers } = makeManagers([tab]);

@@ -2,6 +2,4 @@
 
 # pull-request
 
-* closing a harness tab should terminate the harness, the remote connection and close the tab. the remote workspace should be removed as part of the remote teardown.
-
 * reattaching to remote harness that has been detached works, but the screen is blank on reconnect. the transcript/history/current display has not been rendered on reconnect when it should.

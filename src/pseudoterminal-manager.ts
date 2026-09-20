@@ -143,13 +143,24 @@ export class PseudoterminalManager {
 
   // Kill and forget every PTY belonging to a tab (on tab close).
   closeTab(label: string): void {
-    for (const [id, entry] of this.ptys) if (entry.tabLabel === label) { entry.session.kill(); this.ptys.delete(id); }
+    for (const [id, entry] of this.ptys) {
+      if (entry.tabLabel !== label || this.isRemoteTransport(id, entry)) continue;
+      entry.session.kill();
+      this.ptys.delete(id);
+    }
   }
 
   // Kill every PTY (app shutdown).
   closeAll(): void {
-    for (const [, entry] of this.ptys) entry.session.kill();
-    this.ptys.clear();
+    for (const [id, entry] of this.ptys) {
+      if (this.isRemoteTransport(id, entry)) continue;
+      entry.session.kill();
+      this.ptys.delete(id);
+    }
+  }
+
+  private isRemoteTransport(id: string, entry: { tabLabel: string; transport?: boolean }): boolean {
+    return entry.transport === true && this.managers.remote?.get(entry.tabLabel)?.ptyId === id;
   }
 
   dispose(): void {

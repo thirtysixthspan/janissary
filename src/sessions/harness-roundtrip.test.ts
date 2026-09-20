@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
 import { wireControllerEvents } from '../controller/events.js';
 import { HarnessManager } from '../harness/manager.js';
+import { placeAgent } from '../profile/place-agent.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
@@ -66,6 +67,7 @@ function harness() {
         setTimeout(() => { handlers.onExit(transport.id, 0); }, 0);
       },
       write: (data: string) => {
+        if (!transport.connected) return;
         const frame = decodeFrame(data.trim());
         if (!('type' in frame)) throw new Error(frame.error);
         frames.push(frame as ClientFrame);
@@ -122,6 +124,36 @@ async function launch() {
 }
 
 describe('harness sessions round trip', () => {
+  it('keeps a joined tab connected until its final release', async () => {
+    const h = await launch();
+    const creator = managers.tab.byLabel('claude')!;
+    expect(managers.remote.attach('joined', 'claude')).toBe(true);
+    placeAgent(managers, { resolved: 'joined', creator, cwd: WORKSPACE, offline: false, remote: creator.remote });
+    h.frames.length = 0;
+    managers.tab.closeTab(managers.tab.findIndex('claude'));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.transports[0].connected).toBe(true);
+    expect(managers.remote.get('joined')?.attached).toBe(true);
+    expect(h.frames).not.toContainEqual({ type: 'shutdown' });
+    managers.tab.closeTab(managers.tab.findIndex('joined'));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.frames).toContainEqual({ type: 'shutdown' });
+    expect(h.transports[0].connected).toBe(false);
+  });
+
+  it('delivers shutdown before closing the final harness transport', async () => {
+    const h = await launch();
+    h.frames.length = 0;
+    managers.tab.closeTab(managers.tab.findIndex('claude'));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(h.frames).toContainEqual({ type: 'shutdown' });
+    expect(h.remoteKills).toHaveBeenCalled();
+    expect(h.processes.states()).toEqual([]);
+    expect(managers.tab.byLabel('claude')).toBeUndefined();
+    expect(managers.sessions.view()).toEqual([]);
+    expect(saved.records).toEqual([]);
+  });
+
   it('retains the harness process, row, and record after local tab cleanup', async () => {
     const h = await launch();
     h.frames.length = 0;

@@ -207,6 +207,8 @@ On the remote side a dropped connection leaves running work intact for up to sev
 
 Detaching and reattaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
 
+Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
+
 A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection is the one ending that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the end was the user's own instruction rather than news about the session.
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
