@@ -93,6 +93,14 @@ describe('RemoteChannel — attached', () => {
     expect(h.written).toEqual([`${encodeFrame({ type: 'provision', label: 'claude' })}\n`]);
   });
 
+  it('disconnects before closing the transport, so later process frames are ignored', () => {
+    const h = attachedChannel();
+    h.channel.disconnect();
+    h.channel.send({ type: 'kill', id: 'r1' });
+    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.written).toEqual([]);
+  });
+
   it('dispatches channel-level frames to the owner', () => {
     const h = attachedChannel();
     h.channel.receive(`${encodeFrame({ type: 'workspace-ready', dir: '/srv/ws' })}\n`);

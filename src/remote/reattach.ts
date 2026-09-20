@@ -166,7 +166,7 @@ export function detachRemoteEntry(entry: RemoteEntry): boolean {
   cancelSessionState(entry);
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.handlers.clear();
-  entry.channel.close();
+  entry.channel.disconnect();
   return true;
 }
 

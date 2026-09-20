@@ -130,6 +130,11 @@ export class RemoteChannel {
 
   close(): void { this.transport.kill(); }
 
+  disconnect(): void {
+    this.state = 'closed';
+    this.transport.kill();
+  }
+
   replaceTransport(transport: ChannelTransport): void {
     this.transport = transport;
     this.state = 'authenticating';

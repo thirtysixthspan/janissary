@@ -13,7 +13,7 @@ vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheF
 
 function entry(): RemoteEntry {
   return {
-    channel: { sessionId: 'session-1', send: vi.fn(), finish: vi.fn(), close: vi.fn() },
+    channel: { sessionId: 'session-1', send: vi.fn(), finish: vi.fn(), close: vi.fn(), disconnect: vi.fn() },
     address: { address: 'devbox', destination: 'devbox', host: 'devbox' },
     labels: new Set(['claude']),
     handlers: new Map(),
@@ -88,6 +88,15 @@ describe('askSessionState', () => {
     await expect(query).resolves.toEqual([]);
     vi.advanceTimersByTime(SESSION_STATE_TIMEOUT_MS * 2);
     expect(target.sessionState).toBeUndefined();
+  });
+});
+
+describe('detachRemoteEntry', () => {
+  it('disconnects the channel instead of sending process-control frames', () => {
+    const target = entry();
+    detachRemoteEntry(target);
+    expect(target.channel.disconnect).toHaveBeenCalledOnce();
+    expect(target.channel.send).not.toHaveBeenCalled();
   });
 });
 
