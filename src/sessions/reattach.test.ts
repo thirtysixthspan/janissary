@@ -71,29 +71,24 @@ describe('startSessionReattach', () => {
     await expect(startSessionReattach(h.managers, record())).resolves.toMatchObject({ kind: 'ended' });
   });
 
-  // The hang. A peer can accept and then never answer — most concretely when a remote `janus` was
-  // upgraded while the session sat detached, since the handshake is written by the relaying process
-  // rather than by the parked peer behind it. Without an exit, the promise never settled, the
-  // placeholder tab stayed open, and every press of the row's button left another one behind.
-  it('fails rather than hanging when the peer never answers', async () => {
+  it('ends an accepted peer that never answers', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);
 
     await expect(startSessionReattach(h.managers, record())).resolves.toMatchObject({
-      kind: 'failed',
+      kind: 'ended',
       reason: 'devbox accepted the reattach but never said what was running.',
     });
+    expect(h.managers.remote.close).toHaveBeenCalledWith('claude');
     expect(restoreSessionTabs).not.toHaveBeenCalled();
   });
 
-  // The record has to survive a failure, which is what keeps the row parked with its button rather
-  // than marking it ended — the same contract an unreachable host gets.
   it('does not restore any tab for an unanswered query', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);
 
     const outcome = await startSessionReattach(h.managers, record());
-    expect(outcome.kind).toBe('failed');
+    expect(outcome.kind).toBe('ended');
     expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
   });
 

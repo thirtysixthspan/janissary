@@ -29,15 +29,12 @@ async function settleAccepted(
   const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
   if (!entry) return { kind: 'failed', reason: `The connection to ${record.host} closed before it could be read.` };
   const processes = await askSessionState(entry);
-  // No answer establishes nothing, so the record survives and the row keeps its reattach button. A
-  // peer can accept and then never answer — a remote `janus` upgraded while the session sat detached
-  // announces the new version from the relaying process and hands the query to an older peer behind
-  // it — and without this the promise never settled and the placeholder tab sat open for good.
+  // An accepted peer that cannot say what it is holding cannot be safely restored. End it through
+  // the regular remote lifecycle, which closes the placeholder and sends shutdown before its record
+  // can leave a remote workspace stranded.
   if (processes === undefined) {
-    // The reattach settles without a restore pass, so the hold window closes here: the entry lives
-    // on to be tried again, and must not accumulate replay for ids nothing will claim.
-    entry.channel.discardUnclaimed();
-    return { kind: 'failed', reason: `${record.host} accepted the reattach but never said what was running.` };
+    managers.remote.close(label);
+    return { kind: 'ended', reason: `${record.host} accepted the reattach but never said what was running.` };
   }
   if (processes.length === 0) {
     managers.remote.close(label);

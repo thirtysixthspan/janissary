@@ -132,8 +132,9 @@ pressed again, and the trash button appears beside it.
 
 Every failed reattachment also records a notification naming the session, host, and reason, including a failure to start the connection itself. The notification remains available after the temporary connection tab closes.
 
-A peer that accepts a reattach but reports nothing still running is told to shut down and its record
-dropped, rather than being left holding a remote workspace for a week with nothing in it. A reattach
+A peer that accepts a reattach but reports no process state, including a timed-out answer, is told to
+shut down and its record dropped, rather than being left holding a remote workspace for a week with
+nothing in it. A reattach
 that fails or ends also lets go of what it prepared for its tabs: a restored agent binds to the
 process still running on the far side when it is brought back, and that binding is dropped again once
 the attempt is over — so an agent tab recreated later under the same name starts its own shell on

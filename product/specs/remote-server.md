@@ -169,8 +169,8 @@ freshly started remote server that then relays into the parked peer, so the vers
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
 parked while the remote installation was upgraded therefore passes the handshake and is then refused
 by name by the older peer. The query is bounded rather than open-ended so that case settles: no
-answer within the wait establishes nothing, so the session stays parked with its failure reported and
-its reattach button, exactly as an unreachable host does.
+answer within the wait ends the accepted session, closes its placeholder tab, and shuts down the
+remote workspace rather than leaving an uninspectable peer behind.
 
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
