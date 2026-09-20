@@ -449,7 +449,7 @@ describe('RemoteServer', () => {
   });
 });
 describe('detached peer rendezvous', () => {
-  it('keeps a real shell and workspace through EOF and SIGHUP and a fresh remote-serve process', async () => {
+  it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through EOF and SIGHUP and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};
       import { initWorkspaceDir } from ${JSON.stringify(new URL('../workspace/index.ts', import.meta.url).href)};
@@ -486,7 +486,7 @@ describe('detached peer rendezvous', () => {
       if ('error' in handshake || !handshake.session) throw new Error('missing peer identity');
       peer.send({ type: 'provision', label: 'real-sleep-shell' });
       await vi.waitFor(() => expect(peer.lines.some((line) => line.includes('workspace-ready'))).toBe(true), { timeout: 10_000 });
-      peer.send({ ...SPAWN_FRAME, id: 'shell', mode: 'pipe' });
+      peer.send({ ...SPAWN_FRAME, id: 'shell', program: 'sh', command: '/bin/sh', mode });
       peer.send({ type: 'input', id: 'shell', data: 'printf "before:%s\\n" "$$"\n' });
       const outputs = (lines: string[]) => lines.map((line) => decodeFrame(line))
         .filter((frame) => 'type' in frame && frame.type === 'output').map((frame) => frame.data).join('');
