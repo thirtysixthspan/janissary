@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the heading and items in the rows in the session tab table are not aligned. they should all be left aligned. the table headings and row entries on the sessions tab should be aligned. 
-
 * reattaching an agent that has been detached opens the tab, pauses than closes the tab without error. the needs to be resolved and any error should go to the notification tab. 
 
 * detaching a harness tab correctly updates the sessions tab, but the harness tab launches then immediately closes. the row in the sessions tab disappears.

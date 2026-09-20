@@ -16,8 +16,8 @@
 .session-rows { display: flex; flex-direction: column; }
 /* The column names sit over the rows in the same grid, so each label lines up with its column. */
 .session-columns, .session-row {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) 6em 7em 6em auto;
-  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 6em minmax(0, 1.5fr) 8em 8em 6em;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
 }
 .session-row {
   width: 100%; text-align: left; padding: 4px 12px; white-space: nowrap; cursor: pointer; color: var(--fg);

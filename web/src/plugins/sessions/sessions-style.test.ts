@@ -40,7 +40,15 @@ describe('sessions stylesheet', () => {
 
   it('shares a six-column grid between headings and rows', () => {
     expect(sessions).toContain('.session-columns, .session-row {');
-    expect(sessions).toContain('grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) 6em 7em 6em auto');
+    expect(sessions).toContain('grid-template-columns: minmax(0, 1fr) 6em minmax(0, 1.5fr) 8em 8em 6em');
     expect(sessions).toContain('.session-row.joined .session-row-host { padding-left: 16px; }');
+  });
+
+  it('left-aligns headings and entries in tracks independent of row action counts', () => {
+    const columns = sessions.match(/\.session-columns, \.session-row \{[^}]+\}/)?.[0];
+    expect(columns).toContain('text-align: left');
+    expect(columns).toContain('font-size: 12px');
+    expect(columns).toMatch(/grid-template-columns:[^;]+ 6em;/);
+    expect(columns).not.toContain('auto');
   });
 });
