@@ -50,17 +50,22 @@ export function spawnPty(
     env: extraEnv ? { ...env, ...extraEnv } : env,
   });
 
+  let writable = true;
   proc.onData((d) => handlers.onData(id, d));
-  proc.onExit(({ exitCode }) => handlers.onExit(id, exitCode));
+  proc.onExit(({ exitCode }) => {
+    writable = false;
+    handlers.onExit(id, exitCode);
+  });
 
   return {
     id,
     program,
-    write: (data) => proc.write(data),
+    write: (data) => { if (writable) proc.write(data); },
     resize: (c, r) => {
       try { proc.resize(Math.max(1, c), Math.max(1, r)); } catch { /* process may have exited */ }
     },
     kill: () => {
+      writable = false;
       try { proc.kill(); } catch { /* already gone */ }
     },
   };

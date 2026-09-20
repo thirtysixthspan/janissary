@@ -113,7 +113,7 @@ A remote workspace and its SSH session can be shared by the launching tab, agent
 
 Use `sessions` to see active and detached remote sessions. **Disconnect** closes the local tabs while leaving the remote processes running. **Reconnect** returns to that remote workspace and restores its running tabs, even when the workspace path does not exist on your machine. If reattachment fails, **Notifications** records the session, host, and reason; the session stays listed so you can retry. **End session** stops a detached session and removes its remote workspace.
 
-The remote deletes its workspace clone when the session ends. A detached session can wait up to seven days for reattachment before expiring. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session ends.
+The remote deletes its workspace clone when the session ends. A detached session can wait up to seven days for reattachment before expiring. Reconnecting an agent returns to its existing shell and workspace, including after repeated disconnects. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session ends.
 
 `janus --relaunch` doesn't bring a remote agent tab or remote file navigator back, and profiles do not restore remote navigators.
 

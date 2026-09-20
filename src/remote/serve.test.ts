@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
-import { execSync, spawn } from 'node:child_process';
-import { once } from 'node:events';
+import { execSync } from 'node:child_process';
+import { spawn as spawnTerminal } from 'node-pty';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initWorkspaceDir } from '../workspace/index.js';
@@ -449,21 +449,23 @@ describe('RemoteServer', () => {
   });
 });
 describe('detached peer rendezvous', () => {
-  it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through EOF and SIGHUP and a fresh remote-serve process', async (mode) => {
+  it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through terminal hangup and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};
       import { initWorkspaceDir } from ${JSON.stringify(new URL('../workspace/index.ts', import.meta.url).href)};
       import { getConfig } from ${JSON.stringify(new URL('../config.ts', import.meta.url).href)};
       getConfig().sandboxWorkspaces = false;
       initWorkspaceDir(process.argv[1], process.argv[1] + '/absent-config');
+      if (process.stdin.isTTY) process.stdin.setRawMode(true);
       new RemoteServer(process.argv[1]).listen();
     `;
     const start = () => {
-      const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script, repoDir]);
+      const child = spawnTerminal(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script, repoDir], {
+        env: { ...process.env, SHELL: '/bin/bash' },
+      });
       let buffer = '';
       const lines: string[] = [];
-      child.stdout.setEncoding('utf8');
-      child.stdout.on('data', (chunk: string) => {
+      child.onData((chunk: string) => {
         buffer += chunk;
         let newline = buffer.indexOf('\n');
         while (newline !== -1) {
@@ -471,14 +473,13 @@ describe('detached peer rendezvous', () => {
           newline = buffer.indexOf('\n');
         }
       });
-      child.stderr.resume();
-      return { child, lines, send: (frame: Parameters<typeof encodeFrame>[0]) => child.stdin.write(`${encodeFrame(frame)}\n`) };
+      return { child, lines, send: (frame: Parameters<typeof encodeFrame>[0]) => child.write(`${encodeFrame(frame)}\n`) };
     };
     const peer = start();
     let proxy: ReturnType<typeof start> | undefined;
-    const stop = async (child: ReturnType<typeof spawn>) => {
-      if (child.exitCode !== null || child.signalCode !== null) return;
-      const exited = once(child, 'exit'); child.kill('SIGTERM'); await exited;
+    const stop = async (child: ReturnType<typeof spawnTerminal>) => {
+      try { process.kill(child.pid, 'SIGTERM'); } catch { return; }
+      await vi.waitFor(() => expect(() => process.kill(child.pid, 0)).toThrow());
     };
     try {
       await vi.waitFor(() => expect(peer.lines[0]).toContain('__JANUS_REMOTE__'), { timeout: 10_000 });
@@ -492,7 +493,7 @@ describe('detached peer rendezvous', () => {
         .filter((frame) => 'type' in frame && frame.type === 'output').map((frame) => frame.data).join('');
       await vi.waitFor(() => expect(outputs(peer.lines)).toMatch(/before:\d+/));
       const shellPid = /before:(\d+)/.exec(outputs(peer.lines))![1];
-      peer.child.stdin.end(); peer.child.kill('SIGHUP');
+      peer.child.kill();
       proxy = start();
       const restored = proxy;
       await vi.waitFor(() => expect(restored.lines[0]).toContain('__JANUS_REMOTE__'), { timeout: 10_000 });
@@ -500,7 +501,7 @@ describe('detached peer rendezvous', () => {
       await vi.waitFor(() => expect(restored.lines.join('\n')).toContain('"accepted":true'));
       restored.send({ type: 'input', id: 'shell', data: 'printf "after:%s\\n" "$$"\n' });
       await vi.waitFor(() => expect(outputs(restored.lines)).toContain(`after:${shellPid}`));
-      expect(peer.child.exitCode).toBeNull();
+      expect(() => process.kill(peer.child.pid, 0)).not.toThrow();
       expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(true);
     } finally {
       if (proxy) await stop(proxy.child);

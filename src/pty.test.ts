@@ -120,6 +120,24 @@ describe('spawnPty', () => {
     expect(proc.write).toHaveBeenCalledWith('hello');
   });
 
+  it('ignores writes after kill before the exit event arrives', () => {
+    const session = spawnPty('ssh', 'ssh host', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+    const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
+    session.kill();
+    session.write('late shutdown');
+    expect(proc.write).not.toHaveBeenCalled();
+  });
+
+  it('ignores writes from exit cleanup and afterwards', () => {
+    const session = spawnPty('ssh', 'ssh host', '/tmp', {
+      onData: vi.fn(), onExit: () => session.write('exit cleanup'),
+    });
+    const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
+    proc.emitExit(1);
+    session.write('late input');
+    expect(proc.write).not.toHaveBeenCalled();
+  });
+
   it('resize delegates to proc.resize with clamping', () => {
     const handlers = { onData: vi.fn(), onExit: vi.fn() };
     const session = spawnPty('bash', 'less', '/tmp', handlers);

@@ -205,6 +205,8 @@ Reusing the launching tab's name for a new launch does not let the earlier sessi
 
 On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait — the wait exists only for a connection that is lost rather than deliberately ended.
 
+Detaching and reattaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
+
 A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection is the one ending that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the end was the user's own instruction rather than news about the session.
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
