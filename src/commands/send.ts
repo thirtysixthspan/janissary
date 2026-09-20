@@ -2,6 +2,7 @@ import type { Command } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { CommandManagers } from './types.js';
 import { resolveTarget } from './resolve-target.js';
+import { typeIntoHarness } from '../harness/input.js';
 
 /** Parse a `send <label> <text...>` command (the leading `send` is optional). */
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string } {
@@ -17,11 +18,7 @@ export function parseSendCommand(input: string): { label: string; text: string }
 function deliverTo(target: Tab, text: string, managers: CommandManagers): string | null {
   if (target.view === 'harness') {
     if (target.harness?.status !== 'running') return `Tab "${target.label}" is not a running harness.`;
-    // Split from the text so a long line's trailing \r can't land in the same burst the harness's
-    // own input parser treats as a paste (see schedule-manager.ts's `fire`).
-    const ptyId = target.harness.ptyId;
-    managers.pty.input(ptyId, text);
-    setTimeout(() => managers.pty.input(ptyId, '\r'), 50);
+    typeIntoHarness(managers.pty, target.harness.ptyId, target.harness.name, text);
     return null;
   }
   if (target.view === undefined || target.view === 'agent') {
