@@ -146,7 +146,7 @@ export class RemoteManager {
         write: (data) => deferred.session?.write(data), kill: () => deferred.session?.kill(),
       });
       deferred.session = this.managers.pty.spawnTransport(entry.labels.values().next().value ?? label,
-        'ssh', remoteServeCommand(address), cwd, {
+        'ssh', remoteServeCommand(address), resume ? process.cwd() : cwd, {
           onData: (data) => { if (current === generation) channel.receive(data); },
           onExit: () => { if (current === generation) channel.closed(); },
         });

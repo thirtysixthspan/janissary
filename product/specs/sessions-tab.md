@@ -64,6 +64,8 @@ process still running on it; pressing it on any row of that session brings back 
 one connection serves them all. On a reconnecting session it means "try now" and collapses the
 backoff wait.
 
+Reattachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host.
+
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.
 Once a remote agent is ready, its persistent shell keeps the session detachable even before the user runs a command.
@@ -125,6 +127,8 @@ A refused reattach, or a recorded peer process that no longer exists, establishe
 is over: the row becomes ended and a notification names it. A timeout or a failed connection
 establishes nothing: the row stays parked with its failure reported, the reattach button can be
 pressed again, and the trash button appears beside it.
+
+Every failed reattachment also records a notification naming the session, host, and reason, including a failure to start the connection itself. The notification remains available after the temporary connection tab closes.
 
 A peer that accepts a reattach but reports nothing still running is told to shut down and its record
 dropped, rather than being left holding a remote workspace for a week with nothing in it. A reattach

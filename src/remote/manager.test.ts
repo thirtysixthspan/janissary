@@ -436,11 +436,23 @@ describe('RemoteManager reattach from a record', () => {
     const remote = new RemoteManager(managers);
     const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
     const onResult = vi.fn();
-    remote.open('creator', address('devbox'), '/local', handlers, {
+    remote.open('creator', address('devbox'), '/remote/ws', handlers, {
       session: RECORDED_SESSION, workspaceDir: '/remote/ws', onResult,
     });
-    return { remote, handlers, onResult, write, kill, transport: () => transport };
+    return { remote, handlers, onResult, write, kill, spawnTransport: managers.pty.spawnTransport, transport: () => transport };
   }
+
+  it('starts resumed SSH locally while restoring the remote workspace on acceptance', async () => {
+    const h = resumeHarness();
+    expect(h.spawnTransport).toHaveBeenCalledWith(
+      'creator', 'ssh', expect.any(String), process.cwd(), expect.any(Object),
+    );
+    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
+    expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws');
+    h.remote.dispose();
+  });
 
   it('sends reattach carrying the recorded session id, and never provision', () => {
     const h = resumeHarness();

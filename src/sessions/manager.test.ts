@@ -345,6 +345,32 @@ describe('SessionsManager reattachTab', () => {
 });
 
 describe('SessionsManager reattach', () => {
+  it('reports connection failures to the sessions notification feed and preserves the record', async () => {
+    const h = harness([], { label: 'sessions' });
+    saveRemoteSessions([record()]);
+    settle({ kind: 'failed', reason: 'Connection timed out' });
+    h.sessions.reattach(SESSION);
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), 'remote-session', 'sessions',
+      'claude on devbox could not be reattached: Connection timed out',
+    ));
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', failure: 'Connection timed out' });
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+
+  it('reports unexpected reattach rejections and keeps the session available to retry', async () => {
+    const h = harness();
+    saveRemoteSessions([record()]);
+    vi.mocked(startSessionReattach).mockRejectedValue(new Error('SSH could not start'));
+    h.sessions.reattach(SESSION);
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), 'remote-session', 'janus',
+      'claude on devbox could not be reattached: SSH could not start',
+    ));
+    expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', failure: 'SSH could not start' });
+    expect(loadRemoteSessions()).toHaveLength(1);
+  });
+
   it('clears a recorded failure once the peer takes it back', async () => {
     const h = harness();
     saveRemoteSessions([record()]);

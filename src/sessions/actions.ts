@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
+import { errorText } from '../error-text.js';
 import type { RemoteEntry } from '../remote/reattach.js';
 import { endParkedSession } from './end-session.js';
 import { startSessionReattach } from './reattach.js';
@@ -123,6 +124,10 @@ function endedRowFrom(record: RemoteSessionRecord): SessionEnded {
  * attempt started"; the rest is applied when the peer answers, or fails to.
  */
 function reattach(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
+  const failed = (reason: string): void => {
+    report(managers, line(record.launchLabel, record.host, `could not be reattached: ${reason}`));
+    apply({ ran: true, failure: { session: record.session, reason } });
+  };
   void startSessionReattach(managers, record).then((outcome) => {
     if (outcome.kind === 'reattached') {
       report(managers, line(record.launchLabel, record.host, 'reattached.'));
@@ -136,8 +141,8 @@ function reattach(managers: Managers, record: RemoteSessionRecord, apply: ApplyR
     }
     // Nothing was established: the host may be asleep, unreachable, or merely slow. The record
     // survives, the row keeps its reattach button, and the reason lands on the row.
-    apply({ ran: true, failure: { session: record.session, reason: outcome.reason } });
-  });
+    failed(outcome.reason);
+  }, (error: unknown) => { failed(errorText(error)); });
   return { ran: true };
 }
 

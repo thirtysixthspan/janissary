@@ -109,9 +109,11 @@ You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git rep
 
 ## Lifecycle
 
-A remote workspace and its SSH session last until their final user closes. The launching tab, agents joined with ➕, and its file navigator can all share that session. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. If the connection itself drops or you explicitly close `ssh:<address>`, every tab and navigator using it closes, even if the launching tab has already closed. A new session using the launching tab's old name is unaffected. There's no reconnect and no reattach, so a new launch starts a fresh session.
+A remote workspace and its SSH session can be shared by the launching tab, agents joined with ➕, and its file navigator. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. Closing the final user or explicitly closing `ssh:<address>` ends the session. A lost connection retries automatically.
 
-The remote deletes its workspace clone when the session's last user closes, including when the connection drops, so a lost connection never leaves a clone behind. Remote files opened for viewing or editing are cached locally only for that session and cleared at startup or when its last user closes.
+Use `sessions` to see active and detached remote sessions. **Disconnect** closes the local tabs while leaving the remote processes running. **Reconnect** returns to that remote workspace and restores its running tabs, even when the workspace path does not exist on your machine. If reattachment fails, **Notifications** records the session, host, and reason; the session stays listed so you can retry. **End session** stops a detached session and removes its remote workspace.
+
+The remote deletes its workspace clone when the session ends. A detached session can wait up to seven days for reattachment before expiring. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session ends.
 
 `janus --relaunch` doesn't bring a remote agent tab or remote file navigator back, and profiles do not restore remote navigators.
 
