@@ -60,7 +60,10 @@ export function spawnPty(
   return {
     id,
     program,
-    write: (data) => { if (writable) proc.write(data); },
+    write: (data) => {
+      if (!writable) return;
+      try { proc.write(data); } catch { writable = false; }
+    },
     resize: (c, r) => {
       try { proc.resize(Math.max(1, c), Math.max(1, r)); } catch { /* process may have exited */ }
     },

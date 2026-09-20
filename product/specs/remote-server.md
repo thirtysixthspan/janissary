@@ -205,7 +205,7 @@ reference without closing the surviving tabs or ending their ssh session. A tran
 
 Reusing the launching tab's name for a new launch does not let the earlier session's readiness, errors, or recovery close or change the new session.
 
-On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait — the wait exists only for a connection that is lost rather than deliberately ended.
+On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait. This still completes when the SSH transport is already closing. The wait exists only for a connection that is lost rather than deliberately ended.
 
 Detaching and reattaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
 
