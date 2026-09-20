@@ -49,6 +49,7 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
     () => {
       setActivePty(managers, resolved, undefined);
       managers.tab.setCwd(resolved, remote.cwd());
+      managers.shell.ensure(resolved);
       managers.tab.deleteBusy(resolved);
       messageBus.emit('state', { type: 'dirty' });
       out(`Agent "${resolved}" ready on ${address.host}. (workspace: ${remote.cwd()})`);

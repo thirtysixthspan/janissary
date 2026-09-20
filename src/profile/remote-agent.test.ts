@@ -55,6 +55,7 @@ function makeManagers(): {
     },
     remote: { open: openChannel },
     workspace: { create: createWorkspace },
+    shell: { ensure: vi.fn() },
     schedule: { set: vi.fn() },
   } as unknown as Managers;
   return {
@@ -110,6 +111,7 @@ describe('startRemoteAgent', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(h.managers.tab.setCwd).toHaveBeenCalledWith('bekir', '/srv/proj/.janissary/workspace/bekir');
+    expect(h.managers.shell.ensure).toHaveBeenCalledWith('bekir');
     expect(h.managers.tab.isBusy('bekir')).toBe(false);
     expect(h.out).toHaveBeenCalledWith(expect.stringContaining('ready on devbox'));
   });

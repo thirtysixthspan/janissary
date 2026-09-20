@@ -2,7 +2,4 @@
 
 # pull-request
 
-* detaching an agent on a remote host results in the followign error
-murad on 10.27.1.94 cannot be detached — nothing is running in its workspace to come back to.
-
 * detaching a harness tab correctly updates the sessions tab, but the harness tab launches then immediately closes. the row in the sessions tab disappears.

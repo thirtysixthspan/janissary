@@ -65,6 +65,7 @@ one connection serves them all. On a reconnecting session it means "try now" and
 backoff wait.
 
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
+Once a remote agent is ready, its persistent shell keeps the session detachable even before the user runs a command.
 It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up
 for the others and would mean nothing — so it sits on the launching row alone. It is unavailable

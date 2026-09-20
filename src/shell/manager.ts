@@ -71,6 +71,10 @@ export class ShellManager {
     return this.shells.has(label);
   }
 
+  ensure(label: string): void {
+    this.getShell(label, this.managers.tab.cwdOf(label));
+  }
+
   // The tab's persistent shell, spawned on first use and respawned if the previous one died (its
   // stdin no longer writable). A freshly spawned shell is `cd`'d into `cwd` so it starts in the tab's
   // working directory — the workspace clone for a workspaced agent, or the saved cwd for a
