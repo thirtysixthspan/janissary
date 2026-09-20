@@ -192,7 +192,7 @@ export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, ann
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   const session = entry.channel.sessionId;
   entry.channel.finish();
-  entry.channel.close();
+  entry.channel.closeAfterShutdown();
   const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
   dropEndedSessionRecord(managers, session);

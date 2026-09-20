@@ -7,6 +7,7 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
+import { REMOTE_SHUTDOWN_DRAIN_MS } from './shutdown-drain.js';
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
@@ -161,7 +162,7 @@ describe('RemoteManager shared channels', () => {
     await expect(ready).rejects.toThrow('ended before its workspace was ready');
     h.transport()?.onExit();
     expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
-    expect(h.kill).toHaveBeenCalledOnce();
+    expect(h.kill).not.toHaveBeenCalled();
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });
 
@@ -186,6 +187,7 @@ describe('RemoteManager shared channels', () => {
   });
 
   it('keeps the channel after the creator releases and closes it after the last release', () => {
+    vi.useFakeTimers();
     const h = managerHarness();
     h.remote.attach('joined', 'creator');
     expect(h.remote.release('creator')).toBe(true);
@@ -193,14 +195,18 @@ describe('RemoteManager shared channels', () => {
     expect(h.reassignTransports).toHaveBeenCalledWith('creator', 'joined');
     expect(h.remote.get('joined')).toBeDefined();
     h.remote.release('joined');
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.kill).toHaveBeenCalledOnce();
   });
 
-  it('writes a shutdown frame to the transport before killing it on the last release', () => {
+  it('drains a shutdown frame before killing the transport on the last release', () => {
+    vi.useFakeTimers();
     const h = managerHarness();
     h.remote.release('creator');
     const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
     expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.kill).toHaveBeenCalledOnce();
     expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });
@@ -226,11 +232,14 @@ describe('RemoteManager shared channels', () => {
     expect(h.dropSession).toHaveBeenCalledWith('12345678-1234-1234-1234-123456789abc');
   });
 
-  it('writes a shutdown frame to every transport before killing it on closeAll', () => {
+  it('drains a shutdown frame before killing every transport on closeAll', () => {
+    vi.useFakeTimers();
     const h = managerHarness();
     h.remote.closeAll();
     const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
     expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.kill).toHaveBeenCalledOnce();
     expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });
@@ -296,11 +305,14 @@ describe('RemoteManager shared channels', () => {
   });
 
   // The opposite of `detach`: an explicit close finishes the peer off instead of parking it.
-  it('sends a shutdown frame on an explicit close before killing the transport', () => {
+  it('drains a shutdown frame on an explicit close before killing the transport', () => {
+    vi.useFakeTimers();
     const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
     h.remote.close('creator');
     const shutdownIndex = h.write.mock.calls.findIndex(([data]: [string]) => data.includes('"type":"shutdown"'));
     expect(shutdownIndex).toBeGreaterThanOrEqual(0);
+    expect(h.kill).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.kill).toHaveBeenCalledOnce();
     expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });

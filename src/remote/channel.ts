@@ -1,8 +1,10 @@
 import {
   HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteFrame, type RemoteHandshake, type RemoteProcessState, type ServerFrame,
+  type ClientFrame, type RemoteHandshake, type RemoteProcessState, type ServerFrame,
 } from './protocol.js';
 import { SessionRouter, type SessionListener } from './channel-sessions.js';
+import { dispatchAcp, type AcpSessionListener } from './channel-acp.js';
+import { ShutdownDrain } from './shutdown-drain.js';
 
 // One ssh session's lifetime and its state machine. Until `remote-serve` announces itself the
 // session is a plain terminal: bytes pass through to the tab's terminal and keystrokes pass through
@@ -28,14 +30,7 @@ export type NavigatorListener = {
 
 // What one remote ACP session id wants from the inbound stream. Registered by the local ACP
 // adapter, which is the only shape that consumes these frames.
-export type AcpSessionListener = {
-  onReady: () => void;
-  onChunk: (text: string) => void;
-  onEnd: (stopReason: string) => void;
-  // `fatal` says whether the session itself is gone (a failed spawn, a dead agent) or only this
-  // prompt failed (a rate limit). The adapter routes the two to different places.
-  onError: (message: string, fatal: boolean) => void;
-};
+export type { AcpSessionListener } from './channel-acp.js';
 
 // The frames that belong to the tab rather than to one process's I/O: the provisioning answer, the
 // transcript pushes, and the browser-gone report. Everything else inbound is routed to a
@@ -69,6 +64,7 @@ export class RemoteChannel {
   private navigators = new Map<string, NavigatorListener>();
   private acpSessions = new Map<string, AcpSessionListener>();
   private notifiedClose = false;
+  private shutdownDrain = new ShutdownDrain();
   sessionId: string | undefined;
   private router: SessionRouter;
 
@@ -128,7 +124,10 @@ export class RemoteChannel {
     this.transport.write(data);
   }
 
-  close(): void { this.transport.kill(); }
+  close(): void {
+    this.shutdownDrain.cancel();
+    this.transport.kill();
+  }
 
   disconnect(): void {
     this.state = 'closed';
@@ -157,6 +156,13 @@ export class RemoteChannel {
     this.state = 'closed';
   }
 
+  // A PTY kill can discard bytes that have been written but not yet delivered to ssh. Leave the
+  // transport up briefly after the final shutdown frame, while still bounding a peer that cannot
+  // exit on its own.
+  closeAfterShutdown(): void {
+    this.shutdownDrain.schedule(() => this.close());
+  }
+
   // Everything the ssh PTY produced, in arrival order.
   receive(data: string): void {
     if (this.state === 'closed' || this.state === 'reconnecting') return;
@@ -171,6 +177,7 @@ export class RemoteChannel {
   closed(): void {
     if (this.notifiedClose) return;
     this.notifiedClose = true;
+    this.shutdownDrain.cancel();
     if (this.sessionId) {
       this.state = 'reconnecting';
       this.buffer = '';
@@ -240,7 +247,7 @@ export class RemoteChannel {
       this.navigators.get(frame.session)?.onEvent(frame.path);
       return;
     }
-    if (this.dispatchAcp(frame)) return;
+    if (dispatchAcp(this.acpSessions, frame)) return;
     switch (frame.type) {
     case 'workspace-ready':
     case 'reattach-result':
@@ -249,21 +256,6 @@ export class RemoteChannel {
     case 'browser-exited':
     case 'transcript': { this.handlers.onFrame(frame); return; }
     default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
-    }
-  }
-
-  // Routed by id before the switch that ends in `fail`, so an agent that fails to spawn or errors
-  // mid-prompt never kills the transport — killing the transport closes the tab, and an ACP-level
-  // error is not a channel-level fault. A frame whose id has no listener is dropped, which is what
-  // stops a chunk still in flight from a session disposed by `acp reset` landing in its successor.
-  // Returns whether the frame was an ACP one at all.
-  private dispatchAcp(frame: RemoteFrame): boolean {
-    switch (frame.type) {
-    case 'acp-ready': { this.acpSessions.get(frame.id)?.onReady(); return true; }
-    case 'acp-chunk': { this.acpSessions.get(frame.id)?.onChunk(frame.text); return true; }
-    case 'acp-end': { this.acpSessions.get(frame.id)?.onEnd(frame.stopReason); return true; }
-    case 'acp-error': { this.acpSessions.get(frame.id)?.onError(frame.message, frame.fatal); return true; }
-    default: { return false; }
     }
   }
 

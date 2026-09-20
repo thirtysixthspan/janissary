@@ -233,7 +233,7 @@ export class RemoteManager {
       entry.reconnect.stop();
       entry.channel.finish();
       this.channelClosed(entry);
-      entry.channel.close();
+      entry.channel.closeAfterShutdown();
       dropEndedSessionRecord(this.managers, session);
     }
     this.sessionsChanged();
@@ -242,7 +242,7 @@ export class RemoteManager {
 
   closeAll(): void {
     const entries = new Set(this.entries.values());
-    for (const entry of entries) { entry.reconnect.stop(); entry.closed = true; entry.channel.finish(); entry.channel.close(); }
+    for (const entry of entries) { entry.reconnect.stop(); entry.closed = true; entry.channel.finish(); entry.channel.closeAfterShutdown(); }
     this.entries.clear();
   }
 

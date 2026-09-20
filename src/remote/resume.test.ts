@@ -13,7 +13,7 @@ vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheF
 
 function entry(): RemoteEntry {
   return {
-    channel: { sessionId: 'session-1', send: vi.fn(), finish: vi.fn(), close: vi.fn(), disconnect: vi.fn() },
+    channel: { sessionId: 'session-1', send: vi.fn(), finish: vi.fn(), close: vi.fn(), closeAfterShutdown: vi.fn(), disconnect: vi.fn() },
     address: { address: 'devbox', destination: 'devbox', host: 'devbox' },
     labels: new Set(['claude']),
     handlers: new Map(),

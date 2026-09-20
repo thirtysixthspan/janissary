@@ -8,6 +8,7 @@ import { notify } from '../notifications.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { spawnPty, type PtyHandlers } from '../pty.js';
 import { RemoteManager } from '../remote/manager.js';
+import { REMOTE_SHUTDOWN_DRAIN_MS } from '../remote/shutdown-drain.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from '../remote/protocol.js';
 import { RemoteProcesses } from '../remote/serve-processes.js';
 import { TabManager } from '../tab/manager.js';
@@ -136,7 +137,7 @@ describe('harness sessions round trip', () => {
     expect(managers.remote.get('joined')?.attached).toBe(true);
     expect(h.frames).not.toContainEqual({ type: 'shutdown' });
     managers.tab.closeTab(managers.tab.findIndex('joined'));
-    await vi.advanceTimersByTimeAsync(10);
+    await vi.advanceTimersByTimeAsync(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.frames).toContainEqual({ type: 'shutdown' });
     expect(h.transports[0].connected).toBe(false);
   });

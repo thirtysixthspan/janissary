@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { RemoteChannel, type ChannelTransport, type ChannelFrame } from './channel.js';
+import { REMOTE_SHUTDOWN_DRAIN_MS } from './shutdown-drain.js';
 import { encodeFrame, encodeHandshake, HANDSHAKE_SENTINEL, REMOTE_PROTOCOL_VERSION } from './protocol.js';
 
 function harness() {
@@ -22,6 +23,8 @@ function harness() {
   });
   return { channel, written, terminal, frames, errors, closes, attached, truncated, kill };
 }
+
+afterEach(() => vi.useRealTimers());
 
 describe('RemoteChannel — authenticating', () => {
   it('passes pre-handshake bytes through to the terminal as they arrive', () => {
@@ -99,6 +102,29 @@ describe('RemoteChannel — attached', () => {
     h.channel.send({ type: 'kill', id: 'r1' });
     expect(h.kill).toHaveBeenCalledOnce();
     expect(h.written).toEqual([]);
+  });
+
+  it('keeps the transport briefly after final shutdown frames, then closes it', () => {
+    vi.useFakeTimers();
+    const h = attachedChannel();
+    h.channel.finish();
+    h.channel.closeAfterShutdown();
+
+    expect(h.written.at(-1)).toBe(`${encodeFrame({ type: 'shutdown' })}\n`);
+    expect(h.kill).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
+    expect(h.kill).toHaveBeenCalledOnce();
+  });
+
+  it('cancels the shutdown fallback when the transport exits', () => {
+    vi.useFakeTimers();
+    const h = attachedChannel();
+    h.channel.finish();
+    h.channel.closeAfterShutdown();
+    h.channel.closed();
+
+    vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
+    expect(h.kill).not.toHaveBeenCalled();
   });
 
   it('dispatches channel-level frames to the owner', () => {
