@@ -95,6 +95,18 @@ describe('SessionList rendering', () => {
 });
 
 describe('SessionList buttons', () => {
+  it('renders only refresh and split inside the metadata action group', () => {
+    const fixture = capabilities();
+    fixture.value.splitAction = <button aria-label="Split">Split</button>;
+    const { container } = list([row()], fixture.value);
+    const header = container.querySelector('.session-list-header')!;
+    const actions = header.querySelector('.plugin-actions')!;
+    expect(header.children).toHaveLength(1);
+    expect([...actions.children]).toEqual([
+      screen.getByLabelText('Refresh'), screen.getByLabelText('Split'),
+    ]);
+  });
+
   it('offers only the verbs the row carries', () => {
     list([row({ actions: ['focus', 'detach'] })]);
     expect(screen.getByLabelText('Disconnect claude')).toBeInTheDocument();

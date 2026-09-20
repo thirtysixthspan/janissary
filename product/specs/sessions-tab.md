@@ -26,7 +26,7 @@ itself by grouping, not by a row of its own.
 
 An empty list reads `No remote sessions`.
 
-The list header is a full-width metadata bar matching other tabs. Its Refresh and Split controls sit together at the right edge.
+The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. This layout applies even when Sessions is the first plugin opened.
 
 ### Row content
 

@@ -1,3 +1,4 @@
+import '../shared.css';
 import './sessions.css';
 
 export { SessionList as default } from './SessionList';

@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import sessions from './sessions.css?raw';
+import entry from './index?raw';
+import shared from '../shared.css?raw';
 
 describe('sessions stylesheet', () => {
+  it('loads the shared metadata layout when sessions is the first plugin opened', () => {
+    expect(entry).toContain("import '../shared.css'");
+    expect(shared).toMatch(/\.plugin-meta \{[^}]*display: flex/);
+    expect(shared).toMatch(/\.plugin-actions \{[^}]*margin-left: auto/);
+  });
+
   it('uses a full-width metadata band with right-aligned actions', () => {
     expect(sessions).toContain('.session-list.plugin-tab { padding: 0; gap: 0; }');
     expect(sessions).toContain('padding: 6px 12px');
