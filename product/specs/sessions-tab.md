@@ -69,6 +69,7 @@ Reattachment works when the remote workspace path does not exist on the local ma
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.
 A detached harness remains listed after its local tab closes. Reattaching restores the same running process and keeps its tab open; repeated detach and reattach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.
+The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
 Once a remote agent is ready, its persistent shell keeps the session detachable even before the user runs a command.
 It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up

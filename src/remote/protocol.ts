@@ -72,7 +72,9 @@
 // announces 15 and hands the query to a 14 that refuses it by name. Nothing in the handshake can see
 // that, so the bounded wait in `askSessionState` is what catches it: the reattach reports a failure
 // and the session stays parked, rather than waiting for an answer that will never come.
-export const REMOTE_PROTOCOL_VERSION = 15;
+// Version 16 adds `restore` to reattachment so rebuilt tabs receive retained display and transcript
+// history while transport recovery does not duplicate transcript blocks already delivered.
+export const REMOTE_PROTOCOL_VERSION = 16;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -121,7 +123,7 @@ export type ClientFrame =
   // Ask to take over a session that outlived its transport. `session` is the id the handshake
   // announced when the peer was first created, and it is the only credential the far side checks:
   // `relayPeer` refuses any `reattach` whose id does not match the peer it found.
-  | { type: 'reattach'; session: string }
+  | { type: 'reattach'; session: string; restore?: boolean }
   // No payload: there is one workspace per peer, so "which processes are alive" has a single
   // answer and nothing to address it by.
   | { type: 'session-state' }

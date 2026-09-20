@@ -85,7 +85,7 @@ export class RemoteManager {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
         onAttached: () => {
           if ((entry.reconnect.active || state.resuming) && channel.sessionId) {
-            channel.send({ type: 'reattach', session: channel.sessionId });
+            channel.send({ type: 'reattach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
           } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
         },
         onFrame: (frame) => {

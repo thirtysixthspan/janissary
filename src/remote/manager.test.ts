@@ -459,7 +459,7 @@ describe('RemoteManager reattach from a record', () => {
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
     expect(sent.map((frame) => frame.type)).toEqual(['reattach']);
-    expect(sent[0]).toEqual({ type: 'reattach', session: RECORDED_SESSION });
+    expect(sent[0]).toEqual({ type: 'reattach', session: RECORDED_SESSION, restore: true });
   });
 
   // No `workspace-ready` ever comes for a reattach, so the recorded directory is what settles the

@@ -122,7 +122,7 @@ export class RemoteServer {
       this.relay = relayPeer(this.root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
         if (terminated) this.emit({ type: 'reattach-result', accepted: false });
         this.shutdown(terminated ? 0 : 1);
-      });
+      }, frame.restore);
       return;
     }
     // Answered before the workspace exists too, with an empty list: a peer that has not provisioned

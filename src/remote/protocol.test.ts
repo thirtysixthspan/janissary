@@ -13,12 +13,15 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 describe('frame codec', () => {
   it.each([
     { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc' },
+    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
     { type: 'reattach-result', accepted: true },
     { type: 'reattach-result', accepted: false },
   ] as const)('round-trips $type', (frame) => { expect(roundTrip(frame)).toEqual(frame); });
 
   it.each([
     { type: 'reattach', session: '../../elsewhere' }, { type: 'reattach' },
+    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
     { type: 'reattach-result', accepted: 'true' }, { type: 'reattach-result' },
   ])('rejects malformed reattachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
@@ -317,8 +320,8 @@ describe('session-state frames', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 15', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(15);
+  it('is 16', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(16);
   });
 });
 

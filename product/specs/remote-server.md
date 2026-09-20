@@ -162,6 +162,8 @@ peer recognizes neither frame and is refused at the handshake like any other mis
 empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
 nothing in it, which is the one case janissary ends rather than reattaches.
 
+Restoring retained display and transcript history moves the protocol to 16. Reopening detached tabs requests their earlier transcript history; automatic connection recovery receives only transcript blocks missed during disconnection. Both redraw retained terminal output before new output arrives. Sessions started under an older remote version have no retained display history to restore, even if the installation is upgraded while they are detached.
+
 The handshake check is narrower for a reattach than for a launch. A reattach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -235,6 +237,8 @@ the peer's own buffer uses; an overflow is reported with the existing truncated-
 lasts only for the reattach that needs it — once its tabs are built the connection is ordinary, and
 output arriving for a process no tab is listening to is dropped rather than collected for a later
 attach that is not coming.
+
+Reattached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
 A session can be ended for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked

@@ -33,9 +33,21 @@ export function createRemotePtySession(
   onExit: (exitCode: number) => void,
 ): PtySession {
   const { id, program, command, harness, offline, browser, cols, rows, agentName } = options;
+  let attaching = true;
+  const pending: Array<() => void> = [];
+  const deliver = (callback: () => void) => {
+    if (attaching) pending.push(callback);
+    else callback();
+  };
   channel.attach(id, {
-    onOutput: (data) => messageBus.emit('pty', { type: 'data', id, data }),
-    onExit,
+    onOutput: (data) => deliver(() => messageBus.emit('pty', { type: 'data', id, data })),
+    onExit: (exitCode) => deliver(() => onExit(exitCode)),
+  });
+  if (pending.length === 0) attaching = false;
+  else queueMicrotask(() => {
+    attaching = false;
+    for (const callback of pending) callback();
+    pending.length = 0;
   });
   channel.send({
     type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline, browser,
