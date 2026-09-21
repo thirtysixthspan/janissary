@@ -53,6 +53,8 @@ describe('sessions stylesheet', () => {
     expect(sessions).toContain('.session-columns, .session-row {');
     expect(sessions).toContain('grid-template-columns: minmax(0, 1fr) 6em minmax(0, 1.5fr) 8em 8em 6em');
     expect(sessions).toContain('.session-row.joined .session-row-host { padding-left: 16px; }');
+    expect(sessions).toContain('padding: 0 12px');
+    expect(sessions).toContain('padding: 4px 12px');
   });
 
   it('left-aligns headings and entries in tracks independent of row action counts', () => {

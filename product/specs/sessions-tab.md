@@ -39,6 +39,7 @@ root. The type is what the row *is*: `harness`, `agent`, `ssh`, or `navigator`, 
 opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
+Both headings and rows have 12px horizontal padding.
 
 The state is one of `provisioning` (a remote tab whose workspace clone has not landed yet), `active`,
 `reconnecting` (the tabs are open, the transport is gone, and janissary is already retrying),

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* add horizontal padding to the sessions table items (header cells and body cells).
-
 * make the dialog text more concise
 from:
 Detach this session on 10.27.1.94? Its tabs will close.
