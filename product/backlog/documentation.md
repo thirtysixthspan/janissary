@@ -2,8 +2,6 @@
 
 ## ready
 
-* sessions-tab (7/10) — The sessions tab has no page under `documentation/user-documentation/` and no `help.md` row for `sessions`; its only coverage is three paragraphs inside `documentation/user-documentation/advanced-agents/remote-agents.md` describing detach, attach, terminate, and the seven-day expiry. About 16 of 22 facts are undocumented, including the `sessions left` / `sessions right` docking words, the five row states (`provisioning`, `active`, `reconnecting`, `detached`, `terminated`), the Forget action and when it appears, opening a row by click or Enter and the Up/Down/Home/End navigation, the refresh-on-focus behavior, the per-action notification lines (`<what> on <host> detached.` and friends), the detach/attach control every remote tab's metadata row now carries, and the fact that a parked session appears in neither `connection list` nor the connections panel. Fix by adding a new page under `documentation/user-documentation/tab-types/` (the conversations list is the closest model) and a `help.md` row. Ground truth: `product/specs/sessions-tab.md`, `src/plugins/sessions/manifest.ts`, `src/sessions/manager.ts`.
-
 * commit-to-origin (4/10) — Commit-to-origin is documented in `documentation/user-documentation/tab-types/editor.md` and `documentation/user-documentation/tab-types/file-navigator.md`, but 2 of 15 facts are missing. The editor tab's commit icon tooltip now names the branch the push will land on as `Commit to origin (branch <name>)` with the committing/committed/failed state appended (the navigator's equivalent tooltip is documented; the editor's is not), and the navigator commit no longer fails its rebase when the tree holds unrelated uncommitted work — dirty or untracked files it was never asked to commit are set aside before the rebase and restored afterward, whether the rebase lands or is abandoned. Fix by extending the existing commit paragraphs in both pages. Ground truth: `product/specs/editor-tab.md`, `product/specs/file-navigator-tab.md`, `src/git/commit.ts`, `web/src/shared/commit-branch-tooltip.ts`.
 
 ## development
@@ -14,6 +12,7 @@
 
 ## resolved
 
+* sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md, help.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-09-21)
 * sleep-and-resume — documented in documentation/user-documentation/getting-started/sleep-and-resume.md, documentation/user-documentation/automation/scheduling.md, documentation/user-documentation/tab-types/notifications.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-09-21)
 * cli — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-09-13)
 * sandbox — documented in documentation/user-documentation/advanced-agents/workspacing.md, documentation/user-documentation/command-bar/tasks.md (removed 2026-09-13)

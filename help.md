@@ -28,6 +28,7 @@
 | `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh) |
+| `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
