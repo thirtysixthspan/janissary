@@ -153,22 +153,28 @@ function attach(managers: Managers, record: RemoteSessionRecord, apply: ApplyRes
  * one is minutes. The row stays, marked as terminating: a row that disappeared for the duration read as a
  * completed terminate, and reappeared later holding a workspace the user believed was gone.
  */
-function terminate(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
-  void terminateParkedSession(managers, record).then((outcome) => {
+async function terminateAttempt(managers: Managers, record: RemoteSessionRecord): Promise<SessionActionResult> {
+  try {
+    const outcome = await terminateParkedSession(managers, record);
     if (outcome.terminated) {
       report(managers, line(record.launchLabel, record.host, 'terminated.'));
-      apply({
+      return {
         ran: true, drop: record.session, clearFailure: record.session,
-        terminatingDone: record.session, terminated: terminatedRowFrom(record),
-      });
-      return;
+        terminated: terminatedRowFrom(record),
+      };
     }
-    apply({
-      ran: true, terminatingDone: record.session,
-      failure: { session: record.session, reason: outcome.reason },
-    });
-  });
-  return { ran: true, terminating: record.session };
+    return { ran: true, failure: { session: record.session, reason: outcome.reason } };
+  } catch (error) {
+    const reason = errorText(error);
+    report(managers, line(record.launchLabel, record.host, `could not be terminated: ${reason}`));
+    return { ran: true, failure: { session: record.session, reason } };
+  }
+}
+
+function terminate(
+  managers: Managers, record: RemoteSessionRecord,
+): { result: SessionActionResult; attempt: Promise<SessionActionResult> } {
+  return { result: { ran: true, terminating: record.session }, attempt: terminateAttempt(managers, record) };
 }
 
 function terminateLive(managers: Managers, record: RemoteSessionRecord): SessionActionResult | undefined {
@@ -200,5 +206,11 @@ export function runSessionAction(
   if (action.kind === 'forget') return forget(managers, action.session, record);
   if (!record) return REFUSED;
   if (action.kind === 'attach') return attach(managers, record, apply);
-  return terminateLive(managers, record) ?? terminate(managers, record, apply);
+  const live = terminateLive(managers, record);
+  if (live) return live;
+  // The pairing lives here rather than inside `terminate`: whatever `terminating` a raise announces,
+  // this is the one place its clear is guaranteed to follow, on every way the attempt can settle.
+  const { result, attempt } = terminate(managers, record);
+  void attempt.then((settled) => apply({ ...settled, terminatingDone: record.session }));
+  return result;
 }
