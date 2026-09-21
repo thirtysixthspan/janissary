@@ -15,7 +15,10 @@ function decodeRequest(record: Record<string, unknown>): DecodeResult {
   const descriptor = operationDescriptor(operation);
   if (!descriptor.valid(record.args)) return malformed('filesystem-request');
   const args = descriptor.decode(record.args);
-  if (operation === 'write-file') args.content = Buffer.from(args.content ?? '', 'base64').toString('utf8');
+  if (operation === 'write-file') {
+    const decoded = args as { content: string };
+    decoded.content = Buffer.from(decoded.content, 'base64').toString('utf8');
+  }
   return {
     type: 'filesystem-request', session: record.session, request: record.request, operation, args,
   };
