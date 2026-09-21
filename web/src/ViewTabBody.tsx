@@ -5,6 +5,7 @@ import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
 import { tabBodyBorder } from './tab-body-border';
 import { multiOpenablePaths } from './multi-open';
+import { isFilesTabView } from './shared/tab-view-guards';
 
 // Renders the body for file navigator and notifications view tabs. Harness, editor, page, and
 // plugin tabs are rendered separately in App (via MountedViewLayers) because they must all stay
@@ -19,7 +20,7 @@ export function ViewTabBody({
   active?: boolean; onSplit?: () => void;
 }) {
   const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
-  if (tab.view === 'files' && tab.files) {
+  if (isFilesTabView(tab)) {
     return <div className="tab-body" style={border}><FileNavigatorTab files={tab.files} client={client} index={index} onSplit={onSplit} multiOpen={multiOpenablePaths} /></div>;
   }
   if (tab.view === 'notifications') {

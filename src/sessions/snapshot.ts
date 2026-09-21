@@ -2,6 +2,7 @@ import type { Managers } from '../managers.js';
 import type { RemoteSessionKind } from '../protocol.js';
 import type { RemoteEntry } from '../remote/attach.js';
 import type { Tab } from '../tab/types.js';
+import { isFilesTab } from '../tab/view-guards.js';
 import type { SessionChannel, SessionMember, SessionSsh } from './rows.js';
 import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } from './store.js';
 
@@ -26,7 +27,7 @@ function tabKind(tab: Tab): RemoteSessionKind {
 // metadata row already uses, so a navigator over a workspace reads as `$workspace/<name>` rather
 // than as an absolute path nobody recognizes.
 function tabName(tab: Tab): string {
-  if (tab.view === 'files' && tab.files) return `files ${tab.files.root}`;
+  if (isFilesTab(tab)) return `files ${tab.files.root}`;
   return tab.title ?? tab.label;
 }
 

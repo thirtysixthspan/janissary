@@ -2,17 +2,6 @@
 
 ## ready
 
-* Route the last hand-written view-kind checks through the tab view guards built to replace them, starting with the sidebar dock comparison that currently treats two payload-less tabs as the same plugin.
-
-Existing Debt: Both halves of the app have a guard module that checks a tab's view discriminant together with the payload that discriminant implies, but almost nothing imports them, so the invariant is still re-derived inline at the call sites — and where it is re-derived with optional chaining instead of a presence check, two tabs that are both missing the payload compare as equal. Severity: 4/10
-
-Existing Risk: 4/10 - Docking a plugin tab into a sidebar displaces an unrelated plugin's docked tab whenever both have lost their plugin record — the case the guard module's own comment names as real — and the displaced tab silently returns to the center strip.
-
-Proposal Risk: 2/10 - The converted sites narrow the payload before reading it, but the tab record still declares the discriminant and its five payloads as independent optional fields, so a new site can still invent its own check.
-
-Proposal: `src/tab/view-guards.ts` exports `isHarnessTab`, `isEditorTab`, `isFilesTab`, `isPluginTab`, and `isMonitorTab` with narrowed types, and `web/src/shared/tab-view-guards.ts` mirrors them for the wire shape; only two non-test modules under `src/` import the server one. Start with `sameDockKind` in `src/tab/dock.ts`, which returns `candidate.plugin?.id === tab.plugin?.id` once both tabs are known to be plugin tabs — `undefined === undefined` is `true`, so a tab whose plugin record is absent matches any other such tab. Replace it with `isPluginTab(candidate) && isPluginTab(tab) && candidate.plugin.id === tab.plugin.id`, deciding explicitly what a payload-less plugin tab should do; not matching is the behavior the guard module's comment argues for, and it is a behavior change, so it belongs in the commit with its own test. Then convert the remaining inline pairs to the guard call: `src/sessions/snapshot.ts`, which writes `tab.view === 'files' && tab.files` before reading `tab.files.root`, and `web/src/ViewTabBody.tsx` and `web/src/Sidebar.tsx`, which write the same pair before rendering the navigator body. Leave alone the sites that test the discriminant and never touch a payload — `src/schedule/manager.ts`, `src/monitor/targets.ts`, `src/commands/send.ts` — since a guard there would narrow something they do not read. `src/tab/dock.test.ts` pins today's displacement behavior and is where the payload-less case belongs as a new case; nothing covers it today, so the dock change is the one step here that can move behavior.
-
-
 * Correct the architecture guideline's command-routing section, which still describes a schedule branch running ahead of the command registry that no longer exists.
 
 Existing Debt: The binding architecture guideline names a live violation of its own one-command-one-definition rule that has since been fixed, so the document every agent is instructed to read before working describes a code path the codebase does not have. Severity: 3/10

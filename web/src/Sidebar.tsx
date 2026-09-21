@@ -10,6 +10,7 @@ import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
+import { isFilesTabView } from './shared/tab-view-guards';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;
@@ -89,7 +90,7 @@ export function Sidebar({
           startControl={side === 'right' ? resizeButton : undefined}
           endControl={side === 'left' ? resizeButton : undefined}
         />
-        {current.tab.view === 'files' && current.tab.files && (
+        {isFilesTabView(current.tab) && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
             dropRef={dropRef} editorDropRef={editorDropRef} targetCwd={targetCwd ?? current.tab.cwd}

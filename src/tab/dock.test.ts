@@ -55,4 +55,18 @@ describe('applyDock occupant rule for plugin tabs', () => {
     expect(tabs[1].dock).toBe('left');
     expect(tabs[2].dock).toBe('left');
   });
+
+  // The booked bug: `plugin?.id === plugin?.id` compared `undefined === undefined` as a match, so
+  // docking a plugin tab that lost its plugin record displaced any other plugin tab that had too.
+  it('leaves a docked tab alone when both plugin tabs are missing their plugin record', () => {
+    const tabs = [makeTab('janus', '#fff'), makeTab('plugin-a', '#fff'), makeTab('plugin-b', '#fff')];
+    tabs[1].view = 'plugin';
+    tabs[2].view = 'plugin';
+    tabs[1].dock = 'left';
+
+    applyDock(tabs, 0, 2, 'left', vi.fn());
+
+    expect(tabs[1].dock).toBe('left');
+    expect(tabs[2].dock).toBe('left');
+  });
 });

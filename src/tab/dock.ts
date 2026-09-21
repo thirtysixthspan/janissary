@@ -1,3 +1,4 @@
+import { isPluginTab } from './view-guards.js';
 import type { Tab } from './types.js';
 
 // Resolves docking a tab into a sidebar (`'left'` | `'right'`), or undocking it back to the
@@ -33,7 +34,8 @@ export function applyDock(
 
 function sameDockKind(candidate: Tab, tab: Tab): boolean {
   if (candidate.view !== tab.view) return false;
-  return tab.view === 'plugin' ? candidate.plugin?.id === tab.plugin?.id : true;
+  if (tab.view !== 'plugin') return true;
+  return isPluginTab(candidate) && isPluginTab(tab) && candidate.plugin.id === tab.plugin.id;
 }
 
 function nearestNonDocked(tabs: Tab[], activeTab: number, recordLeavingActiveTab: (newIndex: number) => void): number {
