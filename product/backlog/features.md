@@ -2,6 +2,8 @@
 
 ## ready
 
+* auto accept should still operate on remote harnesses that are detached.
+
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
