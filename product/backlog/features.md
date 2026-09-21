@@ -12,6 +12,8 @@ https://chatgpt.com/codex/settings/usage to purchase more credits or try again a
 Claude example message: 
 You've hit your session limit resets 1:20pm (America/Chicago)
 
+* Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
+
 ## development
 
 ## deferred
