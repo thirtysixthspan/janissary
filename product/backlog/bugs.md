@@ -2,6 +2,9 @@
 
 ## ready
 
+after changing an agent name using the tab label the following error occured:
+warning: failed to persist agent state for 10.27.1.94: Invalid agent name: "10.27.1.94"
+
 ## development
 
 ## deferred
