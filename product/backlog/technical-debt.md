@@ -2,16 +2,6 @@
 
 ## ready
 
-* Replace the file navigator drag hook's legacy positional overload with one named options contract.
-
-Existing Debt: `web/src/file-navigator/useFileNavigatorDrag.ts` accepts two incompatible positional call shapes, detects the old one at runtime with string-versus-ref checks, and carries nine ordered parameters plus compatibility casts although `web/src/file-navigator/FileNavigatorTab.tsx` is the sole production caller and uses the newer shape. Severity: 5/10
-
-Existing Risk: 5/10 - Adding a drag destination or changing root handling can silently bind a reference or path to the wrong positional slot, leaving a drop target unresponsive or causing a file move to use the wrong relative-path context without a type error at the call site.
-
-Proposal Risk: 2/10 - The hook still coordinates several drop destinations and global gesture listeners, so regressions remain possible in destination-specific behavior, but named fields make omitted or misrouted inputs visible to TypeScript and reviewers.
-
-Proposal: Define a named options type beside `useFileNavigatorDrag` in `web/src/file-navigator/useFileNavigatorDrag.ts` for `absoluteRoot`, `displayRoot`, `targetCwd`, command-bar and editor refs, and optional remote host; remove the `legacy` branch, union parameters, defaults that masquerade as old-call support, and the compatibility cast. Update `web/src/file-navigator/FileNavigatorTab.tsx` to pass that object, then convert the direct hook construction in `web/src/file-navigator/useFileNavigatorDrag.test.ts` through a small fixture or explicit options objects so each test states the inputs it depends on. Preserve the tests for ordinary moves, command-bar/editor/harness drops, remote path formatting, conflict flow, and mouse-up/blur/Escape/unmount cleanup, since those cover the behavior that must remain unchanged while the call boundary changes.
-
 * Move the three flat `src/message-handler*.ts` files into `src/message/`: `message-handler.ts`, `message-handler-file-navigator.ts`, and `message-handler-plugin.ts` dispatch the server's RPC messages and have three colocated tests, with no bare `src/message.ts` entry. `src/message/` does not exist yet, no configuration names the old paths literally, and roughly five other files import the group, so this is a mechanical move and import rewrite. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `message` prefix. Severity: **low**.
 
 * Move the three flat interactive-command files into `src/interactive/`: `interactive.ts`, `interactive-learned.ts`, and `interactive-signals.ts` classify terminal-taking commands, persist learned classifications, and detect terminal takeover, with three colocated tests and a bare `src/interactive.ts` entry that becomes `index.ts`. `src/interactive/` does not exist yet, no configuration names the old paths literally, and roughly six other files import the group, so its shared concern should live in the tree instead of in repeated filenames. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `interactive` prefix. Severity: **low**.
