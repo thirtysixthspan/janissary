@@ -232,6 +232,26 @@ describe('ShellManager — which shell a tab gets', () => {
       subscription.unsubscribe();
     }
   });
+
+  it('strips shell sentinel lines from restored output', () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = createRemoteShellMock.mock.calls[0][6] as (data: string) => void;
+
+    restored('tsconfig.json\nvitest.config.ts\nweb\n__JS_END_3_1789964749418__\n');
+    restored('/remote/workspace/harun\n__PWD_3_1789964749468__\npwd\n/remote/workspace/harun\n__PWD_3_1789964749502__\n');
+    restored('zsh: operation not permitted: ps\n__JS_END_3_1789964752762__\n');
+
+    expect(tab.log.map((entry) => entry.output)).toEqual([
+      'tsconfig.json\nvitest.config.ts\nweb\n',
+      'zsh: operation not permitted: ps\n',
+    ]);
+  });
 });
 
 describe('ShellManager — promotion to a terminal', () => {

@@ -1,4 +1,5 @@
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
+import { stripShellSentinels } from './sentinel-strip.js';
 import { createRemoteShell } from '../remote/shell-session.js';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
 import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
@@ -125,8 +126,12 @@ export class ShellManager {
     return shell;
   }
 
+  // Restored bytes are the detached peer's replay of the shell's raw stream, which still carries the
+  // sentinel lines live execution strips (`executeShellCmd`/`queryShellPwd`); they are removed here,
+  // at the one place restored output enters the transcript, so a reattached tab's history reads the
+  // way the live tab's always did.
   private appendRestoredOutput(label: string, data: string): void {
-    const output = data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data;
+    const output = stripShellSentinels(data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data);
     if (!output) return;
     this.managers.tab.append(label, { input: '', output });
   }
