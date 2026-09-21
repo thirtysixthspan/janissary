@@ -2,6 +2,85 @@
 
 All notable changes to this project are documented here.
 
+## [0.15.0] - 2026-09-21
+
+### Features
+
+- add a sessions tab for detaching and reattaching remote sessions (#1143)
+- preserve sessions across laptop sleep and resume (#1131)
+- Shift+drag text selection layer over terminal surfaces (#1129)
+- show workspaced tabs as $workspace in the metadata row (#1135)
+- commit-to-origin icon in the editor tab metadata row (#1134)
+- name the commit-to-origin button's target branch in its tooltip (#1133)
+- rename a new file's default name directly in the editor metadata row (#1132)
+- commit and push to origin from the tree (#1128)
+- add architecture diagram generation task and vendor diagram-design skill (#1130)
+- add a Copy file path entry to the file navigator row context menu (#1123)
+- insert file names, not paths, when a file-navigator drag drops onto a command bar or editor (#1122)
+
+### Bug Fixes
+
+- stop two payload-less plugin tabs from displacing each other when docked (#1150)
+- clear the terminating marker on a rejected terminate attempt (#1148)
+- frame machine-typed codex input as a bracketed paste (#1145)
+- read opencode's data-column transcript schema (#1144)
+- name the target branch in the commit-to-origin tooltip (#1139)
+- stash extra tree changes before commit-to-origin's rebase (#1138)
+- shut each controller test's controller down so stale listeners cannot pile up (#1137)
+- include the workspace clone name in the metadata row's workspace symbol (#1136)
+- dont wrap ai files in tests
+- let ArrowUp/ArrowDown move within a wrapped line before recalling history (#1120)
+
+### Documentation
+
+- document commit-to-origin tooltip and rebase stash behavior (#1155)
+- add a Sessions tab page and help.md row (#1154)
+- document sleep and resume behavior (#1153)
+- correct the command-routing paragraph in section 5 (#1151)
+- refresh documentation gap candidates
+- promote the remote sessions tab plan to ready
+- add the remote sessions tab draft plan (#1142)
+- regenerate host and transport deployment diagram
+- regenerate system architecture diagram
+- stamp generation date and source commit into both diagrams
+- drop the diagram set and offer render settings as questions
+- regenerate module architecture diagram set
+- draw the architecture as a diagram set, one per component
+- add generate-deployment-diagram research task
+- add host and transport deployment diagram
+- regenerate system architecture diagram
+- correct Escape-consumption wording for held Shift+drag selections (#1140)
+- record harness/keyboard-nav Escape wording bug from PR #1129
+- draft the Janissary-owned terminal text selection plan (#1127)
+- draft plan for connect-triggered e2e browser on harness tabs (#1126)
+- draft plan for on-demand e2e browser on harness tabs (#1125)
+- phase plan-a-new-feature questions by product and implementation decisions (#1124)
+- plan committing and pushing from the file navigator (#1121)
+
+### Refactoring
+
+- name drag hook options (#1158)
+- extract entry factory (#1157)
+- centralize session URL construction (#1156)
+- let JanusClient.request carry the server's error back (#1147)
+- give each filesystem operation its own decoded-argument type (#1146)
+
+### Chores
+
+- log react organization debt
+- log namespacing opportunities
+- log new technical debt findings
+- log new technical debt findings
+- promote plan
+- promote plan
+- promote plan
+- promote plan
+
+### Other
+
+- quality(plugins): compose the file-backed tab payload once in files.ts (#1152)
+- quality(web): move shared client UI primitives into web/src/shared (#1149)
+
 ## [0.14.0] - 2026-09-13
 
 ### Features
