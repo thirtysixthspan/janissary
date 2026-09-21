@@ -171,6 +171,14 @@ function terminate(managers: Managers, record: RemoteSessionRecord, apply: Apply
   return { ran: true, terminating: record.session };
 }
 
+function terminateLive(managers: Managers, record: RemoteSessionRecord): SessionActionResult | undefined {
+  const entry = managers.remote.liveEntries().find((candidate) => candidate.channel.sessionId === record.session);
+  if (!entry) return;
+  report(managers, line(entry.workspaceLabel, entry.address.host, 'terminated.'));
+  if (!managers.remote.close(entry.workspaceLabel)) return REFUSED;
+  return { ran: true, drop: record.session, clearFailure: record.session };
+}
+
 // Forgetting removes janissary's own record and touches nothing on the far side.
 function forget(managers: Managers, session: string, record: RemoteSessionRecord | undefined): SessionActionResult {
   if (record) report(managers, line(record.launchLabel, record.host, 'forgotten — its record was removed.'));
@@ -191,5 +199,6 @@ export function runSessionAction(
   const record = sessions.recordFor(action.session);
   if (action.kind === 'forget') return forget(managers, action.session, record);
   if (!record) return REFUSED;
-  return action.kind === 'attach' ? attach(managers, record, apply) : terminate(managers, record, apply);
+  if (action.kind === 'attach') return attach(managers, record, apply);
+  return terminateLive(managers, record) ?? terminate(managers, record, apply);
 }

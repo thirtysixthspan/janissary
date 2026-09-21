@@ -72,9 +72,9 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
   return channel.reconnecting ? 'reconnecting' : 'active';
 }
 
-// The launching row of a live channel is where the channel-level verbs live, because a detach acts
-// on the whole channel: one ssh connection serves every tab riding it, so a per-tab detach would
-// have to keep the connection up for the others and would mean nothing. On a channel that cannot
+// The launching row of a live channel is where the channel-level verbs live, because detach and
+// terminate act on the whole channel: one ssh connection serves every tab riding it, so a per-tab
+// action would have to keep the connection up for the others and would mean nothing. On a channel that cannot
 // present its launching row — its tab was closed while the joined ones keep the channel alive —
 // those verbs belong on every surviving row: each is by definition a survivor, and the rows are a
 // view of one thing.
@@ -86,9 +86,11 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
 // backoff is already running, so pressing it collapses the wait exactly as the system resume signal
 // does. It is the same verb as a parked session's because it is the same request — bring this back —
 // and the row's state is what says which kind of waiting it ends.
-function liveActions(launching: boolean, reconnecting: boolean): RemoteSessionAction[] {
+function liveActions(launching: boolean, reconnecting: boolean, terminable: boolean): RemoteSessionAction[] {
   if (!launching) return ['focus', 'close'];
-  return reconnecting ? ['focus', 'attach', 'detach'] : ['focus', 'detach'];
+  const actions: RemoteSessionAction[] = reconnecting ? ['focus', 'attach', 'detach'] : ['focus', 'detach'];
+  if (terminable) actions.push('terminate');
+  return actions;
 }
 
 function liveRows(channel: SessionChannel): RemoteSessionView[] {
@@ -104,7 +106,11 @@ function liveRows(channel: SessionChannel): RemoteSessionView[] {
     destination: channel.destination,
     workspace: channel.workspace,
     joined: member.label !== channel.launchLabel,
-    actions: liveActions(launchAbsent || member.label === channel.launchLabel, state === 'reconnecting'),
+    actions: liveActions(
+      launchAbsent || member.label === channel.launchLabel,
+      state === 'reconnecting',
+      !channel.provisioning && channel.session !== undefined,
+    ),
     label: member.label,
     ...(channel.session !== undefined && { session: channel.session }),
   }));

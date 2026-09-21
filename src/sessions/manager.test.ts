@@ -59,6 +59,7 @@ function entry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
 type Harness = {
   sessions: SessionsManager;
   detach: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
   closeTab: ReturnType<typeof vi.fn>;
   entries: RemoteEntry[];
 };
@@ -76,12 +77,18 @@ function harness(
     entries.splice(index, 1);
     return true;
   });
+  const close = vi.fn((label: string) => {
+    const index = entries.findIndex((candidate) => candidate.labels.has(label));
+    if (index === -1) return false;
+    entries.splice(index, 1);
+    return true;
+  });
   const closeTab = vi.fn();
   const tabs: { label: string; view: string; dotColor?: string; group?: number; groupColor?: string; plugin?: { id: string } }[] = open
     .map((label) => ({ label, view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' }));
   if (sessionsTab) tabs.push({ label: sessionsTab.label, view: 'plugin', plugin: { id: 'sessions' } });
   const managers = {
-    remote: { liveEntries: () => entries, detach, close: vi.fn() },
+    remote: { liveEntries: () => entries, detach, close },
     tab: {
       tabs,
       byLabel: (label: string) => (open.includes(label)
@@ -97,7 +104,7 @@ function harness(
   // Every manager subscribes to the global bus, so one left alive would mirror its own entries into
   // the next case's store the moment that case raises the signal.
   created.push(sessions);
-  return { sessions, detach, closeTab, entries };
+  return { sessions, detach, close, closeTab, entries };
 }
 
 function settle(outcome: AttachOutcome): void {
@@ -438,6 +445,26 @@ describe('SessionsManager attach', () => {
 });
 
 describe('SessionsManager end', () => {
+  it('ends a live session through its channel close and removes its rows', () => {
+    const h = harness([entry({ labels: new Set(['claude', 'bekir']) })], undefined, ['claude', 'bekir']);
+    h.sessions.view();
+
+    expect(h.sessions.terminate(SESSION)).toBe(true);
+    expect(h.close).toHaveBeenCalledWith('claude');
+    expect(h.sessions.view()).toEqual([]);
+    expect(loadRemoteSessions()).toEqual([]);
+    expect(terminateParkedSession).not.toHaveBeenCalled();
+  });
+
+  it('reports a live-session termination once', () => {
+    const h = harness([entry()]);
+
+    h.sessions.terminate(SESSION);
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session', 'janus', 'claude on devbox terminated.');
+  });
+
   it('drops the record and leaves a terminated row when the peer is stopped', async () => {
     const h = harness();
     saveRemoteSessions([record()]);

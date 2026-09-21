@@ -59,9 +59,9 @@ describe('composeSessionRows live channels', () => {
 
   // Decision 10: on a row that is already retrying, attach means "try now" — the same verb as a
   // parked session's, because it is the same request, and the state is what says which wait it ends.
-  it('offers attach on a reconnecting row, beside the detach it still has', () => {
+  it('offers attach on a reconnecting row, beside the detach and terminate controls it still has', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'attach', 'detach']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'terminate']);
   });
 
   it('offers no attach on a row whose transport is healthy', () => {
@@ -90,9 +90,9 @@ describe('composeSessionRows live channels', () => {
     expect(row.workspace).toBe('/srv/ws');
   });
 
-  it('offers focus and detach on the launching row', () => {
+  it('offers focus, detach, and terminate on the launching row', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel()] }));
-    expect(row.actions).toEqual(['focus', 'detach']);
+    expect(row.actions).toEqual(['focus', 'detach', 'terminate']);
     expect(row.joined).toBe(false);
   });
 
@@ -101,6 +101,7 @@ describe('composeSessionRows live channels', () => {
   it('keeps detach on a provisioning row rather than making the control appear later', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel({ provisioning: true })] }));
     expect(row.actions).toContain('detach');
+    expect(row.actions).not.toContain('terminate');
   });
 
   it('offers focus and close on a joined row, never detach', () => {
@@ -142,13 +143,13 @@ describe('composeSessionRows channels without their launching member', () => {
 
   it('offers the park path on a surviving row of a launch-member-less channel', () => {
     const [row] = composeSessionRows(snapshot({ channels: [launchAbsent()] }));
-    expect(row.actions).toEqual(['focus', 'detach']);
+    expect(row.actions).toEqual(['focus', 'detach', 'terminate']);
     expect(row.joined).toBe(true);
   });
 
   it('offers try-now detach on a surviving row while the channel is reconnecting', () => {
     const [row] = composeSessionRows(snapshot({ channels: [launchAbsent({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'attach', 'detach']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'terminate']);
   });
 
   it('keeps a channel with its launching member present at per-member actions', () => {
@@ -160,7 +161,7 @@ describe('composeSessionRows channels without their launching member', () => {
         ],
       })],
     }));
-    expect(rows[0].actions).toEqual(['focus', 'detach']);
+    expect(rows[0].actions).toEqual(['focus', 'detach', 'terminate']);
     expect(rows[1].actions).toEqual(['focus', 'close']);
   });
 });

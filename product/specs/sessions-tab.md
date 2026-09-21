@@ -97,7 +97,8 @@ session stays exactly as it was: nothing is given up locally and nothing is park
 
 **Terminate** applies to a parked session and destroys it: janissary reconnects far enough to tell
 the peer to stop its processes and remove its remote workspace. It asks for confirmation. A live
-session carries no terminate button, because closing its tabs already does that.
+session's launching row also carries Terminate; confirming it stops the peer, removes its remote
+workspace, and closes every tab and navigator sharing that session. Joined rows keep Close instead.
 
 The row stays on screen while the attempt runs, marked as terminating, with its terminate and attach controls
 not pressable until it settles — reaching a slow or unreachable host takes minutes, and a row that
