@@ -2,8 +2,6 @@
 
 ## ready
 
-* commit-to-origin (4/10) — Commit-to-origin is documented in `documentation/user-documentation/tab-types/editor.md` and `documentation/user-documentation/tab-types/file-navigator.md`, but 2 of 15 facts are missing. The editor tab's commit icon tooltip now names the branch the push will land on as `Commit to origin (branch <name>)` with the committing/committed/failed state appended (the navigator's equivalent tooltip is documented; the editor's is not), and the navigator commit no longer fails its rebase when the tree holds unrelated uncommitted work — dirty or untracked files it was never asked to commit are set aside before the rebase and restored afterward, whether the rebase lands or is abandoned. Fix by extending the existing commit paragraphs in both pages. Ground truth: `product/specs/editor-tab.md`, `product/specs/file-navigator-tab.md`, `src/git/commit.ts`, `web/src/shared/commit-branch-tooltip.ts`.
-
 ## development
 
 ## deferred
@@ -12,6 +10,7 @@
 
 ## resolved
 
+* commit-to-origin — documented in documentation/user-documentation/tab-types/editor.md, documentation/user-documentation/tab-types/file-navigator.md (removed 2026-09-21)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md, help.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-09-21)
 * sleep-and-resume — documented in documentation/user-documentation/getting-started/sleep-and-resume.md, documentation/user-documentation/automation/scheduling.md, documentation/user-documentation/tab-types/notifications.md, documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-09-21)
 * cli — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-09-13)
