@@ -2,7 +2,7 @@
 
 ## ready
 
-* auto accept should still operate on remote harnesses that are detached.
+* auto accept should still operate on remote harnesses that are detached. this will allow harness to continue working in the background while detached. notifications should be queued and replayed when the harness is attached.
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
