@@ -204,6 +204,34 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
     expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
   });
+
+  it('publishes restored output immediately and applies transcript retention', () => {
+    writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 2 }));
+    loadConfig(tmpDir);
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = createRemoteShellMock.mock.calls[0][6] as (data: string) => void;
+    const dirty = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', dirty);
+    try {
+      restored('\u{1B}c');
+      expect(dirty).not.toHaveBeenCalled();
+      restored('\u{1B}cearlier output');
+      expect(tab.log).toEqual([{ input: '', output: 'earlier output' }]);
+      expect(dirty).toHaveBeenCalledOnce();
+      restored('later output');
+      restored('latest output');
+      expect(tab.log.map((entry) => entry.output)).toEqual(['later output', 'latest output']);
+      expect(dirty).toHaveBeenCalledTimes(3);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
 });
 
 describe('ShellManager — promotion to a terminal', () => {

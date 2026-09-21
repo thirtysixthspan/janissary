@@ -15,9 +15,8 @@ function claimLabel(managers: Managers, recorded: string): string {
   return uniqueLabel(managers.tab.tabs, recorded);
 }
 
-// An agent tab's shell is created lazily, on its first command, so the recorded spawn id is parked
-// on `ShellManager` rather than handed to a constructor: when the shell is finally asked for, it
-// binds to the one still running out there instead of starting a second beside it.
+// Bind the recorded shell as soon as the tab exists so it claims retained output before the
+// restore pass discards unclaimed frames.
 function restoreAgentTab(
   managers: Managers, launchLabel: string, recordedLabel: string, spawnId: string, workspace: string,
 ): string | undefined {
@@ -29,6 +28,7 @@ function restoreAgentTab(
   placeAgent(managers, {
     resolved: label, creator, cwd: workspace, offline: false, remote: creator.remote,
   });
+  managers.shell.ensure(label);
   return label;
 }
 

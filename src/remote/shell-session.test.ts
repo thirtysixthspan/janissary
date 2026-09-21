@@ -65,6 +65,33 @@ describe('createRemoteShell', () => {
     expect(restored).toHaveBeenCalledWith('retained output');
   });
 
+  it('keeps restored history out of the next command and records only idle output', async () => {
+    const { channel, sent, reply } = attachedChannel('session');
+    channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
+    reply('rsh1', 'earlier output\n');
+    const restored = vi.fn();
+    const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true, restored);
+    const done = vi.fn();
+
+    executeShellCmd(shell, 'echo fresh', 7, vi.fn(), done);
+    await new Promise<void>((resolve) => { setImmediate(resolve); });
+    reply('rsh1', `fresh\n${sentinelFrom(writtenInput(sent))}\n`);
+
+    expect(done).toHaveBeenCalledExactlyOnceWith('fresh');
+    expect(restored).toHaveBeenCalledExactlyOnceWith('earlier output\n');
+
+    const pwd = vi.fn();
+    queryShellPwd(shell, 7, pwd);
+    const sentinel = /__PWD_\d+_\d+__/.exec(writtenInput(sent))![0];
+    reply('rsh1', `/remote/work\n${sentinel}\n`);
+    expect(pwd).toHaveBeenCalledExactlyOnceWith('/remote/work');
+    expect(restored).toHaveBeenCalledTimes(1);
+
+    reply('rsh1', 'background output\n');
+    expect(restored).toHaveBeenLastCalledWith('background output\n');
+    shell.kill();
+  });
+
   it('presents a writable stdin and non-emitting stderr', () => {
     const { channel } = attachedChannel();
     const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash');

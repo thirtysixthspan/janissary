@@ -126,11 +126,9 @@ export class ShellManager {
   }
 
   private appendRestoredOutput(label: string, data: string): void {
-    const tab = this.managers.tab.byLabel(label);
-    if (!tab) return;
     const output = data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data;
     if (!output) return;
-    tab.log = [...tab.log, { input: '', output }];
+    this.managers.tab.append(label, { input: '', output });
   }
 
   // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never

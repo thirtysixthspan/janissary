@@ -6,6 +6,7 @@ import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { spawnPty, type PtyHandlers } from '../pty.js';
 import { startRemoteAgent } from '../profile/remote-agent.js';
+import { placeAgent } from '../profile/place-agent.js';
 import { RemoteManager } from '../remote/manager.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from '../remote/protocol.js';
 import { RemoteProcesses } from '../remote/serve-processes.js';
@@ -37,7 +38,7 @@ let managers: Managers;
 function harness() {
   const transports: Transport[] = [];
   const frames: ClientFrame[] = [];
-  const retained: string[] = [];
+  const retained = new Map<string, string>();
   const remoteKills = vi.fn();
   const emit = (frame: ServerFrame) => {
     const transport = transports.at(-1);
@@ -45,7 +46,7 @@ function harness() {
   };
   const processes = new RemoteProcesses(emit, WORKSPACE, 'harun');
   const recordOutput = (id: string, data: string) => {
-    retained.push(data);
+    retained.set(id, (retained.get(id) ?? '') + data);
     emit({ type: 'output', id, data });
   };
   vi.mocked(spawnShell).mockImplementation(() => {
@@ -75,8 +76,7 @@ function harness() {
           case 'attach': {
             setTimeout(() => {
               emit({ type: 'attach-result', accepted: true });
-              const id = processes.states()[0]?.id;
-              if (id !== undefined && retained.length > 0) emit({ type: 'output', id, data: `\u{1B}c${retained.join('')}` });
+              for (const [id, data] of retained) emit({ type: 'output', id, data: `\u{1B}c${data}` });
             }, 0);
             break;
           }
@@ -151,5 +151,44 @@ it('restores the same agent shell through repeated detach and late transport exi
     expect(h.processes.states()).toEqual(original);
   }
   expect(spawnShell).toHaveBeenCalledOnce();
+  expect(h.remoteKills).not.toHaveBeenCalled();
+});
+
+it.each([false, true])('restores joined agent tabs and their history before a command, label collision=%s', async (collision) => {
+  const h = harness();
+  startRemoteAgent(managers, {
+    resolved: 'harun', creator: managers.tab.cur(), address: { address: 'devbox', destination: 'devbox', host: 'devbox' },
+    cwd: process.cwd(), offline: false, out: vi.fn(),
+  });
+  await vi.advanceTimersByTimeAsync(10);
+  const creator = managers.tab.byLabel('harun')!;
+  expect(managers.remote.attach('joined', 'harun')).toBe(true);
+  placeAgent(managers, { resolved: 'joined', creator, cwd: WORKSPACE, offline: false, remote: creator.remote });
+  managers.shell.ensure('joined');
+  const original = h.processes.states();
+  const joined = original.find((process) => process.agentName === 'joined')!;
+  h.recordOutput(joined.id, 'earlier joined output\n');
+  for (let cycle = 0; cycle < 2; cycle++) {
+    expect(managers.sessions.detach('harun')).toBe(true);
+    expect(managers.tab.tabs.some((tab) => tab.remote)).toBe(false);
+    if (cycle === 0) {
+      h.recordOutput(joined.id, 'output while detached\n');
+      if (collision) placeAgent(managers, { resolved: 'joined', creator: managers.tab.cur(), cwd: process.cwd(), offline: false });
+    }
+    expect(managers.sessions.attach(SESSION)).toBe(true);
+    await vi.advanceTimersByTimeAsync(10);
+    const restored = managers.tab.tabs.find((tab) => tab.remote && tab.label !== 'harun')!;
+    expect(restored).toBeDefined();
+    expect(managers.tab.cur()).toBe(restored);
+    expect(restored.log).toEqual([{ input: '', output: 'earlier joined output\noutput while detached\n' }]);
+    expect(managers.shell.has(restored.label)).toBe(true);
+    expect(managers.tab.cwdOf(restored.label)).toBe(WORKSPACE);
+    if (collision) {
+      expect(restored.label).not.toBe('joined');
+      expect(managers.tab.byLabel('joined')?.log).toEqual([]);
+    }
+    expect(h.processes.states()).toEqual(original);
+  }
+  expect(spawnShell).toHaveBeenCalledTimes(2);
   expect(h.remoteKills).not.toHaveBeenCalled();
 });

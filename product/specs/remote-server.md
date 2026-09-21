@@ -252,6 +252,8 @@ attach that is not coming.
 
 Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
+Every surviving agent, including one joined to another tab's remote workspace, opens in a new agent tab when its session is attached. Its retained shell output appears in the scrollable transcript immediately, including output produced while detached, without requiring a command first. If the original label is occupied, the restored history belongs to the newly named tab. Subsequent idle output appears as it arrives and follows the transcript retention limit. Restored history does not become part of the next command's output, and that command's output appears only once.
+
 A session can be terminated for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked
 session removes janissary's own record and touches nothing on the far side.

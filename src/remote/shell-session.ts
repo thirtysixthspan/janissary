@@ -41,8 +41,8 @@ export function createRemoteShell(
 
   channel.attach(id, {
     onOutput: (data) => {
-      stdout.write(data);
-      onRestoredOutput?.(data);
+      if (onRestoredOutput && stdout.listenerCount('data') === 0) onRestoredOutput(data);
+      else stdout.write(data);
     },
     onExit: () => { live = false; stdin.end(); stdout.end(); },
   });
