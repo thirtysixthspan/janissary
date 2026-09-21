@@ -19,26 +19,21 @@ type Gesture = {
   started: boolean;
 };
 
+export type FileNavigatorDragOptions = {
+  absoluteRoot: string;
+  displayRoot: string;
+  targetCwd: string;
+  dropRef?: RefObject<CommandInputDropHandle | null>;
+  editorDropRef?: RefObject<EditorDropHandle | null>;
+  remoteHost?: string;
+};
+
 export function useFileNavigatorDrag(
   rows: FileNavigatorRow[],
   client: JanusClient,
   index: number,
-  absoluteRootOrDropRef: string | RefObject<CommandInputDropHandle | null> = '',
-  displayRootOrEditorRef: string | RefObject<EditorDropHandle | null> = '',
-  targetCwd = '',
-  providedDropRef?: RefObject<CommandInputDropHandle | null>,
-  providedEditorDropRef?: RefObject<EditorDropHandle | null>,
-  remoteHost?: string,
+  { absoluteRoot, displayRoot, targetCwd, dropRef, editorDropRef, remoteHost }: FileNavigatorDragOptions,
 ) {
-  const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
-  const absoluteRoot = legacy ? '' : absoluteRootOrDropRef;
-  const displayRoot = typeof displayRootOrEditorRef === 'string' ? displayRootOrEditorRef : '';
-  const dropRef = legacy && typeof absoluteRootOrDropRef !== 'string'
-    ? absoluteRootOrDropRef
-    : providedDropRef;
-  const editorDropRef = legacy
-    ? displayRootOrEditorRef as RefObject<EditorDropHandle | null>
-    : providedEditorDropRef;
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [draggedCount, setDraggedCount] = useState(0);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);

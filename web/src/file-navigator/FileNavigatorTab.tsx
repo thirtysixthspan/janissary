@@ -31,9 +31,14 @@ export function FileNavigatorTab({
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeId = useId();
-  const drag = useFileNavigatorDrag(
-    files.rows, client, index, files.absoluteRoot, files.root, targetCwd, dropRef, editorDropRef, files.remote?.host,
-  );
+  const drag = useFileNavigatorDrag(files.rows, client, index, {
+    absoluteRoot: files.absoluteRoot,
+    displayRoot: files.root,
+    targetCwd,
+    dropRef,
+    editorDropRef,
+    remoteHost: files.remote?.host,
+  });
   const rename = useFileNavigatorRename(
     files.rows, client, index, selection.rename, () => containerRef.current?.focus(),
   );

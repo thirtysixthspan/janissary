@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { useFileNavigatorDrag } from './useFileNavigatorDrag';
+import { useFileNavigatorDrag as useFileNavigatorDragImplementation } from './useFileNavigatorDrag';
 import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../shared/drop-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
 
@@ -53,6 +53,26 @@ function makeHarnessBodyElement(ptyId: string): HTMLElement {
   body.dataset.harnessDrop = ptyId;
   document.body.append(body);
   return body;
+}
+
+function useFileNavigatorDrag(
+  rows: FileNavigatorRow[], client: JanusClient, index: number,
+  absoluteRootOrDropRef: string | React.RefObject<CommandInputDropHandle | null> = '',
+  displayRootOrEditorRef: string | React.RefObject<EditorDropHandle | null> = '',
+  targetCwd = '',
+  providedDropRef?: React.RefObject<CommandInputDropHandle | null>,
+  providedEditorDropRef?: React.RefObject<EditorDropHandle | null>,
+  remoteHost?: string,
+) {
+  const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
+  return useFileNavigatorDragImplementation(rows, client, index, {
+    absoluteRoot: legacy ? '' : absoluteRootOrDropRef,
+    displayRoot: typeof displayRootOrEditorRef === 'string' ? displayRootOrEditorRef : '',
+    targetCwd,
+    dropRef: legacy && typeof absoluteRootOrDropRef !== 'string' ? absoluteRootOrDropRef : providedDropRef,
+    editorDropRef: legacy && typeof displayRootOrEditorRef !== 'string' ? displayRootOrEditorRef : providedEditorDropRef,
+    remoteHost,
+  });
 }
 
 // Every harness registration a case makes, torn down after it so the module-level registry never
