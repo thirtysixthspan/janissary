@@ -3,7 +3,7 @@ import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import type { FileNavigatorView, TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient, RequestResult } from '../ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
 import { multiOpenablePaths } from '../multi-open';
@@ -195,7 +195,7 @@ describe('FileNavigatorTab', () => {
   it('closes the commit-message field when the search pop-up opens', () => {
     const client = {
       send: vi.fn(),
-      request: vi.fn().mockResolvedValue({ paths: [] }),
+      request: vi.fn().mockResolvedValue({ ok: true, value: { paths: [] } }),
     } as unknown as JanusClient;
     const { container } = render(
       <FileNavigatorTab files={makeFiles({ branch: 'main' })} client={client} index={0} />,
@@ -375,7 +375,7 @@ describe('FileNavigatorTab', () => {
   });
 
   it('Escape disarms a pending copy: the mark clears and a later paste sends nothing', () => {
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { send: vi.fn(), request } as unknown as JanusClient;
     const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
     const tree = container.querySelector('[role="tree"]')!;
@@ -456,10 +456,10 @@ describe('FileNavigatorTab', () => {
 
   it('shows opener choices for an unsupported file and edits it when chosen', async () => {
     const send = vi.fn();
-    const request = vi.fn().mockResolvedValue({ choices: [
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { choices: [
       { label: 'Edit as text', command: 'edit' },
       { label: 'Open externally', command: 'open external' },
-    ] });
+    ] } });
     const client = { send, request } as unknown as JanusClient;
     const files = makeFiles({ rows: [{ path: 'data.xyz', name: 'data.xyz', depth: 0, dir: false }] });
     render(<FileNavigatorTab files={files} client={client} index={3} />);
@@ -680,7 +680,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Ctrl+C then Ctrl+V on a directory row sends the RPC with the expected params', () => {
-      const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1210,7 +1210,7 @@ describe('FileNavigatorTab', () => {
 
   describe('undo/redo', () => {
     it('Cmd+Z sends undoFileNavigatorItem', async () => {
-      const request = vi.fn().mockResolvedValue({});
+      const request = vi.fn().mockResolvedValue({ ok: true, value: {} });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1219,7 +1219,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Ctrl+Z sends undoFileNavigatorItem', async () => {
-      const request = vi.fn().mockResolvedValue({});
+      const request = vi.fn().mockResolvedValue({ ok: true, value: {} });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1228,7 +1228,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Cmd+Shift+Z sends redoFileNavigatorItem', async () => {
-      const request = vi.fn().mockResolvedValue({});
+      const request = vi.fn().mockResolvedValue({ ok: true, value: {} });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={1} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1237,7 +1237,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Ctrl+Shift+Z sends redoFileNavigatorItem', async () => {
-      const request = vi.fn().mockResolvedValue({});
+      const request = vi.fn().mockResolvedValue({ ok: true, value: {} });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1246,7 +1246,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('a conflict response from undo opens MoveConflictDialog', async () => {
-      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } } });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1255,7 +1255,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('confirming an undo conflict retries undoFileNavigatorItem with overwrite', async () => {
-      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} />);
@@ -1269,7 +1269,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('confirming a redo conflict retries redoFileNavigatorItem with overwrite', async () => {
-      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'README.md', toRelPath: 'dest' } });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { conflict: { fromRelPath: 'README.md', toRelPath: 'dest' } } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={5} />);
@@ -1283,7 +1283,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('cancelling a conflict leaves it unmoved and closes the dialog without sending anything', async () => {
-      const request = vi.fn().mockResolvedValue({ conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { conflict: { fromRelPath: 'dest/README.md', toRelPath: '' } } });
       const send = vi.fn();
       const client = { send, request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
@@ -1298,7 +1298,7 @@ describe('FileNavigatorTab', () => {
 
     it('all four undo/redo chords are intercepted while other Cmd/Ctrl chords still fall through', () => {
       const send = vi.fn();
-      const request = vi.fn().mockResolvedValue({});
+      const request = vi.fn().mockResolvedValue({ ok: true, value: {} });
       const client = { send, request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const tree = container.querySelector('[role="tree"]')!;
@@ -1327,18 +1327,18 @@ describe('FileNavigatorTab', () => {
     });
 
     it('clicking Search files opens the pop-up showing Searching… before the list resolves, then matches after', async () => {
-      const { promise, resolve } = withResolvers<{ paths: string[] }>();
+      const { promise, resolve } = withResolvers<RequestResult<{ paths: string[] }>>();
       const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       expect(screen.getByText('Searching…')).toBeInTheDocument();
-      await act(async () => { resolve({ paths: ['src/index.ts', 'README.md'] }); await promise; });
+      await act(async () => { resolve({ ok: true, value: { paths: ['src/index.ts', 'README.md'] } }); await promise; });
       fireEvent.change(screen.getByPlaceholderText('Find file…'), { target: { value: 'index' } });
       expect(screen.getByText('> src/index.ts')).toBeInTheDocument();
     });
 
     it('shows (no matching files) for a non-matching query and Enter is a no-op', async () => {
-      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: true, value: { paths: ['README.md'] } })) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
@@ -1350,7 +1350,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Escape closes the pop-up and returns focus to the tree', async () => {
-      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['README.md'] })) } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: true, value: { paths: ['README.md'] } })) } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
@@ -1360,7 +1360,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Tab accepts the ghost completion into the input without closing the pop-up', async () => {
-      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: true, value: { paths: ['src/index.ts'] } })) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
@@ -1373,7 +1373,7 @@ describe('FileNavigatorTab', () => {
 
     it('selecting a match sends revealFileNavigatorItem and selects the row once it appears', async () => {
       const send = vi.fn();
-      const client = { send, request: vi.fn(() => Promise.resolve({ paths: ['src/index.ts'] })) } as unknown as JanusClient;
+      const client = { send, request: vi.fn(() => Promise.resolve({ ok: true, value: { paths: ['src/index.ts'] } })) } as unknown as JanusClient;
       const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       await act(async () => { await Promise.resolve(); });
@@ -1386,13 +1386,13 @@ describe('FileNavigatorTab', () => {
     });
 
     it('a reply that arrives after the pop-up is closed does not reopen or repopulate it', async () => {
-      const { promise, resolve } = withResolvers<{ paths: string[] }>();
+      const { promise, resolve } = withResolvers<RequestResult<{ paths: string[] }>>();
       const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       fireEvent.click(screen.getByTitle('Search files'));
       fireEvent.keyDown(screen.getByPlaceholderText('Find file…'), { key: 'Escape' });
       expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
-      await act(async () => { resolve({ paths: ['README.md'] }); await promise; });
+      await act(async () => { resolve({ ok: true, value: { paths: ['README.md'] } }); await promise; });
       expect(screen.queryByPlaceholderText('Find file…')).not.toBeInTheDocument();
     });
   });
@@ -1579,7 +1579,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('choosing Duplicate copies the clicked row into its own directory', () => {
-      const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={3} />);
       fireEvent.contextMenu(screen.getByText('index.ts'));
@@ -1599,11 +1599,14 @@ describe('FileNavigatorTab', () => {
 
     it('choosing Open with shows the chooser for a file a registered opener claims', async () => {
       const request = vi.fn().mockResolvedValue({
-        choices: [
-          { label: 'Open as markdown', command: 'open' },
-          { label: 'Edit as text', command: 'edit' },
-          { label: 'Open externally', command: 'open external' },
-        ],
+        ok: true,
+        value: {
+          choices: [
+            { label: 'Open as markdown', command: 'open' },
+            { label: 'Edit as text', command: 'edit' },
+            { label: 'Open externally', command: 'open external' },
+          ],
+        },
       });
       const client = { send: vi.fn(), request } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
@@ -1620,11 +1623,14 @@ describe('FileNavigatorTab', () => {
     it('edits every selected file when choosing Edit as text', async () => {
       const send = vi.fn();
       const request = vi.fn().mockResolvedValue({
-        choices: [
-          { label: 'Open as markdown', command: 'open' },
-          { label: 'Edit as text', command: 'edit' },
-          { label: 'Open externally', command: 'open external' },
-        ],
+        ok: true,
+        value: {
+          choices: [
+            { label: 'Open as markdown', command: 'open' },
+            { label: 'Edit as text', command: 'edit' },
+            { label: 'Open externally', command: 'open external' },
+          ],
+        },
       });
       const client = { send, request } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);

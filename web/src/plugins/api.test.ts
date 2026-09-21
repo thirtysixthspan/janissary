@@ -7,7 +7,7 @@ function makeClient(request?: () => Promise<unknown>) {
   const send = vi.fn();
   const value = {
     send,
-    request: vi.fn(request ?? (async () => ({ ok: true }))),
+    request: vi.fn(request ?? (async () => ({ ok: true, value: { done: true } }))),
   } as unknown as JanusClient;
   return { client: value, send };
 }
@@ -33,7 +33,7 @@ describe('createPluginClientCapabilities', () => {
   });
 
   it('binds every intent to its own tab label and returns the result', async () => {
-    const { client } = makeClient(async () => ({ name: 'clip.shot-1.png' }));
+    const { client } = makeClient(async () => ({ ok: true, value: { name: 'clip.shot-1.png' } }));
     const capabilities = createPluginClientCapabilities(host, 'video', 'video-2', client, true, null, vi.fn());
 
     await expect(capabilities.intent('capture-frame', { dataUrl: 'data:image/png;base64,AA==' }))
@@ -47,7 +47,7 @@ describe('createPluginClientCapabilities', () => {
   });
 
   it('rejects when the server answers an intent with no result', async () => {
-    const { client } = makeClient(async () => { /* server replied with no result */ });
+    const { client } = makeClient(async () => ({ ok: false }));
     await expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).intent('capture-frame', {}))
       .rejects.toThrow('Plugin intent "capture-frame" failed');
   });

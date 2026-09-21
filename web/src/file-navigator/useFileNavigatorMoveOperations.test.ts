@@ -7,8 +7,8 @@ function makeClient(...results: unknown[]): JanusClient {
   return {
     send: vi.fn(),
     request: vi.fn()
-      .mockImplementationOnce(() => Promise.resolve(results[0]))
-      .mockImplementationOnce(() => Promise.resolve(results[1])),
+      .mockImplementationOnce(() => Promise.resolve({ ok: true, value: results[0] }))
+      .mockImplementationOnce(() => Promise.resolve({ ok: true, value: results[1] })),
   } as unknown as JanusClient;
 }
 
@@ -111,16 +111,16 @@ describe('useFileNavigatorMoveOperations', () => {
     expect(result.current.pendingConflict).toBeNull();
   });
 
-  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
-  // reply, and when the server answered with an error. Both of these used to read a field off that
-  // and throw mid-`.then`, so the batch move silently never opened its overwrite dialog.
+  // `request` resolves `{ ok: false }` when the socket is not open, when the connection ended before
+  // the reply, and when the server answered with an error. Both of these used to read a field off the
+  // bare result value and throw mid-`.then`, so the batch move silently never opened its overwrite dialog.
   it.each([
     ['a batch move', (api: { requestMove: (a: string[], b: string, c: string, d: boolean) => void }) => {
       api.requestMove(['a.txt', 'b.txt'], 'archive', 'archive', false);
     }],
     ['an undo', (api: { sendUndo: () => void }) => { void api.sendUndo(); }],
   ])('leaves %s unanswered by the server with no conflict raised', async (_label, start) => {
-    const client = makeClient(undefined);
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: false })) } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 3));
 
     await act(async () => {

@@ -9,7 +9,7 @@ import type { useEditorPlugins } from './plugins/useEditorPlugins';
 
 type EditorPluginsModule = { useEditorPlugins: typeof useEditorPlugins };
 import type { DirtyTabHandle } from '../tab-handles';
-import type { JanusClient } from '../ws';
+import type { JanusClient, RequestResult } from '../ws';
 
 // A disabled plugin stops claiming its chords (plugins/host.ts filters them out of `bindings()`),
 // which is the only way a yielded chord goes unclaimed. Flipping this flag simulates that without
@@ -47,7 +47,7 @@ function makeClient(saveError?: string) {
   // useEditorSuggest fetches the persona list on mount and fires editorSuggest queries via the
   // same generic request(); default to no personas and no hunks so the suggestion surface is
   // inert unless a test opts in.
-  const request = vi.fn().mockResolvedValue({ names: [], hunks: [] });
+  const request = vi.fn().mockResolvedValue({ ok: true, value: { names: [], hunks: [] } });
   const send = vi.fn();
   // The tab's load and watched reload both go through the client now. Mirror the real method's
   // shape — fetch, throw on a non-ok response, return the body — so the cases below keep driving
@@ -949,8 +949,8 @@ describe('EditorTab', () => {
     it('cancels an in-flight request on Escape so its reply never opens a pending review', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      const { promise, resolve } = withResolvers<{ hunks: { anchor: string; replacement: string }[] }>();
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      const { promise, resolve } = withResolvers<RequestResult<{ hunks: { anchor: string; replacement: string }[] }>>();
       request.mockImplementationOnce(() => promise);
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
@@ -962,7 +962,7 @@ describe('EditorTab', () => {
       fireEvent.keyDown(textarea(), { key: 'Escape' });
       expect(container.querySelector('.editor-row-query')).toBeNull();
 
-      await act(async () => { resolve({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] }); });
+      await act(async () => { resolve({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } }); });
 
       expect(container.querySelector('.editor-diff-controls')).toBeNull();
       expect(container.querySelector('.editor-row-query')).toBeNull();
@@ -1019,8 +1019,8 @@ describe('EditorTab', () => {
     it('fires an editorSuggest query on Ctrl/Cmd+Enter from the query text and previews the single hunk without the multi-change banner', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
 
@@ -1038,8 +1038,8 @@ describe('EditorTab', () => {
     it('previews the pending hunk inline: struck-through removed line and an added line below it, with accept/decline icons', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
 
@@ -1056,7 +1056,7 @@ describe('EditorTab', () => {
     it('does not fire on a plain Enter when the query is not yet runnable', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
       stubRequestFileContent('line one\n');
       await renderLoaded(client, makeView({ line: 2 }));
 
@@ -1069,8 +1069,8 @@ describe('EditorTab', () => {
     it('sends via the run pill click as well as Enter', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       openAndType(' summarizer rewrite this');
@@ -1084,8 +1084,8 @@ describe('EditorTab', () => {
     it('accepts a hunk by clicking its accept icon, updates the buffer, and closes the query line', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       openAndType(' summarizer rewrite this');
@@ -1102,8 +1102,8 @@ describe('EditorTab', () => {
     it('declines every hunk, leaving the buffer unchanged, and keeps the query line open with its text', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       openAndType(' summarizer rewrite this');
@@ -1119,8 +1119,8 @@ describe('EditorTab', () => {
     it('blocks ordinary typing while a hunk is pending', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       stubRequestFileContent('line one\n');
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       openAndType(' summarizer rewrite this');
@@ -1137,12 +1137,15 @@ describe('EditorTab', () => {
     it('previews multiple hunks simultaneously and resolves them independently', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
       request.mockResolvedValueOnce({
-        hunks: [
-          { anchor: 'line one', replacement: 'LINE ONE' },
-          { anchor: 'line two', replacement: 'LINE TWO' },
-        ],
+        ok: true,
+        value: {
+          hunks: [
+            { anchor: 'line one', replacement: 'LINE ONE' },
+            { anchor: 'line two', replacement: 'LINE TWO' },
+          ],
+        },
       });
       stubRequestFileContent('line one\nline two\n');
       const { container } = await renderLoaded(client, makeView({ line: 3 }));
@@ -1376,8 +1379,8 @@ describe('EditorTab', () => {
     it('stays closed while a persona suggestion is pending', async () => {
       const { client, request } = makeClient();
       request.mockReset();
-      request.mockResolvedValueOnce({ names: ['summarizer'] });
-      request.mockResolvedValueOnce({ hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] });
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve('line one\n') } as unknown as Response));
       const { container } = await renderLoaded(client, makeView({ line: 2 }));
       fireEvent.keyDown(textarea(), { key: '>' });

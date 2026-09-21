@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { EditorState } from './model';
-import type { JanusClient } from '../ws';
+import type { JanusClient, RequestResult } from '../ws';
 import { useEditorSuggest } from './useEditorSuggest';
 
 function makeState(text: string, cursorLine = 0): EditorState {
@@ -18,8 +18,8 @@ function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void 
 
 function makeClient(personas: string[] = ['summarizer'], hunksQueue: { hunks: { anchor: string; replacement: string }[] }[] = []) {
   const request = vi.fn();
-  request.mockResolvedValueOnce({ names: personas });
-  for (const reply of hunksQueue) request.mockResolvedValueOnce(reply);
+  request.mockResolvedValueOnce({ ok: true, value: { names: personas } });
+  for (const reply of hunksQueue) request.mockResolvedValueOnce({ ok: true, value: reply });
   return { client: { request } as unknown as JanusClient, request };
 }
 
@@ -74,7 +74,7 @@ describe('useEditorSuggest', () => {
 
   it('discards the reply and does not reopen the pending set when closed while a request is in flight', async () => {
     const { client, request } = makeClient(['summarizer']);
-    const { promise, resolve } = withResolvers<{ hunks: { anchor: string; replacement: string }[] }>();
+    const { promise, resolve } = withResolvers<RequestResult<{ hunks: { anchor: string; replacement: string }[] }>>();
     request.mockImplementationOnce(() => promise);
     const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
@@ -86,7 +86,7 @@ describe('useEditorSuggest', () => {
     act(() => { result.current.closeQueryLine(); });
     expect(result.current.queryLine).toBeNull();
 
-    await act(async () => { resolve({ hunks: [{ anchor: 'old', replacement: 'new' }] }); });
+    await act(async () => { resolve({ ok: true, value: { hunks: [{ anchor: 'old', replacement: 'new' }] } }); });
 
     expect(result.current.pending).toBeNull();
     expect(result.current.noSuggestionLine).toBeNull();

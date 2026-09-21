@@ -484,7 +484,7 @@ describe('HarnessTab', () => {
     it('offers Chat about this for a held layer selection and sends only that selection', async () => {
       const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
       const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const request = vi.fn().mockResolvedValue({ label: 'Chat about this' });
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { label: 'Chat about this' } });
       const send = vi.fn();
       const client = { ...mockClient, request, send } as unknown as JanusClient;
       screenLines = ['aa bb', 'cc dd      '];
@@ -524,7 +524,7 @@ describe('HarnessTab', () => {
 
     it('exits copy mode when Escape closes the menu the drag itself opened', async () => {
       const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue({ ok: true, value: null }) } as unknown as JanusClient;
       screenLines = ['aa bb', 'cc dd'];
       try {
         const rendered = render(<>
@@ -551,7 +551,7 @@ describe('HarnessTab', () => {
 
     it('releases the selection once the menu\'s Copy entry copies it', async () => {
       const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const client = { ...mockClient, request: vi.fn().mockResolvedValue(null) } as unknown as JanusClient;
+      const client = { ...mockClient, request: vi.fn().mockResolvedValue({ ok: true, value: null }) } as unknown as JanusClient;
       screenLines = ['aa bb', 'cc dd'];
       try {
         const rendered = render(<>

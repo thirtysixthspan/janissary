@@ -2,6 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultContextMenu } from './DefaultContextMenu';
+import type { RequestResult } from '../ws';
 import { registerTerminalSelection, unregisterTerminalSelection } from '../shared/terminal/terminal-selection';
 
 function stubSelection(text: string) {
@@ -35,9 +36,9 @@ function labels(): string[] {
 }
 
 function deferredContribution() {
-  let resolve!: (value: { label: string } | null) => void;
+  let resolve!: (value: RequestResult<{ label: string } | null>) => void;
   // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
-  const promise = new Promise<{ label: string } | null>((release) => { resolve = release; });
+  const promise = new Promise<RequestResult<{ label: string } | null>>((release) => { resolve = release; });
   return { promise, resolve };
 }
 
@@ -56,7 +57,7 @@ describe('DefaultContextMenu', () => {
     rightClick(field());
     expect(client.request).toHaveBeenCalledOnce();
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
-    await act(async () => { reply.resolve({ label: 'Chat about this' }); await reply.promise; });
+    await act(async () => { reply.resolve({ ok: true, value: { label: 'Chat about this' } }); await reply.promise; });
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(client.send).not.toHaveBeenCalled();
   });
@@ -80,9 +81,9 @@ describe('DefaultContextMenu', () => {
     expect(client.request).toHaveBeenNthCalledWith(2, {
       method: 'defaultMenuSelectionAction', params: { selection: 'new selection' },
     });
-    await act(async () => { second.resolve({ label: 'Chat about this' }); await second.promise; });
+    await act(async () => { second.resolve({ ok: true, value: { label: 'Chat about this' } }); await second.promise; });
     expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
-    await act(async () => { first.resolve({ label: 'Stale action' }); await first.promise; });
+    await act(async () => { first.resolve({ ok: true, value: { label: 'Stale action' } }); await first.promise; });
     expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
     fireEvent.click(screen.getByText('Chat about this'));
     expect(client.send).toHaveBeenCalledExactlyOnceWith({
@@ -107,7 +108,7 @@ describe('DefaultContextMenu', () => {
     const readText = vi.fn().mockResolvedValue('clipboard text');
     vi.stubGlobal('navigator', { clipboard: { writeText, readText } });
     const client = {
-      request: vi.fn().mockResolvedValueOnce({ label: 'Chat about this' }).mockResolvedValue(null),
+      request: vi.fn().mockResolvedValueOnce({ ok: true, value: { label: 'Chat about this' } }).mockResolvedValue({ ok: true, value: null }),
       send: vi.fn(),
     };
     render(<DefaultContextMenu client={client as never} />);
@@ -135,7 +136,7 @@ describe('DefaultContextMenu', () => {
     render(<DefaultContextMenu client={client as never} />);
     rightClick(field());
     if (label === 'Paste') fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' });
-    await act(async () => { reply.resolve({ label: 'Chat about this' }); await reply.promise; });
+    await act(async () => { reply.resolve({ ok: true, value: { label: 'Chat about this' } }); await reply.promise; });
     expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
     expect(screen.getByText(label)).toHaveClass('selected');
     await act(async () => { fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' }); });
@@ -154,7 +155,7 @@ describe('DefaultContextMenu', () => {
 
   it('offers Copy, Paste, and the contributed action for an editor-owned selection', async () => {
     stubSelection('');
-    const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: { label: 'Chat about this' } }), send: vi.fn() };
     render(<DefaultContextMenu client={client as never} />);
     field();
     const editor = document.createElement('div');
@@ -199,7 +200,7 @@ describe('DefaultContextMenu', () => {
 
   it('runs Chat about this with Cmd+I for the current selection', async () => {
     stubSelection('selected text');
-    const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: { label: 'Chat about this' } }), send: vi.fn() };
     render(<DefaultContextMenu client={client as never} />);
     const event = new KeyboardEvent('keydown', { key: 'i', metaKey: true, bubbles: true, cancelable: true });
     globalThis.dispatchEvent(event);
@@ -306,7 +307,7 @@ describe('DefaultContextMenu', () => {
 
   it('installs the contributed entry while the menu is open and runs it back through the run RPC', async () => {
     stubSelection('selected text');
-    const client = { request: vi.fn().mockResolvedValue({ label: 'Chat about this' }), send: vi.fn() };
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: { label: 'Chat about this' } }), send: vi.fn() };
     const rendered = render(<DefaultContextMenu client={client as never} />);
     rightClick(field());
     const entry = await screen.findByText('Chat about this');
@@ -326,7 +327,7 @@ describe('DefaultContextMenu', () => {
 
   it('omits it for selections with no contribution', async () => {
     stubSelection('selected text');
-    const client = { request: vi.fn().mockResolvedValue(null), send: vi.fn() };
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, value: null }), send: vi.fn() };
     render(<DefaultContextMenu client={client as never} />);
     rightClick(field());
     await screen.findByText('Copy');
@@ -337,7 +338,7 @@ describe('DefaultContextMenu', () => {
     stubSelection('selected text');
     let answer: { label: string } | null = { label: 'Chat about this' };
     const client = {
-      request: vi.fn(() => Promise.resolve(answer)),
+      request: vi.fn(() => Promise.resolve({ ok: true, value: answer })),
       send: vi.fn(),
     };
     const rendered = render(<DefaultContextMenu client={client as never} />);

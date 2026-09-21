@@ -42,8 +42,8 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
     });
     // No answer, so nothing was pasted: dismiss the dialog and leave the tree alone. The clipboard
     // is deliberately left as it is — a cut whose paste never happened still has somewhere to go.
-    if (!result) { setPendingConflict(null); return; }
-    if ('conflictPaths' in result) {
+    if (!result.ok) { setPendingConflict(null); return; }
+    if ('conflictPaths' in result.value) {
       setPendingConflict({
         sources, destinationPath, mode, sourceHost, title: conflictTitle(sources, destinationPath),
       });

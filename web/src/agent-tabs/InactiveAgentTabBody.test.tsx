@@ -23,7 +23,7 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 
 function setup(tab: TabView = makeTab(), commandDrafts: CommandDrafts = new Map()) {
   const send = vi.fn();
-  const request = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matches: [] });
+  const request = vi.fn().mockResolvedValue({ ok: true, value: { newInput: '', newCursor: 0, matches: [] } });
   const onSplit = vi.fn();
   const client = { send, request } as unknown as JanusClient;
   const result = render(

@@ -23,7 +23,7 @@ export function useSelectionAction(client: JanusClient, index: number) {
     void client.request<FileSelectionAction | null>({
       method: 'fileNavigatorSelectionAction', params: { index, paths },
     }).then((result) => {
-      if (generation.current === queryGeneration) setEntry(result ?? null);
+      if (generation.current === queryGeneration) setEntry(result.ok ? (result.value ?? null) : null);
     });
   };
 

@@ -39,8 +39,8 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     });
     // No answer, so nothing moved and there is no conflict report to act on: dismiss the dialog and
     // leave the tree as it stands, rather than reading a field off a result that is not there.
-    if (!result) { setPendingConflict(null); return; }
-    if ('conflictPaths' in result) {
+    if (!result.ok) { setPendingConflict(null); return; }
+    if ('conflictPaths' in result.value) {
       setPendingConflict({ kind: 'batch-move', sourcePaths, destinationPath, title });
       return;
     }
@@ -81,17 +81,17 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
 
   const history = async (method: Method) => {
     const result = await client.request<UndoRedoResult>({ method, params: { index } });
-    if (!result) { setPendingConflict(null); return; }
+    if (!result.ok) { setPendingConflict(null); return; }
     const source = method === 'undoFileNavigatorItem' ? 'undo' : 'redo';
-    if (result.conflict) {
-      const name = basename(result.conflict.fromRelPath);
+    if (result.value.conflict) {
+      const name = basename(result.value.conflict.fromRelPath);
       setPendingConflict({
         kind: 'scalar',
-        ...result.conflict,
+        ...result.value.conflict,
         source,
         title: `"${name}" already exists here. Overwrite it?`,
       });
-    } else if (result.conflicts) {
+    } else if (result.value.conflicts) {
       setPendingConflict({
         kind: 'history',
         method,

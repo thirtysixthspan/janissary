@@ -26,7 +26,8 @@ function stateOf(provisioning: boolean, remote: RemoteTargetView): RemoteSession
 async function raise(client: JanusClient, action: 'detach' | 'attach', label: string): Promise<boolean> {
   const call = { method: 'remoteSession' as const, params: { action, label } };
   if (typeof client.request !== 'function') { client.send(call); return false; }
-  return await client.request<boolean>(call) === true;
+  const result = await client.request<boolean>(call);
+  return result.ok && result.value;
 }
 
 export function remoteSessionControl(

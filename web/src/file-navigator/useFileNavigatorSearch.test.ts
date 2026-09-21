@@ -18,7 +18,7 @@ function setup(request: () => Promise<unknown>, rows: FileNavigatorRow[] = makeR
 
 describe('useFileNavigatorSearch', () => {
   it('opens on an empty query and loads the project file list', async () => {
-    const { result, client } = setup(() => Promise.resolve({ paths: ['src/a.ts', 'src/b.ts'] }));
+    const { result, client } = setup(() => Promise.resolve({ ok: true, value: { paths: ['src/a.ts', 'src/b.ts'] } }));
 
     act(() => { result.current.openSearch(); });
     expect(result.current.searchOpen).toBe(true);
@@ -31,11 +31,11 @@ describe('useFileNavigatorSearch', () => {
     expect(result.current.searchPaths).toEqual(['src/a.ts', 'src/b.ts']);
   });
 
-  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
-  // reply, and when the server answered with an error. Reading `result.paths` off that threw inside
-  // the `.then`, leaving the pop-up on its loading state with no way back but reopening it.
+  // `request` resolves `{ ok: false }` when the socket is not open, when the connection ended before
+  // the reply, and when the server answered with an error. Reading `result.paths` off that threw
+  // inside the `.then`, leaving the pop-up on its loading state with no way back but reopening it.
   it('clears loading and shows nothing when the request goes unanswered', async () => {
-    const { result } = setup(() => Promise.resolve(undefined));
+    const { result } = setup(() => Promise.resolve({ ok: false }));
 
     act(() => { result.current.openSearch(); });
     await act(async () => { await Promise.resolve(); });
@@ -46,7 +46,7 @@ describe('useFileNavigatorSearch', () => {
   });
 
   it('closes and returns focus to the tree', () => {
-    const { result, focusTree } = setup(() => Promise.resolve({ paths: [] }));
+    const { result, focusTree } = setup(() => Promise.resolve({ ok: true, value: { paths: [] } }));
     act(() => { result.current.openSearch(); });
 
     act(() => { result.current.closeSearch(); });
@@ -56,7 +56,7 @@ describe('useFileNavigatorSearch', () => {
   });
 
   it('revealing a path asks the server for it and closes the pop-up', () => {
-    const { result, client } = setup(() => Promise.resolve({ paths: ['src/a.ts'] }));
+    const { result, client } = setup(() => Promise.resolve({ ok: true, value: { paths: ['src/a.ts'] } }));
     act(() => { result.current.openSearch(); });
 
     act(() => { result.current.revealFromSearch('src/a.ts'); });
@@ -70,7 +70,7 @@ describe('useFileNavigatorSearch', () => {
   // The reveal target is consumed only once its row exists: the server rebuild that adds the
   // target's ancestor directories can arrive after the render that asked for it.
   it('selects a revealed path once its row appears in the tree', () => {
-    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ paths: [] })) } as unknown as JanusClient;
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: true, value: { paths: [] } })) } as unknown as JanusClient;
     const setSelected = vi.fn();
     const { result, rerender } = renderHook(
       ({ rows }: { rows: FileNavigatorRow[] }) => useFileNavigatorSearch(client, 3, rows, setSelected, vi.fn()),

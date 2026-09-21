@@ -23,6 +23,12 @@ const CONNECTION_ENDED = 'connection closed';
 // half-open connection, short enough that a genuine wake still recovers promptly.
 const LIVENESS_TIMEOUT_MS = 4000;
 
+// What `request` resolves with: the server's value, or why there isn't one. `error` is absent only
+// for a socket that was never open — every other failure (a connection that ended, a server refusal)
+// carries the text, so a caller with somewhere to show it can tell those apart from the silence a
+// closed socket has always resolved as.
+export type RequestResult<T> = { ok: true; value: T } | { ok: false; error?: string };
+
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
 export class JanusClient {
@@ -176,15 +182,15 @@ export class JanusClient {
     if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ t: 'rpc', id: this.nextId++, ...call }));
   }
 
-  // Send an RPC and resolve with the server's reply result. `undefined` means there is no result to
-  // read: the socket was not open, the connection ended before the reply arrived, or the server
-  // answered with an error this callback shape has nowhere to carry. Callers branch on it — what to
-  // show for an unanswered request is each surface's own decision, not this method's.
-  request<T>(call: RpcCall): Promise<T | undefined> {
+  // Send an RPC and resolve with the server's reply. Callers branch on `ok` — what to show for a
+  // failed request is each surface's own decision, not this method's — and on whether `error` is
+  // present when it is not: absent means the socket was never open, present means the connection
+  // ended before the reply arrived or the server refused the request.
+  request<T>(call: RpcCall): Promise<RequestResult<T>> {
     const id = this.nextId++;
-    return new Promise<T | undefined>((resolve) => {
-      if (this.ws.readyState !== WebSocket.OPEN) { resolve(undefined); return; }
-      this.pending.set(id, (r) => resolve(r as T));
+    return new Promise<RequestResult<T>>((resolve) => {
+      if (this.ws.readyState !== WebSocket.OPEN) { resolve({ ok: false }); return; }
+      this.pending.set(id, (r, error) => resolve(error === undefined ? { ok: true, value: r as T } : { ok: false, error }));
       this.dispatch(id, JSON.stringify({ t: 'rpc', id, ...call }));
     });
   }
@@ -218,13 +224,9 @@ export class JanusClient {
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).
-  saveFile(url: string, content: string): Promise<string | undefined> {
-    const id = this.nextId++;
-    return new Promise((resolve) => {
-      if (this.ws.readyState !== WebSocket.OPEN) { resolve('not connected'); return; }
-      this.pending.set(id, (_result, error) => resolve(error));
-      this.dispatch(id, JSON.stringify({ t: 'rpc', id, method: 'saveFile', params: { url, content } }));
-    });
+  async saveFile(url: string, content: string): Promise<string | undefined> {
+    const result = await this.request<unknown>({ method: 'saveFile', params: { url, content } });
+    return result.ok ? undefined : (result.error ?? 'not connected');
   }
 
   // The session token travels in the query string, so anything served over HTTP rather than the
