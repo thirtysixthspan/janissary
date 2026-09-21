@@ -243,6 +243,7 @@ export class RemoteChannel {
     if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
     if (frame.type === 'output') { this.router.output(frame); return; }
+    if (frame.type === 'shell-history') { this.router.history(frame); return; }
     if (frame.type === 'exit') { this.router.exit(frame); return; }
     if (frame.type === 'filesystem-reply') {
       this.navigators.get(frame.session)?.onReply(frame);

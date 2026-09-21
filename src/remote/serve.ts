@@ -134,7 +134,9 @@ export class RemoteServer {
     case 'shutdown': { this.shutdown(0); return; }
     case 'provision': { void this.provision(frame.label, frame.tokens ?? {}, frame.identity ?? {}); return; }
     case 'spawn': { this.spawn(frame); return; }
-    case 'input': { this.processes?.input(frame.id, frame.data); return; }
+    // Retained before it is delivered, so what the peer replays is in the order it saw the two
+    // directions — which is what pairs a command with the output it produced.
+    case 'input': { this.peer?.input(frame); this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.processes?.kill(frame.id); return; }
     case 'filesystem-open': {

@@ -50,6 +50,58 @@ describe('ReplayHistory', () => {
     expect(history.truncated).toBe(true);
   });
 
+  it('replays a piped shell as history runs when rebuilding tabs, and as output alone otherwise', () => {
+    const history = new ReplayHistory();
+    history.recordInput('agent', '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n');
+    history.record({ type: 'output', id: 'agent', data: 'web\n' });
+    history.record({ type: 'output', id: 'agent', data: '__JS_END_3_1__\n' });
+    expect(history.frames(true)).toEqual([{
+      type: 'shell-history',
+      id: 'agent',
+      runs: [
+        { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+        { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+      ],
+    }]);
+    // An automatic reconnect replays into a tab that is open and possibly mid-command, whose output
+    // scan would match the sentinel inside the recorded input before its command had run.
+    expect(history.frames(false)).toEqual([
+      { type: 'output', id: 'agent', data: '\u{1B}cweb\n__JS_END_3_1__\n' },
+    ]);
+  });
+
+  it('leaves a terminal id replaying as output while a piped id beside it replays as history', () => {
+    const history = new ReplayHistory();
+    history.record({ type: 'output', id: 'pty', data: 'ready' });
+    history.recordInput('agent', 'ls\n');
+    history.record({ type: 'output', id: 'agent', data: 'web\n' });
+    expect(history.frames(true)).toEqual([
+      { type: 'output', id: 'pty', data: '\u{1B}cready' },
+      { type: 'shell-history', id: 'agent', runs: [
+        { source: 'input', text: 'ls\n' }, { source: 'output', text: 'web\n' },
+      ] },
+    ]);
+  });
+
+  it('leads a trimmed history with the earlier-history notice', () => {
+    const history = new ReplayHistory();
+    history.recordInput('agent', 'x'.repeat(REPLAY_HISTORY_CHARS));
+    history.record({ type: 'output', id: 'agent', data: 'latest' });
+    const frame = history.frames(true)[0];
+    if (frame.type !== 'shell-history') throw new Error('Missing shell history replay');
+    expect(history.truncated).toBe(true);
+    expect(frame.runs[0]).toEqual({ source: 'output', text: '\r\n[earlier remote history trimmed]\r\n' });
+    expect(frame.runs.at(-1)).toEqual({ source: 'output', text: 'latest' });
+  });
+
+  it('forgets a piped shell\'s retained input with its output', () => {
+    const history = new ReplayHistory();
+    history.recordInput('agent', 'ls\n');
+    history.record({ type: 'output', id: 'agent', data: 'web\n' });
+    history.forget('agent');
+    expect(history.frames(true)).toEqual([]);
+  });
+
   it('forgets exited terminals and releases retained history on disposal', () => {
     const history = new ReplayHistory();
     history.record({ type: 'output', id: 'exited', data: 'old output' });

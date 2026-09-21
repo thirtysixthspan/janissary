@@ -1,6 +1,8 @@
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
 import { stripShellSentinels } from './sentinel-strip.js';
+import { restoredTranscript } from './restored-transcript.js';
 import { createRemoteShell } from '../remote/shell-session.js';
+import type { ShellHistoryRun } from '../remote/protocol.js';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
 import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
 import { getConfig } from '../config.js';
@@ -112,8 +114,10 @@ export class ShellManager {
         ? adoption.id
         : `rsh${++this.remoteShellCounter}`;
       this.adopted.delete(label);
-      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted,
-        adopted ? (data) => this.appendRestoredOutput(label, data) : undefined);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted, adopted ? {
+        output: (data) => this.appendRestoredOutput(label, data),
+        history: (runs) => this.appendRestoredHistory(label, runs),
+      } : undefined);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,
@@ -134,6 +138,13 @@ export class ShellManager {
     const output = stripShellSentinels(data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data);
     if (!output) return;
     this.managers.tab.append(label, { input: '', output });
+  }
+
+  // The peer retained what was written to the shell as well as what came out of it, so the tab's
+  // transcript is rebuilt as the entries the live tab held — each command beside its output — rather
+  // than as one entry of output with nothing to say what produced it.
+  private appendRestoredHistory(label: string, runs: readonly ShellHistoryRun[]): void {
+    for (const entry of restoredTranscript(runs)) this.managers.tab.append(label, entry);
   }
 
   // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never

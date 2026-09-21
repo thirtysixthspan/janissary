@@ -593,6 +593,51 @@ describe('detached peer rendezvous', () => {
     } finally { socket.destroy(); peer.dispose(); }
   });
 
+  it('replays a piped shell\'s commands beside its output through the relay', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    peer.track({ type: 'spawn', id: 'agent', program: 'shell', command: 'shell', mode: 'pipe', agentName: 'agent' });
+    peer.input({ type: 'input', id: 'agent', data: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' });
+    peer.emit({ type: 'output', id: 'agent', data: 'web\n__JS_END_3_1__\n' });
+    peer.detach();
+    peer.input({ type: 'input', id: 'agent', data: '{ :; ps\n} 2>&1; echo "__JS_END_3_2__"\n' });
+    peer.emit({ type: 'output', id: 'agent', data: 'not permitted\n__JS_END_3_2__\n' });
+    const output: string[] = [];
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn(), true)!;
+    try {
+      await vi.waitFor(() => expect(output.join('')).toContain('shell-history'));
+      expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+        { type: 'attach-result', accepted: true },
+        { type: 'shell-history', id: 'agent', runs: [
+          { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+          { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+          { source: 'input', text: '{ :; ps\n} 2>&1; echo "__JS_END_3_2__"\n' },
+          { source: 'output', text: 'not permitted\n__JS_END_3_2__\n' },
+        ] },
+      ]);
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
+  // A pty echoes what is written to it, so its retained output already carries the commands; keeping
+  // the input as well would replay every keystroke twice.
+  it('does not retain input written to a pty process', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    peer.track({ type: 'spawn', id: 'terminal', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude' });
+    peer.input({ type: 'input', id: 'terminal', data: 'hello' });
+    peer.emit({ type: 'output', id: 'terminal', data: 'hello\r\n' });
+    peer.detach();
+    const output: string[] = [];
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn(), true)!;
+    try {
+      await vi.waitFor(() => expect(output.join('').trim().split('\n')).toHaveLength(2));
+      expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+        { type: 'attach-result', accepted: true },
+        { type: 'output', id: 'terminal', data: '\u{1B}chello\r\n' },
+      ]);
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
   it('drops the oldest buffered frames once the replay budget is exceeded, and reports the gap', async () => {
     const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
     await peer.start(vi.fn());

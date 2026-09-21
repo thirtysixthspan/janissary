@@ -3,6 +3,7 @@ import type { GitIdentity } from '../git/identity.js';
 import type { RemoteFrame } from './protocol.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 import { decodeSessionStateResult } from './frame-decode-sessions.js';
+import { decodeShellHistory } from './frame-decode-history.js';
 
 type DecodeResult = RemoteFrame | { error: string };
 
@@ -218,6 +219,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'exit': { return decodeExit(record); }
   case 'browser-exited': { return decodeBrowserExited(record); }
   case 'transcript': { return decodeTranscript(record); }
+  case 'shell-history': { return decodeShellHistory(record); }
   case 'filesystem-open':
   case 'filesystem-close':
   case 'filesystem-request':

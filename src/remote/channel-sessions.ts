@@ -1,5 +1,5 @@
 import { PendingFrames } from './channel-pending.js';
-import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js';
+import type { ClientFrame, RemoteProcessState, ServerFrame, ShellHistoryRun } from './protocol.js';
 
 // One remote process id's I/O, and every map that is keyed by one. Kept out of `RemoteChannel`
 // because the channel's own job is the transport's state machine — authenticating, framing,
@@ -11,10 +11,14 @@ import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js
 export type SessionListener = {
   onOutput: (data: string) => void;
   onExit: (exitCode: number) => void;
+  // The process's retained history, replayed as ordered runs when an attach rebuilds its tab. Only
+  // the remote shell adapter takes one: a pty redraws from its output frame instead.
+  onHistory?: (runs: readonly ShellHistoryRun[]) => void;
 };
 
 type SpawnFrame = Extract<ClientFrame, { type: 'spawn' }>;
 type OutputFrame = Extract<ServerFrame, { type: 'output' }>;
+type HistoryFrame = Extract<ServerFrame, { type: 'shell-history' }>;
 type ExitFrame = Extract<ServerFrame, { type: 'exit' }>;
 
 export type SessionRouterHandlers = {
@@ -46,6 +50,7 @@ export class SessionRouter {
     this.sessions.set(id, listener);
     for (const frame of this.pending.claim(id)) {
       if (frame.type === 'output') { listener.onOutput(frame.data); continue; }
+      if (frame.type === 'shell-history') { listener.onHistory?.(frame.runs); continue; }
       this.sessions.delete(id);
       listener.onExit(frame.exitCode);
     }
@@ -84,6 +89,14 @@ export class SessionRouter {
   output(frame: OutputFrame): void {
     const listener = this.sessions.get(frame.id);
     if (listener) listener.onOutput(frame.data);
+    else if (this.holding) this.pending.hold(frame);
+  }
+
+  // Held for a tab still being built exactly as output is, and for the same reason: an attach after a
+  // restart replays before its tabs exist, and the history is the whole point of that replay.
+  history(frame: HistoryFrame): void {
+    const listener = this.sessions.get(frame.id);
+    if (listener) listener.onHistory?.(frame.runs);
     else if (this.holding) this.pending.hold(frame);
   }
 

@@ -84,6 +84,14 @@ describe('frame codec', () => {
       { type: 'output', id: 'r1', data: 'done' },
       { type: 'exit', id: 'r1', exitCode: 0 },
       { type: 'transcript', blocks: ['first', 'second'] },
+      {
+        type: 'shell-history', id: 'agent',
+        runs: [
+          { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+          { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+        ],
+      },
+      { type: 'shell-history', id: 'agent', runs: [] },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
@@ -181,6 +189,11 @@ describe('frame codec', () => {
     ['output without string data', { type: 'output', id: 'r1', data: [] }],
     ['exit with a fractional code', { type: 'exit', id: 'r1', exitCode: 1.5 }],
     ['transcript with a non-string block', { type: 'transcript', blocks: ['b25l', 2] }],
+    ['shell-history without an id', { type: 'shell-history', runs: [] }],
+    ['shell-history without a runs list', { type: 'shell-history', id: 'agent' }],
+    ['shell-history with an unknown run source', { type: 'shell-history', id: 'agent', runs: [{ source: 'echo', text: 'bHM=' }] }],
+    ['shell-history with a non-string run text', { type: 'shell-history', id: 'agent', runs: [{ source: 'input', text: 7 }] }],
+    ['shell-history with a non-object run', { type: 'shell-history', id: 'agent', runs: ['bHM='] }],
     ['filesystem request with an unknown operation', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'unknown', args: {} }],
     ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
@@ -334,8 +347,8 @@ describe('session-state frames', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 16', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(16);
+  it('is 17', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(17);
   });
 });
 
@@ -355,7 +368,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
       'exit', 'filesystem-event', 'filesystem-reply', 'output',
-      'session-state-result', 'transcript', 'workspace-failed', 'workspace-ready',
+      'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });
 

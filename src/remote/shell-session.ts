@@ -1,6 +1,15 @@
 import { PassThrough, Writable } from 'node:stream';
 import type { ShellProcess } from '../shell/index.js';
 import type { RemoteChannel } from './channel.js';
+import type { ShellHistoryRun } from './protocol.js';
+
+// Where an attached shell's replayed history goes. `output` takes bytes that arrived with no live
+// command listening for them; `history` takes the peer's retained runs, which never reach the stream
+// at all — they carry the sentinel text a live command's output scan would match.
+export type RestoredSink = {
+  output: (data: string) => void;
+  history: (runs: readonly ShellHistoryRun[]) => void;
+};
 
 /**
  * A remote agent tab's persistent shell, wearing the shape `ShellManager` and `executeShellCmd`
@@ -24,7 +33,7 @@ export function createRemoteShell(
   command: string,
   agentName?: string,
   adopted = false,
-  onRestoredOutput?: (data: string) => void,
+  restored?: RestoredSink,
 ): ShellProcess {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
@@ -41,9 +50,10 @@ export function createRemoteShell(
 
   channel.attach(id, {
     onOutput: (data) => {
-      if (onRestoredOutput && stdout.listenerCount('data') === 0) onRestoredOutput(data);
+      if (restored && stdout.listenerCount('data') === 0) restored.output(data);
       else stdout.write(data);
     },
+    onHistory: (runs) => { restored?.history(runs); },
     onExit: () => { live = false; stdin.end(); stdout.end(); },
   });
   if (!adopted) {

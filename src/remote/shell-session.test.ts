@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createRemoteShell } from './shell-session.js';
 import { RemoteChannel, type ChannelTransport } from './channel.js';
-import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame } from './protocol.js';
+import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame, type ShellHistoryRun } from './protocol.js';
 import { executeShellCmd, queryShellPwd } from '../shell/index.js';
 
 // An attached channel over a fake ssh PTY, plus a helper to answer as the remote shell would.
@@ -58,18 +58,39 @@ describe('createRemoteShell', () => {
   it('reports replayed output while an adopted shell claims it', () => {
     const { channel } = attachedChannel('session');
     channel.receive(`${encodeFrame({ type: 'output', id: 'rsh1', data: 'retained output' })}\n`);
-    const restored = vi.fn();
+    const restored = { output: vi.fn(), history: vi.fn() };
 
     createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true, restored);
 
-    expect(restored).toHaveBeenCalledWith('retained output');
+    expect(restored.output).toHaveBeenCalledWith('retained output');
+    expect(restored.history).not.toHaveBeenCalled();
+  });
+
+  it('reports retained history runs to an adopted shell and never onto its stream', () => {
+    const { channel } = attachedChannel('session');
+    const runs: ShellHistoryRun[] = [
+      { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_9__"\n' },
+      { source: 'output', text: 'src\n__JS_END_3_9__\n' },
+    ];
+    channel.receive(`${encodeFrame({ type: 'shell-history', id: 'rsh1', runs })}\n`);
+    const restored = { output: vi.fn(), history: vi.fn() };
+
+    const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true, restored);
+    const onData = vi.fn();
+    shell.stdout?.on('data', onData);
+    channel.receive(`${encodeFrame({ type: 'shell-history', id: 'rsh1', runs })}\n`);
+
+    expect(restored.history).toHaveBeenCalledTimes(2);
+    expect(restored.history).toHaveBeenLastCalledWith(runs);
+    expect(onData).not.toHaveBeenCalled();
+    expect(restored.output).not.toHaveBeenCalled();
   });
 
   it('keeps restored history out of the next command and records only idle output', async () => {
     const { channel, sent, reply } = attachedChannel('session');
     channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     reply('rsh1', 'earlier output\n');
-    const restored = vi.fn();
+    const restored = { output: vi.fn(), history: vi.fn() };
     const shell = createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true, restored);
     const done = vi.fn();
 
@@ -78,17 +99,17 @@ describe('createRemoteShell', () => {
     reply('rsh1', `fresh\n${sentinelFrom(writtenInput(sent))}\n`);
 
     expect(done).toHaveBeenCalledExactlyOnceWith('fresh');
-    expect(restored).toHaveBeenCalledExactlyOnceWith('earlier output\n');
+    expect(restored.output).toHaveBeenCalledExactlyOnceWith('earlier output\n');
 
     const pwd = vi.fn();
     queryShellPwd(shell, 7, pwd);
     const sentinel = /__PWD_\d+_\d+__/.exec(writtenInput(sent))![0];
     reply('rsh1', `/remote/work\n${sentinel}\n`);
     expect(pwd).toHaveBeenCalledExactlyOnceWith('/remote/work');
-    expect(restored).toHaveBeenCalledTimes(1);
+    expect(restored.output).toHaveBeenCalledTimes(1);
 
     reply('rsh1', 'background output\n');
-    expect(restored).toHaveBeenLastCalledWith('background output\n');
+    expect(restored.output).toHaveBeenLastCalledWith('background output\n');
     shell.kill();
   });
 

@@ -78,7 +78,16 @@
 // renames version 14's two frames to `attach` and `attach-result`, so the wire uses the one word the
 // rest of the session vocabulary does. The rename needs no bump of its own: the handshake admits
 // only an exact match, and every build that speaks the old names announces 14 or 15.
-export const REMOTE_PROTOCOL_VERSION = 16;
+//
+// Version 17 adds retained shell input and the `shell-history` frame that replays it. A remote agent
+// tab's shell runs in `pipe` mode so no tty echo can corrupt its sentinel protocol, which means the
+// far side only ever emits that shell's *output* — the commands were written in and never echoed
+// back. A peer now retains the input it was sent for a piped process alongside the output it
+// produced, and replays the pair as ordered runs when an attach is rebuilding tabs, so a restored
+// agent transcript reads as commands beside their output rather than as responses alone. This is the
+// carries-not-shape case the `identity` bump above is the archetype of: a version-16 peer retains no
+// input, so it would answer an attach with command-less history while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 17;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -203,6 +212,13 @@ export type ServerFrame =
   // absent, the local side falls back to naming the remote and nothing more.
   | { type: 'browser-exited'; id: string; message?: string }
   | { type: 'transcript'; blocks: string[] }
+  // One piped process's retained history, as the runs the far side saw them in: what was written to
+  // it and what it produced, in order. Sent only when an attach is rebuilding tabs, and never for a
+  // `pty` process, whose tty already echoed its input into the retained output. It is a frame of its
+  // own rather than more `output` because the recorded input carries the sentinel `echo` the shell
+  // protocol delimits commands with, and a live command's scan of the output stream would match it
+  // before the command had run.
+  | { type: 'shell-history'; id: string; runs: ShellHistoryRun[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
@@ -216,6 +232,12 @@ export type ServerFrame =
   // be collapsed: dropping a live session throws away its conversation, and keeping a dead one
   // means the next prompt writes into a corpse.
   | { type: 'acp-error'; id: string; message: string; fatal: boolean };
+
+// One unbroken stretch of a piped shell's history, tagged with the direction it travelled. Tagged
+// rather than inferred: the local side reconstructs a transcript entry per command from these, and
+// guessing which text was a command from its shape would mistake output that happens to look like
+// one.
+export type ShellHistoryRun = { source: 'input' | 'output'; text: string };
 
 // One live process as the far side describes it. The fields are exactly what the local side needs to
 // rebuild the tab that was driving it: the spawn id its output is routed by, what is running, how it
@@ -243,7 +265,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true,
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
-  'browser-exited': true,
+  'shell-history': true, 'browser-exited': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };
@@ -263,6 +285,9 @@ function encodeText(text: string): string {
 function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'input' || frame.type === 'output') return { ...frame, data: encodeText(frame.data) };
   if (frame.type === 'transcript') return { ...frame, blocks: frame.blocks.map((block) => encodeText(block)) };
+  if (frame.type === 'shell-history') {
+    return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
+  }
   if (frame.type === 'filesystem-request' && frame.operation === 'write-file') {
     return { ...frame, args: { ...frame.args, content: encodeText(frame.args.content ?? '') } };
   }

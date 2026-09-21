@@ -71,6 +71,14 @@ export class DetachedPeer {
     if (frame.mode === 'pipe') this.pipes.add(frame.id);
   }
 
+  // Retain what was written to a piped process, so an attach that rebuilds its tab can show each
+  // command beside the output it produced. Only for a piped one: a pty echoes what is written to it,
+  // and retaining that again would double every keystroke in a redrawn terminal.
+  input(frame: Extract<ClientFrame, { type: 'input' }>): void {
+    if (this.stopped || !this.pipes.has(frame.id)) return;
+    this.history.recordInput(frame.id, frame.data);
+  }
+
   detach(): void {
     if (this.stopped) return;
     this.sink = undefined;

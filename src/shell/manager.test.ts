@@ -8,6 +8,7 @@ import { loadConfig } from '../config.js';
 import { loadLearnedCommands, learnedCommands } from '../interactive-learned.js';
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
+import type { RestoredSink } from '../remote/shell-session.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -50,6 +51,12 @@ function completeCommand(result: string): void {
 function resolvePwd(): void {
   const onResult = queryShellPwdMock.mock.calls.at(-1)?.[2] as (pwd: string) => void;
   onResult('/tmp');
+}
+
+// The restored sink the manager handed the adopted remote shell: where a replayed session's output
+// and retained history land.
+function restoredSink(): RestoredSink {
+  return createRemoteShellMock.mock.calls[0][6] as RestoredSink;
 }
 
 function resetShellMocks(): void {
@@ -215,17 +222,17 @@ describe('ShellManager — which shell a tab gets', () => {
     const shellManager = new ShellManager(managers);
     shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
     shellManager.ensure(tab.label);
-    const restored = createRemoteShellMock.mock.calls[0][6] as (data: string) => void;
+    const restored = restoredSink();
     const dirty = vi.fn();
     const subscription = messageBus.on('state', 'dirty', dirty);
     try {
-      restored('\u{1B}c');
+      restored.output('\u{1B}c');
       expect(dirty).not.toHaveBeenCalled();
-      restored('\u{1B}cearlier output');
+      restored.output('\u{1B}cearlier output');
       expect(tab.log).toEqual([{ input: '', output: 'earlier output' }]);
       expect(dirty).toHaveBeenCalledOnce();
-      restored('later output');
-      restored('latest output');
+      restored.output('later output');
+      restored.output('latest output');
       expect(tab.log.map((entry) => entry.output)).toEqual(['later output', 'latest output']);
       expect(dirty).toHaveBeenCalledTimes(3);
     } finally {
@@ -241,15 +248,40 @@ describe('ShellManager — which shell a tab gets', () => {
     const shellManager = new ShellManager(managers);
     shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
     shellManager.ensure(tab.label);
-    const restored = createRemoteShellMock.mock.calls[0][6] as (data: string) => void;
+    const restored = restoredSink();
 
-    restored('tsconfig.json\nvitest.config.ts\nweb\n__JS_END_3_1789964749418__\n');
-    restored('/remote/workspace/harun\n__PWD_3_1789964749468__\npwd\n/remote/workspace/harun\n__PWD_3_1789964749502__\n');
-    restored('zsh: operation not permitted: ps\n__JS_END_3_1789964752762__\n');
+    restored.output('tsconfig.json\nvitest.config.ts\nweb\n__JS_END_3_1789964749418__\n');
+    restored.output('/remote/workspace/harun\n__PWD_3_1789964749468__\npwd\n/remote/workspace/harun\n__PWD_3_1789964749502__\n');
+    restored.output('zsh: operation not permitted: ps\n__JS_END_3_1789964752762__\n');
 
     expect(tab.log.map((entry) => entry.output)).toEqual([
       'tsconfig.json\nvitest.config.ts\nweb\n',
       'zsh: operation not permitted: ps\n',
+    ]);
+  });
+
+  it('rebuilds a restored transcript from retained history runs, commands included', () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = restoredSink();
+
+    restored.history([
+      { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+      { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+      { source: 'input', text: 'pwd\necho "__PWD_3_2__"\n' },
+      { source: 'output', text: '/remote/workspace/harun\n__PWD_3_2__\n' },
+      { source: 'input', text: '{ :; ps\n} 2>&1; echo "__JS_END_3_3__"\n' },
+      { source: 'output', text: 'operation not permitted\n__JS_END_3_3__\n' },
+    ]);
+
+    expect(tab.log).toEqual([
+      { input: 'ls', output: 'web' },
+      { input: 'ps', output: 'operation not permitted' },
     ]);
   });
 });

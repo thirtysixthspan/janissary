@@ -9,7 +9,9 @@ import { startRemoteAgent } from '../profile/remote-agent.js';
 import { placeAgent } from '../profile/place-agent.js';
 import { RemoteManager } from '../remote/manager.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from '../remote/protocol.js';
+import { ReplayHistory } from '../remote/replay-history.js';
 import { RemoteProcesses } from '../remote/serve-processes.js';
+import { shellCommandInput } from '../shell/command-input.js';
 import { spawnShell } from '../shell/index.js';
 import { ShellManager } from '../shell/manager.js';
 import { TabManager } from '../tab/manager.js';
@@ -38,7 +40,9 @@ let managers: Managers;
 function harness() {
   const transports: Transport[] = [];
   const frames: ClientFrame[] = [];
-  const retained = new Map<string, string>();
+  // The real retention the far side keeps, so what an attach replays here is what a peer would
+  // actually compose from the same traffic.
+  const history = new ReplayHistory();
   const remoteKills = vi.fn();
   const emit = (frame: ServerFrame) => {
     const transport = transports.at(-1);
@@ -46,8 +50,12 @@ function harness() {
   };
   const processes = new RemoteProcesses(emit, WORKSPACE, 'harun');
   const recordOutput = (id: string, data: string) => {
-    retained.set(id, (retained.get(id) ?? '') + data);
+    history.record({ type: 'output', id, data });
     emit({ type: 'output', id, data });
+  };
+  // A command as the far side sees it: written in, never echoed back by a piped shell.
+  const recordCommand = (id: string, command: string, delimiter: string) => {
+    history.recordInput(id, shellCommandInput(command, delimiter));
   };
   vi.mocked(spawnShell).mockImplementation(() => {
     const shell = new PassThrough();
@@ -74,9 +82,10 @@ function harness() {
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
           case 'attach': {
+            const restore = frame.restore === true;
             setTimeout(() => {
               emit({ type: 'attach-result', accepted: true });
-              for (const [id, data] of retained) emit({ type: 'output', id, data: `\u{1B}c${data}` });
+              for (const replay of history.frames(restore)) emit(replay);
             }, 0);
             break;
           }
@@ -98,7 +107,7 @@ function harness() {
   managers.shell = new ShellManager(managers);
   managers.sessions = new SessionsManager(managers);
   wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
-  return { transports, frames, processes, remoteKills, recordOutput };
+  return { transports, frames, processes, remoteKills, recordOutput, recordCommand };
 }
 
 beforeEach(() => {
@@ -152,6 +161,29 @@ it('restores the same agent shell through repeated detach and late transport exi
   }
   expect(spawnShell).toHaveBeenCalledOnce();
   expect(h.remoteKills).not.toHaveBeenCalled();
+});
+
+it('restores an attached agent transcript with its commands beside their output', async () => {
+  const h = harness();
+  startRemoteAgent(managers, {
+    resolved: 'harun', creator: managers.tab.cur(), address: { address: 'devbox', destination: 'devbox', host: 'devbox' },
+    cwd: process.cwd(), offline: false, out: vi.fn(),
+  });
+  await vi.advanceTimersByTimeAsync(10);
+  const shell = h.processes.states()[0];
+  h.recordCommand(shell.id, 'ls', '__JS_END_3_1__');
+  h.recordOutput(shell.id, 'src\nweb\n__JS_END_3_1__\n');
+  expect(managers.sessions.detach('harun')).toBe(true);
+  h.recordCommand(shell.id, 'ps', '__JS_END_3_2__');
+  h.recordOutput(shell.id, 'operation not permitted\n__JS_END_3_2__\n');
+
+  expect(managers.sessions.attach(SESSION)).toBe(true);
+  await vi.advanceTimersByTimeAsync(10);
+
+  expect(managers.tab.byLabel('harun')?.log).toEqual([
+    { input: 'ls', output: 'src\nweb' },
+    { input: 'ps', output: 'operation not permitted' },
+  ]);
 });
 
 it.each([false, true])('restores joined agent tabs and their history before a command, label collision=%s', async (collision) => {
