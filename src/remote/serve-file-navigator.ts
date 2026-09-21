@@ -56,7 +56,7 @@ export class RemoteFileNavigators {
   }
 
   private dispatch(frame: RequestFrame): MaybePromise<unknown> {
-    return operationDescriptor(frame.operation).run(this.context(frame.session), frame.args);
+    return operationDescriptor(frame.operation).run(this.context(frame.session), frame.args as never);
   }
 
   // The session-scoped half of what an operation runs against, bound per request: the watcher map

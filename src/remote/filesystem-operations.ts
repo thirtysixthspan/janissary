@@ -23,24 +23,32 @@ export type OperationContext = {
   pasteSources: (args: RemoteFilesystemArguments) => string[];
 };
 
-export type OperationDescriptor = {
+export type OperationDescriptor<A = RemoteFilesystemArguments> = {
   // Whether a decoded-but-unvalidated argument record is acceptable for this operation.
   valid: (args: Record<string, unknown>) => boolean;
   // The arguments this operation carries, and only those — anything else the client sent is dropped.
-  decode: (args: Record<string, unknown>) => RemoteFilesystemArguments;
+  decode: (args: Record<string, unknown>) => A;
   // Every path these arguments name, for the workspace-containment check. Written per operation
   // rather than falling through to a shared guess: an operation with no extractor of its own would
   // otherwise pass containment without a single path being tested.
-  paths: (args: RemoteFilesystemArguments) => string[];
+  paths: (args: A) => string[];
   // Set when an empty path means the workspace root itself rather than an unnamed path.
   rootDestination?: true;
   // How a refusal is answered. Absent when this operation's result — directory entries, stats, file
   // content — has nowhere to put a reason, in which case it is refused as an error. The reason comes
   // from whoever is refusing: containment on the server, a connection that ended or a far-side error
   // on the client.
-  refusal?: (args: RemoteFilesystemArguments, attempted: string[], reason: string) => unknown;
-  run: (context: OperationContext, args: RemoteFilesystemArguments) => MaybePromise<unknown>;
+  refusal?: (args: A, attempted: string[], reason: string) => unknown;
+  run: (context: OperationContext, args: A) => MaybePromise<unknown>;
 };
+
+// An identity function used only for its generic type parameter: it lets each table entry below
+// infer its own decoded-argument type `A` from its own `decode`, then checks that entry's `paths`,
+// `refusal`, and `run` against that same `A` — so nineteen differently-shaped entries can each be
+// exactly typed inside one plain object, without restating each shape as an explicit annotation.
+function descriptorFor<A>(descriptor: OperationDescriptor<A>): OperationDescriptor<A> {
+  return descriptor;
+}
 
 const pathOnly = (args: Record<string, unknown>) => ({ path: args.path as string });
 const namedPath = (args: RemoteFilesystemArguments) => [args.path ?? ''];
@@ -51,111 +59,112 @@ const noArguments = { valid: (args: Record<string, unknown>) => Object.keys(args
 // The operations that only read. None of them can express a refusal in its own result, so none
 // names one.
 const READ_OPERATIONS = {
-  'read-directory': {
+  'read-directory': descriptorFor({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
-    run: (context, args) => context.filesystem.readDirectory(context.root, args.path ?? ''),
-  },
-  stat: {
+    run: (context, args) => context.filesystem.readDirectory(context.root, args.path),
+  }),
+  stat: descriptorFor({
     valid: (args) => stringArray(args.paths),
     decode: (args) => ({ paths: args.paths as string[] }),
-    paths: (args) => args.paths ?? [],
-    run: (context, args) => context.filesystem.statRows(context.root, args.paths ?? []),
-  },
-  watch: {
+    paths: (args) => args.paths,
+    run: (context, args) => context.filesystem.statRows(context.root, args.paths),
+  }),
+  watch: descriptorFor({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
-    run: (context, args) => context.watch(args.path ?? ''),
-  },
-  unwatch: {
+    run: (context, args) => context.watch(args.path),
+  }),
+  unwatch: descriptorFor({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
-    run: (context, args) => context.unwatch(args.path ?? ''),
-  },
-  git: { ...noArguments, run: (context) => context.git() },
+    run: (context, args) => context.unwatch(args.path),
+  }),
+  git: descriptorFor({ ...noArguments, run: (context: OperationContext) => context.git() }),
   // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
   // rejection (git's own error) travels back as the request's error reply.
-  'git-pull': { ...noArguments, run: (context) => context.filesystem.pull(context.root) },
-  search: { ...noArguments, run: (context) => context.filesystem.search(context.root) },
-  'read-file': {
+  'git-pull': descriptorFor({ ...noArguments, run: (context: OperationContext) => context.filesystem.pull(context.root) }),
+  search: descriptorFor({ ...noArguments, run: (context: OperationContext) => context.filesystem.search(context.root) }),
+  'read-file': descriptorFor({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath,
-    run: (context, args) => context.readFile(args.path ?? ''),
-  },
-} as const satisfies Record<string, OperationDescriptor>;
+    run: (context, args) => context.readFile(args.path),
+  }),
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
+} as const satisfies Record<string, OperationDescriptor<any>>;
 
 // The operations that write. Each names the refusal shape matching its own result type.
 const MUTATION_OPERATIONS = {
-  'write-file': {
+  'write-file': descriptorFor({
     valid: (args) => stringValue(args.path) && stringValue(args.content),
     decode: (args) => ({ path: args.path as string, content: args.content as string }),
     paths: namedPath, refusal: refusedItem,
     run: (context, args) => context.filesystem.writeFile(
-      context.root, args.path ?? '', Buffer.from(args.content ?? '', 'base64'),
+      context.root, args.path, Buffer.from(args.content, 'base64'),
     ),
-  },
-  move: {
+  }),
+  move: descriptorFor({
     valid: (args) => stringValue(args.from) && stringValue(args.to),
     decode: (args) => ({ from: args.from as string, to: args.to as string }),
-    paths: (args) => [args.from ?? '', args.to ?? ''],
+    paths: (args) => [args.from, args.to],
     rootDestination: true, refusal: refusedItem,
-    run: (context, args) => context.filesystem.move(context.root, args.from ?? '', args.to ?? ''),
-  },
-  'move-many': {
+    run: (context, args) => context.filesystem.move(context.root, args.from, args.to),
+  }),
+  'move-many': descriptorFor({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination) && policy(args.policy),
     decode: (args) => ({
       sources: args.sources as string[], destination: args.destination as string,
       ...optionalPolicy(args.policy),
     }),
-    paths: (args) => [...(args.sources ?? []), args.destination ?? ''],
+    paths: (args) => [...args.sources, args.destination],
     rootDestination: true, refusal: refusedMoveMany,
     run: (context, args) => context.filesystem.moveMany(
-      context.root, args.sources ?? [], args.destination ?? '', args.policy,
+      context.root, args.sources, args.destination, args.policy,
     ),
-  },
-  delete: {
+  }),
+  delete: descriptorFor({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, refusal: refusedItem,
-    run: (context, args) => context.filesystem.delete(context.root, args.path ?? ''),
-  },
-  'delete-many': {
+    run: (context, args) => context.filesystem.delete(context.root, args.path),
+  }),
+  'delete-many': descriptorFor({
     valid: (args) => stringArray(args.paths),
     decode: (args) => ({ paths: args.paths as string[] }),
-    paths: (args) => args.paths ?? [],
+    paths: (args) => args.paths,
     refusal: refusedDeleteMany,
-    run: (context, args) => context.filesystem.deleteMany(context.root, args.paths ?? []),
-  },
-  rename: {
+    run: (context, args) => context.filesystem.deleteMany(context.root, args.paths),
+  }),
+  rename: descriptorFor({
     valid: (args) => stringValue(args.path) && nonEmptyString(args.name),
     decode: (args) => ({ path: args.path as string, name: args.name as string }),
     paths: namedPath, refusal: refusedItem,
-    run: (context, args) => context.filesystem.rename(context.root, args.path ?? '', args.name ?? ''),
-  },
-  paste: {
+    run: (context, args) => context.filesystem.rename(context.root, args.path, args.name),
+  }),
+  paste: descriptorFor({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination)
       && (args.mode === 'copy' || args.mode === 'cut') && policy(args.policy),
     decode: (args) => ({
       sources: args.sources as string[], destination: args.destination as string,
       mode: args.mode as 'copy' | 'cut', ...optionalPolicy(args.policy),
     }),
-    paths: (args) => [...(args.sources ?? []), args.destination ?? ''],
+    paths: (args) => [...args.sources, args.destination],
     rootDestination: true, refusal: refusedPaste,
     run: (context, args) => context.filesystem.paste(
-      context.root, context.pasteSources(args), args.destination ?? '', args.mode ?? 'copy', args.policy,
+      context.root, context.pasteSources(args), args.destination, args.mode, args.policy,
     ),
-  },
-  'create-file': {
+  }),
+  'create-file': descriptorFor({
     valid: (args) => stringValue(args.destination),
     decode: destinationOnly, paths: namedDestination,
     rootDestination: true, refusal: refusedItem,
-    run: (context, args) => context.filesystem.createFile(context.root, args.destination ?? ''),
-  },
-  'create-directory': {
+    run: (context, args) => context.filesystem.createFile(context.root, args.destination),
+  }),
+  'create-directory': descriptorFor({
     valid: (args) => stringValue(args.destination),
     decode: destinationOnly, paths: namedDestination,
     rootDestination: true, refusal: refusedItem,
-    run: (context, args) => context.filesystem.createDirectory(context.root, args.destination ?? ''),
-  },
+    run: (context, args) => context.filesystem.createDirectory(context.root, args.destination),
+  }),
   // Commits and pushes the named paths, or the navigator's own root for an empty list — its
   // workspace-relative prefix travels as `root`, since the far side's single shared workspace root
   // cannot otherwise tell one navigator's root from another's. Its result is a summary string with
@@ -163,37 +172,37 @@ const MUTATION_OPERATIONS = {
   // refusal comes back as an error instead. `rootDestination` is required, not cosmetic: a navigator
   // rooted at the workspace itself derives an *empty* prefix, and that must read as the root itself
   // rather than as an escaping path.
-  'git-commit': {
+  'git-commit': descriptorFor({
     valid: (args) => nonEmptyString(args.message) && stringArray(args.paths)
       && (args.root === undefined || stringValue(args.root)),
     decode: (args) => ({
       message: args.message as string, paths: args.paths as string[], ...optionalRoot(args.root),
     }),
-    paths: (args) => [...(args.paths ?? []), ...(args.root === undefined ? [] : [args.root])],
+    paths: (args) => [...args.paths, ...(args.root === undefined ? [] : [args.root])],
     rootDestination: true,
     run: (context, args) => {
-      const paths = args.paths ?? [];
-      const root = paths.length === 0 && args.root ? path.join(context.root, args.root) : context.root;
-      return context.filesystem.commit(root, args.message ?? '', paths);
+      const root = args.paths.length === 0 && args.root ? path.join(context.root, args.root) : context.root;
+      return context.filesystem.commit(root, args.message, args.paths);
     },
-  },
-  replay: {
+  }),
+  replay: descriptorFor({
     valid: (args) => history(args.undoStack) && history(args.redoStack)
       && (args.direction === 'undo' || args.direction === 'redo')
       && typeof args.overwrite === 'boolean' && typeof args.skipConflicts === 'boolean',
     decode: (args) => ({
-      undoStack: args.undoStack as unknown[], redoStack: args.redoStack as unknown[],
+      undoStack: args.undoStack as HistoryStep[], redoStack: args.redoStack as HistoryStep[],
       direction: args.direction as 'undo' | 'redo', overwrite: args.overwrite as boolean,
       skipConflicts: args.skipConflicts as boolean,
     }),
-    paths: (args) => historyPaths([...(args.undoStack ?? []), ...(args.redoStack ?? [])] as HistoryStep[]),
+    paths: (args) => historyPaths([...args.undoStack, ...args.redoStack]),
     refusal: refusedReplay,
     run: (context, args) => context.filesystem.replay(
-      context.root, args.undoStack as HistoryStep[], args.redoStack as HistoryStep[],
-      args.direction ?? 'undo', args.overwrite ?? false, args.skipConflicts ?? false,
+      context.root, args.undoStack, args.redoStack,
+      args.direction, args.overwrite, args.skipConflicts,
     ),
-  },
-} as const satisfies Record<string, OperationDescriptor>;
+  }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
+} as const satisfies Record<string, OperationDescriptor<any>>;
 
 // One entry per operation: its argument validator, its decoder, its path extractor, how a refusal is
 // answered, and what it dispatches to. The `satisfies` is the guarantee — adding a member to
@@ -202,12 +211,15 @@ const MUTATION_OPERATIONS = {
 export const FILESYSTEM_OPERATIONS = {
   ...READ_OPERATIONS,
   ...MUTATION_OPERATIONS,
-} satisfies Record<RemoteFilesystemOperation, OperationDescriptor>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the constraint only loosens this satisfies check's variance; each entry keeps its own decoded type in `typeof FILESYSTEM_OPERATIONS`.
+} satisfies Record<RemoteFilesystemOperation, OperationDescriptor<any>>;
 
 export function isFilesystemOperation(value: unknown): value is RemoteFilesystemOperation {
   return typeof value === 'string' && Object.hasOwn(FILESYSTEM_OPERATIONS, value);
 }
 
-export function operationDescriptor(operation: RemoteFilesystemOperation): OperationDescriptor {
+export function operationDescriptor<K extends RemoteFilesystemOperation>(
+  operation: K,
+): (typeof FILESYSTEM_OPERATIONS)[K] {
   return FILESYSTEM_OPERATIONS[operation];
 }

@@ -15,7 +15,7 @@ type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 // survive the trip.
 export function refusedPaths(frame: RequestFrame, root: string): string[] {
   const descriptor = operationDescriptor(frame.operation);
-  return descriptor.paths(frame.args).filter((candidate) => {
+  return descriptor.paths(frame.args as never).filter((candidate) => {
     if (candidate === '' && descriptor.rootDestination) return false;
     const relative = path.isAbsolute(candidate) ? path.relative(root, candidate) : candidate;
     return !containedPath(root, relative);
@@ -38,7 +38,7 @@ export function refusalValueFor(
 ): Refusal {
   const descriptor = operationDescriptor(operation);
   if (!descriptor.refusal) return { classified: false };
-  return { classified: true, value: descriptor.refusal(args, descriptor.paths(args), reason) };
+  return { classified: true, value: descriptor.refusal(args as never, descriptor.paths(args as never), reason) };
 }
 
 // A containment refusal: the request named a path outside the workspace root and ran nothing.

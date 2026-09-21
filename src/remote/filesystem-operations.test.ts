@@ -80,7 +80,7 @@ describe('FILESYSTEM_OPERATIONS', () => {
   });
 
   it.each(PATH_CASES)('extracts every path %s names', (operation, args, expected) => {
-    expect(operationDescriptor(operation).paths(args)).toEqual(expected);
+    expect(operationDescriptor(operation).paths(args as never)).toEqual(expected);
   });
 
   it.each(PATH_CASES)('accepts a well-formed %s argument record', (operation, args) => {
