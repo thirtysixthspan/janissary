@@ -7,6 +7,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
+import { typeIntoHarness } from '../harness/input.js';
 
 // Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
 // user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
@@ -186,12 +187,7 @@ export class ScheduleManager {
     if (tab.sessionTerminated || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
-      // Sent as one write, a long command's trailing \r can land inside the same burst the harness's
-      // own input parser treats as a paste, so it's read as inserted text rather than submit. Splitting
-      // the \r into its own write after the text has been processed mimics organic typing and avoids that.
-      const ptyId = tab.harness.ptyId;
-      this.managers.pty.input(ptyId, e.command);
-      setTimeout(() => this.managers.pty.input(ptyId, '\r'), 50);
+      typeIntoHarness(this.managers.pty, tab.harness.ptyId, tab.harness.name, e.command);
       notify(this.managers, 'schedule-fire', tab.label, e.command);
       return true;
     }

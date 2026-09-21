@@ -112,3 +112,91 @@ describe('OpencodeTranscriptSource', () => {
     expect(source.resolved()).toBe(false);
   });
 });
+
+// The current opencode keeps each message's and each part's content as one JSON document in a
+// `data` column; the older flat `role`/`type`/`text`/`tool`/`state` columns are gone. The fixture
+// below mirrors that shape.
+describe('OpencodeTranscriptSource with data-column schema', () => {
+  function createDataSchema(database: DatabaseSync): void {
+    database.exec('CREATE TABLE session (id TEXT PRIMARY KEY, directory TEXT, parent_id TEXT, time_created INTEGER)');
+    database.exec('CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, data TEXT)');
+    database.exec('CREATE TABLE part (id TEXT PRIMARY KEY, message_id TEXT, session_id TEXT, time_created INTEGER, data TEXT)');
+  }
+
+  function addJsonSession(database: DatabaseSync, id: string, directory: string, timeCreated: number, parentId: string | null): void {
+    database.prepare('INSERT INTO session (id, directory, parent_id, time_created) VALUES (?, ?, ?, ?)')
+      .run(id, directory, parentId, timeCreated);
+  }
+
+  function addJsonMessage(database: DatabaseSync, id: string, sessionId: string, timeCreated: number, role: string, parts: Record<string, unknown>[]): void {
+    database.prepare('INSERT INTO message (id, session_id, time_created, data) VALUES (?, ?, ?, ?)')
+      .run(id, sessionId, timeCreated, JSON.stringify({ role }));
+    for (const [index, part] of parts.entries()) {
+      database.prepare('INSERT INTO part (id, message_id, session_id, time_created, data) VALUES (?, ?, ?, ?, ?)')
+        .run(`${id}-p${index}`, id, sessionId, timeCreated, JSON.stringify(part));
+    }
+  }
+
+  it('resolves the session and reads messages whose role lives in the data JSON', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonMessage(database, 'm1', 'mine', spawnedAt + 10, 'user', [{ type: 'text', text: 'this session' }]);
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: this session']);
+    expect(source.resolved()).toBe(true);
+  });
+
+  it('renders a tool part whose state is a nested JSON object', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonMessage(database, 'm1', 'mine', spawnedAt + 10, 'assistant', [
+      { type: 'tool', tool: 'bash', state: { input: { command: 'ls' }, output: 'a.ts' } },
+    ]);
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['assistant → bash({"command":"ls"})\nbash result: a.ts']);
+  });
+
+  it('includes a child session\'s data-column rows, labeled as a subagent', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonSession(database, 'child', cwd, spawnedAt + 5, 'mine');
+    addJsonMessage(database, 'm1', 'child', spawnedAt + 10, 'assistant', [{ type: 'text', text: 'subagent working' }]);
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['[subagent child] assistant: subagent working']);
+  });
+
+  it('returns only newer rows on a second read', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonMessage(database, 'm1', 'mine', spawnedAt + 10, 'user', [{ type: 'text', text: 'first' }]);
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: first']);
+    expect(source.poll()).toEqual([]);
+    addJsonMessage(database, 'm2', 'mine', spawnedAt + 20, 'assistant', [{ type: 'text', text: 'second' }]);
+    database.close();
+    expect(source.poll()).toEqual(['assistant: second']);
+  });
+
+  it('skips a part whose data column does not parse', () => {
+    const database = openWritable();
+    createDataSchema(database);
+    addJsonSession(database, 'mine', cwd, spawnedAt, null);
+    addJsonMessage(database, 'm1', 'mine', spawnedAt + 10, 'user', [{ type: 'text', text: 'real' }]);
+    database.prepare('INSERT INTO part (id, message_id, session_id, time_created, data) VALUES (?, ?, ?, ?, ?)')
+      .run('m1-p9', 'm1', 'mine', spawnedAt + 10, 'not json');
+    database.close();
+
+    const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
+    expect(source.poll()).toEqual(['user: real']);
+  });
+});
