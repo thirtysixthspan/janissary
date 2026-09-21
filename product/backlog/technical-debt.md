@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Give every browser transport and resource request one session-token URL builder.
 
 Existing Debt: `web/src/ws.ts`, `web/src/plugins/api.ts`, and `web/src/ws-connection.ts` independently read, encode, and place the same page session token even though the client class documents `resourceUrl` as the single location for that rule. Severity: 4/10
@@ -41,6 +39,8 @@ Proposal: Define a named options type beside `useFileNavigatorDrag` in `web/src/
 * Move the three flat interactive-command files into `src/interactive/`: `interactive.ts`, `interactive-learned.ts`, and `interactive-signals.ts` classify terminal-taking commands, persist learned classifications, and detect terminal takeover, with three colocated tests and a bare `src/interactive.ts` entry that becomes `index.ts`. `src/interactive/` does not exist yet, no configuration names the old paths literally, and roughly six other files import the group, so its shared concern should live in the tree instead of in repeated filenames. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `interactive` prefix. Severity: **low**.
 
 * Move the three flat notifications-feed files into `src/notifications/`: `notifications.ts`, `notifications-tab.ts`, and `notifications-tab-test-fixture.ts` own event eligibility, the singleton feed tab, and its test host, with two colocated tests and a bare `src/notifications.ts` entry that becomes `index.ts`. `src/notifications/` does not exist yet, no configuration names the old paths literally, and roughly twenty-five files across `src/` and `web/src/` import the group, so the one concern is currently discoverable only through a filename prefix. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `notifications` prefix. Severity: **low**.
+
+## development
 
 ## deferred
 
