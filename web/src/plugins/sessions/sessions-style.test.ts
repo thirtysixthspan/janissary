@@ -38,6 +38,14 @@ describe('sessions stylesheet', () => {
       .toContain(".session-row-actions button[data-action='reattach'] { color: var(--error); }");
   });
 
+  it('lays the state cell out as its plug and then its word', () => {
+    const state = sessions.match(/\.session-row-state \{[^}]+\}/)?.[0];
+
+    expect(state).toContain('display: flex');
+    expect(state).toContain('align-items: baseline');
+    expect(state).toContain('gap: 6px');
+  });
+
   it('shares a six-column grid between headings and rows', () => {
     expect(sessions).toContain('.session-columns, .session-row {');
     expect(sessions).toContain('grid-template-columns: minmax(0, 1fr) 6em minmax(0, 1.5fr) 8em 8em 6em');

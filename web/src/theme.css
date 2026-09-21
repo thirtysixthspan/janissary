@@ -257,6 +257,16 @@ html, body, #root {
   font-size: 13px; padding: 0 4px; line-height: 1;
 }
 .tab-connections:hover, .tab-schedule:hover { color: var(--fg); }
+/* The connection plug: one glyph for a connection's status wherever it is shown — the metadata row
+   of a remote tab and the sessions tab's State column. Green is up, blue is parked on its host, red
+   is over. Provisioning and reconnecting stay muted: neither has settled anywhere yet. */
+.connection-plug { font-size: 13px; line-height: 1; cursor: default; color: var(--muted); }
+.connection-plug[data-state='active'] { color: var(--success); }
+.connection-plug[data-state='detached'] { color: var(--accent); }
+.connection-plug[data-state='ended'] { color: var(--error); }
+/* The plug leads the metadata row, ahead of the host chip, so a remote tab reads "how, where, what
+   path there". */
+.tab-meta .connection-plug { order: -2; }
 .tab-remote-session {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;

@@ -72,6 +72,19 @@ describe('SessionList rendering', () => {
     },
   );
 
+  // The plug carries the colour at a glance; the word keeps detached apart from reconnecting, which
+  // the palette alone does not.
+  it.each(['provisioning', 'active', 'reconnecting', 'detached', 'ended'] as const)(
+    'states a %s row as a plug beside its word',
+    (state) => {
+      const { container } = list([row({ state, actions: [] })]);
+      const cell = container.querySelector('.session-row-state');
+
+      expect(cell?.querySelector('.connection-plug')).toHaveAttribute('data-state', state);
+      expect(cell).toHaveTextContent(state);
+    },
+  );
+
   // The indent is the grouping: one glance shows what a single detach would take with it.
   it('indents a row that rides another row\'s channel', () => {
     const { container } = list([row({ id: 'a' }), row({ id: 'b', joined: true })]);
@@ -112,6 +125,29 @@ describe('SessionList buttons', () => {
     expect(screen.getByLabelText('Disconnect claude')).toBeInTheDocument();
     expect(screen.queryByLabelText('Reconnect claude')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('End session claude')).not.toBeInTheDocument();
+  });
+
+  // The three verbs that act on a connection draw the host's plug glyphs, so a verb means the same
+  // picture here and on a remote tab's metadata row. Forget and close touch no connection.
+  it('draws each connection verb as the plug with the sign of what it does', () => {
+    const { container } = list([row({
+      state: 'detached', actions: ['reattach', 'detach', 'end', 'forget', 'close'], session: 's1',
+    })]);
+    const drawn = Object.fromEntries(
+      [...container.querySelectorAll<HTMLElement>(':scope .session-row-actions button')]
+        .map((button) => [
+          button.dataset.action,
+          button.querySelector<SVGElement>(':scope svg')?.dataset.icon,
+        ]),
+    );
+
+    expect(drawn).toEqual({
+      reattach: 'plug-circle-plus',
+      detach: 'plug-circle-minus',
+      end: 'plug-circle-xmark',
+      close: 'xmark',
+      forget: 'trash',
+    });
   });
 
   // `focus` is what opening the row already does, so it carries no button of its own.

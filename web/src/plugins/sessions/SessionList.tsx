@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction, SessionsPayload } from '@shared/plugins/sessions/shared';
-import { ConfirmDialog, type TabPluginClientCapabilities } from '../api';
+import { ConfirmDialog, ConnectionPlug, type TabPluginClientCapabilities } from '../api';
 import { SessionRowActions } from './SessionRowActions';
 import { openIntentFor, relativeActivity, sessionClickSelection, nextSessionSelection } from './sessions-keys';
 
@@ -132,7 +132,10 @@ export function SessionList({
             <span className="session-row-host">{row.host}</span>
             <span className="session-row-kind">{row.kind}</span>
             <span className="session-row-name">{row.name}</span>
-            <span className="session-row-state">{row.state}</span>
+            <span className="session-row-state">
+              <ConnectionPlug state={row.state} />
+              {row.state}
+            </span>
             <time className="session-row-activity" dateTime={new Date(row.activity).toISOString()}>
               {relativeActivity(row.activity, now)}
             </time>

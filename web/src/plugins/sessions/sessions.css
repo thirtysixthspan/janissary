@@ -30,7 +30,9 @@
 .session-row-host { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .session-row-name { overflow: hidden; text-overflow: ellipsis; }
 .session-row-kind { color: var(--muted); }
-.session-row-state { color: var(--muted); }
+/* The state reads as its plug and then its word: the colour carries at a glance, and the word keeps
+   detached apart from reconnecting, which the palette alone does not. */
+.session-row-state { color: var(--muted); display: flex; align-items: baseline; gap: 6px; }
 .session-row-activity { color: var(--faint); }
 /* A session that is parked, retrying, or over reads differently from one that is working. */
 .session-row[data-state='detached'] .session-row-state { color: var(--accent); }

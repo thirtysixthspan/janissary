@@ -7,6 +7,7 @@ import { SplitTabButton } from '../SplitTabButton';
 import type { StatusWindowButtonProps } from './status-windows/status-button';
 import type { RemoteTargetView } from '@shared/protocol';
 import { RemoteChip } from './RemoteChip';
+import { ConnectionPlug } from './ConnectionPlug';
 import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionButton';
 
 type Properties = {
@@ -38,6 +39,9 @@ export function AgentTabMeta({
   const workspaced = flags?.includes('workspaced') ?? false;
   return (
     <div className="tab-meta">
+      {remote !== undefined && remoteSession !== undefined && (
+        <ConnectionPlug state={remoteSession.state} />
+      )}
       {remote !== undefined && <RemoteChip remote={remote} />}
       <span className="tab-cwd">{cwdDisplay ?? cwd}</span>
       {model !== undefined && <MetaChip label="Model" value={model} />}

@@ -283,6 +283,49 @@ describe('AgentTabMeta', () => {
       expect(chip.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
+    // The row states the connection's status rather than leaving it to be inferred from which verb
+    // the button happens to be offering.
+    it('leads the row with a plug carrying the channel state', () => {
+      const { container, getByLabelText } = control('reconnecting');
+      const plug = container.querySelector('.connection-plug');
+
+      expect(plug).toHaveAttribute('data-state', 'reconnecting');
+      expect(plug).not.toBeNull();
+      expect(plug!.compareDocumentPosition(getByLabelText('Remote')) & Node.DOCUMENT_POSITION_FOLLOWING)
+        .toBeTruthy();
+    });
+
+    it('shows no plug on a tab that is not remote', () => {
+      const onAction = vi.fn();
+      const { container } = render(
+        <AgentTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />,
+      );
+      expect(container.querySelector('.connection-plug')).toBeNull();
+    });
+
+    it('shows no plug on a remote tab that was given no control', () => {
+      const { container } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      expect(container.querySelector('.connection-plug')).toBeNull();
+    });
+
+    // One plug family for the whole vocabulary: the status glyph, and each verb as that plug with
+    // the sign of what it does to the connection.
+    it('draws each verb with its own plug glyph', () => {
+      const { container, rerender } = control();
+      expect(container.querySelector(':scope .tab-remote-session svg'))
+        .toHaveAttribute('data-icon', 'plug-circle-minus');
+
+      rerender(
+        <AgentTabMeta
+          cwd="/srv/proj"
+          remote={remote}
+          remoteSession={{ state: 'reconnecting', onAction: vi.fn() }}
+        />,
+      );
+      expect(container.querySelector(':scope .tab-remote-session svg'))
+        .toHaveAttribute('data-icon', 'plug-circle-plus');
+    });
+
     // There is nothing to come back to until the workspace clone has landed.
     it('is disabled while the tab is provisioning', () => {
       const { getByLabelText } = control('provisioning');

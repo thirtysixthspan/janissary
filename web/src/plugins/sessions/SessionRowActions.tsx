@@ -1,19 +1,22 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faLink, faStop, faTrash, faXmark,
-} from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction } from '@shared/plugins/sessions/shared';
+import { detachSessionIcon, reattachSessionIcon, endSessionIcon } from '../api';
 
 // The per-row buttons. Icon-only and right-aligned, the way the conversations list's are, with the
 // verb in the accessible label so a row reads correctly without the icon.
+//
+// The three that act on a connection carry the host's plug glyphs, so the same verb means the same
+// picture here and on a remote tab's metadata row. Forget and close keep their own: neither touches
+// the connection.
 
-type Presentation = { icon: typeof faLink; label: string };
+type Presentation = { icon: typeof faTrash; label: string };
 
 const PRESENTATION: Record<Exclude<SessionRowAction, 'focus'>, Presentation> = {
-  reattach: { icon: faLink, label: 'Reconnect' },
-  detach: { icon: faLink, label: 'Disconnect' },
-  end: { icon: faStop, label: 'End session' },
+  reattach: { icon: reattachSessionIcon, label: 'Reconnect' },
+  detach: { icon: detachSessionIcon, label: 'Disconnect' },
+  end: { icon: endSessionIcon, label: 'End session' },
   forget: { icon: faTrash, label: 'Forget session' },
   close: { icon: faXmark, label: 'Close' },
 };

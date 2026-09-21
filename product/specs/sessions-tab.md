@@ -43,6 +43,12 @@ The state is one of `provisioning` (a remote tab whose workspace clone has not l
 `detached` (parked on its host, awaiting reattachment), or `ended` (a session established to be
 over).
 
+The State column shows a plug ahead of the state's word, coloured by what the connection is doing:
+green while it is up, blue while it is parked on its host, red once it is over. A session still
+provisioning or still reconnecting has not settled, so its plug stays muted and the word tells the
+two apart. The same plug, with the same colours, is what every other surface uses to say a
+connection's status.
+
 A session the channel lifecycle ends outright leaves no row at all: its record is dropped with the
 channel, so a harness the user closes reads as one ending — never as a second, detached line for a
 peer that was already shut down. Only a session parked while its peer stays alive keeps a row.
@@ -57,6 +63,10 @@ Every row offers what it can actually do, and nothing else. The give-and-take co
 control reads Disconnect — green, because taking a session away is the deliberate, recoverable
 direction — and Reconnect — red, because it reaches for a session that is not here. The other
 row buttons keep their own verbs.
+
+The three verbs that act on the connection itself are drawn as that same plug carrying the sign of
+what they do to it: a minus for detach, a plus for reattach, a cross for ending the session. Forget
+and close keep glyphs of their own, because neither touches a connection.
 
 **Reattach** applies to a parked session, and to a live one whose transport is being retried. On a
 parked session it opens one ssh connection and brings the whole peer back, opening a tab for each
@@ -153,8 +163,10 @@ metadata row. See [[notifications]].
 
 ### The control on a remote tab
 
-Every remote tab's metadata row carries the same control, right-aligned among the row's other
-buttons and light on dark: detach while the
+Every remote tab's metadata row leads with the connection's plug, ahead of the host chip, so the row
+reads how, where, and what path there — coloured exactly as the sessions tab colours it. The control
+itself sits at the other end of the row, right-aligned among the row's other
+buttons and light on dark, and carries the same verb glyphs the list's rows carry: detach while the
 session is healthy, reattach while its transport is being retried. It is disabled while the tab is
 provisioning and shows a spinner while an action is in flight. The spinner clears when the action is
 answered — including when it was refused, and including when nothing answers at all — so the control
