@@ -2,17 +2,6 @@
 
 ## ready
 
-* Correct the architecture guideline's command-routing section, which still describes a schedule branch running ahead of the command registry that no longer exists.
-
-Existing Debt: The binding architecture guideline names a live violation of its own one-command-one-definition rule that has since been fixed, so the document every agent is instructed to read before working describes a code path the codebase does not have. Severity: 3/10
-
-Existing Risk: 4/10 - An agent that trusts the paragraph either hunts for a branch it cannot find or re-adds one ahead of the registry to match the description, which is exactly the shadow execution path the rule beneath it exists to forbid.
-
-Proposal Risk: 2/10 - The paragraph would describe the code as it stands, but nothing ties the two together, so the next branch added ahead of the registry leaves it wrong again in the same way.
-
-Proposal: Section 5 of `ai/guidelines/architecture-principles.md` opens its second paragraph with "One branch still runs ahead of the registry: `CommandManager.run` opens the schedule dialog for a bare `schedule` before calling `resolveCommand`." `CommandManager.run` in `src/command/manager.ts` now calls `resolveCommand` first and switches on the resolution, with no schedule branch anywhere before it, and `schedule` is an ordinary registry entry — imported from `src/commands/schedule.ts` and listed in `coreCommands` in `src/commands/index.ts`. Rewrite that first sentence to name what actually bypasses `executeCommand` today: the `shell` resolution, which `run` routes to its own `runShell` rather than through the registry. Keep the paragraph's remaining two sentences, which are still accurate — `harness` and `ssh` are `Command` entries, and `ROUTE_NAMES` in `src/plugins/command-adapter.ts` is `['shell']`, already as short as the branches it shadows — and do not touch the rule statement in the third paragraph. Nothing in the test suite reads this document, so the verification is reading `src/command/manager.ts`, `src/commands/index.ts`, and `src/plugins/command-adapter.ts` and confirming the rewritten sentence matches all three; `src/commands.test.ts`, which walks the registry for shadowing, is what keeps the registry claim true.
-
-
 * Compose the file-backed tab payload once in the plugin host's shared file helpers instead of rebuilding it in each viewer plugin's activation.
 
 Existing Debt: The module that exists to hold the operations every file-backed tab plugin performs holds the size helper and the external-open helpers but not the payload construction itself, so four viewer plugins each rebuild the same name/path/size/url record around the same resource-registration call. Severity: 3/10
