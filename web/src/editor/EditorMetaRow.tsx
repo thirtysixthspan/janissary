@@ -3,9 +3,9 @@ import type { EditorView } from '@shared/protocol';
 import { EditorSaveButton } from './EditorSaveButton';
 import { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
-import { connectionsWindowIcon } from '../icons';
+import { connectionsWindowIcon } from '../shared/icons';
 import { EditorSyncIcon } from './EditorSyncIcon';
-import { SplitTabButton } from '../SplitTabButton';
+import { SplitTabButton } from '../shared/SplitTabButton';
 import { EditorMetaName } from './EditorMetaName';
 import { EditorCommitButton } from './EditorCommitButton';
 

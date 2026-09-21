@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorView } from '@shared/protocol';
-import { syncIcon } from '../icons';
+import { syncIcon } from '../shared/icons';
 
 const TOOLTIPS: Record<NonNullable<EditorView['sync']>, string> = {
   provisioning: 'GitHub sync: provisioning workspace',

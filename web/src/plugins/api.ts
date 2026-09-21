@@ -15,7 +15,7 @@ export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/us
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
 // the same terms and for the same reason: a plugin that renames something should rename it the way
 // the tab strip and the file navigator already do.
-export { InlineEditInput } from '../InlineEditInput';
+export { InlineEditInput } from '../shared/InlineEditInput';
 
 // The host's terse confirmation, published for the same reason and on the same terms: a plugin that
 // asks the user to confirm something destructive should ask it the way the rest of the application
@@ -28,7 +28,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../shared/icons';
 
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal

@@ -1,4 +1,4 @@
-import type { HarnessDropHandle } from './drop-handles';
+import type { HarnessDropHandle } from './shared/drop-handles';
 
 // Where every mounted harness tab publishes the handle a file-navigator drag releases onto, keyed
 // by the tab's PTY id. The navigator reads that id straight off the `[data-harness-drop]` element

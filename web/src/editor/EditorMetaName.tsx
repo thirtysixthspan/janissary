@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
-import { InlineEditInput } from '../InlineEditInput';
+import { InlineEditInput } from '../shared/InlineEditInput';
 
 // The editor tab's name in its metadata row. Once a "new file" session the name auto-starts in
 // edit mode — pre-selected with keyboard focus — the same rename the tab label already offers;

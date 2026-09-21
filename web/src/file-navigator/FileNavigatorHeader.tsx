@@ -5,11 +5,11 @@ import type {
 } from '@shared/protocol';
 import { nextDock, dockTooltip } from '../dock-cycle';
 import { nextDetail, detailTooltip } from './file-navigator-detail';
-import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../icons';
+import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../shared/icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { FileNavigatorPullButton } from './FileNavigatorPullButton';
 import { FileNavigatorCommitButton } from './FileNavigatorCommitButton';
-import { SplitTabButton } from '../SplitTabButton';
+import { SplitTabButton } from '../shared/SplitTabButton';
 import { RemoteChip } from '../shared/RemoteChip';
 
 type Properties = {

@@ -2,8 +2,8 @@ import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
-import { statusDotIcon, unreadIcon } from './icons';
-import { InlineEditInput } from './InlineEditInput';
+import { statusDotIcon, unreadIcon } from './shared/icons';
+import { InlineEditInput } from './shared/InlineEditInput';
 import { truncateTabLabel } from './tab-label';
 import type { TabDragTransform } from './useTabReorder';
 

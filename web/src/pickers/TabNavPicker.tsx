@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
-import { statusDotIcon } from '../icons';
+import { statusDotIcon } from '../shared/icons';
 import { filterTabs, displayLabel } from './tab-nav-match';
 
 function highlightLabel(label: string, query: string): React.ReactNode {

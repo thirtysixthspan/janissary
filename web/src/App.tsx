@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { JanusClient } from './ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { AppMain } from './AppMain';
-import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
-import type { DirtyTabHandle } from './tab-handles';
+import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
+import type { DirtyTabHandle } from './shared/tab-handles';
 import { useTabHandles } from './useTabHandles';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
 import { useCommandDrafts } from './agent-tabs/command-input/useCommandDrafts';

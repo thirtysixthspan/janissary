@@ -5,7 +5,7 @@ import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator
 import { hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
 import { joinCommandPaths, joinDropFileNames } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
-import type { CommandInputDropHandle, EditorDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle } from '../shared/drop-handles';
 import { harnessDropHandle } from '../harness-drop-registry';
 
 const DRAG_THRESHOLD_PX = 4;

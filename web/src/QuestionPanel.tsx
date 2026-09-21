@@ -1,9 +1,9 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { ModalDialog } from './ModalDialog';
+import { ModalDialog } from './shared/ModalDialog';
 import { useAnswerButtons } from './useAnswerButtons';
-import type { QuestionPanelHandle } from './tab-handles';
+import type { QuestionPanelHandle } from './shared/tab-handles';
 
 export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   question: PendingQuestionView;

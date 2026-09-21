@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { EditorView, FileNavigatorCommitStatus } from '@shared/protocol';
-import { commitIcon } from '../icons';
+import { commitIcon } from '../shared/icons';
 import { commitBranchTooltipSuffix } from '../shared/commit-branch-tooltip';
 
 const STATE_NOTES: Record<FileNavigatorCommitStatus, string> = {

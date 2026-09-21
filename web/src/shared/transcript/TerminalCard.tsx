@@ -4,7 +4,7 @@ import type { JanusClient } from '../../ws';
 import type { TerminalEntry } from '@shared/protocol';
 import { useXterm } from '../terminal/useXterm';
 import { SelectionOverlay } from '../terminal/SelectionOverlay';
-import { collapsedIcon } from '../../icons';
+import { collapsedIcon } from '../icons';
 
 type Properties = { entry: TerminalEntry; client: JanusClient };
 

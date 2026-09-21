@@ -10,7 +10,7 @@ import React, {
 import type { TabView } from '@shared/protocol';
 import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../ws';
-import { SplitTabButton } from '../SplitTabButton';
+import { SplitTabButton } from '../shared/SplitTabButton';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';

@@ -7,7 +7,7 @@ import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
-import type { HarnessTabHandle } from '../tab-handles';
+import type { HarnessTabHandle } from '../shared/tab-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
 
 type Properties = {

@@ -5,7 +5,7 @@ import { useCommandDraft, type CommandDrafts } from './useCommandDrafts';
 import { spliceIntoTextarea } from '../../shared/command-bar/textarea-splice';
 import { useCommandBarKeys } from '../../shared/command-bar/useCommandBarKeys';
 import { CommandBarShell } from '../../shared/command-bar/CommandBarShell';
-import type { CommandInputDropHandle } from '../../drop-handles';
+import type { CommandInputDropHandle } from '../../shared/drop-handles';
 
 export type CommandInputProperties = {
   dotColor: string;

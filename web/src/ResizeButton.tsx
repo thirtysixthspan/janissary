@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { resizeIcon } from './icons';
+import { resizeIcon } from './shared/icons';
 import { beginResizeDrag } from './drag-resize';
 
 export function ResizeButton({ direction, label, onResize, align = 'end' }: {

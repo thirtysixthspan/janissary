@@ -16,8 +16,8 @@ import type { PickerOverlayView } from './pickers/picker-overlay-view';
 import { mountedPickerOverlayProps } from './pickers/picker-overlay-props';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
-import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
-import type { EditorDropHandle } from './drop-handles';
+import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab-handles';
+import type { EditorDropHandle } from './shared/drop-handles';
 
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { SuggestionView } from '@shared/protocol';
-import { approveIcon, rejectIcon, snapshotIcon, resetIcon } from './icons';
+import { approveIcon, rejectIcon, snapshotIcon, resetIcon } from './shared/icons';
 
 // A byte count formatted as b/kb/mb, one decimal place above 1000.
 function formatBytes(n: number): string {

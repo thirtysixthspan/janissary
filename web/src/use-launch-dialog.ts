@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useDialogKeyboard } from './useDialogKeyboard';
+import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import type { JanusClient } from './ws';
 
 // Shared cancel/create wiring for the "New harness" and "New schedule" launch dialogs: a Close

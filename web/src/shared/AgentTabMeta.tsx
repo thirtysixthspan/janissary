@@ -1,9 +1,9 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from './tab-flag-display';
-import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../icons';
+import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
 import { StatusWindowButton } from './status-windows/StatusWindowButton';
-import { SplitTabButton } from '../SplitTabButton';
+import { SplitTabButton } from './SplitTabButton';
 import type { StatusWindowButtonProps } from './status-windows/status-button';
 import type { RemoteTargetView } from '@shared/protocol';
 import { RemoteChip } from './RemoteChip';

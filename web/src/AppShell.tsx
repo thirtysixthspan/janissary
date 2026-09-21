@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
-import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
 import { useConnectionStatus } from './useConnectionStatus';
 import { ConnectionStatusLabel } from './ConnectionStatusLabel';
 
