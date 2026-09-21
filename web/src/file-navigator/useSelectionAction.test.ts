@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from '../ws';
+import type { JanusClient, RequestResult } from '../ws';
 import { useSelectionAction } from './useSelectionAction';
 
 const OFFERED = { label: 'Add to playlist', action: 'queue' };
 
 function makeClient(reply?: unknown) {
-  const request = vi.fn(async () => reply === undefined ? OFFERED : reply);
+  const request = vi.fn(async () => ({ ok: true, value: reply === undefined ? OFFERED : reply }));
   const send = vi.fn();
   return { client: { request, send } as unknown as JanusClient, request, send };
 }
@@ -50,8 +50,8 @@ describe('useSelectionAction', () => {
   });
 
   it('ignores an older reply that resolves after the current query', async () => {
-    const first = deferred<typeof OFFERED>();
-    const second = deferred<typeof OFFERED>();
+    const first = deferred<RequestResult<typeof OFFERED>>();
+    const second = deferred<RequestResult<typeof OFFERED>>();
     const request = vi.fn()
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
@@ -62,14 +62,14 @@ describe('useSelectionAction', () => {
       result.current.query(['first.mp3', 'second.mp3']);
       result.current.query(['third.mp3', 'fourth.mp3']);
     });
-    await act(async () => { second.resolve({ label: 'Current action', action: 'current' }); });
-    await act(async () => { first.resolve({ label: 'Stale action', action: 'stale' }); });
+    await act(async () => { second.resolve({ ok: true, value: { label: 'Current action', action: 'current' } }); });
+    await act(async () => { first.resolve({ ok: true, value: { label: 'Stale action', action: 'stale' } }); });
 
     expect(result.current.entry).toEqual({ label: 'Current action', action: 'current' });
   });
 
   it('ignores a pending reply after the menu action is cleared', async () => {
-    const pending = deferred<typeof OFFERED>();
+    const pending = deferred<RequestResult<typeof OFFERED>>();
     const client = { request: vi.fn(() => pending.promise), send: vi.fn() } as unknown as JanusClient;
     const { result } = renderHook(() => useSelectionAction(client, 0));
 
@@ -77,7 +77,7 @@ describe('useSelectionAction', () => {
       result.current.query(['first.mp3', 'second.mp3']);
       result.current.clear();
     });
-    await act(async () => { pending.resolve(OFFERED); });
+    await act(async () => { pending.resolve({ ok: true, value: OFFERED }); });
 
     expect(result.current.entry).toBeNull();
   });

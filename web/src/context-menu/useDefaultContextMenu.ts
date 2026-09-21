@@ -57,8 +57,8 @@ export function useDefaultContextMenu(client?: JanusClient) {
       if (target.selectionText && typeof client?.request === 'function') {
         void client.request<DefaultMenuEntry | null>({
           method: 'defaultMenuSelectionAction', params: { selection: target.selectionText },
-        }).then((entry) => {
-          if (generation.current === queryGeneration) setContributed(entry ?? null);
+        }).then((result) => {
+          if (generation.current === queryGeneration) setContributed(result.ok ? (result.value ?? null) : null);
         });
       }
       setPending({ ...target, x: event.clientX, y: event.clientY });
@@ -70,11 +70,11 @@ export function useDefaultContextMenu(client?: JanusClient) {
       event.preventDefault();
       void client.request<DefaultMenuEntry | null>({
         method: 'defaultMenuSelectionAction', params: { selection: selection.text },
-      }).then((entry) => {
-        if (!entry) return;
+      }).then((result) => {
+        if (!result.ok || !result.value) return;
         client.send({
           method: 'runDefaultMenuSelectionAction',
-          params: { selection: selection.text, action: entry.label },
+          params: { selection: selection.text, action: result.value.label },
         });
       });
     };

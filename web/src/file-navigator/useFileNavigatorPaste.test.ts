@@ -19,7 +19,7 @@ describe('useFileNavigatorPaste', () => {
 
   it('sends the RPC with the destination the cursor implies', () => {
     setClipboard('copy', ['/other/a.txt']);
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 2, '/root'));
 
@@ -43,7 +43,7 @@ describe('useFileNavigatorPaste', () => {
 
   it('a conflictPaths reply opens the conflict state instead of reporting success', async () => {
     setClipboard('copy', ['/other/a.txt']);
-    const request = vi.fn().mockResolvedValue({ conflictPaths: ['/other/a.txt'] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 
@@ -55,8 +55,8 @@ describe('useFileNavigatorPaste', () => {
   it('retry re-sends with overwrite-all and with skip-conflicts', async () => {
     setClipboard('copy', ['/other/a.txt']);
     const request = vi.fn()
-      .mockResolvedValueOnce({ conflictPaths: ['/other/a.txt'] })
-      .mockResolvedValue({ total: 1, failedPaths: [] });
+      .mockResolvedValueOnce({ ok: true, value: { conflictPaths: ['/other/a.txt'] } })
+      .mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
@@ -67,7 +67,7 @@ describe('useFileNavigatorPaste', () => {
       params: { index: 0, sources: ['/other/a.txt'], destinationPath: '', mode: 'copy', policy: 'overwrite-all' },
     });
 
-    request.mockResolvedValueOnce({ conflictPaths: ['/other/a.txt'] });
+    request.mockResolvedValueOnce({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
     await act(async () => { result.current.skipConflicts(); await Promise.resolve(); });
     expect(request).toHaveBeenLastCalledWith({
@@ -78,7 +78,7 @@ describe('useFileNavigatorPaste', () => {
 
   it('a successful cut-paste clears the clipboard', async () => {
     setClipboard('cut', ['/other/a.txt']);
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 
@@ -87,7 +87,7 @@ describe('useFileNavigatorPaste', () => {
   });
 
   it('duplicate copies a nested row into its own parent directory', () => {
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 4, '/root'));
 
@@ -100,7 +100,7 @@ describe('useFileNavigatorPaste', () => {
   });
 
   it('duplicate targets the tree root for a top-level row', () => {
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 
@@ -114,7 +114,7 @@ describe('useFileNavigatorPaste', () => {
 
   it('duplicate ignores the clipboard and leaves it as it was', async () => {
     setClipboard('cut', ['/other/a.txt']);
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 
@@ -132,7 +132,7 @@ describe('useFileNavigatorPaste', () => {
 
   it('a successful copy-paste leaves the clipboard intact', async () => {
     setClipboard('copy', ['/other/b.txt']);
-    const request = vi.fn().mockResolvedValue({ total: 1, failedPaths: [] });
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 
@@ -145,7 +145,7 @@ describe('useFileNavigatorPaste', () => {
   // threw mid-`.then`, so the paste silently never opened its dialog.
   it('an unanswered paste raises no conflict and keeps a cut clipboard', async () => {
     setClipboard('cut', ['/other/a.txt']);
-    const request = vi.fn().mockResolvedValue(undefined);
+    const request = vi.fn().mockResolvedValue({ ok: false });
     const client = { request } as unknown as JanusClient;
     const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
 

@@ -40,8 +40,8 @@ export function useQuickOpen(client: JanusClient) {
       // The loading flag clears whether or not an answer came, for the same reason the file-search
       // pop-up's does: a palette left spinning is stuck until it is reopened. With no paths there is
       // nothing to pick, so the empty root is never used to build a path.
-      setRoot(result?.root ?? '');
-      setPaths(result?.paths ?? []);
+      setRoot(result.ok ? result.value.root : '');
+      setPaths(result.ok ? result.value.paths : []);
       setQuickOpenLoading(false);
     });
   }, [client, setQuickOpenOpen]);

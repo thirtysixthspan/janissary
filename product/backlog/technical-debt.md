@@ -2,17 +2,6 @@
 
 ## ready
 
-* Let the websocket client's request method carry the server's error back to its caller, so a failed operation can say what went wrong instead of looking like a closed socket.
-
-Existing Debt: The client's generic request helper resolves with the reply's result and drops its error string, so every caller sees the same `undefined` for three different outcomes — socket not open, connection ended, server refused — and the one call that genuinely needs the error had to be written as a second hand-rolled copy of the same send-and-settle code. Severity: 5/10
-
-Existing Risk: 5/10 - A file-navigator operation the server refuses resolves as `undefined`, the caller takes the same early return it takes for a socket that was never open, and the user sees the action simply not happen with no message anywhere.
-
-Proposal Risk: 2/10 - Callers can tell the three outcomes apart, but whether each one reports the error stays a per-call-site decision, so a site that ignores the new arm is exactly as silent as it is today.
-
-Proposal: `JanusClient.request` in `web/src/ws.ts` registers `this.pending.set(id, (r) => resolve(r as T))`, discarding the second `error` parameter that `settle` passes and that `onEvent`'s `rpc-reply` arm supplies from the server. `handle` in `src/message-handler.ts` replies `{ t: 'rpc-reply', id, error: errorText(error) }` for any dispatch that throws or rejects, so the string is already on the wire and only the client discards it. `saveFile`, directly below `request` in the same class, exists only to read that error and duplicates the `readyState` check, the `pending.set`, and the `dispatch` call to do so. Change `request<T>` to resolve a discriminated result — `{ ok: true; value: T } | { ok: false; error?: string }`, with the error absent for a socket that was never open and set to the existing `CONNECTION_ENDED` constant for one that closed mid-flight — and re-express `saveFile` as a call to it, deleting the duplicated body. Then update the fifteen call sites, all of which branch on a falsy result today: `web/src/file-navigator/useFileNavigatorMoveOperations.ts` (two, one of which clears a pending conflict dialog on the `undefined`), `useSelectionAction.ts`, `useFileNavigatorOpener.ts` (two), `useFileNavigatorSearch.ts`, `web/src/pickers/useQuickOpen.ts`, `web/src/editor/useEditorSuggest.ts` (two), and `web/src/context-menu/useDefaultContextMenu.ts` (two). Keep each site's existing no-result behavior for the socket case and add reporting only where the feature already has somewhere to put a message — deciding that per site is the work, and adding it blindly would push error text onto surfaces with no place to render it. `web/src/ws.test.ts` pins the current resolve-with-`undefined` contract and its expectations change with the signature; the file-navigator hook tests pin the early-return paths, which must still be taken for a socket that was never open.
-
-
 * Make a session row's terminating marker clear on every way the attempt can end, not only on the one path the current code handles.
 
 Existing Debt: The sessions feature raises a per-session terminating marker before an attempt starts and clears it from that attempt's success path alone, with nothing owning the pairing, and the sibling attach action handles its rejection arm while terminate does not. Severity: 5/10

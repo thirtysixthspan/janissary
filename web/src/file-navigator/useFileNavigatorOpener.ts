@@ -16,8 +16,11 @@ export function useFileNavigatorOpener(client: JanusClient, index: number) {
     void client.request<FileOpenerResolution>({
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit },
     }).then((result) => {
-      if (result?.command) sendOpen(client, index, path, result.command);
-      else if (result?.choices.length) setPending({ path, paths: [path], choices: result.choices, selected: 0 });
+      if (!result.ok) return;
+      if (result.value.command) sendOpen(client, index, path, result.value.command);
+      else if (result.value.choices.length > 0) {
+        setPending({ path, paths: [path], choices: result.value.choices, selected: 0 });
+      }
     });
   };
 
@@ -32,7 +35,9 @@ export function useFileNavigatorOpener(client: JanusClient, index: number) {
     void client.request<FileOpenerResolution>({
       method: 'fileNavigatorOpeners', params: { index, relPath: path, edit: false, all: true },
     }).then((result) => {
-      if (result?.choices.length) setPending({ path, paths, choices: result.choices, selected: 0 });
+      if (result.ok && result.value.choices.length > 0) {
+        setPending({ path, paths, choices: result.value.choices, selected: 0 });
+      }
     });
   };
 

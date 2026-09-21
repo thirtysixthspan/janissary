@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import React from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient, RequestResult } from '../ws';
 import { useQuickOpen } from './useQuickOpen';
 
 function TestComponent({ client, onHook }: { client: JanusClient; onHook: (hook: ReturnType<typeof useQuickOpen>) => void }) {
@@ -34,11 +34,11 @@ describe('useQuickOpen', () => {
 
   it('stores the fetched root/paths and clears loading once the request resolves', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
-    const { promise, resolve } = withResolvers<{ root: string; paths: string[] }>();
+    const { promise, resolve } = withResolvers<RequestResult<{ root: string; paths: string[] }>>();
     const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
     render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
     act(() => hook!.openQuickOpen());
-    await act(async () => { resolve({ root: '/proj', paths: ['a.ts'] }); await promise; });
+    await act(async () => { resolve({ ok: true, value: { root: '/proj', paths: ['a.ts'] } }); await promise; });
     expect(hook!.quickOpenLoading).toBe(false);
     act(() => hook!.setQuickOpenQuery('a'));
     expect(hook!.quickOpenResults.map((r) => r.path)).toEqual(['a.ts']);
@@ -46,12 +46,12 @@ describe('useQuickOpen', () => {
 
   it('drops a reply that arrives after the window was closed', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
-    const { promise, resolve } = withResolvers<{ root: string; paths: string[] }>();
+    const { promise, resolve } = withResolvers<RequestResult<{ root: string; paths: string[] }>>();
     const client = { send: vi.fn(), request: vi.fn(() => promise) } as unknown as JanusClient;
     render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
     act(() => hook!.openQuickOpen());
     act(() => hook!.setQuickOpenOpen(false));
-    await act(async () => { resolve({ root: '/proj', paths: ['a.ts'] }); await promise; });
+    await act(async () => { resolve({ ok: true, value: { root: '/proj', paths: ['a.ts'] } }); await promise; });
     expect(hook!.quickOpenOpen).toBe(false);
     expect(hook!.quickOpenLoading).toBe(true);
   });
@@ -59,7 +59,7 @@ describe('useQuickOpen', () => {
   it('caps results at the top 10 best-scoring matches', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
     const paths = Array.from({ length: 15 }, (_, i) => `dir/file${i}.ts`);
-    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ root: '/proj', paths })) } as unknown as JanusClient;
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: true, value: { root: '/proj', paths } })) } as unknown as JanusClient;
     render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
     act(() => hook!.openQuickOpen());
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -70,7 +70,7 @@ describe('useQuickOpen', () => {
   it('pickQuickOpenFile sends an edit command with the absolute path and closes', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
     const send = vi.fn();
-    const client = { send, request: vi.fn(() => Promise.resolve({ root: '/proj', paths: ['a.ts'] })) } as unknown as JanusClient;
+    const client = { send, request: vi.fn(() => Promise.resolve({ ok: true, value: { root: '/proj', paths: ['a.ts'] } })) } as unknown as JanusClient;
     render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
     act(() => hook!.openQuickOpen());
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
@@ -79,12 +79,12 @@ describe('useQuickOpen', () => {
     expect(hook!.quickOpenOpen).toBe(false);
   });
 
-  // `request` resolves `undefined` when the socket is not open, when the connection ended before the
-  // reply, and when the server answered with an error. Reading `result.root` off that threw inside
-  // the `.then`, leaving the palette on its loading state with no way back but reopening it.
+  // `request` resolves `{ ok: false }` when the socket is not open, when the connection ended before
+  // the reply, and when the server answered with an error. Reading `result.root` off that threw
+  // inside the `.then`, leaving the palette on its loading state with no way back but reopening it.
   it('clears loading and shows nothing when the request goes unanswered', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
-    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve(undefined)) } as unknown as JanusClient;
+    const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: false })) } as unknown as JanusClient;
     render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
 
     act(() => hook!.openQuickOpen());

@@ -85,7 +85,7 @@ export function useEditorSuggest(
 
   useEffect(() => {
     void client.request<{ names: string[] }>({ method: 'editorPersonas', params: {} }).then((res) => {
-      setPersonas(res?.names ?? []);
+      setPersonas(res.ok ? res.value.names : []);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- persona discovery is intentionally fetched once per mounted editor
   }, []);
@@ -153,7 +153,7 @@ export function useEditorSuggest(
       firingRef.current = false;
       setFiringLine(null);
       if (firingCancelledRef.current) { firingCancelledRef.current = false; return; }
-      const hunks = res?.hunks ?? [];
+      const hunks = res.ok ? res.value.hunks : [];
       // Empty hunks/failure is already surfaced via a notification server-side (Decision 10); the
       // query line stays open with its text intact and no pending panel opens.
       if (hunks.length > 0) {

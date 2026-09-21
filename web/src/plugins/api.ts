@@ -97,8 +97,8 @@ export function createPluginClientCapabilities(
         method: 'pluginIntent',
         params: { tab: label, intent: name, payload },
       });
-      if (result === undefined) throw new Error(`Plugin intent "${name}" failed`);
-      return result;
+      if (!result.ok) throw new Error(`Plugin intent "${name}" failed`);
+      return result.value;
     },
     splitAction: splitAction ?? null,
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin

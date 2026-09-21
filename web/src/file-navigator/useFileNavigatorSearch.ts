@@ -35,7 +35,7 @@ export function useFileNavigatorSearch(
       if (requestRef.current !== requestId) return;
       // The loading flag clears whether or not an answer came. A pop-up left spinning has no way
       // back except reopening it; an empty list says plainly that there is nothing to pick.
-      setSearchPaths(result?.paths ?? []);
+      setSearchPaths(result.ok ? result.value.paths : []);
       setSearchLoading(false);
     });
   };

@@ -67,13 +67,13 @@ describe('JanusClient', () => {
     const client = new JanusClient();
     const promise = client.request<string>({ method: 'toggleCollapse', params: {} });
     messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'bar' }) });
-    await expect(promise).resolves.toBe('bar');
+    await expect(promise).resolves.toEqual({ ok: true, value: 'bar' });
   });
 
-  it('request resolves with undefined when socket is closed', async () => {
+  it('request resolves with a failed result and no error when socket is closed', async () => {
     inst.readyState = 3;
     const client = new JanusClient();
-    await expect(client.request({ method: 'toggleCollapse', params: {} })).resolves.toBeUndefined();
+    await expect(client.request({ method: 'toggleCollapse', params: {} })).resolves.toEqual({ ok: false });
   });
 
   it('onState listener is called when a state event arrives', () => {
@@ -442,7 +442,7 @@ describe('JanusClient', () => {
 
       closeHandler!();
 
-      await expect(completion).resolves.toBeUndefined();
+      await expect(completion).resolves.toEqual({ ok: false, error: 'connection closed' });
       await expect(save).resolves.toBe('connection closed');
     });
 
@@ -450,7 +450,7 @@ describe('JanusClient', () => {
       const client = new JanusClient();
       const completion = client.request<string>({ method: 'toggleCollapse', params: {} });
       closeHandler!();
-      await expect(completion).resolves.toBeUndefined();
+      await expect(completion).resolves.toEqual({ ok: false, error: 'connection closed' });
 
       expect(() => {
         messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'late' }) });
@@ -475,7 +475,7 @@ describe('JanusClient', () => {
 
       client.dispose();
 
-      await expect(completion).resolves.toBeUndefined();
+      await expect(completion).resolves.toEqual({ ok: false, error: 'connection closed' });
       await expect(save).resolves.toBe('connection closed');
     });
 
@@ -537,7 +537,7 @@ describe('JanusClient reconnection', () => {
     const request = client.request({ method: 'toggleCollapse', params: {} });
     const save = client.saveFile('/file', 'contents');
     sockets[0].close();
-    await expect(request).resolves.toBeUndefined();
+    await expect(request).resolves.toEqual({ ok: false, error: 'connection closed' });
     await expect(save).resolves.toBe('connection closed');
     client.send({ method: 'toggleCollapse', params: {} });
     vi.advanceTimersByTime(250);

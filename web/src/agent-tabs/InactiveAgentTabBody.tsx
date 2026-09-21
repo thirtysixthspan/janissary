@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import type { TabView } from '@shared/protocol';
+import type { CompletionResult, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { Transcript } from '../shared/transcript/Transcript';
@@ -72,7 +72,10 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
         ghostHistory={[]}
         onSubmit={(text) => client.send({ method: 'command', params: { text } })}
         inputRef={inputReference}
-        complete={(text, cursor) => client.request({ method: 'complete', params: { text, cursor } })}
+        complete={async (text, cursor) => {
+          const result = await client.request<CompletionResult>({ method: 'complete', params: { text, cursor } });
+          return result.ok ? result.value : undefined;
+        }}
         pickerOpen={false}
         busy={tab.busy}
         autoFocus={false}
