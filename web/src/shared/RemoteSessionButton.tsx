@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
-import { detachSessionIcon, attachSessionIcon } from '../icons';
+import { detachSessionIcon, attachSessionIcon } from './icons';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // The detach/attach control beside a remote tab's host chip — the second front door onto the same

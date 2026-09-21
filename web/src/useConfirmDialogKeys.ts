@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useDialogKeyboard } from './useDialogKeyboard';
+import { useDialogKeyboard } from './shared/useDialogKeyboard';
 
 // Shared keyboard/click-outside behavior for a two-button (confirm/cancel) modal dialog: y/n
 // direct shortcuts, Left/Right move the selection, Enter runs the selected option, Escape

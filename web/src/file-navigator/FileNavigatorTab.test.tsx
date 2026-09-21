@@ -7,7 +7,7 @@ import type { JanusClient, RequestResult } from '../ws';
 import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
 import { multiOpenablePaths } from '../multi-open';
-import type { CommandInputDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
 
 beforeAll(() => {

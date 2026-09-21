@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render as renderBare, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabHandle } from './tab-handles';
-import type { DirtyTabHandle } from './tab-handles';
+import type { HarnessTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle } from './shared/tab-handles';
 import { MountedViewLayers } from './MountedViewLayers';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
 

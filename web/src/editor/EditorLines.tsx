@@ -7,7 +7,7 @@ import type { EditorSuggestApi } from './useEditorSuggest';
 import { suggestPillLabel } from './suggest-request';
 import { suggestDiffPreview, type SuggestDiffPreview } from './suggestDiff';
 import type { TokenRange } from './highlight/tokenize';
-import { approveIcon, rejectIcon } from '../icons';
+import { approveIcon, rejectIcon } from '../shared/icons';
 
 type EditorLinesProps = {
   state: EditorState;

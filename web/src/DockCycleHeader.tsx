@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { JanusClient } from './ws';
 import { nextDock, dockTooltip } from './dock-cycle';
-import { dockSwapIcon } from './icons';
+import { dockSwapIcon } from './shared/icons';
 
 type Properties = {
   dock?: 'left' | 'right';

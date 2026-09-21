@@ -7,7 +7,7 @@ import { DockedPluginBody } from './plugins/DockedPluginBody';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
-import type { CommandInputDropHandle, EditorDropHandle } from './drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
 

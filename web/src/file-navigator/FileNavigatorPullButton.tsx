@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorPullStatus } from '@shared/protocol';
-import { pullIcon } from '../icons';
+import { pullIcon } from '../shared/icons';
 
 const RESTING_TOOLTIP = 'Pull from origin';
 

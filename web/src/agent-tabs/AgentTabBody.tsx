@@ -5,7 +5,7 @@ import { Transcript } from '../shared/transcript/Transcript';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { CommandArea } from './command-input/CommandArea';
 import type { CommandDrafts } from './command-input/useCommandDrafts';
-import type { CommandInputDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';

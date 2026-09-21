@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandInput } from './CommandInput';
 import type { CommandDrafts } from './useCommandDrafts';
-import type { CommandInputDropHandle } from '../../drop-handles';
+import type { CommandInputDropHandle } from '../../shared/drop-handles';
 
 function renderCommandInput(overrides: { history?: string[]; ghostHistory?: string[]; busy?: boolean } = {}) {
   const inputRef = createRef<HTMLTextAreaElement>();

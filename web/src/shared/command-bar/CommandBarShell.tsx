@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { statusDotIcon, promptIcon } from '../../icons';
+import { statusDotIcon, promptIcon } from '../icons';
 
 export type CommandBarShellProperties = {
   value: string;

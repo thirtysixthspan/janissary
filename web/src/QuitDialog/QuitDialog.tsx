@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConfirmDialogShell } from '../ConfirmDialogShell';
+import { ConfirmDialogShell } from '../shared/ConfirmDialogShell';
 
 // Confirmation dialog shown when the `quit` command runs. Modal: nothing but y/n/Enter/Escape/
 // Left/Right, or a click on the dialog itself, does anything while it's open. Both input

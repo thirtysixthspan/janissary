@@ -2,7 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ShellTab } from './ShellTab';
-import type { ShellTabHandle } from './tab-handles';
+import type { ShellTabHandle } from './shared/tab-handles';
 import { tabBodyBorder } from './tab-body-border';
 
 type Properties = {

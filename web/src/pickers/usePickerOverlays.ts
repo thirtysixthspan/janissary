@@ -2,7 +2,7 @@ import type React from 'react';
 import { useMemo } from 'react';
 import type { ProfileRow, RouteChooserView, TabView, TaskRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import type { CommandInputDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { getRecentHistory } from '../history';
 import { buildOverlayOpenState } from './overlay-registry';
 import type { PickerOverlaysState } from './picker-overlays-state';

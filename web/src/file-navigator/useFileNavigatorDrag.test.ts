@@ -3,7 +3,7 @@ import { renderHook, act } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useFileNavigatorDrag } from './useFileNavigatorDrag';
-import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../shared/drop-handles';
 import { registerHarnessDrop } from '../harness-drop-registry';
 
 function makeRows(): FileNavigatorRow[] {

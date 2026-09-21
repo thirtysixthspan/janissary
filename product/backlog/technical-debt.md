@@ -2,17 +2,6 @@
 
 ## ready
 
-* Move the client's shared UI primitives out of the app-shell root into the shared layer, where the existing import zone can enforce that they never reach back into a feature.
-
-Existing Debt: The client has two shared layers — a `shared` directory and a set of flat modules at the client root that features import directly — and only the first is covered by the import zone forbidding shared code from importing a feature, so the boundary the organization guideline calls mechanically enforceable holds for roughly half the shared code. Severity: 4/10
-
-Existing Risk: 4/10 - A primitive at the root is free to import from a feature directory, and the import cycle that creates resolves to `undefined` at module-init time, so the first render of a dialog or a tab handle throws instead of the import failing at lint.
-
-Proposal Risk: 2/10 - The moved modules come under the zone and a feature import from them becomes a lint error, but the websocket client cluster stays at the root outside it, so a shared-to-feature import is still reachable from there.
-
-Proposal: `eslint.config.mjs` builds `clientFeatureZones` from `clientFeatureDirectories` and adds one zone with `target: './web/src/shared'` and `from` set to every feature directory. Modules sitting at the `web/src` root but imported by two or more feature directories are outside it: `web/src/icons.ts` (twelve feature files), `web/src/drop-handles.ts` (eight), `web/src/ModalDialog.tsx` (three), `web/src/useDialogKeyboard.ts` (three), `web/src/tab-handles.ts` (three), and `web/src/InlineEditInput.tsx`, `web/src/SplitTabButton.tsx`, and `web/src/ConfirmDialogShell.tsx` (two each). Move each into `web/src/shared/` together with its colocated test where one exists — `drop-handles.test.ts`, `tab-handles.test.ts`, `useDialogKeyboard.test.tsx`, `SplitTabButton.test.tsx` — and update the importers; the zone itself needs no edit, since it already targets the directory rather than a list of files. Two re-export lines in `web/src/plugins/api.ts` point at `../InlineEditInput` and `../icons` and must follow the move. Leave `web/src/ws.ts` and the modules it owns — `web/src/ws-connection.ts`, `web/src/pty-output-buffer.ts`, `web/src/reconnect-policy.ts`, `web/src/client-state-collectors.ts` — at the root for a later increment: thirty-two feature files import the client, and moving that cluster is a larger change than this one. Nothing here changes behavior, so the moved modules' own tests and `web/src/App.test.tsx` passing unchanged is the verification; `src/eslint-feature-boundaries.test.ts` pins how the zones are constructed and must keep passing.
-
-
 * Route the last hand-written view-kind checks through the tab view guards built to replace them, starting with the sidebar dock comparison that currently treats two payload-less tabs as the same plugin.
 
 Existing Debt: Both halves of the app have a guard module that checks a tab's view discriminant together with the payload that discriminant implies, but almost nothing imports them, so the invariant is still re-derived inline at the call sites — and where it is re-derived with optional chaining instead of a presence check, two tabs that are both missing the payload compare as equal. Severity: 4/10

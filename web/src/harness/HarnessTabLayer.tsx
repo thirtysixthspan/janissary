@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { HarnessTabView } from '../shared/tab-view-guards';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
-import type { HarnessTabHandle } from '../tab-handles';
+import type { HarnessTabHandle } from '../shared/tab-handles';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { tabBodyBorder } from '../tab-body-border';

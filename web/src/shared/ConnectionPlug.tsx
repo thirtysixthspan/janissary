@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { connectionStatusIcon } from '../icons';
+import { connectionStatusIcon } from './icons';
 
 // A connection's status, as one plug coloured by what the connection is doing. Both surfaces that
 // show a remote session — the sessions tab's State column and a remote tab's metadata row — render

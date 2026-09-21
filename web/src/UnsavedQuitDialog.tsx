@@ -1,5 +1,5 @@
 import React from 'react';
-import { ConfirmDialogShell } from './ConfirmDialogShell';
+import { ConfirmDialogShell } from './shared/ConfirmDialogShell';
 
 // Shown instead of the plain QuitDialog when `quit` (or closing the last tab) is requested while
 // an editor tab has unsaved changes — those paths close every tab at once and never go through

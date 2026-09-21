@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
+import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab-handles';
 
 // The imperative handles App.tsx hands down to MountedViewLayers/useFocusOnTabSwitch for
 // focusing whichever surface a tab switch (or Ctrl+A/G section nav) should land keyboard focus
