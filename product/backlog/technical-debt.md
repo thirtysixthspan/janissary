@@ -2,17 +2,6 @@
 
 ## ready
 
-* Extract remote-entry creation and frame/transport wiring from the remote lifecycle manager.
-
-Existing Debt: `RemoteManager` in `src/remote/manager.ts` is 274 lines and combines the entry-table lifecycle with deferred PTY construction, handshake/frame dispatch, reconnect generation guards, readiness promises, and callback routing in one `create` method, exceeding the project's focused-module size guideline. Severity: 6/10
-
-Existing Risk: 5/10 - Changes to provisioning or attach frames must modify a closure-heavy method beside shared-owner release and shutdown logic, making it easy to bind a callback to the wrong entry or alter teardown while changing only transport setup.
-
-Proposal Risk: 3/10 - Remote setup still has mutually dependent channel and transport objects, so the extracted factory must retain its explicit deferred ownership and lifecycle callbacks to avoid hiding those ordering constraints.
-
-Proposal: Move the construction pipeline from `RemoteManager.create` in `src/remote/manager.ts` into a focused `src/remote/` entry-factory module that creates the `RemoteChannel`, owns the deferred session/ready promise and generation guard, and returns the completed `RemoteEntry` plus its channel. Give that factory a narrow port for the manager-owned effects it needs: reporting a channel close against the exact entry and announcing session changes; keep the `entries` map, attach/release/detach/close operations, and their public API on `RemoteManager`, leaving `create` as the small registration and delegation path. Preserve the exported `RemoteLaunchHandlers` and `remoteServeCommand` surface used by `src/remote/manager.test.ts`, and keep its shared-channel, creator-label-reuse, attach, detach, and browser-exit cases passing because they cover the callback identity and lifecycle ordering the extraction must not change.
-
-
 * Replace the file navigator drag hook's legacy positional overload with one named options contract.
 
 Existing Debt: `web/src/file-navigator/useFileNavigatorDrag.ts` accepts two incompatible positional call shapes, detects the old one at runtime with string-versus-ref checks, and carries nine ordered parameters plus compatibility casts although `web/src/file-navigator/FileNavigatorTab.tsx` is the sole production caller and uses the newer shape. Severity: 5/10

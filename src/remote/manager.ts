@@ -1,15 +1,14 @@
 import { messageBus } from '../bus.js';
-import { getProjectTokens } from '../project/tokens.js';
-import { getGitIdentity } from '../git/identity.js';
 import type { Managers } from '../managers.js';
-import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
-import { RemoteChannel } from './channel.js';
-import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
-import { Attach, detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, terminateRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
-import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
-import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
+import type { RemoteChannel } from './channel.js';
+import type { RemoteTranscriptSource } from './transcript-source.js';
+import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
+import type { RemoteResume } from './resume.js';
 import { remoteChannelClosed } from './manager-closed.js';
+import { createRemoteEntry } from './entry-factory.js';
+
+export { remoteServeCommand } from './entry-factory.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
 // and its channel has gone away.
@@ -21,23 +20,6 @@ export type RemoteLaunchHandlers = {
   onClosed: () => void;
 };
 
-
-// The local side runs `ssh -t <destination> '$SHELL -ic "janus remote-serve [<path>]"'`. Nothing is
-// shipped over the wire: the remote must already have `janus` on its PATH, and a missing binary
-// fails the launch with ssh's own message in the tab's terminal. `-t` forces a real tty so ssh's
-// authentication prompts render there.
-//
-// The `$SHELL -ic` wrapper is what puts `janus` on that PATH. ssh runs a bare command through a
-// non-interactive shell, which skips `~/.bashrc` — and that is exactly where nvm and its kind
-// install their PATH setup, so a version-managed `janus` would be missing. `$SHELL` expands on the
-// remote (sshd sets it from the user's passwd entry) so the wrapper follows whatever shell that
-// user configured; the single quotes keep the local `$SHELL -lc` from expanding it first and hold
-// the wrapper together as one ssh argument. Both halves of the address are metacharacter-free by
-// `parseRemoteAddress`, so nesting them a quoting level deeper stays safe.
-export function remoteServeCommand(address: RemoteAddress): string {
-  const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
-  return `ssh -t ${address.destination} '$SHELL -ic "${serve}"'`;
-}
 
 // One independently launched remote workspace owns one channel. Tabs joined through the metadata
 // row and its file navigator are aliases onto that entry, so the channel survives until its last
@@ -63,97 +45,14 @@ export class RemoteManager {
     label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers,
     resume?: RemoteResume,
   ): RemoteChannel {
-    const state = { resuming: resume !== undefined };
-    const transcript = createRemoteTranscriptSource();
-    let resolveReady = (_dir: string) => {};
-    let rejectReady = (_error: Error) => {};
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-    const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
-    void ready.catch(() => {});
-    // The channel and its transport reference each other: the channel parses what the ssh PTY
-    // produces, and its own frames are written back to that PTY. Held in one box so neither has to
-    // exist before the other.
-    const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
-
-    const channel = new RemoteChannel(
-      {
-        get id() { return deferred.session?.id ?? ''; },
-        write: (data) => deferred.session?.write(data),
-        kill: () => deferred.session?.kill(),
-      },
-      {
-        onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
-        onAttached: () => {
-          if ((entry.attach.active || state.resuming) && channel.sessionId) {
-            channel.send({ type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
-          } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
-        },
-        onFrame: (frame) => {
-          switch (frame.type) {
-          case 'attach-result': {
-            handleAttachResult(this.managers, entry, frame, label, resume, state,
-              () => reportTruncatedReplay(this.managers, entry));
-            break;
-          }
-          case 'workspace-ready': {
-            if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
-            entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
-            this.sessionsChanged();
-            break;
-          }
-          case 'workspace-failed': {
-            if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
-            entry.handlers.get(label)?.onFailed(frame.message);
-            break;
-          }
-          case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
-          case 'browser-exited': { notifyBrowserGone(this.managers, frame.id, frame.message); break; }
-          default: { transcript.push(frame.blocks); }
-          }
-        },
-        onError: (message) => {
-          if (entry.attach.active) return;
-          if (!entry.closed && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
-          entry.handlers.get(label)?.onFailed(message);
-        },
-        onClose: () => this.channelClosed(entry),
-        // The spawned set is what `recordOf` reads, so a session becomes recordable on the first
-        // spawn and stops being on the last exit. Per process, not per byte.
-        onProcesses: () => this.sessionsChanged(),
-        onSessionExit: (_id, owner, harness) => {
-          terminateRemoteProcess(this.managers, entry, owner ?? label, harness);
-          this.sessionsChanged();
-        },
-      },
-    );
-    deferred.channel = channel;
-    // Set before the first handshake, which is what makes `consumeTerminalPhase` treat the incoming
-    // session as one to attach to rather than one to adopt.
-    if (resume) channel.sessionId = resume.session;
-
-    const entry: Entry = {
-      channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
-      ready, resolveReady, rejectReady, settled: false, closed: false, workspaceLabel: label,
-      attach: new Attach(() => connect(), () => channel.close()),
-    };
+    const entry = createRemoteEntry({
+      managers: this.managers, label, address, cwd, handlers, resume,
+      channelClosed: (closed) => this.channelClosed(closed),
+      sessionsChanged: () => this.sessionsChanged(),
+    });
     this.entries.set(label, entry);
-    let generation = 0;
-    const connect = () => {
-      const current = ++generation;
-      deferred.session?.kill();
-      channel.replaceTransport({
-        get id() { return deferred.session?.id ?? ''; },
-        write: (data) => deferred.session?.write(data), kill: () => deferred.session?.kill(),
-      });
-      deferred.session = this.managers.pty.spawnTransport(entry.labels.values().next().value ?? label,
-        'ssh', remoteServeCommand(address), resume ? process.cwd() : cwd, {
-          onData: (data) => { if (current === generation) channel.receive(data); },
-          onExit: () => { if (current === generation) channel.closed(); },
-        });
-    };
-    connect();
     this.sessionsChanged();
-    return channel;
+    return entry.channel;
   }
 
   // Register a second tab or navigator against the source tab's existing workspace and channel.
