@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { spawnPty } from '../pty.js';
-import { spawnShell } from '../shell/index.js';
+import { killShellGroup, spawnShell } from '../shell/index.js';
 import { RemoteProcesses } from './serve-processes.js';
 
 vi.mock('../pty.js');
@@ -32,6 +32,7 @@ describe('RemoteProcesses forwarded credentials', () => {
       id: 'pty1', program: 'claude', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
     });
     vi.mocked(spawnShell).mockReset().mockReturnValue(fakeShell() as never);
+    vi.mocked(killShellGroup).mockReset();
     vi.mocked(harnessSpawnEnv).mockReset().mockReturnValue({ env: undefined });
   });
 
@@ -54,7 +55,31 @@ describe('RemoteProcesses forwarded credentials', () => {
 
     expect(vi.mocked(spawnShell)).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'agent' }, {
       workspaceDir: '/remote/workspace', tokens: CREDENTIALS,
+    }, { detached: true });
+  });
+
+  // The hangup that parks a peer reaches the ssh session's whole process group, so a shell left in
+  // it dies with the transport the detach exists to give up.
+  it('spawns a persistent shell in a process group of its own', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'agent');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
     });
+
+    expect(vi.mocked(spawnShell).mock.calls[0]?.[3]).toEqual({ detached: true });
+  });
+
+  it('ends a persistent shell together with the group it leads', () => {
+    const shell = fakeShell();
+    vi.mocked(spawnShell).mockReturnValue(shell as never);
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'agent');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
+    });
+
+    processes.kill('r1');
+
+    expect(vi.mocked(killShellGroup)).toHaveBeenCalledWith(shell);
   });
 
   it('uses a joined tab\'s spawn name for its persistent shell', () => {

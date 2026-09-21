@@ -1,5 +1,5 @@
 import { spawnPty } from '../pty.js';
-import { spawnShell } from '../shell/index.js';
+import { killShellGroup, spawnShell } from '../shell/index.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js';
@@ -113,11 +113,15 @@ export class RemoteProcesses {
     this.browsers.delete(id);
   }
 
+  // Spawned in a process group of its own, because the hangup that parks this peer is delivered to
+  // the ssh session's group and would otherwise take the shell down with the transport — the one
+  // thing a detach exists to leave running. A `pty` process needs no such care: its pseudo-terminal
+  // already put it in a session of its own.
   private spawnPipe(id: string, agentName?: string): Omit<Entry, 'frame'> {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: agentName ?? this.label }, {
       workspaceDir: this.workspaceDir,
       tokens: this.tokens,
-    });
+    }, { detached: true });
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);
     shell.stderr?.on('data', onChunk);
@@ -126,7 +130,7 @@ export class RemoteProcesses {
     // local `ShellManager` does for a freshly spawned shell.
     shell.stdin?.write(`cd "${this.workspaceDir}"\n`);
     this.writers.set(id, (data) => { if (shell.stdin?.writable) shell.stdin.write(data); });
-    return { kill: () => { shell.kill(); } };
+    return { kill: () => { killShellGroup(shell); } };
   }
 
   private finish(id: string, exitCode: number): void {

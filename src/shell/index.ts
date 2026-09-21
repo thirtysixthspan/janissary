@@ -8,12 +8,19 @@ import { shellStartupArgs } from './startup.js';
 // to be a real local child.
 export type ShellProcess = Pick<ChildProcess, 'stdin' | 'stdout' | 'stderr' | 'kill'>;
 
+// `detached` puts the shell in a process group of its own instead of the caller's. Only the remote
+// server asks for it: the hangup that parks a peer is delivered to the ssh session's process group,
+// which the server and everything it spawned share, and a shell left in that group dies with the
+// transport the detach exists to give up. A local shell has no transport to be hung up by.
+export type ShellSpawnOptions = { detached?: boolean };
+
 // `sandbox`, when given a `workspaceDir`, confines the shell (and everything it spawns) to that
 // workspace (see src/sandbox/index.ts); omitted or workspaceDir-less, the shell runs exactly as before.
 export function spawnShell(
   _tabIndex: number,
   extraEnvironment?: Record<string, string>,
   sandbox?: SandboxOptions,
+  options?: ShellSpawnOptions,
 ): ChildProcess {
   const baseEnv = { ...process.env, ...extraEnvironment };
   const shellPath = process.env.SHELL || 'bash';
@@ -21,12 +28,25 @@ export function spawnShell(
   const shell = spawn(command, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
+    ...(options?.detached === true && { detached: true }),
   });
   shell.stdout.setEncoding('utf8');
   shell.stderr.setEncoding('utf8');
   // Swallow EPIPE on stdin: the shell may exit while a write is in flight (e.g. during test cleanup).
   shell.stdin.on('error', (err: NodeJS.ErrnoException) => { if (err.code !== 'EPIPE') throw err; });
   return shell;
+}
+
+/**
+ * End a shell spawned with `detached` together with everything still running under it. Its own group
+ * is the only thing that will ever reach the command it is in the middle of running — nothing else
+ * shares a group with it any more — so signalling the shell alone would leave that command behind on
+ * the host. Never call this on a shell spawned without `detached`: its group is this process's own.
+ */
+export function killShellGroup(shell: ChildProcess): void {
+  const pid = shell.pid;
+  if (pid === undefined) { shell.kill(); return; }
+  try { process.kill(-pid, 'SIGTERM'); } catch { shell.kill(); }
 }
 
 // What is written to a shell to run one command and mark the end of its output.

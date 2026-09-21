@@ -218,6 +218,10 @@ Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and 
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
+An agent tab's persistent shell is one of those processes: it outlives the transport it was reached
+through rather than ending with it, so a parked session still holds it when the reattachment asks
+what survived. Ending such a shell stops whatever it was running too, so nothing is left behind on
+the host when the session is shut down.
 Detaching is refused while a session is still provisioning: there is nothing to come back to yet.
 Janissary records what it launched — the session id, the address, the workspace, and each live
 process with its own label — in the project's own state directory, so a peer stays findable after the

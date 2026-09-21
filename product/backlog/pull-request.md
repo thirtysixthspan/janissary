@@ -2,10 +2,6 @@
 
 # pull-request
 
-* when an agent is detached - the remote shell is terminated and when reattaching, the agent ends:
-yavuz on 10.27.1.94 ended
-Instead, the agent's shell should be maintained and reattached when requested. 
-
 * closing a harness tab still generates the following error
 Unhandled pty write error [Error: EIO: i/o error, write] {
   errno: -5,
