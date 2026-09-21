@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { humanSize } from '../openers/size.js';
-import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
+import type { TabPluginDeclaration, TabPluginResources, TabPluginServerCapabilities } from './api.js';
 
 // The operations every file-backed tab plugin performs, composed once from the capability primitives
 // the contract already supplies. Deliberately plain functions taking a capability object rather than
@@ -18,6 +18,14 @@ export function fileSize(file: string): string {
   } catch {
     return 'unknown';
   }
+}
+
+// The name/path/size/url record every file-backed tab payload starts from. Plugins spread this and
+// add whatever fields their own payload carries beyond it — a schema version, a mode, a player.
+export function fileTabPayload(file: string, resources: TabPluginResources): {
+  name: string; path: string; size: string; url: string;
+} {
+  return { name: path.basename(file), path: file, size: fileSize(file), url: resources.registerFile(file) };
 }
 
 // Hand a file to the OS and report what happened. `viewer` names the kind of application in both

@@ -2,7 +2,7 @@ import path from 'node:path';
 import {
   defineIntents, type TabPluginActivation, type TabPluginResources, type TabPluginServerCapabilities,
 } from '../api.js';
-import { fileSize, openFileExternally } from '../files.js';
+import { fileTabPayload, openFileExternally } from '../files.js';
 import { saveImageEdit } from './edit.js';
 import {
   isImagePayload, isSaveEditPayload, type ImageMode, type ImagePayload, type SaveEditPayload,
@@ -17,12 +17,7 @@ function openExternal(file: string, capabilities: TabPluginServerCapabilities): 
 function imagePayload(
   file: string, resources: TabPluginResources, mode?: ImageMode,
 ): ImagePayload {
-  const payload: ImagePayload = {
-    name: path.basename(file),
-    path: file,
-    size: fileSize(file),
-    url: resources.registerFile(file),
-  };
+  const payload: ImagePayload = fileTabPayload(file, resources);
   return mode ? { ...payload, mode } : payload;
 }
 

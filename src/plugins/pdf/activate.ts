@@ -3,7 +3,7 @@ import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { fileSize, openFileInConfiguredViewer, servesContentType } from '../files.js';
+import { fileTabPayload, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { pdfManifest } from './manifest.js';
 import { isLoadFailedPayload, isPdfPayload, type PdfLoadFailure } from './shared.js';
 
@@ -29,12 +29,7 @@ function openPdfTab(file: string, capabilities: TabPluginServerCapabilities): vo
   }
   capabilities.openOrFocusTab(file, (resources) => ({
     title: path.basename(file),
-    payload: {
-      name: path.basename(file),
-      path: file,
-      size: fileSize(file),
-      url: resources.registerFile(file),
-    },
+    payload: fileTabPayload(file, resources),
   }));
 }
 
