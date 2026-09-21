@@ -54,6 +54,8 @@ These five events notify only for a **background** tab. Activity in the currentl
 
 `notifications.events.rateLimited` covers interactive `acp` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
 
+A command that fires more than five seconds late ignores all five toggles and posts regardless, even from the active tab. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for when that happens.
+
 ## Post your own line with `notify`
 
 <img class="agent-float left" src="/agents/mahir-south.png" alt="" />

@@ -109,7 +109,7 @@ You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git rep
 
 ## Lifecycle
 
-A remote workspace and its SSH session can be shared by the launching tab, agents joined with ➕, and its file navigator. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. Closing the final tab or explicitly closing `ssh:<address>` stops the remaining remote processes, removes the remote workspace, and then closes SSH. A lost connection retries automatically.
+A remote workspace and its SSH session can be shared by the launching tab, agents joined with ➕, and its file navigator. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. Closing the final tab or explicitly closing `ssh:<address>` stops the remaining remote processes, removes the remote workspace, and then closes SSH. A lost connection retries automatically. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#remote-sessions) for what that reconnect covers and what it doesn't.
 
 Use `sessions` to see active and detached remote sessions. **Detach** closes the local tabs while leaving the remote processes running. **Attach** returns to that remote workspace and restores its running tabs, even when the workspace path does not exist on your machine. If a host cannot be reached, **Notifications** records the session, host, and reason; the session stays listed so you can retry. If a host accepts an attach but cannot report its running tabs, Janissary terminates that session and removes its remote workspace. **Terminate** stops an active or detached session, removes its remote workspace, and closes every tab sharing it.
 

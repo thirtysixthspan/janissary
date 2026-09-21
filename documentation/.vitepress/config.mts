@@ -66,6 +66,7 @@ export default defineConfig({
             { text: "Keyboard shortcuts", link: "/user-documentation/getting-started/keyboard" },
             { text: "Right-click menus", link: "/user-documentation/getting-started/context-menus" },
             { text: "Activity log", link: "/user-documentation/getting-started/activity-log" },
+            { text: "Sleep and resume", link: "/user-documentation/getting-started/sleep-and-resume" },
             { text: "License", link: "/user-documentation/getting-started/license" },
           ],
         },
