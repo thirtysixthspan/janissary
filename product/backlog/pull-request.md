@@ -2,8 +2,6 @@
 
 # pull-request
 
-* when an agent reattaches, its transcript should be shown in the UI, similar to how it is done for harnesses.
-
 * add horizontal padding to the sessions table items (header cells and body cells).
 
 * make the dialog text more concise

@@ -537,7 +537,7 @@ describe('detached peer rendezvous', () => {
     try {
       await vi.waitFor(() => expect(output.join('')).toContain('acp-end'));
       const frames = output.join('').trim().split('\n').map((line) => JSON.parse(line));
-      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-end', 'output']);
+      expect(frames.map((frame) => frame.type)).toEqual(['attach-result', 'output', 'output', 'transcript', 'transcript', 'acp-chunk', 'acp-end', 'output']);
       expect(frames.at(-1).id).toBe('shell');
       socket.write(`${encodeFrame({ type: 'input', id: 'r1', data: 'new input' })}\n`);
       await vi.waitFor(() => expect(received).toHaveBeenCalledWith(expect.stringContaining('input')));
@@ -549,6 +549,7 @@ describe('detached peer rendezvous', () => {
         expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
           { type: 'attach-result', accepted: true },
           { type: 'output', id: 'r1', data: '\u{1B}cmissed terminal bytes' },
+          { type: 'output', id: 'shell', data: '\u{1B}ccommand completion sentinel' },
         ]);
       } finally { again.destroy(); }
     } finally { socket.destroy(); peer.dispose(); }
@@ -570,6 +571,24 @@ describe('detached peer rendezvous', () => {
         { type: 'attach-result', accepted: true },
         { type: 'output', id: 'terminal', data: '\u{1B}cbefore detach\r\nwhile detached' },
         { type: 'transcript', blocks: ['earlier turn', 'later turn'] },
+      ]);
+    } finally { socket.destroy(); peer.dispose(); }
+  });
+
+  it('restores retained agent pipe output through the relay', async () => {
+    const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+    await peer.start(vi.fn());
+    peer.track({ type: 'spawn', id: 'agent', program: 'shell', command: 'shell', mode: 'pipe', agentName: 'agent' });
+    peer.emit({ type: 'output', id: 'agent', data: 'before detach' });
+    peer.detach();
+    peer.emit({ type: 'output', id: 'agent', data: ' while detached' });
+    const output: string[] = [];
+    const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn(), true)!;
+    try {
+      await vi.waitFor(() => expect(output.join('').trim().split('\n')).toHaveLength(2));
+      expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+        { type: 'attach-result', accepted: true },
+        { type: 'output', id: 'agent', data: '\u{1B}cbefore detach while detached' },
       ]);
     } finally { socket.destroy(); peer.dispose(); }
   });

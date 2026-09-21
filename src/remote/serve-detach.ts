@@ -52,8 +52,8 @@ export class DetachedPeer {
 
   emit(frame: ServerFrame): void {
     if (this.stopped) return;
-    if (frame.type === 'transcript' || (frame.type === 'output' && !this.pipes.has(frame.id))) this.history.record(frame);
-    if (frame.type === 'exit') { this.pipes.delete(frame.id); this.history.forget(frame.id); }
+    if (frame.type === 'transcript' || frame.type === 'output') this.history.record(frame);
+    else if (frame.type === 'exit') { this.pipes.delete(frame.id); this.history.forget(frame.id); }
     if (this.sink) { this.sink(`${encodeFrame(frame)}\n`); return; }
     if (frame.type === 'output' && !this.pipes.has(frame.id)) return;
     const encoded = encodeFrame(frame);
@@ -122,7 +122,7 @@ export class DetachedPeer {
       this.dropped = false;
       const history = this.history.frames(frame.restore === true);
       for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);
-      const pending = this.pending.filter((pending) => !frame.restore || pending.type !== 'transcript')
+      const pending = this.pending.filter((pending) => !frame.restore || (pending.type !== 'transcript' && pending.type !== 'output'))
         .toSorted((a, b) => Number(a.type === 'exit') - Number(b.type === 'exit'));
       for (const frame of pending) socket.write(`${encodeFrame(frame)}\n`);
       this.pending = [];
