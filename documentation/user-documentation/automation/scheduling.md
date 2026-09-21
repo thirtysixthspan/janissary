@@ -62,6 +62,8 @@ In an agent tab, the command is dispatched as if typed. If the agent is busy whe
 
 An agent's timers persist with its state, surviving `janus --relaunch` — a timer whose agent isn't currently open simply waits until that agent is open again. Harness tabs' timers are the exception: they live in memory only and end when the harness tab closes.
 
+A command delivered more than five seconds late posts `<command> ran <duration> late` to [notifications](/user-documentation/tab-types/notifications), with `(system was asleep)` appended when it missed its time because your machine was asleep. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for the rest of what happens to a timer while you're away.
+
 [Profiles](/user-documentation/automation/profiles) can pre-author a harness tab's schedule so it's set up on every launch. Since launching a harness is an ordinary command, you can schedule one with a starting prompt too — wrap the whole [`harness … with <prompt>`](/user-documentation/advanced-agents/harness) command:
 
 ```
