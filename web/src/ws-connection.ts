@@ -1,4 +1,5 @@
 import { connectionPhase, reconnectDelay, type ConnectionPhase } from './reconnect-policy';
+import { webSocketUrl } from './session-url';
 
 export class SocketConnection {
   socket!: WebSocket;
@@ -59,8 +60,7 @@ export class SocketConnection {
   private connect(): void {
     clearTimeout(this.deadline);
     const previous = this.socket;
-    const token = new URLSearchParams(location.search).get('token') ?? '';
-    const socket = new WebSocket(`ws://${location.host}/?token=${encodeURIComponent(token)}`);
+    const socket = new WebSocket(webSocketUrl());
     this.socket = socket;
     this.closeHandled = false;
     previous?.close();
