@@ -12,3 +12,12 @@ it('renders the fixed wording and hides a settled connection', () => {
   rerender(<ConnectionStatusLabel status="connected" />);
   expect(screen.queryByRole('status')).toBeNull();
 });
+
+// The indicator's appearance and its overlay positioning belong to the stylesheet, where the themes
+// are defined — not to an inline style object the themes cannot reach.
+it('takes its appearance from the stylesheet rather than an inline style', () => {
+  render(<ConnectionStatusLabel status="reconnecting" />);
+  const label = screen.getByRole('status');
+  expect(label.className).toBe('connection-status');
+  expect(label.getAttribute('style')).toBeNull();
+});

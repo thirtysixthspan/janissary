@@ -23,6 +23,7 @@ export function buildTabViews(
     shorten,
     managers.questions.pendingFor(tab.label),
     (label) => managers.remote.workspaceOf(label),
+    (label) => managers.remote.reconnectingOf(label),
   ));
 }
 
@@ -39,6 +40,9 @@ export function buildTabView(
   shorten: (path: string) => string,
   pendingQuestion?: PendingQuestionView,
   workspaceOf?: (label: string) => string | undefined,
+  // Resolved here rather than marked onto the tab: the channel's recovery state belongs to
+  // `RemoteManager`, and a copy of it on the tab is a copy that can outlive the recovery.
+  reconnectingOf?: (label: string) => boolean,
 ): TabView {
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   return {
@@ -62,7 +66,17 @@ export function buildTabView(
       ...(tab.autoApprove ? ['autoApprove'] : []),
       ...(tab.browser && !tab.harness?.browserError ? ['browser'] : []),
     ],
-    remote: tab.remote,
+    // Present only when true, so a healthy tab's target is exactly what it was before the flag.
+    remote: tab.remote && {
+      ...tab.remote,
+      // Recovery-ish channel facts: neither belongs on what `profile save` persists, and neither can
+      // be answered from the tab. `provisioning` is the channel's own workspace-absence test — the
+      // one detach refuses on — read beside `reconnectingOf` from the same lookup the workspace
+      // prefix already uses.
+      ...(reconnectingOf?.(tab.label) === true && { reconnecting: true }),
+      ...(workspaceOf !== undefined && tab.remote !== undefined
+        && workspaceOf(tab.label) === undefined && { provisioning: true }),
+    },
     acp,
     connections,
     schedule,
@@ -85,6 +99,8 @@ export function buildTabView(
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
     // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
     // server-only, read by monitor page feeds, and must never be broadcast back to clients.
+    // And for `tab.sessionTerminated`: that copy is the server's own gate on a dead remote session, with
+    // no client reader. The copy the client does get is `harness.sessionTerminated`, passed through above.
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,

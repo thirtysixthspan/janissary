@@ -2,6 +2,8 @@ import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RemoteFrame } from './protocol.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
+import { decodeSessionStateResult } from './frame-decode-sessions.js';
+import { decodeShellHistory } from './frame-decode-history.js';
 
 type DecodeResult = RemoteFrame | { error: string };
 
@@ -190,11 +192,12 @@ function unhandledRemoteFrame(type: never): never {
 // before calling — so the switch is exhaustive over the union rather than open over `string`.
 export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
-  case 'reattach': {
+  case 'attach': {
+    if (record.restore !== undefined && typeof record.restore !== 'boolean') return malformed(type);
     return typeof record.session === 'string' && /^[a-f\d-]{36}$/.test(record.session)
-      ? { type, session: record.session } : malformed(type);
+      ? { type, session: record.session, ...(record.restore !== undefined && { restore: record.restore }) } : malformed(type);
   }
-  case 'reattach-result': {
+  case 'attach-result': {
     if (typeof record.accepted !== 'boolean') return malformed(type);
     if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);
     return {
@@ -202,6 +205,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
       ...(record.truncated !== undefined && { truncated: record.truncated }),
     };
   }
+  case 'session-state': { return { type }; }
+  case 'session-state-result': { return decodeSessionStateResult(record); }
   case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }
   case 'spawn': { return decodeSpawn(record); }
@@ -214,6 +219,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'exit': { return decodeExit(record); }
   case 'browser-exited': { return decodeBrowserExited(record); }
   case 'transcript': { return decodeTranscript(record); }
+  case 'shell-history': { return decodeShellHistory(record); }
   case 'filesystem-open':
   case 'filesystem-close':
   case 'filesystem-request':

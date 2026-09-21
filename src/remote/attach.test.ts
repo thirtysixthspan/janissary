@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RemoteManager } from './manager.js';
-import { Reattach } from './reattach.js';
+import { Attach } from './attach.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
@@ -31,14 +31,14 @@ function setup() {
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
-  const channel = remote.open(tab.label, { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local', handlers);
+  const channel = remote.create(tab.label, { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local', handlers);
   transports[0].onData(`${encodeHandshake('/remote', sessionId)}\n`);
   const frame = (value: ServerFrame) => transports.at(-1)!.onData(`${encodeFrame(value)}\n`);
   frame({ type: 'workspace-ready', dir: '/remote/work' });
   return { tab, remote, channel, managers, handlers, transports, frame };
 }
 
-describe('remote reattachment', () => {
+describe('remote attachment', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.clearAllMocks(); });
   afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); messageBus.clear(); });
 
@@ -55,10 +55,10 @@ describe('remote reattachment', () => {
     expect(h.transports).toHaveLength(2);
     expect(h.remote.get('work')).toBe(h.channel);
     h.transports[1].onData(`${encodeHandshake('/remote', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')}\n`);
-    expect(h.transports[1].write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({ type: 'reattach', session: sessionId })}\n`);
+    expect(h.transports[1].write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({ type: 'attach', session: sessionId })}\n`);
     h.channel.send({ type: 'input', id: 'r1', data: 'discard' });
     expect(h.transports[1].write).toHaveBeenCalledTimes(1);
-    h.frame({ type: 'reattach-result', accepted: true });
+    h.frame({ type: 'attach-result', accepted: true });
     h.frame({ type: 'output', id: 'r1', data: 'alive' });
     h.frame({ type: 'filesystem-reply', session: 'files', request: 'q', result: [] });
     expect(output).toHaveBeenCalledWith('alive'); expect(reply).toHaveBeenCalledOnce();
@@ -72,7 +72,7 @@ describe('remote reattachment', () => {
     const h = setup(); h.transports[0].onExit(); vi.advanceTimersByTime(250);
     h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
     const before = h.tab.log.length;
-    h.frame({ type: 'reattach-result', accepted: true, truncated: true });
+    h.frame({ type: 'attach-result', accepted: true, truncated: true });
     expect(h.tab.log.length).toBe(before);
     h.remote.dispose();
   });
@@ -81,7 +81,7 @@ describe('remote reattachment', () => {
     const h = setup(); h.tab.view = 'agent'; h.tab.harness = undefined;
     h.transports[0].onExit(); vi.advanceTimersByTime(250);
     h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
-    h.frame({ type: 'reattach-result', accepted: true, truncated: true });
+    h.frame({ type: 'attach-result', accepted: true, truncated: true });
     expect(h.tab.log.at(-1)?.output).toContain('dropped to limit memory use');
     h.remote.dispose();
   });
@@ -98,10 +98,10 @@ describe('remote reattachment', () => {
   it('stops on refusal, retains the ended tab and transcript, and notifies exactly once', () => {
     const h = setup(); h.transports[0].onExit(); vi.advanceTimersByTime(250);
     h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
-    h.frame({ type: 'reattach-result', accepted: false });
+    h.frame({ type: 'attach-result', accepted: false });
     h.transports[1].onExit(); vi.advanceTimersByTime(60_000);
     expect(h.transports).toHaveLength(2);
-    expect(h.tab.harness).toMatchObject({ status: 'exited', sessionEnded: 'Remote janus on devbox ended — start a new agent or shell to continue.' });
+    expect(h.tab.harness).toMatchObject({ status: 'exited', sessionTerminated: 'Remote janus on devbox terminated — create a new agent or shell to continue.' });
     expect(h.tab.log[0].output).toBe('earlier work');
     expect(h.managers.tab.closeTab).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledOnce(); expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
@@ -119,7 +119,7 @@ describe('remote reattachment', () => {
     h.frame({ type: 'exit', id: 'r1', exitCode: 3 });
     h.transports[0].onExit(); vi.advanceTimersByTime(60_000);
     expect(exited).toHaveBeenCalledExactlyOnceWith(3);
-    expect(h.tab.sessionEnded).toContain(harness ? "Remote harness 'work'" : 'Remote shell');
+    expect(h.tab.sessionTerminated).toContain(harness ? "Remote harness 'work'" : 'Remote shell');
     expect(notify).toHaveBeenCalledOnce(); expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
     expect(h.managers.tab.closeTab).not.toHaveBeenCalled(); expect(h.transports).toHaveLength(1);
     h.remote.dispose();
@@ -146,7 +146,7 @@ describe('remote reattachment', () => {
       },
     } as unknown as Managers;
     const remote = new RemoteManager(managers);
-    const channel = remote.open('work', { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local',
+    const channel = remote.create('work', { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local',
       { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
     transports[0].onData(`${encodeHandshake('/remote', sessionId)}\n`);
     const frame = (value: ServerFrame) => transports.at(-1)!.onData(`${encodeFrame(value)}\n`);
@@ -156,8 +156,8 @@ describe('remote reattachment', () => {
     channel.send({ type: 'spawn', id: 'r1', program: 'work', command: 'work', mode: 'pty',
       harness: 'claude', agentName: 'work', cols: 80, rows: 24 });
     frame({ type: 'exit', id: 'r1', exitCode: 3 });
-    expect(tab.sessionEnded).toContain("Remote harness 'work'");
-    expect(joined.sessionEnded).toBeUndefined();
+    expect(tab.sessionTerminated).toContain("Remote harness 'work'");
+    expect(joined.sessionTerminated).toBeUndefined();
     expect(clearRemoteFileCacheForWorkspace).not.toHaveBeenCalled();
     expect(channel.attached).toBe(true);
     remote.dispose();
@@ -173,7 +173,7 @@ describe('remote reattachment', () => {
     h.frame({ type: 'exit', id: 'r1', exitCode: 0 });
     expect(exited).toHaveBeenCalledExactlyOnceWith(0);
     expect(notify).not.toHaveBeenCalled();
-    expect(h.tab.sessionEnded).toBeUndefined();
+    expect(h.tab.sessionTerminated).toBeUndefined();
     expect(h.transports[0].kill).not.toHaveBeenCalled();
     h.remote.dispose();
   });
@@ -198,7 +198,7 @@ describe('remote reattachment', () => {
 
   it('retries a failed transport spawn and cancels all timers on stop', () => {
     const connect = vi.fn(() => { throw new Error('spawn failed'); });
-    const retry = new Reattach(connect, vi.fn());
+    const retry = new Attach(connect, vi.fn());
     retry.lost(); vi.advanceTimersByTime(10_000);
     expect(connect.mock.calls.length).toBeGreaterThan(1);
     retry.stop(); const count = connect.mock.calls.length;

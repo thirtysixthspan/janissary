@@ -68,6 +68,47 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
   }
 }
 
+// Every session action is refused unless a row both names the target and offers that verb, which
+// keeps the grant as narrow as the list that motivates it: a plugin may do what the host already
+// showed it could be done, and nothing else. Matching the name alone was wider — a recorded row's
+// label belongs to no live tab, so `close` on one reached whatever tab happened to share the name.
+//
+// Each arm acts through the row that authorised it rather than looking the target up a second time.
+function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'sessions') return;
+  switch (action.action) {
+    case 'refresh': { managers.sessions.refresh(); return; }
+    case 'detach': {
+      const row = managers.sessions.offers('detach', { label: action.label });
+      if (row) managers.sessions.detach(row.label);
+      return;
+    }
+    case 'focus': {
+      const row = managers.sessions.offers('focus', { label: action.label });
+      if (row) managers.sessions.focus(row.label);
+      return;
+    }
+    case 'close': {
+      const row = managers.sessions.offers('close', { label: action.label });
+      if (row) managers.sessions.close(row.label);
+      return;
+    }
+    case 'attach': {
+      if (managers.sessions.offers('attach', { session: action.session })) {
+        managers.sessions.attach(action.session);
+      }
+      return;
+    }
+    case 'terminate': {
+      if (managers.sessions.offers('terminate', { session: action.session })) managers.sessions.terminate(action.session);
+      return;
+    }
+    case 'forget': {
+      if (managers.sessions.offers('forget', { session: action.session })) managers.sessions.forget(action.session);
+    }
+  }
+}
+
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
@@ -80,6 +121,12 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => managers.conversations.view(),
     act: actOnConversations,
     empty: { summaries: [], windows: [], models: [] },
+  },
+  sessions: {
+    subscribe: (fire) => messageBus.on('sessions', 'changed', fire),
+    read: (managers) => managers.sessions.view(),
+    act: actOnSessions,
+    empty: [],
   },
 };
 

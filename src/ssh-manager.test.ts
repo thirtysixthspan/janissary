@@ -31,7 +31,7 @@ describe('SshManager.run', () => {
     const reconnect = vi.fn(), closeTab = vi.fn();
     managers.tab.closeTab = closeTab;
     managers.tab.harnessTabByPtyId = ((id: string) => tabs.find((tab) => tab.harness?.ptyId === id)) as Managers['tab']['harnessTabByPtyId'];
-    managers.remote = { open: reconnect } as unknown as Managers['remote'];
+    managers.remote = { create: reconnect } as unknown as Managers['remote'];
     new SshManager(managers).run('ssh host');
     wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
     try {

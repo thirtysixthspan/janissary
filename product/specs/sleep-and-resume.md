@@ -8,17 +8,17 @@ The window reconnects automatically, retrying indefinitely with delays increasin
 
 ### Connection status
 
-A small announcement in the center column appears for every tab type. It reads `Reconnecting…`, escalates to `Cannot reach session` after six unsuccessful retries, and shows `Reconnected` for two seconds after recovery. A session that remains unreachable leaves the window open and keeps retrying. Reconnection never forces a reload or starts a replacement session.
+A small announcement in the center column appears for every tab type. It reads `Reconnecting…`, escalates to `Cannot reach session` after six unsuccessful retries, and shows `Reconnected` for two seconds after recovery. It is overlaid in the column's top-right corner rather than placed above the tab's content, so appearing and disappearing never moves or resizes what the tab is showing. A session that remains unreachable leaves the window open and keeps retrying. Reconnection never forces a reload or starts a replacement session.
 
 Requests outstanding when the local connection closes fail and are never resent. Input during a disconnected period is not queued. Terminal output produced while disconnected is not replayed, so a terminal can show a gap even though its process continued running.
 
 ### Remote work
 
-Remote agents and harnesses launched with `on <address>` continue running on their host when the connection drops. Recovery opens a new SSH connection and reattaches to the existing workspace and processes. Related tabs and file navigators remain open. A detached remote session waits up to seven days; if nobody returns, its processes and workspace are cleaned up. Output produced while detached — an agent's replies, a remote shell's output — is buffered up to a fixed size; a detachment that produces more than that drops the oldest of it and, on reattachment, an agent tab's transcript notes that some output was dropped to limit memory use.
+Remote agents and harnesses launched with `on <address>` continue running on their host when the connection drops. Recovery opens a new SSH connection and attaches to the existing workspace and processes. Related tabs and file navigators remain open. A detached remote session waits up to seven days; if nobody returns, its processes and workspace are cleaned up. Output produced while detached — an agent's replies, a remote shell's output — is buffered up to a fixed size; a detachment that produces more than that drops the oldest of it and, on attachment, an agent tab's transcript notes that some output was dropped to limit memory use.
 
-A remote session that is confirmed to have ended is not restarted. The affected tab stays open, preserves its transcript, and explains what ended. A notification reads `<what> on <host> ended — start a new agent or shell to continue.`, where `<what>` is `Remote janus`, `Remote harness '<label>'`, or `Remote shell`. Unreachability alone is not treated as termination.
+A remote session that is confirmed to have terminated is not restarted. The affected tab stays open, preserves its transcript, and explains what went. A notification reads `<what> on <host> terminated — create a new agent or shell to continue.`, where `<what>` is `Remote janus`, `Remote harness '<label>'`, or `Remote shell`. Unreachability alone is not treated as termination.
 
-Plain `ssh <destination>` tabs keep their ordinary close-on-exit behavior: a dropped SSH connection ends the tab, without reattachment.
+Plain `ssh <destination>` tabs keep their ordinary close-on-exit behavior: a dropped SSH connection ends the tab, without attachment.
 
 ### Overdue commands
 

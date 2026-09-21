@@ -37,6 +37,7 @@ export const clientPluginLoaders = {
   page: () => import('./page/index'),
   pdf: () => import('./pdf/index'),
   schedules: () => import('./schedules/index'),
+  sessions: () => import('./sessions/index'),
   video: () => import('./video/index'),
 } satisfies Record<ProductionTabPluginId, () => Promise<unknown>>;
 
@@ -78,5 +79,6 @@ export const clientPluginRegistry = createClientPluginRegistry({
   page: clientPlugin(1, clientPluginLoaders.page),
   pdf: clientPlugin(1, clientPluginLoaders.pdf),
   schedules: clientPlugin(1, clientPluginLoaders.schedules),
+  sessions: clientPlugin(1, clientPluginLoaders.sessions),
   video: clientPlugin(1, clientPluginLoaders.video),
 } satisfies Record<ProductionTabPluginId, ClientPluginRegistration>);

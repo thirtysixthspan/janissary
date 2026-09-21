@@ -62,8 +62,16 @@ export class PseudoterminalManager {
   // it unchanged; an inbound exit frame is routed into the same private `handleExit` a local PTY's
   // own exit handler calls, so the exit bus event, the `activePty` clear, and the inline-card status
   // update all happen identically.
-  registerRemotePty(label: string, channel: RemoteChannel, options: Omit<RemotePtyOptions, 'id' | 'cols' | 'rows'>): string {
-    const id = `rpty${++this.remoteCounter}`;
+  //
+  // `recordedId` adopts a spawn id the far side already knows instead of minting one. That is what
+  // makes an attach bind to the process already running out there: the channel attaches under the
+  // recorded id — claiming whatever the peer replayed for it — and the `spawn` frame that follows is
+  // one `RemoteProcesses.spawn` ignores, because an id it already holds is not spawned twice.
+  registerRemotePty(
+    label: string, channel: RemoteChannel, options: Omit<RemotePtyOptions, 'id' | 'cols' | 'rows'>,
+    recordedId?: string,
+  ): string {
+    const id = recordedId ?? `rpty${++this.remoteCounter}`;
     const session = createRemotePtySession(
       channel,
       { ...options, id, cols: this.cols, rows: this.rows, agentName: label },
@@ -134,14 +142,32 @@ export class PseudoterminalManager {
   }
 
   // Kill and forget every PTY belonging to a tab (on tab close).
+  //
+  // A transport is left alone whatever its channel's table entry says. Every path that ends a
+  // session drops the channel from `RemoteManager`'s table before running the sweep that closes its
+  // tabs, so asking the manager here answers "not a transport" exactly when the shutdown drain is in
+  // flight — and the first tab closed in that sweep would kill the ssh PTY out from under it,
+  // discarding the `shutdown` frame that stops the far side's work. `RemoteManager` ends its own
+  // transports; `closeAll` below is where an orphaned one is still reaped.
   closeTab(label: string): void {
-    for (const [id, entry] of this.ptys) if (entry.tabLabel === label) { entry.session.kill(); this.ptys.delete(id); }
+    for (const [id, entry] of this.ptys) {
+      if (entry.tabLabel !== label || entry.transport === true) continue;
+      entry.session.kill();
+      this.ptys.delete(id);
+    }
   }
 
   // Kill every PTY (app shutdown).
   closeAll(): void {
-    for (const [, entry] of this.ptys) entry.session.kill();
-    this.ptys.clear();
+    for (const [id, entry] of this.ptys) {
+      if (this.isRemoteTransport(id, entry)) continue;
+      entry.session.kill();
+      this.ptys.delete(id);
+    }
+  }
+
+  private isRemoteTransport(id: string, entry: { tabLabel: string; transport?: boolean }): boolean {
+    return entry.transport === true && this.managers.remote?.get(entry.tabLabel)?.ptyId === id;
   }
 
   dispose(): void {

@@ -1,5 +1,8 @@
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
+import { stripShellSentinels } from './sentinel-strip.js';
+import { restoredTranscript } from './restored-transcript.js';
 import { createRemoteShell } from '../remote/shell-session.js';
+import type { ShellHistoryRun } from '../remote/protocol.js';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
 import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
 import { getConfig } from '../config.js';
@@ -11,6 +14,7 @@ import type { Managers } from '../managers.js';
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
 // label the `shell:<name>` connection in the panel/completion.
 export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
+const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
 
 // Callbacks for a single `execute`: `onChunk` streams partial output as it arrives, `onDone` receives
 // the final captured output, and `onPwd` the shell's working directory after the command (so the
@@ -30,6 +34,14 @@ export class ShellManager {
   // Distinguishes a remote tab's shell ids from the local `pty…` ids, so both can key the same
   // remote channel without colliding.
   private remoteShellCounter = 0;
+  // Spawn ids an attach recorded for tabs whose shells have not been asked for yet. A remote agent
+  // tab's shell is created lazily, on its first command, so the id cannot be handed to a constructor
+  // — it waits here until `spawnFor` needs one, and is consumed exactly once. The session id the
+  // record carried is kept beside the spawn id so an adoption can never be claimed by a tab talking
+  // over a different channel: the label a tab holds is freed the moment it closes, and a later tab
+  // granted the same label must start its own shell rather than bind to a process on a session that
+  // has nothing to do with it.
+  private adopted = new Map<string, { id: string; session: string | undefined }>();
   // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
   // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
   // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
@@ -46,9 +58,25 @@ export class ShellManager {
 
   constructor(private managers: Managers) {}
 
+  // Tell this tab's next remote shell to bind to a spawn id the far side already holds, rather than
+  // starting a second shell beside the one still running there. `session` is the session id the
+  // record of the attach carried, checked against the tab's channel when the shell is finally
+  // asked for.
+  adoptRemoteShell(label: string, id: string, session?: string): void {
+    this.adopted.set(label, { id, session });
+  }
+
+  // Forget a label's adoption before anything bound to it — an attach that failed, or whose
+  // session turned out to be over, has no shell out there worth binding to.
+  releaseAdoptedShell(label: string): void { this.adopted.delete(label); }
+
   // Whether a tab currently has a live shell. Drives the connections panel and completion.
   has(label: string): boolean {
     return this.shells.has(label);
+  }
+
+  ensure(label: string): void {
+    this.getShell(label, this.managers.tab.cwdOf(label));
   }
 
   // The tab's persistent shell, spawned on first use and respawned if the previous one died (its
@@ -76,7 +104,20 @@ export class ShellManager {
     const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
+      // An attached tab adopts the spawn id the far side already knows it by, so the adapter binds
+      // to the shell still running there rather than starting a second one beside it — but only
+      // while its channel is still the session the adoption was recorded against, and never past a
+      // tab close that freed its label.
+      const adoption = this.adopted.get(label);
+      const adopted = adoption !== undefined && this.managers.remote.get(label)?.sessionId === adoption.session;
+      const id = adopted
+        ? adoption.id
+        : `rsh${++this.remoteShellCounter}`;
+      this.adopted.delete(label);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted, adopted ? {
+        output: (data) => this.appendRestoredOutput(label, data),
+        history: (runs) => this.appendRestoredHistory(label, runs),
+      } : undefined);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,
@@ -87,6 +128,23 @@ export class ShellManager {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;
+  }
+
+  // Restored bytes are the detached peer's replay of the shell's raw stream, which still carries the
+  // sentinel lines live execution strips (`executeShellCmd`/`queryShellPwd`); they are removed here,
+  // at the one place restored output enters the transcript, so a reattached tab's history reads the
+  // way the live tab's always did.
+  private appendRestoredOutput(label: string, data: string): void {
+    const output = stripShellSentinels(data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data);
+    if (!output) return;
+    this.managers.tab.append(label, { input: '', output });
+  }
+
+  // The peer retained what was written to the shell as well as what came out of it, so the tab's
+  // transcript is rebuilt as the entries the live tab held — each command beside its output — rather
+  // than as one entry of output with nothing to say what produced it.
+  private appendRestoredHistory(label: string, runs: readonly ShellHistoryRun[]): void {
+    for (const entry of restoredTranscript(runs)) this.managers.tab.append(label, entry);
   }
 
   // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never
@@ -197,6 +255,7 @@ export class ShellManager {
   // `connection close shell` result message). On `connection close shell` and tab close.
   close(label: string): boolean {
     const shell = this.shells.get(label);
+    this.adopted.delete(label);
     if (!shell) return false;
     shell.kill();
     this.shells.delete(label);
@@ -215,6 +274,7 @@ export class ShellManager {
     this.shellQueues.clear();
     this.shellPtyIds.clear();
     this.promotions.clear();
+    this.adopted.clear();
   }
 
   dispose(): void {

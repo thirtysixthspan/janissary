@@ -1,0 +1,48 @@
+/* Sessions tab: the remote sessions this janissary holds — active, reconnecting, detached, terminated.
+   A scrollable flex column of five-column rows, with rows that share a channel indented under the
+   row that launched it, so one glance shows what a single detach would take with it. */
+.session-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
+.session-list.plugin-tab { padding: 0; gap: 0; }
+.session-empty { padding: 8px 12px; color: var(--muted); }
+.session-list-header { min-height: 28px; padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+/* The header's refresh and split buttons, styled like the host icon buttons they sit beside — as the
+   conversation list styles its own metadata-row buttons. Without this the refresh icon arrives with
+   the browser's default button chrome and reads bright against the dark header. */
+.session-list-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.session-list-header .plugin-actions button:hover { color: var(--fg); }
+.session-rows { display: flex; flex-direction: column; }
+/* The column names sit over the rows in the same grid, so each label lines up with its column. */
+.session-columns, .session-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) 6em minmax(0, 1.5fr) 8em 8em 6em;
+  gap: 12px; align-items: baseline; padding: 0 12px; color: var(--muted); font-size: 12px; text-align: left;
+}
+.session-row {
+  width: 100%; text-align: left; padding: 4px 12px; white-space: nowrap; cursor: pointer; color: var(--fg);
+}
+.session-row:hover { background: var(--border); }
+.session-row.selected { background: var(--bg-soft); }
+/* The indent is the grouping: a joined row belongs to the launching row above it, and its host
+   column is left empty because it is the same host by construction. */
+.session-row.joined .session-row-host { padding-left: 16px; }
+.session-row-host { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.session-row-name { overflow: hidden; text-overflow: ellipsis; }
+.session-row-kind { color: var(--muted); }
+/* The state reads as its plug and then its word: the colour carries at a glance, and the word keeps
+   detached apart from reconnecting, which the palette alone does not. */
+.session-row-state { color: var(--muted); display: flex; align-items: baseline; gap: 6px; }
+.session-row-activity { color: var(--faint); }
+/* A session that is parked, retrying, or over reads differently from one that is working. */
+.session-row[data-state='detached'] .session-row-state { color: var(--accent); }
+.session-row[data-state='reconnecting'] .session-row-state,
+.session-row[data-state='provisioning'] .session-row-state { color: var(--warn, var(--accent)); }
+.session-row[data-state='terminated'] { color: var(--muted); }
+.session-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.session-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  padding: 0 4px; line-height: 1;
+}
+.session-row-actions button:hover { color: var(--fg); }
+.session-row-actions button:disabled { color: var(--faint); cursor: default; }

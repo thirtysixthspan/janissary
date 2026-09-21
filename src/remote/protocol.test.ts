@@ -12,17 +12,33 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 
 describe('frame codec', () => {
   it.each([
-    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc' },
-    { type: 'reattach-result', accepted: true },
-    { type: 'reattach-result', accepted: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
+    { type: 'attach-result', accepted: true },
+    { type: 'attach-result', accepted: false },
   ] as const)('round-trips $type', (frame) => { expect(roundTrip(frame)).toEqual(frame); });
 
   it.each([
-    { type: 'reattach', session: '../../elsewhere' }, { type: 'reattach' },
-    { type: 'reattach-result', accepted: 'true' }, { type: 'reattach-result' },
-  ])('rejects malformed reattachment %j', (frame) => {
+    { type: 'attach', session: '../../elsewhere' }, { type: 'attach' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
+    { type: 'attach-result', accepted: 'true' }, { type: 'attach-result' },
+  ])('rejects malformed attachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
   });
+  // The two rejections are not the same fact. A line that is not a JSON object came off the far
+  // side's stderr, which `ssh -t` folds into this stream; a JSON object the union does not admit is
+  // the two ends disagreeing about the contract.
+  it.each([
+    "Unhandled pty write error [Error: EIO: i/o error, write] { errno: -5, code: 'EIO' }",
+    'Warning: Permanently added devbox to the list of known hosts.',
+    '"a bare json string"',
+    '[1, 2, 3]',
+    '',
+  ])('marks far-side output as stray: %s', (line) => {
+    expect(decodeFrame(line)).toMatchObject({ stray: true });
+  });
+
   it('round-trips every client frame', () => {
     const frames: RemoteFrame[] = [
       {
@@ -68,6 +84,14 @@ describe('frame codec', () => {
       { type: 'output', id: 'r1', data: 'done' },
       { type: 'exit', id: 'r1', exitCode: 0 },
       { type: 'transcript', blocks: ['first', 'second'] },
+      {
+        type: 'shell-history', id: 'agent',
+        runs: [
+          { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+          { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+        ],
+      },
+      { type: 'shell-history', id: 'agent', runs: [] },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
@@ -127,12 +151,13 @@ describe('frame codec', () => {
     });
   });
 
-  it('rejects a line that is not JSON', () => {
-    expect(decodeFrame('not json at all')).toEqual({ error: expect.stringContaining('Malformed remote frame') });
+  it('rejects a line that is not JSON, marking it as the far side\'s own output', () => {
+    expect(decodeFrame('not json at all'))
+      .toEqual({ error: expect.stringContaining('Malformed remote frame'), stray: true });
   });
 
-  it('rejects a line that is JSON but not an object', () => {
-    expect(decodeFrame('[1,2,3]')).toEqual({ error: expect.stringContaining('Malformed remote frame') });
+  it('rejects a line that is JSON but not an object, marking it the same way', () => {
+    expect(decodeFrame('[1,2,3]')).toEqual({ error: expect.stringContaining('Malformed remote frame'), stray: true });
   });
 
   it.each([
@@ -164,6 +189,11 @@ describe('frame codec', () => {
     ['output without string data', { type: 'output', id: 'r1', data: [] }],
     ['exit with a fractional code', { type: 'exit', id: 'r1', exitCode: 1.5 }],
     ['transcript with a non-string block', { type: 'transcript', blocks: ['b25l', 2] }],
+    ['shell-history without an id', { type: 'shell-history', runs: [] }],
+    ['shell-history without a runs list', { type: 'shell-history', id: 'agent' }],
+    ['shell-history with an unknown run source', { type: 'shell-history', id: 'agent', runs: [{ source: 'echo', text: 'bHM=' }] }],
+    ['shell-history with a non-string run text', { type: 'shell-history', id: 'agent', runs: [{ source: 'input', text: 7 }] }],
+    ['shell-history with a non-object run', { type: 'shell-history', id: 'agent', runs: ['bHM='] }],
     ['filesystem request with an unknown operation', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'unknown', args: {} }],
     ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
@@ -259,23 +289,86 @@ describe('frame codec', () => {
   });
 });
 
+describe('session-state frames', () => {
+  it('round-trips the query', () => {
+    expect(roundTrip({ type: 'session-state' })).toEqual({ type: 'session-state' });
+  });
+
+  it('round-trips an answer describing a harness and an agent shell', () => {
+    const frame = {
+      type: 'session-state-result',
+      processes: [
+        { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude' },
+        { id: 'spawn-2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
+      ],
+    } as const;
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('round-trips an empty answer, which is a peer holding nothing', () => {
+    const frame = { type: 'session-state-result', processes: [] } as const;
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it.each([
+    { what: 'a missing process list', record: { type: 'session-state-result' } },
+    { what: 'a process list that is not an array', record: { type: 'session-state-result', processes: {} } },
+    {
+      what: 'an empty spawn id',
+      record: { type: 'session-state-result', processes: [{ id: '', program: 'claude', mode: 'pty' }] },
+    },
+    {
+      what: 'a mode outside the declared values',
+      record: { type: 'session-state-result', processes: [{ id: 'a', program: 'claude', mode: 'tty' }] },
+    },
+    {
+      what: 'a process that is not an object',
+      record: { type: 'session-state-result', processes: ['spawn-1'] },
+    },
+  ])('refuses $what by name', ({ record }) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining('Malformed remote frame "session-state-result"'),
+    });
+  });
+
+  // One malformed entry makes the whole answer malformed: a silently shortened list is
+  // indistinguishable from a process that exited, and an empty one ends the session.
+  it('refuses the whole answer when one entry among several is malformed', () => {
+    const record = {
+      type: 'session-state-result',
+      processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty' }, { id: 'spawn-2', mode: 'pipe' }],
+    };
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining('Malformed remote frame "session-state-result"'),
+    });
+  });
+});
+
+describe('protocol version', () => {
+  // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
+  // agreeing on a version number while disagreeing about what it covers.
+  it('is 17', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(17);
+  });
+});
+
 // The records are keyed by the frame unions, so the compiler already refuses an entry the union does
 // not declare and demands one for every member it does. The edit it cannot see is a member and its
 // entry deleted together — the contract silently shrinking — which is what these pin.
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt',
+      'acp-close', 'acp-open', 'acp-prompt', 'attach',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'reattach', 'resize', 'shutdown', 'spawn',
+      'input', 'kill', 'provision', 'resize', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'browser-exited',
-      'exit', 'filesystem-event', 'filesystem-reply', 'output', 'reattach-result',
-      'transcript', 'workspace-failed', 'workspace-ready',
+      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
+      'exit', 'filesystem-event', 'filesystem-reply', 'output',
+      'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });
 
@@ -288,9 +381,11 @@ describe('admitted frame types', () => {
     const admitted = [...Object.keys(CLIENT_FRAME_TYPES), ...Object.keys(SERVER_FRAME_TYPES)];
     // Each is sent with no fields, so every decoder rejects it as malformed — the point is that
     // none comes back as *unknown*, which is what an admitted-but-undecoded type would produce.
-    // `shutdown` carries no fields at all, so it is the one type that decodes cleanly on its own.
+    // `shutdown` and `session-state` carry no fields at all — one workspace per peer leaves nothing
+    // to address — so they are the two types that decode cleanly on their own.
+    const payloadFree = new Set(['shutdown', 'session-state']);
     for (const type of admitted) {
-      if (type === 'shutdown') { expect(decodeFrame(JSON.stringify({ type }))).toEqual({ type }); continue; }
+      if (payloadFree.has(type)) { expect(decodeFrame(JSON.stringify({ type }))).toEqual({ type }); continue; }
       expect(decodeFrame(JSON.stringify({ type }))).toEqual({
         error: expect.stringContaining(`Malformed remote frame "${type}"`),
       });

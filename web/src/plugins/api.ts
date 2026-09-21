@@ -17,6 +17,19 @@ export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/us
 // the tab strip and the file navigator already do.
 export { InlineEditInput } from '../InlineEditInput';
 
+// The host's terse confirmation, published for the same reason and on the same terms: a plugin that
+// asks the user to confirm something destructive should ask it the way the rest of the application
+// does, with the same wording shape and the same keyboard contract. It shipped as two identical
+// per-plugin copies before this, which is exactly the drift the published surface exists to prevent.
+export { ConfirmDialog } from '../shared/ConfirmDialog';
+
+// A connection's status glyph, and the three glyphs for the verbs that change one. Published for the
+// same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of
+// the same connections, and a plugin drawing its own icon for detach would be the drift this surface
+// exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../icons';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { sandboxSpawn, type SandboxOptions } from '../sandbox/index.js';
 import { shellStartupArgs } from './startup.js';
+import { shellCommandInput, shellPwdQueryInput } from './command-input.js';
 
 // The subset of `ChildProcess` that shell execution actually touches: `stdin`'s writability and
 // `write`, `stdout`/`stderr` as `'data'` emitters, and `kill()`. Narrow enough that a process
@@ -8,12 +9,19 @@ import { shellStartupArgs } from './startup.js';
 // to be a real local child.
 export type ShellProcess = Pick<ChildProcess, 'stdin' | 'stdout' | 'stderr' | 'kill'>;
 
+// `detached` puts the shell in a process group of its own instead of the caller's. Only the remote
+// server asks for it: the hangup that parks a peer is delivered to the ssh session's process group,
+// which the server and everything it spawned share, and a shell left in that group dies with the
+// transport the detach exists to give up. A local shell has no transport to be hung up by.
+export type ShellSpawnOptions = { detached?: boolean };
+
 // `sandbox`, when given a `workspaceDir`, confines the shell (and everything it spawns) to that
 // workspace (see src/sandbox/index.ts); omitted or workspaceDir-less, the shell runs exactly as before.
 export function spawnShell(
   _tabIndex: number,
   extraEnvironment?: Record<string, string>,
   sandbox?: SandboxOptions,
+  options?: ShellSpawnOptions,
 ): ChildProcess {
   const baseEnv = { ...process.env, ...extraEnvironment };
   const shellPath = process.env.SHELL || 'bash';
@@ -21,6 +29,7 @@ export function spawnShell(
   const shell = spawn(command, args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
+    ...(options?.detached === true && { detached: true }),
   });
   shell.stdout.setEncoding('utf8');
   shell.stderr.setEncoding('utf8');
@@ -29,21 +38,16 @@ export function spawnShell(
   return shell;
 }
 
-// What is written to a shell to run one command and mark the end of its output.
-//
-// It is deliberately a *single logical line*: a brace group the shell has to read all the way to its
-// closing `}` — and past the `; echo` that follows on the same line — before it can run anything.
-// Written as two lines instead, the delimiter's `echo` would still be sitting unread in the shell's
-// input when the command starts, and a shell hands that input straight to the command it runs. A
-// command that reads its own stdin — a password prompt, a `read`, a REPL, anything promoted to a
-// terminal — then consumes the delimiter as its own input, so the delimiter never arrives and the
-// command never ends.
-//
-// The group runs in the current shell, so `cd`, variable assignments, and exit status are unchanged.
-// The leading `:` guards the empty and comment-only cases, which would otherwise make the group a
-// syntax error and take the delimiter's `echo` down with it.
-export function shellCommandInput(command: string, delimiter: string): string {
-  return `{ :; ${command}\n} 2>&1; echo "${delimiter}"\n`;
+/**
+ * End a shell spawned with `detached` together with everything still running under it. Its own group
+ * is the only thing that will ever reach the command it is in the middle of running — nothing else
+ * shares a group with it any more — so signalling the shell alone would leave that command behind on
+ * the host. Never call this on a shell spawned without `detached`: its group is this process's own.
+ */
+export function killShellGroup(shell: ChildProcess): void {
+  const pid = shell.pid;
+  if (pid === undefined) { shell.kill(); return; }
+  try { process.kill(-pid, 'SIGTERM'); } catch { shell.kill(); }
 }
 
 export function executeShellCmd(
@@ -98,5 +102,5 @@ export function queryShellPwd(
 
   shell.stdout!.on('data', onData);
   shell.stderr!.on('data', onData);
-  if (shell.stdin?.writable) shell.stdin.write(`pwd\necho "${prompt}"\n`);
+  if (shell.stdin?.writable) shell.stdin.write(shellPwdQueryInput(prompt));
 }

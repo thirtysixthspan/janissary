@@ -53,8 +53,9 @@ function makeManagers(): {
       launchDir: '/proj',
       shorten: (p: string) => p,
     },
-    remote: { open: openChannel },
+    remote: { create: openChannel },
     workspace: { create: createWorkspace },
+    shell: { ensure: vi.fn() },
     schedule: { set: vi.fn() },
   } as unknown as Managers;
   return {
@@ -110,6 +111,7 @@ describe('startRemoteAgent', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(h.managers.tab.setCwd).toHaveBeenCalledWith('bekir', '/srv/proj/.janissary/workspace/bekir');
+    expect(h.managers.shell.ensure).toHaveBeenCalledWith('bekir');
     expect(h.managers.tab.isBusy('bekir')).toBe(false);
     expect(h.out).toHaveBeenCalledWith(expect.stringContaining('ready on devbox'));
   });
@@ -169,7 +171,7 @@ describe('agent on <address> — command and profile entry points', () => {
     newAgentOp(h.managers, 'agent bekir on devbox');
 
     expect(h.createWorkspace).not.toHaveBeenCalled();
-    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ host: 'devbox' }), '/proj', expect.anything());
+    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ host: 'devbox' }), '/proj', expect.anything(), undefined);
     expect(h.tabs.at(-1)).toMatchObject({ label: 'bekir', remote: { host: 'devbox' } });
   });
 
@@ -192,7 +194,7 @@ describe('agent on <address> — command and profile entry points', () => {
     );
 
     expect(error).toBeUndefined();
-    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ destination: 'admin@devbox' }), '/proj', expect.anything());
+    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ destination: 'admin@devbox' }), '/proj', expect.anything(), undefined);
     expect(h.tabs.at(-1)).toMatchObject({ group: 4, groupColor: '#bbb', dotColor: '#aaa' });
   });
 

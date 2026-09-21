@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isPidAlive } from '../instance-lock.js';
 import { decodeFrame, encodeFrame, type ClientFrame, type ServerFrame } from './protocol.js';
+import { ReplayHistory } from './replay-history.js';
 
 export const REMOTE_DETACH_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -25,6 +26,7 @@ export class DetachedPeer {
   private stopped = false;
   private connections = new Set<Socket>();
   private pipes = new Set<string>();
+  private history = new ReplayHistory();
 
   constructor(
     private root: string, readonly session: string,
@@ -50,6 +52,8 @@ export class DetachedPeer {
 
   emit(frame: ServerFrame): void {
     if (this.stopped) return;
+    if (frame.type === 'transcript' || frame.type === 'output') this.history.record(frame);
+    else if (frame.type === 'exit') { this.pipes.delete(frame.id); this.history.forget(frame.id); }
     if (this.sink) { this.sink(`${encodeFrame(frame)}\n`); return; }
     if (frame.type === 'output' && !this.pipes.has(frame.id)) return;
     const encoded = encodeFrame(frame);
@@ -67,6 +71,14 @@ export class DetachedPeer {
     if (frame.mode === 'pipe') this.pipes.add(frame.id);
   }
 
+  // Retain what was written to a piped process, so an attach that rebuilds its tab can show each
+  // command beside the output it produced. Only for a piped one: a pty echoes what is written to it,
+  // and retaining that again would double every keystroke in a redrawn terminal.
+  input(frame: Extract<ClientFrame, { type: 'input' }>): void {
+    if (this.stopped || !this.pipes.has(frame.id)) return;
+    this.history.recordInput(frame.id, frame.data);
+  }
+
   detach(): void {
     if (this.stopped) return;
     this.sink = undefined;
@@ -80,6 +92,7 @@ export class DetachedPeer {
     this.sink = undefined;
     this.pending = [];
     this.pendingBytes = 0;
+    this.history.clear();
     clearTimeout(this.expiry);
     this.socket?.destroy();
     this.server?.close();
@@ -102,8 +115,8 @@ export class DetachedPeer {
       const newline = buffer.indexOf('\n');
       if (newline === -1) return;
       const frame = decodeFrame(buffer.slice(0, newline));
-      if (!('type' in frame) || frame.type !== 'reattach' || frame.session !== this.session) {
-        socket.end(`${encodeFrame({ type: 'reattach-result', accepted: false })}\n`);
+      if (!('type' in frame) || frame.type !== 'attach' || frame.session !== this.session) {
+        socket.end(`${encodeFrame({ type: 'attach-result', accepted: false })}\n`);
         return;
       }
       this.socket?.destroy();
@@ -113,9 +126,12 @@ export class DetachedPeer {
       clearTimeout(this.expiry);
       this.expiry = undefined;
       this.sink = (chunk) => { socket.write(chunk); };
-      this.emit({ type: 'reattach-result', accepted: true, ...(this.dropped && { truncated: true }) });
+      this.emit({ type: 'attach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
       this.dropped = false;
-      const pending = this.pending.toSorted((a, b) => Number(a.type === 'exit') - Number(b.type === 'exit'));
+      const history = this.history.frames(frame.restore === true);
+      for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);
+      const pending = this.pending.filter((pending) => !frame.restore || (pending.type !== 'transcript' && pending.type !== 'output'))
+        .toSorted((a, b) => Number(a.type === 'exit') - Number(b.type === 'exit'));
       for (const frame of pending) socket.write(`${encodeFrame(frame)}\n`);
       this.pending = [];
       this.pendingBytes = 0;
@@ -130,6 +146,7 @@ export class DetachedPeer {
 
 export function relayPeer(
   root: string, session: string, output: (data: string) => void, ended: (terminated: boolean) => void,
+  restore = false,
 ): Socket | undefined {
   let record: { pid: number; socket: string };
   try {
@@ -142,7 +159,7 @@ export function relayPeer(
   if (!isPidAlive(record.pid)) { ended(true); return; }
   const socket = createConnection(record.socket);
   socket.setEncoding('utf8');
-  socket.once('connect', () => socket.write(`${encodeFrame({ type: 'reattach', session })}\n`));
+  socket.once('connect', () => socket.write(`${encodeFrame({ type: 'attach', session, ...(restore && { restore }) })}\n`));
   socket.on('data', output);
   socket.on('error', () => socket.destroy());
   socket.on('close', () => ended(false));

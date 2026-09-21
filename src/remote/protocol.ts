@@ -52,12 +52,42 @@
 // navigator rooted below the workspace root stages and commits only its own subtree rather than
 // everything the far side's single shared workspace root can see.
 //
-// Version 14 adds the reattach frames (`reattach` out, `reattach-result` back) and a `session` id
+// Version 14 adds the attach frames — spelled `reattach` and `reattach-result` at the time, renamed
+// by version 16 below — and a `session` id
 // carried on the handshake, backing reconnection to a peer that outlived its transport across a
-// laptop sleep. A version-13 remote has no rendezvous to answer a reattach request against, so the
-// handshake check above is what turns a stale far side into a clear refusal instead of a reattach
+// laptop sleep. A version-13 remote has no rendezvous to answer an attach request against, so the
+// handshake check above is what turns a stale far side into a clear refusal instead of an attach
 // request nobody on the other end recognizes.
-export const REMOTE_PROTOCOL_VERSION = 14;
+//
+// Version 15 adds the session-state query (`session-state` out, `session-state-result` back), which
+// asks a peer to describe the processes still alive in its workspace. It is what turns an accepted
+// attach into tabs: a janissary that was restarted since the launch holds a record of what it
+// started, but only the far side knows what is still running, and the sessions tab has to open one
+// tab per surviving process rather than a single representative one. A version-14 remote recognizes
+// neither frame and is refused at the handshake like any other mismatch.
+//
+// That check is narrower here than elsewhere, and deliberately so. An attach's handshake is written
+// by the freshly started `janus remote-serve` that then relays into the parked peer (`relayPeer` in
+// `./serve-detach.ts`), not by the parked peer itself — so it binds the relaying process's version,
+// which is whatever is installed on the host now. A peer parked across a remote upgrade therefore
+// announces 15 and hands the query to a 14 that refuses it by name. Nothing in the handshake can see
+// that, so the bounded wait in `askSessionState` is what catches it: the attach reports a failure
+// and the session stays parked, rather than waiting for an answer that will never come.
+// Version 16 adds `restore` to attachment so rebuilt tabs receive retained display and transcript
+// history while transport recovery does not duplicate transcript blocks already delivered. It also
+// renames version 14's two frames to `attach` and `attach-result`, so the wire uses the one word the
+// rest of the session vocabulary does. The rename needs no bump of its own: the handshake admits
+// only an exact match, and every build that speaks the old names announces 14 or 15.
+//
+// Version 17 adds retained shell input and the `shell-history` frame that replays it. A remote agent
+// tab's shell runs in `pipe` mode so no tty echo can corrupt its sentinel protocol, which means the
+// far side only ever emits that shell's *output* — the commands were written in and never echoed
+// back. A peer now retains the input it was sent for a piped process alongside the output it
+// produced, and replays the pair as ordered runs when an attach is rebuilding tabs, so a restored
+// agent transcript reads as commands beside their output rather than as responses alone. This is the
+// carries-not-shape case the `identity` bump above is the archetype of: a version-16 peer retains no
+// input, so it would answer an attach with command-less history while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 17;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -103,7 +133,13 @@ import { decodeKnownFrame } from './frame-decode.js';
 // agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
-  | { type: 'reattach'; session: string }
+  // Ask to take over a session that outlived its transport. `session` is the id the handshake
+  // announced when the peer was first created, and it is the only credential the far side checks:
+  // `relayPeer` refuses any `attach` whose id does not match the peer it found.
+  | { type: 'attach'; session: string; restore?: boolean }
+  // No payload: there is one workspace per peer, so "which processes are alive" has a single
+  // answer and nothing to address it by.
+  | { type: 'session-state' }
   // No payload: the far side removes its workspace and exits, exactly as SIGTERM does — sent by
   // every local path that ends a session on purpose rather than losing its transport.
   | { type: 'shutdown' }
@@ -149,7 +185,15 @@ export type ClientFrame =
 // Remote → local: the process family's output/exit, the provisioning answer, and the transcript
 // blocks the remote's own `createTranscriptSource` yields.
 export type ServerFrame =
-  | { type: 'reattach-result'; accepted: boolean; truncated?: boolean }
+  // The answer to `attach`. A refusal is terminal rather than retryable — it says that session is
+  // gone, not that this attempt failed — which is the distinction `src/remote/attach.ts` turns
+  // into an ended tab instead of another round of backoff. `truncated` says the peer's replay buffer
+  // overflowed while it waited, so what follows is missing its oldest output.
+  | { type: 'attach-result'; accepted: boolean; truncated?: boolean }
+  // The answer to `session-state`: one entry per process still running in the workspace. An empty
+  // list is a real answer and not a failure — it says the peer is holding a workspace with nothing
+  // in it, which is the one case the local side ends rather than attaches.
+  | { type: 'session-state-result'; processes: RemoteProcessState[] }
   // `notice` is what the remote knows about the workspace it just made and the local side cannot
   // work out for itself: whether its processes are actually confined, and which GitHub credential
   // it ended up with. Both are facts about the machine they hold on, so they are reported from
@@ -168,6 +212,13 @@ export type ServerFrame =
   // absent, the local side falls back to naming the remote and nothing more.
   | { type: 'browser-exited'; id: string; message?: string }
   | { type: 'transcript'; blocks: string[] }
+  // One piped process's retained history, as the runs the far side saw them in: what was written to
+  // it and what it produced, in order. Sent only when an attach is rebuilding tabs, and never for a
+  // `pty` process, whose tty already echoed its input into the retained output. It is a frame of its
+  // own rather than more `output` because the recorded input carries the sentinel `echo` the shell
+  // protocol delimits commands with, and a live command's scan of the output stream would match it
+  // before the command had run.
+  | { type: 'shell-history'; id: string; runs: ShellHistoryRun[] }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
@@ -182,6 +233,23 @@ export type ServerFrame =
   // means the next prompt writes into a corpse.
   | { type: 'acp-error'; id: string; message: string; fatal: boolean };
 
+// One unbroken stretch of a piped shell's history, tagged with the direction it travelled. Tagged
+// rather than inferred: the local side reconstructs a transcript entry per command from these, and
+// guessing which text was a command from its shape would mistake output that happens to look like
+// one.
+export type ShellHistoryRun = { source: 'input' | 'output'; text: string };
+
+// One live process as the far side describes it. The fields are exactly what the local side needs to
+// rebuild the tab that was driving it: the spawn id its output is routed by, what is running, how it
+// was started, and the harness or agent name that decides which kind of tab it belongs in.
+export type RemoteProcessState = {
+  id: string;
+  program: string;
+  mode: 'pty' | 'pipe';
+  harness?: string;
+  agentName?: string;
+};
+
 export type RemoteFrame = ClientFrame | ServerFrame;
 
 // The admitted frame types as data, keyed by the unions above rather than re-listed as strings —
@@ -189,15 +257,15 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // or `ServerFrame` without an entry here is a compile error, instead of a frame type that encodes,
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
-  reattach: true, shutdown: true,
+  attach: true, 'session-state': true, shutdown: true,
   provision: true, spawn: true, input: true, resize: true, kill: true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
-  'reattach-result': true,
+  'attach-result': true, 'session-state-result': true,
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
-  'browser-exited': true,
+  'shell-history': true, 'browser-exited': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };
@@ -217,6 +285,9 @@ function encodeText(text: string): string {
 function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'input' || frame.type === 'output') return { ...frame, data: encodeText(frame.data) };
   if (frame.type === 'transcript') return { ...frame, blocks: frame.blocks.map((block) => encodeText(block)) };
+  if (frame.type === 'shell-history') {
+    return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
+  }
   if (frame.type === 'filesystem-request' && frame.operation === 'write-file') {
     return { ...frame, args: { ...frame.args, content: encodeText(frame.args.content ?? '') } };
   }
@@ -239,15 +310,21 @@ export function encodeFrame(frame: RemoteFrame): string {
 // Parse one line into a frame, rejecting anything outside the union rather than ignoring it — an
 // unrecognized frame means the two ends disagree about the contract, which is not a thing to
 // silently skip past.
-export function decodeFrame(line: string): RemoteFrame | { error: string } {
+//
+// A line that is not a JSON object at all is a different thing, and says so with `stray`. `ssh -t`
+// folds the far side's stderr into the same tty the frames travel on, so anything the remote prints
+// outside the protocol — node-pty's own write-error log among them — arrives here looking like a
+// frame and is not one. That is terminal output, not a contract disagreement, and the caller is
+// what decides the difference (see `RemoteChannel.dispatch`).
+export function decodeFrame(line: string): RemoteFrame | { error: string; stray?: true } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
   } catch {
-    return { error: `Malformed remote frame: ${line.slice(0, 80)}` };
+    return { error: `Malformed remote frame: ${line.slice(0, 80)}`, stray: true };
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return { error: 'Malformed remote frame: not an object.' };
+    return { error: 'Malformed remote frame: not an object.', stray: true };
   }
   const record = parsed as Record<string, unknown>;
   const type = record.type;

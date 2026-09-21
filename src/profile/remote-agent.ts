@@ -3,6 +3,7 @@ import { startRemoteLaunch } from '../harness/remote-launch.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { placeAgent, type PlaceAgentOptions } from './place-agent.js';
 import type { RemoteAddress } from '../remote/address.js';
+import type { RemoteResume } from '../remote/resume.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
@@ -18,6 +19,9 @@ export type RemoteAgentLaunch = {
   cwd: string;
   presentation?: PlaceAgentOptions['presentation'];
   out: (text: string) => void;
+  // Set when this launch is really an attach: the channel asks to attach rather than to
+  // provision, and the workspace it comes back to is the one the record remembers.
+  resume?: RemoteResume;
 };
 
 /**
@@ -34,7 +38,7 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
     resolved, creator, cwd, offline, busy: true, presentation,
     remote: { address: address.address, host: address.host },
   });
-  const remote = startRemoteLaunch(managers, resolved, address, cwd);
+  const remote = startRemoteLaunch(managers, resolved, address, cwd, launch.resume);
   setActivePty(managers, resolved, remote.ptyId);
   messageBus.emit('state', { type: 'dirty' });
 
@@ -45,6 +49,7 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
     () => {
       setActivePty(managers, resolved, undefined);
       managers.tab.setCwd(resolved, remote.cwd());
+      managers.shell.ensure(resolved);
       managers.tab.deleteBusy(resolved);
       messageBus.emit('state', { type: 'dirty' });
       out(`Agent "${resolved}" ready on ${address.host}. (workspace: ${remote.cwd()})`);

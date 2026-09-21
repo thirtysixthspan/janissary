@@ -1,4 +1,4 @@
-import type { AggregatedScheduleView, ConversationsView } from '../protocol.js';
+import type { AggregatedScheduleView, ConversationsView, RemoteSessionView } from '../protocol.js';
 
 export const TAB_PLUGIN_API_VERSION = 1;
 
@@ -59,13 +59,14 @@ export class TabPluginRejection extends Error {
 // Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
 // — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
 // shell output. Adding one is additive; each needs its own justification and its own data slice.
-export type TabPluginNotificationTopic = 'schedules' | 'conversations';
+export type TabPluginNotificationTopic = 'schedules' | 'conversations' | 'sessions';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
 const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   schedules: true,
   conversations: true,
+  sessions: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -87,6 +88,11 @@ export type TabPluginNotification =
   | {
     topic: 'conversations';
     data: ConversationsView;
+    tabs: readonly string[];
+  }
+  | {
+    topic: 'sessions';
+    data: readonly RemoteSessionView[];
     tabs: readonly string[];
   };
 
@@ -120,7 +126,19 @@ export type TabPluginTopicAction =
   // The title the user typed over the conversation's own. Trimmed, capped, and refused when empty by
   // the manager, so a plugin cannot leave a conversation nameless.
   | { topic: 'conversations'; action: 'rename'; id: string; title: string }
-  | { topic: 'conversations'; action: 'delete'; id: string };
+  | { topic: 'conversations'; action: 'delete'; id: string }
+  // The four things a session row offers, plus the two a row that cannot be parked offers instead.
+  // Addressed by tab label or by session id depending on what the verb acts on: `detach`, `focus`,
+  // and `close` act on a tab this janissary holds, while `attach`, `terminate`, and `forget` act on a
+  // session that may have no tab at all. Every one is refused unless a row in the topic's current
+  // data both names the target *and* offers that verb — presence alone is not enough, since a
+  // recorded row's label is a name belonging to no live tab and would otherwise let `close` reach
+  // whatever tab happened to share it.
+  | { topic: 'sessions'; action: 'detach' | 'focus' | 'close'; label: string }
+  | { topic: 'sessions'; action: 'attach' | 'terminate' | 'forget'; session: string }
+  // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
+  // only by pressing attach or terminate.
+  | { topic: 'sessions'; action: 'refresh' };
 
 export type TabPluginDeclaration = {
   id: string;
@@ -291,6 +309,10 @@ export type {
   ConversationTurnView,
   ConversationWindowView,
   ConversationsView,
+  RemoteSessionAction,
+  RemoteSessionKind,
+  RemoteSessionState,
+  RemoteSessionView,
 } from '../protocol.js';
 
 // Resolution: core openers and commands resolve first, then one plugin contribution by exact

@@ -8,6 +8,7 @@ import { loadConfig } from '../config.js';
 import { loadLearnedCommands, learnedCommands } from '../interactive-learned.js';
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
+import type { RestoredSink } from '../remote/shell-session.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -50,6 +51,12 @@ function completeCommand(result: string): void {
 function resolvePwd(): void {
   const onResult = queryShellPwdMock.mock.calls.at(-1)?.[2] as (pwd: string) => void;
   onResult('/tmp');
+}
+
+// The restored sink the manager handed the adopted remote shell: where a replayed session's output
+// and retained history land.
+function restoredSink(): RestoredSink {
+  return createRemoteShellMock.mock.calls[0][6] as RestoredSink;
 }
 
 function resetShellMocks(): void {
@@ -139,6 +146,143 @@ describe('ShellManager — which shell a tab gets', () => {
     await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
     expect(createRemoteShellMock).toHaveBeenCalledTimes(1);
     expect(spawnTransportMock).not.toHaveBeenCalled();
+  });
+
+  // An attached agent tab's shell is created lazily, so the recorded spawn id is parked here first
+  // — and only the channel the adoption was recorded against may claim it.
+  it('binds a remote tab\'s first shell to the adopted spawn id its channel still holds', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toBe('rsh9');
+    expect(createRemoteShellMock.mock.calls[0][5]).toBe(true);
+  });
+
+  // Closing the tab frees the adoption with it: a later tab granted the same label starts its own
+  // shell instead of binding to a spawn id nobody recorded for it.
+  it('drops an adopted spawn id when the tab closes', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+    shellManager.closeTab('janus');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
+
+  // The label a tab holds is freed the moment it closes, and a fresh session that reuses it talks
+  // over a different channel — the adoption belongs to the old session and must not be claimed.
+  it('refuses an adoption whose recorded session no longer matches the tab\'s channel', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-2' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
+
+  it('releases an adopted spawn id when the attach says there is no shell to come back to', async () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    managers.tab.cur().remote = 'devbox';
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
+    shellManager.releaseAdoptedShell('janus');
+
+    shellManager.run('janus', 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
+    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
+  });
+
+  it('publishes restored output immediately and applies transcript retention', () => {
+    writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 2 }));
+    loadConfig(tmpDir);
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = restoredSink();
+    const dirty = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', dirty);
+    try {
+      restored.output('\u{1B}c');
+      expect(dirty).not.toHaveBeenCalled();
+      restored.output('\u{1B}cearlier output');
+      expect(tab.log).toEqual([{ input: '', output: 'earlier output' }]);
+      expect(dirty).toHaveBeenCalledOnce();
+      restored.output('later output');
+      restored.output('latest output');
+      expect(tab.log.map((entry) => entry.output)).toEqual(['later output', 'latest output']);
+      expect(dirty).toHaveBeenCalledTimes(3);
+    } finally {
+      subscription.unsubscribe();
+    }
+  });
+
+  it('strips shell sentinel lines from restored output', () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = restoredSink();
+
+    restored.output('tsconfig.json\nvitest.config.ts\nweb\n__JS_END_3_1789964749418__\n');
+    restored.output('/remote/workspace/harun\n__PWD_3_1789964749468__\npwd\n/remote/workspace/harun\n__PWD_3_1789964749502__\n');
+    restored.output('zsh: operation not permitted: ps\n__JS_END_3_1789964752762__\n');
+
+    expect(tab.log.map((entry) => entry.output)).toEqual([
+      'tsconfig.json\nvitest.config.ts\nweb\n',
+      'zsh: operation not permitted: ps\n',
+    ]);
+  });
+
+  it('rebuilds a restored transcript from retained history runs, commands included', () => {
+    const managers = makeManagers();
+    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
+    const tab = managers.tab.cur();
+    tab.remote = { address: 'devbox', host: 'devbox' };
+    const shellManager = new ShellManager(managers);
+    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
+    shellManager.ensure(tab.label);
+    const restored = restoredSink();
+
+    restored.history([
+      { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
+      { source: 'output', text: 'web\n__JS_END_3_1__\n' },
+      { source: 'input', text: 'pwd\necho "__PWD_3_2__"\n' },
+      { source: 'output', text: '/remote/workspace/harun\n__PWD_3_2__\n' },
+      { source: 'input', text: '{ :; ps\n} 2>&1; echo "__JS_END_3_3__"\n' },
+      { source: 'output', text: 'operation not permitted\n__JS_END_3_3__\n' },
+    ]);
+
+    expect(tab.log).toEqual([
+      { input: 'ls', output: 'web' },
+      { input: 'ps', output: 'operation not permitted' },
+    ]);
   });
 });
 

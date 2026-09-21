@@ -655,6 +655,13 @@ describe('EditorTab', () => {
     expect(meta.querySelector('.tab-connections')).not.toBeNull();
   });
 
+  it('uses the link icon for the metadata connections button', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+
+    expect(container.querySelector(':scope .tab-connections svg')).toHaveAttribute('data-icon', 'link');
+  });
+
   it('groups every metadata button in the right-side actions', async () => {
     const { client } = makeClient();
     const { container } = render(

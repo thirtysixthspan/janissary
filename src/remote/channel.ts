@@ -1,7 +1,10 @@
 import {
   HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteFrame, type RemoteHandshake, type ServerFrame,
+  type ClientFrame, type RemoteHandshake, type RemoteProcessState, type ServerFrame,
 } from './protocol.js';
+import { SessionRouter, type SessionListener } from './channel-sessions.js';
+import { dispatchAcp, type AcpSessionListener } from './channel-acp.js';
+import { ShutdownDrain } from './shutdown-drain.js';
 
 // One ssh session's lifetime and its state machine. Until `remote-serve` announces itself the
 // session is a plain terminal: bytes pass through to the tab's terminal and keystrokes pass through
@@ -17,12 +20,7 @@ export type ChannelTransport = {
   kill: () => void;
 };
 
-// What one remote process id wants from the inbound stream. Registered by the remote `PtySession`
-// and the remote shell adapter, which are the only two shapes local code consumes.
-export type SessionListener = {
-  onOutput: (data: string) => void;
-  onExit: (exitCode: number) => void;
-};
+export type { SessionListener } from './channel-sessions.js';
 
 export type NavigatorListener = {
   onReply: (frame: Extract<ServerFrame, { type: 'filesystem-reply' }>) => void;
@@ -32,20 +30,13 @@ export type NavigatorListener = {
 
 // What one remote ACP session id wants from the inbound stream. Registered by the local ACP
 // adapter, which is the only shape that consumes these frames.
-export type AcpSessionListener = {
-  onReady: () => void;
-  onChunk: (text: string) => void;
-  onEnd: (stopReason: string) => void;
-  // `fatal` says whether the session itself is gone (a failed spawn, a dead agent) or only this
-  // prompt failed (a rate limit). The adapter routes the two to different places.
-  onError: (message: string, fatal: boolean) => void;
-};
+export type { AcpSessionListener } from './channel-acp.js';
 
 // The frames that belong to the tab rather than to one process's I/O: the provisioning answer, the
 // transcript pushes, and the browser-gone report. Everything else inbound is routed to a
 // `SessionListener` instead. `browser-exited` carries a session id but is not that session's
 // output — the tab it names is resolved by the manager, since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'reattach-result' }>;
+export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.
@@ -56,21 +47,33 @@ export type RemoteChannelHandlers = {
   onError: (message: string) => void;
   onClose: () => void;
   onSessionExit?: (id: string, label: string | undefined, harness: boolean) => void;
+  // The set of processes this channel has spawned changed — a `spawn` went out, or a `kill` did.
+  // What makes a session recordable is having something running in its workspace, so this is the
+  // moment a launch becomes attachable. Per process, never per byte.
+  onProcesses?: () => void;
+  // The held-frame buffer overflowed and dropped its oldest frames. Reported through the same line
+  // a truncated replay already has, since it is the same fact one layer further in.
+  onTruncatedReplay?: () => void;
 };
 
-type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'reattaching';
+type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
 
 export class RemoteChannel {
   private state: ChannelState = 'authenticating';
   private buffer = '';
-  private sessions = new Map<string, SessionListener>();
   private navigators = new Map<string, NavigatorListener>();
   private acpSessions = new Map<string, AcpSessionListener>();
   private notifiedClose = false;
+  private shutdownDrain = new ShutdownDrain();
   sessionId: string | undefined;
-  private spawned = new Map<string, Extract<ClientFrame, { type: 'spawn' }>>();
+  private router: SessionRouter;
 
-  constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {}
+  constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {
+    this.router = new SessionRouter({
+      onSessionExit: handlers.onSessionExit,
+      onTruncatedReplay: handlers.onTruncatedReplay,
+    });
+  }
 
   // The transport's PTY id: what the tab's terminal is attached to while the channel authenticates.
   get ptyId(): string { return this.transport.id; }
@@ -79,9 +82,14 @@ export class RemoteChannel {
 
   // Route this process id's output and exit frames. The id is chosen by the caller and is the same
   // id the spawn frame carries.
-  attach(id: string, listener: SessionListener): void { this.sessions.set(id, listener); }
+  attach(id: string, listener: SessionListener): void { this.router.attach(id, listener); }
 
-  detach(id: string): void { this.sessions.delete(id); }
+  detach(id: string): void { this.router.detach(id); }
+
+  discardUnclaimed(): void { this.router.discardUnclaimed(); }
+
+  // What this channel started, for the session record to be written from.
+  spawnedProcesses(): RemoteProcessState[] { return this.router.spawnedProcesses(); }
 
   attachNavigator(id: string, listener: NavigatorListener): void {
     this.navigators.set(id, listener);
@@ -96,7 +104,7 @@ export class RemoteChannel {
   detachAcp(id: string): void { this.acpSessions.delete(id); }
 
   send(frame: ClientFrame): void {
-    if (this.state !== 'attached' && !(this.state === 'reattaching' && frame.type === 'reattach')) {
+    if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
       if (frame.type === 'filesystem-request') this.navigators.get(frame.session)?.onReply({
         type: 'filesystem-reply', session: frame.session, request: frame.request, error: 'Remote connection unavailable.',
       });
@@ -105,8 +113,8 @@ export class RemoteChannel {
       }
       return;
     }
-    if (frame.type === 'spawn') this.spawned.set(frame.id, frame);
-    else if (frame.type === 'kill') this.spawned.delete(frame.id);
+    if (frame.type === 'spawn') { this.router.record(frame); this.handlers.onProcesses?.(); }
+    else if (frame.type === 'kill') { this.router.forget(frame.id); this.handlers.onProcesses?.(); }
     this.transport.write(`${encodeFrame(frame)}\n`);
   }
 
@@ -116,7 +124,15 @@ export class RemoteChannel {
     this.transport.write(data);
   }
 
-  close(): void { this.transport.kill(); }
+  close(): void {
+    this.shutdownDrain.cancel();
+    this.transport.kill();
+  }
+
+  disconnect(): void {
+    this.state = 'closed';
+    this.transport.kill();
+  }
 
   replaceTransport(transport: ChannelTransport): void {
     this.transport = transport;
@@ -126,20 +142,25 @@ export class RemoteChannel {
   }
 
   finish(): void {
-    for (const id of this.spawned.keys()) this.send({ type: 'kill', id });
+    for (const id of this.router.spawnedIds()) this.send({ type: 'kill', id });
     for (const id of this.acpSessions.keys()) this.send({ type: 'acp-close', id });
     for (const session of this.navigators.keys()) this.send({ type: 'filesystem-close', session });
     this.send({ type: 'shutdown' });
     this.state = 'closed';
     this.sessionId = undefined;
-    for (const listener of this.sessions.values()) listener.onExit(1);
-    this.sessions.clear();
+    this.router.finish();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
     for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
-    this.spawned.clear();
     this.state = 'closed';
+  }
+
+  // A PTY kill can discard bytes that have been written but not yet delivered to ssh. Leave the
+  // transport up briefly after the final shutdown frame, while still bounding a peer that cannot
+  // exit on its own.
+  closeAfterShutdown(): void {
+    this.shutdownDrain.schedule(() => this.close());
   }
 
   // Everything the ssh PTY produced, in arrival order.
@@ -149,13 +170,14 @@ export class RemoteChannel {
     // Both run in the same read: the handshake line may sit in the middle of a chunk whose tail is
     // already frames, so the terminal phase can hand straight over to the frame phase.
     if (this.state === 'authenticating') this.consumeTerminalPhase();
-    if (this.attached || this.state === 'reattaching') this.consumeFrames();
+    if (this.attached || this.state === 'attaching') this.consumeFrames();
   }
 
   // The ssh session ended, for any reason. Notifies the owner exactly once.
   closed(): void {
     if (this.notifiedClose) return;
     this.notifiedClose = true;
+    this.shutdownDrain.cancel();
     if (this.sessionId) {
       this.state = 'reconnecting';
       this.buffer = '';
@@ -163,7 +185,7 @@ export class RemoteChannel {
       return;
     }
     this.state = 'closed';
-    this.sessions.clear();
+    this.router.clear();
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
     this.acpSessions.clear();
@@ -191,7 +213,11 @@ export class RemoteChannel {
     this.buffer = this.buffer.slice(newline + 1);
     const handshake = parseHandshake(line);
     if ('error' in handshake) { this.fail(handshake.error); return; }
-    this.state = this.sessionId ? 'reattaching' : 'attached';
+    this.state = this.sessionId ? 'attaching' : 'attached';
+    // A handshake that speaks for an existing session opens the hold window: the peer is about to
+    // flush its replay and the tabs that will claim it may not exist yet. It closed by
+    // `discardUnclaimed` once those tabs are built — or by the settlement that ends the attach.
+    if (this.state === 'attaching') this.router.openHold();
     this.sessionId ??= handshake.session;
     this.handlers.onAttached(handshake);
   }
@@ -202,27 +228,23 @@ export class RemoteChannel {
       const line = this.buffer.slice(0, newline).trim();
       this.buffer = this.buffer.slice(newline + 1);
       if (line) this.dispatch(line);
-      if (this.state !== 'attached' && this.state !== 'reattaching') return;
+      if (this.state !== 'attached' && this.state !== 'attaching') return;
       newline = this.buffer.indexOf('\n');
     }
   }
 
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
+    // A line the far side printed rather than framed. Killing the transport over it took the whole
+    // session with it, including the `shutdown` already queued behind it — so a remote harness
+    // outlived the tab that closed it and kept its workspace. It goes to the terminal handler, which
+    // is where the far side's own output already goes before the handshake.
+    if (!('type' in frame) && frame.stray === true) { this.handlers.onTerminalData(line); return; }
     if (!('type' in frame)) { this.fail(frame.error); return; }
-    if (frame.type === 'reattach-result' && frame.accepted) this.state = 'attached';
-    if (frame.type === 'output') { this.sessions.get(frame.id)?.onOutput(frame.data); return; }
-    if (frame.type === 'exit') {
-      const listener = this.sessions.get(frame.id);
-      this.sessions.delete(frame.id);
-      const spawned = this.spawned.get(frame.id);
-      this.spawned.delete(frame.id);
-      if (spawned && (spawned.harness || spawned.mode === 'pipe')) {
-        this.handlers.onSessionExit?.(frame.id, spawned.agentName, spawned.harness !== undefined);
-      }
-      listener?.onExit(frame.exitCode);
-      return;
-    }
+    if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
+    if (frame.type === 'output') { this.router.output(frame); return; }
+    if (frame.type === 'shell-history') { this.router.history(frame); return; }
+    if (frame.type === 'exit') { this.router.exit(frame); return; }
     if (frame.type === 'filesystem-reply') {
       this.navigators.get(frame.session)?.onReply(frame);
       return;
@@ -231,29 +253,15 @@ export class RemoteChannel {
       this.navigators.get(frame.session)?.onEvent(frame.path);
       return;
     }
-    if (this.dispatchAcp(frame)) return;
+    if (dispatchAcp(this.acpSessions, frame)) return;
     switch (frame.type) {
     case 'workspace-ready':
-    case 'reattach-result':
+    case 'attach-result':
+    case 'session-state-result':
     case 'workspace-failed':
     case 'browser-exited':
     case 'transcript': { this.handlers.onFrame(frame); return; }
     default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
-    }
-  }
-
-  // Routed by id before the switch that ends in `fail`, so an agent that fails to spawn or errors
-  // mid-prompt never kills the transport — killing the transport closes the tab, and an ACP-level
-  // error is not a channel-level fault. A frame whose id has no listener is dropped, which is what
-  // stops a chunk still in flight from a session disposed by `acp reset` landing in its successor.
-  // Returns whether the frame was an ACP one at all.
-  private dispatchAcp(frame: RemoteFrame): boolean {
-    switch (frame.type) {
-    case 'acp-ready': { this.acpSessions.get(frame.id)?.onReady(); return true; }
-    case 'acp-chunk': { this.acpSessions.get(frame.id)?.onChunk(frame.text); return true; }
-    case 'acp-end': { this.acpSessions.get(frame.id)?.onEnd(frame.stopReason); return true; }
-    case 'acp-error': { this.acpSessions.get(frame.id)?.onError(frame.message, frame.fatal); return true; }
-    default: { return false; }
     }
   }
 

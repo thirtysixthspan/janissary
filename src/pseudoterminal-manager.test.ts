@@ -167,6 +167,53 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('main')).toEqual([]);
   });
 
+  it.each(['closeTab', 'closeAll'] as const)('%s leaves remote-owned transports to remote teardown', (method) => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    managers.remote = { get: vi.fn(() => ({ ptyId: 'pty1' })) } as unknown as Managers['remote'];
+    const manager = new PseudoterminalManager(managers);
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+    manager[method]('main');
+    expect(kill).not.toHaveBeenCalled();
+    manager.input('pty1', 'shutdown');
+    expect(write).toHaveBeenCalledWith('shutdown');
+    vi.mocked(managers.remote.get).mockReturnValue(undefined);
+    manager.closeAll();
+    expect(kill).toHaveBeenCalledOnce();
+  });
+
+  // Every path that ends a session drops the channel from `RemoteManager`'s table before closing its
+  // tabs, so the lookup above answers "not a transport" exactly while the shutdown drain is running.
+  // Killing the ssh PTY there discarded the shutdown frame that stops the far side's work.
+  it('closeTab leaves a transport alive even once its channel has left the remote table', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    managers.remote = { get: vi.fn() } as unknown as Managers['remote'];
+    const manager = new PseudoterminalManager(managers);
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+
+    manager.closeTab('main');
+
+    expect(kill).not.toHaveBeenCalled();
+    manager.input('pty1', 'shutdown');
+    expect(write).toHaveBeenCalledWith('shutdown');
+  });
+
+  it('closeTab still kills the tab\'s own PTYs while leaving its transport', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    managers.remote = { get: vi.fn() } as unknown as Managers['remote'];
+    const manager = new PseudoterminalManager(managers);
+    const harnessKill = vi.fn();
+    vi.mocked(spawnPty).mockImplementationOnce((program, _command, _cwd, _handlers) => (
+      { id: 'pty-harness', program, write, resize, kill: harnessKill }
+    ));
+    manager.spawn('main', 'claude', 'claude', '/repo');
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+
+    manager.closeTab('main');
+
+    expect(harnessKill).toHaveBeenCalledOnce();
+    expect(kill).not.toHaveBeenCalled();
+  });
+
   it('handleExit (via onExit) clears activePty on full-tab takeovers', () => {
     const tab = makeTab('main', 'red');
     const { managers } = makeManagers([tab]);

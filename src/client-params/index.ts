@@ -11,6 +11,7 @@ import { EDITOR_PARAMS } from './editor.js';
 import { MONITOR_PARAMS } from './monitor.js';
 import { SCHEDULE_PARAMS } from './schedule.js';
 import { PLUGIN_PARAMS } from './plugin.js';
+import { SESSION_PARAMS } from './sessions.js';
 
 // Each domain table is already keyed by its own slice of the union, so this `satisfies` is the
 // second half of the check: a whole domain dropped from the spread stops compiling here.
@@ -21,6 +22,7 @@ export const CLIENT_PARAMS_DECODERS = {
   ...MONITOR_PARAMS,
   ...SCHEDULE_PARAMS,
   ...PLUGIN_PARAMS,
+  ...SESSION_PARAMS,
 } satisfies Record<ClientMessage['method'], ParamsDecoder>;
 
 // Takes `unknown` rather than `Record<string, unknown>` so the caller does not have to cast

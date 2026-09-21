@@ -1,0 +1,188 @@
+# Sessions Tab
+
+The sessions tab answers one question the rest of the application cannot: what am I running on other
+hosts right now, and what is still running out there that I am no longer attached to?
+
+A remote session used to be invisible infrastructure tied to one tab's lifetime. Quitting the
+application left a live peer on the far host with no way to find it again and nothing but its
+seven-day expiry to end it. The sessions tab makes that set of sessions a thing the user can see,
+park, and pick back up — the way tmux sessions are listed, detached, and attached.
+
+### Opening the tab
+
+`sessions` opens the list, or focuses it when it is already open — there is only ever one. `sessions
+left` and `sessions right` dock it into that sidebar, and a bare `sessions` on a docked list returns
+it to the centre. Any other argument is rejected with `Usage: sessions [left|right]`. The tab is
+titled **sessions**.
+
+### What is listed
+
+Every remote client this janissary holds, and every parked session it could come back to. That
+means remote harness tabs, remote agent tabs, plain `ssh <destination>` tabs, remote file
+navigators, and — for a session no longer attached — one row per process still alive on its host.
+
+There is deliberately no row standing for a connection. A connection shared by several tabs shows
+itself by grouping, not by a row of its own.
+
+An empty list reads `No remote sessions`.
+
+The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. This layout applies even when Sessions is the first plugin opened.
+
+When there are no remote sessions, the tab shows only its `No remote sessions` empty-state message; it omits the table headings because there are no rows for them to describe.
+
+### Row content
+
+Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
+the bare host, what the row is running, its kind, its state, and how long ago it last changed. The
+third column shows the tab's own name — a harness or agent label, `ssh`, or a navigator's abbreviated
+root. The type is what the row *is*: `harness`, `agent`, `ssh`, or `navigator`, matching the tab it
+opens or would open. The row's tooltip carries the full destination
+and the remote workspace path, and the reason the last attempt on it failed when there was one.
+Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
+Both headings and rows have 12px horizontal padding.
+
+The state is one of `provisioning` (a remote tab whose workspace clone has not landed yet), `active`,
+`reconnecting` (the tabs are open, the transport is gone, and janissary is already retrying),
+`detached` (parked on its host, awaiting attachment), or `terminated` (a session established to be
+over).
+
+The State column shows a plug ahead of the state's word, coloured by what the connection is doing:
+green while it is up, blue while it is parked on its host, red once it is over. A session still
+provisioning or still reconnecting has not settled, so its plug stays muted and the word tells the
+two apart. The same plug, with the same colours, is what every other surface uses to say a
+connection's status.
+
+A session the channel lifecycle ends outright leaves no row at all: its record is dropped with the
+channel, so a harness the user closes reads as one termination — never as a second, detached line for a
+peer that was already shut down. Only a session parked while its peer stays alive keeps a row.
+
+Rows are ordered by most recent activity, newest first. Rows sharing a connection are indented under
+the row that launched it, and a group stays together wherever its launching row sorts — so one glance
+shows what a single detach would take with it.
+
+### Actions
+
+Every row offers what it can actually do, and nothing else. Its action buttons are light on the dark
+surface, with the same muted resting treatment and bright hover treatment regardless of the verb.
+
+Detach and Attach use directional plug glyphs: a minus for detaching and a plus for attaching. Detach confirmation asks `Detach this session on <host>?`. Both
+Terminate and Close use a circle-xmark, making the actions that end something immediately recognizable.
+
+**Attach** applies to a parked session, and to a live one whose transport is being retried. On a
+parked session it opens one ssh connection and brings the whole peer back, opening a tab for each
+process still running on it; pressing it on any row of that session brings back all of them, because
+one connection serves them all. On a reconnecting session it means "try now" and collapses the
+backoff wait.
+
+Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host.
+
+**Detach** applies to a live session and gives it up locally while deliberately leaving it running.
+Closing the local tabs during that action never stops their remote processes.
+A detached harness remains listed after its local tab closes. Attaching restores the same running process and keeps its tab open; repeated detach and attach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.
+The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored agent tab likewise shows its retained shell history in its transcript — each retained command as its own entry with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
+Once a remote agent is ready, its persistent shell keeps the session detachable even before the user runs a command. That shell keeps running on its host after the detach gives up the connection it was reached through, so the session still holds it when the attachment asks what survived. Attaching returns the agent to that retained shell, so it can continue working without starting a replacement shell.
+It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
+what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up
+for the others and would mean nothing — so it sits on the launching row alone. It is unavailable
+while the session is still provisioning: there is nothing to come back to yet. When the launching tab
+has been closed while joined tabs keep the connection alive, the launching row cannot be presented
+and the whole connection would otherwise be destructible only — so the surviving rows carry the
+launching row's actions instead, and raising detach on any of them parks the shared session the same
+way.
+
+A detach is refused outright for any session that could not be listed afterwards — one still being
+prepared, one the host never named, or one whose workspace has nothing running in it — and the
+reason is recorded in the notifications feed rather than left as a control that does nothing. The
+session stays exactly as it was: nothing is given up locally and nothing is parked on the host.
+
+**Terminate** applies to a parked session and destroys it: janissary reconnects far enough to tell
+the peer to stop its processes and remove its remote workspace. It asks for confirmation. A live
+session's launching row also carries Terminate; confirming it stops the peer, removes its remote
+workspace, and closes every tab and navigator sharing that session. Joined rows keep Close instead.
+
+The row stays on screen while the attempt runs, marked as terminating, with its terminate and attach controls
+not pressable until it settles — reaching a slow or unreachable host takes minutes, and a row that
+disappeared for the duration would read as a termination that had already succeeded. A peer that answers —
+accepting the attach or refusing it because the session is already gone — terminates the session: the
+record is dropped and the row becomes terminated. A connection that never gets an answer establishes
+nothing: the row stays parked with the failure reported and the attach button beside it.
+
+**Forget** removes janissary's own record and touches nothing on the far side. It is earned rather
+than always present: it appears on a parked row only after an attach or a terminate has failed to reach
+that host, so it cannot be the easy way past a session that is merely slow to answer. A terminated row
+carries it as the only thing left to do with the row.
+
+**Close** appears where a launching row carries detach: on an ssh row, a navigator row, and any row
+joined onto another row's connection. Closing an ssh row kills that tab's session; closing a joined
+row releases its hold on the shared connection.
+
+### Opening a row
+
+One click moves the current row, a second click on the same row opens it, and Enter opens the
+current row. Opening an active, reconnecting, ssh, or navigator row focuses that tab. Opening a
+parked row attaches it. Opening a terminated row does nothing.
+
+Up and Down move between rows without wrapping; Home and End jump to the ends.
+
+### Refresh
+
+The list keeps itself current: a session being launched, joined, released, parked, or losing its
+transport updates the rows as it happens, and a session is recorded as attachable the moment it has
+a workspace with something running in it — whether or not this tab is open. The header's refresh
+button is therefore for re-reading rather than for noticing, and returning to an open tab from
+another is too: the tab re-reads when the user brings it back into focus. It opens no ssh connection. Reachability is learned only by pressing attach or terminate, so a parked row claims
+nothing about its host beyond what the record says and what the last attempt reported — a peer that
+expired while janissary was closed still reads as detached until something tries it.
+
+### What a failed attempt establishes
+
+A refused attach, or a recorded peer process that no longer exists, establishes that the session
+is over: the row becomes terminated and a notification names it. A timeout or a failed connection
+establishes nothing: the row stays parked with its failure reported, the attach button can be
+pressed again, and the trash button appears beside it.
+
+Every failed attachment also records a notification naming the session, host, and reason, including a failure to start the connection itself. The notification remains available after the temporary connection tab closes.
+
+A peer that accepts an attach but reports no process state, including a timed-out answer, is told to
+shut down and its record dropped, rather than being left holding a remote workspace for a week with
+nothing in it. An attach
+that fails or ends also lets go of what it prepared for its tabs: a restored agent binds to the
+process still running on the far side when it is brought back, and that binding is dropped again once
+the attempt is over — so an agent tab recreated later under the same name starts its own shell on
+the connection it is actually on, never binding to a process belonging to a different session.
+Closing an attached tab before running anything releases the same binding.
+
+### Reporting
+
+Each action records one line in the notifications feed, so the change survives the tabs it happened
+to: `<what> on <host> detached.`, `<what> on <host> attached.`,
+`<what> on <host> terminated.`, and `<what> on <host> forgotten — its record was removed.` A refused
+detach records its own line naming why, so an action that declines to run is never silent. A line is
+attributed to the sessions tab when it is open and to the active tab otherwise, so the feed's
+provenance header names the surface the change belongs to even when the action was raised from a
+metadata row. See [[notifications]].
+
+### The control on a remote tab
+
+Every remote tab's metadata row leads with the connection's plug, ahead of the host chip, so the row
+reads how, where, and what path there — coloured exactly as the sessions tab colours it. The control
+itself sits at the other end of the row, right-aligned among the row's other
+buttons and light on dark, and carries the same verb glyphs the list's rows carry: detach while the
+session is healthy, attach while its transport is being retried. It is disabled while the tab is
+provisioning and shows a spinner while an action is in flight. The spinner clears when the action is
+answered — including when it was refused, and including when nothing answers at all — so the control
+is never left reading as mid-operation on a tab that is still open. An attach pressed on a tab whose
+connection has already gone is refused with its reason recorded, like a refused detach. Pressing
+detach there acts on the whole shared connection and asks the same confirmation the list does — the
+one dialog, with the same keyboard behavior on both front doors: Escape cancels, `y` or an
+arrow-toggle and Enter confirms, and the focus lands inside the dialog when it opens. A remote file navigator's
+header keeps its host chip and gains no control, matching what its row offers.
+
+### Scope
+
+The list is the project's own: opening janissary on another project shows only that project's remote
+sessions, which matches what a remote launch is — a clone of *this* project's origin.
+
+The sessions tab and the connections surface stay disjoint. `connection list` and the connections
+panel describe connections open now, so a parked session appears in neither. See [[connection]] and
+[[remote-server]].

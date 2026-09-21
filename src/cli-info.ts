@@ -23,7 +23,7 @@ Commands:
 Options:
   --port=<n>     Port to listen on (default: auto)
   --no-open      Start the server without opening the app window
-  --relaunch     Reattach to existing state instead of clearing it
+  --relaunch     Attach to existing state instead of clearing it
   --help         Show this help
   --version      Show version
 

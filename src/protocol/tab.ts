@@ -15,6 +15,23 @@ export type AcpRef =
 // set on every `kind: 'acp'` row, identifying which session the row's transcript button opens.
 export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' | 'terminal' | 'sqlite' | 'ssh'; acpRef?: AcpRef };
 
+/**
+ * A remote tab's target as the client sees it: everything stored on the tab, plus the facts only
+ * the live channel holds.
+ *
+ * `reconnecting` deliberately does not live on `RemoteTarget` itself. That type is what a tab stores
+ * and what `profile save` and `--relaunch` persist, and a recovery state written there would outlive
+ * the recovery. It is resolved from `RemoteManager`'s own `reconnect.active` when the view is built,
+ * so there is no copy of it to go stale, and it is present only when true — a healthy tab's target
+ * is exactly what it was before this field existed.
+ *
+ * `provisioning` rides the same reasoning: whether the channel has a workspace directory is the test
+ * `RemoteManager` itself applies before detaching, it is read from the channel when the view is
+ * built, and a copy of it on the tab would go stale exactly when the clone did or did not land. It
+ * is also present only when true.
+ */
+export type RemoteTargetView = RemoteTarget & { reconnecting?: boolean; provisioning?: boolean };
+
 // A pending route chooser: the unprefixed command plus the option labels to pick from.
 export type RouteChooserView = { cmd: string; choices: string[] };
 
@@ -52,7 +69,7 @@ export type TabView = {
   // the metadata row's flag-emoji display. Empty when none are active.
   flags?: string[];
   // Set when this tab's process runs on another host: the metadata row's leading host chip.
-  remote?: RemoteTarget;
+  remote?: RemoteTargetView;
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;
   connections: ConnectionView[];

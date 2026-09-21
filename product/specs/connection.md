@@ -44,7 +44,7 @@ Over an ssh tab, this panel shows only that tab's own `ssh:<destination>` row (n
 
 A **remote** tab (one launched with `on <address>`) shows *both* rows: `ssh:<address>` for the transport it runs over, and `terminal:<program>` for the process on the far side — a remote claude harness reports `terminal:claude`, exactly as a local one does, since the ssh session it runs over is listed as the transport rather than masquerading as one of the tab's processes. `connection list` includes the `ssh:<address>` row globally, alongside every open ssh tab's, and tab-completion offers `ssh:<label>` for remote tabs too. See `remote-server.md`.
 
-In the web app, the tab's metadata bar carries a connections button (a plug icon) alongside its other buttons. When the tab has at least one live connection, the button is active: hovering it shows the connections window, moving away hides it again, and clicking pins the window open until the button is clicked a second time. When the tab has no live connections, the button is dark and unclickable, with a tooltip explaining there are none. Each time a tab becomes the active tab, its connections window (if non-empty) auto-shows immediately and then fades away after five seconds; moving the pointer onto the button or the window during that auto-show cancels the fade and hands control back to plain hover behavior, while clicking at any point pins or unpins the window regardless of where it is in that sequence. A non-ssh harness tab has no connections button, since the terminal is already the connection; an ssh harness tab keeps both the connections and schedule buttons.
+In the web app, the tab's metadata bar carries a connections button (a link icon) alongside its other buttons. When the tab has at least one live connection, the button is active: hovering it shows the connections window, moving away hides it again, and clicking pins the window open until the button is clicked a second time. When the tab has no live connections, the button is dark and unclickable, with a tooltip explaining there are none. Each time a tab becomes the active tab, its connections window (if non-empty) auto-shows immediately and then fades away after five seconds; moving the pointer onto the button or the window during that auto-show cancels the fade and hands control back to plain hover behavior, while clicking at any point pins or unpins the window regardless of where it is in that sequence. A non-ssh harness tab has no connections button, since the terminal is already the connection; an ssh harness tab keeps both the connections and schedule buttons.
 
 An editor tab carries the same connections button and window, listing its open persona connections (each shown as `<persona> (acp)`) alongside any other connections that tab has opened. Unlike every other kind of connection row, an editor tab's persona connection rows carry their own small close control; clicking it closes just that one persona's connection immediately, the same as running `connection close acp:<persona>`, without affecting any other open persona connection in that tab.
 
@@ -55,3 +55,10 @@ Every ACP connection row in the connections window — the tab's own agent (`acp
 ### `connection` command
 
 `connection <list|close> [kind:id]` lists or closes open connections. See the Connections section. `connection list` shows every open connection; `connection close <kind>:<id>` closes one, where `<kind>` is `sqlite`, `shell`, `acp`, `browser`, or `ssh`. Malformed invocations return a `Usage:` message.
+
+### Parked remote sessions
+
+This surface describes connections open *now*, so a remote session that has been detached appears in
+neither `connection list` nor the connections window — it has no open connection to list. Those are
+listed in the sessions tab, which shows both the remote sessions this janissary is attached to and
+the ones still running on their hosts awaiting attachment. See [[sessions-tab]].

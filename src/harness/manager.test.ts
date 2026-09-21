@@ -964,7 +964,7 @@ function remoteLaunch(): {
   (managers.pty as unknown as { registerRemotePty: unknown }).registerRemotePty = registerRemotePty;
   (managers.tab as unknown as { append: unknown }).append = append;
   (managers as unknown as { remote: unknown }).remote = {
-    open: vi.fn((_label: string, _address: unknown, _cwd: string, h: RemoteHandlers) => { handlers = h; return channel; }),
+    create: vi.fn((_label: string, _address: unknown, _cwd: string, h: RemoteHandlers) => { handlers = h; return channel; }),
     get: vi.fn(() => channel),
     transcriptSource: vi.fn(() => ({ poll: () => [], resolved: () => false })),
   };
@@ -1020,7 +1020,7 @@ describe('HarnessManager remote launch', () => {
 
     expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({
       program: 'claude', harness: 'claude',
-    }));
+    }), undefined);
     expect(managers.pty.spawn).not.toHaveBeenCalled();
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: 'rpty1', status: 'running' });
   });

@@ -37,7 +37,8 @@ vi.mock('./sandbox/index.js', () => ({
   sandboxSpawn: vi.fn((_options, command, args, env) => ({ command, args, env })),
 }));
 
-import { spawnShell, executeShellCmd, queryShellPwd, shellCommandInput } from './index.js';
+import { spawnShell, executeShellCmd, killShellGroup, queryShellPwd } from './index.js';
+import { shellCommandInput } from './command-input.js';
 import { shellStartupArgs } from './startup.js';
 
 beforeEach(() => {
@@ -78,6 +79,55 @@ describe('spawnShell', () => {
     const proc = spawnShell(0);
     expect(proc.stdout.setEncoding).toHaveBeenCalledWith('utf8');
     expect(proc.stderr.setEncoding).toHaveBeenCalledWith('utf8');
+  });
+
+  it('leaves the shell in the caller\'s process group by default', () => {
+    spawnShell(0);
+    expect(mockSpawn.mock.calls[0][2].detached).toBeUndefined();
+  });
+
+  it('gives the shell a process group of its own when asked to detach', () => {
+    spawnShell(0, undefined, undefined, { detached: true });
+    expect(mockSpawn.mock.calls[0][2].detached).toBe(true);
+  });
+});
+
+// A detached shell leads a group nothing else will clean up, so ending it has to end the group or
+// the command it was running is left behind.
+describe('killShellGroup', () => {
+  it('signals the whole process group the shell leads', () => {
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    const shell = { pid: 4242, kill: vi.fn() } as unknown as ChildProcess;
+    try {
+      killShellGroup(shell);
+      expect(kill).toHaveBeenCalledWith(-4242, 'SIGTERM');
+      expect(shell.kill).not.toHaveBeenCalled();
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it('falls back to the shell alone when the group signal cannot be delivered', () => {
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => { throw new Error('ESRCH'); });
+    const shell = { pid: 4242, kill: vi.fn() } as unknown as ChildProcess;
+    try {
+      killShellGroup(shell);
+      expect(shell.kill).toHaveBeenCalledOnce();
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it('falls back to the shell alone when it never got a pid', () => {
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    const shell = { pid: undefined, kill: vi.fn() } as unknown as ChildProcess;
+    try {
+      killShellGroup(shell);
+      expect(kill).not.toHaveBeenCalled();
+      expect(shell.kill).toHaveBeenCalledOnce();
+    } finally {
+      kill.mockRestore();
+    }
   });
 });
 
