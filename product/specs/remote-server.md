@@ -172,6 +172,14 @@ by name by the older peer. The query is bounded rather than open-ended so that c
 answer within the wait ends the accepted session, closes its placeholder tab, and shuts down the
 remote workspace rather than leaving an uninspectable peer behind.
 
+Output the far side prints outside the protocol does not end the session. The remote's own error
+reporting shares the connection the frames travel on, so a line that is not a frame at all is treated
+as terminal output from that host and ignored, and the frames on either side of it are handled
+normally. Only a frame the contract does not admit is a fault. Closing a remote tab therefore still
+stops its remote work and removes its workspace when the far side has printed something of its own —
+which it previously did not, because the stray line ended the connection before the instruction to
+stop could reach the peer.
+
 After the handshake, every frame is validated before dispatch. Process, workspace, and ACP session
 identifiers must be nonempty strings; terminal dimensions must be positive integers; spawn modes and
 optional flags must use their declared values; exit codes must be integers; transcript blocks must
@@ -209,7 +217,7 @@ On the remote side a dropped connection leaves running work intact for up to sev
 
 Detaching and attaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
 
-Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
+Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. That drain is what delivers those frames, so nothing else takes the connection down while it runs: closing the tabs of a session that is already ending leaves the connection to the teardown that is ending it. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
 
 A refused attachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Terminated tabs stay open with their transcripts and an explanation, and a `remote-session-terminated` notification names what went: `<what> on <host> terminated — create a new agent or shell to continue.` Nothing relaunches automatically. Explicitly terminating the shared remote connection is the one termination that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the termination was the user's own instruction rather than news about the session.
 

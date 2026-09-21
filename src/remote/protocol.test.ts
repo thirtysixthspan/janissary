@@ -26,6 +26,19 @@ describe('frame codec', () => {
   ])('rejects malformed attachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
   });
+  // The two rejections are not the same fact. A line that is not a JSON object came off the far
+  // side's stderr, which `ssh -t` folds into this stream; a JSON object the union does not admit is
+  // the two ends disagreeing about the contract.
+  it.each([
+    "Unhandled pty write error [Error: EIO: i/o error, write] { errno: -5, code: 'EIO' }",
+    'Warning: Permanently added devbox to the list of known hosts.',
+    '"a bare json string"',
+    '[1, 2, 3]',
+    '',
+  ])('marks far-side output as stray: %s', (line) => {
+    expect(decodeFrame(line)).toMatchObject({ stray: true });
+  });
+
   it('round-trips every client frame', () => {
     const frames: RemoteFrame[] = [
       {
@@ -130,12 +143,13 @@ describe('frame codec', () => {
     });
   });
 
-  it('rejects a line that is not JSON', () => {
-    expect(decodeFrame('not json at all')).toEqual({ error: expect.stringContaining('Malformed remote frame') });
+  it('rejects a line that is not JSON, marking it as the far side\'s own output', () => {
+    expect(decodeFrame('not json at all'))
+      .toEqual({ error: expect.stringContaining('Malformed remote frame'), stray: true });
   });
 
-  it('rejects a line that is JSON but not an object', () => {
-    expect(decodeFrame('[1,2,3]')).toEqual({ error: expect.stringContaining('Malformed remote frame') });
+  it('rejects a line that is JSON but not an object, marking it the same way', () => {
+    expect(decodeFrame('[1,2,3]')).toEqual({ error: expect.stringContaining('Malformed remote frame'), stray: true });
   });
 
   it.each([

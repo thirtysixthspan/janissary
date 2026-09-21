@@ -142,9 +142,16 @@ export class PseudoterminalManager {
   }
 
   // Kill and forget every PTY belonging to a tab (on tab close).
+  //
+  // A transport is left alone whatever its channel's table entry says. Every path that ends a
+  // session drops the channel from `RemoteManager`'s table before running the sweep that closes its
+  // tabs, so asking the manager here answers "not a transport" exactly when the shutdown drain is in
+  // flight — and the first tab closed in that sweep would kill the ssh PTY out from under it,
+  // discarding the `shutdown` frame that stops the far side's work. `RemoteManager` ends its own
+  // transports; `closeAll` below is where an orphaned one is still reaped.
   closeTab(label: string): void {
     for (const [id, entry] of this.ptys) {
-      if (entry.tabLabel !== label || this.isRemoteTransport(id, entry)) continue;
+      if (entry.tabLabel !== label || entry.transport === true) continue;
       entry.session.kill();
       this.ptys.delete(id);
     }

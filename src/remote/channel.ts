@@ -235,6 +235,11 @@ export class RemoteChannel {
 
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
+    // A line the far side printed rather than framed. Killing the transport over it took the whole
+    // session with it, including the `shutdown` already queued behind it — so a remote harness
+    // outlived the tab that closed it and kept its workspace. It goes to the terminal handler, which
+    // is where the far side's own output already goes before the handshake.
+    if (!('type' in frame) && frame.stray === true) { this.handlers.onTerminalData(line); return; }
     if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
     if (frame.type === 'output') { this.router.output(frame); return; }

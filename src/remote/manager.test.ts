@@ -145,9 +145,11 @@ describe('RemoteManager shared channels', () => {
     h.remote.release('creator');
     const replacementHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
     h.remote.create('creator', address('otherhost'), '/local', replacementHandlers);
+    // A frame outside the union, not a line that simply is not one: far-side output the remote
+    // printed rather than framed is ignored now, so it would fault nothing to isolate.
     oldTransport?.onData(failure === 'workspace failure'
       ? `${encodeFrame({ type: 'workspace-failed', message: 'provision failed' })}\n`
-      : 'invalid-frame\n');
+      : `${JSON.stringify({ type: 'exec', id: 'r1' })}\n`);
     await expect(oldReady).rejects.toThrow();
     expect(h.handlers.onFailed).not.toHaveBeenCalled();
     expect(replacementHandlers.onFailed).not.toHaveBeenCalled();

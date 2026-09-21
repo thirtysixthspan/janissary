@@ -285,15 +285,21 @@ export function encodeFrame(frame: RemoteFrame): string {
 // Parse one line into a frame, rejecting anything outside the union rather than ignoring it — an
 // unrecognized frame means the two ends disagree about the contract, which is not a thing to
 // silently skip past.
-export function decodeFrame(line: string): RemoteFrame | { error: string } {
+//
+// A line that is not a JSON object at all is a different thing, and says so with `stray`. `ssh -t`
+// folds the far side's stderr into the same tty the frames travel on, so anything the remote prints
+// outside the protocol — node-pty's own write-error log among them — arrives here looking like a
+// frame and is not one. That is terminal output, not a contract disagreement, and the caller is
+// what decides the difference (see `RemoteChannel.dispatch`).
+export function decodeFrame(line: string): RemoteFrame | { error: string; stray?: true } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(line);
   } catch {
-    return { error: `Malformed remote frame: ${line.slice(0, 80)}` };
+    return { error: `Malformed remote frame: ${line.slice(0, 80)}`, stray: true };
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    return { error: 'Malformed remote frame: not an object.' };
+    return { error: 'Malformed remote frame: not an object.', stray: true };
   }
   const record = parsed as Record<string, unknown>;
   const type = record.type;

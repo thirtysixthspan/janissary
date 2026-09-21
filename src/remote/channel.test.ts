@@ -215,6 +215,42 @@ describe('RemoteChannel — attached', () => {
     h.channel.receive(`${encodeFrame({ type: 'kill', id: 'r1' })}\n`);
     expect(h.errors[0]).toContain('Unexpected remote frame "kill"');
   });
+
+  // `ssh -t` folds the far side's stderr into the frame stream, so anything the remote prints
+  // outside the protocol arrives here. Killing the transport over it took the session with it —
+  // including the shutdown sequence already queued behind it, which is how a closed harness tab left
+  // its remote harness running and its workspace in place.
+  it.each([
+    "Unhandled pty write error [Error: EIO: i/o error, write] { errno: -5, code: 'EIO' }",
+    'Warning: Permanently added devbox to the list of known hosts.',
+    '"a bare json string"',
+  ])('keeps the channel on far-side output that is not a frame: %s', (line) => {
+    const h = attachedChannel();
+    h.channel.receive(`${line}\n`);
+
+    expect(h.terminal).toContain(line);
+    expect(h.errors).toEqual([]);
+    expect(h.kill).not.toHaveBeenCalled();
+    expect(h.channel.attached).toBe(true);
+  });
+
+  it('handles the frames after a stray line normally', () => {
+    const h = attachedChannel();
+    h.channel.receive('Unhandled pty write error\n');
+    h.channel.receive(`${encodeFrame({ type: 'workspace-failed', message: 'nope' })}\n`);
+
+    expect(h.frames).toEqual([{ type: 'workspace-failed', message: 'nope' }]);
+  });
+
+  // The shutdown sequence is what a stray line used to discard: the transport died before the drain,
+  // so nothing of what `finish` wrote reached the peer.
+  it('still sends the shutdown sequence after a stray line', () => {
+    const h = attachedChannel();
+    h.channel.receive('Unhandled pty write error\n');
+    h.channel.finish();
+
+    expect(h.written).toContain(`${encodeFrame({ type: 'shutdown' })}\n`);
+  });
 });
 
 describe('RemoteChannel — ACP session routing', () => {
