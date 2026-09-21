@@ -45,10 +45,4 @@
   padding: 0 4px; line-height: 1;
 }
 .session-row-actions button:hover { color: var(--fg); }
-/* The link icon, colored by what pressing it would do: give a session up (green) or bring one
-   back (red). A disabled control stays faint, so the disabled rule below keeps its color. */
-.session-row-actions button[data-action='detach'] { color: var(--success); }
-.session-row-actions button[data-action='detach']:hover { color: var(--success); }
-.session-row-actions button[data-action='attach'] { color: var(--error); }
-.session-row-actions button[data-action='attach']:hover { color: var(--error); }
 .session-row-actions button:disabled { color: var(--faint); cursor: default; }

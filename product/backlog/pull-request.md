@@ -2,8 +2,6 @@
 
 # pull-request
 
-* is sessions tab, action buttons on session rows should be light on dark, not using color. close and terminate buttons should be the circle-xmark, not the plug. the ssh terminate button tooltip should say terminate.
-
 * in the sessions tab, when there are no remote sessions, the table headers should not be shown.
 
 * when an agent reattaches, its transcript should be shown in the UI, similar to how it is done for harnesses.

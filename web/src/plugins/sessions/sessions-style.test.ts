@@ -31,11 +31,14 @@ describe('sessions stylesheet', () => {
     expect(sessions).toContain('.session-list-header .plugin-actions button:hover { color: var(--fg); }');
   });
 
-  it('colors the row link buttons by what pressing them would do', () => {
-    expect(sessions)
-      .toContain(".session-row-actions button[data-action='detach'] { color: var(--success); }");
-    expect(sessions)
-      .toContain(".session-row-actions button[data-action='attach'] { color: var(--error); }");
+  it('keeps row action buttons light on the dark surface without action colors', () => {
+    const buttons = sessions.match(/\.session-row-actions button \{[^}]+\}/)?.[0];
+
+    expect(buttons).toContain('background: transparent');
+    expect(buttons).toContain('color: var(--muted)');
+    expect(sessions).toContain('.session-row-actions button:hover { color: var(--fg); }');
+    expect(sessions).not.toContain("button[data-action='detach']");
+    expect(sessions).not.toContain("button[data-action='attach']");
   });
 
   it('lays the state cell out as its plug and then its word', () => {

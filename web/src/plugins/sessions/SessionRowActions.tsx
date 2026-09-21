@@ -1,8 +1,8 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faCircleXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction } from '@shared/plugins/sessions/shared';
-import { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../api';
+import { detachSessionIcon, attachSessionIcon } from '../api';
 
 // The per-row buttons. Icon-only and right-aligned, the way the conversations list's are, with the
 // verb in the accessible label so a row reads correctly without the icon.
@@ -16,9 +16,9 @@ type Presentation = { icon: typeof faTrash; label: string };
 const PRESENTATION: Record<Exclude<SessionRowAction, 'focus'>, Presentation> = {
   attach: { icon: attachSessionIcon, label: 'Attach' },
   detach: { icon: detachSessionIcon, label: 'Detach' },
-  terminate: { icon: terminateSessionIcon, label: 'Terminate' },
+  terminate: { icon: faCircleXmark, label: 'Terminate' },
   forget: { icon: faTrash, label: 'Forget session' },
-  close: { icon: faXmark, label: 'Close' },
+  close: { icon: faCircleXmark, label: 'Close' },
 };
 
 // `focus` is what opening the row already does, so it carries no button of its own: a second

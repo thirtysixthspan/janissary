@@ -59,14 +59,11 @@ shows what a single detach would take with it.
 
 ### Actions
 
-Every row offers what it can actually do, and nothing else. The give-and-take pair of the plug
-control reads Detach — green, because taking a session away is the deliberate, recoverable
-direction — and Attach — red, because it reaches for a session that is not here. The other
-row buttons keep their own verbs.
+Every row offers what it can actually do, and nothing else. Its action buttons are light on the dark
+surface, with the same muted resting treatment and bright hover treatment regardless of the verb.
 
-The three verbs that act on the connection itself are drawn as that same plug carrying the sign of
-what they do to it: a minus for detach, a plus for attach, a cross for terminating the session. Forget
-and close keep glyphs of their own, because neither touches a connection.
+Detach and Attach use directional plug glyphs: a minus for detaching and a plus for attaching. Both
+Terminate and Close use a circle-xmark, making the actions that end something immediately recognizable.
 
 **Attach** applies to a parked session, and to a live one whose transport is being retried. On a
 parked session it opens one ssh connection and brings the whole peer back, opening a tab for each

@@ -127,9 +127,9 @@ describe('SessionList buttons', () => {
     expect(screen.queryByLabelText('Terminate claude')).not.toBeInTheDocument();
   });
 
-  // The three verbs that act on a connection draw the host's plug glyphs, so a verb means the same
-  // picture here and on a remote tab's metadata row. Forget and close touch no connection.
-  it('draws each connection verb as the plug with the sign of what it does', () => {
+  // Attach and detach carry the connection's directional plug glyphs. The two actions that end a
+  // session or close a row instead share the unmistakable closing glyph.
+  it('draws directional plugs and circle-xmarks for closing actions', () => {
     const { container } = list([row({
       state: 'detached', actions: ['attach', 'detach', 'terminate', 'forget', 'close'], session: 's1',
     })]);
@@ -144,10 +144,16 @@ describe('SessionList buttons', () => {
     expect(drawn).toEqual({
       attach: 'plug-circle-plus',
       detach: 'plug-circle-minus',
-      terminate: 'plug-circle-xmark',
-      close: 'xmark',
+      terminate: 'circle-xmark',
+      close: 'circle-xmark',
       forget: 'trash',
     });
+  });
+
+  it('titles a terminate control with its action', () => {
+    list([row({ state: 'detached', actions: ['terminate'], session: 's1' })]);
+
+    expect(screen.getByLabelText('Terminate claude')).toHaveAttribute('title', 'Terminate');
   });
 
   // `focus` is what opening the row already does, so it carries no button of its own.
