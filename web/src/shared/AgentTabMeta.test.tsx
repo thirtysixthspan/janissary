@@ -169,6 +169,14 @@ describe('AgentTabMeta', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('uses the link icon for the metadata connections button', () => {
+    const { container } = render(
+      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+    );
+
+    expect(container.querySelector(':scope .tab-connections svg')).toHaveAttribute('data-icon', 'link');
+  });
+
   it('renders an empty connections button as dark and inert with its tooltip', () => {
     const onEnter = vi.fn();
     const onClick = vi.fn();

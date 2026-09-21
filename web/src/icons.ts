@@ -20,7 +20,7 @@ export {
   faFileCirclePlus as newFileIcon,
   faFolderPlus as newDirectoryIcon,
   faMagnifyingGlass as searchFilesIcon,
-  faPlug as connectionsWindowIcon,
+  faLink as connectionsWindowIcon,
   faPlug as connectionStatusIcon,
   faPlugCircleMinus as detachSessionIcon,
   faPlugCirclePlus as attachSessionIcon,
