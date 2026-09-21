@@ -11,6 +11,7 @@ import type { Managers } from '../managers.js';
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
 // label the `shell:<name>` connection in the panel/completion.
 export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
+const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
 
 // Callbacks for a single `execute`: `onChunk` streams partial output as it arrives, `onDone` receives
 // the final captured output, and `onPwd` the shell's working directory after the command (so the
@@ -110,7 +111,8 @@ export class ShellManager {
         ? adoption.id
         : `rsh${++this.remoteShellCounter}`;
       this.adopted.delete(label);
-      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted);
+      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted,
+        adopted ? (data) => this.appendRestoredOutput(label, data) : undefined);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,
@@ -121,6 +123,14 @@ export class ShellManager {
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
     if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
     return shell;
+  }
+
+  private appendRestoredOutput(label: string, data: string): void {
+    const tab = this.managers.tab.byLabel(label);
+    if (!tab) return;
+    const output = data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data;
+    if (!output) return;
+    tab.log = [...tab.log, { input: '', output }];
   }
 
   // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never

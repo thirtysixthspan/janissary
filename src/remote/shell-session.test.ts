@@ -5,7 +5,7 @@ import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame } from './p
 import { executeShellCmd, queryShellPwd } from '../shell/index.js';
 
 // An attached channel over a fake ssh PTY, plus a helper to answer as the remote shell would.
-function attachedChannel() {
+function attachedChannel(session?: string) {
   const sent: RemoteFrame[] = [];
   const transport: ChannelTransport = {
     id: 'pty1',
@@ -21,6 +21,7 @@ function attachedChannel() {
   const channel = new RemoteChannel(transport, {
     onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn(),
   });
+  channel.sessionId = session;
   channel.receive(`${encodeHandshake('/srv/proj')}\n`);
   const reply = (id: string, data: string) => { channel.receive(`${encodeFrame({ type: 'output', id, data })}\n`); };
   return { channel, sent, reply };
@@ -52,6 +53,16 @@ describe('createRemoteShell', () => {
     expect(sent).toEqual([]);
     shell.stdin?.write('echo retained\n');
     expect(sent).toEqual([{ type: 'input', id: 'rsh1', data: 'echo retained\n' }]);
+  });
+
+  it('reports replayed output while an adopted shell claims it', () => {
+    const { channel } = attachedChannel('session');
+    channel.receive(`${encodeFrame({ type: 'output', id: 'rsh1', data: 'retained output' })}\n`);
+    const restored = vi.fn();
+
+    createRemoteShell(channel, 'rsh1', 'bash', 'bash', 'bekir', true, restored);
+
+    expect(restored).toHaveBeenCalledWith('retained output');
   });
 
   it('presents a writable stdin and non-emitting stderr', () => {

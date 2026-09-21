@@ -24,6 +24,7 @@ export function createRemoteShell(
   command: string,
   agentName?: string,
   adopted = false,
+  onRestoredOutput?: (data: string) => void,
 ): ShellProcess {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
@@ -39,7 +40,10 @@ export function createRemoteShell(
   });
 
   channel.attach(id, {
-    onOutput: (data) => { stdout.write(data); },
+    onOutput: (data) => {
+      stdout.write(data);
+      onRestoredOutput?.(data);
+    },
     onExit: () => { live = false; stdin.end(); stdout.end(); },
   });
   if (!adopted) {

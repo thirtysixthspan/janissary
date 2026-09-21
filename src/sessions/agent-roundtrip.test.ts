@@ -37,12 +37,17 @@ let managers: Managers;
 function harness() {
   const transports: Transport[] = [];
   const frames: ClientFrame[] = [];
+  const retained: string[] = [];
   const remoteKills = vi.fn();
   const emit = (frame: ServerFrame) => {
     const transport = transports.at(-1);
     if (transport?.connected) transport.handlers.onData(transport.id, `${encodeFrame(frame)}\n`);
   };
   const processes = new RemoteProcesses(emit, WORKSPACE, 'harun');
+  const recordOutput = (id: string, data: string) => {
+    retained.push(data);
+    emit({ type: 'output', id, data });
+  };
   vi.mocked(spawnShell).mockImplementation(() => {
     const shell = new PassThrough();
     return Object.assign(shell, {
@@ -67,7 +72,14 @@ function harness() {
         frames.push(frame as ClientFrame);
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
-          case 'attach': { setTimeout(() => { emit({ type: 'attach-result', accepted: true }); }, 0); break; }
+          case 'attach': {
+            setTimeout(() => {
+              emit({ type: 'attach-result', accepted: true });
+              const id = processes.states()[0]?.id;
+              if (id !== undefined && retained.length > 0) emit({ type: 'output', id, data: `\u{1B}c${retained.join('')}` });
+            }, 0);
+            break;
+          }
           case 'session-state': { setTimeout(() => { emit({ type: 'session-state-result', processes: processes.states() }); }, 0); break; }
           case 'spawn': { processes.spawn(frame); break; }
           case 'kill': { processes.kill(frame.id); break; }
@@ -86,7 +98,7 @@ function harness() {
   managers.shell = new ShellManager(managers);
   managers.sessions = new SessionsManager(managers);
   wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit: vi.fn() });
-  return { transports, frames, processes, remoteKills };
+  return { transports, frames, processes, remoteKills, recordOutput };
 }
 
 beforeEach(() => {
@@ -116,10 +128,12 @@ it('restores the same agent shell through repeated detach and late transport exi
   await vi.advanceTimersByTimeAsync(10);
   const original = h.processes.states();
   expect(original).toHaveLength(1);
+  h.recordOutput(original[0].id, 'before detach');
   for (let cycle = 0; cycle < 2; cycle++) {
     const old = h.transports.at(-1)!;
     h.frames.length = 0;
     expect(managers.sessions.detach('harun')).toBe(true);
+    if (cycle === 0) h.recordOutput(original[0].id, ' while detached');
     expect(h.frames).toEqual([]);
     expect(managers.tab.byLabel('harun')).toBeUndefined();
     expect(managers.sessions.view()).toMatchObject([{ state: 'detached', session: SESSION }]);
@@ -131,6 +145,7 @@ it('restores the same agent shell through repeated detach and late transport exi
     expect(managers.tab.byLabel('harun')?.activePty).toBeUndefined();
     expect(managers.shell.has('harun')).toBe(true);
     expect(managers.tab.cwdOf('harun')).toBe(WORKSPACE);
+    expect(managers.tab.byLabel('harun')?.log).toContainEqual({ input: '', output: 'before detach while detached' });
     expect(managers.sessions.view()).toMatchObject([{ state: 'active', kind: 'agent', session: SESSION }]);
     expect(saved.records).toHaveLength(1);
     expect(h.processes.states()).toEqual(original);
