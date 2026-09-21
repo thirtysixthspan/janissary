@@ -1,6 +1,7 @@
 import type { ServerEvent, RpcCall, StateEvent } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
+import { resourceUrl } from './session-url';
 import { SocketConnection } from './ws-connection';
 import type { ConnectionPhase } from './reconnect-policy';
 
@@ -233,8 +234,7 @@ export class JanusClient {
   // socket has to carry it. This is where that rule lives — callers that must hand a URL to
   // something else (an `<img src>`, a plugin's own fetch) build it here rather than repeating it.
   resourceUrl(reference: string): string {
-    const token = new URLSearchParams(location.search).get('token') ?? '';
-    return `${reference}?token=${encodeURIComponent(token)}`;
+    return resourceUrl(reference);
   }
 
   // Read a file's contents over HTTP. Throws on a non-ok response rather than resolving with an

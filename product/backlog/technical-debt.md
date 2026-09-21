@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give every browser transport and resource request one session-token URL builder.
-
-Existing Debt: `web/src/ws.ts`, `web/src/plugins/api.ts`, and `web/src/ws-connection.ts` independently read, encode, and place the same page session token even though the client class documents `resourceUrl` as the single location for that rule. Severity: 4/10
-
-Existing Risk: 4/10 - A later change to authentication, URL encoding, or the endpoint query shape can update only one copy and leave plugin resources, ordinary file reads, or reconnects anonymously addressed, producing failures that depend on which surface made the request.
-
-Proposal Risk: 2/10 - The WebSocket and HTTP endpoints still deliberately have different URL bases, so a future endpoint with genuinely different token semantics must extend the shared helper deliberately rather than inherit the existing rule by accident.
-
-Proposal: Add a focused browser-only URL helper under `web/src/` that owns reading `location.search`, percent-encoding the token, and forming both the existing resource URL and the existing WebSocket URL without changing their current output. Have `JanusClient.resourceUrl` in `web/src/ws.ts`, the `resourceUrl` capability built by `createPluginClientCapabilities` in `web/src/plugins/api.ts`, and the socket construction in `web/src/ws-connection.ts` call it; retain the public `JanusClient.resourceUrl` and plugin capability APIs so plugin call sites remain unchanged. Move the repeated token cases currently asserted by `web/src/ws.test.ts` and `web/src/plugins/api.test.ts` to tests for the helper or retain one delegation assertion at each boundary, and add coverage that the socket URL still carries the encoded token.
-
-
 * Extract remote-entry creation and frame/transport wiring from the remote lifecycle manager.
 
 Existing Debt: `RemoteManager` in `src/remote/manager.ts` is 274 lines and combines the entry-table lifecycle with deferred PTY construction, handshake/frame dispatch, reconnect generation guards, readiness promises, and callback routing in one `create` method, exceeding the project's focused-module size guideline. Severity: 6/10

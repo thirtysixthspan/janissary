@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
+import { resourceUrl } from '../session-url';
 import type { PluginHost } from './host';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -88,10 +89,7 @@ export function createPluginClientCapabilities(
     dock,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
-    resourceUrl: (reference) => {
-      const token = new URLSearchParams(location.search).get('token') ?? '';
-      return `${reference}?token=${encodeURIComponent(token)}`;
-    },
+    resourceUrl,
     intent: async <Result,>(name: string, payload: unknown) => {
       const result = await client.request<Result>({
         method: 'pluginIntent',
