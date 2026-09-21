@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make a session row's terminating marker clear on every way the attempt can end, not only on the one path the current code handles.
-
-Existing Debt: The sessions feature raises a per-session terminating marker before an attempt starts and clears it from that attempt's success path alone, with nothing owning the pairing, and the sibling attach action handles its rejection arm while terminate does not. Severity: 5/10
-
-Existing Risk: 4/10 - A terminate whose promise rejects leaves the row marked terminating for the life of the process — no attach control, no terminate control, no failure line — while the parked workspace it claims to be removing is still sitting on the far host.
-
-Proposal Risk: 2/10 - The marker clears on every settle path, but it still lives in a set the manager mutates from two places rather than being derived from the attempt itself, so a future third caller can still raise one without clearing it.
-
-Proposal: `terminate` in `src/sessions/actions.ts` returns `{ ran: true, terminating: record.session }` and calls `void terminateParkedSession(managers, record).then(outcome => …)` with only a fulfillment handler; `attach`, directly above it in the same file, passes both arms to `.then` and is the shape to copy. The rejection is reachable rather than theoretical: `terminateParkedSession` in `src/sessions/terminate-session.ts` resolves from inside a `new Promise` executor that calls `managers.remote.create`, whose `connect` reaches `spawnTransport` in `src/pseudoterminal-manager.ts` and `spawnPty` in `src/pty.ts`, where `pty.spawn` throws synchronously on a spawn failure — and a throw inside that executor rejects the promise nothing is catching. Add a rejection arm to `terminate` that applies `{ ran: true, terminatingDone: record.session, failure: { session: record.session, reason: errorText(error) } }` and reports the same line through `report`, mirroring what `attach`'s `failed` helper already does with `errorText` from `src/error-text.ts`. Then move the raise/clear pairing into `runSessionAction` in the same file, so an action cannot raise the marker without a matching clear: have the action hand back its attempt promise and let `runSessionAction` attach the `terminatingDone` apply itself. `SessionsManager.apply` in `src/sessions/manager.ts` is what folds `terminating` and `terminatingDone` into its `terminating` set and `rows` is what renders from it; `src/sessions/manager.test.ts` pins a row rendering with `terminating: true` and that assertion must keep passing. `src/sessions/actions.ts` has no colocated test file at all — add `src/sessions/actions.test.ts` covering both settle arms of terminate, since nothing today would catch the marker staying raised.
-
-
 * Move the client's shared UI primitives out of the app-shell root into the shared layer, where the existing import zone can enforce that they never reach back into a feature.
 
 Existing Debt: The client has two shared layers — a `shared` directory and a set of flat modules at the client root that features import directly — and only the first is covered by the import zone forbidding shared code from importing a feature, so the boundary the organization guideline calls mechanically enforceable holds for roughly half the shared code. Severity: 4/10
