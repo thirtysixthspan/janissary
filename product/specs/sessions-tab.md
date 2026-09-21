@@ -153,7 +153,7 @@ Closing an attached tab before running anything releases the same binding.
 ### Reporting
 
 Each action records one line in the notifications feed, so the change survives the tabs it happened
-to: `<what> on <host> detached — attach it from the sessions tab.`, `<what> on <host> attached.`,
+to: `<what> on <host> detached.`, `<what> on <host> attached.`,
 `<what> on <host> terminated.`, and `<what> on <host> forgotten — its record was removed.` A refused
 detach records its own line naming why, so an action that declines to run is never silent. A line is
 attributed to the sessions tab when it is open and to the active tab otherwise, so the feed's

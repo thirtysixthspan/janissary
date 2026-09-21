@@ -195,6 +195,13 @@ describe('SessionsManager detach', () => {
     expect(h.closeTab).toHaveBeenCalled();
   });
 
+  it('reports a concise successful detach notice', () => {
+    const h = harness([entry()]);
+    h.sessions.detach('claude');
+
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session', 'janus', 'claude on devbox detached.');
+  });
+
   // The frames `finish()` sends are exactly what a detach must not send. The manager reaches them
   // only through `RemoteManager.detach`, which withholds them — so asserting the call went there,
   // and that no tab close preceded it, is what pins the order that makes it true.

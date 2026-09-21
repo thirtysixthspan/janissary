@@ -101,7 +101,7 @@ function detach(managers: Managers, record: RemoteSessionRecord | undefined, lab
     const index = managers.tab.findIndex(owner);
     if (index !== -1) managers.tab.closeTab(index);
   }
-  report(managers, line(parked.what, parked.host, 'detached — attach it from the sessions tab.'));
+  report(managers, line(parked.what, parked.host, 'detached.'));
   return { ran: true, record: { ...record, activity: Date.now() }, clearFailure: record.session };
 }
 
