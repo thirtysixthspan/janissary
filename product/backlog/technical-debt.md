@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Give each remote filesystem operation its own decoded-argument type so the far side stops re-defaulting fields its own validator already proved present.
 
 Existing Debt: Every operation on the remote file-navigator channel shares one flat wire record whose sixteen fields are all optional, so the validation each operation runs never reaches its executor and each one re-supplies a fallback — an empty path, an empty commit message, a defaulted replay direction — for a value that cannot actually be missing. Severity: 5/10
@@ -80,6 +78,7 @@ Proposal Risk: 2/10 - One helper becomes the only producer of the common fields,
 
 Proposal: `src/plugins/files.ts` describes itself as "the operations every file-backed tab plugin performs, composed once from the capability primitives the contract already supplies" and exports `fileSize`, `openFileExternally`, `openFileInConfiguredViewer`, and `servesContentType`. The one operation it does not hold appears verbatim in `activate` in `src/plugins/markdown/activate.ts`, in `openPdfTab` in `src/plugins/pdf/activate.ts`, in `activate` in `src/plugins/video/activate.ts` (with one extra `player` field), and in the local `imagePayload` helper in `src/plugins/image/activate.ts`: `{ name: path.basename(file), path: file, size: fileSize(file), url: resources.registerFile(file) }`. Add `fileTabPayload(file, resources)` to `src/plugins/files.ts` returning those four fields, and have each site spread it — `{ ...fileTabPayload(file, resources), player: capabilities.configuredViewer() }` for video, and `imagePayload` reduced to the spread plus its existing mode-omitted-not-undefined branch. Do not move the payload *types* or their guards: `ai/guidelines/plugins-tabs.md` requires `src/plugins/<id>/shared.ts` to import nothing at all, not even a type, so each plugin keeps declaring and guarding its own shape and its own schema version, and the helper only builds the value the server hands to `openOrFocusTab`. `src/plugins/audio/activate.ts` builds a playlist rather than a single file record and is deliberately outside this. `src/plugins/files.test.ts` covers the existing helpers and is where the new one's test belongs; `src/plugins/markdown/activate.test.ts`, `src/plugins/pdf/activate.test.ts`, `src/plugins/video/activate.test.ts`, and `src/plugins/image/activate.test.ts` pin what each opened tab's payload must still contain and must pass unchanged.
 
+## development
 
 ## deferred
 
