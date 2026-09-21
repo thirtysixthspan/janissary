@@ -3,7 +3,7 @@ import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { fileSize, openFileExternally } from '../files.js';
+import { fileTabPayload, openFileExternally } from '../files.js';
 import { isMarkdownPayload } from './shared.js';
 
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
@@ -18,12 +18,7 @@ export function activate(): TabPluginActivation {
       inline: (file, capabilities) => {
         capabilities.openOrFocusTab(file, (resources) => ({
           title: path.basename(file),
-          payload: {
-            name: path.basename(file),
-            path: file,
-            size: fileSize(file),
-            url: resources.registerFile(file),
-          },
+          payload: fileTabPayload(file, resources),
         }));
       },
     },

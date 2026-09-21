@@ -6,7 +6,7 @@ import type { TabPluginServerCapabilities } from './api.js';
 import { audioManifest } from './audio/manifest.js';
 import { markdownManifest } from './markdown/manifest.js';
 import {
-  fileSize, openFileExternally, openFileInConfiguredViewer, servesContentType,
+  fileSize, fileTabPayload, openFileExternally, openFileInConfiguredViewer, servesContentType,
 } from './files.js';
 
 // Only the three primitives these helpers compose over. Everything else is left off deliberately: a
@@ -35,6 +35,18 @@ describe('fileSize', () => {
 
   it('answers unknown for a path that no longer exists', () => {
     expect(fileSize('/no/such/file.mp4')).toBe('unknown');
+  });
+});
+
+describe('fileTabPayload', () => {
+  it('composes the name, path, size, and registered url', () => {
+    const file = temporaryFile('clip.mp4', 1500);
+    const registerFile = vi.fn(() => '/resource/url');
+
+    expect(fileTabPayload(file, { registerFile })).toEqual({
+      name: 'clip.mp4', path: file, size: '1.5 KB', url: '/resource/url',
+    });
+    expect(registerFile).toHaveBeenCalledWith(file);
   });
 });
 

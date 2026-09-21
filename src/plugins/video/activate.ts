@@ -3,7 +3,7 @@ import type {
   TabPluginActivation,
   TabPluginServerCapabilities,
 } from '../api.js';
-import { fileSize, openFileInConfiguredViewer, servesContentType } from '../files.js';
+import { fileTabPayload, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { videoManifest } from './manifest.js';
 import {
   isCaptureFramePayload,
@@ -35,13 +35,7 @@ export function activate(): TabPluginActivation {
         }
         capabilities.openOrFocusTab(file, (resources) => ({
           title: path.basename(file),
-          payload: {
-            name: path.basename(file),
-            path: file,
-            size: fileSize(file),
-            url: resources.registerFile(file),
-            player: capabilities.configuredViewer(),
-          },
+          payload: { ...fileTabPayload(file, resources), player: capabilities.configuredViewer() },
         }));
       },
     },
