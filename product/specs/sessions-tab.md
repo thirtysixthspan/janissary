@@ -65,7 +65,7 @@ shows what a single detach would take with it.
 Every row offers what it can actually do, and nothing else. Its action buttons are light on the dark
 surface, with the same muted resting treatment and bright hover treatment regardless of the verb.
 
-Detach and Attach use directional plug glyphs: a minus for detaching and a plus for attaching. Both
+Detach and Attach use directional plug glyphs: a minus for detaching and a plus for attaching. Detach confirmation asks `Detach this session on <host>?`. Both
 Terminate and Close use a circle-xmark, making the actions that end something immediately recognizable.
 
 **Attach** applies to a parked session, and to a live one whose transport is being retried. On a

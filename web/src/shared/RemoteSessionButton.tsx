@@ -72,7 +72,7 @@ export function RemoteSessionButton({
       </button>
       {confirming && (
         <ConfirmDialog
-          title={`Detach this session on ${host}? Its tabs will close.`}
+          title={`Detach this session on ${host}?`}
           confirmLabel="Detach"
           onCancel={() => { setConfirming(false); }}
           onConfirm={() => {

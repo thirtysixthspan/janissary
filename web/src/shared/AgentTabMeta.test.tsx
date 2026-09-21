@@ -344,7 +344,7 @@ describe('AgentTabMeta', () => {
       const { onAction, getByLabelText } = control();
       fireEvent.click(getByLabelText('Detach session on devbox'));
 
-      expect(screen.getByRole('alertdialog')).toHaveTextContent('Its tabs will close');
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('Detach this session on devbox?');
       expect(onAction).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
