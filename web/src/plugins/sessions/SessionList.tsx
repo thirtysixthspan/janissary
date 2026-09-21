@@ -103,14 +103,16 @@ export function SessionList({
         </span>
       </div>
       {payload.entries.length === 0 && <div className="session-empty">No remote sessions</div>}
-      <div className="session-columns" aria-hidden="true">
-        <span className="session-columns-host">Host</span>
-        <span className="session-columns-kind">Type</span>
-        <span className="session-columns-name">Tab</span>
-        <span className="session-columns-state">State</span>
-        <span className="session-columns-activity">Last activity</span>
-        <span />
-      </div>
+      {payload.entries.length > 0 && (
+        <div className="session-columns" aria-hidden="true">
+          <span className="session-columns-host">Host</span>
+          <span className="session-columns-kind">Type</span>
+          <span className="session-columns-name">Tab</span>
+          <span className="session-columns-state">State</span>
+          <span className="session-columns-activity">Last activity</span>
+          <span />
+        </div>
+      )}
       <div className="session-rows">
         {payload.entries.map((row, index) => (
           <div

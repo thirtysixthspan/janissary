@@ -38,8 +38,9 @@ beforeEach(() => {
 
 describe('SessionList rendering', () => {
   it('reports an empty list rather than an empty pane', () => {
-    list([]);
+    const { container } = list([]);
     expect(screen.getByText('No remote sessions')).toBeInTheDocument();
+    expect(container.querySelector('.session-columns')).toBeNull();
   });
 
   it('renders the rows host, type, tab name, state, time, actions', () => {

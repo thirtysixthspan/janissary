@@ -2,8 +2,6 @@
 
 # pull-request
 
-* in the sessions tab, when there are no remote sessions, the table headers should not be shown.
-
 * when an agent reattaches, its transcript should be shown in the UI, similar to how it is done for harnesses.
 
 * make the detach notice more concise.

@@ -28,6 +28,8 @@ An empty list reads `No remote sessions`.
 
 The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. This layout applies even when Sessions is the first plugin opened.
 
+When there are no remote sessions, the tab shows only its `No remote sessions` empty-state message; it omits the table headings because there are no rows for them to describe.
+
 ### Row content
 
 Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
