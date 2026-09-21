@@ -30,7 +30,7 @@ const TRANSCRIPT_POLL_MS = 2000;
 // SIGHUP is what arrives when the ssh channel drops; the other two cover an ordinary kill. The two
 // facts used to be one — all three meant the session was over and its workspace clone went with it —
 // and are now deliberately different. A dropped channel is not evidence the user is finished with
-// the session, only that the transport went, so SIGHUP parks the peer and waits to be reattached
+// the session, only that the transport went, so SIGHUP parks the peer and waits to be attached
 // (`DetachedPeer`, `REMOTE_DETACH_TIMEOUT_MS`). A signal aimed at this process is evidence: SIGTERM
 // and SIGINT still end the session and remove the clone, as does the local side's explicit
 // `shutdown` frame. Removing the SIGHUP branch would silently restore destroy-on-disconnect, which
@@ -117,10 +117,10 @@ export class RemoteServer {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.refuse(frame.error); return; }
     switch (frame.type) {
-    case 'reattach': {
-      if (this.workspaceDir) { this.emit({ type: 'reattach-result', accepted: false }); return; }
+    case 'attach': {
+      if (this.workspaceDir) { this.emit({ type: 'attach-result', accepted: false }); return; }
       this.relay = relayPeer(this.root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
-        if (terminated) this.emit({ type: 'reattach-result', accepted: false });
+        if (terminated) this.emit({ type: 'attach-result', accepted: false });
         this.shutdown(terminated ? 0 : 1);
       }, frame.restore);
       return;
@@ -201,7 +201,7 @@ export class RemoteServer {
   }
 
   // Give up the transport while leaving the session running: the peer holds its workspace and its
-  // processes and waits out `REMOTE_DETACH_TIMEOUT_MS` for someone to reattach. Raised by SIGHUP and
+  // processes and waits out `REMOTE_DETACH_TIMEOUT_MS` for someone to attach. Raised by SIGHUP and
   // by stdin/stdout going away, which are the same event seen from two directions.
   //
   // A process that is relaying into someone else's parked peer has no session of its own to park, so

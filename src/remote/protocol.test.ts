@@ -12,18 +12,18 @@ function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
 
 describe('frame codec', () => {
   it.each([
-    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc' },
-    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
-    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
-    { type: 'reattach-result', accepted: true },
-    { type: 'reattach-result', accepted: false },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
+    { type: 'attach-result', accepted: true },
+    { type: 'attach-result', accepted: false },
   ] as const)('round-trips $type', (frame) => { expect(roundTrip(frame)).toEqual(frame); });
 
   it.each([
-    { type: 'reattach', session: '../../elsewhere' }, { type: 'reattach' },
-    { type: 'reattach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
-    { type: 'reattach-result', accepted: 'true' }, { type: 'reattach-result' },
-  ])('rejects malformed reattachment %j', (frame) => {
+    { type: 'attach', session: '../../elsewhere' }, { type: 'attach' },
+    { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: 'true' },
+    { type: 'attach-result', accepted: 'true' }, { type: 'attach-result' },
+  ])('rejects malformed attachment %j', (frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({ error: expect.stringContaining('Malformed') });
   });
   it('round-trips every client frame', () => {
@@ -331,16 +331,16 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt',
+      'acp-close', 'acp-open', 'acp-prompt', 'attach',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'reattach', 'resize', 'session-state', 'shutdown', 'spawn',
+      'input', 'kill', 'provision', 'resize', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'browser-exited',
-      'exit', 'filesystem-event', 'filesystem-reply', 'output', 'reattach-result',
+      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
+      'exit', 'filesystem-event', 'filesystem-reply', 'output',
       'session-state-result', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });

@@ -29,7 +29,7 @@ function decodeProcessState(value: unknown): RemoteProcessState | undefined {
 
 /**
  * Every entry is checked before any is kept, so a peer describing one malformed process makes the
- * whole answer malformed rather than silently shortening the list a reattach then builds tabs from —
+ * whole answer malformed rather than silently shortening the list an attach then builds tabs from —
  * a short list would look exactly like a process that had exited, and the session would be ended for
  * being empty.
  */

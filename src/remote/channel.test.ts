@@ -337,7 +337,7 @@ it('preserves all session routing while replacing a dropped peer transport', () 
   h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });
   h.channel.receive(`${encodeHandshake('/remote')}\n`);
   expect(h.channel.attached).toBe(false);
-  h.channel.receive(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+  h.channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
   expect(h.channel.attached).toBe(true);
   h.channel.receive(`${encodeFrame({ type: 'output', id: 'p', data: 'still running' })}\n`);
   h.channel.receive(`${encodeFrame({ type: 'filesystem-reply', session: 'n', request: 'q', result: [] })}\n`);
@@ -356,15 +356,15 @@ it('answers new filesystem requests during a disconnect without sending or repla
   expect(h.written).toEqual([]);
 });
 
-// A session reattached after janissary restarted has no tabs at all when the far side's replay burst
-// arrives: the peer flushes everything the instant it accepts the reattach, and the tabs are built
-// from the answer that follows. Dropping what has no listener would lose every reattached process's
+// A session attached after janissary restarted has no tabs at all when the far side's replay burst
+// arrives: the peer flushes everything the instant it accepts the attach, and the tabs are built
+// from the answer that follows. Dropping what has no listener would lose every attached process's
 // first words.
 describe('RemoteChannel — frames for an id with no listener yet', () => {
   function attachedChannel() {
     const h = harness();
     // As a resume does: the session id is set before the handshake, so the channel enters its
-    // reattaching window and the state that opens the hold.
+    // attaching window and the state that opens the hold.
     h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
     h.channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
     return h;
@@ -441,7 +441,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
 
   // A peer may describe a process this side chose not to restore — a navigator's, or one whose tab
   // the user closed meanwhile. Its replay must not sit in memory for the life of the channel.
-  it('discards what no tab claimed once the reattach has built its tabs', () => {
+  it('discards what no tab claimed once the attach has built its tabs', () => {
     const h = attachedChannel();
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r9', data: 'orphan' })}\n`);
     h.channel.discardUnclaimed();
@@ -462,7 +462,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
     expect(chunks).toEqual([]);
   });
 
-  // A transport lost by a session that can be reattached is not the end of anything: the peer is
+  // A transport lost by a session that can be attached is not the end of anything: the peer is
   // still there and the frames it already sent are still owed to whichever tab claims them.
   it('holds what it is holding across a transport loss that will reconnect', () => {
     const h = attachedChannel();
@@ -474,10 +474,10 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
     expect(chunks).toEqual(['held']);
   });
 
-  // A channel that is not reattaching has nothing to hold for: a frame whose listener is gone (a
+  // A channel that is not attaching has nothing to hold for: a frame whose listener is gone (a
   // closed tab whose far side is still writing before its kill lands) stays dropped, and no
   // truncated-replay line is raised into a tab that was never disconnected.
-  it('drops an unlistened frame on a live channel with no reattach in flight', () => {
+  it('drops an unlistened frame on a live channel with no attach in flight', () => {
     const h = harness();
     h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
@@ -489,9 +489,9 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
     expect(h.truncated).not.toHaveBeenCalled();
   });
 
-  // The window brackets the whole reattach, and once it closes the channel is ordinary again:
+  // The window brackets the whole attach, and once it closes the channel is ordinary again:
   // nothing arriving afterwards is held for an id nobody claims.
-  it('stops holding once the reattach window closes', () => {
+  it('stops holding once the attach window closes', () => {
     const h = attachedChannel();
     h.channel.discardUnclaimed();
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);

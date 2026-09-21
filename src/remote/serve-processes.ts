@@ -13,7 +13,7 @@ import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js
 // text, and a tty's echo would feed each written command straight back into the reader's buffer and
 // match the sentinel before the command had run.
 //
-// The spawn frame is kept beside the kill so the table can describe itself. A reattaching janissary
+// The spawn frame is kept beside the kill so the table can describe itself. An attaching janissary
 // knows what it once started but not what survived, and only this side does — so `states()` reads
 // the entries that are still here, which is the same fact `kill` and `finish` maintain rather than a
 // second record that could disagree with them.

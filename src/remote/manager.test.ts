@@ -73,7 +73,7 @@ function managerHarness(ready = true, session?: string) {
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
-  remote.open('creator', address('devbox'), '/local', handlers);
+  remote.create('creator', address('devbox'), '/local', handlers);
   transport?.onData(`${encodeHandshake('/remote', session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, transport: () => transport };
@@ -113,7 +113,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.addressOf('joined')).toBeUndefined();
     expect(h.remote.transcriptSource('joined')).toBeUndefined();
     expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledExactlyOnceWith('devbox', 'creator');
-    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session-ended', 'joined', expect.any(String));
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', 'joined', expect.any(String));
   });
 
   it('keeps readiness and teardown on the old entry after creator-label reuse', async () => {
@@ -123,7 +123,7 @@ describe('RemoteManager shared channels', () => {
     const oldReady = h.remote.readyOf('joined');
     h.remote.release('creator');
     const replacementHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
-    const replacement = h.remote.open('creator', address('otherhost'), '/local', replacementHandlers);
+    const replacement = h.remote.create('creator', address('otherhost'), '/local', replacementHandlers);
     oldTransport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/old/ws' })}\n`);
     await expect(oldReady).resolves.toBe('/old/ws');
     expect(h.remote.workspaceOf('creator')).toBeUndefined();
@@ -144,7 +144,7 @@ describe('RemoteManager shared channels', () => {
     const oldReady = h.remote.readyOf('joined');
     h.remote.release('creator');
     const replacementHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
-    h.remote.open('creator', address('otherhost'), '/local', replacementHandlers);
+    h.remote.create('creator', address('otherhost'), '/local', replacementHandlers);
     oldTransport?.onData(failure === 'workspace failure'
       ? `${encodeFrame({ type: 'workspace-failed', message: 'provision failed' })}\n`
       : 'invalid-frame\n');
@@ -166,7 +166,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });
 
-  // What the metadata row's reattach control is offered from. Read off the channel rather than
+  // What the metadata row's attach control is offered from. Read off the channel rather than
   // marked onto the tab, so it cannot report a recovery that has already finished.
   it('reports a channel mid-backoff as reconnecting and a healthy one as not', () => {
     vi.useFakeTimers();
@@ -211,7 +211,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.kill.mock.invocationCallOrder[0]).toBeGreaterThan(h.write.mock.invocationCallOrder[shutdownIndex]);
   });
 
-  // The session record outlives a launch so it can be reattached or ended — but not outlive the
+  // The session record outlives a launch so it can be attached or ended — but not outlive the
   // session itself. Without the drop, a closed harness leaves a detached row behind a peer that was
   // actually shut down, and the same session reads as two lines in the list.
   it('drops the session record when the last release ends the channel', () => {
@@ -344,7 +344,7 @@ function browserHarness(tabs: Tab[]) {
     },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
-  remote.open('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
+  remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
   transport?.onData(`${encodeHandshake('/remote')}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return {
     managers,
@@ -425,10 +425,10 @@ describe('RemoteManager browser-exited frames', () => {
 
 const RECORDED_SESSION = '12345678-1234-1234-1234-123456789abc';
 
-// Opening with a record is a reattach, and the whole point is that it is the same routine: the
-// channel carries the session id from the start, so the handshake asks to reattach instead of asking
+// Opening with a record is an attach, and the whole point is that it is the same routine: the
+// channel carries the session id from the start, so the handshake asks to attach instead of asking
 // for a clone nobody wants a second copy of.
-describe('RemoteManager reattach from a record', () => {
+describe('RemoteManager attach from a record', () => {
   beforeEach(() => vi.clearAllMocks());
 
   function resumeHarness() {
@@ -448,7 +448,7 @@ describe('RemoteManager reattach from a record', () => {
     const remote = new RemoteManager(managers);
     const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
     const onResult = vi.fn();
-    remote.open('creator', address('devbox'), '/remote/ws', handlers, {
+    remote.create('creator', address('devbox'), '/remote/ws', handlers, {
       session: RECORDED_SESSION, workspaceDir: '/remote/ws', onResult,
     });
     return { remote, handlers, onResult, write, kill, spawnTransport: managers.pty.spawnTransport, transport: () => transport };
@@ -460,26 +460,26 @@ describe('RemoteManager reattach from a record', () => {
       'creator', 'ssh', expect.any(String), process.cwd(), expect.any(Object),
     );
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
-    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
     expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws');
     h.remote.dispose();
   });
 
-  it('sends reattach carrying the recorded session id, and never provision', () => {
+  it('sends attach carrying the recorded session id, and never provision', () => {
     const h = resumeHarness();
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
-    expect(sent.map((frame) => frame.type)).toEqual(['reattach']);
-    expect(sent[0]).toEqual({ type: 'reattach', session: RECORDED_SESSION, restore: true });
+    expect(sent.map((frame) => frame.type)).toEqual(['attach']);
+    expect(sent[0]).toEqual({ type: 'attach', session: RECORDED_SESSION, restore: true });
   });
 
-  // No `workspace-ready` ever comes for a reattach, so the recorded directory is what settles the
+  // No `workspace-ready` ever comes for an attach, so the recorded directory is what settles the
   // placeholder tab. Without it the tab would sit as a placeholder and close over a live session.
-  it('settles the tab from the recorded workspace directory on an accepted reattach', async () => {
+  it('settles the tab from the recorded workspace directory on an accepted attach', async () => {
     const h = resumeHarness();
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
-    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
 
     await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
     expect(h.remote.workspaceOf('creator')).toBe('/remote/ws');
@@ -489,10 +489,10 @@ describe('RemoteManager reattach from a record', () => {
 
   // A peer that answers is a peer that is there; refusing establishes the session is over, which is
   // a different fact from an unreachable host and has to be reported as one.
-  it('reports a refused reattach as refused rather than retrying it', () => {
+  it('reports a refused attach as refused rather than retrying it', () => {
     const h = resumeHarness();
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
-    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: false })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: false })}\n`);
 
     expect(h.onResult).toHaveBeenCalledExactlyOnceWith(false);
   });
@@ -500,8 +500,8 @@ describe('RemoteManager reattach from a record', () => {
   it('answers the caller once, leaving a later transport loss to the ordinary reconnect path', () => {
     const h = resumeHarness();
     h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
-    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
-    h.transport()?.onData(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
+    h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
 
     expect(h.onResult).toHaveBeenCalledTimes(1);
     h.remote.dispose();

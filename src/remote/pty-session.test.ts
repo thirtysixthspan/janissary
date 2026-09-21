@@ -127,7 +127,7 @@ describe('a remote PTY inside PseudoterminalManager', () => {
     channel.sessionId = '11111111-2222-3333-4444-555555555555';
     channel.replaceTransport({ id: 'ssh2', write: vi.fn(), kill: vi.fn() });
     channel.receive(`${encodeHandshake('/remote')}\n`);
-    channel.receive(`${encodeFrame({ type: 'reattach-result', accepted: true })}\n`);
+    channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     channel.receive(`${encodeFrame({ type: 'output', id: 'restored', data: 'previous turn\r\n' })}\n`);
     const manager = new PseudoterminalManager(makeManagers([makeTab('claude', 'red')]));
     const id = manager.registerRemotePty('claude', channel, { program: 'claude', command: 'claude' }, 'restored');

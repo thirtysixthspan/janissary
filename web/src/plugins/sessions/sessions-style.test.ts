@@ -35,7 +35,7 @@ describe('sessions stylesheet', () => {
     expect(sessions)
       .toContain(".session-row-actions button[data-action='detach'] { color: var(--success); }");
     expect(sessions)
-      .toContain(".session-row-actions button[data-action='reattach'] { color: var(--error); }");
+      .toContain(".session-row-actions button[data-action='attach'] { color: var(--error); }");
   });
 
   it('lays the state cell out as its plug and then its word', () => {

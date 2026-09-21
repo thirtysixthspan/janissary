@@ -141,7 +141,7 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
 
-  // A reattached agent tab's shell is created lazily, so the recorded spawn id is parked here first
+  // An attached agent tab's shell is created lazily, so the recorded spawn id is parked here first
   // — and only the channel the adoption was recorded against may claim it.
   it('binds a remote tab\'s first shell to the adopted spawn id its channel still holds', async () => {
     const managers = makeManagers();
@@ -190,7 +190,7 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
   });
 
-  it('releases an adopted spawn id when the reattach says there is no shell to come back to', async () => {
+  it('releases an adopted spawn id when the attach says there is no shell to come back to', async () => {
     const managers = makeManagers();
     managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
     managers.tab.cur().remote = 'devbox';

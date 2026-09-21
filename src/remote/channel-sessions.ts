@@ -3,7 +3,7 @@ import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js
 
 // One remote process id's I/O, and every map that is keyed by one. Kept out of `RemoteChannel`
 // because the channel's own job is the transport's state machine — authenticating, framing,
-// reattaching — while this is the routing table underneath it: which listener owns an id, what was
+// attaching — while this is the routing table underneath it: which listener owns an id, what was
 // spawned under it, and what arrived for an id whose listener does not exist yet.
 
 // What one remote process id wants from the inbound stream. Registered by the remote `PtySession`
@@ -26,21 +26,21 @@ export class SessionRouter {
   private sessions = new Map<string, SessionListener>();
   private spawned = new Map<string, SpawnFrame>();
   private pending = new PendingFrames();
-  // Whether a reattach is settling on this channel and the hold is therefore earning its memory.
+  // Whether an attach is settling on this channel and the hold is therefore earning its memory.
   // Frames arrive between the accepted result and the tabs it builds, and between the answer and
-  // `discardUnclaimed`, so the gate is a window that brackets the whole reattach rather than a live
-  // read of the channel's state — an ordinary channel (no reattach in flight) drops instead.
+  // `discardUnclaimed`, so the gate is a window that brackets the whole attach rather than a live
+  // read of the channel's state — an ordinary channel (no attach in flight) drops instead.
   private holding = false;
 
   constructor(private handlers: SessionRouterHandlers) {}
 
-  // A reattach is under way: hold what arrives for ids whose tabs are still being built. Opened by
+  // An attach is under way: hold what arrives for ids whose tabs are still being built. Opened by
   // the channel the moment its handshake will speak for an existing session, closed by
-  // `discardUnclaimed`, by a settlement that ends the reattach, or by the channel's own clear.
+  // `discardUnclaimed`, by a settlement that ends the attach, or by the channel's own clear.
   openHold(): void { this.holding = true; }
 
   // Anything the far side already sent for this id is delivered here, in arrival order, before the
-  // listener sees anything new — a reattach after a restart replays into tabs that did not exist
+  // listener sees anything new — an attach after a restart replays into tabs that did not exist
   // when the replay arrived.
   attach(id: string, listener: SessionListener): void {
     this.sessions.set(id, listener);
@@ -55,7 +55,7 @@ export class SessionRouter {
   detach(id: string): void { this.sessions.delete(id); }
 
   // Everything still held for a process no tab was built for, and the window with it: once a
-  // reattach has created the tabs the far side's answer named, the channel is ordinary again and a
+  // attach has created the tabs the far side's answer named, the channel is ordinary again and a
   // later frame with no listener is dropped, not held.
   discardUnclaimed(): void {
     this.pending.clear();
@@ -69,7 +69,7 @@ export class SessionRouter {
   spawnedIds(): string[] { return [...this.spawned.keys()]; }
 
   // What this channel started, in the shape the far side describes its own live processes with. The
-  // session record is built from this, so what is written down and what a reattached peer answers
+  // session record is built from this, so what is written down and what an attached peer answers
   // with are the same description of the same thing.
   spawnedProcesses(): RemoteProcessState[] {
     return [...this.spawned.values()].map((frame) => ({
@@ -91,7 +91,7 @@ export class SessionRouter {
     const listener = this.sessions.get(frame.id);
     const spawned = this.spawned.get(frame.id);
     // An id this channel neither has a listener for nor spawned itself belongs to a process started
-    // before this janissary existed — a reattach whose tabs are still being built. Outside that
+    // before this janissary existed — an attach whose tabs are still being built. Outside that
     // window there is nothing the frame could be delivered to, so it is dropped.
     if (!listener && !spawned) {
       if (this.holding) this.pending.hold(frame);

@@ -8,7 +8,7 @@ describe('the connection plug', () => {
   it('colours a connection by what it is doing', () => {
     expect(theme).toContain(".connection-plug[data-state='active'] { color: var(--success); }");
     expect(theme).toContain(".connection-plug[data-state='detached'] { color: var(--accent); }");
-    expect(theme).toContain(".connection-plug[data-state='ended'] { color: var(--error); }");
+    expect(theme).toContain(".connection-plug[data-state='terminated'] { color: var(--error); }");
   });
 
   // Neither has settled anywhere yet, so neither takes one of the three answers as its colour.

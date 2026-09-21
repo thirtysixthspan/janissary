@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { RemoteSessionKind } from '../protocol.js';
-import type { RemoteEntry } from '../remote/reattach.js';
+import type { RemoteEntry } from '../remote/attach.js';
 import type { Tab } from '../tab/types.js';
 import type { SessionChannel, SessionMember, SessionSsh } from './rows.js';
 import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } from './store.js';
@@ -55,7 +55,7 @@ export function channelOf(
     destination: entry.address.destination,
     workspace: entry.workspaceDir ?? '',
     provisioning: entry.workspaceDir === undefined,
-    reconnecting: entry.reconnect.active,
+    reconnecting: entry.attach.active,
     members,
     ...(entry.channel.sessionId !== undefined && { session: entry.channel.sessionId }),
   };
@@ -90,13 +90,13 @@ function processOf(
 /**
  * The record for one live channel, or nothing when there is not yet a session worth remembering — a
  * channel still provisioning has no workspace to come back to, one the far side gave no id for
- * cannot be named in a reattach, and one that has spawned nothing cannot be reattached at all.
+ * cannot be named in an attach, and one that has spawned nothing cannot be attached at all.
  *
  * That last case is the deliberate one. `session-state` is answered from `RemoteProcesses.states()`,
  * which reports spawned processes only, so a peer holding nothing but an ACP session answers an
- * empty list — and `settleAccepted` in `src/sessions/reattach.ts` reads an empty answer as "nothing
- * still running", shuts the peer down, and calls the session ended. Recording such a session would
- * put a row on screen whose reattach button destroys the session it names, which is worse than the
+ * empty list — and `settleAccepted` in `src/sessions/attach.ts` reads an empty answer as "nothing
+ * still running", shuts the peer down, and calls the session terminated. Recording such a session would
+ * put a row on screen whose attach button destroys the session it names, which is worse than the
  * row's absence. `detach` in `src/sessions/actions.ts` refuses it instead, and says why.
  *
  * Written from what the channel actually spawned rather than from the tabs on screen, so the record

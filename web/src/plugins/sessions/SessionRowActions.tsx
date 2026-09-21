@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction } from '@shared/plugins/sessions/shared';
-import { detachSessionIcon, reattachSessionIcon, endSessionIcon } from '../api';
+import { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../api';
 
 // The per-row buttons. Icon-only and right-aligned, the way the conversations list's are, with the
 // verb in the accessible label so a row reads correctly without the icon.
@@ -14,16 +14,16 @@ import { detachSessionIcon, reattachSessionIcon, endSessionIcon } from '../api';
 type Presentation = { icon: typeof faTrash; label: string };
 
 const PRESENTATION: Record<Exclude<SessionRowAction, 'focus'>, Presentation> = {
-  reattach: { icon: reattachSessionIcon, label: 'Reconnect' },
-  detach: { icon: detachSessionIcon, label: 'Disconnect' },
-  end: { icon: endSessionIcon, label: 'End session' },
+  attach: { icon: attachSessionIcon, label: 'Attach' },
+  detach: { icon: detachSessionIcon, label: 'Detach' },
+  terminate: { icon: terminateSessionIcon, label: 'Terminate' },
   forget: { icon: faTrash, label: 'Forget session' },
   close: { icon: faXmark, label: 'Close' },
 };
 
 // `focus` is what opening the row already does, so it carries no button of its own: a second
 // control for the gesture the row itself is would be one more thing to explain.
-const BUTTONS: Exclude<SessionRowAction, 'focus'>[] = ['reattach', 'detach', 'end', 'close', 'forget'];
+const BUTTONS: Exclude<SessionRowAction, 'focus'>[] = ['attach', 'detach', 'terminate', 'close', 'forget'];
 
 export function SessionRowActions({
   row,
@@ -39,10 +39,10 @@ export function SessionRowActions({
         // Decision 12: while a workspace is still landing there is nothing to come back to, so the
         // control stays where the eye expects it and is simply not pressable yet.
         //
-        // The same shape covers an end attempt already reaching the host: pressing End again would
-        // open a second ssh connection to the same peer and leak the first, since the end channel is
+        // The same shape covers a terminate already reaching the host: pressing Terminate again would
+        // open a second ssh connection to the same peer and leak the first, since that channel is
         // keyed by a label the second attempt overwrites.
-        const inFlight = row.ending === true && (action === 'end' || action === 'reattach');
+        const inFlight = row.terminating === true && (action === 'terminate' || action === 'attach');
         const disabled = (action === 'detach' && row.state === 'provisioning') || inFlight;
         return (
           <button

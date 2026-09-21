@@ -45,14 +45,14 @@ export function startRemoteLaunch(
   // before this function returns and no resolver has to be lifted out of the promise.
   const state = { dir: cwd, notice: undefined as string | undefined, ptyId: '', settled: false };
   const ready = new Promise<void>((resolve, reject) => {
-    const channel = managers.remote.open(label, address, cwd, {
+    const channel = managers.remote.create(label, address, cwd, {
       onReady: (remoteDir, remoteNotice) => {
         state.dir = remoteDir;
         state.notice = remoteNotice;
         state.settled = true;
         resolve();
       },
-      // A reattach hears about a launch that never reached an answer here, at the launch's own
+      // An attach hears about a launch that never reached an answer here, at the launch's own
       // failure funnel, rather than through a second path of its own.
       onFailed: (message) => {
         if (state.settled) { closeTab(managers, label); return; }

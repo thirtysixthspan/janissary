@@ -1,10 +1,10 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { errorText } from '../error-text.js';
-import type { RemoteEntry } from '../remote/reattach.js';
-import { endParkedSession } from './end-session.js';
-import { startSessionReattach } from './reattach.js';
-import type { SessionEnded } from './rows.js';
+import type { RemoteEntry } from '../remote/attach.js';
+import { terminateParkedSession } from './terminate-session.js';
+import { startSessionAttach } from './attach.js';
+import type { SessionTerminated } from './rows.js';
 import type { RemoteSessionRecord } from './store.js';
 
 // The sessions plugin's own id, which is what its open tab (if any) carries. Its label is what the
@@ -17,8 +17,8 @@ const PLUGIN_ID = 'sessions';
 
 export type SessionAction =
   | { kind: 'detach'; label: string }
-  | { kind: 'reattach'; session: string }
-  | { kind: 'end'; session: string }
+  | { kind: 'attach'; session: string }
+  | { kind: 'terminate'; session: string }
   | { kind: 'forget'; session: string };
 
 export type SessionActionResult = {
@@ -29,13 +29,13 @@ export type SessionActionResult = {
   drop?: string;
   failure?: { session: string; reason: string };
   clearFailure?: string;
-  // An end attempt started on this session, and settled on it. Raised before the attempt is awaited
+  // A terminate attempt started on this session, and settled on it. Raised before the attempt is awaited
   // so the row never renders without it, and cleared on every exit — a row left claiming to be
-  // mid-end is exactly as misleading as the vanished row this replaced.
-  ending?: string;
-  endingDone?: string;
-  ended?: SessionEnded;
-  forgetEnded?: string;
+  // mid-terminate is exactly as misleading as the vanished row this replaced.
+  terminating?: string;
+  terminatingDone?: string;
+  terminated?: SessionTerminated;
+  forgetTerminated?: string;
 };
 
 export type ApplyResult = (result: SessionActionResult) => void;
@@ -89,8 +89,8 @@ function detach(managers: Managers, record: RemoteSessionRecord | undefined, lab
   const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
   if (!entry) return REFUSED;
   // Refused before anything is dropped. A session parked with no record left the peer holding its
-  // workspace on the far side for the whole seven-day expiry with no row, no reattach path, and
-  // nothing to end it by — the invisible infrastructure this feature exists to end.
+  // workspace on the far side for the whole seven-day expiry with no row, no attach path, and
+  // nothing to terminate it by — the invisible infrastructure this feature exists to remove.
   if (!record) {
     report(managers, line(entry.workspaceLabel, entry.address.host, detachRefusal(entry)));
     return REFUSED;
@@ -101,11 +101,11 @@ function detach(managers: Managers, record: RemoteSessionRecord | undefined, lab
     const index = managers.tab.findIndex(owner);
     if (index !== -1) managers.tab.closeTab(index);
   }
-  report(managers, line(parked.what, parked.host, 'detached — reattach it from the sessions tab.'));
+  report(managers, line(parked.what, parked.host, 'detached — attach it from the sessions tab.'));
   return { ran: true, record: { ...record, activity: Date.now() }, clearFailure: record.session };
 }
 
-function endedRowFrom(record: RemoteSessionRecord): SessionEnded {
+function terminatedRowFrom(record: RemoteSessionRecord): SessionTerminated {
   return {
     session: record.session,
     host: record.host,
@@ -123,58 +123,58 @@ function endedRowFrom(record: RemoteSessionRecord): SessionEnded {
  * returns — an ssh connection has to authenticate first — so what is applied here is only "an
  * attempt started"; the rest is applied when the peer answers, or fails to.
  */
-function reattach(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
+function attach(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
   const failed = (reason: string): void => {
-    report(managers, line(record.launchLabel, record.host, `could not be reattached: ${reason}`));
+    report(managers, line(record.launchLabel, record.host, `could not be attached: ${reason}`));
     apply({ ran: true, failure: { session: record.session, reason } });
   };
-  void startSessionReattach(managers, record).then((outcome) => {
-    if (outcome.kind === 'reattached') {
-      report(managers, line(record.launchLabel, record.host, 'reattached.'));
+  void startSessionAttach(managers, record).then((outcome) => {
+    if (outcome.kind === 'attached') {
+      report(managers, line(record.launchLabel, record.host, 'attached.'));
       apply({ ran: true, clearFailure: record.session });
       return;
     }
-    if (outcome.kind === 'ended') {
-      report(managers, line(record.launchLabel, record.host, 'ended.'));
-      apply({ ran: true, drop: record.session, clearFailure: record.session, ended: endedRowFrom(record) });
+    if (outcome.kind === 'terminated') {
+      report(managers, line(record.launchLabel, record.host, 'terminated.'));
+      apply({ ran: true, drop: record.session, clearFailure: record.session, terminated: terminatedRowFrom(record) });
       return;
     }
     // Nothing was established: the host may be asleep, unreachable, or merely slow. The record
-    // survives, the row keeps its reattach button, and the reason lands on the row.
+    // survives, the row keeps its attach button, and the reason lands on the row.
     failed(outcome.reason);
   }, (error: unknown) => { failed(errorText(error)); });
   return { ran: true };
 }
 
 /**
- * Destroy a parked session, and keep its row on screen while that runs.
+ * Terminate a parked session, and keep its row on screen while that runs.
  *
  * The attempt has to reconnect to the host before it can say anything, which on a slow or unreachable
- * one is minutes. The row stays, marked as ending: a row that disappeared for the duration read as a
- * completed end, and reappeared later holding a workspace the user believed was gone.
+ * one is minutes. The row stays, marked as terminating: a row that disappeared for the duration read as a
+ * completed terminate, and reappeared later holding a workspace the user believed was gone.
  */
-function end(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
-  void endParkedSession(managers, record).then((outcome) => {
-    if (outcome.ended) {
-      report(managers, line(record.launchLabel, record.host, 'ended.'));
+function terminate(managers: Managers, record: RemoteSessionRecord, apply: ApplyResult): SessionActionResult {
+  void terminateParkedSession(managers, record).then((outcome) => {
+    if (outcome.terminated) {
+      report(managers, line(record.launchLabel, record.host, 'terminated.'));
       apply({
         ran: true, drop: record.session, clearFailure: record.session,
-        endingDone: record.session, ended: endedRowFrom(record),
+        terminatingDone: record.session, terminated: terminatedRowFrom(record),
       });
       return;
     }
     apply({
-      ran: true, endingDone: record.session,
+      ran: true, terminatingDone: record.session,
       failure: { session: record.session, reason: outcome.reason },
     });
   });
-  return { ran: true, ending: record.session };
+  return { ran: true, terminating: record.session };
 }
 
 // Forgetting removes janissary's own record and touches nothing on the far side.
 function forget(managers: Managers, session: string, record: RemoteSessionRecord | undefined): SessionActionResult {
   if (record) report(managers, line(record.launchLabel, record.host, 'forgotten — its record was removed.'));
-  return { ran: true, drop: session, clearFailure: session, forgetEnded: session };
+  return { ran: true, drop: session, clearFailure: session, forgetTerminated: session };
 }
 
 export function runSessionAction(
@@ -191,5 +191,5 @@ export function runSessionAction(
   const record = sessions.recordFor(action.session);
   if (action.kind === 'forget') return forget(managers, action.session, record);
   if (!record) return REFUSED;
-  return action.kind === 'reattach' ? reattach(managers, record, apply) : end(managers, record, apply);
+  return action.kind === 'attach' ? attach(managers, record, apply) : terminate(managers, record, apply);
 }

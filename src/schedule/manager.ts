@@ -183,7 +183,7 @@ export class ScheduleManager {
   // through an agent tab's command pipeline. Returns false when delivery must wait (the harness
   // is not running), leaving the entry due so it retries on a later tick.
   private fire(tab: Tab, e: ScheduleEntry): boolean {
-    if (tab.sessionEnded || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
+    if (tab.sessionTerminated || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
       // Sent as one write, a long command's trailing \r can land inside the same burst the harness's

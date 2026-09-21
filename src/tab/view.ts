@@ -99,8 +99,8 @@ export function buildTabView(
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).
     // Same for `tab.pageSnapshot`: the visible-text cache a plugin writes through `snapshotTab` is
     // server-only, read by monitor page feeds, and must never be broadcast back to clients.
-    // And for `tab.sessionEnded`: that copy is the server's own gate on a dead remote session, with
-    // no client reader. The copy the client does get is `harness.sessionEnded`, passed through above.
+    // And for `tab.sessionTerminated`: that copy is the server's own gate on a dead remote session, with
+    // no client reader. The copy the client does get is `harness.sessionTerminated`, passed through above.
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,

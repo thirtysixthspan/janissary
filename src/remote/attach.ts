@@ -22,9 +22,9 @@ export type RemoteEntry = {
   settled: boolean;
   closed: boolean;
   workspaceLabel: string;
-  reconnect: Reattach;
+  attach: Attach;
   // The resolver of a `session-state` query waiting for its answer. One at a time: the only thing
-  // that asks is a reattach settling its tabs, and a channel has one of those in flight at most.
+  // that asks is an attach settling its tabs, and a channel has one of those in flight at most.
   // `undefined` is how it is told no answer is coming — see `cancelSessionState`.
   sessionState?: (processes: RemoteProcessState[] | undefined) => void;
   // False when this entry's ending has already been narrated by whoever settled it: the per-process
@@ -38,7 +38,7 @@ export type RemoteEntry = {
 // recordable and lets an open sessions tab notice a change without a Refresh.
 export function emitSessionsChanged(): void { messageBus.emit('sessions', { type: 'changed' }); }
 
-export class Reattach {
+export class Attach {
   active = false;
   private stopped = false;
   private attempt = 0;
@@ -94,48 +94,48 @@ export function dropRemoteLabels(entries: Map<string, RemoteEntry>, entry: Remot
 // resume signal has nothing to fix there, so forcing a replacement would only discard an
 // unbuffered PTY gap for no reason.
 export function resumeRemote(entry: RemoteEntry): void {
-  if (entry.closed || !entry.channel.sessionId || !entry.workspaceDir || !entry.reconnect.active) return;
-  entry.reconnect.retry();
+  if (entry.closed || !entry.channel.sessionId || !entry.workspaceDir || !entry.attach.active) return;
+  entry.attach.retry();
 }
 
 // Marks and notifies the affected tabs only — it does not clear the workspace's local file cache,
-// since a per-process end (`endRemoteProcess`) does not necessarily mean the session is over. Only
+// since a per-process end (`terminateRemoteProcess`) does not necessarily mean the session is over. Only
 // `terminateRemoteEntry`, the genuine end of the shared workspace, clears the cache.
-export function endRemoteSession(
+export function terminateRemoteSession(
   managers: Managers, labels: Iterable<string>, host: string, what: string, announce = true,
 ): void {
-  const text = `${what} on ${host} ended — start a new agent or shell to continue.`;
+  const text = `${what} on ${host} terminated — create a new agent or shell to continue.`;
   let notified = false;
   for (const label of labels) {
     const tab = managers.tab.byLabel(label);
     if (!tab) continue;
-    if (tab.sessionEnded) continue;
-    tab.sessionEnded = text;
+    if (tab.sessionTerminated) continue;
+    tab.sessionTerminated = text;
     if (tab.harness) {
       tab.harness.status = 'exited';
-      tab.harness.sessionEnded = text;
+      tab.harness.sessionTerminated = text;
     } else {
       tab.log = [...tab.log, { input: '', output: text }];
       if (tab.runtime) tab.runtime.busy = false;
     }
     if (announce && !notified) {
-      notify(managers, 'remote-session-ended', label, text);
+      notify(managers, 'remote-session-terminated', label, text);
       notified = true;
     }
   }
   messageBus.emit('state', { type: 'dirty' });
 }
 
-export function endRemoteProcess(managers: Managers, entry: RemoteEntry, label: string, harness: boolean): void {
+export function terminateRemoteProcess(managers: Managers, entry: RemoteEntry, label: string, harness: boolean): void {
   // A sessions-driven settlement (`terminateRemoteEntry` with announcing suppressed) mutes the
   // per-process end lines too: the actions layer is the one narrator for that ending, and two
   // differently worded endings for one event would teach the feed's lines cannot be taken at their
   // word.
-  endRemoteSession(managers, [label], entry.address.host,
+  terminateRemoteSession(managers, [label], entry.address.host,
     harness ? `Remote harness '${label}'` : 'Remote shell', entry.announceEnds !== false);
   const live = [...entry.labels].some((owner) => {
     const tab = managers.tab.byLabel(owner);
-    return tab && tab.view !== 'files' && !tab.sessionEnded;
+    return tab && tab.view !== 'files' && !tab.sessionTerminated;
   });
   if (!live) terminateRemoteEntry(managers, entry, false);
 }
@@ -144,7 +144,7 @@ export function endRemoteProcess(managers: Managers, entry: RemoteEntry, label: 
 // harness would leave a detached row for a peer that was actually shut down, and the same session
 // would read as two lines in the list. Guarded because a `Managers` without a settled sessions
 // manager (test harnesses) keeps working.
-export function dropEndedSessionRecord(managers: Managers, session: string | undefined): void {
+export function dropTerminatedSessionRecord(managers: Managers, session: string | undefined): void {
   if (session !== undefined) managers.sessions?.dropSession(session);
 }
 
@@ -162,7 +162,7 @@ export function dropEndedSessionRecord(managers: Managers, session: string | und
 export function detachRemoteEntry(entry: RemoteEntry): boolean {
   if (entry.closed || !entry.workspaceDir || !entry.channel.sessionId) return false;
   entry.closed = true;
-  entry.reconnect.stop();
+  entry.attach.stop();
   cancelSessionState(entry);
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   entry.handlers.clear();
@@ -182,11 +182,11 @@ export function detachRemoteEntry(entry: RemoteEntry): boolean {
 export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, announce = true): RemoteLaunchHandlers[] {
   if (entry.closed) return [];
   entry.closed = true;
-  entry.reconnect.stop();
+  entry.attach.stop();
   cancelSessionState(entry);
-  if (announce) endRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
+  if (announce) terminateRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
   // The muted line carries: a settlement that narrated the ending itself (the sessions tab, a
-  // pressed reattach) keeps the per-process end lines quiet for the finish sweep below too, so one
+  // pressed attach) keeps the per-process end lines quiet for the finish sweep below too, so one
   // event is one line however many exits it passes through.
   else entry.announceEnds = false;
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
@@ -195,6 +195,6 @@ export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, ann
   entry.channel.closeAfterShutdown();
   const handlers = [...entry.handlers.values()];
   entry.handlers.clear();
-  dropEndedSessionRecord(managers, session);
+  dropTerminatedSessionRecord(managers, session);
   return handlers;
 }

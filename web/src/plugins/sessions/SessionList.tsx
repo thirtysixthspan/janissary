@@ -8,11 +8,11 @@ import { openIntentFor, relativeActivity, sessionClickSelection, nextSessionSele
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
-// Detach and end are the two that take something away — tabs in one case, a remote workspace in the
-// other — so both ask first. Forget has no dialog: it removes a record and touches nothing.
+// Detach and terminate are the two that take something away — tabs in one case, a remote workspace
+// in the other — so both ask first. Forget has no dialog: it removes a record and touches nothing.
 const CONFIRMATIONS: Partial<Record<SessionRowAction, { verb: string; button: string }>> = {
-  detach: { verb: 'Disconnect', button: 'Disconnect' },
-  end: { verb: 'End', button: 'End session' },
+  detach: { verb: 'Detach', button: 'Detach' },
+  terminate: { verb: 'Terminate', button: 'Terminate' },
 };
 
 export function SessionList({
@@ -65,8 +65,8 @@ export function SessionList({
     raise(action, row);
   };
 
-  // Opening a row focuses it, or reattaches it. An ended row does nothing: there is nothing left to
-  // focus and nothing left to come back to.
+  // Opening a row focuses it, or attaches it. A terminated row does nothing: there is nothing left
+  // to focus and nothing left to come back to.
   const open = (row: SessionRow) => {
     const intent = openIntentFor(row.state, row.actions);
     if (intent) raise(intent, row);

@@ -117,7 +117,7 @@ describe('RemoteProcesses forwarded credentials', () => {
   });
 });
 
-// What a reattaching janissary asks for. The local side knows what it once started; only this side
+// What an attaching janissary asks for. The local side knows what it once started; only this side
 // knows what survived, so the table describing itself is the whole answer.
 describe('RemoteProcesses session state', () => {
   beforeEach(() => {
@@ -150,7 +150,7 @@ describe('RemoteProcesses session state', () => {
   });
 
   // The entry goes when the process does, so the answer is the live set rather than the launch
-  // history — an empty one is what tells the local side to end the session instead of reattaching.
+  // history — an empty one is what tells the local side to end the session instead of attaching.
   it('answers an empty list once every process has exited', () => {
     const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'claude');
     processes.spawn({

@@ -4,11 +4,11 @@ import type { RemoteProcessState } from '../remote/protocol.js';
 import { uniqueLabel } from '../tab/index.js';
 import type { RemoteSessionRecord } from './store.js';
 
-// Rebuilding the tabs of a reattached session from the peer's own answer. The launching tab already
+// Rebuilding the tabs of an attached session from the peer's own answer. The launching tab already
 // exists by the time this runs — it is the placeholder ssh's prompts rendered in — so what is left
 // is every *other* process the far side reported still running.
 
-// A reattached tab takes its recorded label back, de-duplicated if something else has claimed it
+// An attached tab takes its recorded label back, de-duplicated if something else has claimed it
 // meanwhile. The remote workspace directory is named after the original label, so reusing it keeps
 // the tab and its far-side clone agreeing about what they are.
 function claimLabel(managers: Managers, recorded: string): string {
@@ -38,7 +38,7 @@ function restoreAgentTab(
  *
  * Remote file navigators are deliberately not restored: a navigator is a view onto a workspace that
  * is coming back anyway, and reopening one the user did not ask for would put a tree on screen
- * beside every reattached session.
+ * beside every attached session.
  *
  * Anything still held for a process no tab was built for is discarded once this returns, so a peer
  * describing something this side chose not to restore does not leave its replay in memory for the

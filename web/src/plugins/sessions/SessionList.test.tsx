@@ -64,7 +64,7 @@ describe('SessionList rendering', () => {
       .toEqual(['Host', 'Type', 'Tab', 'State', 'Last activity', '']);
   });
 
-  it.each(['provisioning', 'active', 'reconnecting', 'detached', 'ended'] as const)(
+  it.each(['provisioning', 'active', 'reconnecting', 'detached', 'terminated'] as const)(
     'renders a %s row with that state on it',
     (state) => {
       const { container } = list([row({ state, actions: [] })]);
@@ -74,7 +74,7 @@ describe('SessionList rendering', () => {
 
   // The plug carries the colour at a glance; the word keeps detached apart from reconnecting, which
   // the palette alone does not.
-  it.each(['provisioning', 'active', 'reconnecting', 'detached', 'ended'] as const)(
+  it.each(['provisioning', 'active', 'reconnecting', 'detached', 'terminated'] as const)(
     'states a %s row as a plug beside its word',
     (state) => {
       const { container } = list([row({ state, actions: [] })]);
@@ -122,16 +122,16 @@ describe('SessionList buttons', () => {
 
   it('offers only the verbs the row carries', () => {
     list([row({ actions: ['focus', 'detach'] })]);
-    expect(screen.getByLabelText('Disconnect claude')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Reconnect claude')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('End session claude')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Detach claude')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Attach claude')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Terminate claude')).not.toBeInTheDocument();
   });
 
   // The three verbs that act on a connection draw the host's plug glyphs, so a verb means the same
   // picture here and on a remote tab's metadata row. Forget and close touch no connection.
   it('draws each connection verb as the plug with the sign of what it does', () => {
     const { container } = list([row({
-      state: 'detached', actions: ['reattach', 'detach', 'end', 'forget', 'close'], session: 's1',
+      state: 'detached', actions: ['attach', 'detach', 'terminate', 'forget', 'close'], session: 's1',
     })]);
     const drawn = Object.fromEntries(
       [...container.querySelectorAll<HTMLElement>(':scope .session-row-actions button')]
@@ -142,9 +142,9 @@ describe('SessionList buttons', () => {
     );
 
     expect(drawn).toEqual({
-      reattach: 'plug-circle-plus',
+      attach: 'plug-circle-plus',
       detach: 'plug-circle-minus',
-      end: 'plug-circle-xmark',
+      terminate: 'plug-circle-xmark',
       close: 'xmark',
       forget: 'trash',
     });
@@ -158,30 +158,30 @@ describe('SessionList buttons', () => {
 
   it('disables detach while the workspace is still provisioning', () => {
     list([row({ state: 'provisioning' })]);
-    expect(screen.getByLabelText('Disconnect claude')).toBeDisabled();
+    expect(screen.getByLabelText('Detach claude')).toBeDisabled();
   });
 
   // A second End would open a second ssh connection to the same peer and leak the first, since the
   // end channel is keyed by a label the second attempt overwrites.
   it('holds the destructive buttons while an end attempt is in flight', () => {
     list([row({
-      state: 'detached', actions: ['reattach', 'end', 'forget'], session: 's1', ending: true,
+      state: 'detached', actions: ['attach', 'terminate', 'forget'], session: 's1', terminating: true,
     })]);
-    expect(screen.getByLabelText('End session claude')).toBeDisabled();
-    expect(screen.getByLabelText('Reconnect claude')).toBeDisabled();
+    expect(screen.getByLabelText('Terminate claude')).toBeDisabled();
+    expect(screen.getByLabelText('Attach claude')).toBeDisabled();
   });
 
   it('leaves them pressable on a parked row with no attempt running', () => {
-    list([row({ state: 'detached', actions: ['reattach', 'end'], session: 's1' })]);
-    expect(screen.getByLabelText('End session claude')).toBeEnabled();
-    expect(screen.getByLabelText('Reconnect claude')).toBeEnabled();
+    list([row({ state: 'detached', actions: ['attach', 'terminate'], session: 's1' })]);
+    expect(screen.getByLabelText('Terminate claude')).toBeEnabled();
+    expect(screen.getByLabelText('Attach claude')).toBeEnabled();
   });
 
-  it('raises reattach straight away, with no confirmation', () => {
+  it('raises attach straight away, with no confirmation', () => {
     const fixture = capabilities();
-    list([row({ state: 'detached', actions: ['reattach'], session: 's1' })], fixture.value);
-    fireEvent.click(screen.getByLabelText('Reconnect claude'));
-    expect(fixture.intent).toHaveBeenCalledWith('reattach', { id: 'claude' });
+    list([row({ state: 'detached', actions: ['attach'], session: 's1' })], fixture.value);
+    fireEvent.click(screen.getByLabelText('Attach claude'));
+    expect(fixture.intent).toHaveBeenCalledWith('attach', { id: 'claude' });
   });
 
   // Forgetting removes a record and touches nothing, so it needs no dialog.
@@ -242,29 +242,29 @@ describe('SessionList confirmations', () => {
   it('asks before detaching, since tabs disappear', () => {
     const fixture = capabilities();
     list([row()], fixture.value);
-    fireEvent.click(screen.getByLabelText('Disconnect claude'));
+    fireEvent.click(screen.getByLabelText('Detach claude'));
 
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('Disconnect claude on devbox?');
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Detach claude on devbox?');
     expect(fixture.intent).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByText('Disconnect', { selector: '.modal-button' }));
+    fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
     expect(fixture.intent).toHaveBeenCalledWith('detach', { id: 'claude' });
   });
 
   it('asks before ending, since it destroys the far-side workspace', () => {
     const fixture = capabilities();
-    list([row({ state: 'detached', actions: ['reattach', 'end'], session: 's1' })], fixture.value);
-    fireEvent.click(screen.getByLabelText('End session claude'));
+    list([row({ state: 'detached', actions: ['attach', 'terminate'], session: 's1' })], fixture.value);
+    fireEvent.click(screen.getByLabelText('Terminate claude'));
 
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('End claude on devbox?');
-    fireEvent.click(screen.getByText('End session', { selector: '.modal-button' }));
-    expect(fixture.intent).toHaveBeenCalledWith('end', { id: 'claude' });
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Terminate claude on devbox?');
+    fireEvent.click(screen.getByText('Terminate', { selector: '.modal-button' }));
+    expect(fixture.intent).toHaveBeenCalledWith('terminate', { id: 'claude' });
   });
 
   it('raises nothing when the confirmation is cancelled', () => {
     const fixture = capabilities();
     list([row()], fixture.value);
-    fireEvent.click(screen.getByLabelText('Disconnect claude'));
+    fireEvent.click(screen.getByLabelText('Detach claude'));
     fireEvent.click(screen.getByText('Cancel', { selector: '.modal-button' }));
 
     expect(fixture.intent).not.toHaveBeenCalled();
@@ -297,20 +297,20 @@ describe('SessionList navigation', () => {
     expect(fixture.intent).toHaveBeenCalledWith('focus', { id: 'b' });
   });
 
-  it('opens a detached row by reattaching it', () => {
+  it('opens a detached row by attaching it', () => {
     const fixture = capabilities();
     const { container } = list(
-      [row({ state: 'detached', actions: ['reattach', 'end'], session: 's1' })], fixture.value,
+      [row({ state: 'detached', actions: ['attach', 'terminate'], session: 's1' })], fixture.value,
     );
     const only = container.querySelector('.session-row')!;
     fireEvent.click(only);
     fireEvent.click(only);
-    expect(fixture.intent).toHaveBeenCalledWith('reattach', { id: 'claude' });
+    expect(fixture.intent).toHaveBeenCalledWith('attach', { id: 'claude' });
   });
 
   it('does nothing when an ended row is opened', () => {
     const fixture = capabilities();
-    const { container } = list([row({ state: 'ended', actions: ['forget'], session: 's1' })], fixture.value);
+    const { container } = list([row({ state: 'terminated', actions: ['forget'], session: 's1' })], fixture.value);
     const only = container.querySelector('.session-row')!;
     fireEvent.click(only);
     fireEvent.click(only);

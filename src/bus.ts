@@ -136,7 +136,7 @@ type FileNavigatorEvent = { type: 'collect'; id: number };
 // signal a tab plugin may subscribe to (see src/plugins/notifications.ts).
 type ScheduleEvent = { type: 'changed' };
 type ConversationsEvent = { type: 'changed' };
-// The remote-session set changed: one was launched, joined, detached, reattached, ended, forgotten,
+// The remote-session set changed: one was launched, joined, detached, attached, ended, forgotten,
 // or lost its transport. Its own channel for the same reason `schedules` has one — a named,
 // low-frequency signal a tab plugin may subscribe to, rather than a reason carried on `state: dirty`,
 // which fires on every mutation.

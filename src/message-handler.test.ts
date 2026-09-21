@@ -125,7 +125,7 @@ describe('handle', () => {
 
   // One method carries both verbs, so the dispatcher has one arm and the verb rides the params —
   // there is no second decoder and no second controller method saying the same thing.
-  it.each(['detach', 'reattach'] as const)('routes remoteSession %s to the controller', (action) => {
+  it.each(['detach', 'attach'] as const)('routes remoteSession %s to the controller', (action) => {
     const controller = makeController();
     vi.mocked(controller.remoteSession).mockReturnValue(true);
     const replies = dispatchCall(controller, 71, {

@@ -1,7 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
-import type { RemoteEntry } from './reattach.js';
+import type { RemoteEntry } from './attach.js';
 
 // What a channel has to say to the tabs riding it, kept out of `RemoteManager` so the manager holds
 // the channel lifecycle and these hold the wording. Both are "something happened out there and the
@@ -28,7 +28,7 @@ export function notifyBrowserGone(managers: Managers, sessionId: string, message
 /**
  * The detached peer's replay buffer overflowed and dropped its oldest frames. A harness tab's body
  * is its PTY and nothing renders `tab.log` there, so only a non-harness (agent) tab gets a visible
- * line — the same reasoning `endRemoteSession`'s non-harness branch already uses.
+ * line — the same reasoning `terminateRemoteSession`'s non-harness branch already uses.
  */
 export function reportTruncatedReplay(managers: Managers, entry: RemoteEntry): void {
   for (const label of entry.labels) {

@@ -64,7 +64,7 @@ export class PseudoterminalManager {
   // update all happen identically.
   //
   // `recordedId` adopts a spawn id the far side already knows instead of minting one. That is what
-  // makes a reattach bind to the process already running out there: the channel attaches under the
+  // makes an attach bind to the process already running out there: the channel attaches under the
   // recorded id — claiming whatever the peer replayed for it — and the `spawn` frame that follows is
   // one `RemoteProcesses.spawn` ignores, because an id it already holds is not spawned twice.
   registerRemotePty(

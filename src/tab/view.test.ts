@@ -19,21 +19,21 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
-  // The two `sessionEnded` fields hold the same text for different purposes: the tab's copy is the
+  // The two `sessionTerminated` fields hold the same text for different purposes: the tab's copy is the
   // server's own gate on a dead session and has no client reader, while the harness view's copy is
   // what the tab shows in place of `exited`.
-  it('keeps the tab-level sessionEnded off the wire while the harness view carries it', () => {
+  it('keeps the tab-level sessionTerminated off the wire while the harness view carries it', () => {
     const tab = makeTab('claude', '#fff');
-    const ended = 'Remote janus on devbox ended — start a new agent or shell to continue.';
+    const ended = 'Remote janus on devbox terminated — create a new agent or shell to continue.';
     tab.view = 'harness';
-    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'exited', sessionEnded: ended };
-    tab.sessionEnded = ended;
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'exited', sessionTerminated: ended };
+    tab.sessionTerminated = ended;
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path);
-    expect('sessionEnded' in view).toBe(false);
-    expect(view.harness?.sessionEnded).toBe(ended);
+    expect('sessionTerminated' in view).toBe(false);
+    expect(view.harness?.sessionTerminated).toBe(ended);
   });
 
-  // The metadata row's reattach control exists to be offered while a transport is being retried, and
+  // The metadata row's attach control exists to be offered while a transport is being retried, and
   // the only thing that knows a transport is being retried is the channel. Resolved at view time so
   // there is no copy of it on the tab to outlive the recovery.
   it('carries the channel\'s reconnecting state onto the remote target', () => {

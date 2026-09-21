@@ -40,13 +40,13 @@ describe('openIntentFor', () => {
     expect(openIntentFor(state, ['focus', 'detach'])).toBe('focus');
   });
 
-  it('reattaches a detached row', () => {
-    expect(openIntentFor('detached', ['reattach', 'end'])).toBe('reattach');
+  it('attaches a detached row', () => {
+    expect(openIntentFor('detached', ['attach', 'terminate'])).toBe('attach');
   });
 
   // Nothing is left out there to focus or come back to.
   it('does nothing on an ended row', () => {
-    expect(openIntentFor('ended', ['forget'])).toBeUndefined();
+    expect(openIntentFor('terminated', ['forget'])).toBeUndefined();
   });
 
   it('does nothing when the row does not offer the verb opening would use', () => {

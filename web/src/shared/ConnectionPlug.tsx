@@ -12,14 +12,14 @@ import { connectionStatusIcon } from '../icons';
 // their own, because neither has arrived anywhere yet.
 
 export type ConnectionPlugState =
-  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'ended';
+  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
 
 const LABELS: Record<ConnectionPlugState, string> = {
   provisioning: 'Provisioning',
   active: 'Connected',
   reconnecting: 'Reconnecting',
   detached: 'Detached',
-  ended: 'Closed',
+  terminated: 'Terminated',
 };
 
 export function ConnectionPlug({ state }: { state: ConnectionPlugState }) {

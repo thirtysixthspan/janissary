@@ -8,7 +8,7 @@ import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
 // Janissary's own record of the remote sessions it has launched, so a peer that outlived the process
 // that started it can still be found. Everything else about a remote session is in-memory state on
 // `RemoteManager`, which is exactly why quitting used to make a live peer unreachable: the far side
-// waits `REMOTE_DETACH_TIMEOUT_MS` to be reattached and nothing local remembered its id.
+// waits `REMOTE_DETACH_TIMEOUT_MS` to be attached and nothing local remembered its id.
 //
 // One file per account, in the project's own `.janissary/`, so opening janissary on another project
 // lists only that project's sessions, which matches what a remote launch is: a clone of *this*
@@ -22,8 +22,8 @@ import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
 export type RemoteProcessKind = 'harness' | 'agent';
 
 // One process still running inside the far side's workspace, as this side last knew it. The spawn id
-// is what the reattached channel routes output for; the label is the tab it came from and the tab a
-// reattach recreates.
+// is what the attached channel routes output for; the label is the tab it came from and the tab a
+// attach recreates.
 export type RemoteSessionProcess = {
   id: string;
   label: string;
@@ -35,7 +35,7 @@ export type RemoteSessionProcess = {
 };
 
 export type RemoteSessionRecord = {
-  // The far side's handshake session id — the only thing `reattach` needs to name a peer.
+  // The far side's handshake session id — the only thing `attach` needs to name a peer.
   session: string;
   // The address exactly as launched, plus the two derivations the rows and the ssh command need.
   address: string;
@@ -43,7 +43,7 @@ export type RemoteSessionRecord = {
   host: string;
   workspaceLabel: string;
   workspaceDir: string;
-  // The tab that launched the channel, which a reattach recreates first so ssh's own prompts render
+  // The tab that launched the channel, which an attach recreates first so ssh's own prompts render
   // in it (decision 22).
   launchLabel: string;
   launchKind: RemoteProcessKind;
@@ -101,7 +101,7 @@ export function isRemoteSessionRecord(value: unknown): value is RemoteSessionRec
 
 /**
  * A record whose last activity is older than the far side's own expiry describes a peer that cannot
- * still exist, so it is dropped on the way in and nothing is reported: the session ended on the
+ * still exist, so it is dropped on the way in and nothing is reported: the session terminated on the
  * remote host days ago and janissary has nothing to add to that. Pruning here rather than at write
  * time is what makes it true for a record written by a janissary that has since been closed for a
  * week.
@@ -113,7 +113,7 @@ export function pruneRemoteSessions(
 }
 
 // A file that is missing, truncated, or not an array of records reads as no sessions at all. It is
-// janissary's own cache of what it launched, not user data, so a corrupt one costs the reattach
+// janissary's own cache of what it launched, not user data, so a corrupt one costs the attach
 // buttons and nothing else.
 export function parseRemoteSessions(text: string): RemoteSessionRecord[] {
   let parsed: unknown;
@@ -127,7 +127,7 @@ export function parseRemoteSessions(text: string): RemoteSessionRecord[] {
 }
 
 // Replace the record for this session id, or append it. Keyed by session id rather than by label,
-// because a reattached session takes a de-duplicated label (decision 23) while its id never moves.
+// because an attached session takes a de-duplicated label (decision 23) while its id never moves.
 export function mergeRemoteSession(
   records: readonly RemoteSessionRecord[], record: RemoteSessionRecord,
 ): RemoteSessionRecord[] {

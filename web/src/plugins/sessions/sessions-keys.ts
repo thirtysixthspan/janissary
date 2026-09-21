@@ -29,12 +29,12 @@ export function nextSessionSelection(
 }
 
 // What opening a row does. An active, reconnecting, ssh, or navigator row focuses its tab; a
-// detached row reattaches it; an ended row does nothing, because there is nothing left out there.
+// detached row attaches it; a terminated row does nothing, because there is nothing left out there.
 export function openIntentFor(
   state: string, actions: readonly string[],
-): 'focus' | 'reattach' | undefined {
-  if (state === 'detached') return actions.includes('reattach') ? 'reattach' : undefined;
-  if (state === 'ended') return undefined;
+): 'focus' | 'attach' | undefined {
+  if (state === 'detached') return actions.includes('attach') ? 'attach' : undefined;
+  if (state === 'terminated') return undefined;
   return actions.includes('focus') ? 'focus' : undefined;
 }
 

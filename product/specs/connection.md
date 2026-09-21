@@ -61,4 +61,4 @@ Every ACP connection row in the connections window — the tab's own agent (`acp
 This surface describes connections open *now*, so a remote session that has been detached appears in
 neither `connection list` nor the connections window — it has no open connection to list. Those are
 listed in the sessions tab, which shows both the remote sessions this janissary is attached to and
-the ones still running on their hosts awaiting reattachment. See [[sessions-tab]].
+the ones still running on their hosts awaiting attachment. See [[sessions-tab]].

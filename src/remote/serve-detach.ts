@@ -107,8 +107,8 @@ export class DetachedPeer {
       const newline = buffer.indexOf('\n');
       if (newline === -1) return;
       const frame = decodeFrame(buffer.slice(0, newline));
-      if (!('type' in frame) || frame.type !== 'reattach' || frame.session !== this.session) {
-        socket.end(`${encodeFrame({ type: 'reattach-result', accepted: false })}\n`);
+      if (!('type' in frame) || frame.type !== 'attach' || frame.session !== this.session) {
+        socket.end(`${encodeFrame({ type: 'attach-result', accepted: false })}\n`);
         return;
       }
       this.socket?.destroy();
@@ -118,7 +118,7 @@ export class DetachedPeer {
       clearTimeout(this.expiry);
       this.expiry = undefined;
       this.sink = (chunk) => { socket.write(chunk); };
-      this.emit({ type: 'reattach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
+      this.emit({ type: 'attach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
       this.dropped = false;
       const history = this.history.frames(frame.restore === true);
       for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);
@@ -151,7 +151,7 @@ export function relayPeer(
   if (!isPidAlive(record.pid)) { ended(true); return; }
   const socket = createConnection(record.socket);
   socket.setEncoding('utf8');
-  socket.once('connect', () => socket.write(`${encodeFrame({ type: 'reattach', session, ...(restore && { restore }) })}\n`));
+  socket.once('connect', () => socket.write(`${encodeFrame({ type: 'attach', session, ...(restore && { restore }) })}\n`));
   socket.on('data', output);
   socket.on('error', () => socket.destroy());
   socket.on('close', () => ended(false));

@@ -154,11 +154,11 @@ export class HarnessManager {
     return undefined;
   }
 
-  // Reopen a harness tab for a process already running on a peer being reattached. Everything a
+  // Reopen a harness tab for a process already running on a peer being attached. Everything a
   // fresh `on <address>` launch does, with two facts carried in from the record: the channel asks to
-  // reattach rather than to provision, and the PTY adopts the spawn id the far side already knows
+  // attach rather than to provision, and the PTY adopts the spawn id the far side already knows
   // the harness by. No workspace is cloned — the one this tab had is still there.
-  reattachRemote(options: SpawnTabOptions): void { this.spawnTab(options); }
+  attachRemote(options: SpawnTabOptions): void { this.spawnTab(options); }
 
   // Shared core: create the harness tab and focus it. With no `ready` (no workspace, or a
   // workspace already provisioned by the caller), the PTY spawns immediately, exactly as before —

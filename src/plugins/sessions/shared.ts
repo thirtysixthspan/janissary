@@ -8,10 +8,10 @@ export const SESSIONS_PAYLOAD_SCHEMA_VERSION = 1;
 export type SessionRowKind = 'harness' | 'agent' | 'ssh' | 'navigator';
 
 export type SessionRowState =
-  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'ended';
+  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
 
 export type SessionRowAction =
-  | 'reattach' | 'detach' | 'end' | 'forget' | 'focus' | 'close';
+  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close';
 
 export type SessionRow = {
   id: string;
@@ -27,8 +27,8 @@ export type SessionRow = {
   label: string;
   session?: string;
   failure?: string;
-  // An end attempt on this session is in flight: the row says so and its destructive buttons wait.
-  ending?: boolean;
+  // A terminate attempt on this session is in flight: the row says so and its destructive buttons wait.
+  terminating?: boolean;
 };
 
 export type SessionsPayload = { entries: SessionRow[] };
@@ -38,8 +38,8 @@ export type SessionsPayload = { entries: SessionRow[] };
 export type SessionIntent = { id: string };
 
 const KINDS = new Set<string>(['harness', 'agent', 'ssh', 'navigator']);
-const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'ended']);
-const ACTIONS = new Set<string>(['reattach', 'detach', 'end', 'forget', 'focus', 'close']);
+const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'terminated']);
+const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close']);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -65,7 +65,7 @@ function isSessionRow(value: unknown): value is SessionRow {
     && typeof value.label === 'string'
     && isOptionalString(value.session)
     && isOptionalString(value.failure)
-    && (value.ending === undefined || typeof value.ending === 'boolean');
+    && (value.terminating === undefined || typeof value.terminating === 'boolean');
 }
 
 export function isSessionsPayload(value: unknown): value is SessionsPayload {

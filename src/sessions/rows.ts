@@ -29,7 +29,7 @@ export type SessionChannel = {
 };
 
 // A plain `ssh <destination>` tab: a local PTY running the real ssh binary, with no janissary peer
-// behind it, so it is listed but never detached or reattached.
+// behind it, so it is listed but never detached or attached.
 export type SessionSsh = {
   label: string;
   host: string;
@@ -42,14 +42,14 @@ export type SessionSsh = {
 export type SessionDetached = {
   record: RemoteSessionRecord;
   failure?: string;
-  // An end attempt on this session is running. The row stays on screen for the duration, saying so,
+  // A terminate attempt on this session is running. The row stays on screen for the duration, saying so,
   // rather than disappearing until the host answers.
-  ending?: boolean;
+  terminating?: boolean;
 };
 
-// A session a refused reattach or an emptied peer established is over. Its record is already gone;
+// A session a refused attach or an emptied peer established is over. Its record is already gone;
 // the row stays so the user reads what happened rather than watching a row vanish.
-export type SessionEnded = {
+export type SessionTerminated = {
   session: string;
   host: string;
   destination: string;
@@ -64,7 +64,7 @@ export type SessionsSnapshot = {
   channels: SessionChannel[];
   ssh: SessionSsh[];
   detached: SessionDetached[];
-  ended: SessionEnded[];
+  terminated: SessionTerminated[];
 };
 
 function liveState(channel: SessionChannel): RemoteSessionView['state'] {
@@ -82,13 +82,13 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
 // `detach` is offered even while provisioning. The row's state is what says it cannot be pressed
 // yet, so the control stays where the eye expects it rather than appearing once the clone lands.
 //
-// A reconnecting row gains `reattach`, where it means "try now": the transport is gone and the
+// A reconnecting row gains `attach`, where it means "try now": the transport is gone and the
 // backoff is already running, so pressing it collapses the wait exactly as the system resume signal
 // does. It is the same verb as a parked session's because it is the same request — bring this back —
 // and the row's state is what says which kind of waiting it ends.
 function liveActions(launching: boolean, reconnecting: boolean): RemoteSessionAction[] {
   if (!launching) return ['focus', 'close'];
-  return reconnecting ? ['focus', 'reattach', 'detach'] : ['focus', 'detach'];
+  return reconnecting ? ['focus', 'attach', 'detach'] : ['focus', 'detach'];
 }
 
 function liveRows(channel: SessionChannel): RemoteSessionView[] {
@@ -126,16 +126,16 @@ function sshRow(tab: SessionSsh): RemoteSessionView {
   };
 }
 
-// `end` and `forget` sit on the launching row alone, for the same reason `detach` does: both act on
-// the whole peer. `reattach` is the deliberate exception — pressing it on any row brings the whole
+// `terminate` and `forget` sit on the launching row alone, for the same reason `detach` does: both act on
+// the whole peer. `attach` is the deliberate exception — pressing it on any row brings the whole
 // session back, because one ssh connection serves all of them and the rows are a view of one thing.
 function detachedActions(launching: boolean, failed: boolean): RemoteSessionAction[] {
-  if (!launching) return ['reattach'];
-  return failed ? ['reattach', 'end', 'forget'] : ['reattach', 'end'];
+  if (!launching) return ['attach'];
+  return failed ? ['attach', 'terminate', 'forget'] : ['attach', 'terminate'];
 }
 
 function detachedRows(entry: SessionDetached): RemoteSessionView[] {
-  const { record, failure, ending } = entry;
+  const { record, failure, terminating } = entry;
   return record.processes.map((process) => ({
     id: `${record.session}:${process.id}`,
     host: record.host,
@@ -150,17 +150,17 @@ function detachedRows(entry: SessionDetached): RemoteSessionView[] {
     label: process.label,
     session: record.session,
     ...(failure !== undefined && { failure }),
-    ...(ending === true && { ending: true }),
+    ...(terminating === true && { terminating: true }),
   }));
 }
 
-function endedRow(entry: SessionEnded): RemoteSessionView {
+function terminatedRow(entry: SessionTerminated): RemoteSessionView {
   return {
-    id: `${entry.session}:ended`,
+    id: `${entry.session}:terminated`,
     host: entry.host,
     name: entry.name,
     kind: entry.kind,
-    state: 'ended',
+    state: 'terminated',
     activity: entry.activity,
     destination: entry.destination,
     workspace: entry.workspace,
@@ -182,7 +182,7 @@ export function composeSessionRows(snapshot: SessionsSnapshot): RemoteSessionVie
     ...snapshot.channels.map((channel) => ({ activity: leadActivity(channel), rows: liveRows(channel) })),
     ...snapshot.ssh.map((tab) => ({ activity: tab.activity, rows: [sshRow(tab)] })),
     ...snapshot.detached.map((entry) => ({ activity: entry.record.activity, rows: detachedRows(entry) })),
-    ...snapshot.ended.map((entry) => ({ activity: entry.activity, rows: [endedRow(entry)] })),
+    ...snapshot.terminated.map((entry) => ({ activity: entry.activity, rows: [terminatedRow(entry)] })),
   ];
   return groups
     .filter((group) => group.rows.length > 0)

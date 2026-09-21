@@ -3,7 +3,7 @@ import { composeSessionRows, type SessionChannel, type SessionsSnapshot } from '
 import type { RemoteSessionRecord } from './store.js';
 
 function snapshot(overrides: Partial<SessionsSnapshot> = {}): SessionsSnapshot {
-  return { channels: [], ssh: [], detached: [], ended: [], ...overrides };
+  return { channels: [], ssh: [], detached: [], terminated: [], ...overrides };
 }
 
 function channel(overrides: Partial<SessionChannel> = {}): SessionChannel {
@@ -57,16 +57,16 @@ describe('composeSessionRows live channels', () => {
     expect(row.state).toBe('reconnecting');
   });
 
-  // Decision 10: on a row that is already retrying, reattach means "try now" — the same verb as a
+  // Decision 10: on a row that is already retrying, attach means "try now" — the same verb as a
   // parked session's, because it is the same request, and the state is what says which wait it ends.
-  it('offers reattach on a reconnecting row, beside the detach it still has', () => {
+  it('offers attach on a reconnecting row, beside the detach it still has', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'reattach', 'detach']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach']);
   });
 
-  it('offers no reattach on a row whose transport is healthy', () => {
+  it('offers no attach on a row whose transport is healthy', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel()] }));
-    expect(row.actions).not.toContain('reattach');
+    expect(row.actions).not.toContain('attach');
   });
 
   it('leaves a joined row of a reconnecting channel with focus and close alone', () => {
@@ -148,7 +148,7 @@ describe('composeSessionRows channels without their launching member', () => {
 
   it('offers try-now detach on a surviving row while the channel is reconnecting', () => {
     const [row] = composeSessionRows(snapshot({ channels: [launchAbsent({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'reattach', 'detach']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach']);
   });
 
   it('keeps a channel with its launching member present at per-member actions', () => {
@@ -206,14 +206,14 @@ describe('composeSessionRows detached records', () => {
     expect(rows[0].session).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
   });
 
-  it('offers reattach and end on the launching row', () => {
+  it('offers attach and end on the launching row', () => {
     const rows = composeSessionRows(snapshot({ detached: [{ record: record() }] }));
-    expect(rows[0].actions).toEqual(['reattach', 'end']);
+    expect(rows[0].actions).toEqual(['attach', 'terminate']);
   });
 
   // One ssh connection serves the whole session, so the rows are a view of one thing: pressing
-  // reattach on any of them brings the peer back.
-  it('offers reattach alone on a joined row', () => {
+  // attach on any of them brings the peer back.
+  it('offers attach alone on a joined row', () => {
     const rows = composeSessionRows(snapshot({
       detached: [{
         record: record({
@@ -224,7 +224,7 @@ describe('composeSessionRows detached records', () => {
         }),
       }],
     }));
-    expect(rows[1].actions).toEqual(['reattach']);
+    expect(rows[1].actions).toEqual(['attach']);
   });
 
   // "Forget this" must not be the easy way past a session that is merely slow to answer.
@@ -238,11 +238,11 @@ describe('composeSessionRows detached records', () => {
     const rows = composeSessionRows(snapshot({
       detached: [{ record: record(), failure: 'devbox: Connection timed out' }],
     }));
-    expect(rows[0].actions).toEqual(['reattach', 'end', 'forget']);
+    expect(rows[0].actions).toEqual(['attach', 'terminate', 'forget']);
     expect(rows[0].failure).toBe('devbox: Connection timed out');
   });
 
-  it('leaves a joined row of a failed session with reattach alone', () => {
+  it('leaves a joined row of a failed session with attach alone', () => {
     const rows = composeSessionRows(snapshot({
       detached: [{
         record: record({
@@ -254,14 +254,14 @@ describe('composeSessionRows detached records', () => {
         failure: 'devbox: Connection timed out',
       }],
     }));
-    expect(rows[1].actions).toEqual(['reattach']);
+    expect(rows[1].actions).toEqual(['attach']);
   });
 });
 
-describe('composeSessionRows ended sessions', () => {
-  it('lists an ended session with nothing on offer but clearing the row', () => {
+describe('composeSessionRows terminated sessions', () => {
+  it('lists a terminated session with nothing on offer but clearing the row', () => {
     const [row] = composeSessionRows(snapshot({
-      ended: [{
+      terminated: [{
         session: 'cccccccc-dddd-eeee-ffff-000000000000',
         host: 'devbox',
         destination: 'devbox',
@@ -272,7 +272,7 @@ describe('composeSessionRows ended sessions', () => {
         activity: 10,
       }],
     }));
-    expect(row.state).toBe('ended');
+    expect(row.state).toBe('terminated');
     expect(row.actions).toEqual(['forget']);
   });
 });
@@ -301,17 +301,17 @@ describe('composeSessionRows ordering', () => {
     expect(rows.map((row) => row.label)).toEqual(['build-01', 'claude', 'bekir']);
   });
 
-  it('interleaves live, detached, and ended groups on one activity ordering', () => {
+  it('interleaves live, detached, and terminated groups on one activity ordering', () => {
     const rows = composeSessionRows(snapshot({
       channels: [channel({ members: [{ label: 'claude', name: 'claude', kind: 'harness', activity: 300 }] })],
       detached: [{ record: record({ activity: 400 }) }],
-      ended: [{
+      terminated: [{
         session: 'cccccccc-dddd-eeee-ffff-000000000000',
         host: 'devbox', destination: 'devbox', workspace: '/srv/ws',
         label: 'gone', name: 'gone', kind: 'harness', activity: 200,
       }],
     }));
-    expect(rows.map((row) => row.state)).toEqual(['detached', 'active', 'ended']);
+    expect(rows.map((row) => row.state)).toEqual(['detached', 'active', 'terminated']);
   });
 
   it('composes nothing from an empty snapshot', () => {

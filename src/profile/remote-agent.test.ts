@@ -53,7 +53,7 @@ function makeManagers(): {
       launchDir: '/proj',
       shorten: (p: string) => p,
     },
-    remote: { open: openChannel },
+    remote: { create: openChannel },
     workspace: { create: createWorkspace },
     shell: { ensure: vi.fn() },
     schedule: { set: vi.fn() },

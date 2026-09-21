@@ -146,25 +146,25 @@ with no browser variables at all, leaving a tab that comes up looking healthy in
 to connect to a browser fails with nothing to point at — so a stale remote is refused at the
 handshake, as with every other field of this kind.
 
-Reattachment moves it to 14. The handshake line now carries an optional session id, and the frame
-union gains `reattach` and `reattach-result` so a local side that lost its transport can find the
+Attachment moves it to 14. The handshake line now carries an optional session id, and the frame
+union gains `attach` and `attach-result` so a local side that lost its transport can find the
 same far-side session again over a fresh ssh connection. A version-13 peer neither publishes a
-session id nor answers a reattach request, so it would receive a frame it refuses as unknown and
+session id nor answers an attach request, so it would receive a frame it refuses as unknown and
 sit unreachable rather than falling back to a fresh launch — the mismatch is therefore refused at
 the handshake, as with every other version bump.
 
 Asking a peer what is still running in its workspace moves it to 15. A query frame carries no
 payload — there is one workspace per peer, so the question has a single answer — and the reply names
 one entry per live process with its spawn id, the program, how it was started, and the harness or
-agent name it belongs to. It is what turns an accepted reattach into tabs: a janissary restarted
+agent name it belongs to. It is what turns an accepted attach into tabs: a janissary restarted
 since the launch remembers what it started, and only the far side knows what survived. A version-14
 peer recognizes neither frame and is refused at the handshake like any other mismatch. An
 empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
-nothing in it, which is the one case janissary ends rather than reattaches.
+nothing in it, which is the one case janissary ends rather than attaches.
 
 Restoring retained display and transcript history moves the protocol to 16. Reopening detached tabs requests their earlier transcript history; automatic connection recovery receives only transcript blocks missed during disconnection. Both redraw retained terminal output before new output arrives. Sessions started under an older remote version have no retained display history to restore, even if the installation is upgraded while they are detached.
 
-The handshake check is narrower for a reattach than for a launch. A reattach is answered by the
+The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
 parked while the remote installation was upgraded therefore passes the handshake and is then refused
@@ -195,23 +195,23 @@ ACP handlers.
 
 An ACP-level failure is not a channel-level fault. An agent that fails to spawn or errors mid-prompt
 is reported on its own error frame and routed to the session that owns it; only a malformed or
-unknown frame interrupts the channel. An established session then attempts to reattach.
+unknown frame interrupts the channel. An established session then attempts to attach.
 
 ### Lifecycle and cleanup
 
 A remote channel's lifetime is its last user's lifetime. The launching tab, every agent joined from
 it through ➕, and each navigator using its workspace hold a reference. Closing one tab releases its
-reference without closing the surviving tabs or ending their ssh session. A transport drop keeps those tabs, their file navigators, and their cached workspace files in place. Janissary opens a new SSH connection and reattaches to the existing peer, workspace, and processes. An unreachable peer is retried with bounded delays until it becomes reachable or is confirmed to have ended.
+reference without closing the surviving tabs or ending their ssh session. A transport drop keeps those tabs, their file navigators, and their cached workspace files in place. Janissary opens a new SSH connection and attaches to the existing peer, workspace, and processes. An unreachable peer is retried with bounded delays until it becomes reachable or is confirmed to have terminated.
 
 Reusing the launching tab's name for a new launch does not let the earlier session's readiness, errors, or recovery close or change the new session.
 
-On the remote side a dropped connection leaves running work intact for up to seven days. Reattachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait. This still completes when the SSH transport is already closing. The wait exists only for a connection that is lost rather than deliberately ended.
+On the remote side a dropped connection leaves running work intact for up to seven days. Attachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait. This still completes when the SSH transport is already closing. The wait exists only for a connection that is lost rather than deliberately terminated.
 
-Detaching and reattaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
+Detaching and attaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
 
 Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
 
-A refused reattachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Ended tabs stay open with their transcripts and an explanation, and a `remote-session-ended` notification names what ended: `<what> on <host> ended — start a new agent or shell to continue.` Nothing relaunches automatically. Explicitly closing the shared remote connection is the one ending that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the end was the user's own instruction rather than news about the session.
+A refused attachment for a missing session, a recorded peer process that no longer exists, or an explicit remote shell or harness exit establishes termination. A timeout or failed connection alone does not. Terminated tabs stay open with their transcripts and an explanation, and a `remote-session-terminated` notification names what went: `<what> on <host> terminated — create a new agent or shell to continue.` Nothing relaunches automatically. Explicitly terminating the shared remote connection is the one termination that reads differently: it ends recovery, shuts the peer down, and closes every tab and navigator holding the channel rather than leaving them open, and it records no notification, because the termination was the user's own instruction rather than news about the session.
 
 Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and do not use this recovery.
 
@@ -219,7 +219,7 @@ A session can also be parked deliberately. Detaching one closes every tab and na
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
 An agent tab's persistent shell is one of those processes: it outlives the transport it was reached
-through rather than ending with it, so a parked session still holds it when the reattachment asks
+through rather than ending with it, so a parked session still holds it when the attachment asks
 what survived. Ending such a shell stops whatever it was running too, so nothing is left behind on
 the host when the session is shut down.
 Detaching is refused while a session is still provisioning: there is nothing to come back to yet.
@@ -229,22 +229,22 @@ application has been closed and reopened. That record outlives an ordinary start
 swept with the rest of the state directory, and a record older than the seven-day wait is dropped
 when it is read, since it describes a peer that cannot still exist.
 
-Reattaching a parked session opens one ssh connection and asks the peer to take it back. The
+Attaching a parked session opens one ssh connection and asks the peer to take it back. The
 recorded launching tab is created first, so ssh's own password, passphrase, and host-key prompts
 render there, and the remaining tabs are created once the peer has accepted and said what is still
-running. Each reattached tab takes its recorded label back, de-duplicated if something else has
+running. Each attached tab takes its recorded label back, de-duplicated if something else has
 claimed it meanwhile. Remote file navigators are not restored. A peer that comes back holding
 nothing is told to shut down and its record dropped, rather than being left to hold a remote
 workspace for a week with nothing in it. Output the peer replays before its tabs exist is held and
 delivered to each tab as it is created, in the order the peer produced it, bounded by the same limit
 the peer's own buffer uses; an overflow is reported with the existing truncated-replay line. The hold
-lasts only for the reattach that needs it — once its tabs are built the connection is ordinary, and
+lasts only for the attach that needs it — once its tabs are built the connection is ordinary, and
 output arriving for a process no tab is listening to is dropped rather than collected for a later
 attach that is not coming.
 
-Reattached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
+Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
-A session can be ended for good from its parked state: janissary reconnects far enough to tell the
+A session can be terminated for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked
 session removes janissary's own record and touches nothing on the far side.
 
@@ -390,10 +390,10 @@ a shared channel's server holds one agent per tab using it.
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
-- Restoring a remote file navigator through a profile, a reattach, or `--relaunch`.
+- Restoring a remote file navigator through a profile, an attach, or `--relaunch`.
 - Probing hosts on janissary's own initiative: nothing opens an ssh connection except a pressed
-  reattach, a pressed end, or a `--relaunch` restore.
-- Arbitrating two janissary instances reattaching one peer — last attach wins, and the loser enters
+  attach, a pressed end, or a `--relaunch` restore.
+- Arbitrating two janissary instances attaching one peer — last attach wins, and the loser enters
   its own reconnect backoff.
 - `acp` in a remote **harness** tab — it is already driving its own agent binary in a terminal.
 - Running an ACP agent's `db`, `browser`, and `question` commands on the remote host; the tool loop

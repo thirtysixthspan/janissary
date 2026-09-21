@@ -6,8 +6,8 @@ import type { PtySession } from '../pty.js';
 import type { RemoteAddress } from './address.js';
 import { RemoteChannel } from './channel.js';
 import { createRemoteTranscriptSource, type RemoteTranscriptSource } from './transcript-source.js';
-import { Reattach, detachRemoteEntry, dropEndedSessionRecord, dropRemoteLabels, emitSessionsChanged, endRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './reattach.js';
-import { answerSessionState, handleReattachResult, type RemoteResume } from './resume.js';
+import { Attach, detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, terminateRemoteProcess, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
+import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
 import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
 import { remoteChannelClosed } from './manager-closed.js';
 
@@ -51,15 +51,15 @@ export class RemoteManager {
 
   constructor(private managers: Managers) {}
 
-  // Open a channel for `label` and start provisioning its remote workspace as soon as the handshake
+  // Create a channel for `label` and start provisioning its remote workspace as soon as the handshake
   // lands. The tab is expected to already exist as a placeholder attached to the returned channel's
   // PTY, so ssh's prompts are answerable in it.
   //
-  // With `resume`, the very same routine is a reattach: the channel is created with its session id
-  // already set, so the handshake takes the branch that sends `reattach` rather than `provision` and
-  // `reattach-result` is handled by the code that already handles it. One connection routine serves
-  // launches and reattaches alike.
-  open(
+  // With `resume`, the very same routine is an attach: the channel is created with its session id
+  // already set, so the handshake takes the branch that sends `attach` rather than `provision` and
+  // `attach-result` is handled by the code that already handles it. One connection routine serves
+  // launches and attaches alike.
+  create(
     label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers,
     resume?: RemoteResume,
   ): RemoteChannel {
@@ -84,14 +84,14 @@ export class RemoteManager {
       {
         onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
         onAttached: () => {
-          if ((entry.reconnect.active || state.resuming) && channel.sessionId) {
-            channel.send({ type: 'reattach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
+          if ((entry.attach.active || state.resuming) && channel.sessionId) {
+            channel.send({ type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
           } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
         },
         onFrame: (frame) => {
           switch (frame.type) {
-          case 'reattach-result': {
-            handleReattachResult(this.managers, entry, frame, label, resume, state,
+          case 'attach-result': {
+            handleAttachResult(this.managers, entry, frame, label, resume, state,
               () => reportTruncatedReplay(this.managers, entry));
             break;
           }
@@ -112,7 +112,7 @@ export class RemoteManager {
           }
         },
         onError: (message) => {
-          if (entry.reconnect.active) return;
+          if (entry.attach.active) return;
           if (!entry.closed && !entry.settled) { entry.settled = true; entry.rejectReady(new Error(message)); }
           entry.handlers.get(label)?.onFailed(message);
         },
@@ -121,20 +121,20 @@ export class RemoteManager {
         // spawn and stops being on the last exit. Per process, not per byte.
         onProcesses: () => this.sessionsChanged(),
         onSessionExit: (_id, owner, harness) => {
-          endRemoteProcess(this.managers, entry, owner ?? label, harness);
+          terminateRemoteProcess(this.managers, entry, owner ?? label, harness);
           this.sessionsChanged();
         },
       },
     );
     deferred.channel = channel;
     // Set before the first handshake, which is what makes `consumeTerminalPhase` treat the incoming
-    // session as one to reattach to rather than one to adopt.
+    // session as one to attach to rather than one to adopt.
     if (resume) channel.sessionId = resume.session;
 
     const entry: Entry = {
       channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
       ready, resolveReady, rejectReady, settled: false, closed: false, workspaceLabel: label,
-      reconnect: new Reattach(() => connect(), () => channel.close()),
+      attach: new Attach(() => connect(), () => channel.close()),
     };
     this.entries.set(label, entry);
     let generation = 0;
@@ -174,9 +174,9 @@ export class RemoteManager {
   addressOf(label: string): RemoteAddress | undefined { return this.entries.get(label)?.address; }
 
   // Whether this tab's channel has lost its transport and is retrying. Read when the tab view is
-  // built rather than marked onto the tab, so the metadata row's reattach control can never be
+  // built rather than marked onto the tab, so the metadata row's attach control can never be
   // showing a recovery that has already finished.
-  reconnectingOf(label: string): boolean { return this.entries.get(label)?.reconnect.active ?? false; }
+  reconnectingOf(label: string): boolean { return this.entries.get(label)?.attach.active ?? false; }
 
   // The tab's local transcript source: what the remote's own `createTranscriptSource` pushes into.
   transcriptSource(label: string): RemoteTranscriptSource | undefined { return this.entries.get(label)?.transcript; }
@@ -190,7 +190,7 @@ export class RemoteManager {
   // `connection close ssh:<id>` — the user ending the shared session on purpose. The far side is
   // genuinely finished (`terminateRemoteEntry` sends the shutdown frames), recovery stops, and every
   // tab and navigator holding the channel closes, which is the only reason a remote tab's `ssh:` row
-  // is separately closable at all. Nothing reaches the notifications feed: `remote-session-ended`
+  // is separately closable at all. Nothing reaches the notifications feed: `remote-session-terminated`
   // exists to report a session the user did not end, and this is the opposite case.
   close(label: string): boolean {
     const entry = this.entries.get(label);
@@ -230,11 +230,11 @@ export class RemoteManager {
       // Captured before `finish()` — fifteen lines below, the channel forgets its own session id as
       // part of closing.
       const session = entry.channel.sessionId;
-      entry.reconnect.stop();
+      entry.attach.stop();
       entry.channel.finish();
       this.channelClosed(entry);
       entry.channel.closeAfterShutdown();
-      dropEndedSessionRecord(this.managers, session);
+      dropTerminatedSessionRecord(this.managers, session);
     }
     this.sessionsChanged();
     return true;
@@ -242,7 +242,7 @@ export class RemoteManager {
 
   closeAll(): void {
     const entries = new Set(this.entries.values());
-    for (const entry of entries) { entry.reconnect.stop(); entry.closed = true; entry.channel.finish(); entry.channel.closeAfterShutdown(); }
+    for (const entry of entries) { entry.attach.stop(); entry.closed = true; entry.channel.finish(); entry.channel.closeAfterShutdown(); }
     this.entries.clear();
   }
 

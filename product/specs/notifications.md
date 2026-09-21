@@ -48,8 +48,8 @@ the sidebar's own strip (see `sidebars.md`).
 ### Events that notify
 
 - **`schedule-late`** — a scheduled command is delivered more than five seconds late: `<command> ran <duration> late (system was asleep)` if it was already overdue when the machine last resumed, or `<command> ran <duration> late` otherwise.
-- **`remote-session-ended`** — a remote peer, harness, or shell is confirmed to have ended: `<what> on <host> ended — start a new agent or shell to continue.` The affected tab stays open; no replacement session starts automatically.
-- **`remote-session`** — a remote session was detached, reattached, ended, or forgotten from the sessions tab or a tab's metadata row: `<what> on <host> detached — reattach it from the sessions tab.`, `<what> on <host> reattached.`, `<what> on <host> ended.`, or `<what> on <host> forgotten — its record was removed.` `<what>` is the name the session's row shows. Distinct from `remote-session-ended`, which reports a session ending on its own rather than a decision the user made; each line is plain text carrying no click target, and is recorded so the change survives the tabs it happened to.
+- **`remote-session-terminated`** — a remote peer, harness, or shell is confirmed to have terminated: `<what> on <host> terminated — create a new agent or shell to continue.` The affected tab stays open; no replacement session starts automatically.
+- **`remote-session`** — a remote session was detached, attached, terminated, or forgotten from the sessions tab or a tab's metadata row: `<what> on <host> detached — attach it from the sessions tab.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, or `<what> on <host> forgotten — its record was removed.` `<what>` is the name the session's row shows. Distinct from `remote-session-terminated`, which reports a session terminating on its own rather than a decision the user made; each line is plain text carrying no click target, and is recorded so the change survives the tabs it happened to.
 
 These event types can produce a notification line:
 
@@ -120,7 +120,7 @@ The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `a
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
-`open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-ended`, and `remote-session` events have no toggle. A `question` event fires only for a
+`open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, and `remote-session` events have no toggle. A `question` event fires only for a
 background tab.
 
 ### Focus suppression
@@ -129,7 +129,7 @@ An ambient event on the **currently active** tab never produces a notification �
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
-`plugin-note`, `schedule-late`, `remote-session-ended`, and `remote-session` events **bypass focus suppression**: they still
+`plugin-note`, `schedule-late`, `remote-session-terminated`, and `remote-session` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is

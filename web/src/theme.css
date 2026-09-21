@@ -263,7 +263,7 @@ html, body, #root {
 .connection-plug { font-size: 13px; line-height: 1; cursor: default; color: var(--muted); }
 .connection-plug[data-state='active'] { color: var(--success); }
 .connection-plug[data-state='detached'] { color: var(--accent); }
-.connection-plug[data-state='ended'] { color: var(--error); }
+.connection-plug[data-state='terminated'] { color: var(--error); }
 /* The plug leads the metadata row, ahead of the host chip, so a remote tab reads "how, where, what
    path there". */
 .tab-meta .connection-plug { order: -2; }

@@ -5,21 +5,21 @@ import path from 'node:path';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications.js';
 import type { Managers } from '../managers.js';
-import type { RemoteEntry } from '../remote/reattach.js';
+import type { RemoteEntry } from '../remote/attach.js';
 import { SessionsManager } from './manager.js';
-import { startSessionReattach, type ReattachOutcome } from './reattach.js';
-import { endParkedSession, type EndOutcome } from './end-session.js';
+import { startSessionAttach, type AttachOutcome } from './attach.js';
+import { terminateParkedSession, type TerminateOutcome } from './terminate-session.js';
 import { initRemoteSessionStore, loadRemoteSessions, saveRemoteSessions, type RemoteSessionRecord } from './store.js';
 
-// The reattach and end flows open real ssh connections, so they are faked here: what this suite is
+// The attach and end flows open real ssh connections, so they are faked here: what this suite is
 // about is the manager's own bookkeeping — which record survives which outcome, what the row set
 // says afterwards, and whether the change signal fired.
-vi.mock('./reattach.js', () => ({ startSessionReattach: vi.fn() }));
-// `isEndSessionLabel` is the real one: it is the pure half of that module, and the manager's ability
+vi.mock('./attach.js', () => ({ startSessionAttach: vi.fn() }));
+// `isTerminateSessionLabel` is the real one: it is the pure half of that module, and the manager's ability
 // to tell an end channel from a live session depends on it agreeing with the label the module mints.
-vi.mock(import('./end-session.js'), async (importOriginal) => ({
+vi.mock(import('./terminate-session.js'), async (importOriginal) => ({
   ...await importOriginal(),
-  endParkedSession: vi.fn(),
+  terminateParkedSession: vi.fn(),
 }));
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 
@@ -51,7 +51,7 @@ function entry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
     labels: new Set(['claude']),
     workspaceLabel: 'claude',
     workspaceDir: '/srv/proj/.janissary/workspace/claude',
-    reconnect: { active: false },
+    attach: { active: false },
     ...overrides,
   } as unknown as RemoteEntry;
 }
@@ -100,8 +100,8 @@ function harness(
   return { sessions, detach, closeTab, entries };
 }
 
-function settle(outcome: ReattachOutcome): void {
-  vi.mocked(startSessionReattach).mockResolvedValue(outcome);
+function settle(outcome: AttachOutcome): void {
+  vi.mocked(startSessionAttach).mockResolvedValue(outcome);
 }
 
 beforeEach(() => { vi.clearAllMocks(); });
@@ -269,7 +269,7 @@ describe('SessionsManager detach', () => {
     expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', session: SESSION });
   });
 
-  // A peer whose workspace holds nothing answers `session-state` with an empty list, which a reattach
+  // A peer whose workspace holds nothing answers `session-state` with an empty list, which an attach
   // reads as "this session is over" — so there is nothing to come back to and the transport stays.
   it('is refused for a channel with nothing running in its workspace', () => {
     const h = harness([entry({
@@ -296,7 +296,7 @@ describe('SessionsManager detach', () => {
 
 // A row authorises a verb only when it offers it. Recorded labels are ordinary harness names, so a
 // parked row named `claude` sitting beside a live tab named `claude` is a likely collision rather
-// than a contrived one — and the parked row offers reattach, never close.
+// than a contrived one — and the parked row offers attach, never close.
 describe('SessionsManager offers', () => {
   it('authorises a verb the matching row lists', () => {
     const h = harness([entry()]);
@@ -326,46 +326,46 @@ describe('SessionsManager offers', () => {
   });
 });
 
-describe('SessionsManager reattachTab', () => {
+describe('SessionsManager attachTab', () => {
   it('collapses the backoff on a live entry', () => {
     const h = harness([entry()]);
-    expect(h.sessions.reattachTab('claude')).toBe(true);
+    expect(h.sessions.attachTab('claude')).toBe(true);
   });
 
   // The only way to press this and hit no live entry is a tab whose channel has already gone, which
   // is exactly when the user needs telling: a control that declines without a word reads as broken.
   it('reports a refusal for a tab whose channel is gone', () => {
     const h = harness();
-    expect(h.sessions.reattachTab('claude')).toBe(false);
+    expect(h.sessions.attachTab('claude')).toBe(false);
     expect(notify).toHaveBeenCalledWith(
       expect.anything(), 'remote-session', 'claude',
-      'claude cannot be reattached — its remote connection is gone.',
+      'claude cannot be attached — its remote connection is gone.',
     );
   });
 });
 
-describe('SessionsManager reattach', () => {
+describe('SessionsManager attach', () => {
   it('reports connection failures to the sessions notification feed and preserves the record', async () => {
     const h = harness([], { label: 'sessions' });
     saveRemoteSessions([record()]);
     settle({ kind: 'failed', reason: 'Connection timed out' });
-    h.sessions.reattach(SESSION);
+    h.sessions.attach(SESSION);
     await vi.waitFor(() => expect(notify).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), 'remote-session', 'sessions',
-      'claude on devbox could not be reattached: Connection timed out',
+      'claude on devbox could not be attached: Connection timed out',
     ));
     expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', failure: 'Connection timed out' });
     expect(loadRemoteSessions()).toHaveLength(1);
   });
 
-  it('reports unexpected reattach rejections and keeps the session available to retry', async () => {
+  it('reports unexpected attach rejections and keeps the session available to retry', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(startSessionReattach).mockRejectedValue(new Error('SSH could not start'));
-    h.sessions.reattach(SESSION);
+    vi.mocked(startSessionAttach).mockRejectedValue(new Error('SSH could not start'));
+    h.sessions.attach(SESSION);
     await vi.waitFor(() => expect(notify).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), 'remote-session', 'janus',
-      'claude on devbox could not be reattached: SSH could not start',
+      'claude on devbox could not be attached: SSH could not start',
     ));
     expect(h.sessions.view()[0]).toMatchObject({ state: 'detached', failure: 'SSH could not start' });
     expect(loadRemoteSessions()).toHaveLength(1);
@@ -375,21 +375,21 @@ describe('SessionsManager reattach', () => {
     const h = harness();
     saveRemoteSessions([record()]);
     settle({ kind: 'failed', reason: 'devbox: Connection timed out' });
-    h.sessions.reattach(SESSION);
+    h.sessions.attach(SESSION);
     await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: Connection timed out'));
 
-    settle({ kind: 'reattached', label: 'claude' });
-    h.sessions.reattach(SESSION);
+    settle({ kind: 'attached', label: 'claude' });
+    h.sessions.attach(SESSION);
     await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBeUndefined());
   });
 
   // A connection that never gets an answer establishes nothing, so the record survives and the row
-  // keeps its reattach button — with a trash button now beside it.
+  // keeps its attach button — with a trash button now beside it.
   it('leaves a failed attempt detached, with its reason and a trash button on the row', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
     settle({ kind: 'failed', reason: 'devbox: No route to host' });
-    h.sessions.reattach(SESSION);
+    h.sessions.attach(SESSION);
 
     await vi.waitFor(() => {
       const row = h.sessions.view()[0];
@@ -401,43 +401,43 @@ describe('SessionsManager reattach', () => {
   });
 
   // A peer that answers is a peer that is there; refusing establishes the session is over.
-  it('drops the record and leaves an ended row when the peer refuses', async () => {
+  it('drops the record and leaves a terminated row when the peer refuses', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    settle({ kind: 'ended', reason: 'claude on devbox is no longer running.' });
-    h.sessions.reattach(SESSION);
+    settle({ kind: 'terminated', reason: 'claude on devbox is no longer running.' });
+    h.sessions.attach(SESSION);
 
-    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(loadRemoteSessions()).toEqual([]);
   });
 
   // Exactly one line for the event: whatever the remote layer would have had to say about the same
   // ending is muted, so the feed never teaches its lines cannot be taken at their word.
-  it('records exactly one notification for a reattach that ends the session', async () => {
+  it('records exactly one notification for an attach that ends the session', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    settle({ kind: 'ended', reason: 'claude on devbox is no longer running.' });
-    h.sessions.reattach(SESSION);
+    settle({ kind: 'terminated', reason: 'claude on devbox is no longer running.' });
+    h.sessions.attach(SESSION);
 
-    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session', 'janus', 'claude on devbox ended.');
+    expect(notify).toHaveBeenCalledWith(expect.anything(), 'remote-session', 'janus', 'claude on devbox terminated.');
   });
 
   it('is refused for a session it has no record of', () => {
-    expect(harness().sessions.reattach('no-such-session')).toBe(false);
-    expect(startSessionReattach).not.toHaveBeenCalled();
+    expect(harness().sessions.attach('no-such-session')).toBe(false);
+    expect(startSessionAttach).not.toHaveBeenCalled();
   });
 });
 
 describe('SessionsManager end', () => {
-  it('drops the record and leaves an ended row when the peer is stopped', async () => {
+  it('drops the record and leaves a terminated row when the peer is stopped', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockResolvedValue({ ended: true } satisfies EndOutcome);
-    h.sessions.end(SESSION);
+    vi.mocked(terminateParkedSession).mockResolvedValue({ terminated: true } satisfies TerminateOutcome);
+    h.sessions.terminate(SESSION);
 
-    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(loadRemoteSessions()).toEqual([]);
   });
 
@@ -445,18 +445,18 @@ describe('SessionsManager end', () => {
   it('records exactly one notification for a successful end', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockResolvedValue({ ended: true } satisfies EndOutcome);
-    h.sessions.end(SESSION);
+    vi.mocked(terminateParkedSession).mockResolvedValue({ terminated: true } satisfies TerminateOutcome);
+    h.sessions.terminate(SESSION);
 
-    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('ended'));
+    await vi.waitFor(() => expect(h.sessions.view()[0].state).toBe('terminated'));
     expect(notify).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the record when the host could not be reached', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockResolvedValue({ ended: false, reason: 'devbox: timed out' });
-    h.sessions.end(SESSION);
+    vi.mocked(terminateParkedSession).mockResolvedValue({ terminated: false, reason: 'devbox: timed out' });
+    h.sessions.terminate(SESSION);
 
     await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: timed out'));
     expect(loadRemoteSessions()).toHaveLength(1);
@@ -468,12 +468,12 @@ describe('SessionsManager end', () => {
   it('keeps the row on screen, marked ending, while the attempt is unresolved', () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockReturnValue(new Promise(() => {}));
-    h.sessions.end(SESSION);
+    vi.mocked(terminateParkedSession).mockReturnValue(new Promise(() => {}));
+    h.sessions.terminate(SESSION);
 
     const rows = h.sessions.view();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ state: 'detached', session: SESSION, ending: true });
+    expect(rows[0]).toMatchObject({ state: 'detached', session: SESSION, terminating: true });
   });
 
   // The end channel is opened under a synthetic label carrying the record's session id. Counted as a
@@ -481,11 +481,11 @@ describe('SessionsManager end', () => {
   it('does not list the end attempt\'s own channel as a live session', () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockImplementation(() => {
-      h.entries.push(entry({ labels: new Set([`end-session:${SESSION}`]) }));
+    vi.mocked(terminateParkedSession).mockImplementation(() => {
+      h.entries.push(entry({ labels: new Set([`terminate-session:${SESSION}`]) }));
       return new Promise(() => {});
     });
-    h.sessions.end(SESSION);
+    h.sessions.terminate(SESSION);
 
     const rows = h.sessions.view();
     expect(rows).toHaveLength(1);
@@ -495,8 +495,8 @@ describe('SessionsManager end', () => {
   it('stops claiming to be ending once the attempt fails', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    vi.mocked(endParkedSession).mockResolvedValue({ ended: false, reason: 'devbox: timed out' });
-    h.sessions.end(SESSION);
+    vi.mocked(terminateParkedSession).mockResolvedValue({ terminated: false, reason: 'devbox: timed out' });
+    h.sessions.terminate(SESSION);
 
     await vi.waitFor(() => expect(h.sessions.view()[0].failure).toBe('devbox: timed out'));
     expect(h.sessions.view()[0].ending).toBeUndefined();
@@ -511,15 +511,15 @@ describe('SessionsManager forget', () => {
     expect(h.sessions.forget(SESSION)).toBe(true);
     expect(loadRemoteSessions()).toEqual([]);
     expect(h.sessions.view()).toEqual([]);
-    expect(endParkedSession).not.toHaveBeenCalled();
-    expect(startSessionReattach).not.toHaveBeenCalled();
+    expect(terminateParkedSession).not.toHaveBeenCalled();
+    expect(startSessionAttach).not.toHaveBeenCalled();
   });
 
-  it('clears an ended row too, which is the only thing left to clear', async () => {
+  it('clears a terminated row too, which is the only thing left to clear', async () => {
     const h = harness();
     saveRemoteSessions([record()]);
-    settle({ kind: 'ended', reason: 'gone' });
-    h.sessions.reattach(SESSION);
+    settle({ kind: 'terminated', reason: 'gone' });
+    h.sessions.attach(SESSION);
     await vi.waitFor(() => expect(h.sessions.view()).toHaveLength(1));
 
     h.sessions.forget(SESSION);
@@ -565,19 +565,19 @@ describe('SessionsManager change signal', () => {
 });
 
 describe('SessionsManager restoreAll', () => {
-  // Each session is reattached on its own: a refusing peer is marked ended and an unreachable host
+  // Each session is attached on its own: a refusing peer is marked terminated and an unreachable host
   // stays detached, and neither holds the restore up.
-  it('reattaches every recorded session independently', () => {
+  it('attaches every recorded session independently', () => {
     const h = harness();
     saveRemoteSessions([record(), record({ session: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' })]);
-    settle({ kind: 'reattached', label: 'claude' });
+    settle({ kind: 'attached', label: 'claude' });
 
     h.sessions.restoreAll();
-    expect(startSessionReattach).toHaveBeenCalledTimes(2);
+    expect(startSessionAttach).toHaveBeenCalledTimes(2);
   });
 
   it('does nothing when nothing is parked', () => {
     harness().sessions.restoreAll();
-    expect(startSessionReattach).not.toHaveBeenCalled();
+    expect(startSessionAttach).not.toHaveBeenCalled();
   });
 });

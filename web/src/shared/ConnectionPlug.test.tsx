@@ -11,7 +11,7 @@ describe('ConnectionPlug', () => {
     ['active', 'Connected'],
     ['reconnecting', 'Reconnecting'],
     ['detached', 'Detached'],
-    ['ended', 'Closed'],
+    ['terminated', 'Terminated'],
   ])('carries %s on the element and names it', (state, label) => {
     const { container } = render(<ConnectionPlug state={state} />);
     const plug = container.querySelector('.connection-plug');

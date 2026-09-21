@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
-import { dropRemoteLabels, type RemoteEntry } from './reattach.js';
+import { dropRemoteLabels, type RemoteEntry } from './attach.js';
 
 /**
  * A channel's transport went away. Split out of `RemoteManager` to keep that file under the size
@@ -18,14 +18,14 @@ export function remoteChannelClosed(
   managers: Managers, entries: Map<string, RemoteEntry>, entry: RemoteEntry,
 ): void {
   if (entry.closed) return;
-  if (entry.channel.sessionId && entry.workspaceDir) { entry.reconnect.lost(); return; }
+  if (entry.channel.sessionId && entry.workspaceDir) { entry.attach.lost(); return; }
   entry.closed = true;
   if (!entry.settled) {
     entry.settled = true;
     entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
   } else if (entry.workspaceDir && entry.labels.size > 0) {
-    notify(managers, 'remote-session-ended', entry.labels.values().next().value!,
-      `Remote janus on ${entry.address.host} ended — start a new agent or shell to continue.`);
+    notify(managers, 'remote-session-terminated', entry.labels.values().next().value!,
+      `Remote janus on ${entry.address.host} terminated — create a new agent or shell to continue.`);
   }
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   const handlers = [...entry.handlers.values()];

@@ -26,8 +26,8 @@ export interface SpawnTabOptions {
   // Set for an `on <address>` launch: the harness runs on another host, `workspaceDir` stays
   // undefined (the clone is the remote's, and so is its cleanup), and the PTY is a remote session.
   remote?: RemoteAddress;
-  // Set when this launch is really a reattach to a peer that is already running the harness: the
-  // channel asks to reattach instead of asking for a clone, and the PTY adopts the recorded spawn id
+  // Set when this launch is really an attach to a peer that is already running the harness: the
+  // channel asks to attach instead of asking for a clone, and the PTY adopts the recorded spawn id
   // rather than minting a new one, so it binds to the process already out there.
   resume?: RemoteResume;
   // The spawn id the far side already knows this process by. Only meaningful alongside `resume`.

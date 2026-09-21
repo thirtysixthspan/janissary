@@ -388,7 +388,7 @@ describe('notify — line composition', () => {
     expect(entry.openTab).toBe('janus');
   });
 });
-it.each(['schedule-late', 'remote-session-ended'] as const)('shows the composed %s detail without configuration', (event) => {
+it.each(['schedule-late', 'remote-session-terminated'] as const)('shows the composed %s detail without configuration', (event) => {
   expect(shouldNotify(undefined, event, 'active', 'active')).toBe(true);
   expect(notificationText(event, 'active', 'full detail')).toBe('full detail');
   expect(notificationText(event, 'active')).toBe('');

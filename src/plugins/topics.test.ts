@@ -10,7 +10,7 @@ import {
 } from './api.js';
 import { createPluginContext } from './context.js';
 import { readTopicData, runTopicAction, subscribeTopic } from './topics.js';
-import { emitSessionsChanged } from '../remote/reattach.js';
+import { emitSessionsChanged } from '../remote/attach.js';
 import { messageBus } from '../bus.js';
 
 const ROWS: AggregatedScheduleView[] = [
@@ -18,7 +18,7 @@ const ROWS: AggregatedScheduleView[] = [
 ];
 
 // Two rows offering disjoint verbs, which is what the list actually composes: a live launching row
-// carries `focus` and `detach`, a parked one carries `reattach`, `end`, and `forget`. A single row
+// carries `focus` and `detach`, a parked one carries `attach`, `end`, and `forget`. A single row
 // claiming every verb would let a topic action pass no matter which arm authorised it.
 const SESSION_ROWS: RemoteSessionView[] = [
   {
@@ -34,7 +34,7 @@ const SESSION_ROWS: RemoteSessionView[] = [
   {
     id: 'session-1:rpty1', host: 'devbox', name: 'parked', kind: 'harness', state: 'detached',
     activity: 900, destination: 'devbox', workspace: '/srv/ws', joined: false,
-    actions: ['reattach', 'end', 'forget'], label: 'parked', session: 'session-1',
+    actions: ['attach', 'terminate', 'forget'], label: 'parked', session: 'session-1',
   },
 ];
 
@@ -76,7 +76,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
           && (label === undefined || row.label === label)
           && (session === undefined || row.session === session),
       )),
-      refresh: vi.fn(), detach: vi.fn(), reattach: vi.fn(), end: vi.fn(), forget: vi.fn(),
+      refresh: vi.fn(), detach: vi.fn(), attach: vi.fn(), terminate: vi.fn(), forget: vi.fn(),
       focus: vi.fn(), close: vi.fn(),
     },
   } as unknown as Managers;
@@ -178,8 +178,8 @@ describe('the sessions topic source', () => {
     { action: { topic: 'sessions', action: 'detach', label: 'claude' }, method: 'detach' },
     { action: { topic: 'sessions', action: 'focus', label: 'claude' }, method: 'focus' },
     { action: { topic: 'sessions', action: 'close', label: 'bekir' }, method: 'close' },
-    { action: { topic: 'sessions', action: 'reattach', session: 'session-1' }, method: 'reattach' },
-    { action: { topic: 'sessions', action: 'end', session: 'session-1' }, method: 'end' },
+    { action: { topic: 'sessions', action: 'attach', session: 'session-1' }, method: 'attach' },
+    { action: { topic: 'sessions', action: 'terminate', session: 'session-1' }, method: 'terminate' },
     { action: { topic: 'sessions', action: 'forget', session: 'session-1' }, method: 'forget' },
   ] as const)('routes $method to the manager', ({ action, method }) => {
     const { managers } = makeManagers();
@@ -199,8 +199,8 @@ describe('the sessions topic source', () => {
   it.each([
     { what: 'a tab the view does not hold', action: { topic: 'sessions', action: 'detach', label: 'ghost' }, method: 'detach' },
     { what: 'a tab the view does not hold', action: { topic: 'sessions', action: 'close', label: 'ghost' }, method: 'close' },
-    { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'reattach', session: 'ghost' }, method: 'reattach' },
-    { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'end', session: 'ghost' }, method: 'end' },
+    { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'attach', session: 'ghost' }, method: 'attach' },
+    { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'terminate', session: 'ghost' }, method: 'terminate' },
     { what: 'a session the view does not hold', action: { topic: 'sessions', action: 'forget', session: 'ghost' }, method: 'forget' },
   ] as const)('refuses $method naming $what', ({ action, method }) => {
     const { managers } = makeManagers();
@@ -210,7 +210,7 @@ describe('the sessions topic source', () => {
 
   // Naming a row the view holds is not enough — the row has to offer the verb. A parked row's label
   // is a recorded name belonging to no live tab, so `close` on one used to reach whatever tab
-  // happened to share it, even though that row offers only `reattach`.
+  // happened to share it, even though that row offers only `attach`.
   it.each([
     { what: 'close on a parked row', action: { topic: 'sessions', action: 'close', label: 'parked' }, method: 'close' },
     { what: 'detach on a parked row', action: { topic: 'sessions', action: 'detach', label: 'parked' }, method: 'detach' },

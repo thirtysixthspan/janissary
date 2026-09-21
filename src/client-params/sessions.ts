@@ -5,5 +5,5 @@ import { isOneOf, isString, type ParamsDecoder } from './guards.js';
 // pointing, so the verb is a field on the request rather than a second decoder and a second
 // dispatcher arm saying the same thing.
 export const SESSION_PARAMS: Record<RemoteSessionRpcCall['method'], ParamsDecoder> = {
-  remoteSession: (params) => isOneOf(params.action, ['detach', 'reattach']) && isString(params.label),
+  remoteSession: (params) => isOneOf(params.action, ['detach', 'attach']) && isString(params.label),
 };

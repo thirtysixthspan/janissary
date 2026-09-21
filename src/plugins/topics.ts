@@ -93,14 +93,14 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
       if (row) managers.sessions.close(row.label);
       return;
     }
-    case 'reattach': {
-      if (managers.sessions.offers('reattach', { session: action.session })) {
-        managers.sessions.reattach(action.session);
+    case 'attach': {
+      if (managers.sessions.offers('attach', { session: action.session })) {
+        managers.sessions.attach(action.session);
       }
       return;
     }
-    case 'end': {
-      if (managers.sessions.offers('end', { session: action.session })) managers.sessions.end(action.session);
+    case 'terminate': {
+      if (managers.sessions.offers('terminate', { session: action.session })) managers.sessions.terminate(action.session);
       return;
     }
     case 'forget': {

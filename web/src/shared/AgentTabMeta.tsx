@@ -15,12 +15,12 @@ type Properties = {
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
-  // Set only for a remote tab: what its channel is doing, and where to send the detach or reattach
+  // Set only for a remote tab: what its channel is doing, and where to send the detach or attach
   // the control raises. Whether an action is in flight is the button's own business — nothing out
   // here knows it, so nothing out here is asked for it.
   remoteSession?: {
     state: RemoteSessionState;
-    onAction(action: 'detach' | 'reattach'): void;
+    onAction(action: 'detach' | 'attach'): void;
   };
 };
 

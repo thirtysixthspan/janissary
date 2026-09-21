@@ -30,7 +30,7 @@ export class ShellManager {
   // Distinguishes a remote tab's shell ids from the local `pty…` ids, so both can key the same
   // remote channel without colliding.
   private remoteShellCounter = 0;
-  // Spawn ids a reattach recorded for tabs whose shells have not been asked for yet. A remote agent
+  // Spawn ids an attach recorded for tabs whose shells have not been asked for yet. A remote agent
   // tab's shell is created lazily, on its first command, so the id cannot be handed to a constructor
   // — it waits here until `spawnFor` needs one, and is consumed exactly once. The session id the
   // record carried is kept beside the spawn id so an adoption can never be claimed by a tab talking
@@ -56,13 +56,13 @@ export class ShellManager {
 
   // Tell this tab's next remote shell to bind to a spawn id the far side already holds, rather than
   // starting a second shell beside the one still running there. `session` is the session id the
-  // record of the reattach carried, checked against the tab's channel when the shell is finally
+  // record of the attach carried, checked against the tab's channel when the shell is finally
   // asked for.
   adoptRemoteShell(label: string, id: string, session?: string): void {
     this.adopted.set(label, { id, session });
   }
 
-  // Forget a label's adoption before anything bound to it — a reattach that failed, or whose
+  // Forget a label's adoption before anything bound to it — an attach that failed, or whose
   // session turned out to be over, has no shell out there worth binding to.
   releaseAdoptedShell(label: string): void { this.adopted.delete(label); }
 
@@ -100,7 +100,7 @@ export class ShellManager {
     const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      // A reattached tab adopts the spawn id the far side already knows it by, so the adapter binds
+      // An attached tab adopts the spawn id the far side already knows it by, so the adapter binds
       // to the shell still running there rather than starting a second one beside it — but only
       // while its channel is still the session the adoption was recorded against, and never past a
       // tab close that freed its label.

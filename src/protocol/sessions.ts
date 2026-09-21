@@ -9,14 +9,14 @@ export type RemoteSessionKind = 'harness' | 'agent' | 'ssh' | 'navigator';
 
 // `provisioning` is a remote tab whose workspace clone has not landed yet, `reconnecting` a live
 // entry whose transport is gone and whose backoff is already running, `detached` a peer parked on
-// its host, and `ended` a session a reattach or an end established is over.
+// its host, and `terminated` a session an attach or a terminate established is over.
 export type RemoteSessionState =
-  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'ended';
+  | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
 
 // What a row offers. Kept as a list on the row rather than derived by the client from kind and
 // state, so the server stays the single source of truth about what may be pressed (principle 1).
 export type RemoteSessionAction =
-  | 'reattach' | 'detach' | 'end' | 'forget' | 'focus' | 'close';
+  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close';
 
 export type RemoteSessionView = {
   // Stable row identity: the tab label for a live row, `<session>:<spawn id>` for a recorded one.
@@ -35,23 +35,23 @@ export type RemoteSessionView = {
   // The row's tooltip: the full destination as launched, and the remote workspace path.
   destination: string;
   workspace: string;
-  // A row riding another row's channel, rendered indented under it. Detach, end, and forget live on
+  // A row riding another row's channel, rendered indented under it. Detach, terminate, and forget live on
   // the launching row only, because they act on a whole channel.
   joined: boolean;
   actions: RemoteSessionAction[];
-  // The tab this row is, or — for a recorded row — the tab label a reattach would take back.
+  // The tab this row is, or — for a recorded row — the tab label an attach would take back.
   label: string;
   // The far side's session id, present exactly when the row belongs to a recorded session.
   session?: string;
-  // What the last reattach or end reported, when one failed. It is also what earns the row its trash
+  // What the last attach or terminate reported, when one failed. It is also what earns the row its trash
   // button: forgetting a session must not be the easy way past a host that is merely slow.
   failure?: string;
-  // An end attempt on this session is in flight. Set only on a detached row, and what keeps its
+  // A terminate attempt on this session is in flight. Set only on a detached row, and what keeps its
   // destructive controls from being pressed a second time while the first is still reaching the host.
-  ending?: boolean;
+  terminating?: boolean;
 };
 
 export type RemoteSessionRpcCall =
   // The metadata row's control, both verbs behind one method: a per-verb method would be two
   // dispatcher arms and two decoders for one decision the row already made.
-  { method: 'remoteSession'; params: { action: 'detach' | 'reattach'; label: string } };
+  { method: 'remoteSession'; params: { action: 'detach' | 'attach'; label: string } };

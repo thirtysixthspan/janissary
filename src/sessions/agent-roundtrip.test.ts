@@ -67,7 +67,7 @@ function harness() {
         frames.push(frame as ClientFrame);
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
-          case 'reattach': { setTimeout(() => { emit({ type: 'reattach-result', accepted: true }); }, 0); break; }
+          case 'attach': { setTimeout(() => { emit({ type: 'attach-result', accepted: true }); }, 0); break; }
           case 'session-state': { setTimeout(() => { emit({ type: 'session-state-result', processes: processes.states() }); }, 0); break; }
           case 'spawn': { processes.spawn(frame); break; }
           case 'kill': { processes.kill(frame.id); break; }
@@ -123,7 +123,7 @@ it('restores the same agent shell through repeated detach and late transport exi
     expect(h.frames).toEqual([]);
     expect(managers.tab.byLabel('harun')).toBeUndefined();
     expect(managers.sessions.view()).toMatchObject([{ state: 'detached', session: SESSION }]);
-    expect(managers.sessions.reattach(SESSION)).toBe(true);
+    expect(managers.sessions.attach(SESSION)).toBe(true);
     await vi.advanceTimersByTimeAsync(10);
     old.handlers.onExit(old.id, 1);
     await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);

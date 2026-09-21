@@ -6,7 +6,7 @@ import { clientParamsValid } from './index.js';
 // checked here, which is what lets the arm read them at their declared types.
 
 describe('remoteSession params', () => {
-  it.each(['detach', 'reattach'])('accepts the %s verb with a label', (action) => {
+  it.each(['detach', 'attach'])('accepts the %s verb with a label', (action) => {
     expect(clientParamsValid('remoteSession', { action, label: 'claude' })).toBe(true);
   });
 

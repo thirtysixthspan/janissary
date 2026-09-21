@@ -1,4 +1,4 @@
-/* Sessions tab: the remote sessions this janissary holds — active, reconnecting, detached, ended.
+/* Sessions tab: the remote sessions this janissary holds — active, reconnecting, detached, terminated.
    A scrollable flex column of five-column rows, with rows that share a channel indented under the
    row that launched it, so one glance shows what a single detach would take with it. */
 .session-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; outline: none; }
@@ -38,7 +38,7 @@
 .session-row[data-state='detached'] .session-row-state { color: var(--accent); }
 .session-row[data-state='reconnecting'] .session-row-state,
 .session-row[data-state='provisioning'] .session-row-state { color: var(--warn, var(--accent)); }
-.session-row[data-state='ended'] { color: var(--muted); }
+.session-row[data-state='terminated'] { color: var(--muted); }
 .session-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .session-row-actions button {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
@@ -49,6 +49,6 @@
    back (red). A disabled control stays faint, so the disabled rule below keeps its color. */
 .session-row-actions button[data-action='detach'] { color: var(--success); }
 .session-row-actions button[data-action='detach']:hover { color: var(--success); }
-.session-row-actions button[data-action='reattach'] { color: var(--error); }
-.session-row-actions button[data-action='reattach']:hover { color: var(--error); }
+.session-row-actions button[data-action='attach'] { color: var(--error); }
+.session-row-actions button[data-action='attach']:hover { color: var(--error); }
 .session-row-actions button:disabled { color: var(--faint); cursor: default; }

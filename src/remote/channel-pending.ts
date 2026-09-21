@@ -3,11 +3,11 @@ import { PENDING_BUFFER_BUDGET_BYTES } from './serve-detach.js';
 
 // Output and exit frames whose process id has no listener yet.
 //
-// A detached peer flushes its whole replay buffer the instant it accepts a reattach
+// A detached peer flushes its whole replay buffer the instant it accepts an attach
 // (`DetachedPeer.accept`), which is the right thing for the case that machinery was built for: the
-// tabs were already open and only the transport had gone. A session reattached after janissary
+// tabs were already open and only the transport had gone. A session attached after janissary
 // restarted has no tabs at all, and the frames arrive before the ones it is about to build — so
-// dropping what has no listener would lose the first burst of every reattached process.
+// dropping what has no listener would lose the first burst of every attached process.
 //
 // Bounded by the same budget the far side holds itself to, and for the same reason: a peer that
 // replays a megabyte into a janissary whose tabs never arrive must not grow this without limit. The

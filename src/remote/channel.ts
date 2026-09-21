@@ -36,7 +36,7 @@ export type { AcpSessionListener } from './channel-acp.js';
 // transcript pushes, and the browser-gone report. Everything else inbound is routed to a
 // `SessionListener` instead. `browser-exited` carries a session id but is not that session's
 // output — the tab it names is resolved by the manager, since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'reattach-result' | 'session-state-result' }>;
+export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.
@@ -49,14 +49,14 @@ export type RemoteChannelHandlers = {
   onSessionExit?: (id: string, label: string | undefined, harness: boolean) => void;
   // The set of processes this channel has spawned changed — a `spawn` went out, or a `kill` did.
   // What makes a session recordable is having something running in its workspace, so this is the
-  // moment a launch becomes reattachable. Per process, never per byte.
+  // moment a launch becomes attachable. Per process, never per byte.
   onProcesses?: () => void;
   // The held-frame buffer overflowed and dropped its oldest frames. Reported through the same line
   // a truncated replay already has, since it is the same fact one layer further in.
   onTruncatedReplay?: () => void;
 };
 
-type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'reattaching';
+type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
 
 export class RemoteChannel {
   private state: ChannelState = 'authenticating';
@@ -104,7 +104,7 @@ export class RemoteChannel {
   detachAcp(id: string): void { this.acpSessions.delete(id); }
 
   send(frame: ClientFrame): void {
-    if (this.state !== 'attached' && !(this.state === 'reattaching' && frame.type === 'reattach')) {
+    if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
       if (frame.type === 'filesystem-request') this.navigators.get(frame.session)?.onReply({
         type: 'filesystem-reply', session: frame.session, request: frame.request, error: 'Remote connection unavailable.',
       });
@@ -170,7 +170,7 @@ export class RemoteChannel {
     // Both run in the same read: the handshake line may sit in the middle of a chunk whose tail is
     // already frames, so the terminal phase can hand straight over to the frame phase.
     if (this.state === 'authenticating') this.consumeTerminalPhase();
-    if (this.attached || this.state === 'reattaching') this.consumeFrames();
+    if (this.attached || this.state === 'attaching') this.consumeFrames();
   }
 
   // The ssh session ended, for any reason. Notifies the owner exactly once.
@@ -213,11 +213,11 @@ export class RemoteChannel {
     this.buffer = this.buffer.slice(newline + 1);
     const handshake = parseHandshake(line);
     if ('error' in handshake) { this.fail(handshake.error); return; }
-    this.state = this.sessionId ? 'reattaching' : 'attached';
+    this.state = this.sessionId ? 'attaching' : 'attached';
     // A handshake that speaks for an existing session opens the hold window: the peer is about to
     // flush its replay and the tabs that will claim it may not exist yet. It closed by
-    // `discardUnclaimed` once those tabs are built — or by the settlement that ends the reattach.
-    if (this.state === 'reattaching') this.router.openHold();
+    // `discardUnclaimed` once those tabs are built — or by the settlement that ends the attach.
+    if (this.state === 'attaching') this.router.openHold();
     this.sessionId ??= handshake.session;
     this.handlers.onAttached(handshake);
   }
@@ -228,7 +228,7 @@ export class RemoteChannel {
       const line = this.buffer.slice(0, newline).trim();
       this.buffer = this.buffer.slice(newline + 1);
       if (line) this.dispatch(line);
-      if (this.state !== 'attached' && this.state !== 'reattaching') return;
+      if (this.state !== 'attached' && this.state !== 'attaching') return;
       newline = this.buffer.indexOf('\n');
     }
   }
@@ -236,7 +236,7 @@ export class RemoteChannel {
   private dispatch(line: string): void {
     const frame = decodeFrame(line);
     if (!('type' in frame)) { this.fail(frame.error); return; }
-    if (frame.type === 'reattach-result' && frame.accepted) this.state = 'attached';
+    if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
     if (frame.type === 'output') { this.router.output(frame); return; }
     if (frame.type === 'exit') { this.router.exit(frame); return; }
     if (frame.type === 'filesystem-reply') {
@@ -250,7 +250,7 @@ export class RemoteChannel {
     if (dispatchAcp(this.acpSessions, frame)) return;
     switch (frame.type) {
     case 'workspace-ready':
-    case 'reattach-result':
+    case 'attach-result':
     case 'session-state-result':
     case 'workspace-failed':
     case 'browser-exited':

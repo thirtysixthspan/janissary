@@ -74,7 +74,7 @@ function harness() {
         frames.push(frame as ClientFrame);
         switch (frame.type) {
           case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
-          case 'reattach': { setTimeout(() => { emit({ type: 'reattach-result', accepted: true }); }, 0); break; }
+          case 'attach': { setTimeout(() => { emit({ type: 'attach-result', accepted: true }); }, 0); break; }
           case 'session-state': { setTimeout(() => { emit({ type: 'session-state-result', processes: processes.states() }); }, 0); break; }
           case 'spawn': { processes.spawn(frame); break; }
           case 'kill': { processes.kill(frame.id); break; }
@@ -173,7 +173,7 @@ describe('harness sessions round trip', () => {
     const originalProcess = h.processes.states()[0];
     for (let cycle = 0; cycle < 2; cycle++) {
       expect(managers.sessions.detach('claude')).toBe(true);
-      expect(managers.sessions.reattach(SESSION)).toBe(true);
+      expect(managers.sessions.attach(SESSION)).toBe(true);
       await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);
       expect(managers.tab.harnessTab('claude')?.harness).toMatchObject({ status: 'running', ptyId: originalProcess.id });
       expect(managers.tab.cwdOf('claude')).toBe(WORKSPACE);
@@ -183,14 +183,14 @@ describe('harness sessions round trip', () => {
     }
     expect(h.remoteSpawns).toHaveBeenCalledOnce();
     expect(h.remoteKills).not.toHaveBeenCalled();
-    expect(notify).not.toHaveBeenCalledWith(expect.anything(), 'remote-session-ended', expect.anything(), expect.anything());
+    expect(notify).not.toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', expect.anything(), expect.anything());
   });
 
   it('ignores an old transport exit delivered after the harness has been restored', async () => {
     const h = await launch();
     const old = h.transports[0];
     managers.sessions.detach('claude');
-    managers.sessions.reattach(SESSION);
+    managers.sessions.attach(SESSION);
     await vi.advanceTimersByTimeAsync(10);
     old.handlers.onExit(old.id, 1);
     await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS + 10);

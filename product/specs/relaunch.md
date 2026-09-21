@@ -7,7 +7,7 @@
 3. Sort the saved agents by their recorded tab `number` and create a tab for each, preserving its saved `number` and `dotColor`.
 4. Load each agent's `cmdHistory` and `log` into its tab, and populate the cwd ref for shell restoration.
 5. If no state files exist, fall back to a single `janus` tab.
-6. Reattach every recorded remote session, opening its tabs as each peer answers (see `remote-server.md`). Each is attempted independently and none holds the restore up: a peer that refuses is marked ended, and a host that cannot be reached leaves its session listed as detached with the failure on its row. An ordinary `janus` start does not do this — it lists those sessions as detached and waits for the button in the sessions tab.
+6. Attach every recorded remote session, opening its tabs as each peer answers (see `remote-server.md`). Each is attempted independently and none holds the restore up: a peer that refuses is marked terminated, and a host that cannot be reached leaves its session listed as detached with the failure on its row. An ordinary `janus` start does not do this — it lists those sessions as detached and waits for the button in the sessions tab.
 7. Render the UI with all restored tabs.
 8. When a shell is spawned for a restored tab, `cd` to the saved working directory.
 

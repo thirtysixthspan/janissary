@@ -2,7 +2,7 @@ import type { RemoteTargetView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { RemoteSessionState } from './RemoteSessionButton';
 
-// The metadata row's detach/reattach control, built once for every tab that renders `AgentTabMeta`.
+// The metadata row's detach/attach control, built once for every tab that renders `AgentTabMeta`.
 // One RPC carries both verbs, so there is nothing per-call-site to get wrong beyond which tab is
 // being addressed.
 
@@ -23,7 +23,7 @@ function stateOf(provisioning: boolean, remote: RemoteTargetView): RemoteSession
 // resolves `undefined` for a socket that is not open or a connection that ends first — on a request
 // nobody answers. It resolves to whether the action actually ran, which is what the feed's line
 // explains when it did not.
-async function raise(client: JanusClient, action: 'detach' | 'reattach', label: string): Promise<boolean> {
+async function raise(client: JanusClient, action: 'detach' | 'attach', label: string): Promise<boolean> {
   const call = { method: 'remoteSession' as const, params: { action, label } };
   if (typeof client.request !== 'function') { client.send(call); return false; }
   return await client.request<boolean>(call) === true;
@@ -33,7 +33,7 @@ export function remoteSessionControl(
   client: JanusClient,
   label: string,
   remote: RemoteTargetView,
-): { state: RemoteSessionState; onAction(action: 'detach' | 'reattach'): Promise<boolean> } {
+): { state: RemoteSessionState; onAction(action: 'detach' | 'attach'): Promise<boolean> } {
   return {
     state: stateOf(remote.provisioning === true, remote),
     onAction: (action) => raise(client, action, label),

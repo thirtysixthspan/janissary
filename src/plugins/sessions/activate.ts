@@ -68,7 +68,7 @@ export function activate(): TabPluginActivation {
       }));
       capabilities.dockTab(INSTANCE_KEY, dock);
     },
-    // The rows change with nothing in flight — a session is detached elsewhere, a peer's reattach
+    // The rows change with nothing in flight — a session is detached elsewhere, a peer's attach
     // finally answers — so the host speaks first and the list redraws from the slice the topic hands
     // it. No title is returned: the name in the tab strip has nothing to do with what the list holds.
     notify: (event, capabilities) => {
@@ -92,11 +92,11 @@ export function activate(): TabPluginActivation {
 }
 
 // Each verb names a row by the id the list is already showing, and the row itself says whether it
-// offers that verb — so a client cannot detach a row that carries no detach, or reattach one that is
+// offers that verb — so a client cannot detach a row that carries no detach, or attach one that is
 // already live, even before the host's own narrowing runs.
 const ROW_INTENTS = {
   detach: 'detach', focus: 'focus', close: 'close',
-  reattach: 'reattach', end: 'end', forget: 'forget',
+  attach: 'attach', terminate: 'terminate', forget: 'forget',
 } as const;
 
 type RowIntent = keyof typeof ROW_INTENTS;

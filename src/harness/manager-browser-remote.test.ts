@@ -21,7 +21,7 @@ function remoteBrowserLaunch(): {
   const registerRemotePty = vi.fn(() => 'rpty1');
   (managers.pty as unknown as { registerRemotePty: unknown }).registerRemotePty = registerRemotePty;
   (managers as unknown as { remote: unknown }).remote = {
-    open: vi.fn((_label: string, _address: unknown, _cwd: string, next: RemoteHandlers) => {
+    create: vi.fn((_label: string, _address: unknown, _cwd: string, next: RemoteHandlers) => {
       handlers = next;
       return channel;
     }),

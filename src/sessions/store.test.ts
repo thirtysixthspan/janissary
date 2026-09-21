@@ -132,7 +132,7 @@ describe('remote session store pruning', () => {
     expect(pruneRemoteSessions([fresh], REMOTE_DETACH_TIMEOUT_MS)).toEqual([fresh]);
   });
 
-  it('prunes on load, so a week-old file offers no reattach', () => {
+  it('prunes on load, so a week-old file offers no attach', () => {
     project();
     saveRemoteSessions([record({ activity: 0 })]);
     expect(loadRemoteSessions(REMOTE_DETACH_TIMEOUT_MS + 1)).toEqual([]);

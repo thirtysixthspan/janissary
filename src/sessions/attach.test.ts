@@ -3,13 +3,13 @@ import type { Managers } from '../managers.js';
 import type { RemoteResume } from '../remote/resume.js';
 import { askSessionState } from '../remote/resume.js';
 import { startRemoteAgent } from '../profile/remote-agent.js';
-import { startSessionReattach } from './reattach.js';
+import { startSessionAttach } from './attach.js';
 import { restoreSessionTabs } from './restore-tabs.js';
 import type { RemoteSessionRecord } from './store.js';
 
-// What this suite is about is how an accepted reattach settles — the peer's answer, an empty answer,
+// What this suite is about is how an accepted attach settles — the peer's answer, an empty answer,
 // and no answer at all read differently on purpose, and the last of them used to not settle at all.
-// The connection itself is faked: `reattachRemote` hands back whichever answer the case is about,
+// The connection itself is faked: `attachRemote` hands back whichever answer the case is about,
 // and the agent launch hands its resume straight back too.
 vi.mock('../remote/resume.js', () => ({ askSessionState: vi.fn() }));
 vi.mock('./restore-tabs.js', () => ({ restoreSessionTabs: vi.fn(() => []) }));
@@ -38,7 +38,7 @@ function harness() {
   const entry = { labels: new Set(['claude']), channel: { discardUnclaimed: vi.fn() } };
   const managers = {
     harness: {
-      reattachRemote: vi.fn((options: { resume: { onResult: (accepted: boolean) => void } }) => {
+      attachRemote: vi.fn((options: { resume: { onResult: (accepted: boolean) => void } }) => {
         options.resume.onResult(true);
       }),
     },
@@ -51,14 +51,14 @@ function harness() {
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-describe('startSessionReattach', () => {
-  it('reattaches when the peer says what is running', async () => {
+describe('startSessionAttach', () => {
+  it('attaches when the peer says what is running', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue([
       { id: 'rpty1', program: 'claude', mode: 'pty', harness: 'claude' },
     ]);
 
-    await expect(startSessionReattach(h.managers, record())).resolves.toMatchObject({ kind: 'reattached' });
+    await expect(startSessionAttach(h.managers, record())).resolves.toMatchObject({ kind: 'attached' });
     expect(restoreSessionTabs).toHaveBeenCalledOnce();
   });
 
@@ -68,16 +68,16 @@ describe('startSessionReattach', () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue([]);
 
-    await expect(startSessionReattach(h.managers, record())).resolves.toMatchObject({ kind: 'ended' });
+    await expect(startSessionAttach(h.managers, record())).resolves.toMatchObject({ kind: 'terminated' });
   });
 
   it('ends an accepted peer that never answers', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);
 
-    await expect(startSessionReattach(h.managers, record())).resolves.toMatchObject({
-      kind: 'ended',
-      reason: 'devbox accepted the reattach but never said what was running.',
+    await expect(startSessionAttach(h.managers, record())).resolves.toMatchObject({
+      kind: 'terminated',
+      reason: 'devbox accepted the attach but never said what was running.',
     });
     expect(h.managers.remote.close).toHaveBeenCalledWith('claude');
     expect(restoreSessionTabs).not.toHaveBeenCalled();
@@ -87,15 +87,15 @@ describe('startSessionReattach', () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);
 
-    const outcome = await startSessionReattach(h.managers, record());
-    expect(outcome.kind).toBe('ended');
+    const outcome = await startSessionAttach(h.managers, record());
+    expect(outcome.kind).toBe('terminated');
     expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
   });
 
-  // The agent branch parks the recorded spawn id before the tab exists, so a reattach that does not
+  // The agent branch parks the recorded spawn id before the tab exists, so an attach that does not
   // come back must release it: the label is about to be freed, and a later tab granted the same
   // label must bind its own shell, not a process id from a session that ended.
-  it('releases the adopted shell when an agent reattach ends instead of reattaching', async () => {
+  it('releases the adopted shell when an agent attach ends instead of attaching', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);
     vi.mocked(startRemoteAgent).mockImplementation(
@@ -108,7 +108,7 @@ describe('startSessionReattach', () => {
       launchKind: 'agent',
       processes: [{ id: 'rsh1', label: 'claude', kind: 'agent' }],
     };
-    await startSessionReattach(h.managers, agentRecord);
+    await startSessionAttach(h.managers, agentRecord);
     expect(h.managers.shell.adoptRemoteShell).toHaveBeenCalledWith('claude', 'rsh1', SESSION);
     expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledWith('claude');
   });

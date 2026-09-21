@@ -72,8 +72,8 @@ export type HarnessView = {
   // Two readers: `HarnessTab` in `web/src/harness/HarnessTab.tsx` shows it in place of the ordinary
   // `exited` status, and `wireControllerEvents` in `src/controller/events.ts` keeps the tab open
   // when its PTY exits rather than closing it, so the transcript survives to explain what happened.
-  // `endRemoteSession` in `src/remote/reattach.ts` is the only writer of this field or `Tab`'s.
-  sessionEnded?: string;
+  // `terminateRemoteSession` in `src/remote/attach.ts` is the only writer of this field or `Tab`'s.
+  sessionTerminated?: string;
 };
 
 // A tab whose harness or agent runs on another host, reached over one ssh session (see
@@ -286,14 +286,14 @@ export type Tab = {
   // reads that field to schedule a recursive delete against the **local** filesystem.
   remote?: RemoteTarget;
   // The server-side record that this tab's remote session has ended, set only on a `remote` tab and
-  // holding the same line the user is shown. Distinct from `HarnessView.sessionEnded`, which exists
+  // holding the same line the user is shown. Distinct from `HarnessView.sessionTerminated`, which exists
   // to be displayed: this one is a gate, read by `ScheduleManager.fire` in `src/schedule/manager.ts`
   // so a scheduled command is not fired into a dead session, and by the `live` check in
-  // `endRemoteProcess` in `src/remote/reattach.ts` so the shared channel is torn down once every tab
-  // on it has ended. Both are written together by `endRemoteSession`, the only writer of either, and
+  // `terminateRemoteProcess` in `src/remote/attach.ts` so the shared channel is torn down once every tab
+  // on it has ended. Both are written together by `terminateRemoteSession`, the only writer of either, and
   // an agent or shell tab has only this one — its user-visible copy is a line in `log`, not a field.
   // Server-only: `toTabView` never puts it on the wire.
-  sessionEnded?: string;
+  sessionTerminated?: string;
   // `--offline` on the tab's creating `agent`/`harness` command: adds a network-deny rule to the
   // tab's sandbox profile (only meaningful alongside `workspaceDir`). Kept so a relaunch restores it.
   offline?: boolean;

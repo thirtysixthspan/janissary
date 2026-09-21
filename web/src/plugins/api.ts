@@ -28,7 +28,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, reattachSessionIcon, endSessionIcon } from '../icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../icons';
 
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal

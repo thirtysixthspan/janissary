@@ -19,7 +19,7 @@ const LIVE: RemoteSessionView = {
 const PARKED: RemoteSessionView = {
   id: 'session-2:rpty1', host: 'devbox', name: 'claude-2', kind: 'harness', state: 'detached',
   activity: 500, destination: 'devbox', workspace: '/srv/ws2', joined: false,
-  actions: ['reattach', 'end'], label: 'claude-2', session: 'session-2',
+  actions: ['attach', 'terminate'], label: 'claude-2', session: 'session-2',
 };
 
 const ROWS: RemoteSessionView[] = [LIVE, PARKED];
@@ -128,8 +128,8 @@ describe('sessions plugin intents', () => {
   });
 
   it.each([
-    { intent: 'reattach', expected: { topic: 'sessions', action: 'reattach', session: 'session-2' } },
-    { intent: 'end', expected: { topic: 'sessions', action: 'end', session: 'session-2' } },
+    { intent: 'attach', expected: { topic: 'sessions', action: 'attach', session: 'session-2' } },
+    { intent: 'terminate', expected: { topic: 'sessions', action: 'terminate', session: 'session-2' } },
   ])('routes $intent to a session-addressed topic action', ({ intent, expected }) => {
     expect(run(intent, { id: 'session-2:rpty1' }).actions).toEqual([expected]);
   });
@@ -142,13 +142,13 @@ describe('sessions plugin intents', () => {
     expect(run('focus', { id: 'claude' }).result).toBeNull();
   });
 
-  // The row itself says what it offers, so a client cannot detach a parked session or reattach a
+  // The row itself says what it offers, so a client cannot detach a parked session or attach a
   // live one even before the host's own narrowing runs.
   it('rejects a verb the named row does not offer', () => {
     expect(() => run('detach', { id: 'session-2:rpty1' }))
       .toThrow(new TabPluginRejection('detach is not offered on that row'));
-    expect(() => run('reattach', { id: 'claude' }))
-      .toThrow(new TabPluginRejection('reattach is not offered on that row'));
+    expect(() => run('attach', { id: 'claude' }))
+      .toThrow(new TabPluginRejection('attach is not offered on that row'));
   });
 
   it('rejects a row id the list is not showing', () => {

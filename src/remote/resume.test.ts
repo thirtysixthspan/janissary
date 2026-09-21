@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications.js';
-import { detachRemoteEntry, terminateRemoteEntry, type RemoteEntry } from './reattach.js';
-import { answerSessionState, askSessionState, handleReattachResult, SESSION_STATE_TIMEOUT_MS, type ResumeState } from './resume.js';
+import { detachRemoteEntry, terminateRemoteEntry, type RemoteEntry } from './attach.js';
+import { answerSessionState, askSessionState, handleAttachResult, SESSION_STATE_TIMEOUT_MS, type ResumeState } from './resume.js';
 
 vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 // The query's three exits: the answer, the deadline, and the entry losing the ability to answer. The
-// last two both resolve `undefined`, which is what tells a reattach that nothing was established —
+// last two both resolve `undefined`, which is what tells an attach that nothing was established —
 // deliberately different from the empty list, which is the peer saying its workspace is empty.
 
 function entry(): RemoteEntry {
@@ -21,7 +21,7 @@ function entry(): RemoteEntry {
     workspaceDir: '/remote/ws',
     closed: false,
     settled: true,
-    reconnect: { stop: vi.fn(), accepted: vi.fn() },
+    attach: { stop: vi.fn(), accepted: vi.fn() },
   } as unknown as RemoteEntry;
 }
 
@@ -48,7 +48,7 @@ describe('askSessionState', () => {
 
   // The hang this exists to end. A peer that accepts and then never answers — a remote `janus`
   // upgraded while the session sat detached is the concrete case — used to leave this unresolved
-  // for good, and with it the reattach and its placeholder tab.
+  // for good, and with it the attach and its placeholder tab.
   it('gives up on a peer that never answers', async () => {
     const query = askSessionState(entry());
     vi.advanceTimersByTime(SESSION_STATE_TIMEOUT_MS);
@@ -101,35 +101,35 @@ describe('detachRemoteEntry', () => {
 });
 
 // The remote-session-ended announcement is how the feed reports a session that ended on its own.
-// A reattach pressed from the sessions tab has its own narrator, so announcing here as well would
+// An attach pressed from the sessions tab has its own narrator, so announcing here as well would
 // land two differently worded endings for one event.
-describe('handleReattachResult — who narrates a refusal', () => {
+describe('handleAttachResult — who narrates a refusal', () => {
   beforeEach(() => { notify.mockClear(); });
 
   const narrating = {
-    tab: { byLabel: () => ({ label: 'claude', log: [], sessionEnded: undefined }) },
+    tab: { byLabel: () => ({ label: 'claude', log: [], sessionTerminated: undefined }) },
   } as unknown as Managers;
 
-  function refusedReattach(resuming: boolean): void {
+  function refusedAttach(resuming: boolean): void {
     const target = entry();
     const state: ResumeState = { resuming };
     const resume = resuming
       ? { session: 'session-1', workspaceDir: '/remote/ws', onResult: vi.fn() }
       : undefined;
-    handleReattachResult(narrating, target,
-      { type: 'reattach-result', accepted: false }, 'creator', resume, state, vi.fn());
+    handleAttachResult(narrating, target,
+      { type: 'attach-result', accepted: false }, 'creator', resume, state, vi.fn());
   }
 
-  it('names the session once for a reattach pressed from a record, and not in the generic line', () => {
-    refusedReattach(true);
+  it('names the session once for an attach pressed from a record, and not in the generic line', () => {
+    refusedAttach(true);
     expect(notify).not.toHaveBeenCalled();
   });
 
   // An automatic reconnect's refusal is a session that ended on its own, and nobody else
   // narrates it — the generic announcement stands as it always read.
   it('keeps the generic announcement for a refusal on the automatic reconnect path', () => {
-    refusedReattach(false);
+    refusedAttach(false);
     expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify.mock.calls[0][1]).toBe('remote-session-ended');
+    expect(notify.mock.calls[0][1]).toBe('remote-session-terminated');
   });
 });

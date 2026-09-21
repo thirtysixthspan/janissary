@@ -19,7 +19,7 @@ export type RemoteAgentLaunch = {
   cwd: string;
   presentation?: PlaceAgentOptions['presentation'];
   out: (text: string) => void;
-  // Set when this launch is really a reattach: the channel asks to reattach rather than to
+  // Set when this launch is really an attach: the channel asks to attach rather than to
   // provision, and the workspace it comes back to is the one the record remembers.
   resume?: RemoteResume;
 };
