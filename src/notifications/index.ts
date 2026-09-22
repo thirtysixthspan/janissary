@@ -128,6 +128,20 @@ export function formatTimestamp(date: Date): string {
   return `${hour12}:${minutes}${period}`;
 }
 
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// A notification's provenance timestamp: `formatTimestamp`'s bare time for a `detectedAt` on
+// today's calendar day, or a short date ahead of it (`Sep 20 9:05am`) for one from an earlier
+// day — a replayed auto-approval from a multi-day detachment must not read as having happened
+// today. The comparison is calendar day, not elapsed hours, so an event from 11pm last night is
+// dated even though it is only a few hours old.
+export function provenanceTimestamp(detectedAt: Date, now: Date = new Date()): string {
+  const sameDay = detectedAt.getFullYear() === now.getFullYear()
+    && detectedAt.getMonth() === now.getMonth() && detectedAt.getDate() === now.getDate();
+  if (sameDay) return formatTimestamp(detectedAt);
+  return `${SHORT_MONTHS[detectedAt.getMonth()]} ${detectedAt.getDate()} ${formatTimestamp(detectedAt)}`;
+}
+
 // The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
 // the event-specific extra: the command for `schedule-fire`, the sender label for
 // `incoming-message`, the user's message for `manual`, the approver's message for `auto-approve`,
@@ -186,7 +200,7 @@ export function notify(
   const fromColor = managers.tab.byLabel(tabLabel)?.dotColor;
   // The dot label is the notification's provenance header — when, then who — so the line reads
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
-  const from = `${formatTimestamp(detectedAt)} ${tabLabel}`;
+  const from = `${provenanceTimestamp(detectedAt)} ${tabLabel}`;
   const output = notificationText(event, tabLabel, message);
   appendNotification(managers, {
     input: '',

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give a replayed notification a date as well as a time, so an auto-approval from earlier in a multi-day detachment does not read as having happened today.
-
-Existing Issue: `formatTimestamp` in `src/notifications.ts` renders a twelve-hour clock time with no date component, and the new `detectedAt` parameter feeds it a time that can be up to the full seven-day detach window old, so a notification replayed on reattach reads as `9:05am` exactly like one raised minutes ago. Severity: 4/10
-
-Existing Risk: 4/10 - The user reattaches after a weekend and reads a queued stand-down as this morning's, so a permission prompt the harness has been blocked on for days looks fresh and the decision about what the agent actually did while unattended is made on a wrong timeline.
-
-Proposal Risk: 2/10 - Every notification line grows, and a date shown on same-day entries is noise unless the rendering is conditional, which is one more branch to get wrong.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: date a replayed notification whose detection time is not today". `notify()` in `src/notifications.ts` builds its provenance header as `${formatTimestamp(detectedAt)} ${tabLabel}`. Extend `formatTimestamp`, or add a sibling beside it, so a `detectedAt` falling on a different calendar day than now is rendered with a short date prefix (for example `Sep 20 9:05am`) while a same-day time keeps today's exact format — the conditional matters because every existing call site passes the default `new Date()` and must render byte-identically. The comparison must be on local calendar day, not on an elapsed-hours threshold, so an event from 11pm last night is dated even though it is three hours old. `src/notifications.test.ts` already has "stamps the header with a given detectedAt time rather than now" and "defaults detectedAt to now when not given" — keep both, and add a case for a `detectedAt` several days back asserting the dated form. `formatTimestamp` is exported and may have other readers, so grep for its call sites before changing its return shape and prefer adding a function to changing the existing one if anything else depends on the bare time.
-
-
 * Give the far side's detection pipeline the same missing-detector guard the local busy handler has, so a harness with no busy classifier keeps its coarse spawn-to-exit busy behavior.
 
 Existing Issue: `busyStatusHandler` in `src/harness/busy-status.ts` returns undefined for a harness name absent from `BUSY_TABLE`, deliberately leaving the tab busy for the whole process lifetime, but `buildHarnessDetection` in `src/remote/serve-processes-detect.ts` builds a `BusyTracker` for every harness spawn with no such check, and `BusyTracker.observe` treats `classifyBusy`'s `undefined` for an unknown harness the same as a ready classification — so the two call sites of a class whose own comment says it "can run identically wherever the capture stream lives" do not in fact behave identically. Severity: 4/10

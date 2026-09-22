@@ -203,4 +203,8 @@ The feed displays **newest first**: the most recently recorded notification appe
 with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
 compact 12-hour clock time (for example `8:32pm`), the originating tab's label, and the message.
 The tab label appears **once**, in this header: a `notify <message>` shows the message on its own
-without repeating the label ahead of it.
+without repeating the label ahead of it. A notification whose actual detection time falls on an
+earlier calendar day than today — a queued report replayed after a multi-day detachment — carries
+a short date ahead of the time (for example `Sep 20 8:32pm`) rather than the bare time alone, so it
+does not read as having happened today; the comparison is calendar day, not elapsed hours, so an
+event from late the previous night is still dated even a few hours later.
