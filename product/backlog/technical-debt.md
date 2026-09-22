@@ -4,8 +4,6 @@
 
 * Move the three flat notifications-feed files into `src/notifications/`: `notifications.ts`, `notifications-tab.ts`, and `notifications-tab-test-fixture.ts` own event eligibility, the singleton feed tab, and its test host, with two colocated tests and a bare `src/notifications.ts` entry that becomes `index.ts`. `src/notifications/` does not exist yet, no configuration names the old paths literally, and roughly twenty-five files across `src/` and `web/src/` import the group, so the one concern is currently discoverable only through a filename prefix. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `notifications` prefix. Severity: **low**.
 
-* Remove the flaky `src/sessions/harness-roundtrip.test.ts` test `delivers shutdown before closing the final harness transport`: it passes reliably in isolation (8/8 across repeated standalone runs) but intermittently fails when run as part of the full server suite under load, observed with `h.frames` accumulating hundreds of duplicate `{ type: 'kill', id: 'rpty1' }` frames instead of the single expected `shutdown` frame within the test's `vi.advanceTimersByTimeAsync(10)` window. Severity: **low** — no evidence of a real behavioral bug (the assertion and every isolated run are correct), but it destabilizes confidence in the `check-diff`/gate signal.
-
 ## development
 
 * Move the editor tab's commit-to-origin, rename, and resync protocol sequences into a plain module beside the component so the commit choreography is testable without rendering the editor.

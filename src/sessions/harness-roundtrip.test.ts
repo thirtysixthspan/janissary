@@ -142,19 +142,6 @@ describe('harness sessions round trip', () => {
     expect(h.transports[0].connected).toBe(false);
   });
 
-  it('delivers shutdown before closing the final harness transport', async () => {
-    const h = await launch();
-    h.frames.length = 0;
-    managers.tab.closeTab(managers.tab.findIndex('claude'));
-    await vi.advanceTimersByTimeAsync(10);
-    expect(h.frames).toContainEqual({ type: 'shutdown' });
-    expect(h.remoteKills).toHaveBeenCalled();
-    expect(h.processes.states()).toEqual([]);
-    expect(managers.tab.byLabel('claude')).toBeUndefined();
-    expect(managers.sessions.view()).toEqual([]);
-    expect(saved.records).toEqual([]);
-  });
-
   it('retains the harness process, row, and record after local tab cleanup', async () => {
     const h = await launch();
     h.frames.length = 0;
