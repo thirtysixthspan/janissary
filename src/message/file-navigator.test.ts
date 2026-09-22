@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.js';
-import type { Controller } from './controller.js';
-import type { ClientMessage } from './protocol.js';
+import { dispatchFileNavigatorMessage } from './file-navigator.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage } from '../protocol.js';
 
 const makeController = () =>
   ({

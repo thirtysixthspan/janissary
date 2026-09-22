@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import type * as ClientMessageModule from './client-message.js';
-import type { Controller } from './controller.js';
-import type { ClientMessage, ServerEvent } from './protocol.js';
+import type * as ClientMessageModule from '../client-message.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage, ServerEvent } from '../protocol.js';
 
 // The contract table is what admits a method to the dispatcher, so a method with a contract and no
 // `case` is the exact slip this guards against: it compiles today only because the mock stands in
 // for the table. Everything the real table already lists keeps its real reply mode.
 const PHANTOM_METHODS = new Set(['phantomMethod', 'phantomFileNavigatorItem']);
 
-vi.mock('./client-message.js', async (importOriginal) => {
+vi.mock('../client-message.js', async (importOriginal) => {
   const actual = await importOriginal<typeof ClientMessageModule>();
   return {
     ...actual,
@@ -18,8 +18,8 @@ vi.mock('./client-message.js', async (importOriginal) => {
   };
 });
 
-const { handle } = await import('./message-handler.js');
-const { dispatchFileNavigatorMessage } = await import('./message-handler-file-navigator.js');
+const { handle } = await import('./handler.js');
+const { dispatchFileNavigatorMessage } = await import('./file-navigator.js');
 
 describe('dispatcher exhaustiveness', () => {
   const controller = { setActiveTab: vi.fn() } as unknown as Controller;

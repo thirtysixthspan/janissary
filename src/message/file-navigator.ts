@@ -1,6 +1,6 @@
-import type { Controller } from './controller.js';
-import type { ClientMessage } from './protocol.js';
-import { unhandledClientMethod } from './client-message.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage } from '../protocol.js';
+import { unhandledClientMethod } from '../client-message.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll' | 'fileNavigatorPull' | 'fileNavigatorCommit'

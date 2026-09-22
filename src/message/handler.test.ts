@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handle } from './message-handler.js';
-import type { Controller } from './controller.js';
-import type { ClientMessage, ServerEvent, RpcCall } from './protocol.js';
+import { handle } from './handler.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage, ServerEvent, RpcCall } from '../protocol.js';
 
 const makeController = () =>
   ({

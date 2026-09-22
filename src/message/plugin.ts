@@ -1,6 +1,6 @@
-import type { Controller } from './controller.js';
-import type { ClientMessage } from './protocol.js';
-import { isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams } from './client-message.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage } from '../protocol.js';
+import { isEditorPluginFailedParams, isPluginFailedParams, isPluginIntentParams } from '../client-message.js';
 
 type PluginMessage = Extract<ClientMessage, {
   method: 'defaultMenuSelectionAction' | 'runDefaultMenuSelectionAction'
