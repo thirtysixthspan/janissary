@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make detached capture queries bounded, non-interactive, and responsible for shutting down their relay process.
-
-Existing Issue: The one-off SSH transport used for a detached capture discards authentication prompts, has no deadline, and kills the transport after a successful reply without sending `shutdown`, which can leave an unreachable command and an empty `remote-serve` peer parked for seven days. Severity: 7/10
-
-Existing Risk: 7/10 - A password, passphrase, host-key, or stalled-network prompt can leave a hidden local PTY waiting forever, while every successful query can strand an unrecorded remote process and session file until expiry.
-
-Proposal Risk: 3/10 - A bounded query can fail on hosts that require interactive authentication, but it will report that limitation promptly and will no longer leave hidden local or remote resources behind.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: bound and clean up detached capture queries". Rework the query lifecycle in `src/harness/capture-remote.ts` so its SSH connection cannot wait on invisible terminal prompts indefinitely: use an explicitly bounded, non-interactive query transport or expose a similarly deterministic failure path, preserve the remote protocol error as a user-facing result instead of collapsing every failure into “no capture yet,” and add a deadline that kills the local PTY. After a successful `capture-reply`, send the fresh relay server a `shutdown` frame and use the existing bounded shutdown-drain path before killing its transport; the parked target peer must remain attached to neither socket and must keep its original expiry. Keep ordinary interactive remote launches in `src/remote/entry-factory.ts` unchanged. Add focused lifecycle coverage in a colocated `src/harness/capture-remote.test.ts`, extend `src/harness/subcommands.test.ts` for visible timeout/authentication errors, and extend `src/remote/serve.test.ts` to prove the relay exits while the queried parked peer remains attachable. Update `product/specs/harness.md` and `product/specs/remote-server.md` with the detached-query failure behavior, then verify with the diff-scoped server checks.
-
-
 * Make on-demand capture replies safe across concurrent requests and transport loss.
 
 Existing Issue: `CaptureRequestTracker` stores only one resolver per process id and `RemoteChannel.closed()` preserves those resolvers when entering reconnect mode, so a second request overwrites the first and a request lost with its SSH transport can remain unresolved forever. Severity: 6/10

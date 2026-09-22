@@ -135,6 +135,19 @@ describe('captureSubcommand — no open tab (detached)', () => {
     expect(writeCaptureFile).toHaveBeenCalledWith('claude', 789, 'parked screen');
     expect(managers.edit).toHaveBeenCalledWith('harness capture claude', '/project/.janissary/captures/claude-now.txt', 'janus');
   });
+
+  it('reports a detached-query failure in the invoking transcript', async () => {
+    vi.mocked(queryParkedCapture).mockResolvedValue({ error: 'SSH authentication is disabled.' });
+    const record = { session: 's1', workspaceLabel: 'claude' };
+    const process = { id: 'r1', label: 'claude', kind: 'harness' };
+    const managers = makeManagers([{ label: 'janus', log: [] } as unknown as Tab], { record: { record, process } });
+    captureSubcommand(managers, noCapture, 'harness capture claude', 'claude');
+
+    await Promise.resolve(); await Promise.resolve();
+    expect(managers.append).toHaveBeenCalledWith('janus', {
+      input: '', output: 'Detached capture query failed: SSH authentication is disabled.',
+    });
+  });
 });
 
 describe('transcriptSubcommand (unaffected by this plan)', () => {

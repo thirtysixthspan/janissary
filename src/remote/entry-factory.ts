@@ -27,6 +27,11 @@ export function remoteServeCommand(address: RemoteAddress): string {
   return `ssh -t ${address.destination} '$SHELL -ic "${serve}"'`;
 }
 
+export function remoteCaptureCommand(address: RemoteAddress): string {
+  const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
+  return `ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t ${address.destination} '$SHELL -ic "${serve}"'`;
+}
+
 export function createRemoteEntry({
   managers, label, address, cwd, handlers, resume, channelClosed, sessionsChanged,
 }: RemoteEntryFactoryOptions): RemoteEntry {

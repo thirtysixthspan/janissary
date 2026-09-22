@@ -241,6 +241,8 @@ Writes the harness tab labeled `<name>`'s current screen to a file and opens it 
 - The tab isn't a harness tab: `"<name>" is not a harness tab.`
 - The tab is a harness tab but nothing has been captured yet: `No capture available for "<name>" yet.`
 
+For a detached remote harness, Janissary runs a short non-interactive query instead of opening an authentication prompt. If it cannot connect, the remote protocol fails, or the query times out, the requesting tab reports `Detached capture query failed: <reason>`.
+
 ## Opening a session transcript
 
 ```

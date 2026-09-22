@@ -576,7 +576,9 @@ closed by a deliberate Detach, so `<name>` cannot resolve to an open tab at all 
 the session's persisted process record instead (the same one the Sessions tab's detached rows read)
 and reaches the parked peer without attaching it. A reconnecting tab has no live connection to ask at
 all, so the request fails immediately rather than waiting behind the retry: `No capture available for
-"<name>" — connection is reconnecting.` One capture is also retained automatically per detected
+"<name>" — connection is reconnecting.` A detached query does not prompt for SSH authentication and
+has a bounded wait; authentication, protocol, and timeout failures appear as `Detached capture query
+failed: <reason>` rather than remaining hidden. One capture is also retained automatically per detected
 permission gate while a remote harness is detached, on the same terms as a live one.
 
 ## Session transcript

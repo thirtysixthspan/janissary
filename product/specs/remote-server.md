@@ -301,6 +301,11 @@ local harness's do; there is no separate browsing UI for captures taken while de
 notifications and captures taken during a detached window do not survive the session's own expiry or
 an explicit Terminate — they are discarded with the session, same as everything else about it.
 
+A detached capture starts a separate, non-interactive SSH query with a bounded deadline. Its relay
+sends `shutdown` after it answers and drains that frame before closing, so the relay exits while the
+queried parked peer keeps its socket and original expiry. Authentication, protocol, and timeout
+failures return to the requesting transcript instead of leaving a hidden query transport running.
+
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
 writes, and every mutation execute on the remote against the provisioned workspace. Every accepted

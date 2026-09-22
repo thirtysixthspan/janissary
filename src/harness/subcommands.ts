@@ -24,6 +24,10 @@ function resolveHarnessTab(managers: Managers, label: string): { error: string }
 function reportCaptureResult(
   managers: Managers, input: string, label: string, invokingLabel: string, capture: RemoteCaptureResult,
 ): void {
+  if (capture && 'error' in capture) {
+    managers.tab.append(invokingLabel, { input: '', output: `Detached capture query failed: ${capture.error}` });
+    return;
+  }
   if (!capture) {
     managers.tab.append(invokingLabel, { input: '', output: `No capture available for "${label}" yet.` });
     return;

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
+import { remoteCaptureCommand } from './entry-factory.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications/index.js';
@@ -44,6 +45,13 @@ describe('remoteServeCommand', () => {
   it('leaves a home-relative path unquoted inside the inner command so the remote expands it', () => {
     expect(remoteServeCommand(address('admin@devbox:~/dev/proj')))
       .toBe(`ssh -t admin@devbox '$SHELL -ic "janus remote-serve ~/dev/proj"'`);
+  });
+});
+
+describe('remoteCaptureCommand', () => {
+  it('disables interactive SSH authentication while retaining the remote shell command', () => {
+    expect(remoteCaptureCommand(address('devbox:/srv/proj')))
+      .toBe(`ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t devbox '$SHELL -ic "janus remote-serve /srv/proj"'`);
   });
 });
 
