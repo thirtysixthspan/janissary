@@ -47,7 +47,7 @@ State your pick and its complexity in one sentence.
 ## Step 2 — Read the plan and the project constraints
 
 1. Read the entire chosen plan.
-2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`CLAUDE.md`](../../CLAUDE.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+2. Read the project constraints that shape implementation: the ESLint rules and file-size limit in [`AGENTS.md`](../../AGENTS.md) (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), and the test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 3. Read every file the plan references to confirm the line anchors and code fragments still match. If a reference is stale, locate the correct position by the quoted code fragment — line numbers drift.
 
 ---

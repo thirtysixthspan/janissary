@@ -10,7 +10,7 @@ This is an **interactive** task. Unlike the autonomous `ai/tasks/*.md` playbooks
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. No `Co-Authored-By:` trailers naming Claude or any other AI, no "Generated with Claude Code" lines, no AI authorship notes in plan files or commit messages. This overrides any default convention that appends such attribution.
 
-**Plan and task formatting:** use natural line breaks only — do not wrap lines at a fixed column width (per `CLAUDE.md`).
+**Plan and task formatting:** use natural line breaks only — do not wrap lines at a fixed column width (per `AGENTS.md`).
 
 ## What you may and may not do
 

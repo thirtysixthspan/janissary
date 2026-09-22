@@ -33,7 +33,7 @@ This task only reads files and runs git. It never builds, tests, lints, or runs 
 
 The working tree **must be clean**, with no modified *and no untracked* files. This matters more than usual here: Step 6's commit stages everything with `git add -A`, so any stray file would be silently swept in. If the tree is not clean, STOP and report what is there. Do not start on top of changes you did not make.
 
-**Command hygiene for the whole run:** run each command plainly and read its output from the result. No piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see CLAUDE.md) and cost a wasted call each time.
+**Command hygiene for the whole run:** run each command plainly and read its output from the result. No piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see AGENTS.md) and cost a wasted call each time.
 
 ---
 
@@ -42,7 +42,7 @@ The working tree **must be clean**, with no modified *and no untracked* files. T
 Read what the project already says about its own shape before reading source. It is the fastest, most authoritative map, and it keeps the diagram from re-deriving something already documented and possibly getting it wrong.
 
 1. [`ai/guidelines/architecture-principles.md`](../../guidelines/architecture-principles.md). The numbered principles describe the server/client split, the manager-per-resource model, the controller's role, the command registry, the parse/execute seam, and the shared wire contract. Each principle names real files and directories. Treat these as the skeleton, and note that principles 2, 3 and 5 each describe a *pressure point* rather than a settled structure.
-2. `CLAUDE.md`'s "Project structure" section for the top-level map.
+2. `AGENTS.md`'s "Project structure" section for the top-level map.
 3. [`ai/guidelines/react-code-organization.md`](../../guidelines/react-code-organization.md) for how `web/src/` is organized: feature directories, the one-way `shared → feature → app` flow, no cross-feature imports.
 4. Skim `product/specs/` filenames. A subsystem with a spec is a named, load-bearing component. A subsystem without one is usually an implementation detail worth collapsing into its neighbour.
 
@@ -56,7 +56,7 @@ ls web/src/plugins/
 wc -l src/controller.ts
 ```
 
-Note anywhere the guidance and the tree disagree: a file a principle names that no longer exists, a new top-level directory `CLAUDE.md` does not mention, sizes that have moved. Diagram what you observe on disk. If a disagreement is material, report it in Step 7 rather than silently picking one source over the other.
+Note anywhere the guidance and the tree disagree: a file a principle names that no longer exists, a new top-level directory `AGENTS.md` does not mention, sizes that have moved. Diagram what you observe on disk. If a disagreement is material, report it in Step 7 rather than silently picking one source over the other.
 
 ---
 

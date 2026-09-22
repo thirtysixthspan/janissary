@@ -15,7 +15,7 @@ import { HarnessManager } from './harness/manager.js';
 import { AcpLoop, HarnessManager } from './acp/index.js';
 ```
 
-Relative imports keep their **`.js`** extension even though the source is `.ts` (NodeNext) — see [`../../CLAUDE.md`](../../CLAUDE.md). A direct import names a real file that "Go to Definition" jumps straight into; a barrel adds a hop that lands you in the re-export list instead.
+Relative imports keep their **`.js`** extension even though the source is `.ts` (NodeNext) — see [`../../AGENTS.md`](../../AGENTS.md). A direct import names a real file that "Go to Definition" jumps straight into; a barrel adds a hop that lands you in the re-export list instead.
 
 ## The one legitimate exception: a package's public API
 

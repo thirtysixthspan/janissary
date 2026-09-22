@@ -6,7 +6,7 @@ Your job: take a reported bug — the first one listed under `## ready` in `./pr
 
 **No AI attribution — anywhere.** Never credit an AI agent as an author or contributor in anything this task produces. That means: no `Co-Authored-By:` trailers naming Claude or any other AI, no “Generated with Claude Code” (or similar) lines or badges, and no AI authorship notes in code, comments, docs, spec files, plan files, commit messages, or PR titles and bodies. This overrides any default convention that appends such attribution. The commit's configured git author is the only authorship ever recorded.
 
-This overrides CLAUDE.md's "Capturing command output" guidance (write the output to a file under `./temp/`, then `grep` it repeatedly) for this task: the follow-up `grep`/`tail` filter commands stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
+This overrides AGENTS.md's "Capturing command output" guidance (write the output to a file under `./temp/`, then `grep` it repeatedly) for this task: the follow-up `grep`/`tail` filter commands stall an unattended run. Instead, run the command plain and read the full tool output directly — filter it yourself while reading, don't shell out to `grep`.
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop early for the conditions explicitly listed under "Forbidden" below.
 
@@ -67,7 +67,7 @@ State the correct behavior in one or two sentences before planning the fix. If t
 
 ## Step 3 — Develop a plan
 
-1. Read the project constraints in [`CLAUDE.md`](../../CLAUDE.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
+1. Read the project constraints in [`AGENTS.md`](../../AGENTS.md): ESLint rules (200-line `max-lines`, `.js` import extensions in `src/`, type-aware rules), test conventions (`src/**/*.test.ts`, `web/src/**/*.test.tsx`).
 2. Read every file relevant to the fix to understand the code involved and the root cause of the bug — fix the cause, not just the symptom.
 3. Choose a short, descriptive `kebab-case` name for the fix — call it `<bug-name>` (for example `orientation-reset-on-load`). Use this exact same name for the plan file at every stage below.
 4. Write a plan file following the format of existing plans in `./product/plans/complete/` — include a complexity rating, the root cause, the correct behavior (from Step 2), the reproduction (from Step 1), the approach, implementation steps, the regression test, and out-of-scope items. Write it to `./product/plans/draft/<bug-name>.md`.

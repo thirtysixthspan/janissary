@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cmd=$(jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -Eq '>[[:space:]]*[^&[:space:]]' && echo \"$cmd\" | grep -Eq '\\b(cat|tail|head|less|more)\\b'; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Redirects output to a file and reads it back with cat/tail/head/less/more. Per CLAUDE.md (Avoid unnecessary file redirects in Bash calls), run the command directly and read its output from the tool result instead — no file, no cat/tail.\"}}'; else printf '{}'; fi"
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if echo \"$cmd\" | grep -Eq '>[[:space:]]*[^&[:space:]]' && echo \"$cmd\" | grep -Eq '\\b(cat|tail|head|less|more)\\b'; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Redirects output to a file and reads it back with cat/tail/head/less/more. Per AGENTS.md (Avoid unnecessary file redirects in Bash calls), run the command directly and read its output from the tool result instead — no file, no cat/tail.\"}}'; else printf '{}'; fi"
           }
         ]
       }

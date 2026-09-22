@@ -10,7 +10,7 @@ Your job: regenerate the screenshots the pages under `documentation/user-documen
 
 **Run autonomously.** This task runs unattended — do not ask the user questions or wait for feedback at any step. Make the best judgment call yourself, using the rules in this document, and keep going. Only stop for the conditions the steps below name explicitly.
 
-**Command hygiene for the whole run.** Run each command plainly and read its output from the tool result. No piping into `grep`/`tail`/`head`, no `>` redirects, no `$(...)` capture — each of those trips a permission prompt or a hook rejection in this repo and stalls an unattended run. The capture prints one line per shot; read them from the result rather than filtering. This overrides CLAUDE.md's "Capturing command output" guidance for this task.
+**Command hygiene for the whole run.** Run each command plainly and read its output from the tool result. No piping into `grep`/`tail`/`head`, no `>` redirects, no `$(...)` capture — each of those trips a permission prompt or a hook rejection in this repo and stalls an unattended run. The capture prints one line per shot; read them from the result rather than filtering. This overrides AGENTS.md's "Capturing command output" guidance for this task.
 
 ---
 
