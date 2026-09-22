@@ -5,7 +5,10 @@ import { messageBus } from '../bus.js';
 import { atomicWriteFile } from '../atomic-write.js';
 import { errorText } from '../error-text.js';
 
-const VALID_NAME = /^[\w-]+$/;
+// Filename-safety guard, not a label dictionary: the label becomes the transcript file's stem, so
+// it must not address a path outside the directory (no `/`, no `\`). Dots are fine — real labels
+// hold them (an IP address, e.g. `10.27.1.94`) — and the appended `.json` defeats the bare `..` shape.
+const VALID_NAME = /^[\w.-]+$/;
 
 let transcriptDir = '';
 

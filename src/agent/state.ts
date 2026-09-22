@@ -13,7 +13,10 @@ export function ensureStateDirectory(): void {
   mkdirSync(stateDirectory, { recursive: true });
 }
 
-const VALID_NAME = /^[\w-]+$/;
+// Filename-safety guard, not a label dictionary: the name becomes the state file's stem, so it must
+// not address a path outside the directory (no `/`, no `\`). Dots are fine — real labels hold them
+// (an IP address, e.g. `10.27.1.94`) — and the appended `.json` defeats the bare `..` shape.
+const VALID_NAME = /^[\w.-]+$/;
 
 export function agentStatePath(name: string): string {
   if (!VALID_NAME.test(name)) throw new Error(`Invalid agent name: "${name}"`);

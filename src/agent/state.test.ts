@@ -39,6 +39,20 @@ describe('agent-state', () => {
     expect(() => agentStatePath('agent/sub')).toThrow();
   });
 
+  it('agentStatePath accepts names with dots', () => {
+    initAgentStateDirectory('/base');
+    const path = agentStatePath('10.27.1.94');
+    expect(path).toContain('10.27.1.94.json');
+  });
+
+  it('saveAgentState round-trips a dotted agent name', () => {
+    mockFs.mkdirSync.mockImplementation(() => {});
+    mockFs.writeFileSync.mockImplementation(() => {});
+    initAgentStateDirectory('/test');
+    saveAgentState({ name: '10.27.1.94', dotColor: '#fff', active: false });
+    expect(mockFs.renameSync).toHaveBeenCalledWith(expect.any(String), '/test/.janissary/state/10.27.1.94.json');
+  });
+
   it('ensureStateDirectory calls mkdirSync with recursive option', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
     initAgentStateDirectory('/test');
