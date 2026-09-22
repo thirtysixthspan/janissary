@@ -6,6 +6,8 @@
 
 * establish a seperate layout for the sessions tab that allows the content to be presented in a narrow width sidebar.
 
+* if the notifications tab is not open, notifications should be presented as a toast message in the upper right corner of the screen with a time limited duration of 4 seconds. the toast should animate out via fade over a 2 second window.
+
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
