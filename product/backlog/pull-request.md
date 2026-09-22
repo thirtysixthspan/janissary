@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give the far side's detection pipeline the same missing-detector guard the local busy handler has, so a harness with no busy classifier keeps its coarse spawn-to-exit busy behavior.
-
-Existing Issue: `busyStatusHandler` in `src/harness/busy-status.ts` returns undefined for a harness name absent from `BUSY_TABLE`, deliberately leaving the tab busy for the whole process lifetime, but `buildHarnessDetection` in `src/remote/serve-processes-detect.ts` builds a `BusyTracker` for every harness spawn with no such check, and `BusyTracker.observe` treats `classifyBusy`'s `undefined` for an unknown harness the same as a ready classification — so the two call sites of a class whose own comment says it "can run identically wherever the capture stream lives" do not in fact behave identically. Severity: 4/10
-
-Existing Risk: 4/10 - The next harness added to `HARNESS_COMMANDS` without a `BUSY_TABLE` entry will have its busy dot cleared roughly two captures after spawn and its tab badged unread when run remotely, while the identical tab run locally stays busy — a split that presents as an intermittent UI bug rather than as a missing table entry.
-
-Proposal Risk: 2/10 - The two paths agree, but the agreement now rests on both call sites remembering to consult `BUSY_TABLE`, which is the same coupling that allowed them to drift.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: apply the missing-busy-detector guard on the far side too". The cleanest fix moves the guard inside the class rather than duplicating it: have `BusyTracker`'s constructor take the harness name, check `Object.hasOwn(BUSY_TABLE, name)` once, and have `observe()` return undefined for every capture when there is no detector — then `busyStatusHandler` keeps its existing early return purely as an optimization and `buildHarnessDetection` inherits the behavior without a second check. `current()` must keep returning `true` in that case so `busyStates()` and the attach-time snapshot report the coarse busy state rather than a spurious ready. Alternatively, guard at the call site in `src/remote/serve-processes-detect.ts` by leaving `HarnessDetection.currentBusy` pinned to `true` and skipping the tracker entirely for an unknown harness. Either way, add cases to `src/harness/busy-status.test.ts`'s `BusyTracker` block for a harness name with no table entry (no transition reported, `current()` stays true) and to `src/remote/serve-processes.test.ts` asserting no `busy-transition` frame is sent for such a spawn. The existing claude/codex/opencode cases in both files pin the detector-backed behavior and must keep passing unchanged.
-
-
 * Document the two new failure outcomes of the screen-capture command in the user documentation, which still lists only the errors that predate this change.
 
 Existing Issue: The capture section of `documentation/user-documentation/advanced-agents/harness.md` gained a paragraph about detached-query failures but still lists `No tab labeled "<name>".` as the outcome when no tab has the label — now only true when no persisted session record matches either — and names neither the ambiguous-label refusal nor the reconnecting refusal that `captureSubcommand` and `resolveOpenRemoteCapture` can now return. Severity: 3/10

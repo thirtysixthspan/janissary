@@ -1,6 +1,7 @@
 import { HarnessScreenReader, type ScreenCapture } from '../harness/screen.js';
 import { HarnessAutoApprover } from '../harness/auto-approve.js';
 import { BusyTracker, type BusyTransition } from '../harness/busy-status.js';
+import { BUSY_TABLE } from '../harness/busy-classify.js';
 import type { ServerFrame } from './protocol.js';
 
 export type HarnessDetection = {
@@ -25,7 +26,7 @@ export function buildHarnessDetection(
   id: string, harnessName: string, cols: number, rows: number, autoApprove: boolean,
   approve: (keystroke: string) => void, send: (frame: ServerFrame) => void,
 ): HarnessDetection {
-  const tracker = new BusyTracker();
+  const tracker = Object.hasOwn(BUSY_TABLE, harnessName) ? new BusyTracker() : undefined;
   let approver: HarnessAutoApprover | undefined;
   if (autoApprove) {
     approver = new HarnessAutoApprover({
@@ -39,12 +40,12 @@ export function buildHarnessDetection(
   }
   const reader = new HarnessScreenReader(id, cols, rows, (capture) => {
     approver?.onCapture(capture);
-    const transition = tracker.observe(capture, harnessName, !approver || approver.isStuck);
+    const transition = tracker?.observe(capture, harnessName, !approver || approver.isStuck);
     if (transition) send({ type: 'busy-transition', id, busy: transition.busy, unread: transition.unread });
   });
   return {
     latestCapture: () => reader.latestCapture(),
-    snapshot: () => tracker.snapshot(),
+    snapshot: () => tracker?.snapshot() ?? { busy: true, unread: false },
     dispose: () => reader.dispose(),
   };
 }

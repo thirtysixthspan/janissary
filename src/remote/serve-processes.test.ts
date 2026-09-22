@@ -265,6 +265,22 @@ describe('RemoteProcesses harness detection', () => {
     expect(send).toHaveBeenCalledWith({ type: 'busy-transition', id: 'r1', busy: false, unread: true });
   });
 
+  it('sends no busy-transition frame for a harness with no BUSY_TABLE entry, and reports it coarsely busy', async () => {
+    const processes = new RemoteProcesses(send, '/remote/workspace', 'claude');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'mystery', command: 'mystery', mode: 'pty', cols: 80, rows: 24,
+      harness: 'mystery', autoApprove: false,
+    });
+    const handlers = vi.mocked(spawnPty).mock.calls.at(-1)?.[3] as {
+      onData: (id: string, data: string) => void; onExit: (id: string, code: number) => void;
+    };
+    onExitHandlers.push(handlers.onExit);
+    handlers.onData('pty1', CLEAR + READY_TEXT.replaceAll('\n', '\r\n'));
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'busy-transition' }));
+    expect(processes.busyStates()).toEqual([{ id: 'r1', busy: true, unread: false }]);
+  });
+
   it('feeds messageBus.emit(\'pty\', …) with the client-supplied spawn id, not spawnPty\'s own internal id', async () => {
     const seen: string[] = [];
     const subscription = messageBus.on('pty', 'data', (event) => { if (event.type === 'data') seen.push(event.id); });

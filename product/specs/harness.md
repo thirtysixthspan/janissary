@@ -494,6 +494,11 @@ harness has its own signal:
 - **opencode** never signals through its title, so only its rendered screen is read: a progress
   bar or an interrupt hint (`esc interrupt`) means working; the absence of both means idle.
 
+A harness type with no recognition signal of its own stays busy for its whole process
+lifetime instead — the coarse spawn-to-exit behavior every harness had before this section's
+tracking existed — and this holds identically whether the tab is local or a remote harness's
+far-side detection.
+
 A newly launched harness tab starts busy, exactly as before, until its first capture is
 classified. A working→idle transition is committed only after the idle reading holds across two
 consecutive captures, so a brief mid-generation pause never flickers the dot off; a return to
