@@ -91,6 +91,7 @@ export class SessionRouter {
       program: frame.program,
       mode: frame.mode,
       ...(frame.harness !== undefined && { harness: frame.harness }),
+      ...(frame.autoApprove !== undefined && { autoApprove: frame.autoApprove }),
       ...(frame.agentName !== undefined && { agentName: frame.agentName }),
     }));
   }

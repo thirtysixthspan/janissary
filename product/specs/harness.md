@@ -585,6 +585,9 @@ If more than one detached session retained `<name>`, capture refuses to choose o
 `Multiple detached sessions are labeled "<name>". Attach the intended session before capturing.` An
 open tab with that label still takes precedence and is captured normally.
 
+A detached harness restored by Attach keeps its recorded auto-approve setting. Older session records
+without that setting restore with auto-approve disabled.
+
 ## Session transcript
 
 ```

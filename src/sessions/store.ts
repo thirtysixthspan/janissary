@@ -32,6 +32,7 @@ export type RemoteSessionProcess = {
   // anything — it is the placeholder ssh's own prompts render in — so which harness to rebuild has
   // to be known from the record rather than from the far side.
   harness?: string;
+  autoApprove?: boolean;
 };
 
 export type RemoteSessionRecord = {
@@ -79,7 +80,8 @@ function isProcess(value: unknown): value is RemoteSessionProcess {
     && typeof value.id === 'string' && value.id.length > 0
     && typeof value.label === 'string' && value.label.length > 0
     && (value.kind === 'harness' || value.kind === 'agent')
-    && (value.harness === undefined || (typeof value.harness === 'string' && value.harness.length > 0));
+    && (value.harness === undefined || (typeof value.harness === 'string' && value.harness.length > 0))
+    && (value.autoApprove === undefined || typeof value.autoApprove === 'boolean');
 }
 
 // Hand-written rather than schema-driven, for the reason every other guard in the tree is: this file

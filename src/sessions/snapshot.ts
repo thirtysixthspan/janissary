@@ -76,11 +76,14 @@ export function sshTabs(managers: Managers, activity: (label: string) => number)
 // takeover, an inline terminal card — belongs to a tab that is already listed and contributes no row
 // of its own.
 function processOf(
-  state: { id: string; mode: 'pty' | 'pipe'; harness?: string; agentName?: string },
+  state: { id: string; mode: 'pty' | 'pipe'; harness?: string; agentName?: string; autoApprove?: boolean },
   launchLabel: string,
 ): RemoteSessionProcess | undefined {
   if (state.harness !== undefined) {
-    return { id: state.id, label: launchLabel, kind: 'harness' as RemoteProcessKind, harness: state.harness };
+    return {
+      id: state.id, label: launchLabel, kind: 'harness' as RemoteProcessKind, harness: state.harness,
+      ...(state.autoApprove !== undefined && { autoApprove: state.autoApprove }),
+    };
   }
   if (state.mode === 'pipe' && state.agentName !== undefined) {
     return { id: state.id, label: state.agentName, kind: 'agent' as RemoteProcessKind };

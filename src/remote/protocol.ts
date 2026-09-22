@@ -294,6 +294,7 @@ export type RemoteProcessState = {
   program: string;
   mode: 'pty' | 'pipe';
   harness?: string;
+  autoApprove?: boolean;
   agentName?: string;
 };
 
