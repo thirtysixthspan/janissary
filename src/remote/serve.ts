@@ -16,6 +16,7 @@ import { errorText } from '../error-text.js';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { DetachedPeer, relayPeer } from './serve-detach.js';
+import { answerCaptureRequest } from './serve-detach-query.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -64,7 +65,8 @@ export class RemoteServer {
   }
 
   listen(): void {
-    this.peer = new DetachedPeer(this.root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0));
+    this.peer = new DetachedPeer(this.root, this.sessionId, (data) => this.receive(data), () => this.shutdown(0),
+      (id) => this.processes?.latestCapture(id), () => this.processes?.busyStates() ?? []);
     this.emit = (frame) => this.peer?.emit(frame);
     void this.peer.start((data) => { process.stdout.write(data); }).then(() => {
       process.stdout.write(`${encodeHandshake(this.root, this.sessionId)}\n`);
@@ -139,6 +141,7 @@ export class RemoteServer {
     case 'input': { this.peer?.input(frame); this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.processes?.kill(frame.id); return; }
+    case 'capture-request': { answerCaptureRequest(frame, this.processes, this.root, (f) => this.emit(f)); return; }
     case 'filesystem-open': {
       if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
       this.files.open(frame.session);

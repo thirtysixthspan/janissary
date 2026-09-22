@@ -18,7 +18,7 @@ Nothing that happened earlier is filled in. The feed starts empty and collects w
 
 ## Read and scroll the feed
 
-The newest notification appears at the top. Each entry starts with the originating tab's colored dot, a compact 12-hour time such as `8:32pm`, and the tab label. The message follows that header.
+The newest notification appears at the top. Each entry starts with the originating tab's colored dot, a compact 12-hour time such as `8:32pm`, and the tab label. The message follows that header. A notification detected on an earlier calendar day than today — for example, one queued while a remote harness sat detached over a weekend — carries a short date ahead of the time, such as `Sep 20 8:32pm`, so it doesn't read as having just happened.
 
 Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` scroll by a line, and `Page Up` and `Page Down` scroll by a page. These keys scroll the content without selecting rows. A docked feed doesn't respond to arrows while another tab has focus. You can also use the mouse wheel.
 

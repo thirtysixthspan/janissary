@@ -52,10 +52,14 @@ describe('frame codec', () => {
         },
         identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
       },
-      { type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude', cols: 100, rows: 40, agentName: 'joined' },
+      {
+        type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude',
+        cols: 100, rows: 40, agentName: 'joined', autoApprove: true,
+      },
       { type: 'input', id: 'r1', data: 'hello' },
       { type: 'resize', id: 'r1', cols: 120, rows: 50 },
       { type: 'kill', id: 'r1' },
+      { type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1' },
       { type: 'filesystem-open', session: 'files1' },
       { type: 'filesystem-close', session: 'files1' },
       { type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'read-directory', args: { path: 'src' } },
@@ -92,6 +96,12 @@ describe('frame codec', () => {
         ],
       },
       { type: 'shell-history', id: 'agent', runs: [] },
+      { type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1_700_000_000_000, capture: 'the screen text' },
+      { type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1_700_000_000_000 },
+      { type: 'busy-transition', id: 'r1', busy: true, unread: false },
+      { type: 'busy-transition', id: 'r1', busy: false, unread: true },
+      { type: 'capture-reply', id: 'r1', request: 'q1', text: 'the screen text', capturedAt: 1_700_000_000_000 },
+      { type: 'capture-reply', id: 'r1', request: 'q1' },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
@@ -175,6 +185,24 @@ describe('frame codec', () => {
     ['spawn with an unknown mode', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'tty', cols: 80, rows: 24 }],
     ['spawn with a non-boolean offline flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, offline: 'yes' }],
     ['spawn with a non-boolean browser flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, browser: 'yes' }],
+    ['spawn with a non-boolean autoApprove flag', { type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pty', cols: 80, rows: 24, autoApprove: 'yes' }],
+    ['capture-request without a session', { type: 'capture-request', id: 'r1' }],
+    ['capture-request with a malformed session', { type: 'capture-request', session: 'not-a-uuid', id: 'r1' }],
+    ['capture-request without an id', { type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc' }],
+    ['capture-reply with text but no capturedAt', { type: 'capture-reply', id: 'r1', text: 'x' }],
+    ['capture-reply with capturedAt but no text', { type: 'capture-reply', id: 'r1', capturedAt: 1 }],
+    ['capture-reply with a non-string text', { type: 'capture-reply', id: 'r1', text: 7, capturedAt: 1 }],
+    ['capture-reply with a non-integer capturedAt', { type: 'capture-reply', id: 'r1', text: 'x', capturedAt: 1.5 }],
+    ['capture-reply with an out-of-range capturedAt', { type: 'capture-reply', id: 'r1', text: 'x', capturedAt: 1e16 }],
+    ['gate-event without an id', { type: 'gate-event', message: 'x', capturedAt: 1 }],
+    ['gate-event without a message', { type: 'gate-event', id: 'r1', capturedAt: 1 }],
+    ['gate-event without a capturedAt', { type: 'gate-event', id: 'r1', message: 'x' }],
+    ['gate-event with a non-integer capturedAt', { type: 'gate-event', id: 'r1', message: 'x', capturedAt: 1.5 }],
+    ['gate-event with an out-of-range capturedAt', { type: 'gate-event', id: 'r1', message: 'x', capturedAt: 1e16 }],
+    ['gate-event with a non-string capture', { type: 'gate-event', id: 'r1', message: 'x', capturedAt: 1, capture: 7 }],
+    ['busy-transition without an id', { type: 'busy-transition', busy: true, unread: false }],
+    ['busy-transition with a non-boolean busy flag', { type: 'busy-transition', id: 'r1', busy: 'yes', unread: false }],
+    ['busy-transition with a non-boolean unread flag', { type: 'busy-transition', id: 'r1', busy: true, unread: 'no' }],
     ['browser-exited without an id', { type: 'browser-exited' }],
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
@@ -347,8 +375,8 @@ describe('session-state frames', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 17', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(17);
+  it('is 18', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(18);
   });
 });
 
@@ -358,7 +386,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt', 'attach',
+      'acp-close', 'acp-open', 'acp-prompt', 'attach', 'capture-request',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'session-state', 'shutdown', 'spawn',
     ]);
@@ -367,7 +395,7 @@ describe('admitted frame types', () => {
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
-      'exit', 'filesystem-event', 'filesystem-reply', 'output',
+      'busy-transition', 'capture-reply', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'output',
       'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });

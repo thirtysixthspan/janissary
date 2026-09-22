@@ -104,7 +104,8 @@ export function startSessionAttach(
         name: harness, label, cwd: record.workspaceDir, workspaceDir: undefined, offline: false,
         group: creator.group, groupColor: creator.groupColor,
         dotColor: distinctColor(managers.tab.tabs.map((tab) => tab.dotColor)),
-        autoApprove: false, browser: false, remote: address, resume: resumed,
+        autoApprove: record.processes.find((process) => process.id === spawnId)?.autoApprove ?? false,
+        browser: false, remote: address, resume: resumed,
         ...(spawnId !== undefined && { resumePtyId: spawnId }),
       });
       return;

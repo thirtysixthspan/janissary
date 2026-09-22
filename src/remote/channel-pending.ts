@@ -13,7 +13,7 @@ import { PENDING_BUFFER_BUDGET_BYTES } from './serve-detach.js';
 // replays a megabyte into a janissary whose tabs never arrive must not grow this without limit. The
 // oldest frames go first, which is what the truncation line the local side already has reports.
 
-type PendingFrame = Extract<ServerFrame, { type: 'output' | 'exit' | 'shell-history' }>;
+type PendingFrame = Extract<ServerFrame, { type: 'output' | 'exit' | 'shell-history' | 'gate-event' | 'busy-transition' }>;
 
 // The encoded length is kept beside each frame so a claim subtracts only what left, instead of
 // re-encoding every survivor to recompute the total.

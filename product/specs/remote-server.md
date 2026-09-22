@@ -198,7 +198,10 @@ A browser-exit frame's message is optional but, when present, must be a nonempty
 newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
 must carry an array of process entries, each with a nonempty spawn id and program and a declared
 mode; one malformed entry makes the whole reply malformed rather than shortening the list, because a
-short list is indistinguishable from a process that exited and an empty one ends the session.
+short list is indistinguishable from a process that exited and an empty one ends the session. A
+gate-event or capture-reply frame's `capturedAt` must be an integer within the range a timestamp can
+represent; an out-of-range or fractional value is refused rather than accepted and later failing when
+it is turned into a capture filename.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.
@@ -270,11 +273,50 @@ cleared at launch and when the channel's last reference is released.
 
 ### What is computed where
 
-Screen captures, asciicast recordings, and busy-status detection are computed **locally** from the
-streamed terminal bytes, so `harness capture` writes a local capture file holding the remote screen
-and the busy dot behaves exactly as it does for a local harness. `harness transcript` is the
-exception: its source is the harness binary's own session record, which lives in the remote's dot
-directory, so the remote reads it and pushes the rendered blocks across.
+A remote harness tab's permission-gate detection, auto-approve keystroke injection, and busy/ready
+status are computed **server-side**, inside `janus remote-serve` — not locally from the streamed
+terminal bytes. This is what lets all three keep working while the tab is detached (see [[harness]]
+and "Detached-session auto-accept, notifications, and captures" below); the local
+side is a consumer of what the remote reports, live while attached and replayed on the next attach
+when it wasn't. Asciicast recordings, by contrast, are still computed **locally** from the streamed
+bytes, exactly as for a local harness — a detached remote harness produces no recording for the gap,
+since there is no local process to write one. `harness transcript` is the other exception: its source
+is the harness binary's own session record, which lives in the remote's dot directory, so the remote
+reads it and pushes the rendered blocks across.
+
+#### Detached-session auto-accept, notifications, and captures
+
+Auto-accept for a remote harness tab keeps clearing its own permission prompts while the session is
+detached or reconnecting, exactly as it does while attached — this is not a separate opt-in, just the
+existing auto-accept toggle continuing to work without a local client watching. A stand-down, where
+auto-accept cannot clear a prompt, behaves the same way whether attached or not.
+
+Notifications an auto-approval or stand-down would have raised are queued while detached and replayed
+into the notifications tab on the next attach, in their original chronological order and timestamped
+at when they actually happened rather than at reattach time. A replayed notification looks exactly
+like a live one — no marking, grouping, or separate section sets it apart, and the Sessions tab gains
+no badge or indicator for a session that had activity while detached.
+
+Screen captures continue too: `harness capture <name>` works against a detached or reconnecting
+session on demand, and one capture is automatically retained per detected permission gate during the
+detached window (not every background poll). Captures land in `.janissary/captures/` the same way a
+local harness's do; there is no separate browsing UI for captures taken while detached. Queued
+notifications and captures taken during a detached window do not survive the session's own expiry or
+an explicit Terminate — they are discarded with the session, same as everything else about it.
+
+A detached capture starts a separate, non-interactive SSH query with a bounded deadline. Its relay
+sends `shutdown` after it answers and drains that frame before closing, so the relay exits while the
+queried parked peer keeps its socket and original expiry. Authentication, protocol, and timeout
+failures return to the requesting transcript instead of leaving a hidden query transport running.
+Each capture request carries a correlation id, so concurrent requests for the same process settle
+their own replies. Losing a live transport settles its pending captures before reconnecting; a later
+reply from the lost transport cannot be delivered on the replacement connection.
+The remote process state also carries each harness's auto-approve setting so a detached Attach rebuilds
+the local metadata with the policy the far-side detector is still applying.
+Busy-transition frames are emitted only when either the busy or unread value changes; an attach still
+receives the current busy snapshot once per running process, carrying its real unread state rather
+than always clearing it, and the far side's own duplicate-suppression is realigned to that snapshot so
+a later change back to the pre-attach state is not mistaken for a repeat and dropped.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and

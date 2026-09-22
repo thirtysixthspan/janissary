@@ -192,6 +192,48 @@ describe('SessionsManager dropSession', () => {
   });
 });
 
+describe('SessionsManager recordForProcess', () => {
+  it('finds the record and process entry naming a persisted process label', () => {
+    const h = harness([], undefined, []);
+    const seeded = record();
+    saveRemoteSessions([seeded]);
+    expect(h.sessions.recordForProcess('claude')).toEqual({
+      record: seeded,
+      process: { id: 'rpty1', label: 'claude', kind: 'harness', harness: 'claude' },
+    });
+  });
+
+  it('returns undefined for a label no persisted process carries', () => {
+    const h = harness([], undefined, []);
+    saveRemoteSessions([record()]);
+    expect(h.sessions.recordForProcess('nope')).toBeUndefined();
+  });
+
+  it('searches every record\'s processes, not only the first', () => {
+    const h = harness([], undefined, []);
+    const other = record({
+      session: '22222222-2222-3333-4444-555555555555',
+      workspaceLabel: 'bekir',
+      launchLabel: 'bekir',
+      processes: [{ id: 'rpty2', label: 'bekir', kind: 'harness', harness: 'codex' }],
+    });
+    saveRemoteSessions([record(), other]);
+    expect(h.sessions.recordForProcess('bekir')).toEqual({
+      record: other,
+      process: { id: 'rpty2', label: 'bekir', kind: 'harness', harness: 'codex' },
+    });
+  });
+
+  it('marks duplicate persisted labels as ambiguous', () => {
+    const h = harness([], undefined, []);
+    const other = record({
+      session: '22222222-2222-3333-4444-555555555555', workspaceLabel: 'other', launchLabel: 'other',
+    });
+    saveRemoteSessions([record(), other]);
+    expect(h.sessions.recordForProcess('claude')).toBe('ambiguous');
+  });
+});
+
 describe('SessionsManager detach', () => {
   it('parks the session and closes every tab holding it', () => {
     const h = harness([entry({ labels: new Set(['claude', 'bekir']) })]);

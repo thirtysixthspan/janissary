@@ -321,6 +321,14 @@ none is open.
 A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
 Metadata row in `tabs.md`.
 
+For a remote harness tab, all of this — gate detection, the injected keystroke, the notification,
+the capture link, and the stand-down behavior — works identically whether the tab is attached, mid
+reconnect, or fully detached with no local client watching at all, since detection runs on the far
+side rather than against locally streamed bytes for a remote tab (see [[remote-server]], "What is
+computed where"). A notification raised while detached queues and appears in the notifications feed
+on the next attach, timestamped at when it actually happened rather than at reattach time, and is
+otherwise indistinguishable from a live one.
+
 An ACP agent can separately ask the human a free-text or multiple-choice question by issuing a
 `question ask` or `question approve` command. This human-answer channel is independent of harness
 auto-approve and does not change how harness permission prompts are recognized or answered. See
@@ -486,6 +494,11 @@ harness has its own signal:
 - **opencode** never signals through its title, so only its rendered screen is read: a progress
   bar or an interrupt hint (`esc interrupt`) means working; the absence of both means idle.
 
+A harness type with no recognition signal of its own stays busy for its whole process
+lifetime instead — the coarse spawn-to-exit behavior every harness had before this section's
+tracking existed — and this holds identically whether the tab is local or a remote harness's
+far-side detection.
+
 A newly launched harness tab starts busy, exactly as before, until its first capture is
 classified. A working→idle transition is committed only after the idle reading holds across two
 consecutive captures, so a brief mid-generation pause never flickers the dot off; a return to
@@ -560,6 +573,26 @@ in the project directory and opens it as a regular editor tab — each invocatio
 opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
 a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it,
 matching agent state).
+
+For a remote harness tab, the capture comes from the far side's own detection rather than locally
+streamed bytes (see [[remote-server]]), and how it is reached depends on the tab's connection state.
+Attached, the request round-trips the live connection. Fully detached — the tab
+closed by a deliberate Detach, so `<name>` cannot resolve to an open tab at all — it resolves against
+the session's persisted process record instead (the same one the Sessions tab's detached rows read)
+and reaches the parked peer without attaching it. A reconnecting tab has no live connection to ask at
+all, so the request fails immediately rather than waiting behind the retry: `No capture available for
+"<name>" — connection is reconnecting.` A tab whose connection has not completed its initial attach
+yet reports the same error rather than leaving the request unanswered. A detached query does not prompt for SSH authentication and
+has a bounded wait; authentication, protocol, and timeout failures appear as `Detached capture query
+failed: <reason>` rather than remaining hidden. One capture is also retained automatically per detected
+permission gate while a remote harness is detached, on the same terms as a live one.
+
+If more than one detached session retained `<name>`, capture refuses to choose one and reports
+`Multiple detached sessions are labeled "<name>". Attach the intended session before capturing.` An
+open tab with that label still takes precedence and is captured normally.
+
+A detached harness restored by Attach keeps its recorded auto-approve setting. Older session records
+without that setting restore with auto-approve disabled.
 
 ## Session transcript
 

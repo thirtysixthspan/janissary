@@ -159,7 +159,12 @@ feed.
 
 There is still **no backlog**. Nothing that happened before the feed existed is replayed into it,
 and closing the tab discards its contents: reopening it, by command or by the next event, starts a
-fresh, empty feed.
+fresh, empty feed. This is about the feed itself, opened and closed locally — it does not describe a
+detached remote harness tab's reattachment, which is a different event: an `auto-approve`
+notification raised while that tab was detached is queued on the far side and replayed into the feed
+on the next attach, in original order and timestamped at when it actually happened, indistinguishable
+from a live one once it lands (see [[remote-server]]). Nothing else changes about ordinary tab
+reopening.
 
 ### `notify <message>`
 
@@ -198,4 +203,8 @@ The feed displays **newest first**: the most recently recorded notification appe
 with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
 compact 12-hour clock time (for example `8:32pm`), the originating tab's label, and the message.
 The tab label appears **once**, in this header: a `notify <message>` shows the message on its own
-without repeating the label ahead of it.
+without repeating the label ahead of it. A notification whose actual detection time falls on an
+earlier calendar day than today — a queued report replayed after a multi-day detachment — carries
+a short date ahead of the time (for example `Sep 20 8:32pm`) rather than the bare time alone, so it
+does not read as having happened today; the comparison is calendar day, not elapsed hours, so an
+event from late the previous night is still dated even a few hours later.

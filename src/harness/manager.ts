@@ -53,7 +53,7 @@ export class HarnessManager {
   latestScreenText(label: string): ScreenCapture | undefined {
     const tab = this.managers.tab.harnessTab(label);
     if (!tab) return undefined;
-    return this.runtimes.get(tab.harness.ptyId)?.reader.latestCapture();
+    return this.runtimes.get(tab.harness.ptyId)?.reader?.latestCapture();
   }
 
   // The named tab's transcript tailer, or undefined when the tab is missing, is not a harness tab,
@@ -234,7 +234,7 @@ export class HarnessManager {
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
       const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser }, options.resumePtyId)
+        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
       this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
       this.markRunning(label, id);

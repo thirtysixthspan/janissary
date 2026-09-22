@@ -6,8 +6,13 @@ import { PseudoterminalManager } from './../pseudoterminal-manager.js';
 import { HarnessScreenReader } from '../harness/screen.js';
 import { messageBus } from '../bus.js';
 import { makeTab } from '../tab/index.js';
+import { notify } from '../notifications/index.js';
+import { writeCaptureFile } from '../harness/capture-file.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
+vi.mock('../harness/capture-file.js', () => ({ writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt') }));
 
 // An attached channel over a fake ssh PTY: `sent` collects the frames the local side writes.
 function attachedChannel() {
@@ -37,14 +42,22 @@ function makeManagers(tabs: Tab[]): Managers {
       cwdOf: vi.fn(() => '/repo'),
       persist: vi.fn(),
       buildAgentState: vi.fn((tab: Tab) => ({ name: tab.label, dotColor: tab.dotColor, active: true })),
+      addBusy: vi.fn(),
+      deleteBusy: vi.fn(),
+      markUnread: vi.fn(),
     },
   } as unknown as Managers;
 }
 
 describe('createRemotePtySession', () => {
+  beforeEach(() => {
+    vi.mocked(notify).mockClear();
+    vi.mocked(writeCaptureFile).mockClear();
+  });
+
   it('satisfies the PtySession shape, naming the remote binary rather than ssh', () => {
     const { channel } = attachedChannel();
-    const session = createRemotePtySession(channel, {
+    const session = createRemotePtySession(channel, makeManagers([]), {
       id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24,
     }, vi.fn());
     expect(session.id).toBe('r1');
@@ -56,7 +69,7 @@ describe('createRemotePtySession', () => {
 
   it('sends a spawn frame carrying the program, command, harness, and dimensions', () => {
     const { channel, sent } = attachedChannel();
-    createRemotePtySession(channel, {
+    createRemotePtySession(channel, makeManagers([]), {
       id: 'r1', program: 'claude', command: 'claude --model opus', harness: 'claude', offline: true, cols: 100, rows: 40,
     }, vi.fn());
     expect(sent).toEqual([{
@@ -67,7 +80,7 @@ describe('createRemotePtySession', () => {
 
   it('sends input, resize, and kill frames for the session id', () => {
     const { channel, sent } = attachedChannel();
-    const session = createRemotePtySession(channel, {
+    const session = createRemotePtySession(channel, makeManagers([]), {
       id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24,
     }, vi.fn());
     sent.length = 0;
@@ -85,7 +98,7 @@ describe('createRemotePtySession', () => {
 
   it('clamps a resize to at least one column and row', () => {
     const { channel, sent } = attachedChannel();
-    const session = createRemotePtySession(channel, {
+    const session = createRemotePtySession(channel, makeManagers([]), {
       id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24,
     }, vi.fn());
     sent.length = 0;
@@ -95,7 +108,7 @@ describe('createRemotePtySession', () => {
 
   it('publishes an inbound output frame on the bus under the session id', () => {
     const { channel } = attachedChannel();
-    createRemotePtySession(channel, { id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24 }, vi.fn());
+    createRemotePtySession(channel, makeManagers([]), { id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24 }, vi.fn());
     const seen: { id: string; data?: string }[] = [];
     const subscription = messageBus.on('pty', 'data', (event) => {
       if (event.type === 'data') seen.push({ id: event.id, data: event.data });
@@ -110,9 +123,92 @@ describe('createRemotePtySession', () => {
   it('calls the exit callback with the remote exit code', () => {
     const { channel } = attachedChannel();
     const onExit = vi.fn();
-    createRemotePtySession(channel, { id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24 }, onExit);
+    createRemotePtySession(channel, makeManagers([]), { id: 'r1', program: 'claude', command: 'claude', cols: 80, rows: 24 }, onExit);
     channel.receive(`${encodeFrame({ type: 'exit', id: 'r1', exitCode: 2 })}\n`);
     expect(onExit).toHaveBeenCalledWith(2);
+  });
+
+  it('sends the autoApprove flag on the spawn frame', () => {
+    const { channel, sent } = attachedChannel();
+    createRemotePtySession(channel, makeManagers([]), {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, autoApprove: true,
+    }, vi.fn());
+    expect(sent).toEqual([{
+      type: 'spawn', id: 'r1', program: 'claude', command: 'claude',
+      mode: 'pty', harness: 'claude', cols: 80, rows: 24, autoApprove: true,
+    }]);
+  });
+
+  // Translation of the far side's gate-event/busy-transition reports into exactly what a local
+  // detector would have produced — see `createRemotePtySession`'s `onGateEvent`/`onBusyTransition`.
+  it('translates a gate-event frame into notify(), stamped with the original detection time, and writes the capture file', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+
+    channel.receive(`${encodeFrame({
+      type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1_700_000_000_000, capture: 'the screen text',
+    })}\n`);
+
+    expect(vi.mocked(writeCaptureFile)).toHaveBeenCalledWith('claude', 1_700_000_000_000, 'the screen text');
+    expect(vi.mocked(notify)).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
+      '/project/.janissary/captures/claude-now.txt', undefined, new Date(1_700_000_000_000),
+    );
+  });
+
+  it('translates a gate-event frame with no capture into notify() with no open file', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+
+    channel.receive(`${encodeFrame({
+      type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1000,
+    })}\n`);
+
+    expect(vi.mocked(writeCaptureFile)).not.toHaveBeenCalled();
+    expect(vi.mocked(notify)).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approve could not clear the permission prompt; standing down',
+      undefined, undefined, new Date(1000),
+    );
+  });
+
+  it('translates a busy-transition frame into addBusy/deleteBusy/markUnread and a state:dirty push', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+    const dirty = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', dirty);
+
+    try {
+      channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: true, unread: false })}\n`);
+      expect(managers.tab.addBusy).toHaveBeenCalledWith('claude');
+      expect(dirty).toHaveBeenCalledTimes(1);
+
+      channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: false, unread: true })}\n`);
+      expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
+      expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
+      expect(dirty).toHaveBeenCalledTimes(2);
+    } finally { subscription.unsubscribe(); }
+  });
+
+  it('does not mark unread on a busy-transition to false with unread: false', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+
+    channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: false, unread: false })}\n`);
+
+    expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
+    expect(managers.tab.markUnread).not.toHaveBeenCalled();
   });
 });
 

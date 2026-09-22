@@ -74,6 +74,7 @@ export class PseudoterminalManager {
     const id = recordedId ?? `rpty${++this.remoteCounter}`;
     const session = createRemotePtySession(
       channel,
+      this.managers,
       { ...options, id, cols: this.cols, rows: this.rows, agentName: label },
       (exitCode) => this.handleExit(id, exitCode),
     );

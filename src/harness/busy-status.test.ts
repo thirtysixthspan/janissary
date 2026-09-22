@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { classifyBusy, busyStatusHandler } from './busy-status.js';
+import { classifyBusy, busyStatusHandler, BusyTracker } from './busy-status.js';
 import { endsWithRecap } from './busy-classify.js';
 import type { ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
@@ -137,6 +137,66 @@ describe('endsWithRecap', () => {
   });
 });
 
+// The far side's counterpart of `busyStatusHandler` reuses this class directly — see
+// `src/remote/serve-processes-detect.ts` — so its own behavior is covered here independent of the
+// `Managers`-backed wrapper, and `busyStatusHandler`'s tests below exercise the same logic again
+// through that wrapper's surface.
+describe('BusyTracker', () => {
+  it('starts busy, matching a freshly spawned tab\'s initial busy state', () => {
+    expect(new BusyTracker().current()).toBe(true);
+  });
+
+  it('reports a gate as not-busy with unread following the `stuck` flag it is given', () => {
+    const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+    expect(new BusyTracker().observe(capture(gate), 'claude', true)).toEqual({ busy: false, unread: true });
+    expect(new BusyTracker().observe(capture(gate), 'claude', false)).toEqual({ busy: false, unread: false });
+  });
+
+  it('reports busy immediately and updates current()', () => {
+    const tracker = new BusyTracker();
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toEqual({ busy: true, unread: false });
+    expect(tracker.current()).toBe(true);
+  });
+
+  it('suppresses a repeated busy decision', () => {
+    const tracker = new BusyTracker();
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toEqual({ busy: true, unread: false });
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toBeUndefined();
+  });
+
+  it('debounces ready to two consecutive captures before reporting it, then updates current()', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    expect(tracker.observe(capture('anything', CLAUDE_IDLE_TITLE), 'claude', false)).toBeUndefined();
+    expect(tracker.current()).toBe(true);
+    expect(tracker.observe(capture('anything', CLAUDE_IDLE_TITLE), 'claude', false)).toEqual({ busy: false, unread: true });
+    expect(tracker.current()).toBe(false);
+  });
+
+  it('resets its reported baseline to a snapshot, so a later decision equal to one from before the snapshot is reported again', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', false);
+    expect(tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', true)).toEqual({ busy: false, unread: true });
+    // A caller (an attach) sends { busy: false, unread: false } on the tracker's behalf, without
+    // an observe() call — the tracker must treat that as what was actually reported from now on.
+    expect(tracker.snapshot()).toEqual({ busy: false, unread: false });
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', false);
+    // The same { busy: false, unread: true } decision as before the snapshot recurs. Without the
+    // snapshot resetting `reported`, this would be wrongly suppressed as a repeat of the pre-attach
+    // decision the client was never actually sent.
+    expect(tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', true)).toEqual({ busy: false, unread: true });
+  });
+
+  it('exempts a claude recap from unread on the ready transition, matching busyStatusHandler', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_RECAP_PROMPT_BOX), 'claude', false);
+    expect(tracker.observe(capture(CLAUDE_RECAP_PROMPT_BOX), 'claude', false)).toEqual({ busy: false, unread: false });
+  });
+});
+
 describe('busyStatusHandler debounce', () => {
   function make(name: string) {
     const busy = new Set<string>();
@@ -167,7 +227,7 @@ describe('busyStatusHandler debounce', () => {
       handler(ready);
       handler(busy);
       expect(tab.deleteBusy).not.toHaveBeenCalled();
-      expect(tab.addBusy).toHaveBeenCalledTimes(2);
+      expect(tab.addBusy).toHaveBeenCalledOnce();
     });
 
     it(`${name}: two consecutive ready captures clear busy`, () => {

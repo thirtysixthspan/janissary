@@ -319,6 +319,46 @@ describe('notify — line composition', () => {
     expect(entry.fromColor).toBe('#abc');
   });
 
+  // Decision 17 of the auto-accept-while-detached plan: a remote harness's queued auto-approve
+  // report is replayed on reattach and must read as having happened when it actually did, not at the
+  // moment of reattachment.
+  it('stamps the header with a given detectedAt time rather than now', () => {
+    const append = vi.fn();
+    notify(
+      makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
+      undefined, undefined, new Date(2026, 0, 1, 9, 5, 0),
+    );
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('9:05am janus');
+  });
+
+  it('defaults detectedAt to now when not given', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('8:32pm janus');
+  });
+
+  it('dates the header for a detectedAt several days back, rather than reading as today', () => {
+    const append = vi.fn();
+    notify(
+      makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
+      undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+    );
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('Dec 28 9:05am janus');
+  });
+
+  it('dates the header for a detectedAt from 11pm the previous calendar day, even though it is only hours old', () => {
+    const append = vi.fn();
+    notify(
+      makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
+      undefined, undefined, new Date(2025, 11, 31, 23, 0, 0),
+    );
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('Dec 31 11:00pm janus');
+  });
+
   it('threads an openFile path onto the appended entry when given', () => {
     const append = vi.fn();
     notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt', '/captures/janus-now.txt');
