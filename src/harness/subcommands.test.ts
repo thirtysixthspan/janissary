@@ -123,6 +123,13 @@ describe('captureSubcommand — no open tab (detached)', () => {
     expect(queryParkedCapture).not.toHaveBeenCalled();
   });
 
+  it('refuses an ambiguous detached label without querying either session', () => {
+    const managers = makeManagers([{ label: 'janus', log: [] } as unknown as Tab], { record: 'ambiguous' });
+    expect(captureSubcommand(managers, noCapture, 'harness capture claude', 'claude'))
+      .toBe('Multiple detached sessions are labeled "claude". Attach the intended session before capturing.');
+    expect(queryParkedCapture).not.toHaveBeenCalled();
+  });
+
   it('resolves via the persisted process record and the one-off parked-peer query when no tab is open', async () => {
     vi.mocked(queryParkedCapture).mockResolvedValue({ text: 'parked screen', capturedAt: 789 });
     const record = { session: 's1', workspaceLabel: 'claude' };

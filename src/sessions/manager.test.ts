@@ -223,6 +223,15 @@ describe('SessionsManager recordForProcess', () => {
       process: { id: 'rpty2', label: 'bekir', kind: 'harness', harness: 'codex' },
     });
   });
+
+  it('marks duplicate persisted labels as ambiguous', () => {
+    const h = harness([], undefined, []);
+    const other = record({
+      session: '22222222-2222-3333-4444-555555555555', workspaceLabel: 'other', launchLabel: 'other',
+    });
+    saveRemoteSessions([record(), other]);
+    expect(h.sessions.recordForProcess('claude')).toBe('ambiguous');
+  });
 });
 
 describe('SessionsManager detach', () => {

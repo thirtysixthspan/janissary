@@ -59,6 +59,7 @@ function resolveOpenRemoteCapture(managers: Managers, input: string, label: stri
 function resolveDetachedCapture(managers: Managers, input: string, label: string): string | undefined {
   const match = managers.sessions?.recordForProcess(label);
   if (!match) return `No tab labeled "${label}".`;
+  if (match === 'ambiguous') return `Multiple detached sessions are labeled "${label}". Attach the intended session before capturing.`;
   const invokingLabel = managers.tab.cur().label;
   void queryParkedCapture(managers, match.record, match.process.id).then((capture) => {
     reportCaptureResult(managers, input, label, invokingLabel, capture);

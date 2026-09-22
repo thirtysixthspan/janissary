@@ -581,6 +581,10 @@ has a bounded wait; authentication, protocol, and timeout failures appear as `De
 failed: <reason>` rather than remaining hidden. One capture is also retained automatically per detected
 permission gate while a remote harness is detached, on the same terms as a live one.
 
+If more than one detached session retained `<name>`, capture refuses to choose one and reports
+`Multiple detached sessions are labeled "<name>". Attach the intended session before capturing.` An
+open tab with that label still takes precedence and is captured normally.
+
 ## Session transcript
 
 ```

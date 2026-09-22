@@ -12,6 +12,8 @@ import {
   type RemoteSessionRecord, type RemoteSessionProcess,
 } from './store.js';
 
+type PersistedProcessMatch = { record: RemoteSessionRecord; process: RemoteSessionProcess };
+
 // The remote sessions this janissary holds: the live ones it is attached to, the parked ones it
 // could come back to, and the ones it has established are over. It owns the record file, composes
 // the list, and runs the four actions the rows offer.
@@ -135,12 +137,15 @@ export class SessionsManager {
   // tab matches (decision 15 of the auto-accept-while-detached plan): a Detach closes every tab, so
   // there is nothing for `managers.tab.byLabel` to find, and this is the same record the Sessions
   // tab's detached rows already read.
-  recordForProcess(label: string): { record: RemoteSessionRecord; process: RemoteSessionProcess } | undefined {
+  recordForProcess(label: string): PersistedProcessMatch | 'ambiguous' | undefined {
+    let match: PersistedProcessMatch | undefined;
     for (const record of this.all()) {
       const process = record.processes.find((candidate) => candidate.label === label);
-      if (process) return { record, process };
+      if (!process) continue;
+      if (match) return 'ambiguous';
+      match = { record, process };
     }
-    return undefined;
+    return match;
   }
 
   // The session is over — its channel reached a genuine end through the remote lifecycle, not

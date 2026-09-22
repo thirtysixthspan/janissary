@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reject ambiguous detached capture labels instead of querying an arbitrary recorded session.
-
-Existing Issue: `SessionsManager.recordForProcess()` returns the first persisted process with a matching label even though multiple detached sessions can each retain the same former tab label after their tabs close. Severity: 6/10
-
-Existing Risk: 6/10 - `harness capture claude` can silently read and open the screen of the wrong remote host or workspace, giving the user misleading or sensitive output with no indication that the target was ambiguous.
-
-Proposal Risk: 2/10 - Ambiguous names will require the user to attach the intended session first, but the command will fail clearly instead of choosing the wrong screen.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: reject ambiguous detached capture labels". Change the persisted-process lookup in `src/sessions/manager.ts` to distinguish no match, one match, and multiple matches rather than returning the first array entry. Update detached resolution in `src/harness/subcommands.ts` to keep the existing missing-label error for zero matches, run the one-off query only for one match, and return a precise ambiguity error for multiple sessions that tells the user to attach the intended session before capturing. Add duplicate-label records covering different hosts and workspaces to `src/sessions/manager.test.ts` and `src/harness/subcommands.test.ts`, and document the error and recovery path in `product/specs/harness.md`. Preserve open-tab precedence, so an existing tab with that label remains an unambiguous target, then verify with the diff-scoped server checks.
-
-
 * Preserve the auto-approve setting when a detached remote harness tab is reconstructed.
 
 Existing Issue: `startSessionAttach()` recreates every detached harness with `autoApprove: false` even when the still-running far-side detector retained the original enabled policy, so the restored tab hides its auto-permitting flag while continuing to inject approvals. Severity: 6/10
