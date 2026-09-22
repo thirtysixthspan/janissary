@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description and the harness specification, which both state that a reconnecting remote tab round-trips its capture request over the live connection when the implementation refuses it outright.
-
-Existing Issue: The description says a capture resolves over the live channel when the tab is "attached or reconnecting-but-still-open" and `product/specs/harness.md` says "Attached or reconnecting, the request round-trips the live connection", while `resolveOpenRemoteCapture` in `src/harness/subcommands.ts` checks `managers.remote.reconnectingOf(label)` first and returns the reconnecting error for every such tab, so both documents contradict themselves one sentence later and describe a behavior no code path has. Severity: 4/10
-
-Existing Risk: 4/10 - The specification is what the next change to this command is read against, so a reader implementing or reviewing a capture change believes a reconnecting round trip exists and either preserves a path that is not there or treats its absence as a regression to fix.
-
-Proposal Risk: 1/10 - The text matches the code, and what remains is only the open question of whether refusing a reconnecting capture is the behavior the product wants — which is now visible rather than hidden behind a contradiction.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: correct the reconnecting capture claim in the harness spec". In `product/specs/harness.md`, the paragraph beginning "For a remote harness tab, the capture comes from the far side's own detection" opens by pairing attached and reconnecting as the round-tripping case and then states three sentences later that a reconnecting tab has no live connection and fails immediately. Rewrite it so only an attached tab round-trips, a reconnecting tab fails immediately with `No capture available for "<name>" — connection is reconnecting.`, and a fully detached session resolves through the persisted record — the three cases `captureSubcommand` and `resolveOpenRemoteCapture` actually implement. Leave the pull request's own title and body alone; the description is the author's statement and correcting the specification is what the next reader needs. Check `product/specs/remote-server.md`'s "Detached-session auto-accept, notifications, and captures" section for the same pairing and fix it there too if present. The behavior itself must not change: `src/harness/subcommands.test.ts`'s "fails immediately for a reconnecting tab, without touching the channel" case pins it and must keep passing untouched.
-
-
 * Give a replayed notification a date as well as a time, so an auto-approval from earlier in a multi-day detachment does not read as having happened today.
 
 Existing Issue: `formatTimestamp` in `src/notifications.ts` renders a twelve-hour clock time with no date component, and the new `detectedAt` parameter feeds it a time that can be up to the full seven-day detach window old, so a notification replayed on reattach reads as `9:05am` exactly like one raised minutes ago. Severity: 4/10

@@ -571,7 +571,7 @@ matching agent state).
 
 For a remote harness tab, the capture comes from the far side's own detection rather than locally
 streamed bytes (see [[remote-server]]), and how it is reached depends on the tab's connection state.
-Attached or reconnecting, the request round-trips the live connection. Fully detached — the tab
+Attached, the request round-trips the live connection. Fully detached — the tab
 closed by a deliberate Detach, so `<name>` cannot resolve to an open tab at all — it resolves against
 the session's persisted process record instead (the same one the Sessions tab's detached rows read)
 and reaches the parked peer without attaching it. A reconnecting tab has no live connection to ask at
