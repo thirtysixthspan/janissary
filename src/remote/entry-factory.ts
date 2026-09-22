@@ -22,14 +22,22 @@ export type RemoteEntryFactoryOptions = {
   sessionsChanged: () => void;
 };
 
-export function remoteServeCommand(address: RemoteAddress): string {
+// The `janus remote-serve` invocation both `remoteServeCommand` and `remoteCaptureCommand`
+// build over ssh, differing only in which non-interactive `-o` flags (if any) precede `-t`.
+// Kept as one builder so a fix to the path interpolation or the `$SHELL -ic` quoting cannot land
+// in one variant and not the other.
+function sshRemoteCommand(address: RemoteAddress, options: string[] = []): string {
   const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
-  return `ssh -t ${address.destination} '$SHELL -ic "${serve}"'`;
+  const flags = options.length > 0 ? `${options.join(' ')} ` : '';
+  return `ssh ${flags}-t ${address.destination} '$SHELL -ic "${serve}"'`;
+}
+
+export function remoteServeCommand(address: RemoteAddress): string {
+  return sshRemoteCommand(address);
 }
 
 export function remoteCaptureCommand(address: RemoteAddress): string {
-  const serve = `janus remote-serve${address.path ? ` ${address.path}` : ''}`;
-  return `ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t ${address.destination} '$SHELL -ic "${serve}"'`;
+  return sshRemoteCommand(address, ['-o BatchMode=yes', '-o NumberOfPasswordPrompts=0', '-o ConnectTimeout=10']);
 }
 
 export function createRemoteEntry({
