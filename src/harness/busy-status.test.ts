@@ -158,6 +158,12 @@ describe('BusyTracker', () => {
     expect(tracker.current()).toBe(true);
   });
 
+  it('suppresses a repeated busy decision', () => {
+    const tracker = new BusyTracker();
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toEqual({ busy: true, unread: false });
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toBeUndefined();
+  });
+
   it('debounces ready to two consecutive captures before reporting it, then updates current()', () => {
     const tracker = new BusyTracker();
     tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
@@ -205,7 +211,7 @@ describe('busyStatusHandler debounce', () => {
       handler(ready);
       handler(busy);
       expect(tab.deleteBusy).not.toHaveBeenCalled();
-      expect(tab.addBusy).toHaveBeenCalledTimes(2);
+      expect(tab.addBusy).toHaveBeenCalledOnce();
     });
 
     it(`${name}: two consecutive ready captures clear busy`, () => {

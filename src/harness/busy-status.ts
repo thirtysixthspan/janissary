@@ -24,6 +24,7 @@ export type BusyTransition = { busy: boolean; unread: boolean };
 export class BusyTracker {
   private pendingReady = false;
   private busy = true;
+  private reported: BusyTransition | undefined;
 
   // The last classification, for a caller that needs a value with nothing new to observe (a remote
   // peer answering an attach with its current state rather than a fresh capture).
@@ -32,20 +33,22 @@ export class BusyTracker {
   // The transition to report for this capture, or undefined when nothing changed (still busy, or a
   // ready capture that only started the debounce window).
   observe(capture: ScreenCapture, harnessName: string, stuck: boolean): BusyTransition | undefined {
+    let decision: BusyTransition | undefined;
     if (detectPermissionGate(capture.text, harnessName)) {
       this.pendingReady = false;
       this.busy = false;
-      return { busy: false, unread: stuck };
-    }
-    const state = classifyBusy(capture, harnessName);
-    if (state === 'busy') {
+      decision = { busy: false, unread: stuck };
+    } else if (classifyBusy(capture, harnessName) === 'busy') {
       this.pendingReady = false;
       this.busy = true;
-      return { busy: true, unread: false };
-    }
-    if (!this.pendingReady) { this.pendingReady = true; return undefined; }
-    this.busy = false;
-    return { busy: false, unread: harnessName !== 'claude' || !endsWithRecap(capture.text) };
+      decision = { busy: true, unread: false };
+    } else if (this.pendingReady) {
+      this.busy = false;
+      decision = { busy: false, unread: harnessName !== 'claude' || !endsWithRecap(capture.text) };
+    } else this.pendingReady = true;
+    if (!decision || (this.reported?.busy === decision.busy && this.reported.unread === decision.unread)) return undefined;
+    this.reported = decision;
+    return decision;
   }
 }
 

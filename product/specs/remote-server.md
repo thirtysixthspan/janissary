@@ -310,6 +310,8 @@ their own replies. Losing a live transport settles its pending captures before r
 reply from the lost transport cannot be delivered on the replacement connection.
 The remote process state also carries each harness's auto-approve setting so a detached Attach rebuilds
 the local metadata with the policy the far-side detector is still applying.
+Busy-transition frames are emitted only when either the busy or unread value changes; an attach still
+receives the current busy snapshot once per running process.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
