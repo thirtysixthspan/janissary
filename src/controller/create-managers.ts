@@ -24,7 +24,7 @@ import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { Questions } from '../questions.js';
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { ConversationsManager } from '../conversations/manager.js';
 import { SessionsManager } from '../sessions/manager.js';

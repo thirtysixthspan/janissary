@@ -1,5 +1,5 @@
-import type { LogEntry, Tab } from './tab/types.js';
-import type { Managers } from './managers.js';
+import type { LogEntry, Tab } from '../tab/types.js';
+import type { Managers } from '../managers.js';
 
 // The notifications tab is a singleton, view-only feed (`view: 'notifications'`) that receives
 // notification-worthy background events as ordinary transcript entries. It mirrors the file navigator

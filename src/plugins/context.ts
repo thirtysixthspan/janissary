@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { didOsOpen } from '../openers/os-open.js';
 import {
   TAB_PLUGIN_CAPABILITY_NAMES,

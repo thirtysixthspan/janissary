@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { RemoteEntry } from '../remote/attach.js';
 import { SessionsManager } from './manager.js';
@@ -21,7 +21,7 @@ vi.mock(import('./terminate-session.js'), async (importOriginal) => ({
   ...await importOriginal(),
   terminateParkedSession: vi.fn(),
 }));
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 

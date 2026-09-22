@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
-import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
-import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
+import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
+import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { createEditorControllerAdapter } from './editor-adapter.js';
 
 const EDITOR_URL = '/open/a1b2';

@@ -5,7 +5,7 @@ import { resolveAgentName } from '../agent/commands.js';
 import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';

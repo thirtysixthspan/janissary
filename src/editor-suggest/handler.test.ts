@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   spawnMonitorSession: vi.fn(),
 }));
 
-vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
+vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 vi.mock('../personas.js', () => ({ listPersonas: mocks.listPersonas, loadPersona: mocks.loadPersona }));
 vi.mock('../monitor/acp.js', () => ({ spawnMonitorSession: mocks.spawnMonitorSession }));
 

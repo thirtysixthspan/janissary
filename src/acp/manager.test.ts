@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   notify: vi.fn(),
 }));
 
-vi.mock('../notifications.js', () => ({
+vi.mock('../notifications/index.js', () => ({
   notify: mocks.notify,
 }));
 vi.mock('./index.js', () => ({

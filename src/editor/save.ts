@@ -6,7 +6,7 @@ import type { Managers } from '../managers.js';
 import { nextFreeName } from './next-free-name.js';
 import { atomicWriteFile } from '../atomic-write.js';
 import { remoteFileFor } from '../file-navigator/remote-file-cache.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { errorText } from '../error-text.js';
 

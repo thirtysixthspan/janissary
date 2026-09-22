@@ -4,9 +4,9 @@ import type { Managers } from './managers.js';
 import {
   AMBIENT_EVENTS, EXPLICIT_EVENTS, shouldNotify, formatTimestamp, notificationText, notify,
   type AmbientNotificationEvent, type ExplicitNotificationEvent,
-} from './notifications.js';
-import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
-import { fakeNotificationsHost } from './notifications-tab-test-fixture.js';
+} from './index.js';
+import { NOTIFICATIONS_LABEL } from './tab.js';
+import { fakeNotificationsHost } from './tab-test-fixture.js';
 
 const allOn: NotificationConfig = {
   events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true, rateLimited: true },

@@ -1,6 +1,6 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 import type { RemoteChannel } from './channel.js';
 import type { RemoteProcessState } from './protocol.js';

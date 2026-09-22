@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
-vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
+vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 
 import { ScheduleManager } from './manager.js';
 import type { Managers } from '../managers.js';

@@ -4,7 +4,7 @@ import type { Managers } from '../managers.js';
 import type { EditorView } from '../tab/types.js';
 import { commitLeftStagingInPlace, commitRoot } from '../git/commit.js';
 import { remoteFileFor } from '../file-navigator/remote-file-cache.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 
 const REST_HOLD_MS = 3000;
 

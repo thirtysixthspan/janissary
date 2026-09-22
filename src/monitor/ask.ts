@@ -3,7 +3,7 @@ import { SUGGESTION_PREFIX } from './manager.js';
 import type { Managers } from '../managers.js';
 import { recordReply } from './reply.js';
 import { recordContext } from './context.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
 
 // Query a running monitor's ACP session directly; the reply lands in the owner tab's

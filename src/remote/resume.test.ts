@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { detachRemoteEntry, terminateRemoteEntry, type RemoteEntry } from './attach.js';
 import { answerSessionState, askSessionState, handleAttachResult, SESSION_STATE_TIMEOUT_MS, type ResumeState } from './resume.js';
 
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 // The query's three exits: the answer, the deadline, and the entry losing the ability to answer. The

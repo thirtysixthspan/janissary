@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Managers } from '../managers.js';
-import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
+import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import type { Tab } from '../tab/types.js';
 import type {
   TabPluginActivation,

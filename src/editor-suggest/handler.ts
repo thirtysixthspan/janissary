@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Managers } from '../managers.js';
 import type { SuggestHunk } from '../protocol.js';
 import { loadPersona, listPersonas } from '../personas.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { HUNK_FORMAT, parseHunks } from './reply-format.js';
 
 export type EditorSuggestParams = { url: string; persona: string; content: string; prompt: string };

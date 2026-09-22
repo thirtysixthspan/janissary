@@ -4,7 +4,7 @@ import type { AggregatedScheduleView, ScheduleLaunchView, ScheduleView } from '.
 import { computeNextRun } from './index.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
 import { typeIntoHarness } from '../harness/input.js';

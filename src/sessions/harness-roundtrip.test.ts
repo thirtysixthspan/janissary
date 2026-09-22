@@ -4,7 +4,7 @@ import { wireControllerEvents } from '../controller/events.js';
 import { HarnessManager } from '../harness/manager.js';
 import { placeAgent } from '../profile/place-agent.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { spawnPty, type PtyHandlers } from '../pty.js';
 import { RemoteManager } from '../remote/manager.js';
@@ -24,7 +24,7 @@ vi.mock(import('./store.js'), async (importOriginal) => ({
   saveRemoteSessions: (records: RemoteSessionRecord[]) => { saved.records = structuredClone(records); },
 }));
 vi.mock('../pty.js', () => ({ spawnPty: vi.fn() }));
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../harness/observers.js', () => ({ harnessRuntime: () => ({ dispose: vi.fn() }) }));
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: () => ({}) }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));

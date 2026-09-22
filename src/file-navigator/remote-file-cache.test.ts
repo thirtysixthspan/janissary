@@ -11,7 +11,7 @@ import {
 import { saveFile } from '../editor/save.js';
 import { openNavigatorFile } from './manager-files.js';
 import type { FilesTabState } from './state.js';
-import { notificationsTab, openNotificationsTab } from '../notifications-tab.js';
+import { notificationsTab, openNotificationsTab } from '../notifications/tab.js';
 
 function setup(writeFile: FileSystemPort['writeFile']) {
   const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));

@@ -1,4 +1,4 @@
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { BatchResult } from '../protocol.js';
 

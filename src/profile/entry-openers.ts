@@ -9,7 +9,7 @@ import type { AgentState } from '../agent/types.js';
 import type { ProfileHarnessEntry } from './types.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { startRemoteAgent } from './remote-agent.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 
 // Open an agent entry. Returns an error to report and skip on (only a remote entry can produce
 // one — its address is re-validated at launch, since a profile file is authored by hand), or

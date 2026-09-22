@@ -2,8 +2,6 @@
 
 ## ready
 
-* Move the three flat notifications-feed files into `src/notifications/`: `notifications.ts`, `notifications-tab.ts`, and `notifications-tab-test-fixture.ts` own event eligibility, the singleton feed tab, and its test host, with two colocated tests and a bare `src/notifications.ts` entry that becomes `index.ts`. `src/notifications/` does not exist yet, no configuration names the old paths literally, and roughly twenty-five files across `src/` and `web/src/` import the group, so the one concern is currently discoverable only through a filename prefix. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `notifications` prefix. Severity: **low**.
-
 ## development
 
 * Move the editor tab's commit-to-origin, rename, and resync protocol sequences into a plain module beside the component so the commit choreography is testable without rendering the editor.
