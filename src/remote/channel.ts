@@ -149,6 +149,7 @@ export class RemoteChannel {
     this.notifiedClose = true;
     this.shutdownDrain.cancel();
     if (this.sessionId) {
+      this.captures.settleAll();
       this.state = 'reconnecting';
       this.buffer = '';
       this.handlers.onClose();

@@ -196,7 +196,7 @@ export type ClientFrame =
   // ignored by a `RemoteServer` that already holds the live workspace (it answers from its own
   // detection pipeline instead), and required by a freshly relaying process with no workspace of its
   // own, which forwards the query into the parked peer matching `session` without attaching it.
-  | { type: 'capture-request'; session: string; id: string }
+  | { type: 'capture-request'; session: string; id: string; request: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
   | {
@@ -265,7 +265,7 @@ export type ServerFrame =
   | { type: 'busy-transition'; id: string; busy: boolean; unread: boolean }
   // The answer to `capture-request`: the process's latest screen capture, or no fields at all when
   // it has none yet — the same "nothing captured yet" a local `latestCapture()` can return.
-  | { type: 'capture-reply'; id: string; text?: string; capturedAt?: number }
+  | { type: 'capture-reply'; id: string; request: string; text?: string; capturedAt?: number }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent

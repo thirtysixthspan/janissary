@@ -2,7 +2,7 @@ import { decodeFrame, encodeFrame, type ServerFrame } from './protocol.js';
 
 export type PreAttachFrame =
   | { kind: 'attach'; restore?: boolean }
-  | { kind: 'capture-request'; id: string }
+  | { kind: 'capture-request'; id: string; request: string }
   | { kind: 'refuse' };
 
 // What `DetachedPeer.accept()`'s pre-attach branch recognizes before a connection is treated as
@@ -15,12 +15,12 @@ export function classifyPreAttachFrame(line: string, session: string): PreAttach
   if (frame.type === 'attach' && frame.session === session) {
     return { kind: 'attach', ...(frame.restore !== undefined && { restore: frame.restore }) };
   }
-  if (frame.type === 'capture-request' && frame.session === session) return { kind: 'capture-request', id: frame.id };
+  if (frame.type === 'capture-request' && frame.session === session) return { kind: 'capture-request', id: frame.id, request: frame.request };
   return { kind: 'refuse' };
 }
 
-export function encodeCaptureReply(id: string, capture: { text: string; capturedAt: number } | undefined): string {
-  return `${encodeFrame({ type: 'capture-reply', id, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) })}\n`;
+export function encodeCaptureReply(id: string, request: string, capture: { text: string; capturedAt: number } | undefined): string {
+  return `${encodeFrame({ type: 'capture-reply', id, request, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) })}\n`;
 }
 
 // One `busy-transition` per still-live harness process, reflecting the far side's retained current

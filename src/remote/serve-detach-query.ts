@@ -16,7 +16,7 @@ import type { ScreenCapture } from '../harness/screen.js';
  * `undefined` here — there is no ended-tab UI on this path that needs to tell the two apart.
  */
 export function requestParkedCapture(
-  root: string, session: string, id: string,
+  root: string, session: string, id: string, request: string,
 ): Promise<{ text: string; capturedAt: number } | undefined> {
   return new Promise((resolve) => {
     let record: { socket: string };
@@ -38,13 +38,13 @@ export function requestParkedCapture(
     };
     socket.setEncoding('utf8');
     socket.setTimeout(10_000, () => finish(undefined));
-    socket.once('connect', () => socket.write(`${encodeFrame({ type: 'capture-request', session, id })}\n`));
+    socket.once('connect', () => socket.write(`${encodeFrame({ type: 'capture-request', session, id, request })}\n`));
     socket.on('data', (data: string) => {
       buffer += data;
       const newline = buffer.indexOf('\n');
       if (newline === -1) return;
       const frame = decodeFrame(buffer.slice(0, newline));
-      if ('type' in frame && frame.type === 'capture-reply' && frame.id === id
+      if ('type' in frame && frame.type === 'capture-reply' && frame.id === id && frame.request === request
         && frame.text !== undefined && frame.capturedAt !== undefined) {
         finish({ text: frame.text, capturedAt: frame.capturedAt });
       } else finish(undefined);
@@ -59,17 +59,17 @@ export function requestParkedCapture(
 // `requestParkedCapture` above). Split out of `RemoteServer.dispatch()`'s switch so that arm stays
 // one line, the way every other case in it does.
 export function answerCaptureRequest(
-  frame: { session: string; id: string },
+  frame: { session: string; id: string; request: string },
   processes: { latestCapture: (id: string) => ScreenCapture | undefined } | undefined,
   root: string,
   emit: (frame: ServerFrame) => void,
 ): void {
   if (processes) {
     const capture = processes.latestCapture(frame.id);
-    emit({ type: 'capture-reply', id: frame.id, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
+    emit({ type: 'capture-reply', id: frame.id, request: frame.request, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
     return;
   }
-  void requestParkedCapture(root, frame.session, frame.id).then((capture) => {
-    emit({ type: 'capture-reply', id: frame.id, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
+  void requestParkedCapture(root, frame.session, frame.id, frame.request).then((capture) => {
+    emit({ type: 'capture-reply', id: frame.id, request: frame.request, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
   });
 }

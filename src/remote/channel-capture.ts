@@ -10,17 +10,19 @@ type CaptureReplyFrame = Extract<ServerFrame, { type: 'capture-reply' }>;
 // small, independently testable piece rather than inline state on an already-large class.
 export class CaptureRequestTracker {
   private pending = new Map<string, (result: CaptureResult) => void>();
+  private nextRequest = 0;
 
-  request(id: string, session: string, send: (frame: { type: 'capture-request'; session: string; id: string }) => void): Promise<CaptureResult> {
+  request(id: string, session: string, send: (frame: { type: 'capture-request'; session: string; id: string; request: string }) => void): Promise<CaptureResult> {
     return new Promise((resolve) => {
-      this.pending.set(id, resolve);
-      send({ type: 'capture-request', session, id });
+      const request = String(++this.nextRequest);
+      this.pending.set(request, resolve);
+      send({ type: 'capture-request', session, id, request });
     });
   }
 
   resolve(frame: CaptureReplyFrame): void {
-    const resolve = this.pending.get(frame.id);
-    this.pending.delete(frame.id);
+    const resolve = this.pending.get(frame.request);
+    this.pending.delete(frame.request);
     resolve?.(frame.text !== undefined && frame.capturedAt !== undefined ? { text: frame.text, capturedAt: frame.capturedAt } : undefined);
   }
 

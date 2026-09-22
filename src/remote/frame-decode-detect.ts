@@ -13,21 +13,21 @@ function malformed(type: string): DecodeResult {
 }
 
 export function decodeCaptureRequest(record: Record<string, unknown>): DecodeResult {
-  const { session, id } = record;
-  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session) || !nonEmptyString(id)) {
+  const { session, id, request } = record;
+  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session) || !nonEmptyString(id) || !nonEmptyString(request)) {
     return malformed('capture-request');
   }
-  return { type: 'capture-request', session, id };
+  return { type: 'capture-request', session, id, request };
 }
 
 export function decodeCaptureReply(record: Record<string, unknown>): DecodeResult {
-  const { id, text, capturedAt } = record;
-  if (!nonEmptyString(id)) return malformed('capture-reply');
-  if (text === undefined && capturedAt === undefined) return { type: 'capture-reply', id };
+  const { id, request, text, capturedAt } = record;
+  if (!nonEmptyString(id) || !nonEmptyString(request)) return malformed('capture-reply');
+  if (text === undefined && capturedAt === undefined) return { type: 'capture-reply', id, request };
   if (typeof text !== 'string' || typeof capturedAt !== 'number' || !Number.isFinite(capturedAt)) {
     return malformed('capture-reply');
   }
-  return { type: 'capture-reply', id, text: Buffer.from(text, 'base64').toString('utf8'), capturedAt };
+  return { type: 'capture-reply', id, request, text: Buffer.from(text, 'base64').toString('utf8'), capturedAt };
 }
 
 export function decodeGateEvent(record: Record<string, unknown>): DecodeResult {

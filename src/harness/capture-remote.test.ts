@@ -33,7 +33,7 @@ describe('queryParkedCapture', () => {
     const h = harness();
     const result = queryParkedCapture(h.managers, h.record, 'h1');
     h.transport().onData(`${encodeHandshake('/srv')}\n`);
-    h.transport().onData(`${encodeFrame({ type: 'capture-reply', id: 'h1', text: 'screen', capturedAt: 1 })}\n`);
+    h.transport().onData(`${encodeFrame({ type: 'capture-reply', id: 'h1', request: '1', text: 'screen', capturedAt: 1 })}\n`);
 
     await expect(result).resolves.toEqual({ text: 'screen', capturedAt: 1 });
     expect(h.write).toHaveBeenLastCalledWith(`${encodeFrame({ type: 'shutdown' })}\n`);

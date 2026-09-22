@@ -713,9 +713,9 @@ describe('detached peer rendezvous', () => {
       querySocket.setEncoding('utf8');
       querySocket.on('data', (data: string) => { queryOutput.push(data); });
       try {
-        querySocket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'r1' })}\n`);
+        querySocket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'r1', request: 'q1' })}\n`);
         await vi.waitFor(() => expect(queryOutput.join('')).toContain('capture-reply'));
-        expect(decodeFrame(queryOutput.join('').trim())).toEqual({ type: 'capture-reply', id: 'r1', text: 'screen text', capturedAt: 555 });
+        expect(decodeFrame(queryOutput.join('').trim())).toEqual({ type: 'capture-reply', id: 'r1', request: 'q1', text: 'screen text', capturedAt: 555 });
         expect(getCapture).toHaveBeenCalledWith('r1');
         // Closed on its own once answered — not left open the way a real attach's socket would be.
         await vi.waitFor(() => expect(querySocket.destroyed || querySocket.readableEnded).toBe(true));
@@ -738,9 +738,9 @@ describe('detached peer rendezvous', () => {
       socket.setEncoding('utf8');
       socket.on('data', (data: string) => { output.push(data); });
       try {
-        socket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'unknown' })}\n`);
+        socket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'unknown', request: 'q1' })}\n`);
         await vi.waitFor(() => expect(output.join('')).toContain('capture-reply'));
-        expect(decodeFrame(output.join('').trim())).toEqual({ type: 'capture-reply', id: 'unknown' });
+        expect(decodeFrame(output.join('').trim())).toEqual({ type: 'capture-reply', id: 'unknown', request: 'q1' });
       } finally { socket.destroy(); peer.dispose(); }
     });
 
@@ -754,7 +754,7 @@ describe('detached peer rendezvous', () => {
       socket.setEncoding('utf8');
       socket.on('data', (data: string) => { output.push(data); });
       try {
-        socket.write(`${encodeFrame({ type: 'capture-request', session: randomUUID(), id: 'r1' })}\n`);
+        socket.write(`${encodeFrame({ type: 'capture-request', session: randomUUID(), id: 'r1', request: 'q1' })}\n`);
         await vi.waitFor(() => expect(output.join('')).toContain('"accepted":false'));
       } finally { socket.destroy(); peer.dispose(); }
     });

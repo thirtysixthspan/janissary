@@ -305,6 +305,9 @@ A detached capture starts a separate, non-interactive SSH query with a bounded d
 sends `shutdown` after it answers and drains that frame before closing, so the relay exits while the
 queried parked peer keeps its socket and original expiry. Authentication, protocol, and timeout
 failures return to the requesting transcript instead of leaving a hidden query transport running.
+Each capture request carries a correlation id, so concurrent requests for the same process settle
+their own replies. Losing a live transport settles its pending captures before reconnecting; a later
+reply from the lost transport cannot be delivered on the replacement connection.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and

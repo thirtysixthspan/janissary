@@ -126,7 +126,7 @@ export class DetachedPeer {
       if (newline === -1) return;
       const classified = classifyPreAttachFrame(buffer.slice(0, newline), this.session);
       if (classified.kind === 'capture-request') {
-        socket.end(encodeCaptureReply(classified.id, this.getCapture(classified.id)));
+        socket.end(encodeCaptureReply(classified.id, classified.request, this.getCapture(classified.id)));
         return;
       }
       if (classified.kind !== 'attach') {

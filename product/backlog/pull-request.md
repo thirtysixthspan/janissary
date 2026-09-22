@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make on-demand capture replies safe across concurrent requests and transport loss.
-
-Existing Issue: `CaptureRequestTracker` stores only one resolver per process id and `RemoteChannel.closed()` preserves those resolvers when entering reconnect mode, so a second request overwrites the first and a request lost with its SSH transport can remain unresolved forever. Severity: 6/10
-
-Existing Risk: 6/10 - Repeated capture commands or a connection drop at the wrong moment can silently strand promises, omit command results, and retain callbacks for the lifetime of a reconnecting channel.
-
-Proposal Risk: 2/10 - Request correlation and explicit settlement add protocol bookkeeping, but malformed or late replies remain observable through narrow decoder and channel tests.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: make capture request tracking concurrent and reconnect-safe". Add a request correlation id to `capture-request` and `capture-reply` in `src/remote/protocol.ts`, validate and preserve it in `src/remote/frame-decode-detect.ts`, `src/remote/serve-detach-capture.ts`, and `src/remote/serve-detach-query.ts`, and key `CaptureRequestTracker` in `src/remote/channel-capture.ts` by that correlation id so two requests for the same process settle independently. In `src/remote/channel.ts`, settle every outstanding request before a live channel enters reconnect mode because replies written to the lost transport will never arrive or be replayed. Cover two overlapping requests, out-of-order replies, a late reply, and recoverable transport loss in a new colocated tracker test and `src/remote/channel.test.ts`; extend `src/remote/protocol.test.ts` and the parked-peer tests for the correlated wire shape. Amend the version-18 rationale and the remote-server spec to describe correlation, then verify with the diff-scoped server checks.
-
-
 * Reject ambiguous detached capture labels instead of querying an arbitrary recorded session.
 
 Existing Issue: `SessionsManager.recordForProcess()` returns the first persisted process with a matching label even though multiple detached sessions can each retain the same former tab label after their tabs close. Severity: 6/10
