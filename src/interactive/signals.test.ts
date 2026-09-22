@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { showsTerminalTakeover } from './interactive-signals.js';
+import { showsTerminalTakeover } from './signals.js';
 
 const ESC = String.fromCodePoint(27);
 const altScreen = `${ESC}[?1049h`;

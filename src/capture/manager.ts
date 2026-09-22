@@ -1,4 +1,4 @@
-import { isInteractive } from '../interactive.js';
+import { isInteractive } from '../interactive/index.js';
 import { commands } from '../commands/index.js';
 import { routeUnknownCommand } from './router.js';
 import type { Managers } from '../managers.js';

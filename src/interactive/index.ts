@@ -1,5 +1,5 @@
-import { commandSegments } from './command/tokens.js';
-import { learnedCommands } from './interactive-learned.js';
+import { commandSegments } from '../command/tokens.js';
+import { learnedCommands } from './learned.js';
 
 // Full-screen / interactive programs that need a real TTY and live keystroke
 // forwarding (a pager like `less`, an editor like `vim`, a monitor like `top`).

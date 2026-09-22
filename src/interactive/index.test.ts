@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { isInteractive } from './interactive.js';
-import { loadLearnedCommands, recordLearnedCommand } from './interactive-learned.js';
+import { isInteractive } from './index.js';
+import { loadLearnedCommands, recordLearnedCommand } from './learned.js';
 
 describe('isInteractive', () => {
   it('detects pagers and editors', () => {

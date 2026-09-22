@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { TabManager } from '../tab/manager.js';
 import { ShellManager } from './manager.js';
 import { loadConfig } from '../config.js';
-import { loadLearnedCommands, learnedCommands } from '../interactive-learned.js';
+import { loadLearnedCommands, learnedCommands } from '../interactive/learned.js';
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { RestoredSink } from '../remote/shell-session.js';
