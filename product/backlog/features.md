@@ -18,6 +18,8 @@ You've hit your session limit resets 1:20pm (America/Chicago)
 
 * Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
 
+* Bundle janissary as a mac application that can be dowloaded and installed into /Applications and launched from an icon in the toolbar.
+
 ## development
 
 ## deferred
