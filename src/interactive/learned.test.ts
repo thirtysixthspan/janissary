@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadLearnedCommands, learnedCommands, learnedKey, recordLearnedCommand } from './interactive-learned.js';
+import { loadLearnedCommands, learnedCommands, learnedKey, recordLearnedCommand } from './learned.js';
 
 const FILE = path.join('.janissary', 'interactive-commands.json');
 

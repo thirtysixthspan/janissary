@@ -10,7 +10,7 @@ import { scaffoldProject } from './project/init.js';
 import { runRemoteServer } from './remote/serve.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
 import { loadConfig } from './config.js';
-import { loadLearnedCommands } from './interactive-learned.js';
+import { loadLearnedCommands } from './interactive/learned.js';
 import { loadAgentNames } from './agent/names.js';
 import { loadHarnessModels } from './harness/models.js';
 import { loadProjectTokens } from './project/tokens.js';
