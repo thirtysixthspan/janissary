@@ -40,6 +40,14 @@ describe('TranscriptStore I/O', () => {
     expect(TranscriptStore.load('janus')).toEqual(log);
   });
 
+  it('round-trips a dotted label without warning', () => {
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const log = [entry('help', 'usage text')];
+    TranscriptStore.save('10.27.1.94', log);
+    expect(TranscriptStore.load('10.27.1.94')).toEqual(log);
+    expect(warning).not.toHaveBeenCalled();
+  });
+
   it('save creates the directory if absent', () => {
     TranscriptStore.clear();
     new TranscriptStore(dir);

@@ -282,6 +282,26 @@ describe('Controller', () => {
     expect(loadAgentState('bob')?.context).toContain('janus: hello there');
   });
 
+  it('persists agent state for an agent named after an IP address without warning', () => {
+    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ip-name-')));
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const { c } = makeController();
+    c.dispatch('agent 10.27.1.94 --no-workspace');
+    c.setActiveTab(0);
+    expect(loadAgentState('10.27.1.94')).toBeDefined();
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
+  it('persists the alias set through the tab label on a dotted agent name', () => {
+    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ip-rename-')));
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const { c } = makeController();
+    c.dispatch('agent 10.27.1.94 --no-workspace');
+    c.renameTab(c.view().findIndex((t) => t.label === '10.27.1.94'), 'build host');
+    expect(loadAgentState('10.27.1.94')?.title).toBe('build host');
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
   it('preserves saved (non-contiguous) tab numbers on relaunch', () => {
     initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-relaunch-')));
     saveAgentState({ name: 'ahmed', dotColor: '#5b9cff', active: false, number: 1 });
