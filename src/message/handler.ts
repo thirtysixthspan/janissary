@@ -1,11 +1,11 @@
-import type { Controller } from './controller.js';
-import type { ClientMessage, ServerEvent } from './protocol.js';
-import { dispatchFileNavigatorMessage } from './message-handler-file-navigator.js';
-import { dispatchPluginMessage } from './message-handler-plugin.js';
+import type { Controller } from '../controller.js';
+import type { ClientMessage, ServerEvent } from '../protocol.js';
+import { dispatchFileNavigatorMessage } from './file-navigator.js';
+import { dispatchPluginMessage } from './plugin.js';
 import {
   clientReplyMode, unhandledClientMethod,
-} from './client-message.js';
-import { errorText } from './error-text.js';
+} from '../client-message.js';
+import { errorText } from '../error-text.js';
 
 type Reply = (event: ServerEvent) => void;
 type DeferredCallback = (resolve: (value: unknown) => void) => void;
