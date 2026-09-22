@@ -1,11 +1,11 @@
 import { HarnessScreenReader, type ScreenCapture } from '../harness/screen.js';
 import { HarnessAutoApprover } from '../harness/auto-approve.js';
-import { BusyTracker } from '../harness/busy-status.js';
+import { BusyTracker, type BusyTransition } from '../harness/busy-status.js';
 import type { ServerFrame } from './protocol.js';
 
 export type HarnessDetection = {
   latestCapture: () => ScreenCapture | undefined;
-  currentBusy: () => boolean;
+  snapshot: () => BusyTransition;
   dispose: () => void;
 };
 
@@ -44,7 +44,7 @@ export function buildHarnessDetection(
   });
   return {
     latestCapture: () => reader.latestCapture(),
-    currentBusy: () => tracker.current(),
+    snapshot: () => tracker.snapshot(),
     dispose: () => reader.dispose(),
   };
 }

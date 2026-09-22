@@ -173,6 +173,22 @@ describe('BusyTracker', () => {
     expect(tracker.current()).toBe(false);
   });
 
+  it('resets its reported baseline to a snapshot, so a later decision equal to one from before the snapshot is reported again', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', false);
+    expect(tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', true)).toEqual({ busy: false, unread: true });
+    // A caller (an attach) sends { busy: false, unread: false } on the tracker's behalf, without
+    // an observe() call — the tracker must treat that as what was actually reported from now on.
+    expect(tracker.snapshot()).toEqual({ busy: false, unread: false });
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', false);
+    // The same { busy: false, unread: true } decision as before the snapshot recurs. Without the
+    // snapshot resetting `reported`, this would be wrongly suppressed as a repeat of the pre-attach
+    // decision the client was never actually sent.
+    expect(tracker.observe(capture(CLAUDE_PROMPT_BOX), 'claude', true)).toEqual({ busy: false, unread: true });
+  });
+
   it('exempts a claude recap from unread on the ready transition, matching busyStatusHandler', () => {
     const tracker = new BusyTracker();
     tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);

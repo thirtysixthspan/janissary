@@ -36,7 +36,7 @@ export class DetachedPeer {
     // pipeline, still running while parked, is what actually has the capture — this peer only routes
     // the query to it. Defaulted so every existing caller (including every test) needs no change.
     private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
-    private currentBusyStates: () => Iterable<{ id: string; busy: boolean }> = () => [],
+    private currentBusyStates: () => Iterable<{ id: string; busy: boolean; unread: boolean }> = () => [],
   ) {
     this.record = path.join(root, '.janissary', 'remote', `${session}.json`);
   }

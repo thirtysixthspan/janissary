@@ -73,8 +73,8 @@ export class RemoteProcesses {
 
   // Every harness process's current busy/ready state, for `DetachedPeer.accept()` to send as a
   // one-shot `busy-transition` on attach (decision 20 of the auto-accept-while-detached plan).
-  busyStates(): Array<{ id: string; busy: boolean }> {
-    return [...this.detections].map(([id, detection]) => ({ id, busy: detection.currentBusy() }));
+  busyStates(): Array<{ id: string; busy: boolean; unread: boolean }> {
+    return [...this.detections].map(([id, detection]) => ({ id, ...detection.snapshot() }));
   }
 
   killAll(): void {

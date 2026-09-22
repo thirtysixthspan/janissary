@@ -27,6 +27,6 @@ export function encodeCaptureReply(id: string, request: string, capture: { text:
 // classification rather than any queued history — see decision 20 of the auto-accept-while-detached
 // plan: busy/ready is a "current state" snapshot, not a log, so an attach gets exactly one frame per
 // process and never a replay of the flips that happened while detached.
-export function busyTransitionFrames(states: Iterable<{ id: string; busy: boolean }>): ServerFrame[] {
-  return [...states].map(({ id, busy }) => ({ type: 'busy-transition', id, busy, unread: false }));
+export function busyTransitionFrames(states: Iterable<{ id: string; busy: boolean; unread: boolean }>): ServerFrame[] {
+  return [...states].map(({ id, busy, unread }) => ({ type: 'busy-transition', id, busy, unread }));
 }

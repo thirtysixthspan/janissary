@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the far side's busy tracker and the client's tab state in agreement across an attach, so the first unread-raising transition after reattaching is not suppressed as a duplicate.
-
-Existing Issue: `BusyTracker.observe` in `src/harness/busy-status.ts` suppresses any decision equal to the last one it reported, while `DetachedPeer.accept()` in `src/remote/serve-detach.ts` sends its attach-time snapshot straight from `busyStates()` with `unread: false` hardcoded and without touching the tracker's `reported` value, so after an attach the tracker can believe it already reported `{ busy: false, unread: true }` while the client was told `{ busy: false, unread: false }`, and the next genuine stand-down or ready transition is dropped as a repeat. Severity: 5/10
-
-Existing Risk: 5/10 - A remote harness that hits an unanswerable permission prompt shortly after the user reattaches leaves the tab with no unread badge at all, which is precisely the signal the feature exists to deliver and precisely the case where the user is not watching that tab.
-
-Proposal Risk: 2/10 - The dot and badge stay in sync across attach, but the tracker still treats `unread` as a level rather than an edge, so a badge the user clears by reading the tab is not re-raised until some other value changes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: keep the far-side busy tracker in sync with the attach-time snapshot". The fix belongs in `src/harness/busy-status.ts` and `src/remote/serve-detach-capture.ts`. Give `BusyTracker` an explicit way to record what a caller sent outside `observe()` — either a `reportedNow(transition)` setter or a `snapshot()` that returns the current transition *and* stores it as `reported` — and have `serve-processes-detect.ts`'s `HarnessDetection` expose that instead of the bare `currentBusy()` boolean, so `busyTransitionFrames` in `src/remote/serve-detach-capture.ts` builds its one-per-process frame from a value the tracker knows it emitted. While there, consider whether `unread` should be an edge rather than a level: `busyStatusHandler`'s pre-change behavior called `markUnread` on every committed ready transition, and the new dedupe on the `(busy, unread)` pair also suppresses a re-badge after the user clears one, and suppresses a re-`addBusy` after `src/tab/cleanup.ts` or `src/profile/manager.ts` call `deleteBusy` for their own reasons. Extend `src/harness/busy-status.test.ts`'s `BusyTracker` block with a case that takes a snapshot and then observes the same decision, asserting it is still reported; extend the `capture-request and detection frames` block in `src/remote/serve.test.ts` with an attach followed by a transition equal to the pre-attach one. The existing `busyStatusHandler debounce` tests pin the local debounce and recap behavior and must keep passing unchanged.
-
-
 * Validate the timestamp a remote detection frame carries before it is used to build a capture filename, so an out-of-range value cannot throw inside the channel's inbound data path.
 
 Existing Issue: `decodeGateEvent` and `decodeCaptureReply` in `src/remote/frame-decode-detect.ts` accept any finite number for `capturedAt`, and both values flow into `writeCaptureFile` and on to `harnessArtifactFilename`, which calls `new Date(timestamp).toISOString()` — a call that throws `RangeError` for any magnitude above the Date range — from inside `createRemotePtySession`'s `onGateEvent` handler, which runs synchronously under `RemoteChannel.receive()`. Severity: 5/10

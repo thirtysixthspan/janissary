@@ -792,7 +792,7 @@ describe('detached peer rendezvous', () => {
       let currentBusy = true;
       const peer = new DetachedPeer(
         repoDir, randomUUID(), vi.fn(), vi.fn(), () => { /* no capture pipeline needed for this test */ },
-        () => [{ id: 'r1', busy: currentBusy }],
+        () => [{ id: 'r1', busy: currentBusy, unread: false }],
       );
       await peer.start(vi.fn());
       peer.detach();
@@ -809,6 +809,36 @@ describe('detached peer rendezvous', () => {
           { type: 'busy-transition', id: 'r1', busy: false, unread: false },
         ]);
       } finally { socket.destroy(); peer.dispose(); }
+    });
+
+    it('carries a non-false unread value through the attach snapshot, and resends it unchanged on a later attach', async () => {
+      const peer = new DetachedPeer(
+        repoDir, randomUUID(), vi.fn(), vi.fn(), () => { /* no capture pipeline needed for this test */ },
+        () => [{ id: 'r1', busy: false, unread: true }],
+      );
+      await peer.start(vi.fn());
+      peer.detach();
+      const first: string[] = [];
+      const firstSocket = relayPeer(repoDir, peer.session, (data) => { first.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(first.join('')).toContain('busy-transition'));
+        const firstFrames = first.join('').trim().split('\n').map((line) => decodeFrame(line));
+        expect(firstFrames.filter((frame) => 'type' in frame && frame.type === 'busy-transition')).toEqual([
+          { type: 'busy-transition', id: 'r1', busy: false, unread: true },
+        ]);
+      } finally { firstSocket.destroy(); }
+      peer.detach();
+      const second: string[] = [];
+      const secondSocket = relayPeer(repoDir, peer.session, (data) => { second.push(data); }, vi.fn())!;
+      try {
+        // The value handed to a fresh attach is not deduped against an earlier attach's identical
+        // one — a reattaching client has no prior state of its own to compare against.
+        await vi.waitFor(() => expect(second.join('')).toContain('busy-transition'));
+        const secondFrames = second.join('').trim().split('\n').map((line) => decodeFrame(line));
+        expect(secondFrames.filter((frame) => 'type' in frame && frame.type === 'busy-transition')).toEqual([
+          { type: 'busy-transition', id: 'r1', busy: false, unread: true },
+        ]);
+      } finally { secondSocket.destroy(); peer.dispose(); }
     });
   });
 });

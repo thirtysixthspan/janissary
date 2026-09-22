@@ -311,7 +311,9 @@ reply from the lost transport cannot be delivered on the replacement connection.
 The remote process state also carries each harness's auto-approve setting so a detached Attach rebuilds
 the local metadata with the policy the far-side detector is still applying.
 Busy-transition frames are emitted only when either the busy or unread value changes; an attach still
-receives the current busy snapshot once per running process.
+receives the current busy snapshot once per running process, carrying its real unread state rather
+than always clearing it, and the far side's own duplicate-suppression is realigned to that snapshot so
+a later change back to the pre-attach state is not mistaken for a repeat and dropped.
 
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and

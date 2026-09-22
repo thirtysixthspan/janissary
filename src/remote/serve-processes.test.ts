@@ -286,6 +286,6 @@ describe('RemoteProcesses harness detection', () => {
   it('reports every harness process\'s current busy state via busyStates()', async () => {
     const { processes, feed } = spawnClaude(false);
     await feed(BUSY_TEXT);
-    expect(processes.busyStates()).toEqual([{ id: 'r1', busy: true }]);
+    expect(processes.busyStates()).toEqual([{ id: 'r1', busy: true, unread: false }]);
   });
 });

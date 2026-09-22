@@ -30,6 +30,16 @@ export class BusyTracker {
   // peer answering an attach with its current state rather than a fresh capture).
   current(): boolean { return this.busy; }
 
+  // What a caller sends on this tracker's behalf outside observe() — an attach-time snapshot,
+  // always reported with unread cleared. Recording it as `reported` keeps the tracker's own
+  // dedupe in sync with what the far side actually told the client, so a later observe() decision
+  // equal to a pre-attach one is not wrongly suppressed as a repeat the client was never sent.
+  snapshot(): BusyTransition {
+    const transition: BusyTransition = { busy: this.busy, unread: false };
+    this.reported = transition;
+    return transition;
+  }
+
   // The transition to report for this capture, or undefined when nothing changed (still busy, or a
   // ready capture that only started the debounce window).
   observe(capture: ScreenCapture, harnessName: string, stuck: boolean): BusyTransition | undefined {
