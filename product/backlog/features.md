@@ -2,8 +2,6 @@
 
 ## ready
 
-* auto accept should still operate on remote harnesses that are detached. this will allow harness to continue working in the background while detached. notifications should be queued and replayed when the harness is attached. similarly captures of the harness should be available.
-
 * establish a seperate layout for the sessions tab that allows the content to be presented in a narrow width sidebar.
 
 * if the notifications tab is not open, notifications should be presented as a toast message in the upper right corner of the screen with a time limited duration of 4 seconds. the toast should animate out via fade over a 2 second window.
