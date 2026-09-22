@@ -56,6 +56,11 @@ export type FileNavigatorRpcCall =
   // differ only in the presence of that list. Fire-and-forget: the outcome surfaces through the next
   // state broadcast and as a notifications-feed line.
   | { method: 'fileNavigatorCommit'; params: { index: number; message: string; paths: string[] } }
+  // Reports that the header commit button was clicked on a tree whose root has no changes at all:
+  // the client, which holds the same changed-count the whole-tree default message is generated
+  // from, opens no message field and sends no commit, and asks the server for the `Nothing to
+  // commit` notifications line in the commit's own vocabulary. Fire-and-forget.
+  | { method: 'fileNavigatorNothingToCommit'; params: { index: number } }
   // Switch which per-row detail a file navigator tab shows (its header's detail button).
   | { method: 'fileNavigatorSetDetail'; params: { index: number; details: FileNavigatorDetail } }
   // Re-root a file navigator tab to the parent directory.

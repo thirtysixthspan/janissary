@@ -25,6 +25,7 @@ export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], Param
   fileNavigatorCollapseAll: (p) => isInteger(p.index),
   fileNavigatorPull: (p) => isInteger(p.index),
   fileNavigatorCommit: (p) => isInteger(p.index) && isString(p.message) && isStringArray(p.paths),
+  fileNavigatorNothingToCommit: (p) => isInteger(p.index),
   fileNavigatorSetDetail: (p) => isInteger(p.index) && isOneOf(p.details, DETAILS),
   fileNavigatorReroot: (p) => isInteger(p.index) && optionalString(p.path),
   moveFileNavigatorItem: (p) => isInteger(p.index) && isString(p.fromRelPath) && isString(p.toRelPath),

@@ -109,6 +109,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'fileNavigatorCollapseAll':
     case 'fileNavigatorPull':
     case 'fileNavigatorCommit':
+    case 'fileNavigatorNothingToCommit':
     case 'fileNavigatorSetDetail':
     case 'fileNavigatorReroot':
     case 'moveFileNavigatorItem':

@@ -710,10 +710,13 @@ It is the pull button flipped: where the pull takes what `origin` has, this send
 Clicking it commits and pushes every change in the tree's repository. The row context menu's **Commit
 to origin** entry does the same for the selected file or files instead.
 
-Both ask for a commit message first. A single-line field, docked to the bottom of the tree in the same
+Both ask for a commit message first — except that the header button on a tree with no changes at
+all asks for none: a click there opens no field, runs no commit, and reports `Nothing to commit`
+in the notifications feed instead, since the changed count it already displays is exactly the
+set the whole-tree commit would carry. A single-line field, docked to the bottom of the tree in the same
 shape as the **Open with** picker, opens already filled in with a generated default. Its title bar
 reads `Commit message` when exactly one file is involved, and `Commit message (N files)` naming the
-count otherwise — including when nothing has changed. For the row menu's named selection, the
+count otherwise. For the row menu's named selection, the
 pre-filled message is the file's own name when one file is involved (`sync: notes.md`), and a count
 when several are (`sync: 3 files`). The header button's default is named after every change under the
 tree's root, not only the rows the tree currently happens to be showing, and it counts rather than
@@ -763,9 +766,10 @@ and it is left exactly as it landed.
 Every commit that runs reports its outcome as exactly one line in the notifications feed. One that
 lands reads `Committed to origin: <git summary>`, carrying git's own account of what it did, or
 `Committed to origin` when git reported no summary. One that fails reads `Could not commit: <git
-error>`, carrying git's own error. When there was nothing to commit — a clean tree, or a selection
+error>`, carrying git's own error. When a commit runs and finds nothing to commit — a selection
 whose files are all unchanged — the line reads `Nothing to commit`, since the user armed the action
-and is owed an answer about why nothing happened. The outcome is reported whether or not the tree
+and is owed an answer about why nothing happened. The header button on a clean tree reports the
+same line without running any commit at all. The outcome is reported whether or not the tree
 that started the commit is still open or still rooted where it was. After a commit lands, the tree's
 git-status coloring is recomputed, so rows that were marked changed stop being marked.
 
