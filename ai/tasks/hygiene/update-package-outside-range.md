@@ -205,7 +205,7 @@ A new major can change this project's exposure in ways that have nothing to do w
    npm pack <package>@<target-version> --pack-destination ./temp
    ```
 
-   Unpack both into `./temp` and diff the **shipped** files (`tar xzf`, then `diff -r`), and read the upstream repository's compare view (`https://github.com/<owner>/<repo>/compare/<old-tag>...<new-tag>`) via `WebFetch` for the source behind it. Where the shipped files are minified bundles, diff the source in the repository compare view instead and treat the bundle diff as a size/shape check only. Do not `grep`/`tail` a slow command's output repeatedly — capture once and read it (see [`CLAUDE.md`](../../../CLAUDE.md)).
+   Unpack both into `./temp` and diff the **shipped** files (`tar xzf`, then `diff -r`), and read the upstream repository's compare view (`https://github.com/<owner>/<repo>/compare/<old-tag>...<new-tag>`) via `WebFetch` for the source behind it. Where the shipped files are minified bundles, diff the source in the repository compare view instead and treat the bundle diff as a size/shape check only. Do not `grep`/`tail` a slow command's output repeatedly — capture once and read it (see [`AGENTS.md`](../../../AGENTS.md)).
 
    Read the diff for these specifically, and record what you find either way:
    - New or widened **network** access — new fetch/XHR/WebSocket/DNS calls, new endpoints, new telemetry or analytics, a client that now follows redirects or sends credentials cross-origin.

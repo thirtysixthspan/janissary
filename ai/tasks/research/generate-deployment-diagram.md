@@ -31,7 +31,7 @@ This task only reads files and runs git. It never builds, tests, lints, or runs 
 
 The working tree **must be clean**, with no modified *and no untracked* files. This matters more than usual here: Step 6's commit stages everything with `git add -A`, so any stray file would be silently swept in. If the tree is not clean, STOP and report what is there. Do not start on top of changes you did not make.
 
-**Command hygiene for the whole run:** run each command plainly and read its output from the result. No piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see CLAUDE.md) and cost a wasted call each time.
+**Command hygiene for the whole run:** run each command plainly and read its output from the result. No piping into `tail`/`head`, no `>` redirects, no `$(...)` capture. These trigger permission prompts or hook rejections in this repo (see AGENTS.md) and cost a wasted call each time.
 
 ---
 
@@ -43,7 +43,7 @@ Start with the documented account:
 
 1. [`ai/guidelines/architecture-principles.md`](../../guidelines/architecture-principles.md), principles 1 and 9. Principle 1 establishes that there is exactly one WebSocket between server and client. Principle 9 is the local-first boundary: loopback bind, a per-session token on the WS upgrade, a Host/Origin allowlist, and an `/open/<id>` allow-list for served files. That boundary is the single most important thing this diagram draws.
 2. [`product/specs/remote-server.md`](../../../product/specs/remote-server.md) for the remote story: one ssh session per host, `janus remote-serve` on the far side, and the address grammar.
-3. `CLAUDE.md`'s "Project structure" section for the top-level map.
+3. `AGENTS.md`'s "Project structure" section for the top-level map.
 4. Skim `product/specs/` filenames for the subsystems that own a transport. `acp.md`, `browser.md`, `database.md`, `remote-server.md`, `shell.md`, `ssh-tab.md`, and `websocket-rpc.md` are the usual carriers. A subsystem with a spec is a candidate node or edge. A subsystem without one rarely is.
 
 Then read the numbers off disk, because they move:

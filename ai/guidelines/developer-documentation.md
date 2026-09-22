@@ -51,7 +51,7 @@ possible — not to hold the whole architecture.
 ## Onboarding: answer "where do I look first?"
 
 A new contributor's first real question is where things live and how to find them — not what
-every subsystem does. The onboarding-relevant docs in this repo (`README.md`, `CLAUDE.md`,
+every subsystem does. The onboarding-relevant docs in this repo (`README.md`, `AGENTS.md`,
 `ai/guidelines/`) should collectively make that answerable within the first sitting:
 
 - State explicitly where behavior is documented (`product/specs/`), where forward-looking design lives
@@ -66,7 +66,7 @@ every subsystem does. The onboarding-relevant docs in this repo (`README.md`, `C
 ## Technical specs and plans
 
 `product/plans/` holds forward-looking design docs for work not yet done (or being done), organized by
-status (`draft/`, `ready/`, `complete/`, `deferred/` — see the root `CLAUDE.md`). Unlike `product/specs/`,
+status (`draft/`, `ready/`, `complete/`, `deferred/` — see the root `AGENTS.md`). Unlike `product/specs/`,
 which documents current behavior, a plan documents an intended change:
 
 - Keep a plan only as detailed as needed to make the implementation decision — API/interface
@@ -76,7 +76,7 @@ which documents current behavior, a plan documents an intended change:
 - Move the plan file between status folders as its state changes, rather than leaving it in
   `draft/` after the work ships — a stale plan sitting in the wrong folder misleads the next
   person who searches there for what's actually in flight.
-- Use natural line breaks, not fixed-column wrapping, per the existing `CLAUDE.md` convention.
+- Use natural line breaks, not fixed-column wrapping, per the existing `AGENTS.md` convention.
 
 ## Record decisions, not just outcomes
 
@@ -94,7 +94,7 @@ A code comment and a spec entry serve different jobs, and neither substitutes fo
 
 - A **comment** belongs at the one line where the reasoning isn't recoverable from reading the
   code itself — a workaround for a specific bug, a non-obvious constraint, why the "obvious"
-  simpler version doesn't work. This repo's own `CLAUDE.md` rule ("default to no comments; only
+  simpler version doesn't work. This repo's own `AGENTS.md` rule ("default to no comments; only
   when the WHY is non-obvious") is this principle applied directly — don't restate what the code
   already says clearly.
 - A **spec entry** belongs where a contributor needs to know the behavior *without* reading the

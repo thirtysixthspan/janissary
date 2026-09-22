@@ -2,7 +2,7 @@ import { copyFileSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 
 import path from 'node:path';
 
 // The `ai/` and `product/` directory tree this tool's task/backlog/plan/spec workflow expects,
-// as documented in the Project Structure section of the target repo's own `CLAUDE.md`.
+// as documented in the Project Structure section of the target repo's own `AGENTS.md`.
 const SCAFFOLD_DIRS = [
   'ai/guidelines',
   'ai/personas',
@@ -15,7 +15,7 @@ const SCAFFOLD_DIRS = [
   'product/specs',
 ];
 
-// The backlog files documented in `CLAUDE.md`'s Project Structure section, each seeded with the
+// The backlog files documented in `AGENTS.md`'s Project Structure section, each seeded with the
 // standard empty `ready`/`development`/`deferred`/`declined` structure.
 const BACKLOG_FILES = ['bugs', 'chores', 'documentation', 'features', 'issues', 'technical-debt'];
 const CONFIG_DIRS = ['.codex', '.claude'];
