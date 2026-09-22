@@ -1,6 +1,6 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { RemoteEntry } from './attach.js';
 
 // What a channel has to say to the tabs riding it, kept out of `RemoteManager` so the manager holds

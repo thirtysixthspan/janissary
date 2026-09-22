@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { errorText } from '../error-text.js';
 
 export type PluginFailureOrigin = { label: string; command: string };

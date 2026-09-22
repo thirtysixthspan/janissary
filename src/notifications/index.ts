@@ -1,7 +1,7 @@
-import type { NotificationConfig } from './config.js';
-import type { Managers } from './managers.js';
-import { getConfig } from './config.js';
-import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from './notifications-tab.js';
+import type { NotificationConfig } from '../config.js';
+import type { Managers } from '../managers.js';
+import { getConfig } from '../config.js';
+import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from './tab.js';
 
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's

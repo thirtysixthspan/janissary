@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 import { REMOTE_SHUTDOWN_DRAIN_MS } from './shutdown-drain.js';
 
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 function address(token: string): RemoteAddress {

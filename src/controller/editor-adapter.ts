@@ -5,7 +5,7 @@ import { renameEditorFile } from '../editor/rename.js';
 import { commitEditorFile } from '../editor/commit.js';
 import { resyncEditorTab } from '../editor/resync.js';
 import { syncEditorBuffer } from '../editor/sync.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { listPersonas } from '../personas.js';
 import { projectFilesFor } from '../project/files.js';
 import type { Managers } from '../managers.js';

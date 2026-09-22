@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
-import { openNotificationsTab, notificationsTab } from '../notifications-tab.js';
+import { openNotificationsTab, notificationsTab } from '../notifications/tab.js';
 import { command } from './notify.js';
 
 function makeManagers(): Managers {

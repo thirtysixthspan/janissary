@@ -12,7 +12,7 @@ vi.mock('../git/commit.js', () => ({
   commitRoot: (...args: unknown[]) => commitRoot(...args),
   commitLeftStagingInPlace: (...args: unknown[]) => commitLeftStagingInPlace(...args),
 }));
-vi.mock('../notifications.js', () => ({ notify: (...args: unknown[]) => notify(...args) }));
+vi.mock('../notifications/index.js', () => ({ notify: (...args: unknown[]) => notify(...args) }));
 
 const { commitEditorFile } = await import('./commit.js');
 const { TabManager } = await import('../tab/manager.js');

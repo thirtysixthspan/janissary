@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { RemoteSessionAction, RemoteSessionView } from '../protocol.js';
 import { resumeRemote } from '../remote/attach.js';

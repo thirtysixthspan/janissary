@@ -36,7 +36,7 @@ vi.mock('./scratch-dir.js', () => ({
     };
   }),
 }));
-vi.mock('../notifications.js', () => ({ notify: notificationMock }));
+vi.mock('../notifications/index.js', () => ({ notify: notificationMock }));
 vi.mock('../browser/browser-log.js', () => ({ writeBrowserLog: browserLogMock }));
 vi.mock('./recorder.js', () => ({
   HarnessRecorder: vi.fn(function () { return { dispose: vi.fn() }; }),

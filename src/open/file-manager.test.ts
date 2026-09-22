@@ -19,7 +19,7 @@ vi.mock('../config.js', () => ({
   getConfig: () => ({ syncPaths: ['synced/'], externalViewers: { video: 'QuickTime Player' } }),
 }));
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: osOpen.didOsOpen }));
-vi.mock('../notifications.js', () => ({ notify: notifications.notify }));
+vi.mock('../notifications/index.js', () => ({ notify: notifications.notify }));
 vi.mock('./launch-dir-branch.js', () => ({
   isLaunchDirOnPrimaryBranch: launchDirBranch.isLaunchDirOnPrimaryBranch,
   refreshLaunchDirBranch: launchDirBranch.refreshLaunchDirBranch,

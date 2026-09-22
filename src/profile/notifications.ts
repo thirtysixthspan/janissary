@@ -1,4 +1,4 @@
-import { openNotificationsTab } from '../notifications-tab.js';
+import { openNotificationsTab } from '../notifications/tab.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { ProfileNotificationsEntry } from './types.js';

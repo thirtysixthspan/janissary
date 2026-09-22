@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { errorText } from '../error-text.js';
 import type { RemoteEntry } from '../remote/attach.js';
 import { terminateParkedSession } from './terminate-session.js';

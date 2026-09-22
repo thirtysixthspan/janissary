@@ -12,7 +12,7 @@ import { runOpenCommand, pinnedOpenerRefusal } from './file-command.js';
 import { getConfig } from '../config.js';
 import { humanSize } from '../openers/size.js';
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { isSyncedPath } from '../sync-path-match.js';
 import { isLaunchDirOnPrimaryBranch, refreshLaunchDirBranch } from './launch-dir-branch.js';
 import { currentBranchSync } from '../git/status.js';

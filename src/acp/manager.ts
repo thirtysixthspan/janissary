@@ -3,7 +3,7 @@ import { connectAcp } from './index.js';
 import { createRemoteAcpSession } from '../remote/acp-session.js';
 import { runAcpToolLoop } from './loop.js';
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
 import type { Managers } from '../managers.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createController, type Controller } from '../controller.js';
-import { openNotificationsTab } from '../notifications-tab.js';
+import { openNotificationsTab } from '../notifications/tab.js';
 import { TabPluginHost } from '../plugins/host.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.

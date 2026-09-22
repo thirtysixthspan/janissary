@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { operationFailureText, reportOperationFailure } from './operation-report.js';
-import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import type { Managers } from '../managers.js';
 
 describe('operationFailureText', () => {

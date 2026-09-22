@@ -1,4 +1,4 @@
-import { NOTIFICATIONS_LABEL } from './notifications-tab.js';
+import { NOTIFICATIONS_LABEL } from './tab.js';
 
 // The tab-manager surface `notify` reaches when it reveals the feed (see `revealNotificationsTab`).
 // A test that only wanted a stub tab manager still ends up on this path the moment anything it

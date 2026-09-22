@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
-import { fakeNotificationsHost } from '../notifications-tab-test-fixture.js';
+import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import type { TabPluginActivation, TabPluginDeclaration } from './api.js';
 import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { TabPluginHost } from './host.js';

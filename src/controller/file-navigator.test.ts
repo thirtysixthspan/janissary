@@ -18,7 +18,7 @@ import {
   renameFileNavigatorItem,
   fileNavigatorOpeners,
 } from './file-navigator.js';
-import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(label: string | undefined, fileNavigator: Record<string, (...args: unknown[]) => unknown>) {

@@ -11,7 +11,7 @@ import { TranscriptLogger } from './transcript/logger.js';
 import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
-import { openNotificationsTab } from './notifications-tab.js';
+import { openNotificationsTab } from './notifications/tab.js';
 import { agentNames } from './agent/names.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';

@@ -1,6 +1,6 @@
 import { clearFilesystemCache } from './filesystem-cache.js';
 import { pullFailureText, pullSuccessText } from './pull-report.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { stillRooted, armFlash, pullFlashDescriptor } from './manager-flash.js';
 import type { MutationContext } from './manager-mutations.js';
 

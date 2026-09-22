@@ -16,7 +16,7 @@ import { askMonitor } from './ask.js';
 import { recordReply } from './reply.js';
 import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import { buildSuggestion, formatInlineSuggestion } from './suggestion.js';
 import { subscribeMonitor } from './subscriptions.js';

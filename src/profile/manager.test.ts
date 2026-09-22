@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const mocks = vi.hoisted(() => ({ notify: vi.fn(), sandboxNotice: vi.fn(() => undefined as string | undefined) }));
-vi.mock('../notifications.js', () => ({ notify: mocks.notify }));
+vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
 import { ProfileManager } from './manager.js';

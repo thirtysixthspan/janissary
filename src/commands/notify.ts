@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 
 // `notify <message>` pushes a custom line into the notifications feed, attributed to the issuing
 // tab. It is the deliberate counterpart to the four ambient events: an explicit signal that

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { TabManager } from './tab/manager.js';
-import type { Managers } from './managers.js';
+import { TabManager } from '../tab/manager.js';
+import type { Managers } from '../managers.js';
 import {
   openNotificationsTab, appendNotification, notificationsTab, revealNotificationsTab,
-} from './notifications-tab.js';
+} from './tab.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;

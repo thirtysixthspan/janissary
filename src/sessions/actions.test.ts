@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { runSessionAction, type SessionActionResult } from './actions.js';
 import { terminateParkedSession } from './terminate-session.js';
 import type { RemoteSessionRecord } from './store.js';
@@ -9,7 +9,7 @@ vi.mock('./terminate-session.js', async (importOriginal) => ({
   ...await importOriginal(),
   terminateParkedSession: vi.fn(),
 }));
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 

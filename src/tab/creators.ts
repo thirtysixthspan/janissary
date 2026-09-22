@@ -2,7 +2,7 @@ import type { Tab, PluginTabRecord, EditorView, FileNavigatorView } from './type
 import {
   makePluginTab, makeEditorTab, makeFilesTab, makeNotificationsTab, distinctColor, insertTabInGroup,
 } from './index.js';
-import { NOTIFICATIONS_LABEL } from '../notifications-tab.js';
+import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import {
   uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
 } from './unique-labels.js';

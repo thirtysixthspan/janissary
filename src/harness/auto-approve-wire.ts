@@ -1,6 +1,6 @@
 import { HarnessAutoApprover } from './auto-approve.js';
 import { writeCaptureFile } from './capture-file.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 
 // Build a `-y`/`--yes` tab's auto-approver: it injects the approval keystroke back into the tab's

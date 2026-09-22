@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { openProfileNotifications } from './notifications.js';
-import { notificationsTab } from '../notifications-tab.js';
+import { notificationsTab } from '../notifications/tab.js';
 import { TabManager } from '../tab/manager.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';

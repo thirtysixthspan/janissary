@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import type { Sinks } from './types.js';
 import type { Managers } from '../managers.js';
 

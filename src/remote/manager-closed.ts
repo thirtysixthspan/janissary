@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 import { dropRemoteLabels, type RemoteEntry } from './attach.js';
 

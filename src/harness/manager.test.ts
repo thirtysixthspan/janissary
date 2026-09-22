@@ -3,7 +3,7 @@ import { HarnessManager } from './manager.js';
 import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture-file.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
@@ -25,7 +25,7 @@ vi.mock('./scratch-dir.js', () => ({
   })),
 }));
 
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
 // Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
 // filesystem; each construction records a disposable stub.

@@ -1,5 +1,5 @@
 import type { Command } from './types.js';
-import { openNotificationsTab } from '../notifications-tab.js';
+import { openNotificationsTab } from '../notifications/tab.js';
 
 // `notifications` opens (or focuses) the singleton notifications tab. `notifications left` /
 // `notifications right` dock it into that sidebar, mirroring `files [left|right]`. Bare

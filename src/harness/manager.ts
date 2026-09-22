@@ -16,7 +16,7 @@ import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { HarnessView } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus, type Subscription } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
