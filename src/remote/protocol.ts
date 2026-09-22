@@ -87,7 +87,30 @@
 // agent transcript reads as commands beside their output rather than as responses alone. This is the
 // carries-not-shape case the `identity` bump above is the archetype of: a version-16 peer retains no
 // input, so it would answer an attach with command-less history while both ends looked healthy.
-export const REMOTE_PROTOCOL_VERSION = 17;
+//
+// Version 18 moves gate-detection, auto-approve, and busy/ready status for a remote harness tab onto
+// the far side, so all three keep working while the tab is detached — replacing the old approach of
+// computing them locally from relayed PTY bytes. Four changes travel together because they are one
+// feature (a version-17 remote knows none of them, so a `-y` remote harness would come up silently
+// unable to auto-approve at all, not merely unable to while detached):
+//  - `spawn` gains `autoApprove`, telling the far side whether this harness process should inject
+//    approval keystrokes at all. A version-17 remote ignores the field and injects nothing, in
+//    keeping with today's split where the far side has never run gate detection.
+//  - `gate-event` reports a detected/approved (or stood-down) permission gate, carrying what the
+//    local `notify()` needs to reconstruct the same notification a local detector would have raised:
+//    the message, the original detection time, and — inline, base64-encoded like `output` — the
+//    triggering screen capture. It travels through the existing detached-peer replay buffer
+//    unchanged, so one already reached while detached queues and replays exactly like `output` does.
+//  - `busy-transition` reports the harness's current busy/ready state and whether the tab should be
+//    marked unread. Unlike `gate-event`, it is a snapshot of current state, not a log entry: it is
+//    never queued while detached, and exactly one is sent on a successful attach, carrying only
+//    whatever the far side's classifier currently holds.
+//  - `capture-request`/`capture-reply` let `harness capture <name>` ask the far side for a fresh
+//    snapshot on demand — over the live channel while attached, or through a lightweight query that
+//    reaches a parked peer without attaching it, while fully detached.
+// A version-17 remote refuses all three new frame types as unknown, which is exactly the mismatch
+// this check exists to catch before a `-y` remote harness ships silently inert.
+export const REMOTE_PROTOCOL_VERSION = 18;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -162,10 +185,18 @@ export type ClientFrame =
     // use — the remote starts its own guard, its own confined browser, and its own workspace
     // directory, exactly as `harnessEnv`'s doc comment states the general rule.
     browser?: boolean;
+    // Whether this harness process should auto-approve its own permission gates on the far side.
+    // Meaningful only alongside `harness`; ignored for a plain PTY takeover or inline terminal card.
+    autoApprove?: boolean;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }
   | { type: 'kill'; id: string }
+  // Ask the far side for a fresh screen capture of the process `id`. `session` names the peer to ask:
+  // ignored by a `RemoteServer` that already holds the live workspace (it answers from its own
+  // detection pipeline instead), and required by a freshly relaying process with no workspace of its
+  // own, which forwards the query into the parked peer matching `session` without attaching it.
+  | { type: 'capture-request'; session: string; id: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
   | {
@@ -219,6 +250,22 @@ export type ServerFrame =
   // protocol delimits commands with, and a live command's scan of the output stream would match it
   // before the command had run.
   | { type: 'shell-history'; id: string; runs: ShellHistoryRun[] }
+  // A detected (and, when auto-approve is on, injected-against) permission gate, or a stand-down when
+  // auto-approve could not clear it — the far side's report of exactly what `HarnessAutoApprover`'s
+  // own `notify` callback would have told a local detector. `capturedAt` is when the gate was seen,
+  // not when this frame was sent, so a replay after reattaching shows the original timeline (a queued
+  // frame can sit in `DetachedPeer.pending` for anywhere from seconds to the full detach window).
+  // `capture` is the triggering screen text, inline and base64-encoded like `output`, so the client
+  // writes the same capture file a local detector would have without a second round trip.
+  | { type: 'gate-event'; id: string; message: string; capturedAt: number; capture?: string }
+  // The harness's current busy/ready state, and whether the tab should be marked unread because of
+  // this transition. A snapshot of current state rather than a log entry — see version 18's comment
+  // above — so this is sent live on every real change while attached, and exactly once (reflecting
+  // whatever is current) on a successful attach; never queued while detached.
+  | { type: 'busy-transition'; id: string; busy: boolean; unread: boolean }
+  // The answer to `capture-request`: the process's latest screen capture, or no fields at all when
+  // it has none yet — the same "nothing captured yet" a local `latestCapture()` can return.
+  | { type: 'capture-reply'; id: string; text?: string; capturedAt?: number }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
@@ -258,14 +305,14 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   attach: true, 'session-state': true, shutdown: true,
-  provision: true, spawn: true, input: true, resize: true, kill: true,
+  provision: true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true,
   'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
-  'shell-history': true, 'browser-exited': true,
+  'shell-history': true, 'browser-exited': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };
@@ -295,6 +342,8 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
     return { ...frame, result: { ...frame.result, content: encodeText(frame.result.content) } };
   }
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
+  if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
+  if (frame.type === 'capture-reply' && frame.text !== undefined) return { ...frame, text: encodeText(frame.text) };
   return { ...frame };
 }
 

@@ -14,11 +14,18 @@ export type SessionListener = {
   // The process's retained history, replayed as ordered runs when an attach rebuilds its tab. Only
   // the remote shell adapter takes one: a pty redraws from its output frame instead.
   onHistory?: (runs: readonly ShellHistoryRun[]) => void;
+  // A detected (and possibly approved) permission gate. Only a remote harness's `PtySession` takes
+  // one — see `createRemotePtySession` in `./pty-session.js`.
+  onGateEvent?: (message: string, capturedAt: number, capture?: string) => void;
+  // The harness's current busy/ready state, and whether the transition should mark the tab unread.
+  onBusyTransition?: (busy: boolean, unread: boolean) => void;
 };
 
 type SpawnFrame = Extract<ClientFrame, { type: 'spawn' }>;
 type OutputFrame = Extract<ServerFrame, { type: 'output' }>;
 type HistoryFrame = Extract<ServerFrame, { type: 'shell-history' }>;
+type GateEventFrame = Extract<ServerFrame, { type: 'gate-event' }>;
+type BusyTransitionFrame = Extract<ServerFrame, { type: 'busy-transition' }>;
 type ExitFrame = Extract<ServerFrame, { type: 'exit' }>;
 
 export type SessionRouterHandlers = {
@@ -51,6 +58,8 @@ export class SessionRouter {
     for (const frame of this.pending.claim(id)) {
       if (frame.type === 'output') { listener.onOutput(frame.data); continue; }
       if (frame.type === 'shell-history') { listener.onHistory?.(frame.runs); continue; }
+      if (frame.type === 'gate-event') { listener.onGateEvent?.(frame.message, frame.capturedAt, frame.capture); continue; }
+      if (frame.type === 'busy-transition') { listener.onBusyTransition?.(frame.busy, frame.unread); continue; }
       this.sessions.delete(id);
       listener.onExit(frame.exitCode);
     }
@@ -97,6 +106,23 @@ export class SessionRouter {
   history(frame: HistoryFrame): void {
     const listener = this.sessions.get(frame.id);
     if (listener) listener.onHistory?.(frame.runs);
+    else if (this.holding) this.pending.hold(frame);
+  }
+
+  // Held exactly like `output`/`history` for the same reason: a gate detected the instant an attach
+  // replays it must not be dropped just because the rebuilt tab's listener has not registered yet.
+  gateEvent(frame: GateEventFrame): void {
+    const listener = this.sessions.get(frame.id);
+    if (listener) listener.onGateEvent?.(frame.message, frame.capturedAt, frame.capture);
+    else if (this.holding) this.pending.hold(frame);
+  }
+
+  // Held the same way, for the one busy-transition frame `DetachedPeer.accept()` sends on a
+  // successful attach (decision 20 of the auto-accept-while-detached plan) — it can arrive before the
+  // rebuilt tab's listener registers just as easily as a replayed `output` frame can.
+  busyTransition(frame: BusyTransitionFrame): void {
+    const listener = this.sessions.get(frame.id);
+    if (listener) listener.onBusyTransition?.(frame.busy, frame.unread);
     else if (this.holding) this.pending.hold(frame);
   }
 

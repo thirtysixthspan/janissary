@@ -31,14 +31,18 @@ export type HarnessObserverOptions = {
 // The full observer set for a named harness tab: capture wiring (auto-approve plus busy status), a
 // screen reader feeding it, an asciicast recorder, and — when the harness has a session record to
 // tail — a transcript tailer. A remote tab reads its transcript from the other host's channel
-// instead of a local dot directory; everything else is identical. A recording failure is reported
-// once in the notifications feed, for the same reason an ssh tab's is: a silent gap would defeat
-// the point of an audit recording.
+// instead of a local dot directory; everything else is identical, EXCEPT the screen reader and its
+// capture wiring, which a remote tab does not get at all: gate-detection, auto-approve, and busy
+// status all run server-side for a remote harness now (decision 14 of the auto-accept-while-detached
+// plan), fed by the far side's own relayed bytes rather than this tab's — see
+// `src/remote/pty-session.ts`'s `onGateEvent`/`onBusyTransition` handlers for where the far side's
+// reports land locally instead. A recording failure is reported once in the notifications feed, for
+// the same reason an ssh tab's is: a silent gap would defeat the point of an audit recording.
 export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime {
   const { managers, name, label, id, cwd, autoApprove, channel } = options;
   const dims = managers.pty.spawnDimensions();
-  const capture = captureWiring(managers, name, label, id, autoApprove);
-  const reader = new HarnessScreenReader(id, dims.cols, dims.rows, capture.handler);
+  const capture = channel ? undefined : captureWiring(managers, name, label, id, autoApprove);
+  const reader = channel ? undefined : new HarnessScreenReader(id, dims.cols, dims.rows, capture?.handler);
   const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
     notify(managers, 'harness-recording-failed', label);
   });
@@ -46,7 +50,7 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
     : undefined;
-  return new HarnessRuntime(reader, recorder, tailer, capture.autoApprover, options.browser);
+  return new HarnessRuntime(reader, recorder, tailer, capture?.autoApprover, options.browser);
 }
 
 // The observer pair for an ssh tab: a screen reader (no capture handler — auto-approve and busy

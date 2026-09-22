@@ -9,7 +9,7 @@ import { composeSessionRows, type SessionTerminated, type SessionsSnapshot } fro
 import { channelOf, recordOf, sshTabs } from './snapshot.js';
 import {
   loadRemoteSessions, mergeRemoteSession, saveRemoteSessions, withoutRemoteSession,
-  type RemoteSessionRecord,
+  type RemoteSessionRecord, type RemoteSessionProcess,
 } from './store.js';
 
 // The remote sessions this janissary holds: the live ones it is attached to, the parked ones it
@@ -128,6 +128,19 @@ export class SessionsManager {
 
   recordFor(session: string): RemoteSessionRecord | undefined {
     return this.all().find((record) => record.session === session);
+  }
+
+  // The record and process entry naming `label`, if this janissary ever recorded a remote process by
+  // that label — the persisted-name resolution `harness capture <name>` falls back to when no open
+  // tab matches (decision 15 of the auto-accept-while-detached plan): a Detach closes every tab, so
+  // there is nothing for `managers.tab.byLabel` to find, and this is the same record the Sessions
+  // tab's detached rows already read.
+  recordForProcess(label: string): { record: RemoteSessionRecord; process: RemoteSessionProcess } | undefined {
+    for (const record of this.all()) {
+      const process = record.processes.find((candidate) => candidate.label === label);
+      if (process) return { record, process };
+    }
+    return undefined;
   }
 
   // The session is over — its channel reached a genuine end through the remote lifecycle, not

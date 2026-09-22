@@ -1,60 +1,20 @@
 import {
   HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteHandshake, type RemoteProcessState, type ServerFrame,
+  type ClientFrame, type RemoteProcessState,
 } from './protocol.js';
 import { SessionRouter, type SessionListener } from './channel-sessions.js';
 import { dispatchAcp, type AcpSessionListener } from './channel-acp.js';
+import { dispatchSessionFrame } from './channel-dispatch.js';
+import { CaptureRequestTracker, type CaptureResult } from './channel-capture.js';
 import { ShutdownDrain } from './shutdown-drain.js';
 
-// One ssh session's lifetime and its state machine. Until `remote-serve` announces itself the
-// session is a plain terminal: bytes pass through to the tab's terminal and keystrokes pass through
-// to the PTY, so ssh's own password, key-passphrase, host-key-verification, and keyboard-interactive
-// prompts render and can be answered in the tab. The sentinel handshake line flips the channel to
-// `attached`, after which every byte is a frame.
-//
-// The transport is injected rather than spawned here so the state machine can be driven over a fake
-// PTY in tests; `RemoteManager` supplies the real one (an `ssh -t … janus remote-serve` PTY).
-export type ChannelTransport = {
-  id: string;
-  write: (data: string) => void;
-  kill: () => void;
-};
-
+export type { CaptureResult } from './channel-capture.js';
 export type { SessionListener } from './channel-sessions.js';
-
-export type NavigatorListener = {
-  onReply: (frame: Extract<ServerFrame, { type: 'filesystem-reply' }>) => void;
-  onEvent: (path: string) => void;
-  onClose?: () => void;
-};
-
-// What one remote ACP session id wants from the inbound stream. Registered by the local ACP
-// adapter, which is the only shape that consumes these frames.
 export type { AcpSessionListener } from './channel-acp.js';
-
-// The frames that belong to the tab rather than to one process's I/O: the provisioning answer, the
-// transcript pushes, and the browser-gone report. Everything else inbound is routed to a
-// `SessionListener` instead. `browser-exited` carries a session id but is not that session's
-// output — the tab it names is resolved by the manager, since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
-
-export type RemoteChannelHandlers = {
-  // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.
-  onTerminalData: (data: string) => void;
-  onAttached: (handshake: RemoteHandshake) => void;
-  onFrame: (frame: ChannelFrame) => void;
-  // A protocol-level fault (a version mismatch, a frame outside the union). Closes the channel.
-  onError: (message: string) => void;
-  onClose: () => void;
-  onSessionExit?: (id: string, label: string | undefined, harness: boolean) => void;
-  // The set of processes this channel has spawned changed — a `spawn` went out, or a `kill` did.
-  // What makes a session recordable is having something running in its workspace, so this is the
-  // moment a launch becomes attachable. Per process, never per byte.
-  onProcesses?: () => void;
-  // The held-frame buffer overflowed and dropped its oldest frames. Reported through the same line
-  // a truncated replay already has, since it is the same fact one layer further in.
-  onTruncatedReplay?: () => void;
-};
+export type {
+  ChannelTransport, NavigatorListener, ChannelFrame, RemoteChannelHandlers,
+} from './channel-types.js';
+import type { ChannelTransport, NavigatorListener, RemoteChannelHandlers } from './channel-types.js';
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
 
@@ -67,6 +27,7 @@ export class RemoteChannel {
   private shutdownDrain = new ShutdownDrain();
   sessionId: string | undefined;
   private router: SessionRouter;
+  private captures = new CaptureRequestTracker();
 
   constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {
     this.router = new SessionRouter({
@@ -102,6 +63,14 @@ export class RemoteChannel {
   attachAcp(id: string, listener: AcpSessionListener): void { this.acpSessions.set(id, listener); }
 
   detachAcp(id: string): void { this.acpSessions.delete(id); }
+
+  // Ask the far side for a fresh screen capture of process `id`, resolving with the reply, or
+  // `undefined` on no capture yet or a channel that closes first (see `CaptureRequestTracker`).
+  // `session` is the peer to ask: this channel's own `sessionId` while attached, or a parked
+  // session's id for the one-off query a throwaway channel makes while fully detached.
+  requestCapture(id: string, session: string): Promise<CaptureResult> {
+    return this.captures.request(id, session, (frame) => this.send(frame));
+  }
 
   send(frame: ClientFrame): void {
     if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
@@ -153,6 +122,7 @@ export class RemoteChannel {
     this.navigators.clear();
     for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
+    this.captures.settleAll();
     this.state = 'closed';
   }
 
@@ -189,6 +159,7 @@ export class RemoteChannel {
     for (const listener of this.navigators.values()) listener.onClose?.();
     this.navigators.clear();
     this.acpSessions.clear();
+    this.captures.settleAll();
     this.handlers.onClose();
   }
 
@@ -242,9 +213,7 @@ export class RemoteChannel {
     if (!('type' in frame) && frame.stray === true) { this.handlers.onTerminalData(line); return; }
     if (!('type' in frame)) { this.fail(frame.error); return; }
     if (frame.type === 'attach-result' && frame.accepted) this.state = 'attached';
-    if (frame.type === 'output') { this.router.output(frame); return; }
-    if (frame.type === 'shell-history') { this.router.history(frame); return; }
-    if (frame.type === 'exit') { this.router.exit(frame); return; }
+    if (dispatchSessionFrame(frame, this.router, this.captures)) return;
     if (frame.type === 'filesystem-reply') {
       this.navigators.get(frame.session)?.onReply(frame);
       return;

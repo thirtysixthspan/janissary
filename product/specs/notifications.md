@@ -159,7 +159,12 @@ feed.
 
 There is still **no backlog**. Nothing that happened before the feed existed is replayed into it,
 and closing the tab discards its contents: reopening it, by command or by the next event, starts a
-fresh, empty feed.
+fresh, empty feed. This is about the feed itself, opened and closed locally — it does not describe a
+detached remote harness tab's reattachment, which is a different event: an `auto-approve`
+notification raised while that tab was detached is queued on the far side and replayed into the feed
+on the next attach, in original order and timestamped at when it actually happened, indistinguishable
+from a live one once it lands (see [[remote-server]]). Nothing else changes about ordinary tab
+reopening.
 
 ### `notify <message>`
 

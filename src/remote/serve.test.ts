@@ -697,4 +697,118 @@ describe('detached peer rendezvous', () => {
       expect(exit).toHaveBeenCalledOnce(); expect(existsSync(ready.dir)).toBe(false);
     } finally { peer.dispose(); vi.useRealTimers(); server.shutdown(0); }
   });
+
+  // The auto-accept-while-detached plan's decisions 16, 18, and 20: a capture-request answers a
+  // parked peer directly without attaching it, a gate-event frame queues and replays like any other
+  // pending frame, and a busy-transition frame is sent live but never queued while detached.
+  describe('capture-request and detection frames', () => {
+    it('answers a capture-request directly, without attaching, claiming the socket, or ending the peer\'s ability to be attached afterward', async () => {
+      const getCapture = vi.fn((id: string) => (id === 'r1' ? { text: 'screen text', capturedAt: 555 } : undefined));
+      const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(), getCapture);
+      await peer.start(vi.fn());
+      peer.detach();
+      const record = JSON.parse(readFileSync(path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`), 'utf8'));
+      const querySocket = createConnection(record.socket);
+      const queryOutput: string[] = [];
+      querySocket.setEncoding('utf8');
+      querySocket.on('data', (data: string) => { queryOutput.push(data); });
+      try {
+        querySocket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'r1' })}\n`);
+        await vi.waitFor(() => expect(queryOutput.join('')).toContain('capture-reply'));
+        expect(decodeFrame(queryOutput.join('').trim())).toEqual({ type: 'capture-reply', id: 'r1', text: 'screen text', capturedAt: 555 });
+        expect(getCapture).toHaveBeenCalledWith('r1');
+        // Closed on its own once answered — not left open the way a real attach's socket would be.
+        await vi.waitFor(() => expect(querySocket.destroyed || querySocket.readableEnded).toBe(true));
+        // The peer itself was never claimed: a real attach still succeeds afterward.
+        const output: string[] = [];
+        const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+        try {
+          await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+        } finally { socket.destroy(); }
+      } finally { querySocket.destroy(); peer.dispose(); }
+    });
+
+    it('answers a capture-request with no fields when nothing has been captured for that id', async () => {
+      const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(), () => { /* nothing captured */ });
+      await peer.start(vi.fn());
+      peer.detach();
+      const record = JSON.parse(readFileSync(path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`), 'utf8'));
+      const socket = createConnection(record.socket);
+      const output: string[] = [];
+      socket.setEncoding('utf8');
+      socket.on('data', (data: string) => { output.push(data); });
+      try {
+        socket.write(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'unknown' })}\n`);
+        await vi.waitFor(() => expect(output.join('')).toContain('capture-reply'));
+        expect(decodeFrame(output.join('').trim())).toEqual({ type: 'capture-reply', id: 'unknown' });
+      } finally { socket.destroy(); peer.dispose(); }
+    });
+
+    it('refuses a capture-request naming the wrong session, the same as attach does', async () => {
+      const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn(), () => ({ text: 'x', capturedAt: 1 }));
+      await peer.start(vi.fn());
+      peer.detach();
+      const record = JSON.parse(readFileSync(path.join(repoDir, '.janissary', 'remote', `${peer.session}.json`), 'utf8'));
+      const socket = createConnection(record.socket);
+      const output: string[] = [];
+      socket.setEncoding('utf8');
+      socket.on('data', (data: string) => { output.push(data); });
+      try {
+        socket.write(`${encodeFrame({ type: 'capture-request', session: randomUUID(), id: 'r1' })}\n`);
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":false'));
+      } finally { socket.destroy(); peer.dispose(); }
+    });
+
+    it('queues a gate-event frame emitted while detached and replays it on attach, like output/exit', async () => {
+      const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+      await peer.start(vi.fn());
+      peer.detach();
+      peer.emit({ type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1000, capture: 'gate text' });
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('gate-event'));
+        expect(output.join('').trim().split('\n').map((line) => decodeFrame(line))).toEqual([
+          { type: 'attach-result', accepted: true },
+          { type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1000, capture: 'gate text' },
+        ]);
+      } finally { socket.destroy(); peer.dispose(); }
+    });
+
+    it('drops a busy-transition frame emitted while detached rather than queuing it', async () => {
+      const peer = new DetachedPeer(repoDir, randomUUID(), vi.fn(), vi.fn());
+      await peer.start(vi.fn());
+      peer.detach();
+      peer.emit({ type: 'busy-transition', id: 'r1', busy: true, unread: false });
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('attach-result'));
+        expect(output.join('')).not.toContain('busy-transition');
+      } finally { socket.destroy(); peer.dispose(); }
+    });
+
+    it('sends exactly one busy-transition frame on attach, reflecting the current value rather than a replay of every flip', async () => {
+      let currentBusy = true;
+      const peer = new DetachedPeer(
+        repoDir, randomUUID(), vi.fn(), vi.fn(), () => { /* no capture pipeline needed for this test */ },
+        () => [{ id: 'r1', busy: currentBusy }],
+      );
+      await peer.start(vi.fn());
+      peer.detach();
+      // Flips while detached — decision 20 says none of them are individually reported.
+      currentBusy = false;
+      currentBusy = true;
+      currentBusy = false;
+      const output: string[] = [];
+      const socket = relayPeer(repoDir, peer.session, (data) => { output.push(data); }, vi.fn())!;
+      try {
+        await vi.waitFor(() => expect(output.join('')).toContain('busy-transition'));
+        const frames = output.join('').trim().split('\n').map((line) => decodeFrame(line));
+        expect(frames.filter((frame) => 'type' in frame && frame.type === 'busy-transition')).toEqual([
+          { type: 'busy-transition', id: 'r1', busy: false, unread: false },
+        ]);
+      } finally { socket.destroy(); peer.dispose(); }
+    });
+  });
 });

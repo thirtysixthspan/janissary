@@ -1,5 +1,8 @@
 import { messageBus } from '../bus.js';
+import { notify } from '../notifications.js';
+import { writeCaptureFile } from '../harness/capture-file.js';
 import type { PtySession } from '../pty.js';
+import type { Managers } from '../managers.js';
 import type { RemoteChannel } from './channel.js';
 
 // The decisions a remote process is started with, mirroring `spawnPty`'s own arguments. `program`
@@ -17,6 +20,9 @@ export type RemotePtyOptions = {
   cols: number;
   rows: number;
   agentName?: string;
+  // Whether the far side should auto-approve this harness's own permission gates. Meaningful only
+  // alongside `harness`; ignored by the far side for anything else, same as `harness` itself.
+  autoApprove?: boolean;
 };
 
 /**
@@ -29,10 +35,11 @@ export type RemotePtyOptions = {
  */
 export function createRemotePtySession(
   channel: RemoteChannel,
+  managers: Managers,
   options: RemotePtyOptions,
   onExit: (exitCode: number) => void,
 ): PtySession {
-  const { id, program, command, harness, offline, browser, cols, rows, agentName } = options;
+  const { id, program, command, harness, offline, browser, cols, rows, agentName, autoApprove } = options;
   let attaching = true;
   const pending: Array<() => void> = [];
   const deliver = (callback: () => void) => {
@@ -42,6 +49,26 @@ export function createRemotePtySession(
   channel.attach(id, {
     onOutput: (data) => deliver(() => messageBus.emit('pty', { type: 'data', id, data })),
     onExit: (exitCode) => deliver(() => onExit(exitCode)),
+    // Only ever fires for a harness spawn — the far side never emits either frame for anything else
+    // (see `REMOTE_PROTOCOL_VERSION`'s version-18 comment in `./protocol.js`) — so `agentName` (the
+    // owning tab's label, always set for a harness spawn by `registerRemotePty`) is always present
+    // here. Translates the far side's report into exactly what a local detector would have produced:
+    // a capture file, a `notify()` call stamped with the original detection time (not now), and the
+    // same busy-dot/unread calls `busyStatusHandler` makes.
+    onGateEvent: (message, capturedAt, capture) => deliver(() => {
+      const label = agentName ?? '';
+      const openFile = capture === undefined ? undefined : writeCaptureFile(label, capturedAt, capture);
+      notify(managers, 'auto-approve', label, message, openFile, undefined, new Date(capturedAt));
+    }),
+    onBusyTransition: (busy, unread) => deliver(() => {
+      const label = agentName ?? '';
+      if (busy) managers.tab.addBusy(label);
+      else {
+        managers.tab.deleteBusy(label);
+        if (unread) managers.tab.markUnread(label);
+      }
+      messageBus.emit('state', { type: 'dirty' });
+    }),
   });
   if (pending.length === 0) attaching = false;
   else queueMicrotask(() => {
@@ -50,7 +77,7 @@ export function createRemotePtySession(
     pending.length = 0;
   });
   channel.send({
-    type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline, browser,
+    type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline, browser, autoApprove,
     ...(agentName && { agentName }),
   });
   return {

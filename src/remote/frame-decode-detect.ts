@@ -1,0 +1,48 @@
+import { nonEmptyString } from './filesystem-argument-checks.js';
+import type { RemoteFrame } from './protocol.js';
+
+// The decoders for the version-18 detection family — `capture-request`/`capture-reply` and
+// `gate-event`/`busy-transition` — in their own module for the same reason `frame-decode-history.ts`
+// has one: `frame-decode.ts` is the dispatcher, and four frame shapes are more validation than a
+// dispatcher arm should hold.
+
+type DecodeResult = RemoteFrame | { error: string };
+
+function malformed(type: string): DecodeResult {
+  return { error: `Malformed remote frame "${type}".` };
+}
+
+export function decodeCaptureRequest(record: Record<string, unknown>): DecodeResult {
+  const { session, id } = record;
+  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session) || !nonEmptyString(id)) {
+    return malformed('capture-request');
+  }
+  return { type: 'capture-request', session, id };
+}
+
+export function decodeCaptureReply(record: Record<string, unknown>): DecodeResult {
+  const { id, text, capturedAt } = record;
+  if (!nonEmptyString(id)) return malformed('capture-reply');
+  if (text === undefined && capturedAt === undefined) return { type: 'capture-reply', id };
+  if (typeof text !== 'string' || typeof capturedAt !== 'number' || !Number.isFinite(capturedAt)) {
+    return malformed('capture-reply');
+  }
+  return { type: 'capture-reply', id, text: Buffer.from(text, 'base64').toString('utf8'), capturedAt };
+}
+
+export function decodeGateEvent(record: Record<string, unknown>): DecodeResult {
+  const { id, message, capturedAt, capture } = record;
+  if (!nonEmptyString(id) || !nonEmptyString(message)
+    || typeof capturedAt !== 'number' || !Number.isFinite(capturedAt)
+    || !(capture === undefined || typeof capture === 'string')) return malformed('gate-event');
+  return {
+    type: 'gate-event', id, message, capturedAt,
+    ...(capture !== undefined && { capture: Buffer.from(capture, 'base64').toString('utf8') }),
+  };
+}
+
+export function decodeBusyTransition(record: Record<string, unknown>): DecodeResult {
+  const { id, busy, unread } = record;
+  if (!nonEmptyString(id) || typeof busy !== 'boolean' || typeof unread !== 'boolean') return malformed('busy-transition');
+  return { type: 'busy-transition', id, busy, unread };
+}

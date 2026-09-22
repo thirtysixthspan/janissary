@@ -1,6 +1,9 @@
 import { spawnPty } from '../pty.js';
 import { killShellGroup, spawnShell } from '../shell/index.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
+import { messageBus } from '../bus.js';
+import type { ScreenCapture } from '../harness/screen.js';
+import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js';
 
@@ -54,9 +57,24 @@ export class RemoteProcesses {
 
   input(id: string, data: string): void { this.writers.get(id)?.(data); }
 
-  resize(id: string, cols: number, rows: number): void { this.resizers.get(id)?.(cols, rows); }
+  resize(id: string, cols: number, rows: number): void {
+    this.resizers.get(id)?.(cols, rows);
+    messageBus.emit('pty', { type: 'resize', id, cols, rows });
+  }
 
   kill(id: string): void { this.entries.get(id)?.kill(); }
+
+  // The latest screen capture for a harness process's detection pipeline, or undefined when it has
+  // none yet (no bytes settled) or `id` names a process with no detection at all (not a harness, or
+  // already exited). Backs `capture-request` (decision 15/16 of the auto-accept-while-detached plan):
+  // a fresh on-demand snapshot, live or from a parked peer, without a full attach.
+  latestCapture(id: string): ScreenCapture | undefined { return this.detections.get(id)?.latestCapture(); }
+
+  // Every harness process's current busy/ready state, for `DetachedPeer.accept()` to send as a
+  // one-shot `busy-transition` on attach (decision 20 of the auto-accept-while-detached plan).
+  busyStates(): Array<{ id: string; busy: boolean }> {
+    return [...this.detections].map(([id, detection]) => ({ id, busy: detection.currentBusy() }));
+  }
 
   killAll(): void {
     for (const [, entry] of this.entries) entry.kill();
@@ -65,6 +83,7 @@ export class RemoteProcesses {
 
   private writers = new Map<string, (data: string) => void>();
   private resizers = new Map<string, (cols: number, rows: number) => void>();
+  private detections = new Map<string, HarnessDetection>();
 
   private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): Omit<Entry, 'frame'> {
     // The remote builds its own copy of the harness environment, browser included: the endpoint
@@ -89,8 +108,14 @@ export class RemoteProcesses {
         frame.command,
         this.workspaceDir,
         {
-          onData: (_id, data) => this.send({ type: 'output', id: frame.id, data }),
-          onExit: (_id, exitCode) => this.finish(frame.id, exitCode),
+          onData: (_id, data) => {
+            this.send({ type: 'output', id: frame.id, data });
+            messageBus.emit('pty', { type: 'data', id: frame.id, data });
+          },
+          onExit: (_id, exitCode) => {
+            messageBus.emit('pty', { type: 'exit', id: frame.id, exitCode });
+            this.finish(frame.id, exitCode);
+          },
         },
         frame.cols,
         frame.rows,
@@ -103,6 +128,12 @@ export class RemoteProcesses {
     }
     this.writers.set(frame.id, (data) => session.write(data));
     this.resizers.set(frame.id, (cols, rows) => session.resize(cols, rows));
+    if (frame.harness !== undefined) {
+      this.detections.set(frame.id, buildHarnessDetection(
+        frame.id, frame.harness, frame.cols, frame.rows, frame.autoApprove ?? false,
+        (keystroke) => this.input(frame.id, keystroke), this.send,
+      ));
+    }
     return { kill: () => { this.closeBrowser(frame.id); session.kill(); } };
   }
 
@@ -137,6 +168,8 @@ export class RemoteProcesses {
     this.entries.delete(id);
     this.writers.delete(id);
     this.resizers.delete(id);
+    this.detections.get(id)?.dispose();
+    this.detections.delete(id);
     this.closeBrowser(id);
     this.send({ type: 'exit', id, exitCode });
   }

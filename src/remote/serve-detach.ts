@@ -3,8 +3,9 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isPidAlive } from '../instance-lock.js';
-import { decodeFrame, encodeFrame, type ClientFrame, type ServerFrame } from './protocol.js';
+import { encodeFrame, type ClientFrame, type ServerFrame } from './protocol.js';
 import { ReplayHistory } from './replay-history.js';
+import { classifyPreAttachFrame, encodeCaptureReply, busyTransitionFrames } from './serve-detach-capture.js';
 
 export const REMOTE_DETACH_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -31,6 +32,11 @@ export class DetachedPeer {
   constructor(
     private root: string, readonly session: string,
     private receive: (data: string) => void, private expired: () => void,
+    // Answers a non-attaching `capture-request` (decision 16): the far side's own live detection
+    // pipeline, still running while parked, is what actually has the capture — this peer only routes
+    // the query to it. Defaulted so every existing caller (including every test) needs no change.
+    private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
+    private currentBusyStates: () => Iterable<{ id: string; busy: boolean }> = () => [],
   ) {
     this.record = path.join(root, '.janissary', 'remote', `${session}.json`);
   }
@@ -55,6 +61,10 @@ export class DetachedPeer {
     if (frame.type === 'transcript' || frame.type === 'output') this.history.record(frame);
     else if (frame.type === 'exit') { this.pipes.delete(frame.id); this.history.forget(frame.id); }
     if (this.sink) { this.sink(`${encodeFrame(frame)}\n`); return; }
+    // A snapshot of current state, not a log entry — see decision 20 of the auto-accept-while-detached
+    // plan. Queuing it would replay every intermediate busy/ready flip on the next attach; `accept()`
+    // sends one fresh frame from the classifier's retained value instead.
+    if (frame.type === 'busy-transition') return;
     if (frame.type === 'output' && !this.pipes.has(frame.id)) return;
     const encoded = encodeFrame(frame);
     this.pending.push(frame);
@@ -114,8 +124,12 @@ export class DetachedPeer {
       if (buffer.length > 1024) { socket.destroy(); return; }
       const newline = buffer.indexOf('\n');
       if (newline === -1) return;
-      const frame = decodeFrame(buffer.slice(0, newline));
-      if (!('type' in frame) || frame.type !== 'attach' || frame.session !== this.session) {
+      const classified = classifyPreAttachFrame(buffer.slice(0, newline), this.session);
+      if (classified.kind === 'capture-request') {
+        socket.end(encodeCaptureReply(classified.id, this.getCapture(classified.id)));
+        return;
+      }
+      if (classified.kind !== 'attach') {
         socket.end(`${encodeFrame({ type: 'attach-result', accepted: false })}\n`);
         return;
       }
@@ -128,13 +142,14 @@ export class DetachedPeer {
       this.sink = (chunk) => { socket.write(chunk); };
       this.emit({ type: 'attach-result', accepted: true, ...((this.dropped || this.history.truncated) && { truncated: true }) });
       this.dropped = false;
-      const history = this.history.frames(frame.restore === true);
+      const history = this.history.frames(classified.restore === true);
       for (const replay of history) socket.write(`${encodeFrame(replay)}\n`);
-      const pending = this.pending.filter((pending) => !frame.restore || (pending.type !== 'transcript' && pending.type !== 'output'))
+      const pending = this.pending.filter((pending) => !classified.restore || (pending.type !== 'transcript' && pending.type !== 'output'))
         .toSorted((a, b) => Number(a.type === 'exit') - Number(b.type === 'exit'));
       for (const frame of pending) socket.write(`${encodeFrame(frame)}\n`);
       this.pending = [];
       this.pendingBytes = 0;
+      for (const busyFrame of busyTransitionFrames(this.currentBusyStates())) socket.write(`${encodeFrame(busyFrame)}\n`);
       this.receive(buffer.slice(newline + 1));
     });
     socket.on('close', () => {

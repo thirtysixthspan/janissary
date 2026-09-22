@@ -6,6 +6,49 @@ import type { Managers } from '../managers.js';
 
 export { classifyBusy, type BusyState } from './busy-classify.js';
 
+export type BusyTransition = { busy: boolean; unread: boolean };
+
+// The busy/ready/unread decision for one harness's capture stream, decoupled from `Managers` so it
+// can run identically wherever the capture stream lives — locally against a client's own tab state,
+// or server-side against a remote harness with no tab state to read at all. `stuck` is the caller's
+// `!approver || approver.isStuck` — auto-approve missing or unable to clear the gate — since only the
+// caller knows whether an approver exists for this tab.
+//
+// A visible permission gate outranks the busy/ready signals: the harness is idle, blocked on the
+// user, so busy clears immediately, and `unread` is raised exactly when nothing is going to answer
+// the gate. A busy→ready transition is debounced to two consecutive ready captures so a brief
+// mid-generation pause does not flicker the dot off; ready→busy is applied immediately. Once a
+// busy→ready transition commits, `unread` is raised too — the harness finished its current run, same
+// as hitting an unanswered permission gate — except for claude, where a `recap:`-prefixed summary
+// line just above its own prompt is not new information worth flagging.
+export class BusyTracker {
+  private pendingReady = false;
+  private busy = true;
+
+  // The last classification, for a caller that needs a value with nothing new to observe (a remote
+  // peer answering an attach with its current state rather than a fresh capture).
+  current(): boolean { return this.busy; }
+
+  // The transition to report for this capture, or undefined when nothing changed (still busy, or a
+  // ready capture that only started the debounce window).
+  observe(capture: ScreenCapture, harnessName: string, stuck: boolean): BusyTransition | undefined {
+    if (detectPermissionGate(capture.text, harnessName)) {
+      this.pendingReady = false;
+      this.busy = false;
+      return { busy: false, unread: stuck };
+    }
+    const state = classifyBusy(capture, harnessName);
+    if (state === 'busy') {
+      this.pendingReady = false;
+      this.busy = true;
+      return { busy: true, unread: false };
+    }
+    if (!this.pendingReady) { this.pendingReady = true; return undefined; }
+    this.busy = false;
+    return { busy: false, unread: harnessName !== 'claude' || !endsWithRecap(capture.text) };
+  }
+}
+
 // The tab facts a capture can change, flattened for change detection: the busy flag and the
 // unread badge. `state: dirty` must fire only when one of them actually flips — captures land
 // every ~1s while a harness is active, and most of them re-affirm the same state.
@@ -16,46 +59,25 @@ function dotSnapshot(managers: Managers, label: string): string {
 
 // Build the per-tab capture handler that keeps the tab's busy dot in sync with the harness's
 // actual state, or undefined when the harness has no detector (leaving the coarse spawn-to-exit
-// busy behavior untouched). A visible permission gate outranks the busy/ready signals: the
-// harness is idle, blocked on the user, so busy clears immediately — and the tab is badged unread
-// when nothing is going to answer the gate (`approver` missing, or stood down on it). A busy→ready
-// transition is debounced to two consecutive ready captures so a brief mid-generation pause does
-// not flicker the dot off; ready→busy is applied immediately. Once a busy→ready transition
-// commits, the tab is also badged unread — the harness finished its current run, same as hitting
-// an unanswered permission gate. `markUnread` itself only badges a hidden (backgrounded, undocked)
-// tab, so a visible tab going ready is unaffected. The one exception: for claude, if the last thing
-// printed before its own prompt was a `recap:`-prefixed summary line, the badge is skipped — the
-// busy dot still clears, but a recap alone is not new information worth flagging. Whenever a capture
-// flips the busy flag or the unread badge, `state: dirty` is emitted so clients see the change
-// immediately — without it, a backgrounded tab's dot would sit stale until the next unrelated state
-// push.
+// busy behavior untouched). `markUnread` itself only badges a hidden (backgrounded, undocked) tab,
+// so a visible tab going ready is unaffected. Whenever a capture flips the busy flag or the unread
+// badge, `state: dirty` is emitted so clients see the change immediately — without it, a
+// backgrounded tab's dot would sit stale until the next unrelated state push.
 export function busyStatusHandler(
   name: string, label: string, managers: Managers, approver: HarnessAutoApprover | undefined,
 ): ((capture: ScreenCapture) => void) | undefined {
-  const entry = BUSY_TABLE[name];
-  if (!entry) return undefined;
-  let pendingReady = false;
-  const apply = (capture: ScreenCapture): void => {
-    if (detectPermissionGate(capture.text, name)) {
-      pendingReady = false;
-      managers.tab.deleteBusy(label);
-      if (!approver || approver.isStuck) managers.tab.markUnread(label);
-      return;
-    }
-    const state = classifyBusy(capture, name);
-    if (state === 'busy') {
-      pendingReady = false;
-      managers.tab.addBusy(label);
-      return;
-    }
-    if (pendingReady) {
-      managers.tab.deleteBusy(label);
-      if (name !== 'claude' || !endsWithRecap(capture.text)) managers.tab.markUnread(label);
-    } else pendingReady = true;
-  };
+  if (!Object.hasOwn(BUSY_TABLE, name)) return undefined;
+  const tracker = new BusyTracker();
   return (capture) => {
     const before = dotSnapshot(managers, label);
-    apply(capture);
+    const transition = tracker.observe(capture, name, !approver || approver.isStuck);
+    if (transition) {
+      if (transition.busy) managers.tab.addBusy(label);
+      else {
+        managers.tab.deleteBusy(label);
+        if (transition.unread) managers.tab.markUnread(label);
+      }
+    }
     if (dotSnapshot(managers, label) !== before) messageBus.emit('state', { type: 'dirty' });
   };
 }

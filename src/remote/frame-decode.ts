@@ -4,6 +4,12 @@ import type { RemoteFrame } from './protocol.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 import { decodeSessionStateResult } from './frame-decode-sessions.js';
 import { decodeShellHistory } from './frame-decode-history.js';
+import {
+  decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition,
+} from './frame-decode-detect.js';
+import {
+  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError,
+} from './frame-decode-acp.js';
 
 type DecodeResult = RemoteFrame | { error: string };
 
@@ -64,18 +70,20 @@ function decodeProvision(record: Record<string, unknown>): DecodeResult {
 }
 
 function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove } = record;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
     || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
     || !positiveInteger(cols) || !positiveInteger(rows)
     || !(offline === undefined || typeof offline === 'boolean')
     || !(browser === undefined || typeof browser === 'boolean')
+    || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
     ...(harness !== undefined && { harness }),
     ...(offline !== undefined && { offline }),
     ...(browser !== undefined && { browser }),
+    ...(autoApprove !== undefined && { autoApprove }),
     ...(agentName !== undefined && { agentName }),
   };
 }
@@ -130,56 +138,6 @@ function decodeTranscript(record: Record<string, unknown>): DecodeResult {
   return { type: 'transcript', blocks: record.blocks.map((block) => Buffer.from(block, 'base64').toString('utf8')) };
 }
 
-// Reject an array and `null` the way `decodeTokens` does, and every non-string value with them: an
-// environment override map is spread straight over the ACP subprocess's environment.
-function decodeEnv(value: unknown): Record<string, string> | undefined | 'invalid' {
-  if (value === undefined) return undefined;
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return 'invalid';
-  const env: Record<string, string> = {};
-  for (const [key, item] of Object.entries(value)) {
-    if (typeof item !== 'string') return 'invalid';
-    env[key] = item;
-  }
-  return env;
-}
-
-function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
-  const { id, command, args, offline } = record;
-  const env = decodeEnv(record.env);
-  if (!nonEmptyString(id) || !nonEmptyString(command) || env === 'invalid'
-    || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')
-    || !(offline === undefined || typeof offline === 'boolean')) return malformed('acp-open');
-  return {
-    type: 'acp-open', id, command, args: args as string[],
-    ...(env !== undefined && { env }),
-    ...(offline !== undefined && { offline }),
-  };
-}
-
-// An empty prompt cannot occur (`AcpManager.run` refuses one before sending) but an empty chunk is
-// ordinary, so the text is checked for being a string rather than for being nonempty.
-function decodeAcpText(type: 'acp-prompt' | 'acp-chunk', record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || typeof record.text !== 'string') return malformed(type);
-  return { type, id: record.id, text: Buffer.from(record.text, 'base64').toString('utf8') };
-}
-
-function decodeAcpAddressed(type: 'acp-close' | 'acp-ready', record: Record<string, unknown>): DecodeResult {
-  return nonEmptyString(record.id) ? { type, id: record.id } : malformed(type);
-}
-
-function decodeAcpEnd(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !nonEmptyString(record.stopReason)) return malformed('acp-end');
-  return { type: 'acp-end', id: record.id, stopReason: record.stopReason };
-}
-
-// `fatal` is required rather than optional: an absent flag would default a dead session to
-// "recoverable", which is the wrong way for this one to fail.
-function decodeAcpError(record: Record<string, unknown>): DecodeResult {
-  const { id, message, fatal } = record;
-  if (!nonEmptyString(id) || !nonEmptyString(message) || typeof fatal !== 'boolean') return malformed('acp-error');
-  return { type: 'acp-error', id, message, fatal };
-}
-
 // The `default` branch of the switch below. The `never` parameter is the point: the call only
 // typechecks while every frame type in the union has a case, so a type added to `RemoteFrame` but
 // not to this dispatcher fails the build rather than being refused at runtime as if it were a frame
@@ -213,6 +171,10 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'input': { return decodeAddressedData(type, record); }
   case 'resize': { return decodeResize(record); }
   case 'kill': { return decodeKill(record); }
+  case 'capture-request': { return decodeCaptureRequest(record); }
+  case 'capture-reply': { return decodeCaptureReply(record); }
+  case 'gate-event': { return decodeGateEvent(record); }
+  case 'busy-transition': { return decodeBusyTransition(record); }
   case 'workspace-ready': { return decodeWorkspaceReady(record); }
   case 'workspace-failed': { return decodeWorkspaceFailed(record); }
   case 'output': { return decodeAddressedData(type, record); }

@@ -173,6 +173,12 @@ export function notify(
   message?: string,
   openFile?: string,
   openTab?: string,
+  // When this event was actually detected, defaulting to now — every existing call site is
+  // unaffected. A remote harness's auto-approve/stand-down report (decision 17 of the
+  // auto-accept-while-detached plan) passes its original detection time, so a notification replayed
+  // on reattach after minutes or hours detached still reads as having happened when it actually did,
+  // rather than at the moment of reattachment.
+  detectedAt: Date = new Date(),
 ): void {
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
@@ -180,7 +186,7 @@ export function notify(
   const fromColor = managers.tab.byLabel(tabLabel)?.dotColor;
   // The dot label is the notification's provenance header — when, then who — so the line reads
   // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
-  const from = `${formatTimestamp(new Date())} ${tabLabel}`;
+  const from = `${formatTimestamp(detectedAt)} ${tabLabel}`;
   const output = notificationText(event, tabLabel, message);
   appendNotification(managers, {
     input: '',

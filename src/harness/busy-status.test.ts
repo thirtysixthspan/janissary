@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { classifyBusy, busyStatusHandler } from './busy-status.js';
+import { classifyBusy, busyStatusHandler, BusyTracker } from './busy-status.js';
 import { endsWithRecap } from './busy-classify.js';
 import type { ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
@@ -134,6 +134,44 @@ describe('endsWithRecap', () => {
 
   it('is false for a generating frame with no prompt box present', () => {
     expect(endsWithRecap(CLAUDE_GENERATING)).toBe(false);
+  });
+});
+
+// The far side's counterpart of `busyStatusHandler` reuses this class directly — see
+// `src/remote/serve-processes-detect.ts` — so its own behavior is covered here independent of the
+// `Managers`-backed wrapper, and `busyStatusHandler`'s tests below exercise the same logic again
+// through that wrapper's surface.
+describe('BusyTracker', () => {
+  it('starts busy, matching a freshly spawned tab\'s initial busy state', () => {
+    expect(new BusyTracker().current()).toBe(true);
+  });
+
+  it('reports a gate as not-busy with unread following the `stuck` flag it is given', () => {
+    const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+    expect(new BusyTracker().observe(capture(gate), 'claude', true)).toEqual({ busy: false, unread: true });
+    expect(new BusyTracker().observe(capture(gate), 'claude', false)).toEqual({ busy: false, unread: false });
+  });
+
+  it('reports busy immediately and updates current()', () => {
+    const tracker = new BusyTracker();
+    expect(tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false)).toEqual({ busy: true, unread: false });
+    expect(tracker.current()).toBe(true);
+  });
+
+  it('debounces ready to two consecutive captures before reporting it, then updates current()', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    expect(tracker.observe(capture('anything', CLAUDE_IDLE_TITLE), 'claude', false)).toBeUndefined();
+    expect(tracker.current()).toBe(true);
+    expect(tracker.observe(capture('anything', CLAUDE_IDLE_TITLE), 'claude', false)).toEqual({ busy: false, unread: true });
+    expect(tracker.current()).toBe(false);
+  });
+
+  it('exempts a claude recap from unread on the ready transition, matching busyStatusHandler', () => {
+    const tracker = new BusyTracker();
+    tracker.observe(capture('anything', CLAUDE_BUSY_TITLE), 'claude', false);
+    tracker.observe(capture(CLAUDE_RECAP_PROMPT_BOX), 'claude', false);
+    expect(tracker.observe(capture(CLAUDE_RECAP_PROMPT_BOX), 'claude', false)).toEqual({ busy: false, unread: false });
   });
 });
 

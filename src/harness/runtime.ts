@@ -14,7 +14,10 @@ export class HarnessRuntime {
   private disposed = false;
 
   constructor(
-    readonly reader: HarnessScreenReader,
+    // Undefined for a remote harness tab: gate-detection, auto-approve, and busy status all run
+    // server-side for those now (decision 14 of the auto-accept-while-detached plan), so there is no
+    // local screen reader to build one against.
+    readonly reader?: HarnessScreenReader,
     readonly recorder?: HarnessRecorder,
     readonly tailer?: HarnessTranscriptTailer,
     readonly autoApprover?: HarnessAutoApprover,
@@ -24,7 +27,7 @@ export class HarnessRuntime {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.reader.dispose();
+    this.reader?.dispose();
     this.recorder?.dispose();
     this.tailer?.dispose();
     this.browser?.close();
