@@ -54,6 +54,13 @@ describe('useFileNavigatorIntents', () => {
     });
   });
 
+  it('reports nothing to commit for the navigator tab it belongs to', () => {
+    const { intents, send } = setup();
+    intents.nothingToCommit();
+
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'fileNavigatorNothingToCommit', params: { index: 3 } });
+  });
+
   it('adapts command and GitHub actions to command messages', () => {
     const { intents, send } = setup();
     intents.sendCommand('edit /project/readme.md');

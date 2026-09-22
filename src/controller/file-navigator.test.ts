@@ -4,6 +4,7 @@ import {
   fileNavigatorCollapseAll,
   fileNavigatorPull,
   fileNavigatorCommit,
+  fileNavigatorNothingToCommit,
   fileNavigatorReroot,
   moveFileNavigatorItem,
   moveFileNavigatorItems,
@@ -91,6 +92,22 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers(undefined, { commit: (...args: unknown[]) => { calls.push(args); } });
     fileNavigatorCommit(managers, 0, 'commit: a.md', ['a.md']);
     expect(calls).toHaveLength(0);
+  });
+
+  it('fileNavigatorNothingToCommit posts the nothing-to-commit line attributed to the tab', () => {
+    const append = vi.fn();
+    const managers = makeManagersWithNotifications('agent', {}, append);
+    fileNavigatorNothingToCommit(managers, 0);
+    expect(append).toHaveBeenCalledTimes(1);
+    expect(append).toHaveBeenCalledWith(
+      NOTIFICATIONS_LABEL,
+      expect.objectContaining({ output: 'Nothing to commit' }),
+    );
+  });
+
+  it('fileNavigatorNothingToCommit is a no-op when the tab index has no label', () => {
+    const managers = makeManagers(undefined, {});
+    expect(() => fileNavigatorNothingToCommit(managers, 0)).not.toThrow();
   });
 
   it('fileNavigatorReroot delegates to FileNavigatorManager.reroot when the tab exists', () => {

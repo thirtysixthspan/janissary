@@ -50,6 +50,7 @@ const makeController = () =>
     fileNavigatorCollapseAll: vi.fn(),
     fileNavigatorPull: vi.fn(),
     fileNavigatorCommit: vi.fn(),
+    fileNavigatorNothingToCommit: vi.fn(),
     fileNavigatorReroot: vi.fn(),
     moveFileNavigatorItem: vi.fn(),
     deleteFileNavigatorItem: vi.fn(),
@@ -361,6 +362,12 @@ describe('handle', () => {
       method: 'fileNavigatorCommit', params: { index: 0, message: 'commit: a.md', paths: ['a.md'] },
     });
     expect(controller.fileNavigatorCommit).toHaveBeenCalledWith(0, 'commit: a.md', ['a.md']);
+  });
+
+  it('routes fileNavigatorNothingToCommit', () => {
+    const controller = makeController();
+    dispatchCall(controller, 16, { method: 'fileNavigatorNothingToCommit', params: { index: 0 } });
+    expect(controller.fileNavigatorNothingToCommit).toHaveBeenCalledWith(0);
   });
 
   it('routes fileNavigatorReroot', () => {

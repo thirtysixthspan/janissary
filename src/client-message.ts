@@ -30,6 +30,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   editorSuggest: 'deferred',
   editorSync: 'ack',
   fileNavigatorCollapseAll: 'ack',
+  fileNavigatorNothingToCommit: 'ack',
   fileNavigatorOpeners: 'result',
   fileNavigatorOpen: 'deferred',
   fileNavigatorPull: 'ack',

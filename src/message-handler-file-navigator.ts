@@ -4,6 +4,7 @@ import { unhandledClientMethod } from './client-message.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
   method: 'fileNavigatorToggle' | 'fileNavigatorCollapseAll' | 'fileNavigatorPull' | 'fileNavigatorCommit'
+    | 'fileNavigatorNothingToCommit'
     | 'fileNavigatorSetDetail' | 'fileNavigatorReroot' | 'moveFileNavigatorItem'
     | 'moveFileNavigatorItems' | 'deleteFileNavigatorItem' | 'deleteFileNavigatorItems'
     | 'renameFileNavigatorItem' | 'fileNavigatorSearch' | 'revealFileNavigatorItem'
@@ -31,6 +32,8 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     case 'fileNavigatorPull': { controller.fileNavigatorPull(message.params.index); break;
     }
     case 'fileNavigatorCommit': { controller.fileNavigatorCommit(message.params.index, message.params.message, message.params.paths); break;
+    }
+    case 'fileNavigatorNothingToCommit': { controller.fileNavigatorNothingToCommit(message.params.index); break;
     }
     case 'fileNavigatorSetDetail': { controller.fileNavigatorSetDetail(message.params.index, message.params.details); break;
     }

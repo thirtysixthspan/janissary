@@ -95,9 +95,12 @@ export function FileNavigatorTab({
   // The header button's whole-tree form: it names no paths, so the server stages everything under
   // the tree's root, and the message it opens pre-filled with is named after every change under that
   // root — `changedCount` — rather than only the rows the tree currently happens to be showing.
-  const commitEverything = () => commit.request(
-    [], defaultCommitMessageForCount(files.changedCount ?? 0), files.changedCount ?? 0,
-  );
+  // A count of zero is the same fact the count is generated from, so the click sends the
+  // nothing-to-commit report instead: no message field opens and no commit is attempted.
+  const commitEverything = () => {
+    if (files.changedCount === 0) { intents.nothingToCommit(); return; }
+    commit.request([], defaultCommitMessageForCount(files.changedCount ?? 0), files.changedCount ?? 0);
+  };
 
   // Opening the search pop-up closes a pending commit-message field first: the two single-input
   // cards share one position in the tree, so leaving the field open would draw them on top of

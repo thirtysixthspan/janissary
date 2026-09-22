@@ -140,6 +140,19 @@ describe('FileNavigatorTab', () => {
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 0 files');
   });
 
+  it('a tree with no changes reports nothing to commit instead of opening the message field', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { container } = render(
+      <FileNavigatorTab files={makeFiles({ branch: 'main', changedCount: 0 })} client={client} index={0} />,
+    );
+
+    fireEvent.click(container.querySelector('.files-commit')!);
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'fileNavigatorNothingToCommit', params: { index: 0 } });
+    expect(client.send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'fileNavigatorCommit' }));
+    expect(screen.queryByLabelText('Commit message')).not.toBeInTheDocument();
+  });
+
   it('sends the commit the message field produced, naming no paths for the whole tree', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const files = makeFiles({
@@ -190,6 +203,18 @@ describe('FileNavigatorTab', () => {
 
     fireEvent.click(container.querySelector('.files-commit')!);
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
+  });
+
+  it('the row menu still opens the message field for its named selection even on a clean tree', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const files = makeFiles({ branch: 'main', changedCount: 0 });
+    render(<FileNavigatorTab files={files} client={client} index={0} />);
+
+    fireEvent.contextMenu(screen.getByText('README.md'));
+    fireEvent.click(screen.getByText('Commit to origin'));
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(screen.getByText('Commit message')).toBeInTheDocument();
   });
 
   it('closes the commit-message field when the search pop-up opens', () => {

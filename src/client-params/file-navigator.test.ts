@@ -16,6 +16,7 @@ const CASES: Array<[
     { index: 0, message: 'commit: a.md', paths: 'a.md' },
     { index: 0, message: 'commit: a.md', paths: ['a.md', 2] },
   ]],
+  ['fileNavigatorNothingToCommit', { index: 0 }, [{ index: '0' }, {}]],
   ['fileNavigatorSetDetail', { index: 0, details: 'modified' }, [{ index: 0 }, { index: 0, details: 'owner' }]],
   ['fileNavigatorReroot', { index: 0 }, [{ index: 0, path: 4 }]],
   ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b' }, [
