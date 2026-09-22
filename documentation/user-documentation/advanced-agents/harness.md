@@ -237,9 +237,13 @@ harness capture <name>
 Writes the harness tab labeled `<name>`'s current screen to a file and opens it in an editor tab — a one-off snapshot, unlike the continuous session recording above. `<name>` is the tab's label, not a harness type, matched exactly and case-sensitively.
 
 - `harness capture` with no name: `Usage: harness capture <name>.`
-- No tab has that label: `No tab labeled "<name>".`
+- No open tab and no persisted detached session record carries that label: `No tab labeled "<name>".`
 - The tab isn't a harness tab: `"<name>" is not a harness tab.`
 - The tab is a harness tab but nothing has been captured yet: `No capture available for "<name>" yet.`
+- More than one detached session was recorded under that label: `Multiple detached sessions are labeled "<name>". Attach the intended session before capturing.`
+- A remote harness tab is reconnecting, with no live connection to ask: `No capture available for "<name>" — connection is reconnecting.`
+
+A session detached from the [Sessions tab](/user-documentation/tab-types/sessions) can still be captured by the label it was recorded under, even though a deliberate Detach closes its tab — a capture doesn't need an open tab to work against a detached remote session.
 
 For a detached remote harness, Janissary runs a short non-interactive query instead of opening an authentication prompt. If it cannot connect, the remote protocol fails, or the query times out, the requesting tab reports `Detached capture query failed: <reason>`.
 

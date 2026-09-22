@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Document the two new failure outcomes of the screen-capture command in the user documentation, which still lists only the errors that predate this change.
-
-Existing Issue: The capture section of `documentation/user-documentation/advanced-agents/harness.md` gained a paragraph about detached-query failures but still lists `No tab labeled "<name>".` as the outcome when no tab has the label — now only true when no persisted session record matches either — and names neither the ambiguous-label refusal nor the reconnecting refusal that `captureSubcommand` and `resolveOpenRemoteCapture` can now return. Severity: 3/10
-
-Existing Risk: 3/10 - A user who hits `Multiple detached sessions are labeled "<name>"` finds nothing about it in the reference page that claims to enumerate this command's errors, and files it as a bug rather than as the deliberate refusal it is.
-
-Proposal Risk: 1/10 - The page lists every outcome, and the remaining exposure is only that a future error string added in code has to be mirrored here by hand.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: document the new harness capture failure outcomes". In `documentation/user-documentation/advanced-agents/harness.md`, under "Capturing a harness's screen", the bulleted error list sits immediately above the detached-query paragraph this change added. Amend the `No tab labeled "<name>".` bullet to say it applies when neither an open tab nor a persisted detached session record carries the label, and add two bullets for the strings `captureSubcommand` and `resolveOpenRemoteCapture` in `src/harness/subcommands.ts` now return: `Multiple detached sessions are labeled "<name>". Attach the intended session before capturing.` and `No capture available for "<name>" — connection is reconnecting.` Add a sentence stating that a session detached from the Sessions tab can still be captured by the label it was recorded under, since a deliberate Detach closes the tab and the page currently reads as though a capture needs an open one. Keep the wording aligned with `product/specs/harness.md`, which already describes all three cases — that spec is the source of truth here, and the documentation page is the user-facing restatement of it. No code changes and no test changes belong in this item.
-
-
 * Share one builder for the remote-serve command string instead of maintaining a second copy for the capture query.
 
 Existing Issue: `remoteCaptureCommand` in `src/remote/entry-factory.ts` reconstructs the same `janus remote-serve` invocation `remoteServeCommand` builds directly above it — same optional path interpolation, same `$SHELL -ic` wrapping, same quoting — differing only by three prepended `ssh -o` flags. Severity: 3/10
