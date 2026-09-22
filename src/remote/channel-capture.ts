@@ -1,6 +1,6 @@
 import type { ServerFrame } from './protocol.js';
 
-export type CaptureResult = { text: string; capturedAt: number } | undefined;
+export type CaptureResult = { text: string; capturedAt: number } | { error: string } | undefined;
 
 type CaptureReplyFrame = Extract<ServerFrame, { type: 'capture-reply' }>;
 
@@ -30,5 +30,13 @@ export class CaptureRequestTracker {
   settleAll(): void {
     for (const resolve of this.pending.values()) resolve(undefined);
     this.pending.clear();
+  }
+
+  // A request that could not be sent at all — the channel is not attached — settles with a
+  // reason instead of being dropped, so the caller can report it rather than wait forever.
+  fail(request: string, message: string): void {
+    const resolve = this.pending.get(request);
+    this.pending.delete(request);
+    resolve?.({ error: message });
   }
 }

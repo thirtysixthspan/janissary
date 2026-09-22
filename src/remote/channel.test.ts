@@ -381,6 +381,13 @@ it('preserves all session routing while replacing a dropped peer transport', () 
   expect(onOutput).toHaveBeenCalledWith('still running');
   expect(onReply).toHaveBeenCalledOnce(); expect(onChunk).toHaveBeenCalledWith('same agent');
 });
+it('settles a capture-request made while still authenticating with an error, rather than hanging', async () => {
+  const h = harness();
+  const pending = h.channel.requestCapture('p1', 's1');
+  await expect(pending).resolves.toEqual({ error: 'Remote connection unavailable.' });
+  expect(h.written).toEqual([]);
+});
+
 it('answers new filesystem requests during a disconnect without sending or replaying them', () => {
   const h = harness();
   h.channel.receive(`${encodeHandshake('/remote', '12345678-1234-1234-1234-123456789abc')}\n`);

@@ -83,6 +83,18 @@ describe('captureSubcommand — open remote tab', () => {
     expect(requestCapture).not.toHaveBeenCalled();
   });
 
+  it('fails immediately when the channel has no session id, without touching the channel', () => {
+    const requestCapture = vi.fn();
+    const tabs = [
+      { label: 'janus', log: [] },
+      { label: 'claude', harness: { ptyId: 'r1' }, remote: { address: 'host', host: 'host' } },
+    ] as unknown as Tab[];
+    const managers = makeManagers(tabs, { channel: { requestCapture, sessionId: undefined } });
+    expect(captureSubcommand(managers, noCapture, 'harness capture claude', 'claude'))
+      .toBe('No capture available for "claude" — connection is reconnecting.');
+    expect(requestCapture).not.toHaveBeenCalled();
+  });
+
   it('round-trips the live channel\'s capture-request when attached, and opens the file once it settles', async () => {
     const requestCapture = vi.fn(() => Promise.resolve({ text: 'remote screen', capturedAt: 456 }));
     const tabs = [

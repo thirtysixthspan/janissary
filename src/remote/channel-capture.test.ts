@@ -24,4 +24,17 @@ describe('CaptureRequestTracker', () => {
 
     await expect(pending).resolves.toBeUndefined();
   });
+
+  it('settles a failed request with the given reason, leaving another pending request untouched', async () => {
+    const tracker = new CaptureRequestTracker();
+    const frames: { request: string }[] = [];
+    const failed = tracker.request('p1', 'session', (frame) => { frames.push(frame); });
+    const other = tracker.request('p2', 'session', (frame) => { frames.push(frame); });
+
+    tracker.fail(frames[0]!.request, 'Remote connection unavailable.');
+
+    await expect(failed).resolves.toEqual({ error: 'Remote connection unavailable.' });
+    tracker.resolve({ type: 'capture-reply', id: 'p2', request: frames[1]!.request, text: 'second', capturedAt: 2 });
+    await expect(other).resolves.toEqual({ text: 'second', capturedAt: 2 });
+  });
 });

@@ -74,11 +74,20 @@ export class RemoteChannel {
 
   send(frame: ClientFrame): void {
     if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
-      if (frame.type === 'filesystem-request') this.navigators.get(frame.session)?.onReply({
-        type: 'filesystem-reply', session: frame.session, request: frame.request, error: 'Remote connection unavailable.',
-      });
-      else if (frame.type === 'acp-open' || frame.type === 'acp-prompt') {
+      switch (frame.type) {
+      case 'filesystem-request': {
+        this.navigators.get(frame.session)?.onReply({
+          type: 'filesystem-reply', session: frame.session, request: frame.request, error: 'Remote connection unavailable.',
+        });
+        break;
+      }
+      case 'acp-open':
+      case 'acp-prompt': {
         this.acpSessions.get(frame.id)?.onError('Remote connection unavailable.', frame.type === 'acp-open');
+        break;
+      }
+      case 'capture-request': { this.captures.fail(frame.request, 'Remote connection unavailable.'); break; }
+      default: { break; }
       }
       return;
     }

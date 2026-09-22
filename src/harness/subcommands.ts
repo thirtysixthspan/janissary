@@ -44,8 +44,9 @@ function resolveOpenRemoteCapture(managers: Managers, input: string, label: stri
   if (managers.remote.reconnectingOf(label)) return `No capture available for "${label}" — connection is reconnecting.`;
   const channel = managers.remote.get(label);
   if (!channel) return `No capture available for "${label}" — connection is reconnecting.`;
+  if (!channel.sessionId) return `No capture available for "${label}" — connection is reconnecting.`;
   const invokingLabel = managers.tab.cur().label;
-  void channel.requestCapture(id, channel.sessionId ?? '').then((capture) => {
+  void channel.requestCapture(id, channel.sessionId).then((capture) => {
     reportCaptureResult(managers, input, label, invokingLabel, capture);
   });
   return undefined;
