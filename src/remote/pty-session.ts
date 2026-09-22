@@ -1,5 +1,5 @@
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications.js';
+import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture-file.js';
 import type { PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';

@@ -11,7 +11,7 @@ import type { RemoteChannel } from '../remote/channel.js';
 // reader or capture wiring at all — gate-detection, auto-approve, and busy status run server-side for
 // it now — while everything else (recorder, transcript tailer) stays exactly as it is for a local tab.
 
-vi.mock('../notifications.js', () => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('./capture-wire.js', () => ({ captureWiring: vi.fn(() => ({})) }));
 vi.mock('./transcript/sources.js', () => ({ createTranscriptSource: vi.fn() }));
 
