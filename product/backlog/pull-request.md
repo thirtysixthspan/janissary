@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Cover the relayed detached capture query, which today is the only wholly untested path in the new capture surface.
-
-Existing Issue: `src/remote/serve-detach-query.ts` — socket connection to a parked peer, newline framing across chunk boundaries, a ten-second deadline, reply correlation, and four separate failure exits — and the `capture-request` arm of `RemoteServer.dispatch` that calls it are referenced by no test in the tree, so the branch that runs when a relaying server holds no workspace of its own is exercised only by hand. Severity: 5/10
-
-Existing Risk: 5/10 - The one path the user reaches when capturing a genuinely detached session on a remote host is the path with no regression net under it, so a framing or lifecycle mistake introduced later surfaces as a silent hang against a real remote rather than a red test.
-
-Proposal Risk: 2/10 - The module has coverage, but a test built on a temporary unix socket is itself a source of flake on slow machines if its waits are written as fixed sleeps rather than as `vi.waitFor` conditions.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: cover the relayed detached capture query". Add `src/remote/serve-detach-query.test.ts` colocated beside the module, modelled on the `detached peer rendezvous` suite in `src/remote/serve.test.ts`, which already stands up a real `DetachedPeer` over a temporary directory and drives it through `relayPeer` — reuse that shape rather than mocking `node:net`. Cover `requestParkedCapture`: a successful reply from a live parked peer resolves with the text and timestamp; a reply split across two socket writes still parses at the newline; a missing or unparsable record file under `.janissary/remote/` resolves `undefined` without throwing; a record whose `socket` is not a string resolves `undefined`; a peer that never answers resolves `undefined` once the ten-second timeout fires under fake timers; and a reply for a different `id` or `request` resolves `undefined` rather than being accepted. Cover `answerCaptureRequest` separately with a fake `processes` object, asserting the direct branch emits a `capture-reply` carrying `latestCapture(id)` and the no-workspace branch delegates to the parked-peer query. The existing `serve.test.ts` cases that prove a capture query leaves the peer attachable must keep passing untouched, since they pin the property this module exists to preserve.
-
-
 * Correct the pull request description and the harness specification, which both state that a reconnecting remote tab round-trips its capture request over the live connection when the implementation refuses it outright.
 
 Existing Issue: The description says a capture resolves over the live channel when the tab is "attached or reconnecting-but-still-open" and `product/specs/harness.md` says "Attached or reconnecting, the request round-trips the live connection", while `resolveOpenRemoteCapture` in `src/harness/subcommands.ts` checks `managers.remote.reconnectingOf(label)` first and returns the reconnecting error for every such tab, so both documents contradict themselves one sentence later and describe a behavior no code path has. Severity: 4/10
