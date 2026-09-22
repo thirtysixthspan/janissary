@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Validate the timestamp a remote detection frame carries before it is used to build a capture filename, so an out-of-range value cannot throw inside the channel's inbound data path.
-
-Existing Issue: `decodeGateEvent` and `decodeCaptureReply` in `src/remote/frame-decode-detect.ts` accept any finite number for `capturedAt`, and both values flow into `writeCaptureFile` and on to `harnessArtifactFilename`, which calls `new Date(timestamp).toISOString()` — a call that throws `RangeError` for any magnitude above the Date range — from inside `createRemotePtySession`'s `onGateEvent` handler, which runs synchronously under `RemoteChannel.receive()`. Severity: 5/10
-
-Existing Risk: 5/10 - A far side that is buggy, mid-upgrade, or hostile can make the local process throw out of its ssh read handler by sending one frame, and every other decoder in this family was written specifically to stop peer-supplied values reaching a filesystem or subprocess surface unchecked, so the gap is a real hole in a boundary the codebase otherwise holds.
-
-Proposal Risk: 2/10 - The frame is refused at the decoder rather than crashing, though a peer sending a plausible-but-wrong timestamp still produces a misleading capture filename and notification time.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1161: bound the capturedAt timestamp on gate-event and capture-reply frames". In `src/remote/frame-decode-detect.ts`, tighten both `decodeGateEvent` and `decodeCaptureReply` so `capturedAt` must be an integer within the range `Date` can represent (`Number.isSafeInteger(capturedAt) && Math.abs(capturedAt) <= 8.64e15`), returning the existing `malformed(...)` result otherwise — this matches how `frame-decode.ts`'s `positiveInteger` already narrows `cols`/`rows` rather than accepting any number. The same bound belongs on the raw-socket path: `requestParkedCapture` in `src/remote/serve-detach-query.ts` reads `frame.capturedAt` off a decoded reply, so it inherits the decoder's check for free once it is there, but confirm the peer-side `encodeCaptureReply` in `src/remote/serve-detach-capture.ts` cannot originate one either. Add refusal cases to the malformed-frame table in `src/remote/protocol.test.ts` beside the existing `gate-event without a capturedAt` entries, covering a non-integer and an out-of-Date-range value for both frame types. The round-trip cases already in that file pin the accepted shape and must keep passing unchanged. Do not change `harnessArtifactFilename` itself — every other caller passes a locally generated timestamp and the sanitization it does today is correct for them.
-
-
 * Cover the relayed detached capture query, which today is the only wholly untested path in the new capture surface.
 
 Existing Issue: `src/remote/serve-detach-query.ts` — socket connection to a parked peer, newline framing across chunk boundaries, a ten-second deadline, reply correlation, and four separate failure exits — and the `capture-request` arm of `RemoteServer.dispatch` that calls it are referenced by no test in the tree, so the branch that runs when a relaying server holds no workspace of its own is exercised only by hand. Severity: 5/10
