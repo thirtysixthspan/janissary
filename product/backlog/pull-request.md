@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that the notifications feature adds two server events and a two-type bus channel, when the diff ships a third of each.
-
-Existing Issue: The description's protocol inventory names two new `ServerEvent` members (toast and toast-clear), a `notifications` bus channel carrying only those two types, two optional client sinks, and two client listener registries, while the diff additionally ships the `notifications-reveal` server event, the `reveal` bus type, the `sendNotificationsReveal` sink, and the `onNotificationsReveal` listener registry — the one-shot signal burst escalation, a toast click, and a docked `notifications` command use to select the feed in a sidebar on every client. Severity: 3/10
-
-Existing Risk: 3/10 - A reader implementing a client or auditing the server-to-client surface from the description builds against one event fewer than the wire carries and never learns what changes their sidebar selection.
-
-Proposal Risk: 2/10 - The description and the code then agree on the full event inventory, but the selection-forcing behavior itself remains and is a deliberate, promised design someone may still want to revisit.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: correct the description's event inventory for the notifications reveal signal". Edit only the pull request description (never the code): the paragraph that says the feature carries "toast and clear" and "two new ServerEvent members" should name the third one-shot event (notifications-reveal, with its left/right dock) and its three triggers — burst escalation, a toast click, and a docked `notifications` command — and the Files changed lines for src/bus.ts, src/protocol/events.ts, the controller sink trio, and web/src/ws.ts should list the additions the diff actually carries there. No behavior changes; the exhaustive contract tables in src/client-message.ts and src/protocol/events.ts are the checklist to verify the rewritten inventory against.
-
-
 * Open the notification record with a non-blocking flag so a FIFO placed at its path cannot hang the server.
 
 Existing Issue: The record writer validates the opened descriptor only after opening the record path with blocking flags, so if a named pipe is placed at `.janissary/notifications.json` the single-threaded server blocks forever inside `openSync` on the next notification or `notifications clear`. Severity: 7/10
