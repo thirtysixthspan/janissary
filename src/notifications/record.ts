@@ -1,4 +1,4 @@
-import { mkdirSync, appendFileSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, writeSync } from 'node:fs';
 import path from 'node:path';
 import type { RecordedNotification } from './queue.js';
 
@@ -20,8 +20,35 @@ export function initNotificationRecord(projectDir?: string): void {
   abandoned = false;
   if (!projectDir) { recordPath = ''; return; }
   const dir = path.join(projectDir, '.janissary');
-  mkdirSync(dir, { recursive: true });
+  try {
+    mkdirSync(dir);
+  } catch {
+    // An existing directory is expected; validate it below before trusting the record path.
+  }
+  if (!isSafeDirectory(dir)) { recordPath = ''; return; }
   recordPath = path.join(dir, 'notifications.json');
+}
+
+function isSafeDirectory(dir: string): boolean {
+  try {
+    const stat = lstatSync(dir);
+    return stat.isDirectory() && !stat.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+function writeRecord(contents: string, append: boolean): void {
+  if (!isSafeDirectory(path.dirname(recordPath))) throw new Error('Unsafe notification record directory');
+  const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_NOFOLLOW
+    | (append ? constants.O_APPEND : constants.O_TRUNC);
+  const descriptor = openSync(recordPath, flags, 0o666);
+  try {
+    if (!fstatSync(descriptor).isFile()) throw new Error('Notification record is not a regular file');
+    writeSync(descriptor, contents);
+  } finally {
+    closeSync(descriptor);
+  }
 }
 
 export function notificationRecordPath(): string {
@@ -44,7 +71,7 @@ export function appendNotificationRecord(notification: RecordedNotification): vo
     ...(notification.openTab && { openTab: notification.openTab }),
   };
   try {
-    appendFileSync(recordPath, JSON.stringify(line) + '\n');
+    writeRecord(JSON.stringify(line) + '\n', true);
   } catch {
     abandoned = true;
   }
@@ -55,7 +82,7 @@ export function appendNotificationRecord(notification: RecordedNotification): vo
 export function clearNotificationRecord(): void {
   if (!recordPath) return;
   try {
-    writeFileSync(recordPath, '');
+    writeRecord('', false);
   } catch {
     abandoned = true;
   }

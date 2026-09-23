@@ -48,6 +48,8 @@ The file only grows; there is no rotation and no size cap. `notifications clear`
 Writing it is best-effort and silent: a write that fails (no permission, a full disk, a read-only
 checkout) is swallowed, further writes are abandoned for the rest of the run, and the queue, the
 feed, and toasts are unaffected. The failure is deliberately not itself reported as a notification.
+The record refuses symlinks at the state-directory and record-file paths, so recording and clearing
+cannot follow those links to modify another file.
 
 ### `notifications [left|right|clear]`
 

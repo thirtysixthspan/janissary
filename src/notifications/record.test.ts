@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { RecordedNotification } from './queue.js';
@@ -68,6 +68,45 @@ describe('notification record', () => {
     appendNotificationRecord(notification());
     clearNotificationRecord();
     expect(readFileSync(notificationRecordPath(), 'utf8')).toBe('');
+  });
+
+  it('does not append through a symlink at the record path', () => {
+    const target = path.join(projectDir, 'outside.txt');
+    writeFileSync(target, 'keep this');
+    appendNotificationRecord(notification());
+    rmSync(notificationRecordPath());
+    symlinkSync(target, notificationRecordPath());
+
+    appendNotificationRecord(notification());
+
+    expect(readFileSync(target, 'utf8')).toBe('keep this');
+  });
+
+  it('does not truncate through a symlink at the record path', () => {
+    const target = path.join(projectDir, 'outside.txt');
+    writeFileSync(target, 'keep this');
+    appendNotificationRecord(notification());
+    rmSync(notificationRecordPath());
+    symlinkSync(target, notificationRecordPath());
+
+    clearNotificationRecord();
+
+    expect(readFileSync(target, 'utf8')).toBe('keep this');
+  });
+
+  it('does not initialize the record through a symlinked state directory', () => {
+    const stateDir = path.join(projectDir, '.janissary');
+    const targetDir = path.join(projectDir, 'outside');
+    mkdirSync(targetDir);
+    writeFileSync(path.join(targetDir, 'notifications.json'), 'keep this');
+    rmSync(stateDir, { recursive: true });
+    symlinkSync(targetDir, stateDir);
+
+    initNotificationRecord(projectDir);
+    appendNotificationRecord(notification());
+    clearNotificationRecord();
+
+    expect(readFileSync(path.join(targetDir, 'notifications.json'), 'utf8')).toBe('keep this');
   });
 
   // A write that cannot happen is swallowed and abandoned for the rest of the run: a notification

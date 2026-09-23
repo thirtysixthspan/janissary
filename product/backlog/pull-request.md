@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Prevent the notification record from following a workspace symlink into another file.
-
-Existing Issue: The new record appends and `notifications clear` truncates a predictable workspace path with filesystem calls that follow symlinks, without checking the final file target. Severity: 8/10
-
-Existing Risk: 8/10 - A less-trusted process that can place a symlink at the record path can make the host append to or erase a file outside the workspace when a notification arrives or the user clears the feed.
-
-Proposal Risk: 2/10 - Refusing linked or non-regular targets can make recording unavailable in unusual workspace layouts, but the notification queue and visible delivery continue to work.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: prevent notification record symlink writes". In `src/notifications/record.ts`, open the record with a no-follow filesystem flag for both append and truncate, verify the opened descriptor is a regular file, and close it reliably; keep the existing best-effort abandonment behavior when a safe write is unavailable. Check the `.janissary` directory target as part of choosing the record path so a linked state directory cannot redirect the file operation. Add cases in `src/notifications/record.test.ts` that place a symlink at the record path and verify both a notification append and `notifications clear` leave the external target unchanged, while the existing ordinary append and truncation cases still pass.
-
-
 * Clear an open notifications feed when the user runs `notifications clear`.
 
 Existing Issue: `clearNotifications` empties the queue, record, and toast stack but leaves an already open notifications tab's `log` untouched, so its rendered feed still contains the supposedly cleared lines. Severity: 7/10
