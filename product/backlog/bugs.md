@@ -2,6 +2,8 @@
 
 ## ready
 
+* intermittent bug likely due to a race condition: on launch the window and UI are displayed but the command line does not have the keyboard focus and clicking on the command line does not recover the focus. the app must be restarted by closing the window. In rarer cases, the window opens but the UI fails to render entirely. again the app must be restarted by closing the window. 
+
 ## development
 
 ## deferred
