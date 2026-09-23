@@ -16,6 +16,7 @@ import type { ConversationSessions } from '../conversations/sessions.js';
 import type { ConversationStore } from '../conversations/store.js';
 import { CONVERSATION_SCHEMA_VERSION } from '../conversations/store.js';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 const ROWS: AggregatedScheduleView[] = [
   { tab: 'janus', id: 's1', spec: 'every 5m', next: 'in 5m', recurring: true, command: 'ls' },
@@ -37,6 +38,7 @@ function manifest(id: string, notifications?: readonly TabPluginNotificationTopi
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },

@@ -53,12 +53,14 @@ export function createRemotePtySession(
     // (see `REMOTE_PROTOCOL_VERSION`'s version-18 comment in `./protocol.js`) — so `agentName` (the
     // owning tab's label, always set for a harness spawn by `registerRemotePty`) is always present
     // here. Translates the far side's report into exactly what a local detector would have produced:
-    // a capture file, a `notify()` call stamped with the original detection time (not now), and the
-    // same busy-dot/unread calls `busyStatusHandler` makes.
-    onGateEvent: (message, capturedAt, capture) => deliver(() => {
+    // a capture file, a `notify()` call, and the same busy-dot/unread calls `busyStatusHandler`
+    // makes. A live report (`replayed` false) is stamped with no detection time so it toasts like a
+    // local one would; a report replayed after a reattach is stamped with the original detection
+    // time (not now) so it is dated in the feed and never toasted.
+    onGateEvent: (message, capturedAt, replayed, capture) => deliver(() => {
       const label = agentName ?? '';
       const openFile = capture === undefined ? undefined : writeCaptureFile(label, capturedAt, capture);
-      notify(managers, 'auto-approve', label, message, openFile, undefined, new Date(capturedAt));
+      notify(managers, 'auto-approve', label, message, openFile, undefined, replayed ? new Date(capturedAt) : undefined);
     }),
     onBusyTransition: (busy, unread) => deliver(() => {
       const label = agentName ?? '';

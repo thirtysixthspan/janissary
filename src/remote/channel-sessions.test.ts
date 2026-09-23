@@ -16,7 +16,7 @@ describe('SessionRouter — gate-event', () => {
     const l = listener();
     router.attach('r1', l);
     router.gateEvent({ type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1000, capture: 'text' });
-    expect(l.onGateEvent).toHaveBeenCalledWith('Auto-approved a permission prompt', 1000, 'text');
+    expect(l.onGateEvent).toHaveBeenCalledWith('Auto-approved a permission prompt', 1000, false, 'text');
   });
 
   it('is dropped for an unregistered id on an ordinary channel (not mid-attach)', () => {
@@ -39,6 +39,7 @@ describe('SessionRouter — gate-event', () => {
     l.onGateEvent.mockImplementation((message: string) => { calls.push(`gate:${message}`); });
     router.attach('r1', l);
     expect(calls).toEqual(['output:before', 'gate:Auto-approved a permission prompt', 'output:after']);
+    expect(l.onGateEvent).toHaveBeenCalledWith('Auto-approved a permission prompt', 1000, true, 'text');
   });
 });
 

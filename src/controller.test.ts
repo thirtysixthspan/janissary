@@ -679,13 +679,13 @@ describe('Controller open command', () => {
       .not.toContain('No opener');
   });
 
-  it('opens the feed for the unsupported-type report when it was closed', () => {
+  it('holds the unsupported-type report without opening a feed when none was open', () => {
     const file = temporaryImage('notes.xyz');
     const { c } = makeController();
     c.dispatch(`open ${file}`);
-    const feed = c.view().find((t) => t.view === 'notifications');
-    expect(feed?.dock).toBe('right');
-    expect(feed!.bufferLines.map((l) => l.text).join('\n')).toContain('No opener for ".xyz" files');
+    expect(c.view().find((t) => t.view === 'notifications')).toBeUndefined();
+    expect(c.managers.notifications.all.map((n) => n.message).join('\n'))
+      .toContain('No opener for ".xyz" files');
   });
 
   it('reports a missing file before dispatching to an opener', () => {
@@ -1681,15 +1681,17 @@ describe('Controller notifications feed', () => {
     }
   });
 
-  it('opens the feed docked right and records the event when the notifications tab is closed', () => {
+  // One event no longer docks a sidebar in — it toasts — but it is held either way, so a feed
+  // opened afterwards renders it.
+  it('holds the event without opening a feed when the notifications tab is closed', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
       c.dispatch('agent bob --no-workspace');
       c.setActiveTab(0);
       c.dispatch('msg bob info hello there');
-      const feed = c.view().find((t) => t.view === 'notifications');
-      expect(feed?.dock).toBe('right');
+      expect(c.view().find((t) => t.view === 'notifications')).toBeUndefined();
+      c.dispatch('notifications right');
       expect(feedText(c)).toContain('Message from janus in bob');
     } finally {
       reset();
@@ -1697,15 +1699,18 @@ describe('Controller notifications feed', () => {
   });
 
   // Creating a tab focuses it, and docking a focused tab moves focus to whatever sits nearest — so
-  // without restoring it, an event firing in the background would move the user somewhere else.
-  it('leaves the active tab where it was when the feed opens itself', () => {
+  // without restoring it, a burst escalating in the background would move the user somewhere else.
+  it('leaves the active tab where it was when a burst opens the feed itself', () => {
     withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
     try {
       const { c } = makeController();
       c.dispatch('agent bob --no-workspace');
       c.setActiveTab(0);
       const before = c.view()[c.managers.tab.activeTab].label;
-      c.dispatch('msg bob info hello there');
+      c.dispatch('msg bob info one');
+      c.dispatch('msg bob info two');
+      c.dispatch('msg bob info three');
+      expect(c.view().find((t) => t.view === 'notifications')?.dock).toBe('right');
       expect(c.view()[c.managers.tab.activeTab].label).toBe(before);
     } finally {
       reset();

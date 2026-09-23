@@ -25,6 +25,11 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     focusRight: event.focusRight,
   }));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
+  messageBus.on('notifications', ['toast', 'clear', 'reveal'], (event) => {
+    if (event.type === 'clear') { sinks.sendToastClear?.(); return; }
+    if (event.type === 'reveal') { sinks.sendNotificationsReveal?.(event.dock); return; }
+    sinks.sendToast?.({ from: event.from, message: event.message, color: event.color });
+  });
   messageBus.on('pty', ['data', 'exit'], (event) => {
     if (event.type === 'data') { sinks.sendPty(event.id, event.data); return; }
     if (event.type !== 'exit') return;

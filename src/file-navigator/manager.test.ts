@@ -4,6 +4,7 @@ import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { LogEntry, Tab } from '../tab/types.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 const watchMock = vi.fn();
 
@@ -117,6 +118,7 @@ describe('FileNavigatorManager', () => {
         },
         retargetEditorTab: retargetEditorTabMock,
       },
+      notifications: new NotificationQueue(),
     };
   });
 

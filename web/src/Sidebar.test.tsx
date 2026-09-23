@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { act, render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
@@ -154,6 +154,36 @@ describe('Sidebar', () => {
     expect(send).toHaveBeenCalledWith({ method: 'reorderTabTo', params: { from: 1, to: 0 } });
     rerender(<Sidebar side="left" tabs={[notifications, files]} client={client} />);
     expect(getByText('a notification')).toBeTruthy();
+  });
+
+  it('reports the selected docked body and selects notifications on a reveal event', () => {
+    let reveal: ((dock: 'left' | 'right') => void) | undefined;
+    const client = {
+      send: vi.fn(), renameTab: vi.fn(),
+      onNotificationsReveal: (listener: (dock: 'left' | 'right') => void) => {
+        reveal = listener;
+        return () => { reveal = undefined; };
+      },
+    } as unknown as JanusClient;
+    const visibility = vi.fn();
+    const files = makeTab({
+      label: 'files', view: 'files', dock: 'left',
+      files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
+    });
+    const notifications = makeTab({ label: 'notifications', view: 'notifications', dock: 'left' });
+    const { getByText } = render(
+      <Sidebar side="left" tabs={[files, notifications]} client={client}
+        onNotificationsVisibilityChange={visibility} />,
+    );
+    expect(visibility).toHaveBeenLastCalledWith(false);
+
+    fireEvent.mouseDown(getByText('notifications'));
+    expect(visibility).toHaveBeenLastCalledWith(true);
+    fireEvent.mouseDown(getByText('files'));
+    expect(visibility).toHaveBeenLastCalledWith(false);
+
+    act(() => reveal?.('left'));
+    expect(visibility).toHaveBeenLastCalledWith(true);
   });
 
   it("each entry's close button closes that entry's own tab", () => {

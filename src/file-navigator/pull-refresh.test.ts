@@ -4,6 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Tab } from '../tab/types.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import { FileNavigatorManager } from './manager.js';
 
 // The pull button's whole reason for existing is that a git-driven replace may not reach the
@@ -73,6 +74,7 @@ describe('the pull button refreshes the whole tree', () => {
         },
         retargetEditorTab: () => {},
       },
+      notifications: new NotificationQueue(),
     };
   });
 

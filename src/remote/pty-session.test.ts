@@ -141,7 +141,7 @@ describe('createRemotePtySession', () => {
 
   // Translation of the far side's gate-event/busy-transition reports into exactly what a local
   // detector would have produced — see `createRemotePtySession`'s `onGateEvent`/`onBusyTransition`.
-  it('translates a gate-event frame into notify(), stamped with the original detection time, and writes the capture file', () => {
+  it('translates a live gate-event frame into notify() with no detection time, and writes the capture file', () => {
     const { channel } = attachedChannel();
     const managers = makeManagers([makeTab('claude', 'red')]);
     createRemotePtySession(channel, managers, {
@@ -155,11 +155,11 @@ describe('createRemotePtySession', () => {
     expect(vi.mocked(writeCaptureFile)).toHaveBeenCalledWith('claude', 1_700_000_000_000, 'the screen text');
     expect(vi.mocked(notify)).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt', undefined, new Date(1_700_000_000_000),
+      '/project/.janissary/captures/claude-now.txt', undefined, undefined,
     );
   });
 
-  it('translates a gate-event frame with no capture into notify() with no open file', () => {
+  it('translates a live gate-event frame with no capture into notify() with no open file', () => {
     const { channel } = attachedChannel();
     const managers = makeManagers([makeTab('claude', 'red')]);
     createRemotePtySession(channel, managers, {
@@ -173,7 +173,44 @@ describe('createRemotePtySession', () => {
     expect(vi.mocked(writeCaptureFile)).not.toHaveBeenCalled();
     expect(vi.mocked(notify)).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approve could not clear the permission prompt; standing down',
-      undefined, undefined, new Date(1000),
+      undefined, undefined, undefined,
+    );
+  });
+
+  it('translates a gate-event frame replayed on reattach into notify(), stamped with the original detection time', async () => {
+    const sent: RemoteFrame[] = [];
+    const transport: ChannelTransport = {
+      id: 'pty1',
+      write: (data) => {
+        for (const line of data.split('\n')) {
+          if (!line) continue;
+          const frame = decodeFrame(line);
+          if (!('error' in frame)) sent.push(frame);
+        }
+      },
+      kill: vi.fn(),
+    };
+    const channel = new RemoteChannel(transport, {
+      onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn(),
+    });
+    // As a resume does: the session id is set before the handshake, so the channel enters its
+    // attaching window and the state that opens the hold, letting a frame for an id with no
+    // listener yet be held instead of dropped.
+    channel.sessionId = '12345678-1234-1234-1234-123456789abc';
+    channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
+    channel.receive(`${encodeFrame({
+      type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1_700_000_000_000, capture: 'the screen text',
+    })}\n`);
+
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+    await Promise.resolve();
+
+    expect(vi.mocked(notify)).toHaveBeenCalledWith(
+      managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
+      '/project/.janissary/captures/claude-now.txt', undefined, new Date(1_700_000_000_000),
     );
   });
 

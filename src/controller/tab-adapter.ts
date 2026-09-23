@@ -1,4 +1,5 @@
 import type { Managers } from '../managers.js';
+import { escalateToFeed } from '../notifications/deliver.js';
 
 export type TabControllerAdapter = {
   setActiveTab(index: number): void;
@@ -12,6 +13,7 @@ export type TabControllerAdapter = {
   editQueuedCommand(index: number, text: string): void;
   deleteQueuedCommand(index: number): void;
   toggleCollapse(): void;
+  revealNotifications(): void;
   promoteToTerminal(): void;
   ptyInput(id: string, data: string): void;
   ptyResize(id: string, cols: number, rows: number): void;
@@ -32,6 +34,7 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     editQueuedCommand: (index, text) => managers.tab.editQueued(managers.tab.cur().label, index, text),
     deleteQueuedCommand: (index) => managers.tab.deleteQueued(managers.tab.cur().label, index),
     toggleCollapse: () => managers.tab.toggleCollapse(),
+    revealNotifications: () => escalateToFeed(managers),
     promoteToTerminal: () => managers.shell.promoteRunning(managers.tab.cur().label),
     ptyInput: (id, data) => managers.pty.input(id, data),
     ptyResize: (id, cols, rows) => managers.pty.resizeOne(id, cols, rows),

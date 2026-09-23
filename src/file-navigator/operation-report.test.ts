@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { operationFailureText, reportOperationFailure } from './operation-report.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import type { Managers } from '../managers.js';
 
 describe('operationFailureText', () => {
@@ -53,7 +54,10 @@ describe('reportOperationFailure', () => {
     const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
     const active = { label: 'agent', log: [] };
     const tabs = [active, notif];
-    return { tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append } } as unknown as Managers;
+    return {
+      tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append },
+      notifications: new NotificationQueue(),
+    } as unknown as Managers;
   }
 
   it('posts no notification when there are no failures', () => {

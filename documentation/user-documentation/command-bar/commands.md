@@ -15,6 +15,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `theme [name]` | Switch the application color theme; bare form opens a picker |
 | `syntax theme [name]` | Switch the editor syntax theme; bare form opens a picker |
 | `notifications [left\|right]` | Open the [notifications](/user-documentation/tab-types/notifications) feed, optionally docked in a sidebar |
+| `notifications clear` | Empty the notifications queue, record file, and any toasts on screen |
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
@@ -57,7 +58,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. All five event types default off in `.janissary/config.json`; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed open opens one in the right sidebar. See [Notifications](/user-documentation/tab-types/notifications) for settings, navigation, and diagnostics.
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. All five event types default off in `.janissary/config.json`; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead, escalating to a docked feed after three within ten seconds. See [Notifications](/user-documentation/tab-types/notifications) for settings, navigation, and diagnostics.
 
 ## Command comments
 

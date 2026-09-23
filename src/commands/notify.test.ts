@@ -3,9 +3,11 @@ import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { openNotificationsTab, notificationsTab } from '../notifications/tab.js';
 import { command } from './notify.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   return managers;
 }
@@ -25,11 +27,14 @@ describe('notify command', () => {
     expect(entries.some((e) => e.output === 'deploy finished' && !!e.from?.endsWith('janus'))).toBe(true);
   });
 
-  it('opens the feed docked right and posts into it when the notifications tab is closed', () => {
+  // A single notification with no feed on screen no longer opens a sidebar — it toasts, and the
+  // queue holds the line so a feed opened afterwards still shows it.
+  it('opens nothing when the notifications tab is closed, and holds the line in the queue', () => {
     command.run('notify deploy finished', { label: 'janus', index: 0 }, managers);
-    const feed = notificationsTab(managers);
-    expect(feed?.dock).toBe('right');
-    expect(feed!.log.some((e) => e.output === 'deploy finished')).toBe(true);
+    expect(notificationsTab(managers)).toBeUndefined();
+    expect(managers.notifications.all.map((n) => n.message)).toContain('deploy finished');
+    openNotificationsTab(managers);
+    expect(feed(managers)).toContain('deploy finished');
   });
 
   it('fires even when the issuing tab is the active tab (bypasses focus suppression)', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../../managers.js';
 import { fakeNotificationsHost } from '../../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../../notifications/queue.js';
 import type { Tab } from '../../tab/types.js';
 import { createPluginCommands } from '../command-adapter.js';
 import { createPluginOpeners } from '../opener-adapter.js';
@@ -47,7 +48,8 @@ function makeManagers() {
       for (const reference of references) openFiles.delete(reference);
     },
   };
-  return { managers: { tab } as unknown as Managers, openFiles, tabs };
+  const managers = { tab, notifications: new NotificationQueue() } as unknown as Managers;
+  return { managers, openFiles, tabs };
 }
 
 describe('frozen tab plugin API v1 fixture', () => {

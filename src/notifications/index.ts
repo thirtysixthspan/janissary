@@ -1,7 +1,13 @@
 import type { NotificationConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
-import { NOTIFICATIONS_LABEL, revealNotificationsTab, appendNotification } from './tab.js';
+import { NOTIFICATIONS_LABEL } from './tab.js';
+import { notificationText, provenanceTimestamp } from './format.js';
+import { deliverNotification } from './deliver.js';
+
+// How a notification reads lives in `./format.js`, which this file re-exports so the importers that
+// have always reached for these through `notifications/index.js` still resolve.
+export { formatTimestamp, provenanceTimestamp, notificationText } from './format.js';
 
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
@@ -119,67 +125,13 @@ export function shouldNotify(
   return config.events[AMBIENT_EVENTS[event]];
 }
 
-// A compact 12-hour clock time (e.g. `8:32pm`) — hour without a leading zero, two-digit minutes,
-// lowercase am/pm, no seconds. Leads each notification line's provenance header.
-export function formatTimestamp(date: Date): string {
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const period = date.getHours() < 12 ? 'am' : 'pm';
-  const hour12 = date.getHours() % 12 === 0 ? 12 : date.getHours() % 12;
-  return `${hour12}:${minutes}${period}`;
-}
-
-const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-// A notification's provenance timestamp: `formatTimestamp`'s bare time for a `detectedAt` on
-// today's calendar day, or a short date ahead of it (`Sep 20 9:05am`) for one from an earlier
-// day — a replayed auto-approval from a multi-day detachment must not read as having happened
-// today. The comparison is calendar day, not elapsed hours, so an event from 11pm last night is
-// dated even though it is only a few hours old.
-export function provenanceTimestamp(detectedAt: Date, now: Date = new Date()): string {
-  const sameDay = detectedAt.getFullYear() === now.getFullYear()
-    && detectedAt.getMonth() === now.getMonth() && detectedAt.getDate() === now.getDate();
-  if (sameDay) return formatTimestamp(detectedAt);
-  return `${SHORT_MONTHS[detectedAt.getMonth()]} ${detectedAt.getDate()} ${formatTimestamp(detectedAt)}`;
-}
-
-// The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
-// the event-specific extra: the command for `schedule-fire`, the sender label for
-// `incoming-message`, the user's message for `manual`, the approver's message for `auto-approve`,
-// and the persona name plus outcome for `editor-suggest`. The `manual`, `auto-approve`, and
-// `editor-suggest` bodies are the message alone — the tab label already leads the line via the
-// header, so repeating it here would double it.
-export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
-  switch (event) {
-    case 'schedule-late':
-    case 'remote-session':
-    case 'remote-session-terminated': { return detail ?? ''; }
-    case 'state-change': { return `Agent '${tabLabel}' finished`; }
-    case 'agent-start': { return `Agent '${tabLabel}' started`; }
-    case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }
-    case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
-    case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
-    case 'manual':
-    case 'auto-approve':
-    case 'editor-suggest':
-    case 'file-operation':
-    case 'open-unsupported': { return detail ?? ''; }
-    case 'plugin-failure':
-    case 'plugin-note': { return detail ?? ''; }
-    case 'question': { return `Question from ${tabLabel}`; }
-    case 'transcript-unavailable': { return 'no harness transcript found'; }
-    case 'ssh-recording-failed': { return 'ssh recording failed'; }
-    case 'harness-recording-failed': { return 'harness recording failed'; }
-    case 'e2e-browser-gone': { return detail ?? 'e2e browser stopped'; }
-  }
-}
-
 // Record a notification for an event on `tabLabel`. The config + focus rules run first, via
-// `shouldNotify`: an event they reject costs nothing and opens nothing, which is what keeps the
-// ambient toggles a volume control rather than a way to fill the screen with sidebars. An event
-// they accept is guaranteed a feed to land in — the open one, or a new one docked right — and then
-// appends the derived line. `shouldNotify` also has to be asked before the feed is revealed because
-// it reads the active tab's label, which opening a tab changes. `message` is the event-specific
-// detail (see `notificationText`).
+// `shouldNotify`: an event they reject costs nothing, records nothing, and shows nothing, which is
+// what keeps the ambient toggles a volume control rather than a way to fill the screen. An event
+// they accept always reaches the queue and the record file; which surface shows it — the feed, a
+// toast, or an escalation to the feed — is `deliverNotification`'s decision. `shouldNotify` has to
+// be asked before any of that because it reads the active tab's label, which opening a tab changes.
+// `message` is the event-specific detail (see `notificationText`).
 export function notify(
   managers: Managers,
   event: NotificationEventType,
@@ -187,27 +139,35 @@ export function notify(
   message?: string,
   openFile?: string,
   openTab?: string,
-  // When this event was actually detected, defaulting to now — every existing call site is
-  // unaffected. A remote harness's auto-approve/stand-down report (decision 17 of the
-  // auto-accept-while-detached plan) passes its original detection time, so a notification replayed
-  // on reattach after minutes or hours detached still reads as having happened when it actually did,
-  // rather than at the moment of reattachment.
-  detectedAt: Date = new Date(),
+  // When this event was actually detected. Genuinely optional rather than defaulting to now: a
+  // caller that supplies one is reporting something it detected earlier — a remote harness's
+  // auto-approve report, queued while detached and replayed on reattach — and such a notification
+  // is dated in the feed and deliberately never toasted, since a toast carries no time.
+  detectedAt?: Date,
 ): void {
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
-  revealNotificationsTab(managers);
-  const fromColor = managers.tab.byLabel(tabLabel)?.dotColor;
-  // The dot label is the notification's provenance header — when, then who — so the line reads
-  // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
-  const from = `${provenanceTimestamp(detectedAt)} ${tabLabel}`;
+  const color = managers.tab.byLabel(tabLabel)?.dotColor;
+  const recordedAt = new Date();
   const output = notificationText(event, tabLabel, message);
-  appendNotification(managers, {
-    input: '',
-    output,
-    from,
-    fromColor,
+  deliverNotification(managers, {
+    event,
+    tabLabel,
+    message: output,
+    ...(color && { color }),
+    entry: {
+      input: '',
+      output,
+      // The dot label is the notification's provenance header — when, then who — so the line reads
+      // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
+      from: `${provenanceTimestamp(detectedAt ?? recordedAt)} ${tabLabel}`,
+      fromColor: color,
+      ...(openFile && { openFile }),
+      ...(openTab && { openTab }),
+    },
+    detectedAt: detectedAt ?? recordedAt,
+    recordedAt,
     ...(openFile && { openFile }),
     ...(openTab && { openTab }),
-  });
+  }, detectedAt !== undefined);
 }

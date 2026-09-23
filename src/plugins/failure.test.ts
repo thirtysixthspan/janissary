@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
 import {
   pluginFailureMessage,
   pluginFailureReason,
@@ -27,6 +28,7 @@ function makeManagers(options: { origin?: boolean; notifications?: boolean } = {
       ...host,
       openNotificationsTab,
     },
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { append, managers, openNotificationsTab, tabs };
 }
@@ -61,19 +63,21 @@ describe('reportPluginFailure', () => {
     expect(fixture.append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ input: '', output: message }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 
-  it('opens a closed notifications feed and appends the failure to it', () => {
+  // A closed feed is left closed — the failure toasts instead — and the queue holds the line for
+  // whenever the feed is opened.
+  it('leaves a closed notifications feed closed and holds the failure in the queue', () => {
     const fixture = makeManagers();
     const before = fixture.tabs.length;
     reportPluginFailure(fixture.managers, 'video', 'failed', origin);
-    expect(fixture.openNotificationsTab).toHaveBeenCalled();
-    expect(fixture.tabs).toHaveLength(before + 1);
-    expect(fixture.append).toHaveBeenCalledWith(
-      NOTIFICATIONS_LABEL,
-      expect.objectContaining({ output: 'Tab plugin "video" disabled: failed.' }),
-    );
+    expect(fixture.openNotificationsTab).not.toHaveBeenCalled();
+    expect(fixture.tabs).toHaveLength(before);
+    expect(fixture.append).not.toHaveBeenCalledWith(NOTIFICATIONS_LABEL, expect.anything());
+    expect(fixture.managers.notifications.all.map((n) => n.message))
+      .toContain('Tab plugin "video" disabled: failed.');
   });
 
   it('does not recreate a closed originating tab', () => {

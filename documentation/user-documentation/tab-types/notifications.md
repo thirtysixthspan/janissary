@@ -6,15 +6,31 @@ Use `notifications` to watch background activity and diagnostic messages from yo
 notifications         open the feed (or focus it if already open)
 notifications left    open it docked in the left sidebar
 notifications right   open it docked in the right sidebar
+notifications clear   empty the queue, the record file, and any toasts on screen
 ```
 
-There is only ever one notifications tab. The feed has no command line. Closing it and reopening it starts over with an empty feed.
+There is only ever one notifications tab. The feed has no command line. Every notification of the
+current run is held in a queue (the most recent 200), independent of whether the feed is open —
+closing it and reopening it loses nothing, since the reopened feed is seeded from the queue.
 
 <img class="agent-float" src="/agents/hamza-south-west.png" alt="" />
 
-You don't have to open it first. If something happens with the feed closed, it opens itself in the right sidebar and the line lands there. It arrives docked, not focused — whatever tab you were working in stays the tab you're working in. Run `notifications` yourself when you want it somewhere else, or want it before anything has happened.
+You don't have to open it first. A notification with no feed on screen appears as a **toast** in
+the window's upper-right corner instead: visible for about four seconds, then fading out over two,
+without opening or rearranging anything. Hovering a toast holds its clock; moving away resumes it
+with the time that was left. Clicking a toast makes the feed visible — docked into the right
+sidebar if it doesn't exist yet, brought onto screen without changing which tab you're working in.
 
-Nothing that happened earlier is filled in. The feed starts empty and collects what follows.
+Three notifications inside a ten-second window escalate on their own: the feed is made visible —
+docked right if it doesn't exist, docked (not focused) if it exists hidden, left exactly where it
+is if already docked — and every toast on screen clears at once, since the feed now shows those
+same lines.
+
+Every notification is also appended to `.janissary/notifications.json`, one JSON line per
+notification, as a durable trail that outlives the run. `notifications clear` is what empties the
+queue, that file, and any toasts on screen — it opens and moves nothing, so an already-open feed
+just goes empty. `clear` is exclusive with a dock keyword: `notifications right clear` docks the
+feed right and clears nothing, since the command reads a single keyword.
 
 ## Read and scroll the feed
 
@@ -60,13 +76,13 @@ A command that fires more than five seconds late ignores all five toggles and po
 
 <img class="agent-float left" src="/agents/mahir-south.png" alt="" />
 
-`notify <message>` posts your own line into the feed. For example, `notify deploy finished` adds `deploy finished` after the time and originating-tab header. It has no toggle and bypasses focus suppression, so it can report from the active tab too. If the feed is closed, it opens in the right sidebar to receive the message. Bare `notify` prints `Usage: notify <message>.`.
+`notify <message>` posts your own line into the feed. For example, `notify deploy finished` adds `deploy finished` after the time and originating-tab header. It has no toggle and bypasses focus suppression, so it can report from the active tab too. It lands in the queue and, when no feed is on screen, appears as a toast, the same as any other notification. Bare `notify` prints `Usage: notify <message>.`.
 
 ## Read diagnostic messages
 
 `harness recording failed` and `ssh recording failed` mean that recording has stopped for that session, while the session itself keeps running. `no harness transcript found` is a separate diagnostic: the harness has no available session transcript, but screen-based monitoring remains available. Each diagnostic is reported once per affected tab. See [Recordings](/user-documentation/advanced-agents/harness#recordings) and [Opening a session transcript](/user-documentation/advanced-agents/harness#opening-a-session-transcript).
 
-These diagnostics bypass the five event toggles and focus suppression, and they open the feed if it isn't already up.
+These diagnostics bypass the five event toggles and focus suppression, and they land in the queue and toast the same way other notifications do.
 
 `No opener for ".xyz" files.` means you opened a file type Janissary has no viewer for, whether you typed `open` or double-clicked a row in the [file navigator](/user-documentation/tab-types/file-navigator). It arrives here rather than in the tab you opened from, because a file navigator has no transcript of its own to print it in. See [Opening files and pages](/user-documentation/tab-types/opening-files).
 

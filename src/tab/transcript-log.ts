@@ -5,8 +5,9 @@ import type { Tab, LogEntry } from './types.js';
 // responsibility and live in transcript-events.ts.
 
 // Caps a log to at most `max` entries, dropping the oldest. Shared by every mutation that grows a
-// tab's log (append) or resumes one rehydrated from disk (TabManager.rehydrate).
-export function capLog(log: LogEntry[], max: number): LogEntry[] {
+// tab's log (append) or resumes one rehydrated from disk (TabManager.rehydrate), and by the
+// notification queue, which is the same oldest-dropped-first list over a different entry type.
+export function capLog<T>(log: T[], max: number): T[] {
   return log.length > max ? log.slice(log.length - max) : log;
 }
 

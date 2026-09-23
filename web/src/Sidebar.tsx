@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
@@ -25,7 +25,7 @@ export const DEFAULT_WIDTH_PX = 300;
 export function Sidebar({
   side, tabs, client, dropRef, editorDropRef, targetCwd,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
-  width = DEFAULT_WIDTH_PX, onWidthChange, focusView,
+  width = DEFAULT_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
 }: {
   side: 'left' | 'right';
   tabs: TabView[];
@@ -44,6 +44,7 @@ export function Sidebar({
   // the `layout` WS event. Overrides the "most recently docked tab wins" default below — see
   // `useLayoutState.ts`.
   focusView?: 'files' | 'notifications';
+  onNotificationsVisibilityChange?: (visible: boolean) => void;
 }) {
   const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
     const delta = side === 'left' ? move.clientX - down.clientX : down.clientX - move.clientX;
@@ -67,7 +68,11 @@ export function Sidebar({
     />
   );
 
-  const { entries, setSelectedLabel, current, activeIndex, plugins } = useSidebarSelection(tabs, side, focusView);
+  const { entries, setSelectedLabel, current, activeIndex, plugins } = useSidebarSelection(tabs, side, focusView, client);
+
+  useEffect(() => {
+    onNotificationsVisibilityChange?.(current?.tab.view === 'notifications');
+  }, [current?.tab.view, onNotificationsVisibilityChange]);
 
   if (entries.length === 0) return null;
 

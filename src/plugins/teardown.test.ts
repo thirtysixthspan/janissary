@@ -4,6 +4,7 @@ import { TabManager } from '../tab/manager.js';
 import type { TabPluginActivation, TabPluginDeclaration } from './api.js';
 import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { TabPluginHost } from './host.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 const manifest: TabPluginDeclaration = {
   id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
@@ -13,6 +14,7 @@ const manifest: TabPluginDeclaration = {
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import type { TabPluginActivation, TabPluginDeclaration } from './api.js';
 import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { TabPluginHost } from './host.js';
@@ -23,6 +24,7 @@ function setup(intentHandler?: TabPluginActivation['intent']) {
   const closeTab = vi.fn();
   const managers = {
     tab: { tabs, append: vi.fn(), closeTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
   const intent = vi.fn(intentHandler ?? ((request) => ({
     intent: request.intent, payload: request.payload, tabPayload: request.tabPayload,
@@ -151,6 +153,7 @@ describe('TabPluginHost intent routing', () => {
         append: vi.fn(), closeTab: vi.fn(), cur: () => tabs[0],
         ...fakeNotificationsHost(tabs),
       },
+      notifications: new NotificationQueue(),
     } as unknown as Managers;
     const host = new TabPluginHost(managers, [declaration], {
       fixture: async () => { throw new Error('chunk missing'); },

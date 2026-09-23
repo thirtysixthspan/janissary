@@ -9,6 +9,7 @@ import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
 import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remote-file-cache.js';
 import { initRemoteSessionStore } from './sessions/store.js';
+import { initNotificationRecord } from './notifications/record.js';
 import { TranscriptLogger } from './transcript/logger.js';
 import { TranscriptStore } from './transcript/store.js';
 
@@ -90,6 +91,14 @@ export const STATE_DIRECTORY_ENTRIES = [
     always: false,
   },
   {
+    // No `clear`, on the same terms as `remoteSessions` above: the record exists to outlive the
+    // run, so a fresh start must not sweep it. `notifications clear` is what empties it, and that
+    // is a deliberate user action rather than a launch-time decision.
+    name: 'notificationRecord',
+    init: (projectDir: string): void => { initNotificationRecord(projectDir); },
+    always: false,
+  },
+  {
     name: 'transcriptLog',
     init: (projectDir: string): void => { new TranscriptLogger(projectDir); },
     always: false,
@@ -108,7 +117,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 export const KNOWN_STATE_DIRECTORY_KEYS = [
   'agentState', 'harnessCapture', 'harnessRecording', 'harnessTranscript',
   'browserLog', 'globalHistory', 'connections', 'profiles', 'workspace',
-  'remoteFileCache', 'remoteSessions', 'transcriptLog', 'transcriptStore',
+  'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog', 'transcriptStore',
 ] as const;
 
 type RegisteredKey = (typeof STATE_DIRECTORY_ENTRIES)[number]['name'];

@@ -4,6 +4,7 @@ import { TabManager } from '../tab/manager.js';
 import { TAB_PLUGIN_API_VERSION, type TabPluginDeclaration } from '../plugins/api.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { createPluginControllerAdapter } from './plugin-adapter.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 const hosts: TabPluginHost[] = [];
 afterEach(() => {
@@ -18,6 +19,7 @@ function fixture(multiple = false) {
     defaultMenu: { label: 'Chat about this' }, capabilities: [],
   };
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   const handler = vi.fn();
   const loader = vi.fn(async () => ({ activate: () => ({

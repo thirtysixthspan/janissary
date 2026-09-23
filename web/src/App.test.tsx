@@ -1,11 +1,13 @@
 import React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RouteChooserView, TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './ws';
 import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
 import { AppShell } from './AppShell';
+import { StatusPanels } from './shared/status-windows/StatusPanels';
+import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';
 
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();
@@ -44,6 +46,8 @@ const client = {
   },
   onPtyExit: () => () => {},
   onLayout(listener: LayoutListener) { layoutListener = listener; return () => {}; },
+  onToast: () => () => {},
+  onToastClear: () => () => {},
   attachPty: () => () => {},
 } as unknown as JanusClient;
 
@@ -744,9 +748,84 @@ describe('App protocol client injection', () => {
     }
   }, 15_000);
 });
+
+it('positions toasts below the connection indicator and both multi-row status panels', async () => {
+  let toastListener: ((event: { from: string; message: string; color?: string }) => void) | undefined;
+  const shellClient = {
+    ...client,
+    connectionStatus: 'reconnecting',
+    onToast: (listener: typeof toastListener) => { toastListener = listener; return () => {}; },
+  } as unknown as JanusClient;
+  const handlers: StatusWindowHandlers = {
+    visible: true, opacity: 1,
+    onButtonEnter: vi.fn(), onButtonLeave: vi.fn(), onButtonClick: vi.fn(),
+    onWindowEnter: vi.fn(), onWindowLeave: vi.fn(),
+  };
+  const tab = makeTab({
+    connections: [
+      { kind: 'shell', text: 'shell one' }, { kind: 'terminal', text: 'terminal two' },
+    ],
+    schedule: [
+      { id: 'one', spec: 'every 1m', next: 'in 1m', recurring: true },
+      { id: 'two', spec: 'every 2m', next: 'in 2m', recurring: true },
+      { id: 'three', spec: 'every 3m', next: 'in 3m', recurring: true },
+    ],
+  });
+  const rect = (bottom: number) => ({
+    x: 0, y: 0, left: 0, top: 0, right: 0, bottom, width: 0, height: bottom, toJSON: () => ({}),
+  }) as DOMRect;
+  function MockStatusBounds() {
+    React.useLayoutEffect(() => {
+      const indicator = document.querySelector<HTMLElement>('.connection-status');
+      if (indicator) indicator.getBoundingClientRect = () => rect(35);
+      const panels = document.querySelectorAll<HTMLElement>('.status-panels .panel');
+      for (const panel of panels) {
+        const bottom = panel.querySelector('.panel-title')?.textContent === 'connections' ? 195 : 286;
+        panel.getBoundingClientRect = () => rect(bottom);
+      }
+    }, []);
+    return null;
+  }
+  const { container } = render(
+    <AppShell tabs={[]} client={shellClient} notificationsVisible={false}>
+      <div className="main">
+        <StatusPanels tab={tab} connections={handlers} schedule={handlers} />
+      </div>
+      <MockStatusBounds />
+    </AppShell>,
+  );
+  act(() => toastListener?.({ from: 'janus', message: 'deploy finished' }));
+  await waitFor(() => expect(container.querySelector('.toast-stack')?.getAttribute('style')).toContain('294px'));
+  expect(container.querySelectorAll(':scope .status-panels .panel')).toHaveLength(2);
+  expect(container.querySelectorAll(':scope .status-panels .panel-row')).toHaveLength(5);
+});
+
+it('keeps a toast while files cover the docked feed and clears it when notifications is selected', async () => {
+  let toastListener: ((event: { from: string; message: string; color?: string }) => void) | undefined;
+  const shellClient = {
+    ...client,
+    onToast: (listener: typeof toastListener) => { toastListener = listener; return () => {}; },
+  } as unknown as JanusClient;
+  const files = makeTab({
+    label: 'files', view: 'files', dock: 'left',
+    files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
+  });
+  const notifications = makeTab({ label: 'notifications', view: 'notifications', dock: 'left' });
+  render(
+    <AppShell tabs={[files, notifications]} client={shellClient} notificationsVisible={false}>
+      <div />
+    </AppShell>,
+  );
+  act(() => toastListener?.({ from: 'janus', message: 'visible from files' }));
+  expect(screen.getByText('visible from files')).toBeInTheDocument();
+
+  fireEvent.mouseDown(screen.getByText('notifications'));
+
+  await waitFor(() => expect(screen.queryByRole('button', { name: /visible from files/ })).toBeNull());
+});
 it.each(['agent', 'harness', 'ssh', 'editor', 'files'])('shows reconnection in the shell around a %s view', (view) => {
   const disconnected = { ...client, connectionStatus: 'reconnecting' } as unknown as JanusClient;
-  render(<AppShell tabs={[]} client={disconnected}><div>{view} view</div></AppShell>);
+  render(<AppShell tabs={[]} client={disconnected} notificationsVisible={false}><div>{view} view</div></AppShell>);
   expect(screen.getByRole('status').textContent).toBe('Reconnecting…');
   expect(screen.getByText(`${view} view`)).toBeInTheDocument();
 });
