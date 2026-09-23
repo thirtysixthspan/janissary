@@ -1,3 +1,35 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Correct the pull request description's claim that the notifications feature adds two server events and a two-type bus channel, when the diff ships a third of each.
+
+Existing Issue: The description's protocol inventory names two new `ServerEvent` members (toast and toast-clear), a `notifications` bus channel carrying only those two types, two optional client sinks, and two client listener registries, while the diff additionally ships the `notifications-reveal` server event, the `reveal` bus type, the `sendNotificationsReveal` sink, and the `onNotificationsReveal` listener registry — the one-shot signal burst escalation, a toast click, and a docked `notifications` command use to select the feed in a sidebar on every client. Severity: 3/10
+
+Existing Risk: 3/10 - A reader implementing a client or auditing the server-to-client surface from the description builds against one event fewer than the wire carries and never learns what changes their sidebar selection.
+
+Proposal Risk: 2/10 - The description and the code then agree on the full event inventory, but the selection-forcing behavior itself remains and is a deliberate, promised design someone may still want to revisit.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: correct the description's event inventory for the notifications reveal signal". Edit only the pull request description (never the code): the paragraph that says the feature carries "toast and clear" and "two new ServerEvent members" should name the third one-shot event (notifications-reveal, with its left/right dock) and its three triggers — burst escalation, a toast click, and a docked `notifications` command — and the Files changed lines for src/bus.ts, src/protocol/events.ts, the controller sink trio, and web/src/ws.ts should list the additions the diff actually carries there. No behavior changes; the exhaustive contract tables in src/client-message.ts and src/protocol/events.ts are the checklist to verify the rewritten inventory against.
+
+
+* Open the notification record with a non-blocking flag so a FIFO placed at its path cannot hang the server.
+
+Existing Issue: The record writer validates the opened descriptor only after opening the record path with blocking flags, so if a named pipe is placed at `.janissary/notifications.json` the single-threaded server blocks forever inside `openSync` on the next notification or `notifications clear`. Severity: 7/10
+
+Existing Risk: 7/10 - A less-trusted process able to write into the project's `.janissary` directory — the same attacker the PR's own record-symlink fix treats as in scope — can freeze the entire application at the next notification: every client, command, and terminal stalls until the process is killed from outside.
+
+Proposal Risk: 2/10 - Recording is refused (and silently abandoned for the run) whenever the record path is not a regular file, which is already the shipped posture for symlinks; the only new hazard is a workspace layout that genuinely relies on a special file at that path, which no supported one does.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: never block opening the notification record path". In src/notifications/record.ts's `writeRecord`, add `constants.O_NONBLOCK` to the flags of the `openSync` call shared by the append and truncate arms: a FIFO with no reader then fails the open immediately (ENXIO) and is swallowed by the existing abandonment handling, one with a reader opens instantly and is rejected by the existing `fstatSync(descriptor).isFile()` check before any write happens, and regular files behave exactly as before. Add a case in src/notifications/record.test.ts that creates a FIFO at the record path (shell out to the `mkfifo` utility, since node:fs has no mkfifo), runs `appendNotificationRecord` and `clearNotificationRecord`, and asserts neither hangs nor changes the FIFO; keep the existing symlink-refusal, failure-abandonment, truncation, and no-project-directory cases passing untouched. The queue, feed, and toast paths do not change.
+
+
+* Bring the user documentation's notifications pages in line with the queue, toast, and record behavior this change introduces.
+
+Existing Issue: The user-facing documentation still teaches the retired behavior — a notification with no feed open opens the feed in the right sidebar, closing and reopening starts over empty, nothing earlier is filled in, and diagnostics open the feed when it is down — and never mentions toasts, burst escalation, `notifications clear`, or the `.janissary/notifications.json` record, across the notifications page, the command-bar reference, and the opening-files page of the documentation site. Severity: 4/10
+
+Existing Risk: 4/10 - Users follow instructions the app no longer honors: they wait for a sidebar that never docks, believe closing the feed discards history that actually persists to a file on disk, and have no documented way to empty that file.
+
+Proposal Risk: 2/10 - Rewriting three pages from the spec can introduce a fresh drift if a page states something the spec does not, so each rewritten claim must be checked against the spec rather than paraphrased from memory.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: update the user documentation for notification toasts, the queue, and the record". Rework documentation/user-documentation/tab-types/notifications.md around holding versus rendering: replace the "opens itself in the right sidebar", "closing it and reopening it starts over with an empty feed", "Nothing that happened earlier is filled in", and "they open the feed if it isn't already up" sentences with the toast (upper-right corner, 4 seconds visible, 2-second fade, hover hold, click reveals docked right), the burst escalation on the third notification inside ten seconds, the queue's retention across close and reopen, the record file's one-JSON-line-per-notification shape and its `notifications clear` truncation, taking the normative wording from the "Toasts and escalation", "The notification queue", and "The notification record" sections of product/specs/notifications.md. Correct the "A notification with no feed open opens one in the right sidebar" sentence in documentation/user-documentation/command-bar/commands.md (and add `notifications clear` to its command summary) and the "If the feed isn't open, it opens itself in the right sidebar to show you" sentence in documentation/user-documentation/tab-types/opening-files.md; also soften the "whether the feed is open to receive it at all" clause in documentation/developer-documentation/tab-plugins.md's `notifyUser` description, which the queue makes misleading. Verify by re-reading each changed page against the spec section by section and confirming every cross-page link still resolves; no code or test changes.
