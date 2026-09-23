@@ -17,14 +17,12 @@ export function notificationsTab(managers: Managers): Tab | undefined {
   return managers.tab.tabs.find((t) => t.view === 'notifications');
 }
 
-// Whether the feed is actually on screen, which is the question a toast has to ask — not whether a
-// tab exists, which `notificationsTab` answers alone. A docked feed is always rendered in its
-// sidebar, so it suppresses the toast; one sitting in the centre strip behind another tab shows
-// nothing, so it does not.
+// Whether the server can know the feed is on screen. The centre-strip selection is shared server
+// state; a docked feed's selected body is client-local, so only each client can suppress its toast.
 export function notificationsFeedVisible(managers: Managers): boolean {
   const tab = notificationsTab(managers);
   if (!tab) return false;
-  if (tab.dock) return true;
+  if (tab.dock) return false;
   return managers.tab.cur().label === NOTIFICATIONS_LABEL;
 }
 

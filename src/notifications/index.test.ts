@@ -349,11 +349,13 @@ describe('notify — surface routing', () => {
     const tabs: Array<{ label: string; dotColor?: string; log?: unknown[]; view?: string; dock?: 'left' | 'right' }> = [janus];
     const toasts: Array<{ from: string; message: string; color?: string }> = [];
     const clears: number[] = [];
+    const reveals: Array<'left' | 'right'> = [];
     const subscriptions = [
       messageBus.on('notifications', 'toast', (event) => {
         if (event.type === 'toast') toasts.push({ from: event.from, message: event.message, color: event.color });
       }),
       messageBus.on('notifications', 'clear', () => { clears.push(1); }),
+      messageBus.on('notifications', 'reveal', (event) => { reveals.push(event.dock); }),
     ];
     const managers = {
       tab: {
@@ -366,7 +368,7 @@ describe('notify — surface routing', () => {
       notifications: new NotificationQueue(),
     } as unknown as Managers;
     const dispose = () => { for (const s of subscriptions) s.unsubscribe(); };
-    return { append, clears, dispose, managers, tabs, toasts };
+    return { append, clears, dispose, managers, tabs, toasts, reveals };
   }
 
   it('records an accepted event in the queue whatever surface shows it', () => {
@@ -399,12 +401,12 @@ describe('notify — surface routing', () => {
     } finally { fixture.dispose(); }
   });
 
-  it('appends to the feed and raises no toast when one is docked', () => {
+  it('routes toasts when a docked feed may be hidden from this client', () => {
     const fixture = setup();
     try {
       fixture.tabs.push({ label: NOTIFICATIONS_LABEL, view: 'notifications', log: [], dock: 'right' });
       notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
-      expect(fixture.toasts).toHaveLength(0);
+      expect(fixture.toasts).toHaveLength(1);
       expect(fixture.append).toHaveBeenCalledWith(
         NOTIFICATIONS_LABEL,
         expect.objectContaining({ output: 'Dropped a.mp3.' }),
@@ -434,6 +436,7 @@ describe('notify — surface routing', () => {
       expect(fixture.tabs.some((t) => t.view === 'notifications')).toBe(true);
       expect(fixture.toasts.map((t) => t.message)).toEqual(['one', 'two']);
       expect(fixture.clears).toHaveLength(1);
+      expect(fixture.reveals).toEqual(['right']);
     } finally { fixture.dispose(); }
   });
 

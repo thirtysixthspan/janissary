@@ -73,9 +73,9 @@ describe('notificationsFeedVisible', () => {
     expect(notificationsFeedVisible(managers)).toBe(false);
   });
 
-  it.each(['left', 'right'] as const)('is true for a feed docked %s', (dock) => {
+  it.each(['left', 'right'] as const)('is false for a docked feed on the %s side until client selection', (dock) => {
     openNotificationsTab(managers, dock);
-    expect(notificationsFeedVisible(managers)).toBe(true);
+    expect(notificationsFeedVisible(managers)).toBe(false);
   });
 
   it('is true for a centre-strip feed that is the active tab', () => {
@@ -150,7 +150,7 @@ describe('showNotificationsFeed', () => {
     showNotificationsFeed(managers);
     expect(notificationsTab(managers)!.dock).toBe('right');
     expect(managers.tab.cur().label).toBe(before);
-    expect(notificationsFeedVisible(managers)).toBe(true);
+    expect(notificationsFeedVisible(managers)).toBe(false);
   });
 });
 

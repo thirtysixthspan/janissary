@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Show notifications when a docked feed is hidden behind another sidebar tab.
-
-Existing Issue: `notificationsFeedVisible` treats every docked feed as visible, but `Sidebar` renders only the locally selected docked view, so selecting a file navigator over the feed suppresses the toast while the new line is off screen. Severity: 7/10
-
-Existing Risk: 7/10 - A normal sidebar selection silently hides incoming notifications, including explicit plugin failures and permission reports, and burst escalation clears the corner without selecting the feed.
-
-Proposal Risk: 3/10 - Coordinating client-specific sidebar selection with server delivery may briefly duplicate a line during a selection change, but the queue still retains it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: deliver notifications when the docked feed is hidden". Rework the visibility decision across `src/notifications/tab.ts`, `src/notifications/deliver.ts`, `web/src/Sidebar.tsx`, `web/src/useSidebarSelection.ts`, and the toast bridge so each client suppresses a toast only when its notifications body is actually the selected view; keep the server authoritative for the queue and burst threshold. Make burst escalation and `revealNotifications` select an already docked feed in its sidebar, using an explicit client selection signal if needed, while preserving the active center tab. Add a client test that selects files over a docked feed and still shows a toast, plus an integration case that escalation selects the feed and clears those toasts; update the visibility claim in `product/specs/notifications.md` and the PR description to match the resulting behavior.
-
-
 * Keep the live notifications feed within the plan's 200-line limit.
 
 Existing Issue: The queue drops its oldest entry after 200 notifications, but an open feed continues through `TabManager.append` under `transcriptMaxLines`, so the tab log can retain many more than 200 and diverge from the queue. Severity: 5/10

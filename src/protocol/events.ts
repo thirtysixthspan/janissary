@@ -49,6 +49,9 @@ export type ToastEvent = { t: 'toast'; from: string; message: string; color?: st
 // Remove every toast on screen at once, without fading. Sent when the feed becomes visible and
 // starts rendering those same notifications, and when `notifications clear` empties everything.
 export type ToastClearEvent = { t: 'toast-clear' };
+// Select the notifications view in the requested sidebar on every connected client after
+// server-side burst escalation or a toast click.
+export type NotificationsRevealEvent = { t: 'notifications-reveal'; dock: 'left' | 'right' };
 export type ServerEvent =
   StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
-  | ToastEvent | ToastClearEvent;
+  | ToastEvent | ToastClearEvent | NotificationsRevealEvent;

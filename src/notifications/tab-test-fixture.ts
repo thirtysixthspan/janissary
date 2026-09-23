@@ -6,9 +6,8 @@ import { NOTIFICATIONS_LABEL } from './tab.js';
 // restated in every fake — and supplied working, not inert: a fake whose `openNotificationsTab` did
 // nothing would leave the feed closed and make every escalation a no-op.
 //
-// `dock` is tracked because the surface a notification reaches is now a visibility question rather
-// than an existence one: a feed docked into a sidebar is on screen, one sitting behind another tab
-// in the centre strip is not (see `notificationsFeedVisible`). `cur` is deliberately not supplied —
+// `dock` is tracked because the server cannot know which client-side sidebar view is selected, so a
+// docked feed is not considered visible here (see `notificationsFeedVisible`). `cur` is deliberately not supplied —
 // every fake that reaches this path already has one, and overriding it here would answer with the
 // wrong tab.
 export type FakeTabRecord = {

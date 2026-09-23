@@ -748,7 +748,7 @@ describe('App protocol client injection', () => {
 });
 it.each(['agent', 'harness', 'ssh', 'editor', 'files'])('shows reconnection in the shell around a %s view', (view) => {
   const disconnected = { ...client, connectionStatus: 'reconnecting' } as unknown as JanusClient;
-  render(<AppShell tabs={[]} client={disconnected}><div>{view} view</div></AppShell>);
+  render(<AppShell tabs={[]} client={disconnected} notificationsVisible={false}><div>{view} view</div></AppShell>);
   expect(screen.getByRole('status').textContent).toBe('Reconnecting…');
   expect(screen.getByText(`${view} view`)).toBeInTheDocument();
 });

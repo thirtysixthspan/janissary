@@ -32,13 +32,13 @@ describe('ToastStack', () => {
 
   it('renders nothing until a toast arrives', () => {
     const fixture = makeClient();
-    const { container } = render(<ToastStack client={fixture.client} />);
+    const { container } = render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     expect(container.querySelector('.toast-stack')).toBeNull();
   });
 
   it('renders the dot, the originating tab, and the message', () => {
     const fixture = makeClient();
-    render(<ToastStack client={fixture.client} />);
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'deploy finished', color: '#abc' });
 
     const toast = screen.getByRole('button');
@@ -47,9 +47,20 @@ describe('ToastStack', () => {
     expect(toast.querySelector('.toast-message')!.textContent).toBe('deploy finished');
   });
 
+  it('does not add a toast when this client is already showing the feed', () => {
+    const fixture = makeClient();
+    const { rerender } = render(<ToastStack client={fixture.client} notificationsVisible />);
+    fixture.toast({ from: 'janus', message: 'already in the feed' });
+    expect(screen.queryByRole('button')).toBeNull();
+
+    rerender(<ToastStack client={fixture.client} notificationsVisible={false} />);
+    fixture.toast({ from: 'janus', message: 'corner visible' });
+    expect(screen.getByText('corner visible')).toBeTruthy();
+  });
+
   it('fades on schedule and then disappears', () => {
     const fixture = makeClient();
-    render(<ToastStack client={fixture.client} />);
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
 
     advance(TOAST_VISIBLE_MS);
@@ -60,7 +71,7 @@ describe('ToastStack', () => {
 
   it('holds while hovered and resumes with the remaining time after', () => {
     const fixture = makeClient();
-    render(<ToastStack client={fixture.client} />);
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
 
     advance(3000);
@@ -75,7 +86,7 @@ describe('ToastStack', () => {
 
   it('clears the stack immediately on the clear event', () => {
     const fixture = makeClient();
-    render(<ToastStack client={fixture.client} />);
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
     fixture.toast({ from: 'build', message: 'two' });
     expect(screen.getAllByRole('button')).toHaveLength(2);
@@ -88,7 +99,7 @@ describe('ToastStack', () => {
   // clear event, so the component does not empty the stack itself.
   it('sends the reveal RPC on click', () => {
     const fixture = makeClient();
-    render(<ToastStack client={fixture.client} />);
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
 
     fireEvent.click(screen.getByRole('button'));
@@ -97,7 +108,7 @@ describe('ToastStack', () => {
 
   it('clears its timers on unmount', () => {
     const fixture = makeClient();
-    const { unmount } = render(<ToastStack client={fixture.client} />);
+    const { unmount } = render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
     unmount();
     expect(vi.getTimerCount()).toBe(0);

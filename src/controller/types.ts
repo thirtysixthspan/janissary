@@ -15,4 +15,5 @@ export type Sinks = {
   // are one-shot: nothing about a toast is state, so nothing about it survives a reconnect.
   sendToast?: (event: { from: string; message: string; color?: string }) => void;
   sendToastClear?: () => void;
+  sendNotificationsReveal?: (dock: 'left' | 'right') => void;
 };

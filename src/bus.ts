@@ -153,7 +153,8 @@ type SessionsEvent = { type: 'changed' };
 // One-shot signals, not state: nothing about a toast survives a reconnect.
 type NotificationsEvent =
   | { type: 'toast'; from: string; message: string; color?: string }
-  | { type: 'clear' };
+  | { type: 'clear' }
+  | { type: 'reveal'; dock: 'left' | 'right' };
 export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;

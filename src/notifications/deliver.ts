@@ -11,7 +11,8 @@ import { appendNotificationRecord, clearNotificationRecord } from './record.js';
 // Make the feed visible and empty the corner in the same breath. The feed now renders those same
 // notifications, so leaving toasts up would show one line in two places at once.
 export function escalateToFeed(managers: Managers): void {
-  showNotificationsFeed(managers);
+  const feed = showNotificationsFeed(managers);
+  messageBus.emit('notifications', { type: 'reveal', dock: feed.dock ?? 'right' });
   messageBus.emit('notifications', { type: 'clear' });
 }
 

@@ -183,10 +183,10 @@ background.
 ### Toasts and escalation
 
 A notification raised while the feed is not on screen appears as a **toast** in the upper-right
-corner of the window. "Not on screen" is a visibility test, not an existence one: a feed docked into
-either sidebar is always rendered, so it suppresses the toast, while a feed sitting in the centre
-strip behind another tab shows nothing and so does not. A toast never opens or moves a tab — the
-layout the user arranged is left alone.
+corner of the window. A centre-strip feed suppresses the toast when it is active. A docked feed
+suppresses it only in clients currently showing the notifications body; when another docked view is
+selected, the feed is off screen and the client shows a toast. A toast never opens or moves a tab —
+the layout the user arranged is left alone.
 
 A toast reads `● <tab>: <message>`: the same colored dot and originating tab label the feed line
 carries, and the same message body, with **no timestamp** — a toast is by definition happening now.
@@ -203,8 +203,8 @@ that corner, so a toast never hides "Cannot reach session".
 notifications tab is made visible and every toast is removed at once — sustained activity is more
 than a corner can carry, and the feed now shows those same lines. It is made visible **docked, not
 focused**: a feed that does not exist opens docked into the right sidebar, one already docked stays
-where it is, and one hidden in the centre strip is docked right rather than made active. The active
-tab is left exactly where it was. Docking into a sidebar that already holds a file navigator does
+where it is and is selected in that sidebar on each client, and one hidden in the centre strip is
+docked right rather than made active. The active centre tab is left exactly where it was. Docking into a sidebar that already holds a file navigator does
 not displace that navigator; the two share the side (see `sidebars.md`). The feed renders the
 queue, so the burst's earlier notifications are already in it when it appears.
 

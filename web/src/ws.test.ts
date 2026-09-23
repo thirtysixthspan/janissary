@@ -313,6 +313,16 @@ describe('JanusClient', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
+  it('delivers a notifications reveal event with its sidebar', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onNotificationsReveal(listener);
+
+    messageHandler!({ data: JSON.stringify({ t: 'notifications-reveal', dock: 'left' }) });
+
+    expect(listener).toHaveBeenCalledWith('left');
+  });
+
   it('unsubscribes a toast listener cleanly', () => {
     const client = new JanusClient();
     const listener = vi.fn();
