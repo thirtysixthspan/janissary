@@ -10,7 +10,7 @@ sessions
 
 <img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
 
-`sessions` opens the list, or focuses it if it's already open — there's only ever one. `sessions left` and `sessions right` dock it into that sidebar; a bare `sessions` on a docked list returns it to the center. Any other argument shows `Usage: sessions [left|right]`. See [Tabs](/user-documentation/getting-started/tabs) for more on docking.
+`sessions` opens the list, or focuses it if it's already open — there's only ever one. `sessions left` and `sessions right` dock it into that sidebar; a bare `sessions` on a docked list returns it to the center. A docked list stacks each session onto two lines so it reads in a narrow sidebar. Any other argument shows `Usage: sessions [left|right]`. See [Tabs](/user-documentation/getting-started/tabs) for more on docking.
 
 ## What's in the list
 
@@ -60,7 +60,7 @@ Click a row once to select it, click again — or press `Enter` — to open it. 
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
-The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
+The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. Opening an `ssh` tab from another tab adds its row straight away, and closing that tab removes the row — which is what a docked list relies on, since it never leaves and returns to focus. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. When docked, Refresh shares one metadata bar with the control that moves the list to the other sidebar. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
 
 ## Reporting
 

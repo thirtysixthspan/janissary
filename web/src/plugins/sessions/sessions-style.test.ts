@@ -65,3 +65,55 @@ describe('sessions stylesheet', () => {
     expect(columns).not.toContain('auto');
   });
 });
+
+describe('sessions narrow stylesheet', () => {
+  const narrow = sessions.slice(sessions.indexOf('.session-list-narrow'));
+
+  it('scopes every added selector to the narrow list', () => {
+    const selectors = [...narrow.matchAll(/([^{}]+)\{/g)].map((match) => match[1].trim());
+    expect(selectors.length).toBeGreaterThan(0);
+    for (const selector of selectors) {
+      expect(selector.startsWith('.session-list-narrow ')).toBe(true);
+      expect(selector).not.toContain(',');
+    }
+    expect(narrow).not.toContain('grid-template-columns');
+  });
+
+  it('overrides the grid, no-wrap, and baseline alignment and separates blocks', () => {
+    const block = narrow.match(/\.session-list-narrow \.session-row \{[^}]+\}/)?.[0];
+    expect(block).toContain('display: block');
+    expect(block).toContain('white-space: normal');
+    expect(block).toContain('align-items: normal');
+    expect(block).toContain('border-bottom: 1px solid var(--border)');
+  });
+
+  it('wraps between whole secondary fields and bounds overlong fields with an ellipsis', () => {
+    const secondary = narrow.match(/\.session-row-secondary \{[^}]+\}/)?.[0];
+    expect(secondary).toContain('display: flex');
+    expect(secondary).toContain('flex-wrap: wrap');
+    const fields = narrow.match(/\.session-row-secondary > \* \{[^}]+\}/)?.[0];
+    expect(fields).toContain('white-space: nowrap');
+    expect(fields).toContain('max-width: 100%');
+    expect(fields).toContain('min-width: 0');
+    expect(fields).toContain('overflow: hidden');
+    expect(fields).toContain('text-overflow: ellipsis');
+  });
+
+  it('indents the entire joined block without doubling the host indent', () => {
+    const joined = narrow.match(/\.session-row\.joined \{[^}]+\}/)?.[0];
+    expect(joined).toContain('margin-left: 16px');
+    expect(joined).toContain('width: calc(100% - 16px)');
+    expect(narrow).toContain('.session-list-narrow .session-row.joined .session-row-host { padding-left: 0; }');
+  });
+
+  it('gives the primary name a shrinkable single line beside full-size actions', () => {
+    const primary = narrow.match(/\.session-row-primary \{[^}]+\}/)?.[0];
+    expect(primary).toContain('display: flex');
+    const name = narrow.match(/\.session-row-name \{[^}]+\}/)?.[0];
+    expect(name).toContain('flex: 1');
+    expect(name).toContain('min-width: 0');
+    expect(name).toContain('white-space: nowrap');
+    expect(sessions).toContain('.session-row-name { overflow: hidden; text-overflow: ellipsis; }');
+    expect(sessions.match(/\.session-row-actions \{[^}]+\}/)?.[0]).toContain('flex-shrink: 0');
+  });
+});

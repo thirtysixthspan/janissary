@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction, SessionsPayload } from '@shared/plugins/sessions/shared';
-import { ConfirmDialog, ConnectionPlug, type TabPluginClientCapabilities } from '../api';
-import { SessionRowActions } from './SessionRowActions';
-import { openIntentFor, relativeActivity, sessionClickSelection, nextSessionSelection } from './sessions-keys';
+import { ConfirmDialog, PluginActionsHeader, type TabPluginClientCapabilities } from '../api';
+import { NarrowSessionRow, WideSessionRow } from './SessionRowBody';
+import { openIntentFor, sessionClickSelection, nextSessionSelection } from './sessions-keys';
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
@@ -86,10 +86,12 @@ export function SessionList({
   };
 
   const now = Date.now();
+  const narrow = capabilities.dock !== null;
+  const RowBody = narrow ? NarrowSessionRow : WideSessionRow;
 
   return (
-    <div className="session-list plugin-tab" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
-      <div className="plugin-meta session-list-header">
+    <div className={`session-list plugin-tab${narrow ? ' session-list-narrow' : ''}`} ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
+      <PluginActionsHeader className="plugin-meta session-list-header">
         <span className="plugin-actions">
           <button
             type="button"
@@ -101,9 +103,9 @@ export function SessionList({
           </button>
           {capabilities.splitAction}
         </span>
-      </div>
+      </PluginActionsHeader>
       {payload.entries.length === 0 && <div className="session-empty">No remote sessions</div>}
-      {payload.entries.length > 0 && (
+      {payload.entries.length > 0 && !narrow && (
         <div className="session-columns" aria-hidden="true">
           <span className="session-columns-host">Host</span>
           <span className="session-columns-kind">Type</span>
@@ -122,7 +124,7 @@ export function SessionList({
             data-state={row.state}
             role="button"
             tabIndex={-1}
-            title={`${row.destination}${row.workspace ? `\n${row.workspace}` : ''}${row.failure ? `\n${row.failure}` : ''}`}
+            title={`${row.destination}\n${row.kind}${row.workspace ? `\n${row.workspace}` : ''}${row.failure ? `\n${row.failure}` : ''}`}
             onClick={() => {
               const click = sessionClickSelection(index, confirmed);
               setSelected(click.selected);
@@ -131,17 +133,7 @@ export function SessionList({
               if (click.opens) open(row);
             }}
           >
-            <span className="session-row-host">{row.host}</span>
-            <span className="session-row-kind">{row.kind}</span>
-            <span className="session-row-name">{row.name}</span>
-            <span className="session-row-state">
-              <ConnectionPlug state={row.state} />
-              {row.state}
-            </span>
-            <time className="session-row-activity" dateTime={new Date(row.activity).toISOString()}>
-              {relativeActivity(row.activity, now)}
-            </time>
-            <SessionRowActions row={row} onAction={(action) => { request(action, row); }} />
+            <RowBody row={row} now={now} onAction={(action) => { request(action, row); }} />
           </div>
         ))}
       </div>

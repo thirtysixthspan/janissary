@@ -46,3 +46,17 @@
 }
 .session-row-actions button:hover { color: var(--fg); }
 .session-row-actions button:disabled { color: var(--faint); cursor: default; }
+
+.session-list-narrow .session-row {
+  display: block; white-space: normal; align-items: normal; border-bottom: 1px solid var(--border);
+}
+.session-list-narrow .session-row.joined { margin-left: 16px; width: calc(100% - 16px); }
+.session-list-narrow .session-row.joined .session-row-host { padding-left: 0; }
+.session-list-narrow .session-row-primary { display: flex; align-items: center; gap: 8px; }
+.session-list-narrow .session-row-name { flex: 1; min-width: 0; white-space: nowrap; }
+.session-list-narrow .session-row-secondary {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; color: var(--muted); font-size: 11px;
+}
+.session-list-narrow .session-row-secondary > * {
+  max-width: 100%; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

@@ -70,6 +70,8 @@ Docking into a side already holding a docked tab displaces that tab back to the 
 
 Every docked plugin tab stays loaded while another entry in the same sidebar is showing, so switching between them preserves what each was displaying; only the one on screen is told it is visible. The sidebar frame, including the dock control, belongs to the application rather than to the plugin. A plugin is told which side it is docked to, so a view can lay itself out for a narrow sidebar without measuring the frame around it.
 
+A plugin may place its header actions alongside the application's dock control in a single sidebar metadata bar. Those actions remain attached to that tab when switching sidebar entries and disappear when it closes. Returning the tab to the centre restores its ordinary header. Plugins with separate headers keep their existing layout.
+
 A profile captures a docked plugin tab with the side it was docked to, and reopens it docked there. A plugin tab opened on a file is reopened by opening that file again; one opened by a plugin's own command — a plugin that claims no file types at all — is reopened by reissuing that command.
 
 ### Changing what a tab shows

@@ -39,6 +39,10 @@ export class SshManager {
     const liveTab = this.managers.tab.byLabel(label);
     if (liveTab?.harness) liveTab.harness.ptyId = id;
     messageBus.emit('state', { type: 'dirty' });
+    // The sessions list is composed partly from this manager's tabs, and nothing else moves when one
+    // opens — so without this an open list, and above all a docked one that never regains focus and
+    // so never re-reads on its own, would show the new connection only after a Refresh.
+    messageBus.emit('sessions', { type: 'changed' });
     return undefined;
   }
 }

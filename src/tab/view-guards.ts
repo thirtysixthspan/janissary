@@ -34,3 +34,10 @@ export function isPluginTab(tab: Tab): tab is PluginTab {
 export function isMonitorTab(tab: Tab): tab is MonitorTab {
   return tab.view === 'monitor' && tab.monitor !== undefined;
 }
+
+// A plain `ssh <destination>` tab is a local PTY running the real ssh binary — recognized the way the
+// connections panel recognizes it, by the harness view's name. It reuses the harness-view tab shape,
+// so the discriminant alone cannot tell it from a harness tab; the destination is what does.
+export function isSshTab(tab: Tab): boolean {
+  return tab.harness?.name === 'ssh' && tab.harness.destination !== undefined;
+}

@@ -23,6 +23,7 @@ export { InlineEditInput } from '../shared/InlineEditInput';
 // does, with the same wording shape and the same keyboard contract. It shipped as two identical
 // per-plugin copies before this, which is exactly the drift the published surface exists to prevent.
 export { ConfirmDialog } from '../shared/ConfirmDialog';
+export { PluginActionsHeader } from './PluginActionsHeader';
 
 // A connection's status glyph, and the three glyphs for the verbs that change one. Published for the
 // same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of

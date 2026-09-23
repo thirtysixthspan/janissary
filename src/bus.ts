@@ -137,7 +137,8 @@ type FileNavigatorEvent = { type: 'collect'; id: number };
 type ScheduleEvent = { type: 'changed' };
 type ConversationsEvent = { type: 'changed' };
 // The remote-session set changed: one was launched, joined, detached, attached, ended, forgotten,
-// or lost its transport. Its own channel for the same reason `schedules` has one — a named,
+// or lost its transport — or a plain `ssh <destination>` tab, which the list carries a row for and
+// which belongs to no channel at all, was opened or closed. Its own channel for the same reason `schedules` has one — a named,
 // low-frequency signal a tab plugin may subscribe to, rather than a reason carried on `state: dirty`,
 // which fires on every mutation.
 //

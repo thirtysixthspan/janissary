@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeTab } from './index.js';
 import type { Tab } from './types.js';
 import {
-  isHarnessTab, isEditorTab, isFilesTab, isPluginTab, isMonitorTab,
+  isHarnessTab, isEditorTab, isFilesTab, isPluginTab, isMonitorTab, isSshTab,
 } from './view-guards.js';
 
 const tab = (overrides: Partial<Tab>): Tab => ({ ...makeTab('t', '#fff'), ...overrides });
@@ -43,5 +43,26 @@ describe.each([
   it(`narrows the payload for a ${kind} tab`, () => {
     const candidate = tab({ view, ...payload });
     expect(guard(candidate) && candidate.view).toBe(view);
+  });
+});
+
+// An ssh tab reuses the harness-view shape, so the discriminant says nothing here: what separates
+// one from a real harness tab is the destination the ssh invocation named.
+describe('isSshTab', () => {
+  const ssh = { name: 'ssh', program: 'ssh', ptyId: 'p1', status: 'running', destination: 'host' } as NonNullable<Tab['harness']>;
+
+  it('admits a harness-view tab running ssh against a destination', () => {
+    expect(isSshTab(tab({ view: 'harness', harness: ssh }))).toBe(true);
+  });
+
+  it('rejects an ssh harness view that names no destination', () => {
+    const { destination, ...rest } = ssh;
+    expect(destination).toBe('host');
+    expect(isSshTab(tab({ view: 'harness', harness: rest }))).toBe(false);
+  });
+
+  it('rejects a harness tab running something else, and a tab with no harness at all', () => {
+    expect(isSshTab(tab({ view: 'harness', harness: HARNESS }))).toBe(false);
+    expect(isSshTab(tab({ view: 'agent' }))).toBe(false);
   });
 });
