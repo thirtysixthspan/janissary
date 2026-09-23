@@ -2,6 +2,8 @@
 
 ## ready
 
+* when trying the launch a new harness/agent, a harness/agent with the same name that already exists either in the sessions table, on the remote machine running or on the remote machine running but not cleaned up, should report an informative error into the notifications tab and prevent a new harness/agent from launching.  
+
 * establish a seperate layout for the sessions tab that allows the content to be presented in a narrow width sidebar.
 
 * if the notifications tab is not open, notifications should be presented as a toast message in the upper right corner of the screen with a time limited duration of 4 seconds. the toast should animate out via fade over a 2 second window.
