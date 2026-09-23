@@ -3,9 +3,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TabManager } from '../tab/manager.js';
+import { flattenBuffer } from '../tab/formatting.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
-import { notificationsTab, openNotificationsTab } from '../notifications/tab.js';
+import { appendNotification, notificationsTab, openNotificationsTab } from '../notifications/tab.js';
 import { NotificationQueue, type RecordedNotification } from '../notifications/queue.js';
 import {
   appendNotificationRecord, initNotificationRecord, notificationRecordPath,
@@ -58,18 +59,23 @@ describe('notifications clear', () => {
   let managers: Managers;
   let projectDir: string;
   let clears: number;
+  let stateChanges: number;
   let subscription: { unsubscribe: () => void };
+  let stateSubscription: { unsubscribe: () => void };
 
   beforeEach(() => {
     managers = makeManagers();
     projectDir = mkdtempSync(path.join(tmpdir(), 'notifications-clear-'));
     initNotificationRecord(projectDir);
     clears = 0;
+    stateChanges = 0;
     subscription = messageBus.on('notifications', 'clear', () => { clears += 1; });
+    stateSubscription = messageBus.on('state', 'dirty', () => { stateChanges += 1; });
   });
 
   afterEach(() => {
     subscription.unsubscribe();
+    stateSubscription.unsubscribe();
     initNotificationRecord(undefined);
     rmSync(projectDir, { recursive: true, force: true });
   });
@@ -94,6 +100,15 @@ describe('notifications clear', () => {
     command.run('notifications clear', issuer, managers);
     expect(managers.notifications.all).toHaveLength(0);
     expect(notificationsTab(managers)).toBeDefined();
+    expect(notificationsTab(managers)!.log).toEqual([]);
+    expect(flattenBuffer(notificationsTab(managers)!.log)).toEqual([]);
+    expect(stateChanges).toBeGreaterThan(0);
+
+    const later = held('later');
+    managers.notifications.append(later);
+    appendNotification(managers, later.entry);
+    expect(notificationsTab(managers)!.log.map((entry) => entry.output)).toEqual(['later']);
+    expect(flattenBuffer(notificationsTab(managers)!.log)).toHaveLength(1);
   });
 
   it('records the command as a transcript entry in the issuing tab', () => {

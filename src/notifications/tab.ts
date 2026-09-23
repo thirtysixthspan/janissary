@@ -95,3 +95,12 @@ export function appendNotification(managers: Managers, entry: LogEntry): void {
   if (!notificationsTab(managers)) return;
   managers.tab.append(NOTIFICATIONS_LABEL, entry);
 }
+
+// Clearing notifications changes the feed's existing transcript without replaying appends or
+// disturbing the user's tab selection. The state signal refreshes the client's bufferLines.
+export function clearNotificationsFeed(managers: Managers): void {
+  const tab = notificationsTab(managers);
+  if (!tab) return;
+  tab.log = [];
+  messageBus.emit('state', { type: 'dirty' });
+}

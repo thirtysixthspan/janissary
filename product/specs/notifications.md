@@ -61,8 +61,8 @@ sidebar already holds another dockable tab (the file navigator or an existing no
 that tab is displaced back to the center strip — nothing is closed as a side effect.
 
 `notifications clear` empties everything a notification is held in: the queue, the record file, and
-any toasts on screen. It opens and moves nothing — a feed already open simply goes empty, and a
-closed one stays closed. `clear` is exclusive with a dock keyword: the command reads a single
+any toasts on screen. It opens and moves nothing — an open feed empties immediately and stays in
+its current placement, and a closed one stays closed. `clear` is exclusive with a dock keyword: the command reads a single
 keyword, so `notifications right clear` docks the feed right and clears nothing.
 
 Running the command records a transcript entry for it in the issuing tab (the command text as

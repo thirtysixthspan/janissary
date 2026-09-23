@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import type { RecordedNotification } from './queue.js';
 import { messageBus } from '../bus.js';
-import { appendNotification, notificationsFeedVisible, showNotificationsFeed } from './tab.js';
+import { appendNotification, clearNotificationsFeed, notificationsFeedVisible, showNotificationsFeed } from './tab.js';
 import { appendNotificationRecord, clearNotificationRecord } from './record.js';
 
 // Where a notification that has already passed `shouldNotify` goes. Holding it and rendering it are
@@ -20,6 +20,7 @@ export function escalateToFeed(managers: Managers): void {
 export function clearNotifications(managers: Managers): void {
   managers.notifications.clear();
   clearNotificationRecord();
+  clearNotificationsFeed(managers);
   messageBus.emit('notifications', { type: 'clear' });
 }
 

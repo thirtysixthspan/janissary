@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear an open notifications feed when the user runs `notifications clear`.
-
-Existing Issue: `clearNotifications` empties the queue, record, and toast stack but leaves an already open notifications tab's `log` untouched, so its rendered feed still contains the supposedly cleared lines. Severity: 7/10
-
-Existing Risk: 7/10 - Users see old notifications after clearing them and can act on links they expected to have removed, while closing and reopening the feed shows a conflicting empty result.
-
-Proposal Risk: 2/10 - A direct feed-log reset could miss a state broadcast or transcript cleanup unless both are verified, leaving a stale view in one client.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: clear the open notifications feed". Update `clearNotifications` in `src/notifications/deliver.ts` and the feed ownership in `src/notifications/tab.ts` so clearing resets the existing notifications tab's log and emits the state change that refreshes `bufferLines`, without reopening or moving a tab or replaying old transcript entries. Strengthen `src/commands/notifications.test.ts` to assert the open tab's log and rendered state become empty, and that a later notification appears as the only line; retain its queue, record, toast-clear, and no-tab checks.
-
-
 * Show notifications when a docked feed is hidden behind another sidebar tab.
 
 Existing Issue: `notificationsFeedVisible` treats every docked feed as visible, but `Sidebar` renders only the locally selected docked view, so selecting a file navigator over the feed suppresses the toast while the new line is off screen. Severity: 7/10
