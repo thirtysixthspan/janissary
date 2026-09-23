@@ -94,7 +94,7 @@ type TabPluginActivation = {
 The host supplies thirteen capabilities:
 
 - `note(text)` writes to the originating transcript.
-- `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether the feed is open to receive it at all.
+- `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
