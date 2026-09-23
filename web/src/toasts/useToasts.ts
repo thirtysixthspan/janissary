@@ -15,7 +15,13 @@ export function useToasts(client: JanusClient, notificationsVisible: boolean): {
   queue.current ??= new ToastQueue();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const notificationsVisibleRef = useRef(notificationsVisible);
+  const wasNotificationsVisibleRef = useRef(false);
   notificationsVisibleRef.current = notificationsVisible;
+
+  useEffect(() => {
+    if (notificationsVisible && !wasNotificationsVisibleRef.current) queue.current!.clear();
+    wasNotificationsVisibleRef.current = notificationsVisible;
+  }, [notificationsVisible]);
 
   useEffect(() => {
     const active = queue.current!;

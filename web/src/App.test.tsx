@@ -799,6 +799,30 @@ it('positions toasts below the connection indicator and both multi-row status pa
   expect(container.querySelectorAll(':scope .status-panels .panel')).toHaveLength(2);
   expect(container.querySelectorAll(':scope .status-panels .panel-row')).toHaveLength(5);
 });
+
+it('keeps a toast while files cover the docked feed and clears it when notifications is selected', async () => {
+  let toastListener: ((event: { from: string; message: string; color?: string }) => void) | undefined;
+  const shellClient = {
+    ...client,
+    onToast: (listener: typeof toastListener) => { toastListener = listener; return () => {}; },
+  } as unknown as JanusClient;
+  const files = makeTab({
+    label: 'files', view: 'files', dock: 'left',
+    files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
+  });
+  const notifications = makeTab({ label: 'notifications', view: 'notifications', dock: 'left' });
+  render(
+    <AppShell tabs={[files, notifications]} client={shellClient} notificationsVisible={false}>
+      <div />
+    </AppShell>,
+  );
+  act(() => toastListener?.({ from: 'janus', message: 'visible from files' }));
+  expect(screen.getByText('visible from files')).toBeInTheDocument();
+
+  fireEvent.mouseDown(screen.getByText('notifications'));
+
+  await waitFor(() => expect(screen.queryByRole('button', { name: /visible from files/ })).toBeNull());
+});
 it.each(['agent', 'harness', 'ssh', 'editor', 'files'])('shows reconnection in the shell around a %s view', (view) => {
   const disconnected = { ...client, connectionStatus: 'reconnecting' } as unknown as JanusClient;
   render(<AppShell tabs={[]} client={disconnected} notificationsVisible={false}><div>{view} view</div></AppShell>);

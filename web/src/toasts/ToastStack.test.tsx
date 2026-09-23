@@ -58,6 +58,20 @@ describe('ToastStack', () => {
     expect(screen.getByText('corner visible')).toBeTruthy();
   });
 
+  it('clears a held toast and its timer when the feed becomes visible', () => {
+    const fixture = makeClient();
+    const { rerender } = render(<ToastStack client={fixture.client} notificationsVisible={false} />);
+    fixture.toast({ from: 'janus', message: 'held notification' });
+    fireEvent.mouseEnter(screen.getByRole('button'));
+    advance(TOAST_VISIBLE_MS + TOAST_FADE_MS);
+    expect(screen.getByRole('button')).toBeInTheDocument();
+
+    rerender(<ToastStack client={fixture.client} notificationsVisible />);
+
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('fades on schedule and then disappears', () => {
     const fixture = makeClient();
     render(<ToastStack client={fixture.client} notificationsVisible={false} />);

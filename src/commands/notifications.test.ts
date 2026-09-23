@@ -48,6 +48,15 @@ describe('notifications command', () => {
     expect(notificationsTab(managers)!.dock).toBe(dock);
   });
 
+  it('asks each client to select the docked feed so any pending toast can clear', () => {
+    const reveals: Array<'left' | 'right'> = [];
+    const subscription = messageBus.on('notifications', 'reveal', (event) => { reveals.push(event.dock); });
+    try {
+      command.run('notifications left', issuer, managers);
+      expect(reveals).toEqual(['left']);
+    } finally { subscription.unsubscribe(); }
+  });
+
   it('records the command as a transcript entry in the issuing tab', () => {
     command.run('notifications', issuer, managers);
     expect(managers.tab.tabs.find((t) => t.label === 'janus')!.log.map((e) => e.input))

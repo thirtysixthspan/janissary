@@ -59,10 +59,14 @@ visible). A leading `left` or `right` keyword docks it into that sidebar instead
 strip, mirroring `files [left|right]` (see `file-navigator-tab.md` and `sidebars.md`). When the target
 sidebar already holds another dockable tab (the file navigator or an existing notifications tab),
 that tab is displaced back to the center strip — nothing is closed as a side effect.
+A docked command selects the notifications body in that sidebar on each client, so its contents are
+visible and any pending toasts clear.
 
 `notifications clear` empties everything a notification is held in: the queue, the record file, and
 any toasts on screen. It opens and moves nothing — an open feed empties immediately and stays in
-its current placement, and a closed one stays closed. `clear` is exclusive with a dock keyword: the command reads a single
+its current placement, and a closed one stays closed. When the feed becomes visible, pending toasts
+clear on that client; toasts remain while another center or sidebar view hides the feed.
+`clear` is exclusive with a dock keyword: the command reads a single
 keyword, so `notifications right clear` docks the feed right and clears nothing.
 
 Running the command records a transcript entry for it in the issuing tab (the command text as

@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import { openNotificationsTab } from '../notifications/tab.js';
 import { clearNotifications } from '../notifications/deliver.js';
+import { messageBus } from '../bus.js';
 
 // `notifications` opens (or focuses) the singleton notifications tab. `notifications left` /
 // `notifications right` dock it into that sidebar, mirroring `files [left|right]`. Bare
@@ -18,8 +19,9 @@ export const command: Command = {
   run: (command_, tab, managers) => {
     managers.tab.append(tab.label, { input: command_, output: '' });
     const rest = command_.replace(/^notifications\b\s*/i, '');
-    const keyword = /^(left|right|clear)\b/i.exec(rest)?.[1].toLowerCase();
+    const keyword = /^(left|right|clear)\b/i.exec(rest)?.[1].toLowerCase() as 'left' | 'right' | 'clear' | undefined;
     if (keyword === 'clear') { clearNotifications(managers); return; }
-    openNotificationsTab(managers, keyword as 'left' | 'right' | undefined);
+    openNotificationsTab(managers, keyword);
+    if (keyword) messageBus.emit('notifications', { type: 'reveal', dock: keyword });
   },
 };
