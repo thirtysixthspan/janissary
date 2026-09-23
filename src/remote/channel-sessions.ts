@@ -16,7 +16,7 @@ export type SessionListener = {
   onHistory?: (runs: readonly ShellHistoryRun[]) => void;
   // A detected (and possibly approved) permission gate. Only a remote harness's `PtySession` takes
   // one — see `createRemotePtySession` in `./pty-session.js`.
-  onGateEvent?: (message: string, capturedAt: number, capture?: string) => void;
+  onGateEvent?: (message: string, capturedAt: number, replayed: boolean, capture?: string) => void;
   // The harness's current busy/ready state, and whether the transition should mark the tab unread.
   onBusyTransition?: (busy: boolean, unread: boolean) => void;
 };
@@ -58,7 +58,7 @@ export class SessionRouter {
     for (const frame of this.pending.claim(id)) {
       if (frame.type === 'output') { listener.onOutput(frame.data); continue; }
       if (frame.type === 'shell-history') { listener.onHistory?.(frame.runs); continue; }
-      if (frame.type === 'gate-event') { listener.onGateEvent?.(frame.message, frame.capturedAt, frame.capture); continue; }
+      if (frame.type === 'gate-event') { listener.onGateEvent?.(frame.message, frame.capturedAt, true, frame.capture); continue; }
       if (frame.type === 'busy-transition') { listener.onBusyTransition?.(frame.busy, frame.unread); continue; }
       this.sessions.delete(id);
       listener.onExit(frame.exitCode);
@@ -114,7 +114,7 @@ export class SessionRouter {
   // replays it must not be dropped just because the rebuilt tab's listener has not registered yet.
   gateEvent(frame: GateEventFrame): void {
     const listener = this.sessions.get(frame.id);
-    if (listener) listener.onGateEvent?.(frame.message, frame.capturedAt, frame.capture);
+    if (listener) listener.onGateEvent?.(frame.message, frame.capturedAt, false, frame.capture);
     else if (this.holding) this.pending.hold(frame);
   }
 
