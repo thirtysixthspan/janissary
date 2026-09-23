@@ -2,6 +2,4 @@
 
 # pull-request
 
-* In the docked session bar, the refresh and the switch dock icons should be in a single metadata bar, not separated across two.
-
 * when a new connection is established or closed in another tab ti should cause the sessions tab to update when docked.

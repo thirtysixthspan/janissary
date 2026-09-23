@@ -706,11 +706,11 @@ html, body, #root {
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
 .sidebar-plugin-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
-.sidebar-plugin-dock-cycle {
+.sidebar-plugin-actions button {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
 }
-.sidebar-plugin-dock-cycle:hover { color: var(--fg); }
+.sidebar-plugin-actions button:hover { color: var(--fg); }
 .resize-button {
   padding: 0 6px; border: none; background: transparent;
   color: var(--muted); cursor: grab; font-size: 12px; line-height: 1;

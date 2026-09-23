@@ -60,7 +60,7 @@ Click a row once to select it, click again — or press `Enter` — to open it. 
 
 <img class="agent-float" src="/agents/ekrem-south-west.png" alt="" />
 
-The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
+The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. When docked, Refresh shares one metadata bar with the control that moves the list to the other sidebar. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
 
 ## Reporting
 

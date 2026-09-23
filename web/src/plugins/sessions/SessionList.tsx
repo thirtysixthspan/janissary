@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction, SessionsPayload } from '@shared/plugins/sessions/shared';
-import { ConfirmDialog, type TabPluginClientCapabilities } from '../api';
+import { ConfirmDialog, PluginActionsHeader, type TabPluginClientCapabilities } from '../api';
 import { NarrowSessionRow, WideSessionRow } from './SessionRowBody';
 import { openIntentFor, sessionClickSelection, nextSessionSelection } from './sessions-keys';
 
@@ -91,7 +91,7 @@ export function SessionList({
 
   return (
     <div className={`session-list plugin-tab${narrow ? ' session-list-narrow' : ''}`} ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
-      <div className="plugin-meta session-list-header">
+      <PluginActionsHeader className="plugin-meta session-list-header">
         <span className="plugin-actions">
           <button
             type="button"
@@ -103,7 +103,7 @@ export function SessionList({
           </button>
           {capabilities.splitAction}
         </span>
-      </div>
+      </PluginActionsHeader>
       {payload.entries.length === 0 && <div className="session-empty">No remote sessions</div>}
       {payload.entries.length > 0 && !narrow && (
         <div className="session-columns" aria-hidden="true">

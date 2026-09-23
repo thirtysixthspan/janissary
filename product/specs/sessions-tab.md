@@ -26,7 +26,7 @@ itself by grouping, not by a row of its own.
 
 An empty list reads `No remote sessions`.
 
-The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. A docked list carries Refresh alone because docked tabs have no split control. This layout applies even when Sessions is the first plugin opened.
+The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. A docked list combines Refresh and the dock-switch control at the right edge of one metadata bar, with no second header or Split control. This layout applies in either sidebar, including an empty list, and even when Sessions is the first plugin opened.
 
 When there are no remote sessions, the tab shows only its `No remote sessions` empty-state message; it omits the table headings because there are no rows for them to describe.
 
