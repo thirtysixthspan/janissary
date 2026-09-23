@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { NotificationConfig } from './config.js';
 import type { Managers } from './managers.js';
 import {
-  AMBIENT_EVENTS, EXPLICIT_EVENTS, shouldNotify, formatTimestamp, notificationText, notify,
+  AMBIENT_EVENTS, EXPLICIT_EVENTS, shouldNotify, notificationText, notify,
   type AmbientNotificationEvent, type ExplicitNotificationEvent,
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from './tab.js';
 import { fakeNotificationsHost } from './tab-test-fixture.js';
+import { NotificationQueue } from './queue.js';
+import { messageBus } from '../bus.js';
 
 const allOn: NotificationConfig = {
   events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true, rateLimited: true },
@@ -245,50 +247,6 @@ describe('shouldNotify — question event', () => {
   });
 });
 
-describe('formatTimestamp', () => {
-  it('renders afternoon times in 12-hour form with pm', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 20, 32, 0))).toBe('8:32pm');
-  });
-
-  it('renders morning times with am and no leading zero on the hour', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 9, 5, 0))).toBe('9:05am');
-  });
-
-  it('renders the midnight hour as 12am', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 0, 15, 0))).toBe('12:15am');
-  });
-
-  it('renders noon as 12pm', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 12, 0, 0))).toBe('12:00pm');
-  });
-
-  it('renders one minute before midnight as 11:59pm', () => {
-    expect(formatTimestamp(new Date(2026, 0, 1, 23, 59, 0))).toBe('11:59pm');
-  });
-});
-
-describe('notificationText', () => {
-  it('returns the bare message for a manual event (the label lives in the header)', () => {
-    expect(notificationText('manual', 'janus', 'this is a notification')).toBe('this is a notification');
-  });
-
-  it('is unchanged for ambient events', () => {
-    expect(notificationText('state-change', 'janus')).toBe("Agent 'janus' finished");
-  });
-
-  it('renders agent-start event text', () => {
-    expect(notificationText('agent-start', 'build')).toBe("Agent 'build' started");
-  });
-
-  it('renders schedule-fire event text with the detail and tab', () => {
-    expect(notificationText('schedule-fire', 'build', 'deploy')).toBe('Scheduled: deploy in build');
-  });
-
-  it('renders rate-limited event text', () => {
-    expect(notificationText('rate-limited', 'build')).toBe("Agent 'build' is being rate limited");
-  });
-});
-
 describe('notify — line composition', () => {
   function makeManagers(append: ReturnType<typeof vi.fn>): Managers {
     const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
@@ -296,6 +254,7 @@ describe('notify — line composition', () => {
     const tabs = [notif, janus];
     return {
       tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => notif, append },
+      notifications: new NotificationQueue(),
     } as unknown as Managers;
   }
 
@@ -373,59 +332,125 @@ describe('notify — line composition', () => {
     expect(entry.openFile).toBeUndefined();
   });
 
-  // Every event that passes `shouldNotify` is guaranteed a feed to land in, a plugin's note as much
-  // as anything else — a note about the very tab the user is watching is the line that matters most.
-  it('opens the feed for a plugin note when none is open', () => {
-    const append = vi.fn();
-    const janus = { label: 'janus', dotColor: '#abc', log: [] };
-    const tabs = [janus];
-    const managers = {
-      tab: {
-        tabs,
-        byLabel: (l: string) => (l === 'janus' ? janus : undefined),
-        cur: () => janus,
-        append,
-        ...fakeNotificationsHost(tabs),
-      },
-    } as unknown as Managers;
-
-    notify(managers, 'plugin-note', 'janus', 'Dropped a.mp3 — it could not be played.');
-
-    expect(tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(true);
-    expect(append).toHaveBeenCalledWith(
-      NOTIFICATIONS_LABEL,
-      expect.objectContaining({ output: 'Dropped a.mp3 — it could not be played.' }),
-    );
-  });
-
-  // An event the config and focus rules reject costs nothing and opens nothing — the ambient
-  // toggles stay a volume control rather than a way to fill the screen with sidebars.
-  it('opens nothing for an ambient event whose toggle is off', () => {
-    const append = vi.fn();
-    const janus = { label: 'janus', dotColor: '#abc', log: [] };
-    const build = { label: 'build', dotColor: '#def', log: [] };
-    const tabs = [janus, build];
-    const managers = {
-      tab: {
-        tabs,
-        byLabel: (l: string) => tabs.find((t) => t.label === l),
-        cur: () => janus,
-        append,
-        ...fakeNotificationsHost(tabs),
-      },
-    } as unknown as Managers;
-
-    notify(managers, 'state-change', 'build');
-
-    expect(tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(false);
-    expect(append).not.toHaveBeenCalled();
-  });
-
   it('threads an owning-tab link onto a question notification', () => {
     const append = vi.fn();
     notify(makeManagers(append), 'question', 'janus', undefined, undefined, 'janus');
     const [, entry] = append.mock.calls[0];
     expect(entry.openTab).toBe('janus');
+  });
+});
+
+// Holding a notification and rendering one are separate: everything `shouldNotify` accepts reaches
+// the queue, and only then is a surface chosen.
+describe('notify — surface routing', () => {
+  function setup() {
+    const append = vi.fn();
+    const janus = { label: 'janus', dotColor: '#abc', log: [] };
+    const tabs: Array<{ label: string; dotColor?: string; log?: unknown[]; view?: string; dock?: 'left' | 'right' }> = [janus];
+    const toasts: Array<{ from: string; message: string; color?: string }> = [];
+    const clears: number[] = [];
+    const subscriptions = [
+      messageBus.on('notifications', 'toast', (event) => {
+        if (event.type === 'toast') toasts.push({ from: event.from, message: event.message, color: event.color });
+      }),
+      messageBus.on('notifications', 'clear', () => { clears.push(1); }),
+    ];
+    const managers = {
+      tab: {
+        tabs,
+        byLabel: (l: string) => tabs.find((t) => t.label === l),
+        cur: () => tabs[0],
+        append,
+        ...fakeNotificationsHost(tabs),
+      },
+      notifications: new NotificationQueue(),
+    } as unknown as Managers;
+    const dispose = () => { for (const s of subscriptions) s.unsubscribe(); };
+    return { append, clears, dispose, managers, tabs, toasts };
+  }
+
+  it('records an accepted event in the queue whatever surface shows it', () => {
+    const fixture = setup();
+    try {
+      notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
+      expect(fixture.managers.notifications.all.map((n) => n.message)).toEqual(['Dropped a.mp3.']);
+    } finally { fixture.dispose(); }
+  });
+
+  // An event the config and focus rules reject costs nothing: no queue entry, no toast, no feed.
+  it('touches nothing for an ambient event whose toggle is off', () => {
+    const fixture = setup();
+    try {
+      fixture.tabs.push({ label: 'build', dotColor: '#def', log: [] });
+      notify(fixture.managers, 'state-change', 'build');
+      expect(fixture.managers.notifications.all).toHaveLength(0);
+      expect(fixture.toasts).toHaveLength(0);
+      expect(fixture.tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(false);
+      expect(fixture.append).not.toHaveBeenCalled();
+    } finally { fixture.dispose(); }
+  });
+
+  it('toasts, and opens no feed, when none is on screen', () => {
+    const fixture = setup();
+    try {
+      notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
+      expect(fixture.toasts).toEqual([{ from: 'janus', message: 'Dropped a.mp3.', color: '#abc' }]);
+      expect(fixture.tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(false);
+    } finally { fixture.dispose(); }
+  });
+
+  it('appends to the feed and raises no toast when one is docked', () => {
+    const fixture = setup();
+    try {
+      fixture.tabs.push({ label: NOTIFICATIONS_LABEL, view: 'notifications', log: [], dock: 'right' });
+      notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
+      expect(fixture.toasts).toHaveLength(0);
+      expect(fixture.append).toHaveBeenCalledWith(
+        NOTIFICATIONS_LABEL,
+        expect.objectContaining({ output: 'Dropped a.mp3.' }),
+      );
+    } finally { fixture.dispose(); }
+  });
+
+  // A toast carries no time, so it cannot honestly represent something detected hours ago.
+  it('raises no toast for a replayed notification', () => {
+    const fixture = setup();
+    try {
+      notify(
+        fixture.managers, 'auto-approve', 'janus', 'Auto-approved a permission prompt',
+        undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+      );
+      expect(fixture.toasts).toHaveLength(0);
+      expect(fixture.managers.notifications.all).toHaveLength(1);
+    } finally { fixture.dispose(); }
+  });
+
+  it('escalates to the feed on the third notification inside the burst window', () => {
+    const fixture = setup();
+    try {
+      for (const message of ['one', 'two', 'three']) {
+        notify(fixture.managers, 'plugin-note', 'janus', message);
+      }
+      expect(fixture.tabs.some((t) => t.view === 'notifications')).toBe(true);
+      expect(fixture.toasts.map((t) => t.message)).toEqual(['one', 'two']);
+      expect(fixture.clears).toHaveLength(1);
+    } finally { fixture.dispose(); }
+  });
+
+  // Replays count toward the burst by arrival, so a reattach delivering several docks the feed
+  // open without ever having toasted: silence in the corner, history in the feed.
+  it('escalates for replayed notifications that never toasted', () => {
+    const fixture = setup();
+    try {
+      for (const message of ['one', 'two', 'three']) {
+        notify(
+          fixture.managers, 'auto-approve', 'janus', message,
+          undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+        );
+      }
+      expect(fixture.tabs.some((t) => t.view === 'notifications')).toBe(true);
+      expect(fixture.toasts).toHaveLength(0);
+    } finally { fixture.dispose(); }
   });
 });
 it.each(['schedule-late', 'remote-session-terminated'] as const)('shows the composed %s detail without configuration', (event) => {

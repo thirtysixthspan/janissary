@@ -32,11 +32,11 @@ directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
 
 ### `notifications`
 
-`notifications` opens the singleton notifications tab, or focuses it when already open (undocking it back to center and making it active if it was docked). `notifications left` / `notifications right` dock it into that sidebar instead. See `notifications.md` for the tab, its events, and the config model.
+`notifications` opens the singleton notifications tab, or focuses it when already open (undocking it back to center and making it active if it was docked). `notifications left` / `notifications right` dock it into that sidebar instead. `notifications clear` empties the notification queue, the record file, and any toasts on screen, and opens nothing. See `notifications.md` for the tab, its events, and the config model.
 
 ### `notify`
 
-`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles, and — like every recorded event — opens the notifications tab docked into the right sidebar when none is open, so the message always lands somewhere. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
+`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles, and — like every recorded event — is held in the notification queue and shown as a toast when no feed is on screen, so the message always lands somewhere. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
 
 ### `quit`
 

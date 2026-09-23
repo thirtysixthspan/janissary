@@ -7,6 +7,7 @@ import {
   type TabPluginDeclaration,
 } from './api.js';
 import { TabPluginHost } from './host.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 function manifest(contributed = true): TabPluginDeclaration {
   return {
@@ -23,6 +24,7 @@ function manifest(contributed = true): TabPluginDeclaration {
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
     openFile: { runAs: vi.fn(async () => {}) },

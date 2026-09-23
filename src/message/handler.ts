@@ -56,6 +56,8 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'toggleCollapse': { controller.toggleCollapse(); break;
     }
+    case 'revealNotifications': { controller.revealNotifications(); break;
+    }
     case 'chooseRoute': { controller.chooseRoute(message.params.index); break;
     }
     case 'closeHarnessLaunch': { controller.closeHarnessLaunch(); break;

@@ -12,6 +12,7 @@ import { saveFile } from '../editor/save.js';
 import { openNavigatorFile } from './manager-files.js';
 import type { FilesTabState } from './state.js';
 import { notificationsTab, openNotificationsTab } from '../notifications/tab.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 function setup(writeFile: FileSystemPort['writeFile']) {
   const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
@@ -22,6 +23,7 @@ function setup(writeFile: FileSystemPort['writeFile']) {
     { filesystem, root: '/remote/ws', relPath: 'src/notes.txt', label: 'files' },
   );
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   managers.editorWatch = { watch: vi.fn(), markSaved: vi.fn() } as unknown as Managers['editorWatch'];
   const url = managers.tab.registerFile(file);
@@ -33,6 +35,7 @@ function openHarness(readFile: FileSystemPort['readFile']) {
   const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-open-'));
   initRemoteFileCache(project);
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   managers.openFile = { edit: vi.fn(), run: vi.fn() } as unknown as Managers['openFile'];
   managers.remote = { workspaceLabelOf: vi.fn(() => 'creator') } as unknown as Managers['remote'];

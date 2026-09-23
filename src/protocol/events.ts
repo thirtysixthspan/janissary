@@ -41,5 +41,14 @@ export type LayoutEvent = {
 // only in client state. Issued by `profile save`, which waits briefly for the matching
 // `reportFileNavigatorSelection` reply before writing the file — see src/file-navigator/selection-request.ts.
 export type CollectTreeStateEvent = { t: 'collect-tree-state'; id: number };
+// One notification to show as a toast in the window's upper-right corner, because no notifications
+// feed is on screen to carry it. The originating tab's label, the message body, and the tab's dot
+// color travel as separate fields — the same `from`/`fromColor` split a transcript `LogEntry`
+// uses — so the client owns how the line is presented, including clamping a long body.
+export type ToastEvent = { t: 'toast'; from: string; message: string; color?: string };
+// Remove every toast on screen at once, without fading. Sent when the feed becomes visible and
+// starts rendering those same notifications, and when `notifications clear` empties everything.
+export type ToastClearEvent = { t: 'toast-clear' };
 export type ServerEvent =
-  StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent;
+  StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
+  | ToastEvent | ToastClearEvent;

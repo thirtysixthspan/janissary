@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import { createEditorControllerAdapter } from './editor-adapter.js';
 
 const EDITOR_URL = '/open/a1b2';
@@ -25,6 +26,7 @@ function makeManagers(options: { notifications?: boolean } = {}) {
       cur: () => active,
       ...fakeNotificationsHost(tabs),
     },
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { append, managers };
 }
@@ -68,13 +70,14 @@ describe('editorPluginFailed', () => {
     );
   });
 
-  it('opens the feed and posts into it when none was open', () => {
+  // With no feed open the report toasts rather than docking a sidebar in — but it is still held,
+  // so a feed opened afterwards carries it.
+  it('opens no feed when none was open, and holds the line in the queue', () => {
     const { append, managers } = makeManagers({ notifications: false });
     createEditorControllerAdapter(managers).editorPluginFailed(EDITOR_URL, 'commenting', 'broke');
-    expect(managers.tab.tabs.some((t) => t.view === 'notifications')).toBe(true);
-    expect(append).toHaveBeenCalledWith(
-      NOTIFICATIONS_LABEL,
-      expect.objectContaining({ output: 'Editor plugin "commenting" disabled: broke.' }),
-    );
+    expect(managers.tab.tabs.some((t) => t.view === 'notifications')).toBe(false);
+    expect(append).not.toHaveBeenCalled();
+    expect(managers.notifications.all.map((n) => n.message))
+      .toContain('Editor plugin "commenting" disabled: broke.');
   });
 });

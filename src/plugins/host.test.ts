@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import type { Tab } from '../tab/types.js';
 import type {
   TabPluginActivation,
@@ -50,6 +51,7 @@ function makeManagers() {
   const managers = {
     tab: { tabs, append, closeTab, openPluginTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
     openFile: { runAs },
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { append, closeTab, managers, openPluginTab, runAs };
 }

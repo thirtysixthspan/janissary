@@ -63,4 +63,9 @@ export type CoreRpcCall =
   // overlay. Replies (deferred) with `{ root, paths }` — `root` is the absolute launch directory,
   // `paths` are its root-relative paths — so the client can join them into an absolute path for
   // the `edit` command regardless of the active tab's own cwd.
-  | { method: 'projectFiles'; params: Record<string, never> };
+  | { method: 'projectFiles'; params: Record<string, never> }
+  // Make the notifications feed visible, from a click on a toast. Runs the same escalation a burst
+  // of notifications does: the feed docks into the right sidebar (or, if one already exists hidden
+  // in the centre strip, is docked right), the active tab is left alone, and every toast on screen
+  // is cleared. Writes no transcript entry anywhere — it is a UI gesture, not a command anyone typed.
+  | { method: 'revealNotifications'; params: Record<string, never> };

@@ -1,20 +1,55 @@
 # Notifications
 
-The **notifications tab** is a singleton, view-only feed that collects notification-worthy
-background events as lines in its own scrollable transcript. It is a non-agent **view tab**
-(`view: 'notifications'`): it renders the standard transcript body fed by its own log, but has no
-command bar and takes no typed input. Like the file navigator tab (see `file-navigator-tab.md`) it is a
-**live, in-memory view** — never persisted, never restored on `--relaunch`. When the feed is empty
-it shows no content at all — unlike an agent tab's empty transcript, it does not show the "Type
-`help` for available commands" hint, since there is no command bar to type into.
+Holding a notification and showing one are separate things. Every notification the user is given is
+held in a **notification queue** for the length of the run, whether or not anything is on screen to
+display it. Two surfaces render that queue: the **notifications tab**, a feed of every notification
+held, and a **toast** in the window's upper-right corner, which shows a single notification when no
+feed is visible. Neither surface owns the notification, so closing the feed discards nothing and a
+toast expiring loses nothing.
+
+The **notifications tab** is a singleton, view-only feed that renders the queue as lines in its own
+scrollable transcript. It is a non-agent **view tab** (`view: 'notifications'`): it renders the
+standard transcript body fed by its own log, but has no command bar and takes no typed input. Like
+the file navigator tab (see `file-navigator-tab.md`) it is a **live, in-memory view** — never
+persisted, never restored on `--relaunch`. When the feed is empty it shows no content at all —
+unlike an agent tab's empty transcript, it does not show the "Type `help` for available commands"
+hint, since there is no command bar to type into.
 
 There is only ever **one** notifications tab. The user opens it with the `notifications` command,
-which chooses where it goes; a recorded event opens it too, always docked into the right sidebar,
-when there is none open to receive the line (see "Opened by the event that needs it" below).
-Opening it again reuses the existing one. Its label is always `notifications`; per
-[[tab-label-no-markers]] no type or status marker is appended.
+which chooses where it goes; a burst of notifications opens it too, docked into the right sidebar,
+when nothing on screen is showing them (see "Toasts and escalation" below). Opening it again reuses
+the existing one. Its label is always `notifications`; per [[tab-label-no-markers]] no type or
+status marker is appended.
 
-### `notifications [left|right]`
+### The notification queue
+
+The queue holds every notification of the current run, oldest dropped first past **200**. It
+survives the notifications tab being closed and reopened — a feed opened at any moment renders
+whatever the queue still holds, including notifications raised long before it existed. It is held
+in memory only: it is not persisted and not restored by `--relaunch`, which keeps the feed a live
+view rather than a restored one.
+
+Because the feed renders the queue, 200 is also the most the feed can show. A session that produces
+more than that loses the oldest lines from the feed; the notification record below is the durable
+trail for reading further back.
+
+### The notification record
+
+Every notification is also appended to **`.janissary/notifications.json`**, one JSON object per
+line, as it is recorded. The file persists across runs and is never read back by the application —
+it is a durable trail to grep, not a source the queue is restored from.
+
+Each line carries the notification's full ISO detection time (unambiguous across days, unlike the
+feed's `8:32pm`), the event type, the originating tab, the message, and the link targets when the
+event has them. The dot color is not recorded — it is a rendering detail of a session the file
+outlives.
+
+The file only grows; there is no rotation and no size cap. `notifications clear` is what empties it.
+Writing it is best-effort and silent: a write that fails (no permission, a full disk, a read-only
+checkout) is swallowed, further writes are abandoned for the rest of the run, and the queue, the
+feed, and toasts are unaffected. The failure is deliberately not itself reported as a notification.
+
+### `notifications [left|right|clear]`
 
 `notifications` opens the notifications tab — or, if it is already open, focuses it (undocking it
 back to the center strip and making it active when it was docked, since focusing must make the feed
@@ -22,6 +57,11 @@ visible). A leading `left` or `right` keyword docks it into that sidebar instead
 strip, mirroring `files [left|right]` (see `file-navigator-tab.md` and `sidebars.md`). When the target
 sidebar already holds another dockable tab (the file navigator or an existing notifications tab),
 that tab is displaced back to the center strip — nothing is closed as a side effect.
+
+`notifications clear` empties everything a notification is held in: the queue, the record file, and
+any toasts on screen. It opens and moves nothing — a feed already open simply goes empty, and a
+closed one stays closed. `clear` is exclusive with a dock keyword: the command reads a single
+keyword, so `notifications right clear` docks the feed right and clears nothing.
 
 Running the command records a transcript entry for it in the issuing tab (the command text as
 input, empty output) before the tab opens, the same as `files`.
@@ -138,50 +178,71 @@ watching — a playlist shedding a track — is exactly the line that must not b
 explicit event with no configuration toggle, but it is emitted only when its owning tab is in the
 background.
 
-### Opened by the event that needs it
+### Toasts and escalation
 
-An event that is recorded always has a feed to land in. When the notifications tab is closed at the
-moment one fires, it **opens docked into the right sidebar** and the line lands in it. Which event
-it was makes no difference: an ambient event that passed its toggle, an explicit one, and a
-`notify` message all open the feed the same way.
+A notification raised while the feed is not on screen appears as a **toast** in the upper-right
+corner of the window. "Not on screen" is a visibility test, not an existence one: a feed docked into
+either sidebar is always rendered, so it suppresses the toast, while a feed sitting in the centre
+strip behind another tab shows nothing and so does not. A toast never opens or moves a tab — the
+layout the user arranged is left alone.
 
-It opens **docked, not focused**. A notification is not a request to change what the user is looking
-at, so the feed appears in the sidebar and the active tab is left exactly where it was — including
-when the event fired in a background tab the user is not watching. Docking it into a sidebar that
-already holds a file navigator does not displace that navigator; the two share the side (see
-`sidebars.md`).
+A toast reads `● <tab>: <message>`: the same colored dot and originating tab label the feed line
+carries, and the same message body, with **no timestamp** — a toast is by definition happening now.
+Link targets are not rendered on it; they are preserved in the queue and the record, so the link is
+still there in the feed. A long message is clamped to two lines.
+
+It is visible for **4 seconds** and then fades out over **2 seconds**. Hovering a toast holds its
+clock, and returns a fading one to fully visible; moving away restarts it with the time that was
+left. **Clicking** a toast makes the feed visible and clears every toast on screen at once. The
+stack begins beneath the connection indicator and the floating status panels that already occupy
+that corner, so a toast never hides "Cannot reach session".
+
+**A burst escalates to the feed.** On the third notification inside a ten-second window the
+notifications tab is made visible and every toast is removed at once — sustained activity is more
+than a corner can carry, and the feed now shows those same lines. It is made visible **docked, not
+focused**: a feed that does not exist opens docked into the right sidebar, one already docked stays
+where it is, and one hidden in the centre strip is docked right rather than made active. The active
+tab is left exactly where it was. Docking into a sidebar that already holds a file navigator does
+not displace that navigator; the two share the side (see `sidebars.md`). The feed renders the
+queue, so the burst's earlier notifications are already in it when it appears.
+
+A **replayed** notification — one whose caller reports a time it detected earlier, such as an
+`auto-approve` queued by a detached remote harness and delivered on reattach (see [[remote-server]])
+— reaches the queue, the record, and the feed, but never a toast: a toast carries no time and could
+not honestly represent something that happened hours or days ago. Replays still count toward the
+burst window, so a reattach delivering several of them docks the feed open: silence in the corner,
+history in the feed.
 
 Whether an event is recorded at all is still decided first, by the per-event toggles and focus
-suppression above. An event those rules discard opens nothing — the ambient toggles remain the
-control over how much reaches the feed, rather than becoming a control over how often a sidebar
-appears. With the default configuration (every ambient toggle off) only explicit events open the
-feed.
+suppression above. An event those rules discard is held nowhere, recorded nowhere, and shown
+nowhere — the ambient toggles remain the control over how much reaches the user.
 
-There is still **no backlog**. Nothing that happened before the feed existed is replayed into it,
-and closing the tab discards its contents: reopening it, by command or by the next event, starts a
-fresh, empty feed. This is about the feed itself, opened and closed locally — it does not describe a
-detached remote harness tab's reattachment, which is a different event: an `auto-approve`
-notification raised while that tab was detached is queued on the far side and replayed into the feed
-on the next attach, in original order and timestamped at when it actually happened, indistinguishable
-from a live one once it lands (see [[remote-server]]). Nothing else changes about ordinary tab
-reopening.
+Closing the notifications tab is purely a display action: it discards nothing, and the next
+`notifications` reopens the feed rendering whatever the queue still holds. `notifications clear` is
+the only thing that empties it.
 
 ### `notify <message>`
 
 `notify <message>` pushes a custom line into the feed, attributed to the issuing tab (e.g.
 `build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
 explicit signal that bypasses focus suppression and the per-event toggles, and — like every other
-recorded event — opens the feed in the right sidebar when none is
-open. It is available from any tab, including agent tabs (an agent dispatches it like
+recorded event — lands in the queue and, when no feed is on screen, appears as a toast.
+It is available from any tab, including agent tabs (an agent dispatches it like
 any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
 a usage error (`Usage: notify <message>.`) and records nothing in the feed.
 
 ### Delivery model
 
-Notifications are ordinary transcript entries appended to the notifications tab through the same
+Feed lines are ordinary transcript entries appended to the notifications tab through the same
 `append` path every tab write uses, and reach the client on the existing per-tab transcript
-broadcast (`bufferLines`). There is no toast banner, no sound, and no dedicated server→client push
-channel — a docked notifications tab renders its feed even though it is never the active tab.
+broadcast (`bufferLines`) — a docked notifications tab renders its feed even though it is never the
+active tab. A feed opened after the fact is filled from the queue directly rather than by replaying
+those appends.
+
+A toast has no tab to ride, so it travels on its own server→client push: one event carrying the
+originating tab, the message, and the dot color, and a second event that clears the corner. Both
+are one-shot rather than state — nothing about a toast survives a reconnect, and a client that
+reloads simply has an empty corner. There is still no sound and no OS-level notification.
 
 Every notification line carries a colored dot, matching the sending tab's own tab-strip dot
 color — the same colored-dot treatment already used for cross-agent `msg`/`broadcast` deliveries.

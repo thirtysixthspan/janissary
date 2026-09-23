@@ -14,6 +14,9 @@ export type LayoutListener = (event: {
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
 }) => void;
+// One notification to show in the corner, and the signal that empties the corner at once.
+export type ToastListener = (event: { from: string; message: string; color?: string }) => void;
+export type ToastClearListener = () => void;
 
 // What a request is answered with when its connection ends before the reply does. Nonempty, because
 // `saveFile`'s caller displays it and an empty string reads there as success.
@@ -39,6 +42,8 @@ export class JanusClient {
   private stateListeners = new Set<StateListener>();
   private exitListeners = new Set<ExitListener>();
   private layoutListeners = new Set<LayoutListener>();
+  private toastListeners = new Set<ToastListener>();
+  private toastClearListeners = new Set<ToastClearListener>();
   private ptyHandlers = new Map<string, (data: string) => void>();
   private ptyOutput: PtyOutputBuffer;
   private pending = new Map<number, (result: unknown, error?: string) => void>();
@@ -164,6 +169,16 @@ export class JanusClient {
 
     break;
     }
+    case 'toast': {
+      for (const l of this.toastListeners) l({ from: event.from, message: event.message, color: event.color });
+
+    break;
+    }
+    case 'toast-clear': {
+      for (const l of this.toastClearListeners) l();
+
+    break;
+    }
     case 'bye': {
       // The server is shutting down (quit/exit); close this window.
       window.close();
@@ -258,6 +273,11 @@ export class JanusClient {
   onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }
   onPtyExit(l: ExitListener): () => void { this.exitListeners.add(l); return () => this.exitListeners.delete(l); }
   onLayout(l: LayoutListener): () => void { this.layoutListeners.add(l); return () => this.layoutListeners.delete(l); }
+  onToast(l: ToastListener): () => void { this.toastListeners.add(l); return () => this.toastListeners.delete(l); }
+  onToastClear(l: ToastClearListener): () => void {
+    this.toastClearListeners.add(l);
+    return () => this.toastClearListeners.delete(l);
+  }
 
   // Register a terminal card's writer for a pty id, flushing any buffered early output first.
   attachPty(id: string, onData: (data: string) => void): () => void {
@@ -276,6 +296,8 @@ export class JanusClient {
     this.stateListeners.clear();
     this.exitListeners.clear();
     this.layoutListeners.clear();
+    this.toastListeners.clear();
+    this.toastClearListeners.clear();
     this.ptyHandlers.clear();
     this.ptyOutput.dispose();
     this.drainPending();

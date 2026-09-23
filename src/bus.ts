@@ -147,10 +147,17 @@ type ConversationsEvent = { type: 'changed' };
 // this at all, and `SessionsManager`'s record comparison keeps a burst of transitions from becoming
 // a write apiece.
 type SessionsEvent = { type: 'changed' };
+// What the notification path asks the client to show in the corner. `toast` is one notification
+// with no feed on screen to carry it; `clear` empties the corner at once, which is what escalation
+// and a toast click both do once the feed becomes visible and starts showing those same lines.
+// One-shot signals, not state: nothing about a toast survives a reconnect.
+type NotificationsEvent =
+  | { type: 'toast'; from: string; message: string; color?: string }
+  | { type: 'clear' };
 export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
-  sessions: SessionsEvent;
+  sessions: SessionsEvent; notifications: NotificationsEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();

@@ -80,6 +80,8 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     exit: () => requestExit(),
     sendLayout: (event) => broadcast({ t: 'layout', ...event }),
     sendCollectTreeState: (event) => broadcast({ t: 'collect-tree-state', ...event }),
+    sendToast: (event) => broadcast({ t: 'toast', ...event }),
+    sendToastClear: () => broadcast({ t: 'toast-clear' }),
   }, options.projectDir);
   if (options.relaunch) controller.rehydrate();
 

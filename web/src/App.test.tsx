@@ -44,6 +44,8 @@ const client = {
   },
   onPtyExit: () => () => {},
   onLayout(listener: LayoutListener) { layoutListener = listener; return () => {}; },
+  onToast: () => () => {},
+  onToastClear: () => () => {},
   attachPty: () => () => {},
 } as unknown as JanusClient;
 

@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   clearWorkspaceDir: vi.fn(),
   initRemoteFileCache: vi.fn(),
   clearRemoteFileCache: vi.fn(),
+  initNotificationRecord: vi.fn(),
 }));
 
 vi.mock('./agent/state.js', () => ({
@@ -57,6 +58,9 @@ vi.mock('./file-navigator/remote-file-cache.js', () => ({
   initRemoteFileCache: mocks.initRemoteFileCache,
   clearRemoteFileCache: mocks.clearRemoteFileCache,
 }));
+vi.mock('./notifications/record.js', () => ({
+  initNotificationRecord: mocks.initNotificationRecord,
+}));
 vi.mock('./transcript/logger.js', () => ({
   TranscriptLogger: vi.fn(),
 }));
@@ -86,6 +90,7 @@ describe('initStateDirectories', () => {
     expect(mocks.initDbDir).toHaveBeenCalledWith('/project');
     expect(mocks.initWorkspaceDir).toHaveBeenCalledWith('/project');
     expect(mocks.initRemoteFileCache).toHaveBeenCalledWith('/project');
+    expect(mocks.initNotificationRecord).toHaveBeenCalledWith('/project');
     expect(loggerModule.TranscriptLogger).toHaveBeenCalledWith('/project');
     expect(storeModule.TranscriptStore as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('/project');
   });
@@ -99,7 +104,7 @@ describe('initStateDirectories', () => {
 
   it('covers exactly the keys the registry is pinned against', () => {
     expect(STATE_DIRECTORY_ORDER_IS_COMPLETE).toBe(true);
-    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(13);
+    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(14);
   });
 });
 

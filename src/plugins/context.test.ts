@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import {
   TAB_PLUGIN_API_VERSION,
   TAB_PLUGIN_CAPABILITY_NAMES,
@@ -34,6 +35,7 @@ function makeManagers() {
       ...fakeNotificationsHost(tabs),
     },
     openFile: { runAs: vi.fn(async () => {}) },
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { append, managers };
 }

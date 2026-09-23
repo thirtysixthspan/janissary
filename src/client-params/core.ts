@@ -47,4 +47,5 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   openHarnessTranscriptFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),
   projectFiles: noParams,
+  revealNotifications: noParams,
 };

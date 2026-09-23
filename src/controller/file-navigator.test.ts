@@ -19,6 +19,7 @@ import {
   fileNavigatorOpeners,
 } from './file-navigator.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
+import { NotificationQueue } from '../notifications/queue.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(label: string | undefined, fileNavigator: Record<string, (...args: unknown[]) => unknown>) {
@@ -41,6 +42,7 @@ function makeManagersWithNotifications(
   return {
     tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append },
     fileNavigator,
+    notifications: new NotificationQueue(),
   } as unknown as Managers;
 }
 

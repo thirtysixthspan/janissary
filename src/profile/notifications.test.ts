@@ -5,9 +5,11 @@ import { TabManager } from '../tab/manager.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { ProfileNotificationsEntry } from './types.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   return managers;
 }

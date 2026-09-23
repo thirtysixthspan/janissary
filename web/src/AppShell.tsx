@@ -6,6 +6,7 @@ import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
 import { useConnectionStatus } from './useConnectionStatus';
 import { ConnectionStatusLabel } from './ConnectionStatusLabel';
+import { ToastStack } from './toasts/ToastStack';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
@@ -47,6 +48,7 @@ export function AppShell({
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
       />
       <DefaultContextMenu client={client} />
+      <ToastStack client={client} />
     </div>
   );
 }

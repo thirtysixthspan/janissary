@@ -293,6 +293,51 @@ describe('JanusClient', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('delivers a toast event to registered listeners', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onToast(listener);
+
+    messageHandler!({ data: JSON.stringify({ t: 'toast', from: 'janus', message: 'one', color: '#abc' }) });
+
+    expect(listener).toHaveBeenCalledWith({ from: 'janus', message: 'one', color: '#abc' });
+  });
+
+  it('delivers a toast-clear event to registered listeners', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onToastClear(listener);
+
+    messageHandler!({ data: JSON.stringify({ t: 'toast-clear' }) });
+
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
+  it('unsubscribes a toast listener cleanly', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onToast(listener)();
+
+    messageHandler!({ data: JSON.stringify({ t: 'toast', from: 'janus', message: 'one' }) });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('dispose stops toast listeners being called for a later toast event', () => {
+    const client = new JanusClient();
+    const toast = vi.fn();
+    const clear = vi.fn();
+    client.onToast(toast);
+    client.onToastClear(clear);
+
+    client.dispose();
+    messageHandler!({ data: JSON.stringify({ t: 'toast', from: 'janus', message: 'one' }) });
+    messageHandler!({ data: JSON.stringify({ t: 'toast-clear' }) });
+
+    expect(toast).not.toHaveBeenCalled();
+    expect(clear).not.toHaveBeenCalled();
+  });
+
   it('dispose stops layout listeners being called for a later layout event', () => {
     const client = new JanusClient();
     const listener = vi.fn();

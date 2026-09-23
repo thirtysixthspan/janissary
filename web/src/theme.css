@@ -317,6 +317,36 @@ html, body, #root {
   background: var(--bg-soft); color: var(--muted); font-size: 12px;
 }
 
+/* Transient notification toasts, upper-right corner of the window. `position: fixed` so the stack
+   is viewport-anchored and floats over the right sidebar when one is open — `.app` sets no
+   transform or filter, so nothing re-parents a fixed descendant. It starts below `.connection-status`
+   and `.status-panels`, which already own that corner, rather than over them. */
+.toast-stack {
+  position: fixed; top: 40px; right: 10px; z-index: 60;
+  display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+  max-width: min(360px, 60vw); pointer-events: none;
+}
+
+/* Unlike `.connection-status`, a toast is a click target — clicking one opens the feed. */
+.toast {
+  pointer-events: auto; cursor: pointer; text-align: left; font: inherit; font-size: 12px;
+  display: flex; gap: 6px; align-items: baseline; width: 100%;
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 9px; color: var(--fg);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
+}
+.toast:hover { border-color: var(--accent, var(--fg)); }
+.toast-from { color: var(--muted); white-space: nowrap; }
+
+/* Clamped rather than truncated server-side: an `e2e-browser-gone` line carries a crash-log tail
+   that would otherwise make a very tall toast, and the full text is in the feed either way. */
+.toast-message {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  overflow: hidden; min-width: 0;
+}
+.toast--fading { animation: toast-fade 2s ease forwards; }
+@keyframes toast-fade { to { opacity: 0; } }
+
 /* Floating connection / schedule panels, top-right over the transcript */
 .status-panels {
   position: absolute; top: 6px; right: 10px; z-index: 20;

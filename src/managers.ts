@@ -24,6 +24,7 @@ import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
 import type { SessionsManager } from './sessions/manager.js';
+import type { NotificationQueue } from './notifications/queue.js';
 
 export type ManagerLifecycle = {
   dispose?(): void;
@@ -56,6 +57,7 @@ type ManagerRegistry = {
   plugins: TabPluginHost;
   conversations: ConversationsManager;
   sessions: SessionsManager;
+  notifications: NotificationQueue;
 };
 
 export type Managers = {
@@ -104,6 +106,9 @@ export const MANAGER_DISPOSE_ORDER = [
   // while tearing down, and after them there would be nothing left to read.
   'sessions',
   'remote',
+  // With the last group, for the same reason: the feed, the toast path, and `notifications clear`
+  // all read the queue while tearing down, and it owns no process or handle of its own to release.
+  'notifications',
   'questions',
   'tab',
   'database',

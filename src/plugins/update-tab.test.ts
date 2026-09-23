@@ -10,6 +10,7 @@ import {
   type TabPluginTabUpdate,
 } from './api.js';
 import { TabPluginHost } from './host.js';
+import { NotificationQueue } from '../notifications/queue.js';
 
 function manifest(
   id: string,
@@ -23,6 +24,7 @@ function manifest(
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
+  managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },

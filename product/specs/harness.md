@@ -306,8 +306,8 @@ At the moment of a successful auto-approval, the app also saves the harness's on
 file and attaches a clickable, outline-style clipboard-icon link before that same notification line's
 text; clicking the link opens the captured text in an ordinary editor tab, so the user can review
 exactly what was auto-approved after the fact. The capture file is written whenever the notification
-is recorded, which is every successful auto-approval — the line opens the feed when none is open, so
-there is no approval whose capture nobody could read. This link is
+is recorded, which is every successful auto-approval — the line is held in the notification queue
+whether or not a feed is open, so there is no approval whose capture nobody could read. This link is
 added only for successful auto-approvals — a prompt still awaiting the user, and the stand-down
 "could not clear the permission prompt" case, get no capture and no link.
 
@@ -315,8 +315,8 @@ If an approved prompt does not clear (the same gate screen redraws unchanged), t
 re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
 standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory
 per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
-every notification, the `auto-approve` line opens the notifications feed in the right sidebar when
-none is open.
+every notification, the `auto-approve` line is held in the notification queue and shown as a toast
+when no feed is on screen — except when it is replayed from a detached session, which never toasts.
 
 A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
 Metadata row in `tabs.md`.
