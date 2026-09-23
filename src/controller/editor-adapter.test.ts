@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
-import { NotificationQueue } from '../notifications/queue.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
 import { createEditorControllerAdapter } from './editor-adapter.js';
 
 const EDITOR_URL = '/open/a1b2';
@@ -43,6 +43,7 @@ describe('editorPluginFailed', () => {
         input: '',
         output: 'Editor plugin "commenting" disabled: exports no handler.',
       }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 
@@ -53,6 +54,7 @@ describe('editorPluginFailed', () => {
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ from: expect.stringContaining('notes.ts') }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 
@@ -67,6 +69,7 @@ describe('editorPluginFailed', () => {
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ from: expect.stringContaining('janus') }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 

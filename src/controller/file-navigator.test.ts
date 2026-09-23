@@ -19,7 +19,7 @@ import {
   fileNavigatorOpeners,
 } from './file-navigator.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
-import { NotificationQueue } from '../notifications/queue.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(label: string | undefined, fileNavigator: Record<string, (...args: unknown[]) => unknown>) {
@@ -104,6 +104,7 @@ describe('controller-file-navigator', () => {
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ output: 'Nothing to commit' }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 
@@ -268,6 +269,7 @@ describe('controller-file-navigator', () => {
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ output: expect.stringContaining('Permission denied') }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 

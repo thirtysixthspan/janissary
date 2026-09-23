@@ -7,7 +7,7 @@ import {
 } from './index.js';
 import { NOTIFICATIONS_LABEL } from './tab.js';
 import { fakeNotificationsHost } from './tab-test-fixture.js';
-import { NotificationQueue } from './queue.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from './queue.js';
 import { messageBus } from '../bus.js';
 
 const allOn: NotificationConfig = {
@@ -410,6 +410,7 @@ describe('notify — surface routing', () => {
       expect(fixture.append).toHaveBeenCalledWith(
         NOTIFICATIONS_LABEL,
         expect.objectContaining({ output: 'Dropped a.mp3.' }),
+        NOTIFICATION_QUEUE_LIMIT,
       );
     } finally { fixture.dispose(); }
   });

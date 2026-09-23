@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the live notifications feed within the plan's 200-line limit.
-
-Existing Issue: The queue drops its oldest entry after 200 notifications, but an open feed continues through `TabManager.append` under `transcriptMaxLines`, so the tab log can retain many more than 200 and diverge from the queue. Severity: 5/10
-
-Existing Risk: 5/10 - A long-running session shows different histories before and after the feed is reopened and lets the supposedly bounded feed grow toward the much larger transcript cap.
-
-Proposal Risk: 2/10 - Trimming the feed could disturb unread or transcript events if the notification-specific cap bypasses their existing update path.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: cap the live notifications feed at 200 lines". Align the live append path in `src/notifications/deliver.ts` and `src/notifications/tab.ts` with `NotificationQueue.logEntries` or apply `NOTIFICATION_QUEUE_LIMIT` through the tab's transcript mutation path, preserving its state broadcast and appended-entry behavior while dropping the same oldest line from both surfaces. Add a case in `src/notifications/tab.test.ts` or `src/notifications/index.test.ts` that opens the feed before more than 200 notifications arrive, checks its `log` and `bufferLines` against the queue, and confirms reopening does not change the retained set; the existing queue cap test covers the closed-feed half.
-
-
 * Place toasts below floating status panels as the plan promises.
 
 Existing Issue: `.toast-stack` starts at a fixed 40px from the viewport top with a higher stacking level than `.status-panels`, whose connection and schedule rows can extend below that point, so a toast covers those panels. Severity: 5/10

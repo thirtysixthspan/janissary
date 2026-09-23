@@ -20,6 +20,7 @@ import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { AgentStatePersistence } from './persistence.js';
 import { persistAgentState } from './manager-persistence.js';
+import { capLog } from './transcript-log.js';
 
 export class TabManager extends TabOpeningState {
   tabs: Tab[] = [];
@@ -208,9 +209,9 @@ export class TabManager extends TabOpeningState {
     return transcriptOperations.capToConfiguredMax(log, getConfig().transcriptMaxLines);
   }
 
-  append(label: string, entry: LogEntry): void {
+  append(label: string, entry: LogEntry, maxLines?: number): void {
     transcriptOperations.append(
-      this.tabs, label, entry, (log) => this.capToConfiguredMax(log),
+      this.tabs, label, entry, (log) => maxLines === undefined ? this.capToConfiguredMax(log) : capLog(log, maxLines),
       this.tabs[this.activeTab]?.label, this.secondaryTabLabel,
     );
   }

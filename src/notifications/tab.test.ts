@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TabManager } from '../tab/manager.js';
+import { flattenBuffer } from '../tab/formatting.js';
 import type { Managers } from '../managers.js';
 import {
   openNotificationsTab, appendNotification, notificationsTab, revealNotificationsTab,
   notificationsFeedVisible, showNotificationsFeed, NOTIFICATIONS_LABEL,
 } from './tab.js';
-import { NotificationQueue, type RecordedNotification } from './queue.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue, type RecordedNotification } from './queue.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
@@ -169,5 +170,22 @@ describe('appendNotification', () => {
     appendNotification(managers, { input: '', output: 'not mirrored' });
     expect(notificationsTab(managers)).toBeUndefined();
     expect(managers.tab.tabs).toHaveLength(before);
+  });
+
+  it('keeps a live feed and its rendered buffer aligned with the queue at the 200-line cap', () => {
+    openNotificationsTab(managers);
+    for (let index = 0; index < NOTIFICATION_QUEUE_LIMIT + 5; index += 1) {
+      const notification = held(String(index));
+      managers.notifications.append(notification);
+      appendNotification(managers, notification.entry);
+    }
+
+    const feed = notificationsTab(managers)!;
+    expect(feed.log).toEqual(managers.notifications.logEntries);
+    expect(feed.log).toHaveLength(NOTIFICATION_QUEUE_LIMIT);
+    expect(flattenBuffer(feed.log)).toEqual(flattenBuffer(managers.notifications.logEntries));
+
+    openNotificationsTab(managers);
+    expect(notificationsTab(managers)!.log).toEqual(managers.notifications.logEntries);
   });
 });

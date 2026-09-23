@@ -29,9 +29,9 @@ whatever the queue still holds, including notifications raised long before it ex
 in memory only: it is not persisted and not restored by `--relaunch`, which keeps the feed a live
 view rather than a restored one.
 
-Because the feed renders the queue, 200 is also the most the feed can show. A session that produces
-more than that loses the oldest lines from the feed; the notification record below is the durable
-trail for reading further back.
+Because the feed renders the queue, 200 is also the most the feed can show, whether it is already
+open or opened later. A session that produces more than that loses the same oldest lines from both
+the queue and feed; the notification record below is the durable trail for reading further back.
 
 ### The notification record
 

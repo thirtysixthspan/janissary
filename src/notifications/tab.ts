@@ -1,5 +1,6 @@
 import type { LogEntry, Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
+import { NOTIFICATION_QUEUE_LIMIT } from './queue.js';
 import { messageBus } from '../bus.js';
 
 // The notifications tab is a singleton, view-only feed (`view: 'notifications'`) that renders the
@@ -91,7 +92,7 @@ export function showNotificationsFeed(managers: Managers): Tab {
 // `entry:appended`, `bufferLines` sync).
 export function appendNotification(managers: Managers, entry: LogEntry): void {
   if (!notificationsTab(managers)) return;
-  managers.tab.append(NOTIFICATIONS_LABEL, entry);
+  managers.tab.append(NOTIFICATIONS_LABEL, entry, NOTIFICATION_QUEUE_LIMIT);
 }
 
 // Clearing notifications changes the feed's existing transcript without replaying appends or

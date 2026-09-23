@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
-import { NotificationQueue } from '../notifications/queue.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
 import {
   pluginFailureMessage,
   pluginFailureReason,
@@ -63,6 +63,7 @@ describe('reportPluginFailure', () => {
     expect(fixture.append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ input: '', output: message }),
+      NOTIFICATION_QUEUE_LIMIT,
     );
   });
 
