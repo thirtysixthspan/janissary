@@ -288,6 +288,36 @@ describe('TabManager queue', () => {
 
     expect(labelsAtEmit).not.toContain('second');
   });
+
+  // Every other kind of session row belongs to a manager that announces its own release. A plain ssh
+  // tab belongs to none, so the close itself is what tells the sessions list its row has gone.
+  it('closing an ssh tab announces it on the sessions channel, with the row already gone', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({
+      ...tm.cur(), label: 'host', number: 2, view: 'harness',
+      harness: { name: 'ssh', program: 'ssh', ptyId: 'p1', status: 'running', destination: 'host' },
+    });
+
+    let labelsAtEmit: string[] = [];
+    const sub = messageBus.on('sessions', 'changed', () => { labelsAtEmit = tm.tabs.map((t) => t.label); });
+
+    tm.closeTab(tm.findIndex('host'));
+    sub.unsubscribe();
+
+    expect(labelsAtEmit).toEqual(['janus']);
+  });
+
+  it('closing an ordinary tab announces nothing on the sessions channel', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+    const changed = vi.fn();
+    const sub = messageBus.on('sessions', 'changed', changed);
+
+    tm.closeTab(tm.findIndex('second'));
+    sub.unsubscribe();
+
+    expect(changed).not.toHaveBeenCalled();
+  });
 });
 
 describe('TabManager markUnread', () => {

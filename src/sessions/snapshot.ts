@@ -2,19 +2,13 @@ import type { Managers } from '../managers.js';
 import type { RemoteSessionKind } from '../protocol.js';
 import type { RemoteEntry } from '../remote/attach.js';
 import type { Tab } from '../tab/types.js';
-import { isFilesTab } from '../tab/view-guards.js';
+import { isFilesTab, isSshTab } from '../tab/view-guards.js';
 import type { SessionChannel, SessionMember, SessionSsh } from './rows.js';
 import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } from './store.js';
 
 // Reading the live world: `RemoteManager`'s channels and `TabManager`'s tabs, turned into the plain
 // snapshot `composeSessionRows` consumes and the record the store writes. Everything effectful about
 // the list is here, so the composition next door stays a pure function of data.
-
-// A plain `ssh <destination>` tab is a local PTY running the real ssh binary — recognized the way the
-// connections panel recognizes it, by the harness view's name.
-function isSshTab(tab: Tab): boolean {
-  return tab.harness?.name === 'ssh' && tab.harness.destination !== undefined;
-}
 
 // What a tab is, for the row's third column: what it *is*, matching the tab it opens or would open.
 function tabKind(tab: Tab): RemoteSessionKind {

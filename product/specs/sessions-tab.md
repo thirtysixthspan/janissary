@@ -130,7 +130,11 @@ Up and Down move between rows without wrapping; Home and End jump to the ends.
 
 The list keeps itself current: a session being launched, joined, released, parked, or losing its
 transport updates the rows as it happens, and a session is recorded as attachable the moment it has
-a workspace with something running in it — whether or not this tab is open. The header's refresh
+a workspace with something running in it — whether or not this tab is open. A plain `ssh
+<destination>` tab belongs to no session of that kind, so it is covered in its own right: opening one
+from any tab adds its row, and closing it — by hand, or because the connection ended — removes the
+row, both as they happen. This is what a docked list depends on, since it never leaves and returns to
+focus and so never re-reads on its own. The header's refresh
 button is therefore for re-reading rather than for noticing, and returning to an open tab from
 another is too: the tab re-reads when the user brings it back into focus. It opens no ssh connection. Reachability is learned only by pressing attach or terminate, so a parked row claims
 nothing about its host beyond what the record says and what the last attempt reported — a peer that

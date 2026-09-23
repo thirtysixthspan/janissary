@@ -74,6 +74,31 @@ describe('SshManager.run', () => {
     expect(managers.harness.registerSshObservers).toHaveBeenCalledWith('pty-1', 'host', 'ssh admin@host -p 2222');
   });
 
+  // The sessions list carries a row for every plain ssh tab and is composed from this manager's
+  // tabs, so opening one has to announce itself: a docked list never regains focus and so never
+  // re-reads on its own.
+  it('announces the new connection on the sessions channel', () => {
+    const { managers } = makeManagers();
+    const changed = vi.fn();
+    const sub = messageBus.on('sessions', 'changed', changed);
+
+    try {
+      new SshManager(managers).run('ssh host');
+      expect(changed).toHaveBeenCalledOnce();
+    } finally { sub.unsubscribe(); }
+  });
+
+  it('announces nothing when the invocation opened no tab', () => {
+    const { managers } = makeManagers();
+    const changed = vi.fn();
+    const sub = messageBus.on('sessions', 'changed', changed);
+
+    try {
+      new SshManager(managers).run('ssh');
+      expect(changed).not.toHaveBeenCalled();
+    } finally { sub.unsubscribe(); }
+  });
+
   it('gives a second session to the same destination its own label, so recordings cannot collide', () => {
     const { managers } = makeManagers();
     const manager = new SshManager(managers);
