@@ -5,14 +5,14 @@ import type { SessionRow } from '@shared/plugins/sessions/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { SessionList } from './SessionList';
 
-function capabilities() {
+function capabilities(dock: TabPluginClientCapabilities['dock'] = null) {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(async () => null);
   const value: TabPluginClientCapabilities = {
     resourceUrl: (reference) => reference,
     intent: async <Result,>(name: string, payload: unknown) => intent(name, payload) as Promise<Result>,
     splitAction: null,
     active: true,
-    dock: null,
+    dock,
     close: vi.fn(),
     reportFailure: vi.fn(),
   };
@@ -322,5 +322,114 @@ describe('SessionList navigation', () => {
     fireEvent.click(only);
     fireEvent.click(only);
     expect(fixture.intent).not.toHaveBeenCalled();
+  });
+});
+
+describe('SessionList docked layout', () => {
+  it.each(['left', 'right'] as const)('stacks rows without headings when docked %s', (dock) => {
+    const entry = row({ destination: 'admin@devbox', failure: 'Connection timed out' });
+    const { container } = list([entry], capabilities(dock).value);
+    expect(container.querySelector('.session-list')).toHaveClass('session-list-narrow');
+    expect(container.querySelector('.session-columns')).toBeNull();
+    const primary = container.querySelector('.session-row-primary');
+    expect(primary).toHaveTextContent('claude');
+    expect(primary).toContainElement(screen.getByLabelText('Detach claude'));
+    const secondary = container.querySelector('.session-row-secondary');
+    expect(secondary).toHaveTextContent('active');
+    expect(secondary).toHaveTextContent('devbox');
+    expect(secondary).toHaveTextContent('just now');
+    expect(secondary?.querySelector('.connection-plug')).toHaveAttribute('data-state', 'active');
+    expect(secondary?.querySelector('time')).toHaveAttribute('dateTime', new Date(entry.activity).toISOString());
+    const renderedRow = container.querySelector('.session-row');
+    expect(renderedRow).not.toHaveTextContent('harness');
+    expect(renderedRow).toHaveAttribute('title', 'admin@devbox\nharness\n/srv/ws\nConnection timed out');
+  });
+
+  it('returns to the table when placement changes back to the centre', () => {
+    const fixture = capabilities('left');
+    const entries = [row()];
+    const { container, rerender } = list(entries, fixture.value);
+    rerender(<SessionList payload={{ entries }} capabilities={{ ...fixture.value, dock: null }} />);
+    expect(container.querySelector('.session-list')).not.toHaveClass('session-list-narrow');
+    expect(container.querySelectorAll(':scope .session-columns span')).toHaveLength(6);
+    expect(container.querySelector('.session-row-kind')).toHaveTextContent('harness');
+    expect(container.querySelector('.session-row-primary')).toBeNull();
+  });
+
+  it('keeps all three actions visible on a parked row after a failed attempt', () => {
+    list([row({
+      state: 'detached', actions: ['attach', 'terminate', 'forget'], failure: 'Connection timed out',
+    })], capabilities('left').value);
+    expect(screen.getByLabelText('Attach claude')).toBeEnabled();
+    expect(screen.getByLabelText('Terminate claude')).toBeEnabled();
+    expect(screen.getByLabelText('Forget session claude')).toBeEnabled();
+    expect(screen.queryByLabelText('Detach claude')).not.toBeInTheDocument();
+  });
+
+  it('keeps detach disabled while provisioning', () => {
+    list([row({ state: 'provisioning' })], capabilities('left').value);
+    expect(screen.getByLabelText('Detach claude')).toBeDisabled();
+  });
+
+  it('keeps attach and terminate disabled during termination', () => {
+    list([row({
+      state: 'detached', actions: ['attach', 'terminate', 'forget'], terminating: true,
+    })], capabilities('left').value);
+    expect(screen.getByLabelText('Attach claude')).toBeDisabled();
+    expect(screen.getByLabelText('Terminate claude')).toBeDisabled();
+    expect(screen.getByLabelText('Forget session claude')).toBeEnabled();
+  });
+
+  it('keeps the empty message without headings', () => {
+    const { container } = list([], capabilities('left').value);
+    expect(screen.getByText('No remote sessions')).toBeInTheDocument();
+    expect(container.querySelector('.session-columns')).toBeNull();
+  });
+
+  it('marks joined rows and keeps their host and close action', () => {
+    const { container } = list([row({ joined: true, actions: ['focus', 'close'] })], capabilities('left').value);
+    expect(container.querySelector('.session-row')).toHaveClass('joined');
+    expect(container.querySelector('.session-row-secondary')).toHaveTextContent('devbox');
+    expect(screen.getByLabelText('Close claude')).toBeEnabled();
+  });
+
+  it.each([null, 'left'] as const)('uses the same keyboard and second-click gestures at %s placement', (dock) => {
+    const fixture = capabilities(dock);
+    const { container } = list([
+      row({ id: 'a' }), row({ id: 'b', state: 'detached', actions: ['attach'] }),
+    ], fixture.value);
+    const node = container.querySelector('.session-list')!;
+    const rows = container.querySelectorAll('.session-row');
+    fireEvent.keyDown(node, { key: 'ArrowDown' });
+    fireEvent.keyDown(node, { key: 'ArrowDown' });
+    expect(rows[1]).toHaveClass('selected');
+    fireEvent.keyDown(node, { key: 'Enter' });
+    expect(fixture.intent).toHaveBeenLastCalledWith('attach', { id: 'b' });
+    fireEvent.keyDown(node, { key: 'Home' });
+    fireEvent.keyDown(node, { key: 'ArrowUp' });
+    expect(rows[0]).toHaveClass('selected');
+    fireEvent.keyDown(node, { key: 'End' });
+    expect(rows[1]).toHaveClass('selected');
+    fireEvent.keyDown(node, { key: 'ArrowUp' });
+    expect(rows[0]).toHaveClass('selected');
+    fixture.intent.mockClear();
+    fireEvent.click(rows[0]);
+    expect(fixture.intent).not.toHaveBeenCalled();
+    fireEvent.click(rows[0]);
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('focus', { id: 'a' });
+  });
+
+  it('refreshes and confirms detach from the docked controls', () => {
+    const fixture = capabilities('left');
+    const { container } = list([row()], fixture.value);
+    expect(container.querySelectorAll(':scope .session-list-header button')).toHaveLength(1);
+    fireEvent.click(screen.getByLabelText('Refresh'));
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('refresh', {});
+    fixture.intent.mockClear();
+    fireEvent.click(screen.getByLabelText('Detach claude'));
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Detach claude on devbox?');
+    expect(fixture.intent).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Detach', { selector: '.modal-button' }));
+    expect(fixture.intent).toHaveBeenCalledExactlyOnceWith('detach', { id: 'claude' });
   });
 });

@@ -26,7 +26,7 @@ itself by grouping, not by a row of its own.
 
 An empty list reads `No remote sessions`.
 
-The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. This layout applies even when Sessions is the first plugin opened.
+The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. A docked list carries Refresh alone because docked tabs have no split control. This layout applies even when Sessions is the first plugin opened.
 
 When there are no remote sessions, the tab shows only its `No remote sessions` empty-state message; it omits the table headings because there are no rows for them to describe.
 
@@ -40,6 +40,8 @@ opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
 Both headings and rows have 12px horizontal padding.
+
+The list has two renderings of the same data: the table above appears in the centre area, while a docked list stacks each session onto two lines with no column headings. The first line holds the tab's name and its right-aligned actions; the second holds the plug and state word, host, and relative last activity. The type appears in the row's tooltip in both renderings. Joined rows indent the whole block by 16px, and a hairline separates blocks. The secondary line wraps between whole fields as the sidebar narrows, keeping the plug with its state word. A field wider than the available line ellipsizes; the tooltip retains the full destination. The tab name also ellipsizes so its actions stay visible on the first line. Placement selects the rendering at every sidebar width; a narrow centre pane still shows the table.
 
 The state is one of `provisioning` (a remote tab whose workspace clone has not landed yet), `active`,
 `reconnecting` (the tabs are open, the transport is gone, and janissary is already retrying),

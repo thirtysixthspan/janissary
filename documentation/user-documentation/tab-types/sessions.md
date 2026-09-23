@@ -10,7 +10,7 @@ sessions
 
 <img class="agent-float" src="/agents/cavus-south-east.png" alt="" />
 
-`sessions` opens the list, or focuses it if it's already open — there's only ever one. `sessions left` and `sessions right` dock it into that sidebar; a bare `sessions` on a docked list returns it to the center. Any other argument shows `Usage: sessions [left|right]`. See [Tabs](/user-documentation/getting-started/tabs) for more on docking.
+`sessions` opens the list, or focuses it if it's already open — there's only ever one. `sessions left` and `sessions right` dock it into that sidebar; a bare `sessions` on a docked list returns it to the center. A docked list stacks each session onto two lines so it reads in a narrow sidebar. Any other argument shows `Usage: sessions [left|right]`. See [Tabs](/user-documentation/getting-started/tabs) for more on docking.
 
 ## What's in the list
 
