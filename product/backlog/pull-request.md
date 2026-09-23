@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Open the notification record with a non-blocking flag so a FIFO placed at its path cannot hang the server.
-
-Existing Issue: The record writer validates the opened descriptor only after opening the record path with blocking flags, so if a named pipe is placed at `.janissary/notifications.json` the single-threaded server blocks forever inside `openSync` on the next notification or `notifications clear`. Severity: 7/10
-
-Existing Risk: 7/10 - A less-trusted process able to write into the project's `.janissary` directory — the same attacker the PR's own record-symlink fix treats as in scope — can freeze the entire application at the next notification: every client, command, and terminal stalls until the process is killed from outside.
-
-Proposal Risk: 2/10 - Recording is refused (and silently abandoned for the run) whenever the record path is not a regular file, which is already the shipped posture for symlinks; the only new hazard is a workspace layout that genuinely relies on a special file at that path, which no supported one does.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: never block opening the notification record path". In src/notifications/record.ts's `writeRecord`, add `constants.O_NONBLOCK` to the flags of the `openSync` call shared by the append and truncate arms: a FIFO with no reader then fails the open immediately (ENXIO) and is swallowed by the existing abandonment handling, one with a reader opens instantly and is rejected by the existing `fstatSync(descriptor).isFile()` check before any write happens, and regular files behave exactly as before. Add a case in src/notifications/record.test.ts that creates a FIFO at the record path (shell out to the `mkfifo` utility, since node:fs has no mkfifo), runs `appendNotificationRecord` and `clearNotificationRecord`, and asserts neither hangs nor changes the FIFO; keep the existing symlink-refusal, failure-abandonment, truncation, and no-project-directory cases passing untouched. The queue, feed, and toast paths do not change.
-
-
 * Bring the user documentation's notifications pages in line with the queue, toast, and record behavior this change introduces.
 
 Existing Issue: The user-facing documentation still teaches the retired behavior — a notification with no feed open opens the feed in the right sidebar, closing and reopening starts over empty, nothing earlier is filled in, and diagnostics open the feed when it is down — and never mentions toasts, burst escalation, `notifications clear`, or the `.janissary/notifications.json` record, across the notifications page, the command-bar reference, and the opening-files page of the documentation site. Severity: 4/10

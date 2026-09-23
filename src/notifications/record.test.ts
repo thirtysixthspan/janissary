@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { RecordedNotification } from './queue.js';
@@ -92,6 +93,15 @@ describe('notification record', () => {
     clearNotificationRecord();
 
     expect(readFileSync(target, 'utf8')).toBe('keep this');
+  });
+
+  it('does not hang when a FIFO sits at the record path', () => {
+    execFileSync('mkfifo', [notificationRecordPath()]);
+
+    expect(() => { appendNotificationRecord(notification()); }).not.toThrow();
+    expect(() => { clearNotificationRecord(); }).not.toThrow();
+
+    expect(lstatSync(notificationRecordPath()).isFIFO()).toBe(true);
   });
 
   it('does not initialize the record through a symlinked state directory', () => {

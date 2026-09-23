@@ -40,7 +40,7 @@ function isSafeDirectory(dir: string): boolean {
 
 function writeRecord(contents: string, append: boolean): void {
   if (!isSafeDirectory(path.dirname(recordPath))) throw new Error('Unsafe notification record directory');
-  const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_NOFOLLOW
+  const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_NOFOLLOW | constants.O_NONBLOCK
     | (append ? constants.O_APPEND : constants.O_TRUNC);
   const descriptor = openSync(recordPath, flags, 0o666);
   try {
