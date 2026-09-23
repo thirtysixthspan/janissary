@@ -319,8 +319,8 @@ html, body, #root {
 
 /* Transient notification toasts, upper-right corner of the window. `position: fixed` so the stack
    is viewport-anchored and floats over the right sidebar when one is open — `.app` sets no
-   transform or filter, so nothing re-parents a fixed descendant. It starts below `.connection-status`
-   and `.status-panels`, which already own that corner, rather than over them. */
+   transform or filter, so nothing re-parents a fixed descendant. Its measured top follows the
+   visible connection indicator and status panels. */
 .toast-stack {
   position: fixed; top: 40px; right: 10px; z-index: 60;
   display: flex; flex-direction: column; gap: 6px; align-items: flex-end;

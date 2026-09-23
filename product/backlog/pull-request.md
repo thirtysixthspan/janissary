@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Place toasts below floating status panels as the plan promises.
-
-Existing Issue: `.toast-stack` starts at a fixed 40px from the viewport top with a higher stacking level than `.status-panels`, whose connection and schedule rows can extend below that point, so a toast covers those panels. Severity: 5/10
-
-Existing Risk: 5/10 - Active connection controls or schedule details can be obscured by a toast at the moment the user needs them, contradicting the promised corner layout.
-
-Proposal Risk: 2/10 - A measured offset or shared layout slot can shift the toast when panels change height, but may leave extra corner space during transitions.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1169: position toasts below status panels". Coordinate `web/src/toasts/ToastStack.tsx`, `web/src/AppShell.tsx`, the active `StatusPanels` rendering path under `web/src/shared/status-windows/`, and `web/src/theme.css` so the stack's top edge follows the actual bottom of visible connection and schedule panels as well as the connection indicator, instead of assuming a 40px height. Cover a panel with several rows and both panels visible in a layout test or browser check, while retaining the existing fixed upper-right placement and toast timing tests.
-
-
 * Remove pending toasts when the user opens the notifications feed manually.
 
 Existing Issue: The `notifications` command can make the feed visible while earlier toasts remain on screen, because only burst escalation, toast-click reveal, and clear emit the toast-clear event. Severity: 5/10

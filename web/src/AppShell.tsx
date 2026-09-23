@@ -7,6 +7,7 @@ import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-han
 import { useConnectionStatus } from './useConnectionStatus';
 import { ConnectionStatusLabel } from './ConnectionStatusLabel';
 import { ToastStack } from './toasts/ToastStack';
+import { useToastPosition } from './toasts/useToastPosition';
 
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
@@ -37,6 +38,7 @@ export function AppShell({
   const [leftNotificationsVisible, setLeftNotificationsVisible] = useState(false);
   const [rightNotificationsVisible, setRightNotificationsVisible] = useState(false);
   const feedVisible = notificationsVisible || leftNotificationsVisible || rightNotificationsVisible;
+  const toastTop = useToastPosition();
   return (
     <div className="app">
       <Sidebar
@@ -55,7 +57,7 @@ export function AppShell({
         onNotificationsVisibilityChange={setRightNotificationsVisible}
       />
       <DefaultContextMenu client={client} />
-      <ToastStack client={client} notificationsVisible={feedVisible} />
+      <ToastStack client={client} notificationsVisible={feedVisible} top={toastTop} />
     </div>
   );
 }

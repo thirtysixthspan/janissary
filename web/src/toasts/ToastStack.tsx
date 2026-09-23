@@ -8,11 +8,15 @@ import { useToasts } from './useToasts';
 //
 // A click asks the server to make the feed visible; the server answers by docking it in and
 // clearing the corner, so this component does not empty the stack itself.
-export function ToastStack({ client, notificationsVisible }: { client: JanusClient; notificationsVisible: boolean }) {
+export function ToastStack({ client, notificationsVisible, top }: {
+  client: JanusClient;
+  notificationsVisible: boolean;
+  top?: number;
+}) {
   const { toasts, hold, release } = useToasts(client, notificationsVisible);
   if (toasts.length === 0) return null;
   return (
-    <div className="toast-stack">
+    <div className="toast-stack" style={{ top: top ?? 40 }}>
       {toasts.map((toast) => (
         <button
           type="button"
