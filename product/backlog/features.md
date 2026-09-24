@@ -2,8 +2,6 @@
 
 ## ready
 
-* when trying the launch a new harness/agent, a harness/agent with the same name that already exists either in the sessions table, on the remote machine running or on the remote machine running but not cleaned up, should report an informative error into the notifications tab and prevent a new harness/agent from launching.  
-
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
