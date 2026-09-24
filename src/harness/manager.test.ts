@@ -4,6 +4,7 @@ import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture-file.js';
 import { notify } from '../notifications/index.js';
+import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
@@ -1260,6 +1261,36 @@ describe('HarnessManager launch-name clashes', () => {
     expect(manager.run('harness claude as foo --no-workspace')).toBeUndefined();
 
     expect(tabs.at(-1)?.label).toBe('foo');
+  });
+
+  it('refuses a `-w` label that climbs out of the workspace base before any cleanup or clone', () => {
+    const { managers, tabs } = withTabs([]);
+    const create = vi.fn();
+    (managers.workspace as unknown as { create: typeof create }).create = create;
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as ../victim -w')).toBeUndefined();
+    expect(manager.openFromProfile({ name: '../victim', tool: 'claude', workspace: true }, '../victim', 2, '#fff', 'janus'))
+      .toBe('launch refused — see notifications');
+
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', expect.stringMatching(
+      /^Cannot launch "\.\.\/victim": a workspace name must be a single folder name/));
+    expect(isWorkspaceRunning).not.toHaveBeenCalled();
+    expect(hasLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('keeps a slash-bearing label for a launch that makes no workspace', () => {
+    const { managers, tabs } = withTabs([]);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as a/b --no-workspace')).toBeUndefined();
+
+    expect(tabs.at(-1)?.label).toBe('a/b');
+    expect(notify).not.toHaveBeenCalledWith(managers, 'launch-refused', expect.anything(), expect.anything());
   });
 
   it('refuses a profile entry whose name a detached row holds, as a skip', () => {

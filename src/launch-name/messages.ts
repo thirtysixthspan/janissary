@@ -23,6 +23,11 @@ export function localRunningRefusal(name: string, path: string): string {
   return `Cannot launch "${name}": "${name}" is already running (${path}).`;
 }
 
+// A name that cannot become a workspace folder at all; `reason` is `workspaceLabelError`'s answer.
+export function invalidNameRefusal(name: string, reason: string): string {
+  return `Cannot launch "${name}": ${reason}.`;
+}
+
 export function checkUnansweredRefusal(name: string, host: string, reason: string): string {
   return `Cannot launch "${name}": could not check ${host} for an existing "${name}" — ${stripStop(reason)}.`;
 }

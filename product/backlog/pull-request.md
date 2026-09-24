@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Confine launch labels before automatic leftover cleanup can remove a directory outside the workspace base.
-
-Existing Issue: The new cleanup passes a typed harness label or a remote provision frame's label directly into `workspacePath` and then recursively removes the resulting path, while those inputs can contain `..` and path separators. Severity: 10/10
-
-Existing Risk: 10/10 - A launch such as a `-w` harness with a traversal label can delete an existing project directory or other data outside `.janissary/workspace` before cloning fails.
-
-Proposal Risk: 2/10 - A shared containment check guards the deletion paths, though future workspace operations still need to use that guard consistently.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1175: confine launch labels before leftover cleanup". Validate or safely resolve each label as one workspace child before any existence check or removal in `src/launch-name/leftover.ts` and `src/launch-name/local.ts`, and reject invalid labels at `src/remote/frame-decode.ts` or `src/remote/serve-provision.ts` before they reach that helper; preserve ordinary display labels where no workspace path is created. Ensure both the command path in `src/harness/command-parse.ts` and profile harness names in `src/profile/entry-openers.ts` reach the same guard, and have invalid local launches report a refusal without deleting or cloning. Add cases in `src/launch-name/leftover.test.ts`, `src/harness/manager.test.ts`, and `src/remote/serve.test.ts` that place a sentinel outside the workspace base and verify traversal labels cannot remove it; keep the existing ordinary-leftover tests passing.
-
-
 * Preserve a live remote workspace when its requested label differs only by case.
 
 Existing Issue: The local collision check compares labels without case, but `hasLivePeer` in the remote workspace check compares the recorded label with strict equality before removing a folder that appears to be leftover. Severity: 9/10

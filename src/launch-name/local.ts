@@ -1,9 +1,10 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { workspacePath } from '../workspace/index.js';
+import { workspaceLabelError } from '../workspace/label.js';
 import { checkLaunchName } from './check.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from './leftover.js';
-import { cleanedNotice, localRunningRefusal, removalFailedRefusal } from './messages.js';
+import { cleanedNotice, invalidNameRefusal, localRunningRefusal, removalFailedRefusal } from './messages.js';
 
 // The local half of the launch-name check: read the open tabs and the sessions rows, run the pure
 // check, and — for a `-w` launch — clear a leftover workspace folder before the clone would land on
@@ -25,6 +26,15 @@ export type LocalLaunchName = {
   skip?: readonly string[];
 };
 
+// The refusal for an explicit `-w` name that cannot become one workspace folder, checked before
+// anything reads or removes a path built from it. A default name is drawn from a fixed set of safe
+// names, and a launch without `-w` builds no path, so either keeps any label it likes.
+function invalidWorkspaceName(request: LocalLaunchName): string | undefined {
+  if (!request.workspace || !request.explicit) return undefined;
+  const reason = workspaceLabelError(request.name);
+  return reason === undefined ? undefined : invalidNameRefusal(request.name, reason);
+}
+
 function runningCheck(managers: Managers, workspace: boolean): ((name: string) => string | undefined) | undefined {
   if (!workspace) return undefined;
   const tabUses = (dir: string) => managers.tab.tabs.some((tab) => tab.workspaceDir === dir);
@@ -36,6 +46,11 @@ function runningCheck(managers: Managers, workspace: boolean): ((name: string) =
  * posted). A `-w` launch's leftover folder is removed and announced here, before the caller clones.
  */
 export function resolveLocalLaunchName(managers: Managers, request: LocalLaunchName): string | undefined {
+  const invalid = invalidWorkspaceName(request);
+  if (invalid !== undefined) {
+    notify(managers, 'launch-refused', request.creator, invalid);
+    return undefined;
+  }
   const result = checkLaunchName({
     name: request.name,
     explicit: request.explicit,

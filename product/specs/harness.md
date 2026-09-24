@@ -137,6 +137,13 @@ it. The removal is announced as `Removed leftover workspace "<label>" (<path>) b
 `Cannot launch "<label>": could not remove leftover workspace "<label>" (<path>) — <reason>.`, closing
 a remote placeholder at once.
 
+A workspace launch's label must be a single folder name: not empty, not `.` or `..`, and without `/`
+or `\`. A local `-w` launch (typed `as <label>` or a profile entry's `name`) with any other label is
+refused before any leftover check, removal, or clone, with
+`Cannot launch "<label>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`
+posted to the notifications feed. For `on <address>` the host refuses it the same way, and the
+placeholder shows that line as its workspace error. A launch without a workspace keeps any label.
+
 Sessions-tab Attach and `--relaunch` restore bring back an existing session rather than launching a
 new one, so they keep disambiguating with `-2`, `-3`, ….
 

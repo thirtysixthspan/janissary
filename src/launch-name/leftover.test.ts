@@ -83,6 +83,18 @@ describe('removeLeftoverWorkspace', () => {
     expect(removeLeftoverWorkspace('foo')).toBeUndefined();
   });
 
+  it('refuses a label that climbs out of the workspace base, leaving the folder there intact', () => {
+    const sentinel = path.join(root, '.janissary', 'sentinel');
+    mkdirSync(sentinel, { recursive: true });
+    writeFileSync(path.join(sentinel, 'keep.txt'), 'keep');
+    mkdirSync(workspacePath('foo'), { recursive: true });
+
+    expect(hasLeftoverWorkspace('../sentinel')).toBe(false);
+    expect(removeLeftoverWorkspace('../sentinel')).toMatch(/single folder name/);
+    expect(removeLeftoverWorkspace('foo/../../sentinel')).toMatch(/single folder name/);
+    expect(existsSync(path.join(sentinel, 'keep.txt'))).toBe(true);
+  });
+
   it('returns the error text when the removal fails', () => {
     mkdirSync(path.join(workspacePath('foo'), 'nested'), { recursive: true });
     chmodSync(path.join(root, '.janissary', 'workspace'), 0o500);

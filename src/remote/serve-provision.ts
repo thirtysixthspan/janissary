@@ -3,7 +3,9 @@ import { setGitIdentity, type GitIdentity } from '../git/identity.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { workspacePath } from '../workspace/index.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
+import { workspaceLabelError } from '../workspace/label.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
+import { invalidNameRefusal } from '../launch-name/messages.js';
 import { errorText } from '../error-text.js';
 import type { ServerFrame } from './protocol.js';
 import { RemoteProcesses } from './serve-processes.js';
@@ -37,7 +39,8 @@ export type ProvisionContext = {
  * Check the label, then clone the project root's `origin` into `.janissary/workspace/<label>` under
  * this root, using the very same `WorkspaceManager` the local server uses for a `-w` launch.
  *
- * A label with a live owner on this host is refused with `name-in-use` and nothing is provisioned. A
+ * A label that cannot name one folder under the workspace base is answered with `workspace-failed`
+ * before any path is built from it. A label with a live owner on this host is refused with `name-in-use` and nothing is provisioned. A
  * leftover folder under it with nothing running is removed first — a failed removal is refused the
  * same way, carrying the path and the reason — and a successful one is reported on `workspace-ready`.
  * The label goes into this peer's record before the clone starts, so a second provision of it on
@@ -48,6 +51,8 @@ export async function provisionRemoteWorkspace(
 ): Promise<void> {
   const { emit, workspaces } = context;
   if (!context.idle()) return;
+  const invalid = workspaceLabelError(label);
+  if (invalid !== undefined) { emit({ type: 'workspace-failed', message: invalidNameRefusal(label, invalid) }); return; }
   if (isWorkspaceRunning(label, () => false)) { emit({ type: 'name-in-use', label }); return; }
   const leftover = hasLeftoverWorkspace(label) ? workspacePath(label) : undefined;
   const failure = removeLeftoverWorkspace(label);

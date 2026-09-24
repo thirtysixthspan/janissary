@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { isOwnInstanceAlive, isPidAlive, readLockPid } from '../instance-lock.js';
 import { untrustWorkspace, workspacePath } from '../workspace/index.js';
+import { workspaceLabelError } from '../workspace/label.js';
 import { errorText } from '../error-text.js';
 
 // A workspace folder named after a launch's label, and whether anything still owns it. Shared by the
@@ -55,9 +56,13 @@ export function isWorkspaceRunning(label: string, tabUses: (dir: string) => bool
  * Remove a leftover workspace folder named `label` and its `.tmp` sibling, even with uncommitted
  * work in it. Returns the error text when the removal fails, and undefined on success — including
  * when there was nothing to remove. Unlike `removeWorkspace`, which swallows every error, a failure
- * here is reported: the launch it would have cleared the way for is refused instead.
+ * here is reported: the launch it would have cleared the way for is refused instead. A label that
+ * cannot name one folder under the workspace base is refused the same way, before anything is
+ * touched, so no caller can reach outside the base through this.
  */
 export function removeLeftoverWorkspace(label: string): string | undefined {
+  const invalid = workspaceLabelError(label);
+  if (invalid !== undefined) return invalid;
   const dir = workspacePath(label);
   const scratch = `${dir}.tmp`;
   try {
@@ -70,7 +75,7 @@ export function removeLeftoverWorkspace(label: string): string | undefined {
   return undefined;
 }
 
-// Whether a leftover folder is there to remove at all.
+// Whether a leftover folder is there to remove at all. Never for a label outside the workspace base.
 export function hasLeftoverWorkspace(label: string): boolean {
-  return existsSync(workspacePath(label));
+  return workspaceLabelError(label) === undefined && existsSync(workspacePath(label));
 }

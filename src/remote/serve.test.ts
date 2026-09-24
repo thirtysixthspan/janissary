@@ -499,6 +499,24 @@ describe('RemoteServer provision — label check', () => {
     }
   });
 
+  it('refuses a label that climbs out of the workspace base, leaving the folder there intact', async () => {
+    const sentinel = path.join(repoDir, '.janissary', 'sentinel');
+    mkdirSync(sentinel, { recursive: true });
+    writeFileSync(path.join(sentinel, 'keep.txt'), 'keep');
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: '../sentinel' })}\n`);
+      await vi.waitFor(() => expect(frames).toHaveLength(1));
+      expect(frames[0]).toMatchObject({
+        type: 'workspace-failed',
+        message: expect.stringMatching(/^Cannot launch "\.\.\/sentinel": a workspace name must be a single folder name/),
+      });
+      expect(existsSync(path.join(sentinel, 'keep.txt'))).toBe(true);
+    } finally {
+      rmSync(sentinel, { recursive: true, force: true });
+    }
+  });
+
   it('writes the label into the peer record before it clones', async () => {
     const order: string[] = [];
     await provisionRemoteWorkspace({

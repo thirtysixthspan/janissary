@@ -195,3 +195,8 @@ Workspace directories are ephemeral:
   feed, and the clone goes ahead. A removal that fails refuses the launch with
   `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.`. A
   remote launch gets the same treatment on the remote host (see [[remote-server]]).
+- **Workspace names**: A `-w` launch's name becomes a folder directly under the workspace base, so
+  a typed name or a profile entry's name must be a single folder name: not empty, not `.` or `..`,
+  and without `/` or `\`. Any other name is refused before anything is checked, removed, or cloned,
+  with `Cannot launch "<name>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`
+  posted to the notifications feed. A launch without a workspace keeps any label.
