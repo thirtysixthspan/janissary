@@ -191,11 +191,16 @@ Workspace directories are ephemeral:
   inside it — the launch is refused for a typed name, or moves on to the next free name for a
   default one. A name that differs from the owner's only by case counts as held too, since a
   case-insensitive filesystem gives both one folder. A plain shell sitting in the folder does not
-  count as an owner. If nothing holds it,
+  count as an owner. If nothing holds it but the project has no git repository or no `origin`
+  remote, the folder is left alone and the launch fails with its usual workspace error, since it
+  could never have cloned. Otherwise
   the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them,
   `Removed leftover workspace "<name>" (<path>) before launching.` is posted to the notifications
-  feed, and the clone goes ahead. A removal that fails refuses the launch with
-  `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.`. A
+  feed, and the clone goes ahead. A cleanup that fails — including a failure to update the Claude
+  trust file, which is tried first and leaves the folder untouched — refuses the launch with
+  `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.` and
+  posts no removal notice. A removal that fails partway leaves whatever it could not remove in
+  place, and the next launch under that name treats it as a leftover again. A
   remote launch gets the same treatment on the remote host (see [[remote-server]]).
 - **Workspace names**: A `-w` launch's name becomes a folder directly under the workspace base, so
   a typed name or a profile entry's name must be a single folder name: not empty, not `.` or `..`,

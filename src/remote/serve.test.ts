@@ -502,6 +502,23 @@ describe('RemoteServer provision — label check', () => {
     server.shutdown(0);
   });
 
+  it('keeps a leftover and answers workspace-failed when the root has lost its origin remote', async () => {
+    const leftover = path.join(workspaceBase(), 'originless-label');
+    mkdirSync(leftover, { recursive: true });
+    writeFileSync(path.join(leftover, 'uncommitted.txt'), 'stale work');
+    execSync('git remote remove origin', { cwd: repoDir, stdio: 'pipe' });
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'originless-label' })}\n`);
+      await vi.waitFor(() => expect(frames).toHaveLength(1));
+      expect(frames[0]).toMatchObject({ type: 'workspace-failed', message: expect.stringMatching(/^Failed to create workspace:/) });
+      expect(existsSync(path.join(leftover, 'uncommitted.txt'))).toBe(true);
+    } finally {
+      execSync(`git remote add origin "${path.join(tmpDir, 'origin.git')}"`, { cwd: repoDir, stdio: 'pipe' });
+      rmSync(leftover, { recursive: true, force: true });
+    }
+  });
+
   it('answers name-in-use with the path and reason when a leftover cannot be removed', async () => {
     const leftover = path.join(workspaceBase(), 'stuck-label');
     mkdirSync(path.join(leftover, 'nested'), { recursive: true });

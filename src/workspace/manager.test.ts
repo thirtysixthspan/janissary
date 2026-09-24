@@ -31,6 +31,27 @@ describe('WorkspaceManager', () => {
     removeWorkspaceMock.mockReset();
   });
 
+  describe('preflight', () => {
+    it('is undefined for a repo with an origin remote, and starts no clone', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      expect(new WorkspaceManager().preflight()).toBeUndefined();
+      expect(provisionWorkspaceMock).not.toHaveBeenCalled();
+    });
+
+    it('returns the error create would for a missing repo', () => {
+      findRepoRootMock.mockReturnValue(undefined);
+      expect(new WorkspaceManager().preflight()).toBe('No git repository found. Cannot create workspace.');
+    });
+
+    it('returns the error create would for a missing origin remote', () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockImplementation(() => { throw new Error('no origin remote'); });
+      expect(new WorkspaceManager().preflight()).toBe('Failed to create workspace: no origin remote');
+      expect(provisionWorkspaceMock).not.toHaveBeenCalled();
+    });
+  });
+
   describe('create', () => {
     it('returns an error when no repo is found', () => {
       findRepoRootMock.mockReturnValue(undefined);

@@ -58,9 +58,11 @@ export function isWorkspaceRunning(label: string, tabUses: (dir: string) => bool
  * Remove a leftover workspace folder named `label` and its `.tmp` sibling, even with uncommitted
  * work in it. Returns the error text when the removal fails, and undefined on success — including
  * when there was nothing to remove. Unlike `removeWorkspace`, which swallows every error, a failure
- * here is reported: the launch it would have cleared the way for is refused instead. A label that
- * cannot name one folder under the workspace base is refused the same way, before anything is
- * touched, so no caller can reach outside the base through this.
+ * here is reported: the launch it would have cleared the way for is refused instead. The trust
+ * entry goes first, so a failed trust-file write leaves the folder untouched; a removal that fails
+ * partway leaves the rest in place for the next launch to try again. A label that cannot name one
+ * folder under the workspace base is refused the same way, before anything is touched, so no caller
+ * can reach outside the base through this.
  */
 export function removeLeftoverWorkspace(label: string): string | undefined {
   const invalid = workspaceLabelError(label);
@@ -68,12 +70,12 @@ export function removeLeftoverWorkspace(label: string): string | undefined {
   const dir = workspacePath(label);
   const scratch = `${dir}.tmp`;
   try {
+    untrustWorkspace(dir);
     if (existsSync(dir)) rmSync(dir, { recursive: true });
     if (existsSync(scratch)) rmSync(scratch, { recursive: true });
   } catch (error) {
     return errorText(error);
   }
-  untrustWorkspace(dir);
   return undefined;
 }
 

@@ -54,7 +54,7 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
       activeTab: 0,
       placeProfileTabs: vi.fn(),
     },
-    workspace: { create: vi.fn() },
+    workspace: { create: vi.fn(), preflight: vi.fn((): string | undefined => undefined) },
     openFile: { edit: vi.fn() },
     monitor: { snapshot: vi.fn(() => []) },
     sessions: { view: vi.fn(() => []) },
@@ -429,6 +429,20 @@ describe('ProfileManager.newAgent — launch-name clashes', () => {
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
       'Cannot launch "bob": could not remove leftover workspace "bob" (/proj/.janissary/workspace/bob) — EACCES: permission denied.');
     expect(managers.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('keeps a -w leftover when the project has no origin to clone, reporting the create error as before', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    leftover.hasLeftoverWorkspace.mockReturnValue(true);
+    vi.mocked(managers.workspace.preflight).mockReturnValue('Failed to create workspace: no origin remote');
+    vi.mocked(managers.workspace.create).mockReturnValue({ error: 'Failed to create workspace: no origin remote' });
+
+    new ProfileManager(managers).newAgent('agent bob -w');
+
+    expect(leftover.removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(mocks.notify).not.toHaveBeenCalled();
+    expect(appended).toEqual([{ input: 'agent bob -w', output: 'Failed to create workspace: no origin remote' }]);
   });
 
   it('leaves the leftover step out of a launch without -w', () => {

@@ -93,7 +93,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
       input: vi.fn(),
     },
-    workspace: { create: () => ({ dir: '/workspace/claude' }) },
+    workspace: { create: () => ({ dir: '/workspace/claude' }), preflight: vi.fn() },
     openFile: { edit },
     schedule: { set: scheduleSet },
     sessions: { view: vi.fn(() => []), recordForProcess: vi.fn() },
@@ -1280,6 +1280,20 @@ describe('HarnessManager launch-name clashes', () => {
     expect(hasLeftoverWorkspace).not.toHaveBeenCalled();
     expect(removeLeftoverWorkspace).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('keeps a -w leftover when the project has no origin to clone, reporting the create error as before', () => {
+    const { managers, tabs } = withTabs([]);
+    const error = 'Failed to create workspace: no origin remote';
+    Object.assign(managers.workspace, { preflight: () => error, create: () => ({ error }) });
+    vi.mocked(hasLeftoverWorkspace).mockReturnValueOnce(true);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as bob -w')).toBe(error);
+
+    expect(removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
     expect(tabs.map((t) => t.label)).toEqual(['janus']);
   });
 

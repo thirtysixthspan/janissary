@@ -44,7 +44,8 @@ export type ProvisionContext = {
  * leftover folder under it with nothing running is removed first — a failed removal is refused the
  * same way, carrying the path and the reason — and a successful one is reported on `workspace-ready`.
  * The label goes into this peer's record before the clone starts, so a second provision of it on
- * this host from here on sees it running.
+ * this host from here on sees it running. A leftover is only removed once the clone's repository and
+ * `origin` check passes; otherwise the failure is answered and the leftover kept.
  */
 export async function provisionRemoteWorkspace(
   context: ProvisionContext, label: string, forwarded: ProjectTokens, identity: GitIdentity,
@@ -55,6 +56,8 @@ export async function provisionRemoteWorkspace(
   if (invalid !== undefined) { emit({ type: 'workspace-failed', message: invalidNameRefusal(label, invalid) }); return; }
   if (isWorkspaceRunning(label, () => false)) { emit({ type: 'name-in-use', label }); return; }
   const leftover = hasLeftoverWorkspace(label) ? workspacePath(label) : undefined;
+  const blocked = leftover === undefined ? undefined : workspaces.preflight();
+  if (blocked !== undefined) { emit({ type: 'workspace-failed', message: blocked }); return; }
   const failure = removeLeftoverWorkspace(label);
   if (failure !== undefined) { emit({ type: 'name-in-use', label, path: workspacePath(label), reason: failure }); return; }
   context.peer?.setLabel(label);

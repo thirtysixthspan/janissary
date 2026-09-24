@@ -70,9 +70,11 @@ export function resolveLocalLaunchName(managers: Managers, request: LocalLaunchN
 }
 
 // Remove a leftover folder under `name`, if there is one. False once a failed removal has been
-// posted as the launch's refusal.
+// posted as the launch's refusal. A launch that cannot clone keeps the leftover and goes on, so the
+// caller's `create` fails with the same error it always has and nothing was lost for it.
 function clearLeftover(managers: Managers, creator: string, name: string): boolean {
   if (!hasLeftoverWorkspace(name)) return true;
+  if (managers.workspace.preflight() !== undefined) return true;
   const dir = workspacePath(name);
   const failure = removeLeftoverWorkspace(name);
   if (failure !== undefined) {

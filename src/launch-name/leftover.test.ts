@@ -1,9 +1,17 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
+import type * as Workspace from '../workspace/index.js';
+import { initWorkspaceDir, untrustWorkspace, workspacePath } from '../workspace/index.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from './leftover.js';
+
+// The trust-file update is stubbed so no test reaches the real home directory's Claude config, and
+// so one test can make it fail.
+vi.mock('../workspace/index.js', async (importOriginal) => ({
+  ...await importOriginal<typeof Workspace>(),
+  untrustWorkspace: vi.fn(),
+}));
 
 // A pid far above any real one, so the liveness probe answers "dead".
 const DEAD_PID = 99_999_999;
@@ -98,6 +106,15 @@ describe('removeLeftoverWorkspace', () => {
     expect(removeLeftoverWorkspace('../sentinel')).toMatch(/single folder name/);
     expect(removeLeftoverWorkspace('foo/../../sentinel')).toMatch(/single folder name/);
     expect(existsSync(path.join(sentinel, 'keep.txt'))).toBe(true);
+  });
+
+  it('returns the trust-file error and leaves the folder untouched when untrusting fails', () => {
+    mkdirSync(workspacePath('foo'), { recursive: true });
+    writeFileSync(path.join(workspacePath('foo'), 'uncommitted.txt'), 'work');
+    vi.mocked(untrustWorkspace).mockImplementationOnce(() => { throw new Error('EACCES: permission denied, open .claude.json'); });
+
+    expect(removeLeftoverWorkspace('foo')).toBe('EACCES: permission denied, open .claude.json');
+    expect(existsSync(path.join(workspacePath('foo'), 'uncommitted.txt'))).toBe(true);
   });
 
   it('returns the error text when the removal fails', () => {
