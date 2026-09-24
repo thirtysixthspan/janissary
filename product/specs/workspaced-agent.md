@@ -189,7 +189,9 @@ Workspace directories are ephemeral:
 - **Leftover folders**: Before a `-w` launch clones, it checks the workspace folder its name would
   use. If a live janissary owner still holds it — an open tab using it, or a janus instance running
   inside it — the launch is refused for a typed name, or moves on to the next free name for a
-  default one. A plain shell sitting in the folder does not count as an owner. If nothing holds it,
+  default one. A name that differs from the owner's only by case counts as held too, since a
+  case-insensitive filesystem gives both one folder. A plain shell sitting in the folder does not
+  count as an owner. If nothing holds it,
   the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them,
   `Removed leftover workspace "<name>" (<path>) before launching.` is posted to the notifications
   feed, and the clone goes ahead. A removal that fails refuses the launch with

@@ -35,6 +35,11 @@ describe('isWorkspaceRunning', () => {
     expect(isWorkspaceRunning('foo', () => false)).toBe(true);
   });
 
+  it('is true for a live peer record whose label differs only by case', () => {
+    writePeerRecord('s1', { pid: process.pid, socket: '/tmp/x.sock', label: 'foo' });
+    expect(isWorkspaceRunning('Foo', () => false)).toBe(true);
+  });
+
   it('is false for a labeled peer record whose pid is dead', () => {
     writePeerRecord('s1', { pid: DEAD_PID, socket: '/tmp/x.sock', label: 'foo' });
     expect(isWorkspaceRunning('foo', () => false)).toBe(false);

@@ -2,7 +2,7 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { workspacePath } from '../workspace/index.js';
 import { workspaceLabelError } from '../workspace/label.js';
-import { checkLaunchName } from './check.js';
+import { checkLaunchName, sameLaunchName } from './check.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from './leftover.js';
 import { cleanedNotice, invalidNameRefusal, localRunningRefusal, removalFailedRefusal } from './messages.js';
 
@@ -37,7 +37,8 @@ function invalidWorkspaceName(request: LocalLaunchName): string | undefined {
 
 function runningCheck(managers: Managers, workspace: boolean): ((name: string) => string | undefined) | undefined {
   if (!workspace) return undefined;
-  const tabUses = (dir: string) => managers.tab.tabs.some((tab) => tab.workspaceDir === dir);
+  const tabUses = (dir: string) => managers.tab.tabs.some((tab) => tab.workspaceDir !== undefined
+    && sameLaunchName(tab.workspaceDir, dir));
   return (name) => (isWorkspaceRunning(name, tabUses) ? localRunningRefusal(name, workspacePath(name)) : undefined);
 }
 

@@ -296,7 +296,9 @@ only the host knows what is running there.
 
 A workspace named `<name>` on the host counts as running when a remote server peer on that host —
 attached or parked — is holding a workspace under that name and its process is alive, or when a janus
-instance running inside that workspace holds its lock. A plain shell sitting in the folder does not
+instance running inside that workspace holds its lock. A peer holding a name that differs only by
+case counts too (`Foo` is running while a live peer holds `foo`), so a live workspace is never
+removed as a leftover on a case-insensitive filesystem. A plain shell sitting in the folder does not
 count. Each remote server records the name it is provisioning before its clone starts, so a second
 launch of the same name on the same host sees the first one from then on. A peer record whose process
 has died is ignored, and it is left in place.

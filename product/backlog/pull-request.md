@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Preserve a live remote workspace when its requested label differs only by case.
-
-Existing Issue: The local collision check compares labels without case, but `hasLivePeer` in the remote workspace check compares the recorded label with strict equality before removing a folder that appears to be leftover. Severity: 9/10
-
-Existing Risk: 9/10 - On a case-insensitive host, a second Janissary instance can launch `Foo` while a live peer owns `foo`, causing cleanup to remove the live peer's workspace and interrupt its process.
-
-Proposal Risk: 2/10 - Matching peer labels consistently prevents the known collision, while filesystem-specific aliasing beyond case remains a separate concern.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1175: protect live remote workspaces across case-only label changes". Make `src/launch-name/leftover.ts` compare live peer labels with the same case-insensitive rule used by `src/launch-name/check.ts`, and apply that rule to the open-tab workspace predicate used by `src/launch-name/local.ts` where paths can alias on the host filesystem. Before `src/remote/serve-provision.ts` removes any existing directory, ensure a peer owning a case variant causes `name-in-use` rather than cleanup. Extend `src/launch-name/leftover.test.ts` and `src/remote/serve.test.ts` with a live peer recorded as `foo` and a requested `Foo`, asserting the workspace contents remain intact; retain the dead-peer cleanup case.
-
-
 * Validate clone prerequisites before deleting a leftover workspace.
 
 Existing Issue: Both the local launch resolver and remote provisioner remove and announce a leftover before `WorkspaceManager.create` checks whether the project has a repository and an `origin` remote, and a trust-file write failure after removal is outside the cleanup error handler. Severity: 8/10

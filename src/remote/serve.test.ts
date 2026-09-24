@@ -470,6 +470,24 @@ describe('RemoteServer provision — label check', () => {
     }
   });
 
+  it('answers name-in-use for a label a live peer carries in another case, removing nothing', async () => {
+    const owned = path.join(workspaceBase(), 'case-label');
+    mkdirSync(owned, { recursive: true });
+    writeFileSync(path.join(owned, 'live.txt'), 'live work');
+    mkdirSync(peerRecords(), { recursive: true });
+    const record = path.join(peerRecords(), `${randomUUID()}.json`);
+    writeFileSync(record, JSON.stringify({ pid: process.pid, socket: '/tmp/none.sock', label: 'case-label' }));
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'CASE-LABEL' })}\n`);
+      await vi.waitFor(() => expect(frames).toEqual([{ type: 'name-in-use', label: 'CASE-LABEL' }]));
+      expect(existsSync(path.join(owned, 'live.txt'))).toBe(true);
+    } finally {
+      rmSync(record, { force: true });
+      rmSync(owned, { recursive: true, force: true });
+    }
+  });
+
   it('removes a leftover with nothing running in it, clones, and reports the removal', async () => {
     const leftover = path.join(workspaceBase(), 'leftover-label');
     mkdirSync(leftover, { recursive: true });

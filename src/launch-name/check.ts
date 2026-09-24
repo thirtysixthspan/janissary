@@ -37,15 +37,17 @@ export type LaunchNameResult =
 const CLASHING_KINDS = new Set<LaunchNameRow['kind']>(['harness', 'agent']);
 const CLASHING_STATES = new Set<LaunchNameRow['state']>(['provisioning', 'active', 'reconnecting', 'detached']);
 
-function same(a: string, b: string): boolean {
+// Two names clash when they differ only by case. The workspace-running check uses the same rule,
+// since a case-insensitive filesystem gives both names one folder.
+export function sameLaunchName(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 
 // The refusal line for `name`, or undefined when nothing holds it.
 export function clashOf(name: string, request: LaunchNameRequest): string | undefined {
-  if (request.tabs.some((label) => same(label, name))) return openTabRefusal(name);
+  if (request.tabs.some((label) => sameLaunchName(label, name))) return openTabRefusal(name);
   const row = request.rows.find((candidate) => CLASHING_KINDS.has(candidate.kind)
-    && CLASHING_STATES.has(candidate.state) && same(candidate.label, name));
+    && CLASHING_STATES.has(candidate.state) && sameLaunchName(candidate.label, name));
   if (row) return sessionsRowRefusal(name, row.state, row.host);
   return request.running?.(name);
 }
@@ -74,9 +76,9 @@ export function checkLaunchName(request: LaunchNameRequest): LaunchNameResult {
   const skip = request.skip ?? [];
   const candidates = request.candidates ?? suffixCandidates(request.name);
   for (const candidate of candidates) {
-    if (skip.some((skipped) => same(skipped, candidate))) continue;
+    if (skip.some((skipped) => sameLaunchName(skipped, candidate))) continue;
     if (clashOf(candidate, request) === undefined) {
-      return { accepted: true, name: candidate, moved: !same(candidate, request.name) };
+      return { accepted: true, name: candidate, moved: !sameLaunchName(candidate, request.name) };
     }
   }
   return { accepted: false, message: request.exhausted ?? POOL_EXHAUSTED };
