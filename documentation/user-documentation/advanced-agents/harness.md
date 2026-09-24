@@ -12,6 +12,8 @@ harness claude --no-workspace      opt out of the default workspace
 
 The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The binary must be installed and on your `PATH`; if it isn't, the tab closes as soon as it opens (the launch is still recorded in the tab you ran the command from).
 
+It's looked up through your own login shell, started interactively, so your startup files run first — `.zshrc` included. A harness installed by a version manager such as nvm is found here the same way it is when you type its name in your terminal.
+
 ![A harness tab: the harness's own terminal interface filling the tab body.](/screenshots/harness-tab.png)
 
 ## Typing into a harness

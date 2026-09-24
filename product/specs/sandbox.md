@@ -41,8 +41,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   `hosts.yml`, which stays denied), `~/Library/Keychains`, `~/.nvm` (nvm's loader scripts and every
   installed Node version under `versions/`), `~/.rvm` (same, for Ruby — execute needs no separate
   carve-in for either since `process-exec` is already allowed everywhere except
-  `/tmp`/`/private/tmp`), `~/.bash_profile`/`~/.bashrc` (sourced by a login/interactive `bash`
-  shell on startup), and `~/.cache/opencode/models.json` (opencode's cached provider/model
+  `/tmp`/`/private/tmp`), the shell startup files `~/.bash_profile`, `~/.bashrc`, `~/.profile`,
+  `~/.zshenv`, `~/.zprofile`, `~/.zshrc`, and `~/.zlogin` (sourced by the login/interactive shell
+  every workspaced command is launched through, so the user's own `PATH` additions apply inside a
+  workspace — read-only, never writable, since a sandboxed process that could edit them would be
+  writing the startup script of the next shell janissary spawns), and `~/.cache/opencode/models.json` (opencode's cached provider/model
   catalog, so a workspaced opencode harness sees the same model list the non-sandboxed opencode on
   that machine has already fetched — read-only, and deliberately not a write carve-out, since a
   non-sandboxed opencode reads the same file and a writable cache would let a sandboxed process
@@ -243,7 +246,7 @@ dedicated handling:
   matching. Without the `SELF_DIR_L`/`SELF_DIR_R` carve-in, a harness binary installed under `$HOME`
   (nvm, `~/.opencode/bin`, …) can't complete that self-read, and the Keychain call fails silently —
   the harness reports "not logged in" with no permission error to explain why. Because a PTY-backed
-  tab always spawns `<shell> -lc '<command>'`, `sandboxSpawn`'s own `command` argument is always the
+  tab always spawns the command through a shell, `sandboxSpawn`'s own `command` argument is always the
   shell, never the harness binary — `pty.ts` passes the real program name through explicitly as
   `SandboxOptions.selfBinaryHint` so the profile carves in the right directory.
 - **The real Darwin per-user cache directory.** `confstr(3)`'s `_CS_DARWIN_USER_CACHE_DIR` — a

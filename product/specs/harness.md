@@ -24,6 +24,26 @@ profile; other harness types are unchanged.
 - `harness` with no name — opens the **New harness** launch dialog (see [New harness launch dialog](#new-harness-launch-dialog) below), not an error.
 - `harness foo` — error: `Unknown harness "foo". Choose from: claude, opencode, codex.`
 
+### Launch shell
+
+The harness binary is launched through the user's login shell (`$SHELL`, falling back to `bash`),
+started as an interactive shell as well as a login one. Which startup files a shell reads depends on
+that distinction — zsh reads `.zprofile` for a login shell but `.zshrc` only for an interactive one —
+and a version manager's `PATH` setup (nvm, rbenv, pyenv, mise, asdf) lives in the interactive file.
+Started this way, a harness installed by one is found exactly as it is when the user types its name
+in their own terminal, instead of the tab opening and closing again on a binary that is not on
+`PATH`. The same launch applies to every program janissary opens in a terminal: an ssh tab, an
+inline terminal card, and a forced PTY takeover. Anything a startup file prints appears in the
+terminal, as it does in the user's own.
+
+Only `bash` and `zsh` are started this way. A login shell that is neither is started as a login
+shell alone, for the same reason it is given no startup flags elsewhere: a shell that rejects an
+option it does not recognize exits instead of launching, which costs the whole tab.
+
+A workspaced harness reads those startup files too: the shell's own startup files are carved into
+the sandbox's read allow-list, so the user's `PATH` additions apply inside a workspace as well (see
+Sandbox).
+
 ### New harness launch dialog
 
 Typing `harness` with no arguments — from a tab that has a command line — opens a modal **New harness**

@@ -173,6 +173,25 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  // A PTY spawn runs its command through an interactive login shell, so the shell's own startup
+  // files have to be readable — otherwise the $HOME content deny fails that read silently and a
+  // workspaced harness starts with none of the user's PATH additions. zsh's are the ones that
+  // matter most: `.zshrc`, where a version manager puts its PATH setup, is read only when the
+  // shell is interactive.
+  it('binds read-carvein params to the shell startup files a launched shell sources', () => {
+    if (!sandboxAvailable()) return;
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir }, 'bash', []);
+    const carveIns = result.args
+      .filter((_, i) => result.args[i - 1] === '-D' && result.args[i].startsWith('R'))
+      .map((v) => v.slice(v.indexOf('=') + 1));
+    const home = realpathSync(homedir());
+    for (const file of ['.zshenv', '.zprofile', '.zshrc', '.zlogin', '.bash_profile', '.bashrc', '.profile']) {
+      expect(carveIns).toContain(path.join(home, file));
+    }
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   // The task picker inserts `execute $janissary/ai/tasks/<task>.md` for a built-in task, so a
   // workspaced agent has to be able to open the file that names. An install under $HOME — a global
   // npm prefix, or a development checkout — falls under the $HOME content deny without this.

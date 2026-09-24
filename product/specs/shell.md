@@ -70,6 +70,8 @@ Commands delivered by `msg`/`broadcast` and commands fired by a schedule run in 
 
 `shell --pty <command>` forces PTY takeover regardless of whether `<command>` is on the interactive-program list, for commands that need a real terminal but aren't auto-detected. A bare `shell --pty`, with no command following, opens the user's login shell (`$SHELL`, falling back to `bash`) directly in a PTY — an interactive shell prompt inside the tab.
 
+A command that runs in a PTY — whether promoted by detection, forced with `--pty`, or opened as an inline terminal card — is launched through a login *and* interactive shell, so unlike the tab's own shell (see Shell startup files) it does read the user's startup files and has the `PATH` they set. Nothing they print is a problem there: the bytes go to a real terminal, exactly as they do when the user opens one themselves. Only `bash` and `zsh` are started interactively; any other login shell is started as a login shell alone rather than risking an option it does not accept.
+
 ### `!` and `!!` shorthand
 
 `!<command>` is shorthand for `shell <command>` — a terser way to run a command in the shell without typing the keyword. `!!<command>` is shorthand for `shell --pty <command>`, forcing PTY takeover the same way the flag does. A bare `!!`, like a bare `shell --pty`, opens the user's login shell directly in a PTY.

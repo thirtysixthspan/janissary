@@ -54,7 +54,7 @@ source ~/.zshrc && myalias
 shell --pty
 ```
 
-Interactive programs are the exception to all of this. They run through a login shell, so anything on the tab's own terminal, including a bare `shell --pty`, sees your startup files as usual.
+Interactive programs are the exception to all of this. They run through a shell that is both a login shell and an interactive one, so anything on the tab's own terminal, including a bare `shell --pty`, reads your startup files as usual — `.zshrc` included, which a login shell alone skips. Your aliases, functions, and `PATH` edits are all there.
 
 Only `bash` and `zsh` are given the flags to skip startup files. Any other login shell reads its own, since refusing to launch on a flag it doesn't recognize would be worse.
 
