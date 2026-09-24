@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
+import { shellCommandArgs } from './startup.js';
 import { executeShellCmd } from './index.js';
 
 // Stands in for the pseudo-terminal: records what was written to the shell and lets a test push
@@ -98,6 +99,23 @@ describe('ptyShellArgs', () => {
       process.env.SHELL = '/bin/bash';
       expect(ptyShellArgs()).toEqual(['--norc', '--noprofile']);
       expect(ptyShellArgs()).not.toContain('-lc');
+    } finally {
+      if (previousShell === undefined) delete process.env.SHELL; else process.env.SHELL = previousShell;
+    }
+  });
+
+  // The tab shell suppresses startup files because its output is captured into the transcript; a
+  // PTY-launched command reads them because its bytes go to a real terminal. Opposite intents, so
+  // the two argvs must never share a flag — a change to one that quietly matched the other would
+  // mean rc-file banners landing mid-command, or a harness launched without the user's PATH.
+  it('shares no flag with the argv a PTY-launched command runs through', () => {
+    const previousShell = process.env.SHELL;
+    try {
+      for (const shell of ['/bin/zsh', '/bin/bash']) {
+        process.env.SHELL = shell;
+        const launched = new Set(shellCommandArgs(shell, 'claude'));
+        expect(ptyShellArgs().some((flag) => launched.has(flag))).toBe(false);
+      }
     } finally {
       if (previousShell === undefined) delete process.env.SHELL; else process.env.SHELL = previousShell;
     }

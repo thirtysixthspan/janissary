@@ -98,7 +98,7 @@ export function createPtyShell(spawn: (onData: (data: string) => void) => PtyShe
 }
 
 // The argv a tab's PTY-backed shell is spawned with: the shell itself, startup files suppressed,
-// rather than `-lc <command>`.
+// rather than the interactive `shellCommandArgs` form a PTY-launched command runs through.
 export function ptyShellArgs(): string[] {
   return shellStartupArgs(process.env.SHELL || 'bash');
 }

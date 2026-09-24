@@ -42,10 +42,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   installed Node version under `versions/`), `~/.rvm` (same, for Ruby — execute needs no separate
   carve-in for either since `process-exec` is already allowed everywhere except
   `/tmp`/`/private/tmp`), the shell startup files `~/.bash_profile`, `~/.bashrc`, `~/.profile`,
-  `~/.zshenv`, `~/.zprofile`, `~/.zshrc`, and `~/.zlogin` (sourced by the login/interactive shell
-  every workspaced command is launched through, so the user's own `PATH` additions apply inside a
-  workspace — read-only, never writable, since a sandboxed process that could edit them would be
-  writing the startup script of the next shell janissary spawns), and `~/.cache/opencode/models.json` (opencode's cached provider/model
+  `~/.zshenv`, `~/.zprofile`, `~/.zshrc`, and `~/.zlogin` (sourced by a shell on startup — the
+  interactive shell every workspaced command is launched through reads the interactive ones, and a
+  login shell a user starts inside the workspace reads the rest — so the user's own `PATH` additions
+  apply inside a workspace; read-only, never writable, since a sandboxed process that could edit
+  them would be writing the startup script of the next shell janissary spawns), and `~/.cache/opencode/models.json` (opencode's cached provider/model
   catalog, so a workspaced opencode harness sees the same model list the non-sandboxed opencode on
   that machine has already fetched — read-only, and deliberately not a write carve-out, since a
   non-sandboxed opencode reads the same file and a writable cache would let a sandboxed process
