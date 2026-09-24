@@ -60,23 +60,23 @@ describe('spawnPty', () => {
     expect(mockPtySpawn).toHaveBeenCalledOnce();
   });
 
-  it('runs the command through an interactive login shell so the user\'s rc file sets PATH', () => {
+  it('runs the command through an interactive, non-login shell so the user\'s rc file and PATH order both apply', () => {
     const previous = process.env.SHELL;
     process.env.SHELL = '/bin/zsh';
     try {
       spawnPty('claude', 'claude', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
-      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', ['-l', '-i', '-c', 'claude'], expect.any(Object));
+      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', ['-i', '-c', 'claude'], expect.any(Object));
     } finally {
       process.env.SHELL = previous;
     }
   });
 
-  it('keeps the login-only form for a shell whose flags are unverified', () => {
+  it('gives a shell whose flags are unverified the bare command form', () => {
     const previous = process.env.SHELL;
     process.env.SHELL = '/usr/bin/fish';
     try {
       spawnPty('claude', 'claude', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
-      expect(mockPtySpawn).toHaveBeenCalledWith('/usr/bin/fish', ['-lc', 'claude'], expect.any(Object));
+      expect(mockPtySpawn).toHaveBeenCalledWith('/usr/bin/fish', ['-c', 'claude'], expect.any(Object));
     } finally {
       process.env.SHELL = previous;
     }

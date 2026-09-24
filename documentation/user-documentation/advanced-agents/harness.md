@@ -12,7 +12,9 @@ harness claude --no-workspace      opt out of the default workspace
 
 The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The binary must be installed and on your `PATH`; if it isn't, the tab closes as soon as it opens (the launch is still recorded in the tab you ran the command from).
 
-It's looked up through your own login shell, started interactively, so your startup files run first — `.zshrc` included. A harness installed by a version manager such as nvm is found here the same way it is when you type its name in your terminal.
+It's looked up through your own shell, started interactively, so your startup files run first — `.zshrc` included. A harness installed by a version manager such as nvm is found here the same way it is when you type its name in your terminal.
+
+It's started interactively but not as a login shell, and that second part matters if you have the same harness installed twice — say a fresh install in `~/.local/bin` and an older packaged one in `/opt/homebrew/bin`. A login shell rebuilds `PATH` from the system's own list of directories and tacks yours on the end, which can flip which copy wins. Skipping that keeps your `PATH` exactly as your terminal has it, so the copy you get in a harness tab is the copy you get when you type the name yourself.
 
 ![A harness tab: the harness's own terminal interface filling the tab body.](/screenshots/harness-tab.png)
 

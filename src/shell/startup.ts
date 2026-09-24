@@ -11,10 +11,10 @@ const STARTUP_ARGS: Record<string, string[]> = {
 };
 
 // The shells known to accept `-i` alongside `-c`, so a command can be run through an interactive
-// shell rather than a login-only one. The distinction decides which startup files are read: zsh
-// reads `.zprofile` for a login shell but `.zshrc` only for an interactive one, and a version
-// manager's PATH setup (nvm, rbenv, pyenv, mise, asdf) lives in the rc file. A program launched
-// with `-lc` alone therefore cannot find a binary the user finds by typing its name.
+// shell. The interactive startup file is the one that matters: zsh reads `.zshrc` and bash reads
+// `.bashrc` only when the shell is interactive, and that is where a version manager's PATH setup
+// (nvm, rbenv, pyenv, mise, asdf) lives. A program launched without `-i` therefore cannot find a
+// binary the user finds by typing its name.
 const INTERACTIVE_COMMAND_SHELLS = new Set(['bash', 'zsh']);
 
 function shellName(shellPath: string): string {
@@ -27,13 +27,22 @@ export function shellStartupArgs(shellPath: string): string[] {
   return STARTUP_ARGS[shellName(shellPath)] ?? [];
 }
 
-// The argv that runs `command` through `shellPath` as both a login and an interactive shell, so the
-// program it launches sees the PATH the user's own terminal has. The flags are passed separately
-// rather than bundled as `-lic`, which keeps the form correct for a shell that parses them one at a
-// time. A shell outside the known set keeps the login-only `-lc`, for the same reason
-// `shellStartupArgs` gives an unrecognized shell nothing: exiting on an unaccepted flag would cost
-// the launch entirely, which is worse than one startup file left unread.
+// The argv that runs `command` through `shellPath` as an interactive shell — and deliberately not as
+// a login one, which is what makes the program see the same PATH the user's own terminal has rather
+// than a reshuffled version of it. On macOS every login shell sources `/etc/zprofile` (or
+// `/etc/profile`), which runs `path_helper`; that does not extend PATH but rebuilds it, emitting the
+// directories in `/etc/paths` and `/etc/paths.d` first and appending the caller's own entries after
+// them. A binary the user's PATH resolves to one copy of then resolves to whichever older copy
+// happens to sit in a promoted directory. Nothing is lost by skipping it: janissary is started from
+// the user's terminal, so its inherited PATH is already a login shell's, complete and in the order
+// the user established — login initialization can only reorder it. The remote launch line in
+// `remote/entry-factory.ts` (`$SHELL -ic "janus remote-serve"`) has always used this form.
+//
+// The flags are passed separately rather than bundled as `-ic`, which keeps the form correct for a
+// shell that parses them one at a time. A shell outside the known set gets `-c` alone, for the same
+// reason `shellStartupArgs` gives an unrecognized shell nothing: exiting on an unaccepted flag would
+// cost the launch entirely, which is worse than one startup file left unread.
 export function shellCommandArgs(shellPath: string, command: string): string[] {
-  if (!INTERACTIVE_COMMAND_SHELLS.has(shellName(shellPath))) return ['-lc', command];
-  return ['-l', '-i', '-c', command];
+  if (!INTERACTIVE_COMMAND_SHELLS.has(shellName(shellPath))) return ['-c', command];
+  return ['-i', '-c', command];
 }

@@ -26,8 +26,9 @@ let counter = 0;
  * rather than written to the real stdout, so many can run concurrently across tabs.
  * `sandbox`, when given a `workspaceDir`, confines the process to that workspace (see src/sandbox/index.ts);
  * omitted or workspaceDir-less, the command runs exactly as before.
- * By default the command runs through an interactive login shell (see `shellCommandArgs`), so a
- * harness binary installed by a version manager is found the way it is in the user's own terminal.
+ * By default the command runs through an interactive, non-login shell (see `shellCommandArgs`), so a
+ * harness binary installed by a version manager is found the way it is in the user's own terminal —
+ * with the user's own PATH order intact, which a login shell's `path_helper` would rewrite.
  * `shellArgs` replaces that argv for callers that need the shell itself rather than one command run
  * through it — a tab's own PTY-backed shell, which must skip its startup files.
  */

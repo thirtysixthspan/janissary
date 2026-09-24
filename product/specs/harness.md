@@ -26,22 +26,30 @@ profile; other harness types are unchanged.
 
 ### Launch shell
 
-The harness binary is launched through the user's login shell (`$SHELL`, falling back to `bash`),
-started as an interactive shell as well as a login one. Which startup files a shell reads depends on
-that distinction — zsh reads `.zprofile` for a login shell but `.zshrc` only for an interactive one —
-and a version manager's `PATH` setup (nvm, rbenv, pyenv, mise, asdf) lives in the interactive file.
-Started this way, a harness installed by one is found exactly as it is when the user types its name
-in their own terminal, instead of the tab opening and closing again on a binary that is not on
-`PATH`. The same launch applies to every program janissary opens in a terminal: an ssh tab, an
-inline terminal card, and a forced PTY takeover. Anything a startup file prints appears in the
-terminal, as it does in the user's own.
+The harness binary is launched through the user's shell (`$SHELL`, falling back to `bash`), started
+as an interactive shell and deliberately not as a login one. Interactive is what makes the launch
+read `.zshrc` (or `.bashrc`), the startup file a version manager's `PATH` setup (nvm, rbenv, pyenv,
+mise, asdf) lives in, so a harness installed by one is found instead of the tab opening and closing
+again on a binary that is not on `PATH`.
 
-Only `bash` and `zsh` are started this way. A login shell that is neither is started as a login
-shell alone, for the same reason it is given no startup flags elsewhere: a shell that rejects an
-option it does not recognize exits instead of launching, which costs the whole tab.
+Not a login shell is what makes the launch resolve the *same copy* of that binary the user's own
+terminal resolves. A login shell re-runs the system's own `PATH` setup, which rebuilds the variable
+from the machine's list of directories and appends the inherited entries after it — so a harness
+installed in two places at once, as a newer install alongside an older packaged one, would launch as
+whichever copy the machine's list happens to promote rather than the one the user's `PATH` puts
+first. Janissary is started from the user's terminal and already inherits that `PATH` in full, so
+there is nothing for login startup to add.
 
-A workspaced harness reads those startup files too: the shell's own startup files are carved into
-the sandbox's read allow-list, so the user's `PATH` additions apply inside a workspace as well (see
+The same launch applies to every program janissary opens in a terminal: an ssh tab, an inline
+terminal card, and a forced PTY takeover. Anything a startup file prints appears in the terminal, as
+it does in the user's own.
+
+Only `bash` and `zsh` are started interactively. A shell that is neither is given the command alone,
+for the same reason it is given no startup flags elsewhere: a shell that rejects an option it does
+not recognize exits instead of launching, which costs the whole tab.
+
+A workspaced harness reads its startup file too: the shell's own startup files are carved into the
+sandbox's read allow-list, so the user's `PATH` additions apply inside a workspace as well (see
 Sandbox).
 
 ### New harness launch dialog
