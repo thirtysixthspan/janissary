@@ -31,6 +31,10 @@ export { formatTimestamp, provenanceTimestamp, notificationText } from './format
 // attached, ended, forgotten — so the change is on the record even when the tab is closed. It
 // carries its line verbatim, exactly as `remote-session-terminated` does, and is deliberately distinct
 // from it: that one reports a session ending on its own, this one reports a decision the user made.
+// `launch-refused` reports a harness or agent launch stopped because its name clashes with an open
+// tab, a sessions-table row, or something running on the target host, and
+// `launch-workspace-cleaned` reports a leftover workspace removed so a launch could go ahead. Both
+// carry their line verbatim.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -51,7 +55,9 @@ export type NotificationEventType =
   | 'file-operation'
   | 'open-unsupported'
   | 'plugin-failure'
-  | 'plugin-note';
+  | 'plugin-note'
+  | 'launch-refused'
+  | 'launch-workspace-cleaned';
 
 // A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
 // active tab never notifies about its own activity) apply to these five.
@@ -103,6 +109,8 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'open-unsupported': true,
   'plugin-failure': true,
   'plugin-note': true,
+  'launch-refused': true,
+  'launch-workspace-cleaned': true,
 };
 
 function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {

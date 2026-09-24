@@ -27,18 +27,30 @@ export class WorkspaceManager {
   // `origin` remote, or `origin` can't be read. Shared by the agent and harness `--workspace`
   // paths so both behave identically.
   create(name: string): ProvisioningWorkspace | { error: string } {
-    const root = findRepoRoot(this.projectDir);
-    if (!root) return { error: NO_REPO };
-    let remoteUrl: string;
-    try {
-      remoteUrl = getRemoteUrl(root);
-    } catch (error) {
-      return { error: `Failed to create workspace: ${errorText(error)}` };
-    }
-    const handle = provisionWorkspace(name, remoteUrl);
+    const origin = this.originUrl();
+    if ('error' in origin) return origin;
+    const handle = provisionWorkspace(name, origin.url);
     this.refs.set(handle.dir, 1);
     this.pending.set(name, { cancel: handle.cancel, dir: handle.dir });
     return { dir: handle.dir, ready: this.trackReady(name, handle.ready) };
+  }
+
+  // The error `create` would return for want of a repo or an `origin` remote, or undefined when a
+  // clone could start. Clones nothing, so a caller about to destroy something for the clone's sake —
+  // a leftover folder under the same name — can stop first.
+  preflight(): string | undefined {
+    const origin = this.originUrl();
+    return 'error' in origin ? origin.error : undefined;
+  }
+
+  private originUrl(): { url: string } | { error: string } {
+    const root = findRepoRoot(this.projectDir);
+    if (!root) return { error: NO_REPO };
+    try {
+      return { url: getRemoteUrl(root) };
+    } catch (error) {
+      return { error: `Failed to create workspace: ${errorText(error)}` };
+    }
   }
 
   private async trackReady(name: string, ready: Promise<void>): Promise<void> {

@@ -112,16 +112,30 @@ function decodeBrowserExited(record: Record<string, unknown>): DecodeResult {
 }
 
 function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.dir) || !optionalNonEmptyString(record.notice)) return malformed('workspace-ready');
-  return record.notice === undefined
-    ? { type: 'workspace-ready', dir: record.dir }
-    : { type: 'workspace-ready', dir: record.dir, notice: record.notice };
+  const { dir, notice, cleaned } = record;
+  if (!nonEmptyString(dir) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)) return malformed('workspace-ready');
+  return {
+    type: 'workspace-ready', dir,
+    ...(notice !== undefined && { notice }),
+    ...(cleaned !== undefined && { cleaned }),
+  };
 }
 
 function decodeWorkspaceFailed(record: Record<string, unknown>): DecodeResult {
   return nonEmptyString(record.message)
     ? { type: 'workspace-failed', message: record.message }
     : malformed('workspace-failed');
+}
+
+// `path` and `reason` travel together or not at all: one without the other describes neither a
+// running label nor a failed removal.
+function decodeNameInUse(record: Record<string, unknown>): DecodeResult {
+  const { label, path, reason } = record;
+  if (!nonEmptyString(label) || !optionalNonEmptyString(path) || !optionalNonEmptyString(reason)
+    || (path === undefined) !== (reason === undefined)) return malformed('name-in-use');
+  return path === undefined || reason === undefined
+    ? { type: 'name-in-use', label }
+    : { type: 'name-in-use', label, path, reason };
 }
 
 function decodeExit(record: Record<string, unknown>): DecodeResult {
@@ -177,6 +191,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'busy-transition': { return decodeBusyTransition(record); }
   case 'workspace-ready': { return decodeWorkspaceReady(record); }
   case 'workspace-failed': { return decodeWorkspaceFailed(record); }
+  case 'name-in-use': { return decodeNameInUse(record); }
   case 'output': { return decodeAddressedData(type, record); }
   case 'exit': { return decodeExit(record); }
   case 'browser-exited': { return decodeBrowserExited(record); }

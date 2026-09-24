@@ -1,10 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
+
+const notify = vi.hoisted(() => vi.fn());
+vi.mock('../notifications/index.js', () => ({ notify }));
+
 import { openProfileEntries } from './agent-opener.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import type { LoadedProfile, ProfileEntry, ProfileHarnessEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
+import type { RemoteSessionView } from '../protocol.js';
 
 function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileNavigatorOpen: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> } {
   const harnessOpen = vi.fn((_entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined => {
@@ -44,6 +49,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
       get tabs() { return tabs; },
       set tabs(value: Tab[]) { tabs = value; },
       byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
+      allLabels: () => tabs.map((t) => t.label),
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
       closeTab: vi.fn(),
       setCwd: vi.fn(),
@@ -67,6 +73,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
     fileNavigator: { open: fileNavigatorOpen },
     openFile: { edit, run },
     plugins: { declarations: [{ id: 'image', fileExtensions: { '.png': 'image/png' } }] },
+    sessions: { view: vi.fn(() => []) },
   } as unknown as Managers;
   return { managers, harnessOpen, fileNavigatorOpen, edit };
 }
@@ -189,7 +196,7 @@ describe('openProfileEntries — group authoring', () => {
 
     await openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', 2, expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', 2, expect.any(String), 'janus');
   });
 
   it('uses a harness entry\'s authored group instead of the next free one', async () => {
@@ -199,7 +206,7 @@ describe('openProfileEntries — group authoring', () => {
 
     await openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', 1, expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', 1, expect.any(String), 'janus');
   });
 
   it('splits entries across their own authored groups plus the shared default for unnumbered ones', async () => {
@@ -212,9 +219,9 @@ describe('openProfileEntries — group authoring', () => {
 
     await openProfileEntries(loaded([joinsJanus, joinsOther, noGroup]), managers, 'demo', 'janus', () => {});
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'a' }), 'a', 1, 'red');
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'b' }), 'b', 5, 'yellow');
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'c' }), 'c', 6, expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'a' }), 'a', 1, 'red', 'janus');
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'b' }), 'b', 5, 'yellow', 'janus');
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'c' }), 'c', 6, expect.any(String), 'janus');
   });
 
   it('inserts an agent entry contiguously into an existing group instead of appending past it', async () => {
@@ -286,7 +293,7 @@ describe('openProfileEntries — cwd expansion', () => {
 
     await openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/proj/src' }), 'claude', expect.any(Number), expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/proj/src' }), 'claude', expect.any(Number), expect.any(String), 'janus');
   });
 
   it('leaves a legacy absolute harness entry cwd unchanged', async () => {
@@ -296,7 +303,7 @@ describe('openProfileEntries — cwd expansion', () => {
 
     await openProfileEntries(loaded([entry]), managers, 'claude', 'janus', () => {});
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/elsewhere/src' }), 'claude', expect.any(Number), expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/elsewhere/src' }), 'claude', expect.any(Number), expect.any(String), 'janus');
   });
 
   it('expands a $root-relative agent entry cwd to an absolute path before setting it', async () => {
@@ -332,7 +339,7 @@ describe('openProfileEntries — semantic launch-time checks (Decision 7)', () =
 
     await openProfileEntries(loaded([entry]), managers, 'codex', 'janus', (text) => { messages.push(text); });
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ tool: 'codex', autoApprove: true }), 'codex', expect.any(Number), expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ tool: 'codex', autoApprove: true }), 'codex', expect.any(Number), expect.any(String), 'janus');
     expect(messages.join(' ')).not.toMatch(/Skipped/);
   });
 
@@ -359,7 +366,29 @@ describe('openProfileEntries — effort field', () => {
 
     await openProfileEntries(loaded([entry]), managers, 'claude', 'janus', (text) => { messages.push(text); });
 
-    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ effort: 'not-a-real-effort-level' }), 'claude', expect.any(Number), expect.any(String));
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ effort: 'not-a-real-effort-level' }), 'claude', expect.any(Number), expect.any(String), 'janus');
     expect(messages.join(' ')).not.toMatch(/Skipped/);
+  });
+});
+
+describe('openProfileEntries — launch-name clashes', () => {
+  it('skips a clashing agent entry with a notification and still opens the entries after it', async () => {
+    notify.mockClear();
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const { managers, harnessOpen } = makeManagers([janus]);
+    vi.mocked(managers.sessions.view).mockReturnValue([
+      { label: 'bob', kind: 'agent', state: 'detached', host: 'devbox' } as RemoteSessionView,
+    ]);
+    const clashing: AgentState = { name: 'bob', dotColor: 'blue', active: false };
+    const later: ProfileHarnessEntry = { name: 'claude', tool: 'claude' };
+    const messages: string[] = [];
+
+    await openProfileEntries(loaded([clashing, later]), managers, 'demo', 'janus', (text) => { messages.push(text); });
+
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "bob": "bob" is already in the sessions tab (detached on devbox).');
+    expect(managers.tab.tabs.map((t) => t.label)).not.toContain('bob');
+    expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', expect.any(Number), expect.any(String), 'janus');
+    expect(messages.join(' ')).toContain('Skipped: bob (launch refused — see notifications).');
   });
 });

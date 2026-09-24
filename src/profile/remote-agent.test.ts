@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const notify = vi.hoisted(() => vi.fn());
+vi.mock('../notifications/index.js', () => ({ notify }));
+
 import { startRemoteAgent } from './remote-agent.js';
 import { openAgentEntry } from './entry-openers.js';
 import { newAgentOp } from './new-agent.js';
@@ -7,9 +11,10 @@ import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
 type RemoteHandlers = {
-  onReady: (dir: string, notice?: string) => void;
+  onReady: (dir: string, notice?: string, cleaned?: string) => void;
   onFailed: (message: string) => void;
   onClosed: () => void;
+  onNameRefused?: (frame: { type: 'name-in-use'; label: string; path?: string; reason?: string }) => void;
 };
 
 function address(token: string): RemoteAddress {
@@ -21,13 +26,16 @@ function address(token: string): RemoteAddress {
 function makeManagers(): {
   managers: Managers; tabs: Tab[]; out: ReturnType<typeof vi.fn>;
   openChannel: ReturnType<typeof vi.fn>; createWorkspace: ReturnType<typeof vi.fn>;
-  ready: (dir: string, notice?: string) => void; fail: (message: string) => void; drop: () => void;
+  ready: (dir: string, notice?: string, cleaned?: string) => void; fail: (message: string) => void; drop: () => void;
+  refuse: () => void;
 } {
   const tabs: Tab[] = [{ label: 'janus', group: 1, groupColor: '#fff', dotColor: '#fff', log: [] } as unknown as Tab];
   const busy = new Set<string>();
   let handlers: RemoteHandlers | undefined;
   const out = vi.fn();
-  const openChannel = vi.fn((_label: string, _addr: RemoteAddress, _cwd: string, h: RemoteHandlers) => {
+  let launched = '';
+  const openChannel = vi.fn((label: string, _addr: RemoteAddress, _cwd: string, h: RemoteHandlers) => {
+    launched = label;
     handlers = h;
     return { ptyId: 'ssh-pty-1', attached: false, send: vi.fn() };
   });
@@ -57,12 +65,15 @@ function makeManagers(): {
     workspace: { create: createWorkspace },
     shell: { ensure: vi.fn() },
     schedule: { set: vi.fn() },
+    sessions: { view: vi.fn(() => []) },
   } as unknown as Managers;
   return {
     managers, tabs, out, openChannel, createWorkspace,
-    ready: (dir, notice) => handlers!.onReady(dir, notice),
+    ready: (dir, notice, cleaned) => handlers!.onReady(dir, notice, cleaned),
     fail: (message) => handlers!.onFailed(message),
     drop: () => handlers!.onClosed(),
+    // The latest launch's host answering that the label it was asked to provision is running.
+    refuse: () => handlers!.onNameRefused!({ type: 'name-in-use', label: launched }),
   };
 }
 
@@ -190,7 +201,7 @@ describe('agent on <address> — command and profile entry points', () => {
     const h = makeManagers();
     const error = openAgentEntry(
       { name: 'bekir', dotColor: '#aaa', active: false, remote: 'admin@devbox:/srv/proj' },
-      h.managers, 4, '#bbb', '#aaa',
+      h.managers, 4, '#bbb', '#aaa', 'janus',
     );
 
     expect(error).toBeUndefined();
@@ -202,10 +213,70 @@ describe('agent on <address> — command and profile entry points', () => {
     const h = makeManagers();
     const error = openAgentEntry(
       { name: 'bekir', dotColor: '#aaa', active: false, remote: 'devbox;id' },
-      h.managers, 4, '#bbb', '#aaa',
+      h.managers, 4, '#bbb', '#aaa', 'janus',
     );
 
     expect(error).toContain('devbox;id');
     expect(h.openChannel).not.toHaveBeenCalled();
+  });
+});
+
+describe('agent on <address> — the host refusing the name', () => {
+  beforeEach(() => { vi.useFakeTimers(); notify.mockClear(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('refuses an explicit name at once, posting to the feed and not the transcript', async () => {
+    const h = makeManagers();
+    newAgentOp(h.managers, 'agent bekir on devbox');
+
+    h.refuse();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(h.tabs.map((t) => t.label)).toEqual(['janus']);
+    expect(notify).toHaveBeenCalledWith(h.managers, 'launch-refused', 'janus', 'Cannot launch "bekir": "bekir" is already running on devbox.');
+    expect(h.managers.tab.append).not.toHaveBeenCalled();
+  });
+
+  it('retries a pool name under a fresh one, silently, and gives up after five with one refusal', async () => {
+    const h = makeManagers();
+    newAgentOp(h.managers, 'agent on devbox');
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      h.refuse();
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    const tried = h.openChannel.mock.calls.map((call) => call[0] as string);
+    expect(tried).toHaveLength(5);
+    expect(new Set(tried).size).toBe(5);
+    expect(h.tabs.map((t) => t.label)).toEqual(['janus']);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(h.managers, 'launch-refused', 'janus',
+      `Cannot launch agent on devbox: 5 names tried (${tried.join(', ')}) are already running on devbox.`);
+  });
+
+  it('posts the check-unanswered refusal on an early channel end and keeps today\'s failure line', async () => {
+    const h = makeManagers();
+    newAgentOp(h.managers, 'agent bekir on devbox');
+
+    h.drop();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(h.managers.tab.append).toHaveBeenCalledWith('janus', expect.objectContaining({
+      output: 'Failed to start "bekir" on devbox: Remote session to devbox ended before its workspace was ready.',
+    }));
+    expect(notify).toHaveBeenCalledWith(h.managers, 'launch-refused', 'janus',
+      'Cannot launch "bekir": could not check devbox for an existing "bekir" — Remote session to devbox ended before its workspace was ready.');
+  });
+
+  it('posts the cleanup notice when the host removed a leftover first', async () => {
+    const h = makeManagers();
+    newAgentOp(h.managers, 'agent bekir on devbox');
+
+    h.ready('/srv/ws/bekir', undefined, '/srv/ws/bekir');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(notify).toHaveBeenCalledWith(h.managers, 'launch-workspace-cleaned', 'janus',
+      'Removed leftover workspace "bekir" on devbox (/srv/ws/bekir) before launching.');
   });
 });

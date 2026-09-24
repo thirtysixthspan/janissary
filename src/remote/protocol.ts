@@ -110,7 +110,16 @@
 //    reaches a parked peer without attaching it, while fully detached.
 // A version-17 remote refuses all three new frame types as unknown, which is exactly the mismatch
 // this check exists to catch before a `-y` remote harness ships silently inert.
-export const REMOTE_PROTOCOL_VERSION = 18;
+//
+// Version 19 has `provision` check the label before cloning. A label something is already running
+// under on the host is refused with the new `name-in-use` frame, and so is a leftover workspace under
+// that label that could not be removed (carried as `path` and `reason`). A leftover that was removed
+// is reported by `workspace-ready`'s new `cleaned` field. `name-in-use` is a frame of its own rather
+// than a `workspace-failed` so the local side can tell a name refusal from a clone failure: the
+// first closes the placeholder at once, the second shows its error first. A version-18 remote never
+// checks and never sends it, so a launch against one would land on a leftover's failed clone exactly
+// as before while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 19;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -229,8 +238,14 @@ export type ServerFrame =
   // work out for itself: whether its processes are actually confined, and which GitHub credential
   // it ended up with. Both are facts about the machine they hold on, so they are reported from
   // there; `serve-notice.ts` composes them into this one string.
-  | { type: 'workspace-ready'; dir: string; notice?: string }
+  // `cleaned` is the absolute path of a leftover workspace under the same label that was removed
+  // before this one was cloned, so the local side can say so.
+  | { type: 'workspace-ready'; dir: string; notice?: string; cleaned?: string }
   | { type: 'workspace-failed'; message: string }
+  // The answer to a `provision` whose label is taken on this host: with neither optional field,
+  // something is running under it; with both, a leftover workspace at `path` could not be removed
+  // because of `reason`. Nothing is provisioned either way.
+  | { type: 'name-in-use'; label: string; path?: string; reason?: string }
   | { type: 'output'; id: string; data: string }
   | { type: 'exit'; id: string; exitCode: number }
   // The remote's e2e browser for that session is gone — a failed launch, a browser that exited, or
@@ -312,7 +327,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true,
-  'workspace-ready': true, 'workspace-failed': true, output: true, exit: true, transcript: true,
+  'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
   'shell-history': true, 'browser-exited': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,

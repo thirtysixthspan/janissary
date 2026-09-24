@@ -1,5 +1,6 @@
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteResume } from '../remote/resume.js';
+import type { RemoteNameRetry } from '../launch-name/fail-remote.js';
 
 // The full set of decisions a harness tab is created from, grouped into one object so
 // `HarnessManager`'s two launch paths (`open` and `openFromProfile`) name every field instead of
@@ -32,4 +33,8 @@ export interface SpawnTabOptions {
   resume?: RemoteResume;
   // The spawn id the far side already knows this process by. Only meaningful alongside `resume`.
   resumePtyId?: string;
+  // Set for a fresh `on <address>` launch: who launched it, whether its name was typed, the labels
+  // tried so far, and how to relaunch under the next one, so a host's label refusal is reported to
+  // the right tab or, for a default name, retried. Never set for an attach.
+  nameRetry?: RemoteNameRetry;
 }

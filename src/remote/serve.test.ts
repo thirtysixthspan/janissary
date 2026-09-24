@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { spawn as spawnTerminal } from 'node-pty';
 import { tmpdir } from 'node:os';
@@ -14,6 +14,8 @@ import { RemoteChannel } from './channel.js';
 import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake } from './protocol.js';
 import type { ServerFrame } from './protocol.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
+import { provisionRemoteWorkspace } from './serve-provision.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
 import { randomUUID } from 'node:crypto';
 import { createConnection } from 'node:net';
 import { readFileSync } from 'node:fs';
@@ -447,6 +449,120 @@ describe('RemoteServer', () => {
     const { server, frames } = makeServer();
     server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
     expect(frames).toEqual([{ type: 'session-state-result', processes: [] }]);
+  });
+});
+
+describe('RemoteServer provision — label check', () => {
+  const workspaceBase = () => path.join(repoDir, '.janissary', 'workspace');
+  const peerRecords = () => path.join(repoDir, '.janissary', 'remote');
+
+  it('answers name-in-use for a label a live peer on this host carries, provisioning nothing', async () => {
+    mkdirSync(peerRecords(), { recursive: true });
+    const record = path.join(peerRecords(), `${randomUUID()}.json`);
+    writeFileSync(record, JSON.stringify({ pid: process.pid, socket: '/tmp/none.sock', label: 'held-label' }));
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'held-label' })}\n`);
+      await vi.waitFor(() => expect(frames).toEqual([{ type: 'name-in-use', label: 'held-label' }]));
+      expect(existsSync(path.join(workspaceBase(), 'held-label'))).toBe(false);
+    } finally {
+      rmSync(record, { force: true });
+    }
+  });
+
+  it('answers name-in-use for a label a live peer carries in another case, removing nothing', async () => {
+    const owned = path.join(workspaceBase(), 'case-label');
+    mkdirSync(owned, { recursive: true });
+    writeFileSync(path.join(owned, 'live.txt'), 'live work');
+    mkdirSync(peerRecords(), { recursive: true });
+    const record = path.join(peerRecords(), `${randomUUID()}.json`);
+    writeFileSync(record, JSON.stringify({ pid: process.pid, socket: '/tmp/none.sock', label: 'case-label' }));
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'CASE-LABEL' })}\n`);
+      await vi.waitFor(() => expect(frames).toEqual([{ type: 'name-in-use', label: 'CASE-LABEL' }]));
+      expect(existsSync(path.join(owned, 'live.txt'))).toBe(true);
+    } finally {
+      rmSync(record, { force: true });
+      rmSync(owned, { recursive: true, force: true });
+    }
+  });
+
+  it('removes a leftover with nothing running in it, clones, and reports the removal', async () => {
+    const leftover = path.join(workspaceBase(), 'leftover-label');
+    mkdirSync(leftover, { recursive: true });
+    writeFileSync(path.join(leftover, 'uncommitted.txt'), 'stale work');
+    const { server, frames } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'leftover-label' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+
+    expect(frames.find((f) => f.type === 'workspace-ready')).toMatchObject({ dir: leftover, cleaned: leftover });
+    expect(existsSync(path.join(leftover, 'uncommitted.txt'))).toBe(false);
+    expect(existsSync(path.join(leftover, 'README.md'))).toBe(true);
+    server.shutdown(0);
+  });
+
+  it('keeps a leftover and answers workspace-failed when the root has lost its origin remote', async () => {
+    const leftover = path.join(workspaceBase(), 'originless-label');
+    mkdirSync(leftover, { recursive: true });
+    writeFileSync(path.join(leftover, 'uncommitted.txt'), 'stale work');
+    execSync('git remote remove origin', { cwd: repoDir, stdio: 'pipe' });
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'originless-label' })}\n`);
+      await vi.waitFor(() => expect(frames).toHaveLength(1));
+      expect(frames[0]).toMatchObject({ type: 'workspace-failed', message: expect.stringMatching(/^Failed to create workspace:/) });
+      expect(existsSync(path.join(leftover, 'uncommitted.txt'))).toBe(true);
+    } finally {
+      execSync(`git remote add origin "${path.join(tmpDir, 'origin.git')}"`, { cwd: repoDir, stdio: 'pipe' });
+      rmSync(leftover, { recursive: true, force: true });
+    }
+  });
+
+  it('answers name-in-use with the path and reason when a leftover cannot be removed', async () => {
+    const leftover = path.join(workspaceBase(), 'stuck-label');
+    mkdirSync(path.join(leftover, 'nested'), { recursive: true });
+    chmodSync(workspaceBase(), 0o500);
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'stuck-label' })}\n`);
+      await vi.waitFor(() => expect(frames).toHaveLength(1));
+      expect(frames[0]).toMatchObject({ type: 'name-in-use', label: 'stuck-label', path: leftover, reason: expect.stringMatching(/EACCES|EPERM/) });
+    } finally {
+      chmodSync(workspaceBase(), 0o755);
+      rmSync(leftover, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a label that climbs out of the workspace base, leaving the folder there intact', async () => {
+    const sentinel = path.join(repoDir, '.janissary', 'sentinel');
+    mkdirSync(sentinel, { recursive: true });
+    writeFileSync(path.join(sentinel, 'keep.txt'), 'keep');
+    const { server, frames } = makeServer();
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: '../sentinel' })}\n`);
+      await vi.waitFor(() => expect(frames).toHaveLength(1));
+      expect(frames[0]).toMatchObject({
+        type: 'workspace-failed',
+        message: expect.stringMatching(/^Cannot launch "\.\.\/sentinel": a workspace name must be a single folder name/),
+      });
+      expect(existsSync(path.join(sentinel, 'keep.txt'))).toBe(true);
+    } finally {
+      rmSync(sentinel, { recursive: true, force: true });
+    }
+  });
+
+  it('writes the label into the peer record before it clones', async () => {
+    const order: string[] = [];
+    await provisionRemoteWorkspace({
+      emit: () => {},
+      workspaces: { create: vi.fn(() => { order.push('clone'); return { error: 'stop here' }; }) } as unknown as WorkspaceManager,
+      peer: { setLabel: vi.fn(() => { order.push('label'); }) } as unknown as DetachedPeer,
+      idle: () => true,
+      stopping: () => false,
+      provisioned: vi.fn(),
+    }, 'ordered-label', {}, {});
+    expect(order).toEqual(['label', 'clone']);
   });
 });
 describe('detached peer rendezvous', () => {

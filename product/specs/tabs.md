@@ -17,11 +17,11 @@ Running `agent` creates a new tab with a random unused name chosen from a 52-nam
 
 ### Duplicate name rejection
 
-Creating a tab with a name already in use prints `Agent "<name>" is already active.` and does not create a duplicate tab.
+Creating an agent with a name already in use — by an open tab, or by a live row in the sessions tab — posts `Cannot launch "<name>": …` to the notifications feed and does not create a tab. Nothing is printed in the transcript. See `agents.md` for when a name counts as in use.
 
 ### Name exhaustion
 
-When all 52 pool names are used, bare `agent` prints `All agent names are in use.` and creates no tab.
+When every pool name is in use, bare `agent` posts `All agent names are in use.` to the notifications feed and creates no tab.
 
 ### Tab dot colors
 
@@ -169,9 +169,10 @@ directory is that tab's own working directory — the one-click equivalent of th
 except the new agent starts where this tab is rather than in the server's own directory. The new tab
 joins the source tab's group and is focused right away; there is no dialog or name prompt. The button
 appears only when the tab has a known working directory, and shell (PTY-takeover) tabs do not show it.
-If a new agent cannot be created because all pool names are already in use, the "All agent names are
-in use." message is posted to the notifications feed (when that feed is open) rather than to the
-source tab, so the click still gives visible feedback even from a harness tab that has no transcript.
+If a new agent cannot be created because all pool names are already in use (by open tabs or by live
+sessions-tab rows), the "All agent names are in use." message is posted to the notifications feed
+rather than to the source tab, so the click still gives visible feedback even from a harness tab that
+has no transcript.
 
 Agent tabs also show a clipboard-icon button, tooltip "Open transcript". Clicking it writes the
 tab's full transcript — every entry's input and output — to a plain-text file and opens it in an

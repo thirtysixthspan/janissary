@@ -186,3 +186,24 @@ Workspace directories are ephemeral:
   the app exits before a background deletion finishes, that clone is still cleaned up as part of
   shutdown.
 - **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
+- **Leftover folders**: Before a `-w` launch clones, it checks the workspace folder its name would
+  use. If a live janissary owner still holds it — an open tab using it, or a janus instance running
+  inside it — the launch is refused for a typed name, or moves on to the next free name for a
+  default one. A name that differs from the owner's only by case counts as held too, since a
+  case-insensitive filesystem gives both one folder. A plain shell sitting in the folder does not
+  count as an owner. If nothing holds it but the project has no git repository or no `origin`
+  remote, the folder is left alone and the launch fails with its usual workspace error, since it
+  could never have cloned. Otherwise
+  the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them,
+  `Removed leftover workspace "<name>" (<path>) before launching.` is posted to the notifications
+  feed, and the clone goes ahead. A cleanup that fails — including a failure to update the Claude
+  trust file, which is tried first and leaves the folder untouched — refuses the launch with
+  `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.` and
+  posts no removal notice. A removal that fails partway leaves whatever it could not remove in
+  place, and the next launch under that name treats it as a leftover again. A
+  remote launch gets the same treatment on the remote host (see [[remote-server]]).
+- **Workspace names**: A `-w` launch's name becomes a folder directly under the workspace base, so
+  a typed name or a profile entry's name must be a single folder name: not empty, not `.` or `..`,
+  and without `/` or `\`. Any other name is refused before anything is checked, removed, or cloned,
+  with `Cannot launch "<name>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`
+  posted to the notifications feed. A launch without a workspace keeps any label.

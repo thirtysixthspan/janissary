@@ -4,9 +4,11 @@ import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture-file.js';
 import { notify } from '../notifications/index.js';
+import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import type { RemoteSessionView } from '../protocol.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
 
 vi.mock('./capture-file.js', () => ({
@@ -26,6 +28,14 @@ vi.mock('./scratch-dir.js', () => ({
 }));
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
+
+// No workspace folder exists or is held for any label unless a test says so, so a `-w` launch goes
+// ahead without touching the filesystem.
+vi.mock('../launch-name/leftover.js', () => ({
+  isWorkspaceRunning: vi.fn(() => false),
+  hasLeftoverWorkspace: vi.fn(() => false),
+  removeLeftoverWorkspace: vi.fn(),
+}));
 
 // Mock the recorder so the manager's lifecycle wiring can be asserted without touching the
 // filesystem; each construction records a disposable stub.
@@ -60,6 +70,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
     tab: {
       tabs,
       cur: () => creator,
+      allLabels: () => tabs.map((tab) => tab.label),
       cwdOf: () => '/project',
       setCwd: () => {},
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },
@@ -82,9 +93,10 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
       input: vi.fn(),
     },
-    workspace: { create: () => ({ dir: '/workspace/claude' }) },
+    workspace: { create: () => ({ dir: '/workspace/claude' }), preflight: vi.fn() },
     openFile: { edit },
     schedule: { set: scheduleSet },
+    sessions: { view: vi.fn(() => []), recordForProcess: vi.fn() },
   } as unknown as Managers;
   return { managers, tabs, edit, scheduleSet };
 }
@@ -506,7 +518,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     messageBus.emit('pty', { type: 'data', id: 'pty-1', data: GATE });
     await vi.advanceTimersByTimeAsync(1001);
@@ -517,7 +529,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, offline: true }, 'claude', 2, '#fff', 'janus',
     );
     expect(tabs.at(-1)?.offline).toBe(true);
   });
@@ -526,7 +538,7 @@ describe('HarnessManager auto-approve', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, autoApprove: true }, 'claude', 2, '#fff', 'janus',
     );
     expect(tabs.at(-1)?.autoApprove).toBe(true);
   });
@@ -537,7 +549,7 @@ describe('HarnessManager auto-approve', () => {
     (managers.tab as unknown as { setCwd: typeof setCwd }).setCwd = setCwd;
     const manager = new HarnessManager(managers);
     manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
     );
     expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
   });
@@ -626,7 +638,7 @@ describe('HarnessManager model/effort', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', effort: 'high', workspace: false }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', effort: 'high', workspace: false }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       'claude', 'claude', "claude --effort 'high'", expect.any(String), undefined, false,
@@ -741,7 +753,7 @@ describe('HarnessManager busy/ready status', () => {
   it('builds no busy/ready callback for a harness with no detector, leaving busy set', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
-    expect(manager.openFromProfile({ name: 'mystery', tool: 'mystery' }, 'mystery', 2, '#fff')).toBeUndefined();
+    expect(manager.openFromProfile({ name: 'mystery', tool: 'mystery' }, 'mystery', 2, '#fff', 'janus')).toBeUndefined();
     vi.clearAllMocks();
     await settle('idle-looking output');
     await settle('still idle');
@@ -867,7 +879,7 @@ describe('HarnessManager workspace provisioning', () => {
     const { managers, tabs } = pendingWorkspaceLaunch();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     expect(tabs.at(-1)!.harness).toMatchObject({ ptyId: '', status: 'provisioning' });
     expect(managers.pty.spawn).not.toHaveBeenCalled();
@@ -877,7 +889,7 @@ describe('HarnessManager workspace provisioning', () => {
     const { managers, tabs, resolve } = pendingWorkspaceLaunch();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     resolve();
     await vi.advanceTimersByTimeAsync(0);
@@ -893,7 +905,7 @@ describe('HarnessManager spawn options', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude' }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ workspaceDir: '/workspace/claude', autoApprove: true });
   });
@@ -902,7 +914,7 @@ describe('HarnessManager spawn options', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: false, autoApprove: false }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: false, autoApprove: false }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ workspaceDir: undefined, autoApprove: false });
   });
@@ -925,7 +937,7 @@ describe('HarnessManager spawn options', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', model: 'opus', effort: 'high' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', model: 'opus', effort: 'high' }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
     expect(tabs.at(-1)!.harness).toMatchObject({ model: 'opus', effort: 'high' });
   });
@@ -934,7 +946,7 @@ describe('HarnessManager spawn options', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', dotColor: '#abcdef' }, 'claude', 7, '#123456',
+      { name: 'claude', tool: 'claude', dotColor: '#abcdef' }, 'claude', 7, '#123456', 'janus',
     )).toBeUndefined();
     expect(tabs.at(-1)).toMatchObject({ group: 7, groupColor: '#123456', dotColor: '#abcdef' });
   });
@@ -944,15 +956,17 @@ describe('HarnessManager spawn options', () => {
 // session's PTY (so ssh's own prompts are answerable in it), and the harness process is registered
 // as a remote `PtySession` once the far side reports its workspace ready.
 type RemoteHandlers = {
-  onReady: (dir: string, notice?: string) => void;
+  onReady: (dir: string, notice?: string, cleaned?: string) => void;
   onFailed: (message: string) => void;
   onClosed: () => void;
+  onNameRefused?: (frame: { type: 'name-in-use'; label: string; path?: string; reason?: string }) => void;
 };
 
 function remoteLaunch(): {
   managers: Managers; tabs: Tab[]; append: ReturnType<typeof vi.fn>;
   createWorkspace: ReturnType<typeof vi.fn>; registerRemotePty: ReturnType<typeof vi.fn>;
-  ready: (dir: string, notice?: string) => void; fail: (message: string) => void; drop: () => void;
+  ready: (dir: string, notice?: string, cleaned?: string) => void; fail: (message: string) => void; drop: () => void;
+  refuse: (path?: string, reason?: string) => void; launchedLabels: () => string[];
 } {
   const { managers, tabs } = makeManagers();
   const channel = { ptyId: 'ssh-pty-1', attached: true, send: vi.fn() };
@@ -963,16 +977,26 @@ function remoteLaunch(): {
   (managers.workspace as unknown as { create: unknown }).create = createWorkspace;
   (managers.pty as unknown as { registerRemotePty: unknown }).registerRemotePty = registerRemotePty;
   (managers.tab as unknown as { append: unknown }).append = append;
+  const launched: string[] = [];
   (managers as unknown as { remote: unknown }).remote = {
-    create: vi.fn((_label: string, _address: unknown, _cwd: string, h: RemoteHandlers) => { handlers = h; return channel; }),
+    create: vi.fn((label: string, _address: unknown, _cwd: string, h: RemoteHandlers) => {
+      launched.push(label);
+      handlers = h;
+      return channel;
+    }),
     get: vi.fn(() => channel),
     transcriptSource: vi.fn(() => ({ poll: () => [], resolved: () => false })),
   };
   return {
     managers, tabs, append, createWorkspace, registerRemotePty,
-    ready: (dir, notice) => handlers!.onReady(dir, notice),
+    ready: (dir, notice, cleaned) => handlers!.onReady(dir, notice, cleaned),
     fail: (message) => handlers!.onFailed(message),
     drop: () => handlers!.onClosed(),
+    // The latest launch's host answering `name-in-use` for the label it was asked to provision.
+    refuse: (path, reason) => handlers!.onNameRefused!({
+      type: 'name-in-use', label: launched.at(-1)!, ...(path !== undefined && { path, reason }),
+    }),
+    launchedLabels: () => [...launched],
   };
 }
 
@@ -1076,6 +1100,87 @@ describe('HarnessManager remote launch', () => {
     expect(managers.tab.closeTab).toHaveBeenCalledTimes(1);
   });
 
+  it('refuses an explicit name the host reports running, closing the placeholder at once', async () => {
+    const { managers, tabs, refuse } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude as foo on devbox')).toBeUndefined();
+
+    refuse();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', 'Cannot launch "foo": "foo" is already running on devbox.');
+  });
+
+  it('retries a default name under the next one, silently, over a fresh launch', async () => {
+    const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    refuse();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(launchedLabels()).toEqual(['claude', 'claude-2']);
+    expect(tabs.map((t) => t.label)).toEqual(['janus', 'claude-2']);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('gives up on a default name after five attempts with one refusal', async () => {
+    const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    for (let attempt = 0; attempt < 5; attempt++) {
+      refuse();
+      await vi.advanceTimersByTimeAsync(0);
+    }
+
+    expect(launchedLabels()).toEqual(['claude', 'claude-2', 'claude-3', 'claude-4', 'claude-5']);
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "claude": "claude" through "claude-5" are already running on devbox.');
+  });
+
+  it('refuses at once when the host could not remove a leftover', async () => {
+    const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    refuse('/srv/proj/.janissary/workspace/claude', 'EACCES: permission denied');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(launchedLabels()).toEqual(['claude']);
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "claude": could not remove leftover workspace "claude" on devbox (/srv/proj/.janissary/workspace/claude) — EACCES: permission denied.');
+  });
+
+  it('posts the check-unanswered refusal on an early channel end and keeps today\'s provisionError', async () => {
+    const { managers, tabs, drop } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    drop();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(tabs.at(-1)!.harness?.provisionError).toBe('Remote session to devbox ended before its workspace was ready.');
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "claude": could not check devbox for an existing "claude" — Remote session to devbox ended before its workspace was ready.');
+  });
+
+  it('posts the cleanup notice when the host removed a leftover first', async () => {
+    const { managers, ready } = remoteLaunch();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox')).toBeUndefined();
+
+    ready('/srv/ws/claude', undefined, '/srv/ws/claude');
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-workspace-cleaned', 'janus',
+      'Removed leftover workspace "claude" on devbox (/srv/ws/claude) before launching.');
+  });
+
   it('closes the tab when the channel drops after the harness is running', async () => {
     const { managers, ready, drop } = remoteLaunch();
     const manager = new HarnessManager(managers);
@@ -1093,7 +1198,7 @@ describe('HarnessManager remote launch', () => {
     const manager = new HarnessManager(managers);
 
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', workspace: true, remote: 'admin@devbox:/srv/proj' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', workspace: true, remote: 'admin@devbox:/srv/proj' }, 'claude', 2, '#fff', 'janus',
     )).toBeUndefined();
 
     expect(createWorkspace).not.toHaveBeenCalled();
@@ -1105,8 +1210,110 @@ describe('HarnessManager remote launch', () => {
     const manager = new HarnessManager(managers);
 
     expect(manager.openFromProfile(
-      { name: 'claude', tool: 'claude', remote: 'devbox;id' }, 'claude', 2, '#fff',
+      { name: 'claude', tool: 'claude', remote: 'devbox;id' }, 'claude', 2, '#fff', 'janus',
     )).toContain('devbox;id');
   });
 
+});
+
+describe('HarnessManager launch-name clashes', () => {
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.clearAllMocks();
+  });
+
+  function withTabs(labels: string[], rows: RemoteSessionView[] = []): ReturnType<typeof makeManagers> {
+    const made = makeManagers();
+    for (const label of labels) made.tabs.push({ label, log: [] } as unknown as Tab);
+    vi.mocked(made.managers.sessions.view).mockReturnValue(rows);
+    return made;
+  }
+
+  function row(label: string, state: RemoteSessionView['state']): RemoteSessionView {
+    return { label, state, kind: 'harness', host: 'devbox' } as RemoteSessionView;
+  }
+
+  it('refuses `harness claude as foo` while a tab named foo is open, opening nothing', () => {
+    const { managers, tabs } = withTabs(['foo']);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as foo --no-workspace')).toBeUndefined();
+
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', 'Cannot launch "foo": a tab named "foo" is already open.');
+    expect(tabs.map((t) => t.label)).toEqual(['janus', 'foo']);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('moves a bare `harness claude` past an open claude tab and a detached claude-2 row', () => {
+    const { managers, tabs } = withTabs(['claude'], [row('claude-2', 'detached')]);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude --no-workspace')).toBeUndefined();
+
+    expect(tabs.at(-1)?.label).toBe('claude-3');
+    expect(notify).not.toHaveBeenCalledWith(managers, 'launch-refused', expect.anything(), expect.anything());
+  });
+
+  it('lets a terminated row\'s name be taken again', () => {
+    const { managers, tabs } = withTabs([], [row('foo', 'terminated')]);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as foo --no-workspace')).toBeUndefined();
+
+    expect(tabs.at(-1)?.label).toBe('foo');
+  });
+
+  it('refuses a `-w` label that climbs out of the workspace base before any cleanup or clone', () => {
+    const { managers, tabs } = withTabs([]);
+    const create = vi.fn();
+    (managers.workspace as unknown as { create: typeof create }).create = create;
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as ../victim -w')).toBeUndefined();
+    expect(manager.openFromProfile({ name: '../victim', tool: 'claude', workspace: true }, '../victim', 2, '#fff', 'janus'))
+      .toBe('launch refused — see notifications');
+
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', expect.stringMatching(
+      /^Cannot launch "\.\.\/victim": a workspace name must be a single folder name/));
+    expect(isWorkspaceRunning).not.toHaveBeenCalled();
+    expect(hasLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('keeps a -w leftover when the project has no origin to clone, reporting the create error as before', () => {
+    const { managers, tabs } = withTabs([]);
+    const error = 'Failed to create workspace: no origin remote';
+    Object.assign(managers.workspace, { preflight: () => error, create: () => ({ error }) });
+    vi.mocked(hasLeftoverWorkspace).mockReturnValueOnce(true);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as bob -w')).toBe(error);
+
+    expect(removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+    expect(tabs.map((t) => t.label)).toEqual(['janus']);
+  });
+
+  it('keeps a slash-bearing label for a launch that makes no workspace', () => {
+    const { managers, tabs } = withTabs([]);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as a/b --no-workspace')).toBeUndefined();
+
+    expect(tabs.at(-1)?.label).toBe('a/b');
+    expect(notify).not.toHaveBeenCalledWith(managers, 'launch-refused', expect.anything(), expect.anything());
+  });
+
+  it('refuses a profile entry whose name a detached row holds, as a skip', () => {
+    const { managers } = withTabs([], [row('foo', 'detached')]);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.openFromProfile({ name: 'foo', tool: 'claude', workspace: false }, 'foo', 2, '#fff', 'janus'))
+      .toBe('launch refused — see notifications');
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "foo": "foo" is already in the sessions tab (detached on devbox).');
+  });
 });

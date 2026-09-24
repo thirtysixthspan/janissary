@@ -203,6 +203,17 @@ describe('RemoteChannel — attached', () => {
     expect(h.frames).toEqual([{ type: 'workspace-failed', message: 'nope' }]);
   });
 
+  it('hands a name-in-use answer, with and without its removal details, to onFrame', () => {
+    const h = attachedChannel();
+    h.channel.receive(`${encodeFrame({ type: 'name-in-use', label: 'claude' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'name-in-use', label: 'claude', path: '/srv/ws/claude', reason: 'EACCES' })}\n`);
+    expect(h.frames).toEqual([
+      { type: 'name-in-use', label: 'claude' },
+      { type: 'name-in-use', label: 'claude', path: '/srv/ws/claude', reason: 'EACCES' },
+    ]);
+    expect(h.errors).toEqual([]);
+  });
+
   it('fails the channel on a frame outside the union', () => {
     const h = attachedChannel();
     h.channel.receive(`${JSON.stringify({ type: 'exec', id: 'r1' })}\n`);

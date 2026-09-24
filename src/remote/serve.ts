@@ -1,18 +1,16 @@
 import { loadConfig } from '../config.js';
-import { getProjectTokens, loadProjectTokens, type ProjectTokens } from '../project/tokens.js';
-import { loadGitIdentity, setGitIdentity, type GitIdentity } from '../git/identity.js';
+import { loadProjectTokens, type ProjectTokens } from '../project/tokens.js';
+import { loadGitIdentity, type GitIdentity } from '../git/identity.js';
 import { initWorkspaceDir } from '../workspace/index.js';
-import { sandboxNotice } from '../sandbox/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { createTranscriptSource } from '../harness/transcript/sources.js';
 import type { TranscriptSource } from '../harness/transcript/source.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
 import { resolveRemoteRoot } from './serve-root.js';
-import { RemoteProcesses } from './serve-processes.js';
-import { RemoteAcp } from './serve-acp.js';
-import { githubTokenNotice, workspaceReadyNotice } from './serve-notice.js';
-import { RemoteFileNavigators } from './serve-file-navigator.js';
-import { errorText } from '../error-text.js';
+import type { RemoteProcesses } from './serve-processes.js';
+import type { RemoteAcp } from './serve-acp.js';
+import type { RemoteFileNavigators } from './serve-file-navigator.js';
+import { provisionRemoteWorkspace } from './serve-provision.js';
 import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { DetachedPeer, relayPeer } from './serve-detach.js';
@@ -160,42 +158,21 @@ export class RemoteServer {
     }
   }
 
-  // Clone the project root's `origin` into `.janissary/workspace/<label>` under this root, using the
-  // very same `WorkspaceManager` the local server uses for a `-w` launch.
-  private async provision(label: string, forwarded: ProjectTokens, identity: GitIdentity): Promise<void> {
-    if (this.processes || this.stopping) return;
-    const result = this.workspaces.create(label);
-    if ('error' in result) { this.refuse(result.error); return; }
-    try {
-      await result.ready;
-    } catch (error) {
-      this.refuse(errorText(error));
-      return;
-    }
-    if (this.stopping) { this.workspaces.removeAll(); return; }
-    this.workspaceDir = result.dir;
-    const own = getProjectTokens();
-    // Per token, a forwarded value wins and this machine's own file is the fallback — spreading own
-    // first and forwarded over it says exactly that, since `loadProjectTokens` omits absent
-    // credentials rather than storing them as undefined.
-    //
-    // Only the GitHub credential gets a notice. A missing harness credential announces itself in
-    // that harness's own output the moment it starts, and most remote launches have none configured
-    // on either machine and are working as intended, so a mirrored notice would speak on the
-    // ordinary case rather than warn about anything.
-    const tokens = { ...own, ...forwarded };
-    // The identity, unlike the tokens, is replaced whole or not at all: a name from the local
-    // machine paired with an email from this one belongs to nobody, so a forwarded identity either
-    // stands on its own or this machine's own stays as the fallback.
-    if (Object.keys(identity).length > 0) setGitIdentity(identity);
-    this.processes = new RemoteProcesses((frame) => this.emit(frame), result.dir, label, tokens);
-    this.files = new RemoteFileNavigators((frame) => this.emit(frame), result.dir);
-    this.acp = new RemoteAcp((frame) => this.emit(frame), result.dir, tokens);
-    this.emit({
-      type: 'workspace-ready',
-      dir: result.dir,
-      notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github)),
-    });
+  // Check the label, then clone the project root's `origin` under it (see `serve-provision.ts`).
+  private provision(label: string, forwarded: ProjectTokens, identity: GitIdentity): Promise<void> {
+    return provisionRemoteWorkspace({
+      emit: (frame) => this.emit(frame),
+      workspaces: this.workspaces,
+      peer: this.peer,
+      idle: () => !this.processes && !this.stopping,
+      stopping: () => this.stopping,
+      provisioned: ({ dir, processes, files, acp }) => {
+        this.workspaceDir = dir;
+        this.processes = processes;
+        this.files = files;
+        this.acp = acp;
+      },
+    }, label, forwarded, identity);
   }
 
   private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {

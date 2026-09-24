@@ -161,12 +161,25 @@ These event types can produce a notification line:
   neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled
   audio plugin uses it to name a track it had to drop from a playlist because the browser could not
   decode it (see [[audio-tab]]).
+- **`launch-refused`** — a harness or agent launch was refused because its name is already in use:
+  by an open tab, by a live row in the sessions tab, or by something running on the target host, or
+  because a leftover workspace under that name could not be removed. Pool exhaustion
+  (`All agent names are in use.`) is reported the same way. The line is the refusal itself, such as
+  `Cannot launch "foo": a tab named "foo" is already open.`, attributed to the tab the command was
+  typed in (or the issuing tab of a profile launch); nothing is written to that tab's transcript. See
+  `agents.md`, `harness.md`, and `remote-server.md` for the full set of lines.
+- **`launch-workspace-cleaned`** — a leftover workspace folder with nothing running in it was removed
+  so a launch could go ahead: `Removed leftover workspace "<name>" (<path>) before launching.`, or
+  with ` on <host>` after the name when the folder was on a remote host. Attributed like
+  `launch-refused`.
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
-`open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, and `remote-session` events have no toggle. A `question` event fires only for a
+`open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
+`launch-refused`, and `launch-workspace-cleaned` events have no toggle, and like the other explicit
+events they are shown even when the tab they are attributed to is the active one. A `question` event fires only for a
 background tab.
 
 ### Focus suppression

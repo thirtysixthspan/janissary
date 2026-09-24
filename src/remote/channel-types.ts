@@ -24,11 +24,12 @@ export type NavigatorListener = {
   onClose?: () => void;
 };
 
-// The frames that belong to the tab rather than to one process's I/O: the provisioning answer, the
-// transcript pushes, and the browser-gone report. Everything else inbound is routed to a
-// `SessionListener` instead. `browser-exited` carries a session id but is not that session's
-// output — the tab it names is resolved by the manager, since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
+// The frames that belong to the tab rather than to one process's I/O: the provisioning answer (a
+// ready workspace, a failed one, or a refused label), the transcript pushes, and the browser-gone
+// report. Everything else inbound is routed to a `SessionListener` instead. `browser-exited` carries
+// a session id but is not that session's output — the tab it names is resolved by the manager,
+// since joined tabs share a channel.
+export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'name-in-use' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.

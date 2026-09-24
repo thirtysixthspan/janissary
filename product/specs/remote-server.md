@@ -87,7 +87,13 @@ local workspace clone does:
 - The remote repository has no `origin` remote (`<root> has no "origin" remote.`).
 - The two janissary installations speak different protocol versions — the message names both
   versions and says to update janissary so the hosts match.
-- The ssh session ends before the workspace is ready.
+- The ssh session ends before the workspace is ready. For a new launch this also means the host never
+  got to check the launch's name, so `Cannot launch "<name>": could not check <host> for an existing
+  "<name>" — <reason>.` is posted to the notifications feed as well.
+
+The host refusing the launch's name is the one exception to that display: the placeholder closes at
+once, without showing an error, and the refusal is reported only in the notifications feed (see
+[Name check before provisioning](#name-check-before-provisioning)).
 
 The protocol version covers what the frames carry, not only their shape. A field one end fills in
 and the other is expected to honor is as much a part of the contract as a new frame type, because an
@@ -166,6 +172,14 @@ Restoring retained display and transcript history moves the protocol to 16. Reop
 
 Retaining what was sent to an agent tab's shell moves the protocol to 17. An agent shell runs without a terminal attached, so nothing sent to it is echoed back and its retained output alone says nothing about what produced it. A peer now also retains the commands it was sent for such a shell and replays the two together, in the order it saw them, when an attach is rebuilding tabs — so a restored transcript reads as commands beside their output. Retained commands are replayed only to rebuilt tabs: an automatic reconnect delivers into tabs that are already open, possibly mid-command, where replaying the commands would be mistaken for their output ending. Nothing is retained separately for a harness, whose terminal echoes what is typed into the output it already keeps. A version-16 peer retains no commands and would answer an attach with output alone, so it is refused at the handshake like any other mismatch.
 
+Checking the launch's name before cloning moves the protocol to 19. A provisioning request whose name
+is already running on the host, or whose leftover workspace could not be removed, is answered with a
+new name-refusal frame instead of a clone, and a workspace-ready answer can now say that a leftover
+was removed first. The refusal is a frame of its own rather than a provisioning failure so that the
+local side can close the placeholder at once instead of showing an error. A version-18 remote never
+checks and never answers with it, so a launch against one would still land on a leftover's failed
+clone while both ends looked healthy — it is refused at the handshake like any other mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -202,6 +216,9 @@ short list is indistinguishable from a process that exited and an empty one ends
 gate-event or capture-reply frame's `capturedAt` must be an integer within the range a timestamp can
 represent; an out-of-range or fractional value is refused rather than accepted and later failing when
 it is turned into a capture filename.
+A name-refusal frame must carry a nonempty name, and its path and reason come together or not at
+all, each nonempty when present; a workspace-ready frame's removed-leftover path is optional but,
+when present, must be nonempty.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.
@@ -270,6 +287,30 @@ leave those instructions undeliverable and the far-side processes running until 
 Nothing from the remote workspace is deleted locally when a remote tab closes. Files opened from a
 remote navigator are materialized in the local `.janissary/remote-files/` cache; that cache is
 cleared at launch and when the channel's last reference is released.
+
+#### Name check before provisioning
+
+Before a new launch opens any ssh connection, its name is checked locally against open tabs and the
+sessions tab (see `agents.md` and `harness.md`). The host then checks it again before cloning, since
+only the host knows what is running there.
+
+A workspace named `<name>` on the host counts as running when a remote server peer on that host —
+attached or parked — is holding a workspace under that name and its process is alive, or when a janus
+instance running inside that workspace holds its lock. A peer holding a name that differs only by
+case counts too (`Foo` is running while a live peer holds `foo`), so a live workspace is never
+removed as a leftover on a case-insensitive filesystem. A plain shell sitting in the folder does not
+count. Each remote server records the name it is provisioning before its clone starts, so a second
+launch of the same name on the same host sees the first one from then on. A peer record whose process
+has died is ignored, and it is left in place.
+
+- **Running:** nothing is provisioned. For a typed name or a profile entry's name the placeholder closes at once and `Cannot launch "<name>": "<name>" is already running on <host>.` is posted. For a default name (a bare harness name, or an agent pool name) the placeholder closes and the launch is repeated silently over a fresh ssh connection under the next free name, up to 5 attempts in all. After the fifth, one refusal is posted: `Cannot launch "<first>": "<first>" through "<last>" are already running on <host>.` for a harness, or `Cannot launch agent on <host>: 5 names tried (<n1>, <n2>, …) are already running on <host>.` for an agent.
+- **Leftover:** a workspace folder under the name with nothing running in it is removed, even with uncommitted or unpushed work in it, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "<name>" on <host> (<path>) before launching.` is posted.
+- **Leftover that cannot be removed:** nothing is provisioned, the placeholder closes at once, and `Cannot launch "<name>": could not remove leftover workspace "<name>" on <host> (<path>) — <reason>.` is posted. This covers a failed update of the host's Claude trust file, which is tried before the folder is touched, and a removal that fails partway, which leaves the rest in place for the next launch to try again.
+- **Leftover with nothing to clone:** when the host's project root has lost its git repository or `origin` remote, the leftover is kept and the host answers with the same workspace failure a clone would have given.
+- **Name that is not a single folder name:** a name that is empty, `.` or `..`, or contains `/` or `\` would reach outside the host's workspace base. The host checks it before anything else, provisions and removes nothing, and answers with a workspace failure carrying `Cannot launch "<name>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`, which the placeholder shows before it closes.
+
+These lines go to the notifications feed only, attributed to the tab the launch was typed in (or the
+issuing tab of a profile launch). Attaching a parked session is not a new launch and is never checked.
 
 ### What is computed where
 

@@ -238,6 +238,7 @@ export class RemoteChannel {
     case 'attach-result':
     case 'session-state-result':
     case 'workspace-failed':
+    case 'name-in-use':
     case 'browser-exited':
     case 'transcript': { this.handlers.onFrame(frame); return; }
     default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
