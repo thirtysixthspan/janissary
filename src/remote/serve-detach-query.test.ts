@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -121,6 +121,21 @@ describe('answerCaptureRequest', () => {
     try {
       answerCaptureRequest({ session: peer.session, id: 'r1', request: 'q1' }, undefined, root, (frame) => { emitted.push(frame); });
       await vi.waitFor(() => expect(emitted).toEqual([{ type: 'capture-reply', id: 'r1', request: 'q1', text: 'parked screen', capturedAt: 7 }]));
+    } finally { peer.dispose(); }
+  });
+});
+
+describe('DetachedPeer.setLabel', () => {
+  it('stamps the record with the label, keeping pid and socket, and capture queries still reach it', async () => {
+    const peer = new DetachedPeer(root, randomUUID(), vi.fn(), vi.fn(), () => ({ text: 'labeled screen', capturedAt: 3 }));
+    await peer.start(vi.fn());
+    const file = path.join(root, '.janissary', 'remote', `${peer.session}.json`);
+    const before = JSON.parse(readFileSync(file, 'utf8')) as { pid: number; socket: string };
+    peer.setLabel('foo');
+    peer.detach();
+    try {
+      expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ pid: before.pid, socket: before.socket, label: 'foo' });
+      await expect(requestParkedCapture(root, peer.session, 'r1', 'q1')).resolves.toEqual({ text: 'labeled screen', capturedAt: 3 });
     } finally { peer.dispose(); }
   });
 });

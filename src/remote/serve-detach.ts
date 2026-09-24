@@ -18,6 +18,7 @@ export class DetachedPeer {
   private server: Server | undefined;
   private socket: Socket | undefined;
   private socketDir: string | undefined;
+  private socketPath: string | undefined;
   private expiry: ReturnType<typeof setTimeout> | undefined;
   private sink: ((data: string) => void) | undefined;
   private pending: ServerFrame[] = [];
@@ -53,7 +54,16 @@ export class DetachedPeer {
       server.once('error', reject);
       server.listen(socketPath, resolve);
     });
+    this.socketPath = socketPath;
     writeFileSync(this.record, JSON.stringify({ pid: process.pid, socket: socketPath }), { mode: 0o600 });
+  }
+
+  // Stamp the record with the label this peer is provisioning, before its clone starts, so another
+  // `remote-serve` on this host asked for the same label sees it running and refuses. `pid` and
+  // `socket` are rewritten unchanged; the readers of those two ignore the extra field.
+  setLabel(label: string): void {
+    if (this.stopped || this.socketPath === undefined) return;
+    writeFileSync(this.record, JSON.stringify({ pid: process.pid, socket: this.socketPath, label }), { mode: 0o600 });
   }
 
   emit(frame: ServerFrame): void {

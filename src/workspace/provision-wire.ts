@@ -12,19 +12,22 @@ export const PROVISION_FAILURE_CLOSE_DELAY_MS = 3000;
 //
 // `tabExists` is re-checked right before invoking either callback so a tab closed (and its clone
 // cancelled) mid-provisioning is never resurrected by a clone that was already in flight.
+//
+// `onFailed` gets the raw rejection as well as its text, so a caller can tell a remote host's
+// label refusal apart from an ordinary provisioning failure; callers with no use for it ignore it.
 export function wireProvisioning(
   label: string,
   ready: Promise<void>,
   tabExists: (label: string) => boolean,
   onReady: () => void,
-  onFailed: (message: string) => void,
+  onFailed: (message: string, error: unknown) => void,
 ): void {
   async function settle(): Promise<void> {
     try {
       await ready;
       if (tabExists(label)) onReady();
     } catch (error) {
-      if (tabExists(label)) onFailed(errorText(error));
+      if (tabExists(label)) onFailed(errorText(error), error);
     }
   }
   void settle();

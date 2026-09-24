@@ -7,11 +7,24 @@ const mocks = vi.hoisted(() => ({ notify: vi.fn(), sandboxNotice: vi.fn(() => un
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
 vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
+// No workspace folder exists or is held for any label unless a test says so.
+const leftover = vi.hoisted(() => ({
+  isWorkspaceRunning: vi.fn(() => false),
+  hasLeftoverWorkspace: vi.fn(() => false),
+  removeLeftoverWorkspace: vi.fn((): string | undefined => undefined),
+}));
+vi.mock('../launch-name/leftover.js', () => leftover);
+
 import { ProfileManager } from './manager.js';
 import { initProfileDir } from '../profiles.js';
 import { makeTab } from '../tab/index.js';
 import { agentNames } from '../agent/names.js';
 import type { Managers } from '../managers.js';
+import type { RemoteSessionView } from '../protocol.js';
+import { initWorkspaceDir } from '../workspace/index.js';
+
+// Only sets where workspace paths resolve; nothing under it is ever created.
+initWorkspaceDir('/proj');
 import type { Tab } from '../tab/types.js';
 import { setWindowBoundsReader } from '../window-resizer.js';
 import { messageBus } from '../bus.js';
@@ -44,6 +57,7 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
     workspace: { create: vi.fn() },
     openFile: { edit: vi.fn() },
     monitor: { snapshot: vi.fn(() => []) },
+    sessions: { view: vi.fn(() => []) },
   } as unknown as Managers;
   return { managers, appended };
 }
@@ -343,6 +357,112 @@ describe('ProfileManager.newAgent', () => {
   });
 });
 
+describe('ProfileManager.newAgent — launch-name clashes', () => {
+  beforeEach(() => {
+    mocks.notify.mockClear();
+    leftover.isWorkspaceRunning.mockReturnValue(false);
+    leftover.hasLeftoverWorkspace.mockReturnValue(false);
+    leftover.removeLeftoverWorkspace.mockReset();
+  });
+
+  it('refuses a name an open tab holds, in the notifications feed only', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus, [janus, makeTab('bob', 'blue')]);
+
+    new ProfileManager(managers).newAgent('agent bob');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', 'Cannot launch "bob": a tab named "bob" is already open.');
+    expect(appended).toEqual([]);
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a name a detached sessions row holds', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    vi.mocked(managers.sessions.view).mockReturnValue([
+      { label: 'bob', kind: 'agent', state: 'detached', host: 'devbox' } as RemoteSessionView,
+    ]);
+
+    new ProfileManager(managers).newAgent('agent bob -w');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "bob": "bob" is already in the sessions tab (detached on devbox).');
+    expect(appended).toEqual([]);
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a -w name whose workspace a live process still holds', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers } = makeManagers(janus);
+    leftover.isWorkspaceRunning.mockReturnValue(true);
+
+    new ProfileManager(managers).newAgent('agent bob -w');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "bob": "bob" is already running (/proj/.janissary/workspace/bob).');
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('removes a -w leftover, announces it, and clones', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers } = makeManagers(janus);
+    leftover.hasLeftoverWorkspace.mockReturnValue(true);
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: '/proj/.janissary/workspace/bob', ready: new Promise(() => {}) });
+
+    new ProfileManager(managers).newAgent('agent bob -w');
+
+    expect(leftover.removeLeftoverWorkspace).toHaveBeenCalledWith('bob');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-workspace-cleaned', 'janus',
+      'Removed leftover workspace "bob" (/proj/.janissary/workspace/bob) before launching.');
+    expect(managers.workspace.create).toHaveBeenCalledWith('bob');
+  });
+
+  it('refuses when the leftover cannot be removed', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers } = makeManagers(janus);
+    leftover.hasLeftoverWorkspace.mockReturnValue(true);
+    leftover.removeLeftoverWorkspace.mockReturnValue('EACCES: permission denied.');
+
+    new ProfileManager(managers).newAgent('agent bob -w');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
+      'Cannot launch "bob": could not remove leftover workspace "bob" (/proj/.janissary/workspace/bob) — EACCES: permission denied.');
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+  });
+
+  it('leaves the leftover step out of a launch without -w', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers } = makeManagers(janus);
+    leftover.hasLeftoverWorkspace.mockReturnValue(true);
+
+    new ProfileManager(managers).newAgent('agent bob --no-workspace');
+
+    expect(leftover.removeLeftoverWorkspace).not.toHaveBeenCalled();
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(expect.objectContaining({ label: 'bob' }));
+  });
+
+  it('posts pool exhaustion to the notifications feed rather than the transcript', () => {
+    const tabs = agentNames.map((n) => makeTab(n, 'red'));
+    const { managers, appended } = makeManagers(tabs[0], tabs);
+
+    new ProfileManager(managers).newAgent('agent --no-workspace');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', tabs[0].label, 'All agent names are in use.');
+    expect(appended).toEqual([]);
+  });
+
+  it('refuses a pool-exhausted ➕ launch into a workspace without placing a tab', () => {
+    const tabs = agentNames.map((n) => makeTab(n, 'red'));
+    const { managers } = makeManagers(tabs[0], tabs);
+
+    new ProfileManager(managers).newAgentInWorkspace(tabs[0].label, '/proj/.janissary/workspace/x');
+
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', tabs[0].label, 'All agent names are in use.');
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+  });
+});
+
 describe('ProfileManager.newAgentAt', () => {
   function makeAtManagers(tabs: Tab[], cwdByLabel: Record<string, string>): Managers {
     return {
@@ -369,6 +489,7 @@ describe('ProfileManager.newAgentAt', () => {
         workspaceOf: vi.fn(() => '/remote/ws'),
         readyOf: vi.fn(() => Promise.resolve('/remote/ws')),
       },
+      sessions: { view: vi.fn(() => []) },
     } as unknown as Managers;
   }
 
@@ -403,7 +524,21 @@ describe('ProfileManager.newAgentAt', () => {
     new ProfileManager(managers).newAgentAt(source.label);
 
     expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
-    expect(mocks.notify).toHaveBeenCalledWith(managers, 'manual', source.label, 'All agent names are in use.');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', source.label, 'All agent names are in use.');
+  });
+
+  it('skips a pool name a live sessions row holds', () => {
+    const [free, ...held] = agentNames;
+    const source = makeTab('claude', 'red');
+    const managers = makeAtManagers([source, ...held.map((n) => makeTab(n, 'red'))], { claude: '/work' });
+    vi.mocked(managers.sessions.view).mockReturnValue([
+      { label: free, kind: 'agent', state: 'detached', host: 'devbox' } as RemoteSessionView,
+    ]);
+
+    new ProfileManager(managers).newAgentAt('claude');
+
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'claude', 'All agent names are in use.');
   });
 
   it('does not create a workspace when the creator tab is not workspaced', () => {

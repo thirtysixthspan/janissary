@@ -84,7 +84,13 @@ describe('frame codec', () => {
   it('round-trips every server frame', () => {
     const frames: RemoteFrame[] = [
       { type: 'workspace-ready', dir: '/srv/proj/.janissary/workspace/claude' },
+      {
+        type: 'workspace-ready', dir: '/srv/proj/.janissary/workspace/claude', notice: 'isolation on',
+        cleaned: '/srv/proj/.janissary/workspace/claude',
+      },
       { type: 'workspace-failed', message: 'no origin' },
+      { type: 'name-in-use', label: 'claude' },
+      { type: 'name-in-use', label: 'claude', path: '/srv/proj/.janissary/workspace/claude', reason: 'EACCES: permission denied' },
       { type: 'output', id: 'r1', data: 'done' },
       { type: 'exit', id: 'r1', exitCode: 0 },
       { type: 'transcript', blocks: ['first', 'second'] },
@@ -213,7 +219,14 @@ describe('frame codec', () => {
     ['kill without a string id', { type: 'kill', id: 1 }],
     ['workspace-ready without a directory', { type: 'workspace-ready' }],
     ['workspace-ready with a non-string notice', { type: 'workspace-ready', dir: '/srv/ws', notice: false }],
+    ['workspace-ready with an empty cleaned path', { type: 'workspace-ready', dir: '/srv/ws', cleaned: '' }],
+    ['workspace-ready with a non-string cleaned path', { type: 'workspace-ready', dir: '/srv/ws', cleaned: 1 }],
     ['workspace-failed without a message', { type: 'workspace-failed' }],
+    ['name-in-use without a label', { type: 'name-in-use' }],
+    ['name-in-use with an empty label', { type: 'name-in-use', label: '' }],
+    ['name-in-use with a path but no reason', { type: 'name-in-use', label: 'claude', path: '/srv/ws/claude' }],
+    ['name-in-use with a reason but no path', { type: 'name-in-use', label: 'claude', reason: 'EACCES' }],
+    ['name-in-use with a non-string reason', { type: 'name-in-use', label: 'claude', path: '/srv/ws/claude', reason: 7 }],
     ['output without string data', { type: 'output', id: 'r1', data: [] }],
     ['exit with a fractional code', { type: 'exit', id: 'r1', exitCode: 1.5 }],
     ['transcript with a non-string block', { type: 'transcript', blocks: ['b25l', 2] }],
@@ -375,8 +388,8 @@ describe('session-state frames', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 18', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(18);
+  it('is 19', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(19);
   });
 });
 
@@ -395,7 +408,7 @@ describe('admitted frame types', () => {
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
-      'busy-transition', 'capture-reply', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'output',
+      'busy-transition', 'capture-reply', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use', 'output',
       'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });

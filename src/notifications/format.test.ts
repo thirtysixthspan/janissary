@@ -85,4 +85,11 @@ describe('notificationText', () => {
   it('falls back to a fixed e2e-browser-gone body when no detail is given', () => {
     expect(notificationText('e2e-browser-gone', 'claude')).toBe('e2e browser stopped');
   });
+
+  it.each([
+    ['launch-refused', 'Cannot launch "foo": a tab named "foo" is already open.'],
+    ['launch-workspace-cleaned', 'Removed leftover workspace "foo" (/p/.janissary/workspace/foo) before launching.'],
+  ] as const)('renders the %s message verbatim', (event, text) => {
+    expect(notificationText(event, 'janus', text)).toBe(text);
+  });
 });

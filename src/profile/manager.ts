@@ -1,7 +1,8 @@
 import { listProfiles, profileExists } from '../profiles.js';
 import { parseProfileCommand } from './command.js';
 import { loadProfile } from './file.js';
-import { resolveAgentName } from '../agent/commands.js';
+import { resolveLocalLaunchName } from '../launch-name/local.js';
+import { poolCandidates } from '../launch-name/check.js';
 import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save.js';
@@ -93,8 +94,8 @@ export class ProfileManager {
   newAgentAt(label: string): void {
     const creator = this.managers.tab.byLabel(label);
     if (!creator) return;
-    const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
-    if (resolved === null) { notify(this.managers, 'manual', label, 'All agent names are in use.'); return; }
+    const resolved = this.poolName(label);
+    if (resolved === undefined) return;
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
 
     if (creator.remote) {
@@ -128,13 +129,19 @@ export class ProfileManager {
   newAgentInWorkspace(label: string, workspaceDir: string): void {
     const creator = this.managers.tab.byLabel(label);
     if (!creator) return;
-    const resolved = resolveAgentName('agent', this.managers.tab.allLabels());
-    if (resolved === null) {
-      notify(this.managers, 'manual', label, 'All agent names are in use.');
-      return;
-    }
+    const resolved = this.poolName(label);
+    if (resolved === undefined) return;
     placeAgent(this.managers, {
       resolved, creator, cwd: workspaceDir, workspaceDir, offline: false,
+    });
+  }
+
+  // A pool name for an unnamed agent joining `label`'s workspace, past every open tab and live
+  // sessions row. Joining creates no workspace, so there is no leftover step; pool exhaustion is
+  // posted by the check itself.
+  private poolName(label: string): string | undefined {
+    return resolveLocalLaunchName(this.managers, {
+      creator: label, name: '', explicit: false, workspace: false, candidates: poolCandidates(),
     });
   }
 

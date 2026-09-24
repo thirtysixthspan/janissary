@@ -74,13 +74,18 @@ export function createRemoteEntry({
         }
         case 'workspace-ready': {
           if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
-          entry.handlers.get(label)?.onReady(frame.dir, frame.notice);
+          entry.handlers.get(label)?.onReady(frame.dir, frame.notice, frame.cleaned);
           sessionsChanged();
           break;
         }
         case 'workspace-failed': {
           if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
           entry.handlers.get(label)?.onFailed(frame.message);
+          break;
+        }
+        case 'name-in-use': {
+          if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(`"${frame.label}" is in use on ${address.host}.`)); }
+          entry.handlers.get(label)?.onNameRefused?.(frame);
           break;
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }

@@ -108,11 +108,13 @@ describe('Controller', () => {
     expect(agentNames).toContain(created[0]);
   });
 
-  it('reports when an agent name is already active', () => {
+  it('refuses a second agent with an open tab\'s name in the notifications feed, not the transcript', () => {
     const { c } = makeController();
     c.dispatch('agent bob --no-workspace');
     c.dispatch('agent bob --no-workspace');
-    expect(allText(c)).toContain('already active');
+    expect(c.managers.notifications.all.map((n) => n.message))
+      .toContain('Cannot launch "bob": a tab named "bob" is already open.');
+    expect(allText(c)).not.toContain('Cannot launch');
     expect(c.view().filter((t) => t.label === 'bob')).toHaveLength(1);
   });
 

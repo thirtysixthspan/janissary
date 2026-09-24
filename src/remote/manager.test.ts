@@ -80,7 +80,7 @@ function managerHarness(ready = true, session?: string) {
     },
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
-  const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
+  const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn() };
   remote.create('creator', address('devbox'), '/local', handlers);
   transport?.onData(`${encodeHandshake('/remote', session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
@@ -163,6 +163,23 @@ describe('RemoteManager shared channels', () => {
     expect(replacementHandlers.onFailed).not.toHaveBeenCalled();
     h.transport()?.onData(`${encodeHandshake('/new')}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
     await expect(h.remote.readyOf('creator')).resolves.toBe('/new/ws');
+  });
+
+  it('settles readiness and reaches onNameRefused, not onFailed, on a name-in-use answer', async () => {
+    const h = managerHarness(false);
+    const ready = h.remote.readyOf('creator');
+    h.transport()?.onData(`${encodeFrame({ type: 'name-in-use', label: 'creator' })}\n`);
+    await expect(ready).rejects.toThrow('"creator" is in use on devbox');
+    expect(h.handlers.onNameRefused).toHaveBeenCalledWith({ type: 'name-in-use', label: 'creator' });
+    expect(h.handlers.onFailed).not.toHaveBeenCalled();
+    h.remote.release('creator');
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+  });
+
+  it('hands a removed leftover\'s path to onReady', () => {
+    const h = managerHarness(false);
+    h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', cleaned: '/remote/ws' })}\n`);
+    expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws', undefined, '/remote/ws');
   });
 
   it('settles readiness and clears the cache once on final-owner release', async () => {

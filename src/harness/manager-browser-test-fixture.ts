@@ -38,6 +38,11 @@ vi.mock('./scratch-dir.js', () => ({
 }));
 vi.mock('../notifications/index.js', () => ({ notify: notificationMock }));
 vi.mock('../browser/browser-log.js', () => ({ writeBrowserLog: browserLogMock }));
+vi.mock('../launch-name/leftover.js', () => ({
+  isWorkspaceRunning: vi.fn(() => false),
+  hasLeftoverWorkspace: vi.fn(() => false),
+  removeLeftoverWorkspace: vi.fn(),
+}));
 vi.mock('./recorder.js', () => ({
   HarnessRecorder: vi.fn(function () { return { dispose: vi.fn() }; }),
 }));
@@ -78,6 +83,7 @@ export function makeBrowserManagers(): { managers: Managers; tabs: Tab[] } {
     tab: {
       tabs,
       cur: () => creator,
+      allLabels: () => tabs.map((tab) => tab.label),
       cwdOf: () => '/project',
       setCwd: () => {},
       insertTabInGroup: (tab: Tab) => { tabs.push(tab); },
@@ -103,6 +109,7 @@ export function makeBrowserManagers(): { managers: Managers; tabs: Tab[] } {
     workspace: { create: () => ({ dir: '/workspace/claude' }) },
     openFile: { edit: vi.fn() },
     schedule: { set: vi.fn() },
+    sessions: { view: vi.fn(() => []) },
   } as unknown as Managers;
   return { managers, tabs };
 }

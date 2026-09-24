@@ -64,8 +64,8 @@ export async function openProfileEntries(
     const group = typeof entry.group === 'number' ? entry.group : defaultGroup;
     const groupColor = colorForGroup(group, dotColor);
     const error = isHarnessEntry(entry)
-      ? openHarnessEntry(entry, managers, group, groupColor, issuingCwd, notes)
-      : openAgentEntry(entry, managers, group, groupColor, dotColor);
+      ? openHarnessEntry(entry, managers, group, groupColor, { label: issuingLabel, cwd: issuingCwd }, notes)
+      : openAgentEntry(entry, managers, group, groupColor, dotColor, issuingLabel);
     if (error) { skipped.push(`${label} (${error})`); continue; }
     opened.push(label);
     candidates.push({ label, number: entry.number, focus: entry.focus, pane: entry.pane });

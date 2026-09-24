@@ -89,11 +89,14 @@ is always visible even if the harness exits — and its tab closes — immediate
 
 By default a harness tab's label is the harness name (`claude`, `opencode`, `codex`), disambiguated
 with `-2`, `-3`, … if that label is already in use. `as <label>` overrides this with an arbitrary
-label instead, still disambiguated the same way if it collides with an existing tab:
+label instead. A label typed with `as` is never disambiguated: if it is in use the launch is refused
+(see [Name clashes](#name-clashes)):
 
 ```
+harness claude                → tab "claude"
+harness claude                → tab "claude-2" (default label already taken)
 harness opencode as quality   → tab "quality" running opencode
-harness opencode as quality   → tab "quality-2" running opencode (label already taken)
+harness opencode as quality   → refused: Cannot launch "quality": a tab named "quality" is already open.
 ```
 
 The harness identity (`name`, the binary launched) is unaffected by `as` — only the tab's label
@@ -104,6 +107,38 @@ harness opencode as quality -w
 ```
 
 - `harness claude as` (no label after `as`) — error: `Usage: harness <claude|opencode|codex> as <label>.`
+
+### Name clashes
+
+A label is in use when an open tab has it, when the sessions tab has a harness or agent row with it
+that is provisioning, active, reconnecting, or detached (on any host), when — for a remote launch —
+something with it is running on the target host, or when — for a local `-w` launch — a live janissary
+owner (an open tab or a running janus instance) still holds the workspace folder of that name. A
+terminated, ssh, or file-navigator row never makes a label in use. Labels compare case-insensitively.
+
+- **Default label** (bare `harness <name>`): moves on to the next free `-2`, `-3`, … past every label in use, as above.
+- **`as <label>` or a profile entry's `name`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running (<path>).`.
+
+A remote launch's host answers only after the placeholder tab has opened. When it reports the label
+running, the placeholder closes at once, without showing an error. For an `as` label,
+`Cannot launch "<label>": "<label>" is already running on <host>.` is posted. For a default label the
+launch is repeated silently over a fresh ssh connection under the next free label (`claude-2`,
+`claude-3`, …), up to 5 attempts in all; after the fifth,
+`Cannot launch "claude": "claude" through "claude-5" are already running on <host>.` is posted.
+
+If the ssh connection ends before the host answers (unreachable host, failed auth, or any other
+reason), the placeholder shows the connection's error and closes shortly after as before, and
+`Cannot launch "<label>": could not check <host> for an existing "<label>" — <reason>.` is posted.
+
+A leftover workspace folder under the chosen label with nothing running in it is removed before the
+clone, locally for `-w` and on the host for `on <address>`, even with uncommitted or unpushed work in
+it. The removal is announced as `Removed leftover workspace "<label>" (<path>) before launching.` (with
+` on <host>` after the label for a remote one). A removal that fails refuses the launch with
+`Cannot launch "<label>": could not remove leftover workspace "<label>" (<path>) — <reason>.`, closing
+a remote placeholder at once.
+
+Sessions-tab Attach and `--relaunch` restore bring back an existing session rather than launching a
+new one, so they keep disambiguating with `-2`, `-3`, ….
 
 ### Workspace default and opt-out
 

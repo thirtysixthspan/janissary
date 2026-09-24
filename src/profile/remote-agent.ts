@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import { startRemoteLaunch } from '../harness/remote-launch.js';
-import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
+import { wireProvisioning } from '../workspace/provision-wire.js';
+import { failRemoteLaunch, reportRemoteCleanup, type RemoteNameRetry } from '../launch-name/fail-remote.js';
 import { placeAgent, type PlaceAgentOptions } from './place-agent.js';
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteResume } from '../remote/resume.js';
@@ -22,6 +23,9 @@ export type RemoteAgentLaunch = {
   // Set when this launch is really an attach: the channel asks to attach rather than to
   // provision, and the workspace it comes back to is the one the record remembers.
   resume?: RemoteResume;
+  // Set for a fresh launch, so a host's label refusal is reported to the right tab or, for a pool
+  // name, retried under the next one (see `failRemoteLaunch`). Never set for an attach.
+  nameRetry?: RemoteNameRetry;
 };
 
 /**
@@ -52,16 +56,16 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
       managers.shell.ensure(resolved);
       managers.tab.deleteBusy(resolved);
       messageBus.emit('state', { type: 'dirty' });
+      reportRemoteCleanup(managers, launch.nameRetry, resolved, address.host, remote.cleaned());
       out(`Agent "${resolved}" ready on ${address.host}. (workspace: ${remote.cwd()})`);
       const notice = remote.notice();
       if (notice) out(notice);
     },
-    (message) => {
-      out(`Failed to start "${resolved}" on ${address.host}: ${message}`);
-      setTimeout(() => {
-        const index = managers.tab.findIndex(resolved);
-        if (index !== -1) managers.tab.closeTab(index);
-      }, PROVISION_FAILURE_CLOSE_DELAY_MS);
+    (message, error) => {
+      failRemoteLaunch(managers, {
+        label: resolved, kind: 'agent', error, message, retry: launch.nameRetry,
+        show: (text) => { out(`Failed to start "${resolved}" on ${address.host}: ${text}`); },
+      });
     },
   );
 }

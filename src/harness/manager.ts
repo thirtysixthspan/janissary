@@ -1,8 +1,9 @@
-import { makeHarnessTab, distinctColor, uniqueLabel } from '../tab/index.js';
+import { makeHarnessTab, distinctColor } from '../tab/index.js';
+import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
 import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
 import type { HarnessLaunch } from './command-parse.js';
 import { harnessSpawnEnv } from './scratch-dir.js';
-import { writeBrowserLog } from '../browser/browser-log.js';
+import { reportBrowserGone } from './browser-gone.js';
 import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
@@ -13,14 +14,13 @@ import type { HarnessRuntime } from './runtime.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
-import type { HarnessView } from '../tab/types.js';
+import type { HarnessView, Tab } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus, type Subscription } from '../bus.js';
-import { notify } from '../notifications/index.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
-import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
-import { startRemoteTab } from './remote-launch.js';
+import { wireProvisioning } from '../workspace/provision-wire.js';
+import { failHarnessSpawn, startRemoteTab } from './remote-launch.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { Managers } from '../managers.js';
 
@@ -113,13 +113,24 @@ export class HarnessManager {
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
   // With `workspace`, the harness starts in a fresh clone of the `origin` remote of the repo
   // detected from cwd; otherwise it inherits the creator's cwd. With `remote`, no local clone is
-  // made at all — the clone is provisioned by `janus remote-serve` on the named host.
-  private open(launch: HarnessLaunch): string | undefined {
+  // made at all — the clone is provisioned by `janus remote-serve` on the named host. `retry` is set
+  // when a remote host reported a default name running: the same launch, by the same creator, under
+  // the next free name past every one already `tried`.
+  private open(launch: HarnessLaunch, retry?: { creator: Tab; tried: readonly string[] }): string | undefined {
     const {
       name, workspace, offline, autoApprove, browser, label: label_, model, effort, prompt, remote,
     } = launch;
-    const creator = this.managers.tab.cur();
-    const label = uniqueLabel(this.managers.tab.tabs, label_ ?? name);
+    const creator = retry?.creator ?? this.managers.tab.cur();
+    const explicit = label_ !== undefined;
+    const tried = retry?.tried ?? [];
+    const label = resolveLocalLaunchName(this.managers, {
+      creator: creator.label, name: label_ ?? name, explicit, workspace: workspace && !remote, skip: tried,
+    });
+    if (label === undefined) return undefined;
+    const nameRetry = remote && {
+      creator: creator.label, explicit, tried: [...tried, label],
+      relaunch: (next: readonly string[]) => { this.open(launch, { creator, tried: next }); },
+    };
     const fallbackCwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
 
     const dir = resolveLaunchDir(this.managers, workspace && !remote, label, fallbackCwd);
@@ -128,7 +139,10 @@ export class HarnessManager {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
-    this.spawnTab({ name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, browser, model, effort, ready, remote });
+    this.spawnTab({
+      name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, browser, model, effort, ready, remote,
+      ...(nameRetry && { nameRetry }),
+    });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
     return undefined;
   }
@@ -137,11 +151,17 @@ export class HarnessManager {
   // profile launch (not the creator tab) and the starting directory comes from the entry's own
   // `cwd`/`workspace` (falling back to the issuing tab's cwd when the entry has neither). Returns
   // an error to report and skip on, or undefined once the tab is open. Never persisted — harness
-  // tabs have no agent state.
-  openFromProfile(entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined {
-    const unique = uniqueLabel(this.managers.tab.tabs, label);
+  // tabs have no agent state. The entry's `name` is explicit, so a clash refuses the entry (posted
+  // against `creator`, the issuing tab) rather than suffixing it.
+  openFromProfile(
+    entry: ProfileHarnessEntry, label: string, group: number, groupColor: string, creator: string,
+  ): string | undefined {
     const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
     if (remote && 'error' in remote) return remote.error;
+    const unique = resolveLocalLaunchName(this.managers, {
+      creator, name: label, explicit: true, workspace: (entry.workspace ?? true) && !remote,
+    });
+    if (unique === undefined) return LAUNCH_REFUSED;
     const dir = resolveLaunchDir(this.managers, (entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd());
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
@@ -150,6 +170,7 @@ export class HarnessManager {
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
       group, groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
       browser: entry.browser ?? false, model: entry.model, effort: entry.effort, ready, remote,
+      ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),
     });
     return undefined;
   }
@@ -186,11 +207,7 @@ export class HarnessManager {
     this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
 
     if (remote) {
-      startRemoteTab(
-        this.managers, options, remote,
-        (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, notice),
-        (message) => this.failSpawn(label, message),
-      );
+      startRemoteTab(this.managers, options, remote, (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, notice));
       return;
     }
     const ready = options.ready;
@@ -206,7 +223,7 @@ export class HarnessManager {
       ready,
       (l) => this.managers.tab.tabs.some((t) => t.label === l),
       () => this.finishSpawn(options),
-      (message) => this.failSpawn(label, message),
+      (message, error) => { failHarnessSpawn(this.managers, options, message, error); },
     );
   }
 
@@ -228,7 +245,7 @@ export class HarnessManager {
       ? { env: undefined, handle: undefined }
       : harnessSpawnEnv({
         name, cwd, label, browser,
-        onBrowserGone: (message, log) => this.browserGone(label, message, log),
+        onBrowserGone: (message, log) => reportBrowserGone(this.managers, label, message, log),
       });
     // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
     // spawn or the runtime construction would otherwise strand a fully started browser.
@@ -248,24 +265,6 @@ export class HarnessManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // The tab's browser is gone, delivered twice. The notifications tab carries it as before, and the
-  // tab itself now carries it too, above its terminal, the way a failed workspace clone does. A
-  // notification is worth nothing to a user who keeps that feed closed, and the agent whose next
-  // `connect()` is about to fail is working in this tab.
-  //
-  // Everything the browser said is kept beside those two reports, in a file the notification line
-  // links, because the reports themselves are bounded to a readable tail and a crash trace is
-  // longer than that bound. Written whether or not the feed is open — unlike an auto-approve
-  // capture, which is written per approval and would otherwise pile up unread. A death is rare and
-  // its evidence is the point, the same reasoning that keeps the dead browser's scratch directory.
-  private browserGone(label: string, message: string, log?: string): void {
-    const logFile = log ? writeBrowserLog(label, Date.now(), log) : undefined;
-    notify(this.managers, 'e2e-browser-gone', label, message, logFile);
-    const tab = this.managers.tab.harnessTab(label);
-    if (tab) tab.harness.browserError = message;
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
   // Point the live tab at the PTY it just got. Inside `finishSpawn`'s ownership block, so a tab is
   // never left claiming to run a PTY whose runtime construction threw.
   private markRunning(label: string, id: string): void {
@@ -273,18 +272,5 @@ export class HarnessManager {
     if (!liveTab) return;
     liveTab.harness.ptyId = id;
     liveTab.harness.status = 'running';
-  }
-
-  // A `-w` launch's workspace clone failed after the placeholder tab was already created: surface
-  // the error in place of the empty placeholder, then close the tab shortly after so nothing is
-  // left open in a broken state.
-  private failSpawn(label: string, message: string): void {
-    const tab = this.managers.tab.harnessTab(label);
-    if (tab) tab.harness.provisionError = message;
-    messageBus.emit('state', { type: 'dirty' });
-    setTimeout(() => {
-      const index = this.managers.tab.findIndex(label);
-      if (index !== -1) this.managers.tab.closeTab(index);
-    }, PROVISION_FAILURE_CLOSE_DELAY_MS);
   }
 }
