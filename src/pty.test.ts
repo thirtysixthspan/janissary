@@ -60,6 +60,39 @@ describe('spawnPty', () => {
     expect(mockPtySpawn).toHaveBeenCalledOnce();
   });
 
+  it('runs the command through an interactive login shell so the user\'s rc file sets PATH', () => {
+    const previous = process.env.SHELL;
+    process.env.SHELL = '/bin/zsh';
+    try {
+      spawnPty('claude', 'claude', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', ['-l', '-i', '-c', 'claude'], expect.any(Object));
+    } finally {
+      process.env.SHELL = previous;
+    }
+  });
+
+  it('keeps the login-only form for a shell whose flags are unverified', () => {
+    const previous = process.env.SHELL;
+    process.env.SHELL = '/usr/bin/fish';
+    try {
+      spawnPty('claude', 'claude', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+      expect(mockPtySpawn).toHaveBeenCalledWith('/usr/bin/fish', ['-lc', 'claude'], expect.any(Object));
+    } finally {
+      process.env.SHELL = previous;
+    }
+  });
+
+  it('lets an explicit shellArgs replace the default argv', () => {
+    const previous = process.env.SHELL;
+    process.env.SHELL = '/bin/zsh';
+    try {
+      spawnPty('zsh', 'zsh', '/tmp', { onData: vi.fn(), onExit: vi.fn() }, 80, 24, undefined, undefined, ['--no-rcs']);
+      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', ['--no-rcs'], expect.any(Object));
+    } finally {
+      process.env.SHELL = previous;
+    }
+  });
+
   it('defaults cols to 80 and rows to 24', () => {
     const handlers = { onData: vi.fn(), onExit: vi.fn() };
     spawnPty('bash', 'ls', '/tmp', handlers);

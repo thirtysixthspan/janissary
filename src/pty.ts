@@ -1,5 +1,6 @@
 import * as pty from 'node-pty';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
+import { shellCommandArgs } from './shell/startup.js';
 
 // A live pseudo-terminal backing an inline xterm.js card (an interactive program like vim/less
 // or an AI harness like claude/codex). Bytes flow out through the manager's `onData`; keystrokes
@@ -25,8 +26,10 @@ let counter = 0;
  * rather than written to the real stdout, so many can run concurrently across tabs.
  * `sandbox`, when given a `workspaceDir`, confines the process to that workspace (see src/sandbox/index.ts);
  * omitted or workspaceDir-less, the command runs exactly as before.
- * `shellArgs` replaces the default `-lc <command>` argv for callers that need the shell itself rather
- * than one command run through it — a tab's own PTY-backed shell, which must skip its startup files.
+ * By default the command runs through an interactive login shell (see `shellCommandArgs`), so a
+ * harness binary installed by a version manager is found the way it is in the user's own terminal.
+ * `shellArgs` replaces that argv for callers that need the shell itself rather than one command run
+ * through it — a tab's own PTY-backed shell, which must skip its startup files.
  */
 export function spawnPty(
   program: string,
@@ -41,7 +44,9 @@ export function spawnPty(
 ): PtySession {
   const id = `pty${++counter}`;
   const shell = process.env.SHELL || 'bash';
-  const { command: file, args, env } = sandboxSpawn({ ...sandbox, selfBinaryHint: program }, shell, shellArgs ?? ['-lc', command]);
+  const { command: file, args, env } = sandboxSpawn(
+    { ...sandbox, selfBinaryHint: program }, shell, shellArgs ?? shellCommandArgs(shell, command),
+  );
   const proc = pty.spawn(file, args, {
     name: 'xterm-256color',
     cols: Math.max(1, cols),

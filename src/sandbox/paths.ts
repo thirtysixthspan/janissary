@@ -56,10 +56,14 @@ export const HOME_WRITE_CARVEOUTS = [
 // tree. Execute access for these binaries doesn't need a separate carve-in — `process-exec` is
 // allowed everywhere except `/tmp`/`/private/tmp`, so this read carve-in is the only gap), `.rvm`
 // (same reasoning as `.nvm`, for Ruby: `rvm`'s own loader script plus every installed Ruby
-// version's binaries and gems under `rubies/`/`gems/`), and `.bash_profile`/`.bashrc` (a
-// login/interactive bash shell sources these on startup; without the carve-in, spawning
-// `bash -lc` inside the sandbox fails that read silently and the shell starts with none of the
-// user's aliases/functions/PATH additions).
+// version's binaries and gems under `rubies/`/`gems/`), and the shell startup files
+// `.bash_profile`/`.bashrc`/`.profile` plus zsh's `.zshenv`/`.zprofile`/`.zshrc`/`.zlogin` (a
+// login/interactive shell sources these on startup; without the carve-in, spawning a shell inside
+// the sandbox fails that read silently and it starts with none of the user's aliases/functions/PATH
+// additions. zsh splits them: `.zprofile` is read for a login shell and `.zshrc` only for an
+// interactive one, which is the file a version manager's PATH setup actually lives in. Read-only,
+// never write carve-outs — a sandboxed agent that could edit them would be writing the startup
+// script of the next shell janissary spawns).
 //
 // `.cache/opencode/models.json` is opencode's cached provider/model catalog: without it a
 // workspaced opencode harness cannot see the model list the non-sandboxed opencode on the same
@@ -74,7 +78,9 @@ export const HOME_READ_CARVEINS = [
   ...HOME_WRITE_CARVEOUTS,
   '.claude/settings.json', '.claude/plugins', '.claude/skills', '.claude/agents', '.claude/commands', '.claude/keybindings.json',
   '.gitconfig', '.gitexcludes', '.config/gh/config.yml', 'Library/Keychains', '.nvm', '.rvm',
-  '.bash_profile', '.bashrc', '.cache/opencode/models.json',
+  '.bash_profile', '.bashrc', '.profile',
+  '.zshenv', '.zprofile', '.zshrc', '.zlogin',
+  '.cache/opencode/models.json',
 ];
 
 // Directories where `opendir`/`readdir` must work even though most of their *contents* aren't

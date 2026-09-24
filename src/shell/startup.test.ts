@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { shellStartupArgs } from './startup.js';
+import { shellCommandArgs, shellStartupArgs } from './startup.js';
 
 describe('shellStartupArgs', () => {
   it('gives bash its own rc and profile flags', () => {
@@ -23,5 +23,35 @@ describe('shellStartupArgs', () => {
 
   it('gives an empty shell path no flags', () => {
     expect(shellStartupArgs('')).toEqual([]);
+  });
+});
+
+describe('shellCommandArgs', () => {
+  it('runs a command through bash as a login and interactive shell', () => {
+    expect(shellCommandArgs('/bin/bash', 'claude')).toEqual(['-l', '-i', '-c', 'claude']);
+  });
+
+  it('runs a command through zsh as a login and interactive shell', () => {
+    expect(shellCommandArgs('/bin/zsh', 'claude')).toEqual(['-l', '-i', '-c', 'claude']);
+  });
+
+  it('reads the shell name out of any path', () => {
+    expect(shellCommandArgs('/opt/homebrew/bin/zsh', 'codex')).toEqual(['-l', '-i', '-c', 'codex']);
+    expect(shellCommandArgs('bash', 'codex')).toEqual(['-l', '-i', '-c', 'codex']);
+  });
+
+  it('keeps the login-only form for a shell whose flags are unverified', () => {
+    expect(shellCommandArgs('/bin/sh', 'opencode')).toEqual(['-lc', 'opencode']);
+    expect(shellCommandArgs('/usr/bin/fish', 'opencode')).toEqual(['-lc', 'opencode']);
+  });
+
+  it('keeps the login-only form for an empty shell path', () => {
+    expect(shellCommandArgs('', 'opencode')).toEqual(['-lc', 'opencode']);
+  });
+
+  it('passes the command through untouched whichever form is used', () => {
+    const command = `claude --model 'sonnet' --effort 'high'`;
+    expect(shellCommandArgs('/bin/zsh', command).at(-1)).toBe(command);
+    expect(shellCommandArgs('/usr/bin/fish', command).at(-1)).toBe(command);
   });
 });
