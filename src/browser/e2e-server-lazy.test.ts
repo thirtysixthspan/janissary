@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   browserIsListening, child, e2eServerMocks, guardCall, guardClose, holdBrowserPort, internalPort,
   resetE2EServerFixture, startLazy,
@@ -135,6 +135,76 @@ describe('startLazyE2EBrowserServer when a browser will not start', () => {
     expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 1)', undefined);
     expect(guardClose).not.toHaveBeenCalled();
     expect(mocks.releasedPorts).toEqual([]);
+  });
+});
+
+// Where a death used to be final, a script that retries its connect — or an agent that can crash its
+// own browser — is an unbounded stream of Chromium spawns, notifications, log files and scratch
+// directories on the host outside the sandbox. The budget counts the starts that end in a report and
+// stops giving this tab a browser once there have been too many; the tab itself carries on.
+describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
+  const REFUSED = 'e2e browser will not be restarted';
+
+  it('refuses a further connect once the same failure has happened enough times', async () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    const { onGone } = startLazy();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await expect(connect()).rejects.toThrow('spawn refused');
+    }
+    expect(mocks.spawn).toHaveBeenCalledTimes(3);
+
+    await expect(connect()).rejects.toThrow(REFUSED);
+    // The refusal spends nothing: no scratch allocated, no child forked, and the endpoint the user
+    // still holds is still being served.
+    expect(mocks.spawn).toHaveBeenCalledTimes(3);
+    expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(3);
+    expect(guardClose).not.toHaveBeenCalled();
+    expect(onGone).toHaveBeenCalledTimes(4);
+    expect(onGone).toHaveBeenLastCalledWith(REFUSED, undefined);
+  });
+
+  it('counts a browser that dies the moment it is asked for', async () => {
+    const { onGone } = startLazy();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await connect();
+      child.handlers.get('exit')?.(1, null);
+    }
+    await expect(connect()).rejects.toThrow(REFUSED);
+    expect(mocks.spawn).toHaveBeenCalledTimes(3);
+    // Each of those was reported as its own death, and the refusal is the fourth and last thing said.
+    expect(onGone).toHaveBeenCalledTimes(4);
+  });
+
+  // The one that keeps a browser which crashed once after a long session from looking like one that
+  // will not start: a generation that lived is not a failed start, so the budget is whole again.
+  it('forgets a failure once a generation has been up long enough to have been used', async () => {
+    vi.useFakeTimers();
+    try {
+      startLazy();
+      await connect();
+      vi.advanceTimersByTime(30_000);
+      child.handlers.get('exit')?.(1, null);
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await connect();
+        child.handlers.get('exit')?.(1, null);
+      }
+      expect(mocks.spawn).toHaveBeenCalledTimes(4);
+      await expect(connect()).rejects.toThrow(REFUSED);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says the budget is spent once, however many connects arrive after it', async () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    const { onGone } = startLazy();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try { await connect(); } catch { /* the failure being counted */ }
+    }
+    await expect(connect()).rejects.toThrow(REFUSED);
+    await expect(connect()).rejects.toThrow(REFUSED);
+    expect(onGone).toHaveBeenCalledTimes(4);
   });
 });
 

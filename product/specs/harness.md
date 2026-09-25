@@ -271,6 +271,14 @@ is open, so the replacement is a different process behind the same one rather th
 learn. The death itself is reported
 exactly as before, and the restart is a later connect's doing rather than anything automatic.
 
+That restart is bounded, because a browser that will not start is a loop otherwise. A start that ends
+in a failure — a spawn that is refused, a child that dies before it is listening — counts against the
+tab, as does a browser that dies within thirty seconds of being asked for; a browser that lived longer
+than that is treated as one that ran, and the count starts again. After three such starts the tab is
+given no further browser: the next connect is closed with a reason saying the browser will not be
+restarted, one last report says so on the notifications line and the band, and the guard keeps
+listening, so the tab keeps running and keeps its endpoint. One failure is never the end of it.
+
 Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,
 so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
 the browser-control protocol and refuses `file:` URLs, ending the session rather than failing one

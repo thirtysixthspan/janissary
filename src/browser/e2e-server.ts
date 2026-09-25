@@ -20,11 +20,11 @@ import { playwrightPackagePaths } from './playwright-paths.js';
 // `onGone`; they differ only in whether the child is spawned by the kick or by a client.
 
 export type E2EBrowserHandle = {
-  // Idempotent, and safe before the child has finished starting — or before anything has been asked
-  // to start it. Stops the guard, kills the child, and removes the browser workspace and its temp
-  // sibling. A browser that already ended on its own has released everything but that pair at the
-  // moment it ended, so this is then a no-op — the directory it died in is deliberately kept to be
-  // read, and the next start sweeps it.
+  // Idempotent, and safe before anything has been asked to start. Stops the guard, kills whatever
+  // browser is running, and removes the browser workspace and its temp sibling. A browser that
+  // already ended on its own has released its own half at the moment it ended, and deliberately kept
+  // the directory it died in so it can be read — but the guard and the ports are the tab's and go
+  // back here, so a tab whose browser has died is not a tab still holding a browser-band port.
   close: () => void;
 };
 
@@ -40,8 +40,10 @@ export type E2EBrowserOptions = {
   // The tab's label. It names the scratch directory for a human reading a directory listing and
   // nothing more — the directory itself is allocated exclusively (see `e2e-scratch.ts`).
   label: string;
-  // Invoked once when the browser is gone for a reason the user did not ask for: a child that
-  // exits, a child that never starts, or a guard that cannot listen. Never invoked after `close()`,
+  // Invoked when a browser is gone for a reason the user did not ask for: a child that exits, a
+  // child that never starts, or a guard that cannot listen — once per browser, so a tab that is
+  // given several over its life hears about each. Invoked once more, and only once, when a tab has
+  // asked for browsers often enough that it will not be given another. Never invoked after `close()`,
   // and never before everything that launch acquired has been released.
   //
   // `message` is the report, bounded to stay readable where it is displayed. `log` is the same
@@ -128,7 +130,26 @@ type LazyBrowser = {
   // settles, so a start that failed costs the next connect nothing and a start that succeeded is
   // found through `generation` instead.
   starting: Promise<string> | undefined;
+  // Consecutive generations that ended in a report, judged when the next one is asked for rather
+  // than when they died: nothing watches a live child, and a client asking again is the only moment
+  // a dead one is noticed. A generation still here is a browser in use, and one found dead this soon
+  // after it was spawned is a start that did not take — which is what the budget is made of.
+  failures: number;
+  // Whether the tab has already been told the budget is spent. The one report that ends it, since
+  // `stopSession` is not what delivers it: nothing is being released, only said.
+  reported: boolean;
+  // When the generation behind the guard was spawned, which is what tells the two apart.
+  spawnedAt: number;
 };
+
+// How many starts may end in a report before a tab stops being given a browser at all, and how long
+// a generation has to be up for its own death not to count against that. A browser that came up and
+// was used is not a failed start; a browser that dies the moment it is asked for is, and a script
+// that retries its connect would otherwise spawn one per attempt, forever.
+const RESTART_LIMIT = 3;
+const UPTIME_RESET = 30_000;
+// What a client is told once the budget is gone, and what the human is told, in the same words.
+const WILL_NOT_RESTART = 'e2e browser will not be restarted';
 
 function upstreamOf(lazy: LazyBrowser): string {
   return loopbackWsUrl(lazy.ports.browserPort, lazy.internalPath);
@@ -150,7 +171,10 @@ function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBro
 
   const session = newSession(options.onGone);
   session.ports = ports;
-  const lazy: LazyBrowser = { session, ports, internalPath, label: options.label, generation: undefined, starting: undefined };
+  const lazy: LazyBrowser = {
+    session, ports, internalPath, label: options.label,
+    generation: undefined, starting: undefined, failures: 0, reported: false, spawnedAt: 0,
+  };
   // Everything a tab owns, released in one order whatever asked. The guard first, so nothing can ask
   // for a browser while this is tearing one down, and the ports with it — a port still reserved for a
   // guard that has stopped listening is a port a later launch would be refused. Then whatever browser
@@ -180,11 +204,33 @@ function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBro
   return { env: browserEnv(ports.guardPort, publishedPath), handle: { close: teardown } };
 }
 
+// What the generation behind the guard did, counted as it is found rather than as it ends. Found
+// dead, it is either a start that did not take or a browser that has been used; a generation outliving
+// the interval is the second, and it makes the whole budget whole again. The record is cleared as it
+// is judged, so one death is never counted twice by two clients arriving together.
+function noteFailure(lazy: LazyBrowser): void {
+  const { generation } = lazy;
+  if (!generation?.closed) return;
+  lazy.generation = undefined;
+  lazy.failures = Date.now() - lazy.spawnedAt < UPTIME_RESET ? lazy.failures + 1 : 0;
+}
+
 // The connect-triggered start. One in-flight start serves every client that arrives while it runs —
 // each of them gets its own upstream session once it is up — and a browser that is already running
 // needs no start at all, so this is idempotent rather than a request that spends something.
 async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
   if (lazy.session.closed) throw new Error('e2e browser is no longer available');
+  noteFailure(lazy);
+  // Past the budget this tab is not given a browser again, and saying so is the last thing said about
+  // it: the guard keeps listening, so a tab the user can still read and close is a tab the user can
+  // still read and close.
+  if (lazy.failures >= RESTART_LIMIT) {
+    if (!lazy.reported) {
+      lazy.reported = true;
+      lazy.session.onGone(WILL_NOT_RESTART, undefined);
+    }
+    throw new Error(WILL_NOT_RESTART);
+  }
   // The in-flight start is asked about first, because `generation` is set for the whole of a launch
   // and a client arriving while the child is still binding must wait for that launch rather than be
   // handed an address nothing is listening on yet.
@@ -211,12 +257,14 @@ async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
 // sequence already reports one and closes one client with it.
 async function startBrowser(lazy: LazyBrowser): Promise<string> {
   const generation = newSession(lazy.session.onGone);
+  // Recorded before anything is acquired rather than once the child is listening, for two reasons: a
+  // tab that closes during a launch closes this child like any other, and a start that failed is a
+  // generation the next connect can find and count rather than a launch that left nothing to judge.
+  lazy.spawnedAt = Date.now();
+  lazy.generation = generation;
   try {
     generation.scratch = allocateBrowserScratch(lazy.label);
     generation.child = spawnBrowserChild(generation, lazy.ports.browserPort, lazy.internalPath);
-    // Recorded before the wait, not after it: a tab that closes while the browser is still coming up
-    // closes this record like any other, and a child nothing can reach would be one left running.
-    lazy.generation = generation;
     await waitForListening(generation, lazy.ports.browserPort);
   } catch (error) {
     stopSession(generation, `e2e browser failed to start: ${errorText(error)}`);
