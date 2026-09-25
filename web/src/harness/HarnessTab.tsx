@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
@@ -8,7 +8,7 @@ import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../shared/tab-handles';
-import { registerHarnessDrop } from '../harness-drop-registry';
+import { useHarnessPtyDrop } from './useHarnessPtyDrop';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView; label: string;
@@ -51,20 +51,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
 
   useImperativeHandle(ref, () => ({ focus: focusTerm }), [focusTerm]);
 
-  // A file-navigator drag released over the terminal types its paths into the harness. Focus moves
-  // here first: the drag started in the file tree, where the letters the user types next are a
-  // type-to-select gesture rather than text. A tab still provisioning has no PTY to write to, so it
-  // publishes nothing and the marker below is left off its body.
+  // A tab still provisioning has no PTY to write to, so the drop marker below is left off its body.
   const ptyId = harness.ptyId;
-  useEffect(() => {
-    if (!ptyId) return;
-    return registerHarnessDrop(ptyId, {
-      insertAtCaret: (text: string) => {
-        focusTerm();
-        client.send({ method: 'ptyInput', params: { id: ptyId, data: text } });
-      },
-    });
-  }, [ptyId, client, focusTerm]);
+  useHarnessPtyDrop(ptyId, client, focusTerm);
 
   const intents = agentTabIntents(client, label, 'openHarnessTranscriptFor');
   const isExited = harness.status === 'exited';
