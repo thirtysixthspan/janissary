@@ -5,4 +5,5 @@ export const command: Command = {
   match: (command_) => /^acp\b/i.test(command_),
   samples: ['acp', 'acp bob'],
   run: (command, tab, managers) => { managers.acp.run(tab.label, command); },
+  capture: (command, label, managers, reply) => { managers.acp.run(label, command, reply); },
 };

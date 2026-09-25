@@ -1,6 +1,5 @@
 import { getOutput, unknownCommandMessage } from '../commands.js';
-import { toPrefixedCommand } from '../recognizers/index.js';
-import { resolveRouteChoice } from '../route-choice.js';
+import { recognizeRoute } from '../route-choice.js';
 import type { Managers } from '../managers.js';
 
 export function routeUnknownCommand(
@@ -20,10 +19,9 @@ export function routeUnknownCommand(
 
   // `silent` and `unknown` are both answered the same way: try to recognize a route for the text,
   // and report it unrecognized when none fits. The message comes from the one place that builds it.
-  const openDbs = managers.database.openDbs(label);
-  const choice = resolveRouteChoice(trimmed, openDbs);
-  if (choice) {
-    run(label, toPrefixedCommand(trimmed, choice), callback);
+  const route = recognizeRoute(trimmed, label, managers);
+  if (route.kind === 'routed') {
+    run(label, route.command, callback);
     return;
   }
   callback(unknownCommandMessage(trimmed));
