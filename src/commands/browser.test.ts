@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { command } from './browser.js';
+import type { Managers } from '../managers.js';
 
 describe('browser command', () => {
   it('has the correct name', () => {
@@ -16,5 +17,15 @@ describe('browser command', () => {
     expect(command.match('browserr')).toBe(false);
     expect(command.match('brows')).toBe(false);
     expect(command.match('clear')).toBe(false);
+  });
+
+  it('answers an agent message by handing the reply to the browser manager', () => {
+    const runInteractive = vi.fn();
+    const managers = { browser: { runInteractive } } as unknown as Managers;
+    const reply = vi.fn();
+
+    command.capture!('browser open example.com', 'main', managers, reply);
+
+    expect(runInteractive).toHaveBeenCalledWith('browser open example.com', 'main', reply);
   });
 });

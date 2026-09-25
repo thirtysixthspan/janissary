@@ -4,17 +4,6 @@
 
 ## development
 
-* Route agent-to-agent `command` and `request` messages through the same command resolution the command bar uses, instead of the capture manager's own parallel dispatcher.
-
-Existing Debt: Because a registered command's `run` returns nothing, the capture manager that serves agent messages re-implements dispatch beside the registry — matching `shell` by its own regex, branching on command names for `acp` and `browser`, guessing the output from the tab's last log entry, and duplicating the unknown-command router — contradicting principle 5's "one command, one execution path". Severity: 6/10
-
-Existing Risk: 5/10 - A command sent by message behaves differently from the same text typed into the tab — `!ls` and `!!top` are not recognized as shell, `shell --pty ls` hands `--pty ls` to the piped shell as the command text, and a command that appends more than one entry or appends asynchronously returns the wrong or empty output to the requesting agent — so agent workflows silently diverge from what a user sees.
-
-Proposal Risk: 3/10 - Resolution is shared, so shell spellings agree, but capturing output still depends on each capture-capable command implementing its own hook, and a command without one still falls back to the last-log-entry guess.
-
-Proposal: `CaptureManager.run` in `src/capture/manager.ts` tests `/^shell\b/i` itself, loops `commands` from `src/commands/index.ts`, special-cases `c.name === 'acp'` and `c.name === 'browser'` in `dispatchMatchedCommand`, and otherwise awaits `managers.command.executeCommand` and returns `tab!.log[after - 1].output`; `routeUnknownCommand` in `src/capture/router.ts` repeats the `openDbs` → `resolveRouteChoice` logic of `resolveUnknownCommand` in `src/command/router.ts` with a different fallback. As the first increment: classify the input with `resolveCommand` from `src/resolve.ts` (the resolver `CommandManager.run` in `src/command/manager.ts` uses) and switch on its kind, so the shell spellings and flags resolve exactly as the command bar resolves them while the capture-specific shell call (`detect: false`, the interactive refusal) stays; replace the two name branches with an optional `capture?(command, label, managers, reply)` on the `Command` type in `src/commands/types.ts`, implemented by the `acp` and `browser` commands with the calls the branches make today; and extract the shared part of the two unknown-command routers into one helper both call. Add `src/capture/manager.test.ts` cases for `!ls` and `shell --pty ls` (which have none today), keeping the existing `shell`, interactive-refusal, missing-tab, `acp`/`browser`, matched-command, and unknown-fallback cases passing. Update the §5 paragraph of `ai/guidelines/architecture-principles.md`, which says there is no second execution path, to name what remains once this lands.
-
-
 * Record an accepted editor suggestion as its own undo step by giving the suggestion hook the editor's undo-recording replace instead of the raw state setter.
 
 Existing Debt: The editor already exposes a `replace` that records one discrete undo step for an outside transform — the editor plugins use it — but the suggestion hook was wired to the raw `setState`, so accepting a suggested hunk rewrites the buffer outside the undo history and rebuilds the state from text, dropping the cursor column and any extra selections. Severity: 4/10

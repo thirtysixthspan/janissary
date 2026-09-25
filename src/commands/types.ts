@@ -15,4 +15,12 @@ export interface Command {
     tab: { label: string; index: number },
     managers: CommandManagers,
   ) => void | Promise<void>;
+  // Answers an agent message (`msg … request`/`command`) directly, for a command whose reply is not
+  // a single transcript entry the capture path could read back after `run` returns.
+  capture?: (
+    command: string,
+    label: string,
+    managers: CommandManagers,
+    reply: (output: string) => void,
+  ) => void;
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { CaptureManager } from './manager.js';
 import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
@@ -156,5 +156,96 @@ describe('CaptureManager.run', () => {
     capture.run('main', 'totally-bogus-command', callback);
 
     expect(callback).toHaveBeenCalledWith(expect.stringContaining('Unknown command'));
+  });
+});
+
+// A messaged command is classified by the same resolver as typed text, so the shell spellings and
+// flags mean the same thing here as in the command bar.
+describe('CaptureManager.run shell spellings', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('runs a `!`-prefixed command in the piped shell', () => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', '!ls', callback);
+
+    expect(managers.shell.run).toHaveBeenCalledWith('main', 'ls', { onComplete: callback, detect: false });
+  });
+
+  it.each([
+    ['shell --pty ls', 'ls'],
+    ['!!top', 'top'],
+  ])('refuses %s as interactive instead of piping it', (text, command) => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', text, callback);
+
+    expect(managers.shell.run).not.toHaveBeenCalled();
+    expect(callback).toHaveBeenCalledWith(`Cannot run interactive command remotely: ${command}`);
+  });
+
+  it.each(['shell --pty', '!!'])('refuses a bare %s naming the login shell it would open', (text) => {
+    vi.stubEnv('SHELL', '/bin/zsh');
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', text, callback);
+
+    expect(managers.shell.run).not.toHaveBeenCalled();
+    expect(callback).toHaveBeenCalledWith('Cannot run interactive command remotely: /bin/zsh');
+  });
+});
+
+describe('CaptureManager.run registry dispatch', () => {
+  it('dispatches a matched command despite surrounding whitespace', () => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+
+    capture.run('main', '  close  ', vi.fn());
+
+    expect(managers.command.executeCommand).toHaveBeenCalledWith('close', 'close', 'main', 0);
+  });
+
+  it('dispatches a `/`-prefixed command without the prefix', () => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+
+    capture.run('main', '/harness claude', vi.fn());
+
+    expect(managers.command.executeCommand).toHaveBeenCalledWith('harness', 'harness claude', 'main', 0);
+  });
+
+  it('answers through a command capture hook instead of reading the transcript back', () => {
+    const managers = makeManagers();
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'browser open example.com', callback);
+
+    expect(managers.command.executeCommand).not.toHaveBeenCalled();
+    expect(managers.browser.runInteractive).toHaveBeenCalledWith('browser open example.com', 'main', callback);
+  });
+
+  it('answers help with its output and records it in the transcript', () => {
+    const append = vi.fn();
+    const tab = makeTab('main', 'red');
+    const managers = makeManagers({
+      tab: { findIndex: vi.fn(() => 0), tabs: [tab], byLabel: () => tab, append },
+    } as unknown as Partial<Managers>);
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'help', callback);
+
+    expect(append).toHaveBeenCalledWith('main', expect.objectContaining({ input: 'help', markdown: true }));
+    expect(callback).toHaveBeenCalledWith(expect.any(String));
+    expect(managers.command.executeCommand).not.toHaveBeenCalled();
   });
 });
