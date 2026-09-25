@@ -142,7 +142,7 @@ A harness working inside a workspace can't launch a browser of its own — the s
 harness claude -b
 ```
 
-Janissary starts a headless Chromium for that tab and hands the harness two environment variables: `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
+Janissary publishes an endpoint and two environment variables at launch — `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The headless Chromium itself starts when the harness first connects to that endpoint, which is why a `-b` tab that never drives a browser never starts one; the first connect takes longer than an ordinary one while the browser comes up. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
 
 What it points that browser at is its own work: it starts the workspace clone's build and navigates to that. Janissary doesn't hand the harness the address or session token of the window you're working in, and active workspace confinement blocks the normal route through project state where those values are recorded. That reduces disclosure; it doesn't by itself prove the live session unreachable when the harness is unconfined. The warning below covers those configurations. The browser should still test the code in its own workspace rather than the code you're running.
 
@@ -150,7 +150,7 @@ There's no test runner here and no pass/fail reporting. The two variables are th
 
 The browser is always headless, each `-b` tab gets its own, and the flag works for every harness, with or without a workspace. Combine it with the other options in any order.
 
-A tab with a browser shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". That's how you tell at a glance which of your harnesses has one.
+A harness launched with `-b` shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". The flag is lit from launch, whether or not a browser has been started yet.
 
 ::: warning A browser endpoint is powerful, so this one is contained
 Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. It also refuses a request to close the browser itself, so a harness script can't spend the one browser its tab will ever get — asking just ends that script's own connection. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
@@ -160,7 +160,7 @@ On a machine without macOS sandboxing, or with workspace isolation switched off,
 
 `-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
 
-If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, so the row never claims a browser that isn't there. The harness keeps running — only its browser is gone.
+If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, and stays off: a later connect starts a fresh browser behind the same endpoint, and the row does not light up again for it. The band and the notifications line are where a browser's death is reported. The harness keeps running — only its browser is gone.
 
 The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
 
@@ -170,7 +170,7 @@ It also tells you how the browser went, which is what you get when it said nothi
 
 Chromium reports its own status the same way, and that line is left out of the notification — it says the same thing the message just said, one process further down, and two lines saying it is one too many for a notification line. You'll find it in the log file instead, on the line under the report the file opens with. That's where to look when `(code 1)` isn't enough and you want to know what actually happened to the browser — a `signal SIGSEGV` there is a segfault. Everything else the browser said still rides on the notification as before.
 
-Nothing restarts it, and a later connection attempt simply fails. Closing a tab whose browser is still running stops it and removes its scratch directory.
+A later connect starts a fresh browser behind the same endpoint, with its own state — a different browser from the one that died, so treat a crash that comes back that way as the fault to report rather than as a browser you're losing repeatedly. The dead browser's scratch directory is still kept for the post-mortem, and the new browser gets one of its own. Closing a tab whose browser is still running stops it and removes its scratch directory.
 
 A browser that died keeps its scratch directory instead, so there's something left to look at. It's under `.janissary/workspace/browsers/` in the project directory, named after the tab it belonged to, and it holds Chromium's profile, its temp files, and any crash dump it managed to write — exactly as the browser left them. Closing the dead tab doesn't clear it, since that's the first thing you're likely to do after reading the report. Janissary clears the whole workspace directory the next time it starts, so copy anything you want to keep before then.
 

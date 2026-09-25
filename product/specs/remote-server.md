@@ -144,7 +144,8 @@ handshake like every other field one end fills in and the other must honor.
 
 The end-to-end browser moves it once more, carrying two changes at once. A launch frame now says
 whether the tab was started with `-b`/`--browser`, and the remote acts on that by starting its own
-protocol guard, its own confined browser, and its own scratch directory on its own host — a fact it
+protocol guard on its own host, and its own confined browser and scratch directory on the first
+connect from one of its own clients — a fact it
 acts on rather than an endpoint computed here and shipped over, since the endpoint names ports on
 the machine the browser actually runs on. In the other direction a new frame reports that the
 remote's browser is gone, which the local side surfaces the same way a local browser's death is
