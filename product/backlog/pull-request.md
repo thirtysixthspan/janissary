@@ -2,12 +2,3 @@
 
 # pull-request
 
-* Correct the pull request description's error-path verification step, which describes a retry and a single report that the port-band failure and a repeating start failure do not produce.
-
-Existing Issue: Step 6 of "How to verify" says to fill the browser port band so allocation fails at launch and then connect, expecting a close reason, one death report and a later connect that retries, but a full band at launch makes `portsOrReport` hand the harness no browser variables at all, so there is no endpoint to connect to and nothing ever retries for that tab, and a start failure that repeats is reported again on every connect rather than once. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer or tester following the step either cannot perform it, because the connect it asks for has nowhere to go, or sees one report per connect and concludes the change is broken when it is behaving as written.
-
-Proposal Risk: 1/10 - A description-only correction, and the risk is rewriting it against the restart-budget change above before that lands, which would make it wrong a second time.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1201: correct the description's error-path verification step for a full port band and a repeating start failure". Rewrite step 6 of the "How to verify" section in the pull request body as two steps. The first is the full band at launch: `portsOrReport` in `src/browser/e2e-server.ts` reports once through `onGone` and `startLazyE2EBrowserServer` returns an empty `env`, so the check is that the harness launches with neither `JANISSARY_BROWSER_WS_ENDPOINT` nor `JANISSARY_PLAYWRIGHT` set, one notification is delivered, and no guard is listening — the lazy suite's case "reports a full band through onGone and hands back no browser variables" in `src/browser/e2e-server-lazy.test.ts` pins exactly this. The second is a start failure after launch, such as an unwritable browser scratch directory: the connect is closed, a report is delivered for that attempt, and a later connect tries again and reports again if it fails again. Word the close-reason expectation to match whatever the security finding above settles for `launchFailure` in `src/browser/e2e-guard.ts`, and word the report count to match the restart-budget finding above if it has landed by then. No code or test changes; the step is corrected in the description only.
