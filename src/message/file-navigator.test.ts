@@ -34,9 +34,9 @@ describe('dispatchFileNavigatorMessage', () => {
     const controller = makeController();
     const result = dispatch(controller, 1, {
       method: 'renameFileNavigatorItem',
-      params: { index: 0, relPath: 'src/a.ts', newName: 'b.ts' },
+      params: { label: 'files', relPath: 'src/a.ts', newName: 'b.ts' },
     });
-    expect(controller.renameFileNavigatorItem).toHaveBeenCalledWith(0, 'src/a.ts', 'b.ts');
+    expect(controller.renameFileNavigatorItem).toHaveBeenCalledWith('files', 'src/a.ts', 'b.ts');
     expect(result).toBeUndefined();
   });
 
@@ -45,9 +45,9 @@ describe('dispatchFileNavigatorMessage', () => {
     (controller.pasteFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 1, failedPaths: [] });
     const result = dispatch(controller, 3, {
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
+      params: { label: 'files', sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
     });
-    expect(controller.pasteFileNavigatorItems).toHaveBeenCalledWith(0, ['/a/b.txt'], 'dest', 'copy', undefined);
+    expect(controller.pasteFileNavigatorItems).toHaveBeenCalledWith('files', ['/a/b.txt'], 'dest', 'copy', undefined);
     expect(result).toEqual({ total: 1, failedPaths: [] });
   });
 

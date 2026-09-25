@@ -378,24 +378,24 @@ describe('handle', () => {
 
   it('routes moveFileNavigatorItem', () => {
     const controller = makeController();
-    dispatchCall(controller, 19, { method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b' } });
-    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b', undefined);
+    dispatchCall(controller, 19, { method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'a', toRelPath: 'b' } });
+    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith('files', 'a', 'b', undefined);
   });
 
   it('routes moveFileNavigatorItem with its overwrite flag and replies with its result', () => {
     const controller = makeController();
     (controller.moveFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflictPaths: ['a'] });
     const replies = dispatchCall(controller, 45, {
-      method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: true },
+      method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'a', toRelPath: 'b', overwrite: true },
     });
-    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b', true);
+    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith('files', 'a', 'b', true);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { conflictPaths: ['a'] } }]);
   });
 
   it('routes deleteFileNavigatorItem', () => {
     const controller = makeController();
-    dispatchCall(controller, 20, { method: 'deleteFileNavigatorItem', params: { index: 0, relPath: 'a' } });
-    expect(controller.deleteFileNavigatorItem).toHaveBeenCalledWith(0, 'a');
+    dispatchCall(controller, 20, { method: 'deleteFileNavigatorItem', params: { label: 'files', relPath: 'a' } });
+    expect(controller.deleteFileNavigatorItem).toHaveBeenCalledWith('files', 'a');
   });
 
   it('routes moveFileNavigatorItems and replies with its result', () => {
@@ -403,9 +403,9 @@ describe('handle', () => {
     (controller.moveFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 2, failedPaths: ['b'] });
     const replies = dispatchCall(controller, 44, {
       method: 'moveFileNavigatorItems',
-      params: { index: 0, sourcePaths: ['a', 'b'], destinationPath: 'dest' },
+      params: { label: 'files', sourcePaths: ['a', 'b'], destinationPath: 'dest' },
     });
-    expect(controller.moveFileNavigatorItems).toHaveBeenCalledWith(0, ['a', 'b'], 'dest', undefined);
+    expect(controller.moveFileNavigatorItems).toHaveBeenCalledWith('files', ['a', 'b'], 'dest', undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 44, result: { total: 2, failedPaths: ['b'] } }]);
   });
 
@@ -414,9 +414,9 @@ describe('handle', () => {
     (controller.deleteFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 2, failedPaths: [] });
     const replies = dispatchCall(controller, 45, {
       method: 'deleteFileNavigatorItems',
-      params: { index: 0, paths: ['a', 'b'] },
+      params: { label: 'files', paths: ['a', 'b'] },
     });
-    expect(controller.deleteFileNavigatorItems).toHaveBeenCalledWith(0, ['a', 'b']);
+    expect(controller.deleteFileNavigatorItems).toHaveBeenCalledWith('files', ['a', 'b']);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { total: 2, failedPaths: [] } }]);
   });
 
@@ -425,9 +425,9 @@ describe('handle', () => {
     (controller.pasteFileNavigatorItems as ReturnType<typeof vi.fn>).mockReturnValue({ total: 1, failedPaths: [] });
     const replies = dispatchCall(controller, 46, {
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
+      params: { label: 'files', sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
     });
-    expect(controller.pasteFileNavigatorItems).toHaveBeenCalledWith(0, ['/a/b.txt'], 'dest', 'copy', undefined);
+    expect(controller.pasteFileNavigatorItems).toHaveBeenCalledWith('files', ['/a/b.txt'], 'dest', 'copy', undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 46, result: { total: 1, failedPaths: [] } }]);
   });
 

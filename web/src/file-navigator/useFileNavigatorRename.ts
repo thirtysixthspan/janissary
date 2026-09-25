@@ -9,7 +9,7 @@ type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 // collision handling (via the shared `MoveConflictDialog`), and the RPC send — kept out of
 // `FileNavigatorTab.tsx` to stay under the file-size limit, mirroring `useFileNavigatorDrag`/`useFileNavigatorSearch`.
 export function useFileNavigatorRename(
-  rows: FileNavigatorRow[], client: JanusClient, index: number,
+  rows: FileNavigatorRow[], client: JanusClient, label: string,
   replaceRenamedPath: (oldPath: string, newPath: string) => void,
   focusTree: () => void,
 ) {
@@ -30,7 +30,7 @@ export function useFileNavigatorRename(
   };
 
   const send = (relPath: string, newName: string, newRelPath: string) => {
-    client.send({ method: 'renameFileNavigatorItem', params: { index, relPath, newName } });
+    client.send({ method: 'renameFileNavigatorItem', params: { label, relPath, newName } });
     replaceRenamedPath(relPath, newRelPath);
     setPendingSelection({ oldPath: relPath, newPath: newRelPath });
     focusTree();

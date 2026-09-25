@@ -8,6 +8,7 @@ import {
   fileNavigatorReroot,
   moveFileNavigatorItem,
   moveFileNavigatorItems,
+  pasteFileNavigatorItems,
   deleteFileNavigatorItem,
   deleteFileNavigatorItems,
   undoFileNavigatorItem,
@@ -125,8 +126,8 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', {
       move: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
     });
-    moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts');
-    moveFileNavigatorItem(managers, 0, 'c.ts', 'b.ts', true);
+    moveFileNavigatorItem(managers, 'agent', 'a.ts', 'b.ts');
+    moveFileNavigatorItem(managers, 'agent', 'c.ts', 'b.ts', true);
     expect(calls).toEqual([['agent', 'a.ts', 'b.ts', undefined], ['agent', 'c.ts', 'b.ts', true]]);
   });
 
@@ -135,13 +136,13 @@ describe('controller-file-navigator', () => {
     const managers = makeManagersWithNotifications('agent', {
       move: () => ({ conflictPaths: ['a.ts'] }),
     }, append);
-    expect(moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts')).toEqual({ conflictPaths: ['a.ts'] });
+    expect(moveFileNavigatorItem(managers, 'agent', 'a.ts', 'b.ts')).toEqual({ conflictPaths: ['a.ts'] });
     expect(append).not.toHaveBeenCalled();
   });
 
-  it('moveFileNavigatorItem answers an empty result for an out-of-range index', () => {
+  it('moveFileNavigatorItem answers an empty result for a label no open tab carries', () => {
     const managers = makeManagers('agent', {});
-    expect(moveFileNavigatorItem(managers, 9, 'a.ts', 'b.ts')).toEqual({ total: 0, failedPaths: [] });
+    expect(moveFileNavigatorItem(managers, 'gone', 'a.ts', 'b.ts')).toEqual({ total: 0, failedPaths: [] });
   });
 
   it('deleteFileNavigatorItem delegates to FileNavigatorManager.delete when the tab exists', () => {
@@ -149,7 +150,7 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', {
       delete: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
     });
-    deleteFileNavigatorItem(managers, 0, 'a.ts');
+    deleteFileNavigatorItem(managers, 'agent', 'a.ts');
     expect(calls).toEqual([['agent', 'a.ts']]);
   });
 
@@ -158,7 +159,7 @@ describe('controller-file-navigator', () => {
     const managers = makeManagersWithNotifications('agent', {
       move: () => ({ total: 1, failedPaths: ['a.ts'] }),
     }, append);
-    moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts');
+    moveFileNavigatorItem(managers, 'agent', 'a.ts', 'b.ts');
     expect(append).toHaveBeenCalledTimes(1);
   });
 
@@ -167,7 +168,7 @@ describe('controller-file-navigator', () => {
     const managers = makeManagersWithNotifications('agent', {
       delete: () => ({ total: 1, failedPaths: ['a.ts'] }),
     }, append);
-    deleteFileNavigatorItem(managers, 0, 'a.ts');
+    deleteFileNavigatorItem(managers, 'agent', 'a.ts');
     expect(append).toHaveBeenCalledTimes(1);
   });
 
@@ -183,21 +184,21 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', {
       moveMany: (...args: unknown[]) => ({ total: args.length, failedPaths: [] }),
     });
-    const result = moveFileNavigatorItems(managers, 0, ['a', 'b'], 'dest', 'skip-conflicts');
+    const result = moveFileNavigatorItems(managers, 'agent', ['a', 'b'], 'dest', 'skip-conflicts');
     expect(result).toEqual({ total: 4, failedPaths: [] });
   });
 
   it('moveFileNavigatorItems returns a structured result for a missing tab', () => {
     const managers = makeManagers(undefined, { moveMany: () => ({ conflictPaths: ['a'] }) });
-    expect(moveFileNavigatorItems(managers, 0, ['a'], 'dest')).toEqual({ total: 0, failedPaths: [] });
+    expect(moveFileNavigatorItems(managers, 'agent', ['a'], 'dest')).toEqual({ total: 0, failedPaths: [] });
   });
 
   it('deleteFileNavigatorItems delegates and handles a missing tab', () => {
     const managers = makeManagers('agent', {
       deleteMany: (...args: unknown[]) => ({ total: (args[1] as string[]).length, failedPaths: [] }),
     });
-    expect(deleteFileNavigatorItems(managers, 0, ['a', 'b'])).toEqual({ total: 2, failedPaths: [] });
-    expect(deleteFileNavigatorItems(makeManagers(undefined, {}), 0, ['a'])).toEqual({
+    expect(deleteFileNavigatorItems(managers, 'agent', ['a', 'b'])).toEqual({ total: 2, failedPaths: [] });
+    expect(deleteFileNavigatorItems(makeManagers(undefined, {}), 'agent', ['a'])).toEqual({
       total: 0,
       failedPaths: [],
     });
@@ -267,7 +268,7 @@ describe('controller-file-navigator', () => {
     const managers = makeManagers('agent', {
       rename: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
     });
-    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    renameFileNavigatorItem(managers, 'agent', 'src/foo.ts', 'bar.ts');
     expect(calls).toEqual([['agent', 'src/foo.ts', 'bar.ts']]);
   });
 
@@ -280,7 +281,7 @@ describe('controller-file-navigator', () => {
         failureReasons: { 'src/foo.ts': 'Permission denied; check permissions, then try again' },
       }),
     }, append);
-    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    renameFileNavigatorItem(managers, 'agent', 'src/foo.ts', 'bar.ts');
     expect(append).toHaveBeenCalledWith(
       NOTIFICATIONS_LABEL,
       expect.objectContaining({ output: expect.stringContaining('Permission denied') }),
@@ -288,11 +289,38 @@ describe('controller-file-navigator', () => {
     );
   });
 
-  it('renameFileNavigatorItem is a no-op when the tab index has no label', () => {
+  it('renameFileNavigatorItem is a no-op when no open tab carries the label', () => {
     const calls: unknown[] = [];
     const managers = makeManagers(undefined, { rename: (...args: unknown[]) => { calls.push(args); } });
-    renameFileNavigatorItem(managers, 0, 'src/foo.ts', 'bar.ts');
+    renameFileNavigatorItem(managers, 'agent', 'src/foo.ts', 'bar.ts');
     expect(calls).toHaveLength(0);
+  });
+
+  // A navigator that closed while its request was in flight: the label names no open tab, even
+  // though another navigator now sits at the index it used to hold.
+  it('mutates nothing and reports nothing for a label no open tab carries', async () => {
+    const append = vi.fn();
+    const mutate = vi.fn(() => ({ total: 1, failedPaths: ['a.ts'] }));
+    const managers = makeManagersWithNotifications('other', {
+      move: mutate, moveMany: mutate, paste: mutate, delete: mutate, deleteMany: mutate, rename: mutate,
+    }, append);
+    await moveFileNavigatorItem(managers, 'gone', 'a.ts', 'b');
+    await moveFileNavigatorItems(managers, 'gone', ['a.ts'], 'b');
+    await pasteFileNavigatorItems(managers, 'gone', ['/x/a.ts'], 'b', 'copy');
+    await deleteFileNavigatorItem(managers, 'gone', 'a.ts');
+    await deleteFileNavigatorItems(managers, 'gone', ['a.ts']);
+    await renameFileNavigatorItem(managers, 'gone', 'a.ts', 'c.ts');
+    expect(mutate).not.toHaveBeenCalled();
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it('reaches the named navigator after a tab ahead of it has closed', () => {
+    const deleteItem = vi.fn(() => ({ total: 1, failedPaths: [] }));
+    const tabs = [{ label: 'agent' }, { label: 'files' }, { label: 'files-2' }];
+    const managers = { tab: { tabs }, fileNavigator: { delete: deleteItem } } as unknown as Managers;
+    tabs.shift();
+    deleteFileNavigatorItem(managers, 'files-2', 'a.ts');
+    expect(deleteItem).toHaveBeenCalledWith('files-2', 'a.ts');
   });
 
   it('fileNavigatorOpeners returns the manager result when the tab exists', () => {

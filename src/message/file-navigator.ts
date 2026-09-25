@@ -41,12 +41,12 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     }
     case 'moveFileNavigatorItem': {
       return controller.moveFileNavigatorItem(
-        message.params.index, message.params.fromRelPath, message.params.toRelPath, message.params.overwrite,
+        message.params.label, message.params.fromRelPath, message.params.toRelPath, message.params.overwrite,
       );
     }
     case 'moveFileNavigatorItems': {
       return controller.moveFileNavigatorItems(
-        message.params.index,
+        message.params.label,
         message.params.sourcePaths,
         message.params.destinationPath,
         message.params.policy,
@@ -55,12 +55,12 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     case 'pasteFileNavigatorItems': {
       if (message.params.sourceHost === undefined) {
         return controller.pasteFileNavigatorItems(
-          message.params.index, message.params.sources, message.params.destinationPath,
+          message.params.label, message.params.sources, message.params.destinationPath,
           message.params.mode, message.params.policy,
         );
       }
       return controller.pasteFileNavigatorItems(
-        message.params.index,
+        message.params.label,
         message.params.sources,
         message.params.destinationPath,
         message.params.mode,
@@ -69,13 +69,13 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
       );
     }
     case 'deleteFileNavigatorItem': {
-      return controller.deleteFileNavigatorItem(message.params.index, message.params.relPath);
+      return controller.deleteFileNavigatorItem(message.params.label, message.params.relPath);
     }
     case 'deleteFileNavigatorItems': {
-      return controller.deleteFileNavigatorItems(message.params.index, message.params.paths);
+      return controller.deleteFileNavigatorItems(message.params.label, message.params.paths);
     }
     case 'renameFileNavigatorItem': {
-      return controller.renameFileNavigatorItem(message.params.index, message.params.relPath, message.params.newName);
+      return controller.renameFileNavigatorItem(message.params.label, message.params.relPath, message.params.newName);
     }
     case 'fileNavigatorSearch': {
       return fileNavigatorSearch(controller, message.params.index);

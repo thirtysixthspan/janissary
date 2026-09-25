@@ -23,7 +23,7 @@ import { nextDock } from '../dock-cycle';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
-  files, client, index, dock, autoFocus = true, dropRef, editorDropRef,
+  files, client, index, label, dock, autoFocus = true, dropRef, editorDropRef,
   targetCwd = files.absoluteRoot, onSplit, multiOpen,
 }: Properties) {
   const intents = useFileNavigatorIntents(client, index);
@@ -31,7 +31,7 @@ export function FileNavigatorTab({
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeId = useId();
-  const drag = useFileNavigatorDrag(files.rows, client, index, {
+  const drag = useFileNavigatorDrag(files.rows, client, index, label, {
     absoluteRoot: files.absoluteRoot,
     displayRoot: files.root,
     targetCwd,
@@ -40,14 +40,14 @@ export function FileNavigatorTab({
     remoteHost: files.remote?.host,
   });
   const rename = useFileNavigatorRename(
-    files.rows, client, index, selection.rename, () => containerRef.current?.focus(),
+    files.rows, client, label, selection.rename, () => containerRef.current?.focus(),
   );
   const search = useFileNavigatorSearch(
     client, index, files.rows, selection.replace, () => containerRef.current?.focus(),
   );
   const opener = useFileNavigatorOpener(client, index);
-  const deletion = useFileNavigatorDelete(client, index);
-  const paste = useFileNavigatorPaste(client, index, files.absoluteRoot, files.remote?.host);
+  const deletion = useFileNavigatorDelete(client, label);
+  const paste = useFileNavigatorPaste(client, label, files.absoluteRoot, files.remote?.host);
   const selectionAction = useSelectionAction(client, index);
   const commit = useFileNavigatorCommit(intents.commit);
   useEffect(() => { if (autoFocus) containerRef.current?.focus(); }, [autoFocus]);

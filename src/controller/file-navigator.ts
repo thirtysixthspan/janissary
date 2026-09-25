@@ -1,5 +1,6 @@
-// Controller-facing wrappers for file navigator tab RPCs: resolve the tab index to its label, then
-// delegate to `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
+// Controller-facing wrappers for file navigator tab RPCs: resolve the tab index to its label (or,
+// for the mutating requests that arrive by label, check it is still open), then delegate to
+// `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
@@ -41,13 +42,20 @@ export function fileNavigatorReroot(managers: Managers, index: number, relPath?:
   if (label) managers.fileNavigator.reroot(label, relPath);
 }
 
+// The mutating requests below arrive addressed by label rather than tab index, so a tab closing
+// ahead of the navigator cannot redirect them. A label no open tab carries is a navigator that
+// closed while the request was in flight: it mutates nothing and, like an out-of-range index
+// before it, reports nothing.
+function isOpenTab(managers: Managers, label: string): boolean {
+  return managers.tab.tabs.some((tab) => tab.label === label);
+}
+
 // A conflict answer is returned for the client to confirm, not reported: nothing failed, the move
 // is waiting on the user's say-so to replace what is already there.
 export function moveFileNavigatorItem(
-  managers: Managers, index: number, fromRelPath: string, toRelPath: string, overwrite?: boolean,
+  managers: Managers, label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean,
 ): MaybePromise<BulkMoveResult> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return { total: 0, failedPaths: [] };
+  if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
   return mapMaybe(managers.fileNavigator.move(label, fromRelPath, toRelPath, overwrite), (result) => {
     if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
     return result;
@@ -55,10 +63,9 @@ export function moveFileNavigatorItem(
 }
 
 export function deleteFileNavigatorItem(
-  managers: Managers, index: number, relPath: string,
+  managers: Managers, label: string, relPath: string,
 ): MaybePromise<void> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return;
+  if (!isOpenTab(managers, label)) return;
   return mapMaybe(managers.fileNavigator.delete(label, relPath), (result) => {
     reportOperationFailure(managers, label, 'delete', result);
   });
@@ -66,13 +73,12 @@ export function deleteFileNavigatorItem(
 
 export function moveFileNavigatorItems(
   managers: Managers,
-  index: number,
+  label: string,
   sourcePaths: string[],
   destinationPath: string,
   policy?: BulkConflictPolicy,
 ): MaybePromise<BulkMoveResult> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return { total: 0, failedPaths: [] };
+  if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
   return mapMaybe(managers.fileNavigator.moveMany(label, sourcePaths, destinationPath, policy), (result) => {
     if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
     return result;
@@ -81,15 +87,14 @@ export function moveFileNavigatorItems(
 
 export function pasteFileNavigatorItems(
   managers: Managers,
-  index: number,
+  label: string,
   sources: string[],
   destinationPath: string,
   mode: 'copy' | 'cut',
   policy?: BulkConflictPolicy,
   sourceHost?: string,
 ): MaybePromise<BulkMoveResult> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return { total: 0, failedPaths: [] };
+  if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
   return mapMaybe(managers.fileNavigator.paste(label, sources, destinationPath, mode, policy, sourceHost), (result) => {
     if (!('conflictPaths' in result)) {
       reportOperationFailure(managers, label, mode === 'copy' ? 'copy' : 'move', result);
@@ -99,10 +104,9 @@ export function pasteFileNavigatorItems(
 }
 
 export function deleteFileNavigatorItems(
-  managers: Managers, index: number, paths: string[],
+  managers: Managers, label: string, paths: string[],
 ): MaybePromise<BatchResult> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return { total: 0, failedPaths: [] };
+  if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
   return mapMaybe(managers.fileNavigator.deleteMany(label, paths), (result) => {
     reportOperationFailure(managers, label, 'delete', result);
     return result;
@@ -110,10 +114,9 @@ export function deleteFileNavigatorItems(
 }
 
 export function renameFileNavigatorItem(
-  managers: Managers, index: number, relPath: string, newName: string,
+  managers: Managers, label: string, relPath: string, newName: string,
 ): MaybePromise<void> {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return;
+  if (!isOpenTab(managers, label)) return;
   return mapMaybe(managers.fileNavigator.rename(label, relPath, newName), (result) => {
     reportOperationFailure(managers, label, 'rename', result);
   });

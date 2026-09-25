@@ -19,26 +19,26 @@ const CASES: Array<[
   ['fileNavigatorNothingToCommit', { index: 0 }, [{ index: '0' }, {}]],
   ['fileNavigatorSetDetail', { index: 0, details: 'modified' }, [{ index: 0 }, { index: 0, details: 'owner' }]],
   ['fileNavigatorReroot', { index: 0 }, [{ index: 0, path: 4 }]],
-  ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b' }, [
-    { index: 0, fromRelPath: 'a' },
-    { index: 0, fromRelPath: 'a', toRelPath: [] },
-    { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: 'yes' },
+  ['moveFileNavigatorItem', { label: 'files', fromRelPath: 'a', toRelPath: 'b' }, [
+    { label: 'files', fromRelPath: 'a' },
+    { label: 'files', fromRelPath: 'a', toRelPath: [] },
+    { label: 'files', fromRelPath: 'a', toRelPath: 'b', overwrite: 'yes' },
   ]],
-  ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: true }, []],
-  ['moveFileNavigatorItems', { index: 0, sourcePaths: ['a'], destinationPath: 'b', policy: 'overwrite-all' }, [
-    { index: 0, sourcePaths: 'a', destinationPath: 'b' },
-    { index: 0, sourcePaths: ['a', 2], destinationPath: 'b' },
-    { index: 0, sourcePaths: ['a'], destinationPath: 'b', policy: 'merge' },
+  ['moveFileNavigatorItem', { label: 'files', fromRelPath: 'a', toRelPath: 'b', overwrite: true }, []],
+  ['moveFileNavigatorItems', { label: 'files', sourcePaths: ['a'], destinationPath: 'b', policy: 'overwrite-all' }, [
+    { label: 'files', sourcePaths: 'a', destinationPath: 'b' },
+    { label: 'files', sourcePaths: ['a', 2], destinationPath: 'b' },
+    { label: 'files', sourcePaths: ['a'], destinationPath: 'b', policy: 'merge' },
   ]],
-  ['pasteFileNavigatorItems', { index: 0, sources: ['/tmp/a'], destinationPath: '.', mode: 'copy' }, [
-    { index: 0, sources: ['/tmp/a'], destinationPath: '.' },
-    { index: 0, sources: ['/tmp/a'], destinationPath: '.', mode: 'copy', sourceHost: 7 },
+  ['pasteFileNavigatorItems', { label: 'files', sources: ['/tmp/a'], destinationPath: '.', mode: 'copy' }, [
+    { label: 'files', sources: ['/tmp/a'], destinationPath: '.' },
+    { label: 'files', sources: ['/tmp/a'], destinationPath: '.', mode: 'copy', sourceHost: 7 },
   ]],
-  ['deleteFileNavigatorItem', { index: 0, relPath: 'a' }, [{ index: 0 }]],
-  ['deleteFileNavigatorItems', { index: 0, paths: [] }, [{ index: 0, paths: 'a' }]],
-  ['renameFileNavigatorItem', { index: 0, relPath: 'a', newName: 'b' }, [
-    { index: 0, relPath: 'a' },
-    { index: 0, relPath: 'a', newName: 1 },
+  ['deleteFileNavigatorItem', { label: 'files', relPath: 'a' }, [{ label: 'files' }, { index: 0, relPath: 'a' }, { label: 3, relPath: 'a' }]],
+  ['deleteFileNavigatorItems', { label: 'files', paths: [] }, [{ label: 'files', paths: 'a' }]],
+  ['renameFileNavigatorItem', { label: 'files', relPath: 'a', newName: 'b' }, [
+    { label: 'files', relPath: 'a' },
+    { label: 'files', relPath: 'a', newName: 1 },
   ]],
   ['fileNavigatorSearch', { index: 0 }, [{ index: {} }]],
   ['revealFileNavigatorItem', { index: 0, relPath: 'a/b' }, [{ index: 0, relPath: null }]],

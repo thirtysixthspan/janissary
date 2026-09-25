@@ -7,6 +7,9 @@ export type FileNavigatorTabProperties = {
   files: FileNavigatorView;
   client: JanusClient;
   index: number;
+  // The navigator tab's label. Deletes, moves, pastes, and renames are addressed by it rather than
+  // by `index`, so a tab closing ahead of this one cannot redirect them onto another tree.
+  label: string;
   // The tab's current dock location (undefined means center). Drives the location-cycle
   // button's destination.
   dock?: 'left' | 'right';

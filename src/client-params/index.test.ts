@@ -50,7 +50,7 @@ describe('the client params decoder table', () => {
     ['setDock', { index: 0, dock: 'left' }, { index: 0, dock: 'top' }],
     ['fileNavigatorSetDetail', { index: 0, details: 'size' }, { index: 0, details: 'owner' }],
     ['fileNavigatorOpen', { index: 0, relPath: 'a', command: 'edit' }, { index: 0, relPath: 'a', command: 'launch' }],
-    ['pasteFileNavigatorItems', { index: 0, sources: [], destinationPath: '.', mode: 'cut' }, { index: 0, sources: [], destinationPath: '.', mode: 'move' }],
+    ['pasteFileNavigatorItems', { label: 'files', sources: [], destinationPath: '.', mode: 'cut' }, { label: 'files', sources: [], destinationPath: '.', mode: 'move' }],
   ] as Array<[ClientMessage['method'], Record<string, unknown>, Record<string, unknown>]>)(
     'holds %s to the values its literal union declares',
     (method, valid, invalid) => {

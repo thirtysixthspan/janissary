@@ -28,16 +28,16 @@ export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], Param
   fileNavigatorNothingToCommit: (p) => isInteger(p.index),
   fileNavigatorSetDetail: (p) => isInteger(p.index) && isOneOf(p.details, DETAILS),
   fileNavigatorReroot: (p) => isInteger(p.index) && optionalString(p.path),
-  moveFileNavigatorItem: (p) => isInteger(p.index) && isString(p.fromRelPath) && isString(p.toRelPath)
+  moveFileNavigatorItem: (p) => isString(p.label) && isString(p.fromRelPath) && isString(p.toRelPath)
     && optionalBoolean(p.overwrite),
-  moveFileNavigatorItems: (p) => isInteger(p.index) && isStringArray(p.sourcePaths)
+  moveFileNavigatorItems: (p) => isString(p.label) && isStringArray(p.sourcePaths)
     && isString(p.destinationPath) && optionalOneOf(p.policy, POLICIES),
-  pasteFileNavigatorItems: (p) => isInteger(p.index) && isStringArray(p.sources)
+  pasteFileNavigatorItems: (p) => isString(p.label) && isStringArray(p.sources)
     && isString(p.destinationPath) && isOneOf(p.mode, PASTE_MODES)
     && optionalOneOf(p.policy, POLICIES) && optionalString(p.sourceHost),
-  deleteFileNavigatorItem: (p) => isInteger(p.index) && isString(p.relPath),
-  deleteFileNavigatorItems: (p) => isInteger(p.index) && isStringArray(p.paths),
-  renameFileNavigatorItem: (p) => isInteger(p.index) && isString(p.relPath) && isString(p.newName),
+  deleteFileNavigatorItem: (p) => isString(p.label) && isString(p.relPath),
+  deleteFileNavigatorItems: (p) => isString(p.label) && isStringArray(p.paths),
+  renameFileNavigatorItem: (p) => isString(p.label) && isString(p.relPath) && isString(p.newName),
   fileNavigatorSearch: (p) => isInteger(p.index),
   revealFileNavigatorItem: (p) => isInteger(p.index) && isString(p.relPath),
   fileNavigatorOpeners: (p) => isInteger(p.index) && isString(p.relPath)

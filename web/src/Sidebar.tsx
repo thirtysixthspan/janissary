@@ -97,7 +97,7 @@ export function Sidebar({
         />
         {isFilesTabView(current.tab) && (
           <FileNavigatorTab
-            files={current.tab.files} client={client} index={current.index} dock={current.tab.dock} autoFocus={false}
+            files={current.tab.files} client={client} index={current.index} label={current.tab.label} dock={current.tab.dock} autoFocus={false}
             dropRef={dropRef} editorDropRef={editorDropRef} targetCwd={targetCwd ?? current.tab.cwd}
             multiOpen={multiOpenablePaths}
           />

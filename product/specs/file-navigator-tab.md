@@ -871,6 +871,11 @@ navigator's current root. An escaping path is ignored, so file moves, renames, d
 watchers cannot operate outside that root. The parent-navigation action remains available when it
 does not supply an explicit path.
 
+A delete, move, paste, or rename is addressed to the navigator it was made in. If that navigator
+has closed by the time the request reaches the server, nothing happens and nothing is reported,
+even if another navigator now sits where it used to be in the tab list. Closing another tab while
+such a request is in flight never redirects it onto a different tree.
+
 Closing a file navigator tab (via its close button, the `close` command, or app shutdown) stops every
 watcher it opened. Because a file navigator tab owns no shell, agent session, browser, or workspace,
 the rest of ordinary tab teardown simply does nothing for it. Closing the last remaining tab quits
