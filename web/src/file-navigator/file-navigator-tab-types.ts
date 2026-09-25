@@ -1,7 +1,7 @@
 import type React from 'react';
 import type { FileNavigatorView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import type { CommandInputDropHandle, EditorDropHandle } from '../shared/drop-handles';
+import type { CommandInputDropHandle } from '../shared/drop-handles';
 
 export type FileNavigatorTabProperties = {
   files: FileNavigatorView;
@@ -22,9 +22,6 @@ export type FileNavigatorTabProperties = {
   // Omitted for a center-mounted tree, which per Decision 4 never has a reachable command-bar
   // target regardless.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  // The active tab's editor imperative handle, if it's an editor tab — only ever passed when this
-  // tree is docked into a sidebar, for the same reason as `dropRef` above.
-  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   targetCwd?: string;
   onSplit?: () => void;
   // Classifier for the whole-selection Open/Edit fan-out: which paths, if any, Open and Edit

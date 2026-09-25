@@ -214,9 +214,10 @@ itself, or transcript search — nor for a harness tab, whose terminal takes the
 (below). Names are inserted exactly as computed, without quotes,
 even when a name contains spaces.
 
-Drag selected rows onto an active plain-text editor to insert their file names, separated
-by newlines, as one editor undo step. The editor does not highlight during the drag. Inactive or
-hidden editors are not drop targets.
+Drag selected rows onto a visible plain-text editor to insert their file names, separated
+by newlines, as one editor undo step. The editor does not highlight during the drag. The names go
+into the editor you release over — with two editors side by side in split panes, that can be the
+one that isn't focused. Hidden editors are not drop targets.
 
 Dropping hands keyboard focus to the editor and leaves the cursor just after the name it inserted,
 so you can keep typing without reaching for the mouse.

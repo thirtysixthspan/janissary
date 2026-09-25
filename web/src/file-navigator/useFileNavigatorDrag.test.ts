@@ -4,7 +4,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useFileNavigatorDrag as useFileNavigatorDragImplementation } from './useFileNavigatorDrag';
 import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../shared/drop-handles';
-import { registerHarnessDrop } from '../harness-drop-registry';
+import { registerEditorDrop, registerHarnessDrop } from '../shared/drop-registry';
 
 function makeRows(): FileNavigatorRow[] {
   return [
@@ -37,13 +37,9 @@ function makeDropHandle(): CommandInputDropHandle {
   return { insertAtCaret: vi.fn(), setDropHighlighted: vi.fn() };
 }
 
-function makeEditorDropHandle(): EditorDropHandle {
-  return { insertAtCaret: vi.fn() };
-}
-
-function makeEditorBodyElement(): HTMLElement {
+function makeEditorBodyElement(label: string): HTMLElement {
   const body = document.createElement('div');
-  body.dataset.editorDrop = '';
+  body.dataset.editorDrop = label;
   document.body.append(body);
   return body;
 }
@@ -65,30 +61,34 @@ function makeHarnessBodyElement(ptyId: string): HTMLElement {
 function useFileNavigatorDrag(
   rows: FileNavigatorRow[], client: JanusClient,
   absoluteRootOrDropRef: string | React.RefObject<CommandInputDropHandle | null> = '',
-  displayRootOrEditorRef: string | React.RefObject<EditorDropHandle | null> = '',
+  displayRoot = '',
   targetCwd = '',
   providedDropRef?: React.RefObject<CommandInputDropHandle | null>,
-  providedEditorDropRef?: React.RefObject<EditorDropHandle | null>,
   remoteHost?: string,
 ) {
-  const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
+  const legacy = typeof absoluteRootOrDropRef !== 'string';
   return useFileNavigatorDragImplementation(rows, client, 'files', {
     absoluteRoot: legacy ? '' : absoluteRootOrDropRef,
-    displayRoot: typeof displayRootOrEditorRef === 'string' ? displayRootOrEditorRef : '',
+    displayRoot,
     targetCwd,
-    dropRef: legacy && typeof absoluteRootOrDropRef !== 'string' ? absoluteRootOrDropRef : providedDropRef,
-    editorDropRef: legacy && typeof displayRootOrEditorRef !== 'string' ? displayRootOrEditorRef : providedEditorDropRef,
+    dropRef: legacy ? absoluteRootOrDropRef : providedDropRef,
     remoteHost,
   });
 }
 
-// Every harness registration a case makes, torn down after it so the module-level registry never
-// carries a handle from one case into the next.
+// Every harness and editor registration a case makes, torn down after it so the module-level
+// registry never carries a handle from one case into the next.
 const registeredHarnesses: (() => void)[] = [];
 
 function registerHarness(ptyId: string): HarnessDropHandle {
   const handle = { insertAtCaret: vi.fn() };
   registeredHarnesses.push(registerHarnessDrop(ptyId, handle));
+  return handle;
+}
+
+function registerEditor(label: string): EditorDropHandle {
+  const handle = { insertAtCaret: vi.fn() };
+  registeredHarnesses.push(registerEditorDrop(label, handle));
   return handle;
 }
 
@@ -410,26 +410,55 @@ describe('useFileNavigatorDrag', () => {
   describe('drop onto an editor tab', () => {
     it('a drag released over the editor-body marker inserts the path at the cursor instead of sending moveFileNavigatorItem', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const editorDropHandle = makeEditorDropHandle();
-      const editorDropRef = { current: editorDropHandle };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
-      const body = makeEditorBodyElement();
-      document.elementFromPoint = vi.fn().mockReturnValue(body);
+      const editor = registerEditor('notes-editor');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('notes-editor'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(editorDropHandle.insertAtCaret).toHaveBeenCalledWith('notes.txt');
+      expect(editor.insertAtCaret).toHaveBeenCalledWith('notes.txt');
+      expect(client.send).not.toHaveBeenCalled();
+    });
+
+    // Split panes can show two editors at once. The one under the pointer receives the drop, not
+    // whichever of them holds focus.
+    it('delivers the drop only to the editor under the pointer when two are visible', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const left = registerEditor('left-editor');
+      const right = registerEditor('right-editor');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('right-editor'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(right.insertAtCaret).toHaveBeenCalledWith('notes.txt');
+      expect(left.insertAtCaret).not.toHaveBeenCalled();
+    });
+
+    it('drops nothing over an editor body whose label has no registered handle', () => {
+      const client = makeMoveClient();
+      const other = registerEditor('other-editor');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('hidden-editor'));
+
+      act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      act(() => { result.current.drop(); });
+
+      expect(other.insertAtCaret).not.toHaveBeenCalled();
+      expect(client.request).not.toHaveBeenCalled();
       expect(client.send).not.toHaveBeenCalled();
     });
 
     it('hovering the editor-body marker suppresses the row drop-target highlight', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const editorDropRef = { current: makeEditorDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
-      const body = makeEditorBodyElement();
-      document.elementFromPoint = vi.fn().mockReturnValue(body);
+      registerEditor('notes-editor');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
+      document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('notes-editor'));
 
       act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
@@ -440,8 +469,8 @@ describe('useFileNavigatorDrag', () => {
 
     it('a drag released over a tree row still moves the file as before, unaffected by the editor wiring', () => {
       const client = makeMoveClient();
-      const editorDropRef = { current: makeEditorDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
+      const editor = registerEditor('notes-editor');
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -450,7 +479,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { result.current.drop(); });
 
       expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other' } });
-      expect(editorDropRef.current.insertAtCaret).not.toHaveBeenCalled();
+      expect(editor.insertAtCaret).not.toHaveBeenCalled();
     });
   });
 
@@ -497,7 +526,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() =>
-        useFileNavigatorDrag(makeRows(), client, '/srv/project', 'project', '/srv', undefined, undefined, 'devbox'));
+        useFileNavigatorDrag(makeRows(), client, '/srv/project', 'project', '/srv', undefined, 'devbox'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/a.ts' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -608,10 +637,10 @@ describe('useFileNavigatorDrag', () => {
 
   it('inserts every selected file name once in the editor with newline separators and no cwd relativity', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const editorDropRef = { current: makeEditorDropHandle() };
+    const editor = registerEditor('notes-editor');
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work', undefined, editorDropRef));
-    document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement());
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
+    document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement('notes-editor'));
 
     act(() => {
       result.current.onRowMouseDown(
@@ -624,8 +653,8 @@ describe('useFileNavigatorDrag', () => {
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
-    expect(editorDropRef.current.insertAtCaret).toHaveBeenCalledOnce();
-    expect(editorDropRef.current.insertAtCaret).toHaveBeenCalledWith('notes.txt\na.ts');
+    expect(editor.insertAtCaret).toHaveBeenCalledOnce();
+    expect(editor.insertAtCaret).toHaveBeenCalledWith('notes.txt\na.ts');
     expect(client.send).not.toHaveBeenCalled();
   });
 

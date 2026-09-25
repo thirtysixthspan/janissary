@@ -22,7 +22,7 @@ import { PendingSuggestPanel } from './PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
 import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
-import type { EditorDropHandle } from '../shared/drop-handles';
+import { useEditorDrop } from './useEditorDrop';
 import type { DirtyTabHandle } from '../shared/tab-handles';
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
@@ -34,11 +34,11 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   active: boolean;
   // Whether the tab's body is on screen at all. In a split it can be shown without being the
   // focused tab, and hidden while the focus sits in the other pane, so this is what the scroll
-  // retention keys on rather than `active`. A standalone render is on screen.
+  // retention and the file-navigator drop handle key on rather than `active`. A standalone render is
+  // on screen.
   visible?: boolean;
-  dropRef?: React.RefObject<EditorDropHandle | null>;
   onSplit?: () => void;
-}>(function EditorTab({ editor, tab, client, active, visible = true, dropRef, onSplit }, ref) {
+}>(function EditorTab({ editor, tab, client, active, visible = true, onSplit }, ref) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
@@ -65,22 +65,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey });
 
-  // Every open editor tab stays mounted at once (see the top-of-file comment), so only the
-  // currently active one may claim the shared drop handle — otherwise whichever tab rendered last
-  // would silently win regardless of which one is actually visible and drop-targetable.
-  //
-  // Focuses the textarea before inserting: the caller is a file-navigator drag release, so focus is
-  // still in the file tree, where the letters the user types next are a type-to-select gesture
-  // rather than text. `insert` leaves the caret at the end of what it inserted, so once focus is
-  // here the user simply carries on typing from there.
-  if (dropRef && active) {
-    dropRef.current = {
-      insertAtCaret: (text: string) => {
-        textareaRef.current?.focus();
-        api.insert(text);
-      },
-    };
-  }
+  useEditorDrop(tab.label, visible, textareaRef, api.insert);
 
   const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
 
@@ -149,7 +134,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
       <div
         className="editor-body"
         ref={bodyRef}
-        data-editor-drop
+        data-editor-drop={tab.label}
         data-editor-selection={selectionText}
         onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}

@@ -401,10 +401,10 @@ letters typed select a row rather than entering text.
 For a remote tree, each inserted editor name uses the same `<host>:<absolute-remote-path>` form
 as a command-bar drop.
 
-An editor tab is only a valid drop target while it is the active tab and actually visible — in
-practice this means the file navigator is docked into a sidebar while an editor tab is active in
-the center, the same reachability condition as the command bar. Dragging over an inactive or
-not-currently-displayed editor tab has no effect.
+An editor tab is a valid drop target while it is visible, whether or not it holds focus. The drop
+lands in the editor under the pointer and nowhere else: with two editors showing side by side in
+split panes, releasing over the unfocused one inserts into that one and leaves the focused editor
+untouched. Dragging over an editor tab that is not currently displayed has no effect.
 
 ### Dragging a row into a harness tab
 

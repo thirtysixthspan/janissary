@@ -4,17 +4,6 @@
 
 ## development
 
-* Route a file-navigator drop onto an editor by the editor body under the pointer, the way harness drops already are, instead of through one shared "active editor" ref.
-
-Existing Debt: Editor drops go through a single ref that the focused `EditorTab` overwrites during render and never clears, a design that assumed only one tab body could be visible, while split panes now show two editors and harness drops already solved the same problem with a per-target registry. Severity: 5/10
-
-Existing Risk: 5/10 - Releasing a drag over the unfocused editor in a split pane types the path into the other, focused editor, dirtying a file the user was not looking at and possibly saved unnoticed, and a closed editor's handle can linger in the ref.
-
-Proposal Risk: 2/10 - Each drop lands only in the editor under the pointer or nowhere, which is what `product/specs/file-navigator-tab.md` says; the remaining exposure is the registry's own cleanup, which a render test with two visible editors would pin.
-
-Proposal: `web/src/editor/EditorTab.tsx` assigns `dropRef.current = { insertAtCaret }` in its render body when `active`, and `web/src/file-navigator/useFileNavigatorDrag.ts` checks for any `[data-editor-drop]` element under the pointer (`onWindowMove`) and then calls that one ref (`drop`), so which element was hovered never decides which editor receives the text. `web/src/MountedViewLayers.tsx` passes `visible={visibleLabels.includes(t.label)}`, so two editors can be visible, and the ref is threaded as an `editorDropRef` prop through `App.tsx`, `AppMain.tsx`, `AppShell.tsx`, `Sidebar.tsx` and `FileNavigatorTab.tsx`. Harness tabs already key handles by the PTY id read from `data-harness-drop` via `web/src/harness-drop-registry.ts`. Generalize that registry (move it to `web/src/shared/` since two features would import it, with a separate map or a kind parameter for editors), have `EditorTab` set `data-editor-drop={tab.label}` and register its handle in a `useEffect` gated on `visible` with cleanup, have `drop` read the key from the hovered element and look it up (an unregistered key does nothing), and delete the `editorDropRef` prop chain. `web/src/editor/EditorTab.test.tsx` (the drop-handle block), `web/src/file-navigator/useFileNavigatorDrag.test.ts` (the drop-onto-an-editor cases), `web/src/harness-drop-registry.test.ts`, `web/src/harness/useHarnessPtyDrop.test.ts`, `web/src/shared/drop-handles.test.ts` and `web/src/file-navigator/FileNavigatorTab.test.tsx` cover current behavior; no test covers two visible editors, so add one.
-
-
 * Make keyboard activation of a file in the navigator ask the server's opener registry exactly as double-click does, instead of sending a hardcoded edit or open.
 
 Existing Debt: What activating a file does is split between a Markdown regex in one client handler and the server's opener registry with its declared `editGesture`s, and double-click, Enter and Shift+Enter each call a different mix of the two, so the client carries knowledge of one specific plugin. Severity: 5/10

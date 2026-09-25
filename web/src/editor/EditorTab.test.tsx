@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent, createEvent, act } from '@testing-l
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './EditorTab';
-import type { EditorDropHandle } from '../shared/drop-handles';
+import { editorDropHandle } from '../shared/drop-registry';
 import type { KeyLike } from './keys';
 import type { useEditorPlugins } from './plugins/useEditorPlugins';
 
@@ -1512,14 +1512,14 @@ describe('EditorTab', () => {
   });
 
   describe('drop handle', () => {
-    it('exposes insertAtCaret via dropRef while active, inserting the dropped path at the cursor', async () => {
+    it('publishes insertAtCaret under its tab label while visible, inserting the dropped path at the cursor', async () => {
       const { client } = makeClient();
-      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
-      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+      expect(container.querySelector<HTMLElement>('[data-editor-drop]')?.dataset.editorDrop).toBe('notes');
+      act(() => { editorDropHandle('notes')?.insertAtCaret('src/notes.txt'); });
 
       expect(container.querySelector(':scope .editor-row:not(.editor-row-query) .editor-content')?.textContent).toBe('src/notes.txtline one');
     });
@@ -1529,51 +1529,78 @@ describe('EditorTab', () => {
     // matters: an active editor tab claims focus on mount, so without it this passes either way.
     it('moves keyboard focus to the editor', async () => {
       const { client } = makeClient();
-      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
       const view = makeView();
-      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
       const textarea = screen.getByLabelText('Edit notes.txt');
       act(() => { (textarea as HTMLTextAreaElement).blur(); });
       expect(textarea).not.toHaveFocus();
 
-      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+      act(() => { editorDropHandle('notes')?.insertAtCaret('src/notes.txt'); });
 
       expect(textarea).toHaveFocus();
     });
 
     it('leaves the caret at the end of the dropped path', async () => {
       const { client } = makeClient();
-      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
-      act(() => { dropRef.current?.insertAtCaret('src/notes.txt'); });
+      act(() => { editorDropHandle('notes')?.insertAtCaret('src/notes.txt'); });
 
       expect(textBeforeCaret(container)).toBe('src/notes.txt');
     });
 
     it('leaves the caret at the end of the last path when several are dropped at once', async () => {
       const { client } = makeClient();
-      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
       const view = makeView();
-      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active dropRef={dropRef} />);
+      const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
       await waitFor(() => expect(screen.getByText('line one')).toBeInTheDocument());
 
-      act(() => { dropRef.current?.insertAtCaret('src/one.txt\nsrc/two.txt'); });
+      act(() => { editorDropHandle('notes')?.insertAtCaret('src/one.txt\nsrc/two.txt'); });
 
       expect(textBeforeCaret(container)).toBe('src/two.txt');
     });
 
-    it('leaves a shared dropRef untouched when the tab is inactive', async () => {
+    it('publishes nothing while hidden, and withdraws its handle when hidden or unmounted', async () => {
       const { client } = makeClient();
-      const dropRef = createRef<EditorDropHandle | null>() as React.RefObject<EditorDropHandle | null>;
       const view = makeView();
-      render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active={false} dropRef={dropRef} />);
+      const tab = makeTab({ editor: view });
+      const { rerender, unmount } = render(<EditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
       await waitFor(() => expect(screen.getByLabelText('Edit notes.txt')).toBeInTheDocument());
+      expect(editorDropHandle('notes')).toBeUndefined();
 
-      expect(dropRef.current).toBeNull();
+      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible />);
+      expect(editorDropHandle('notes')).toBeDefined();
+
+      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible={false} />);
+      expect(editorDropHandle('notes')).toBeUndefined();
+
+      rerender(<EditorTab editor={view} tab={tab} client={client} active={false} visible />);
+      unmount();
+      expect(editorDropHandle('notes')).toBeUndefined();
+    });
+
+    // Split panes show two editors at once; each one visible keeps its own handle, so a drop
+    // reaches the editor under the pointer rather than whichever one holds focus.
+    it('keeps a separate handle for each of two visible editors', async () => {
+      const { client } = makeClient();
+      const view = makeView();
+      const other = { ...makeView(), url: '/open/2', name: 'other.txt' };
+      const { container } = render(
+        <>
+          <EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />
+          <EditorTab editor={other} tab={makeTab({ label: 'other', editor: other })} client={client} active={false} visible />
+        </>,
+      );
+      await waitFor(() => expect(screen.getAllByText('line one')).toHaveLength(2));
+
+      act(() => { editorDropHandle('other')?.insertAtCaret('src/notes.txt'); });
+
+      const bodies = container.querySelectorAll('[data-editor-drop]');
+      expect(bodies[0].textContent).not.toContain('src/notes.txt');
+      expect(bodies[1].textContent).toContain('src/notes.txtline one');
     });
   });
 

@@ -12,6 +12,13 @@ export function hoveredHarnessPty(x: number, y: number): string | null {
   return body instanceof HTMLElement ? body.dataset.harnessDrop ?? null : null;
 }
 
+// The tab label of the editor body under the pointer, which is the key its own drop handle is
+// registered under — null when the pointer is over no editor at all.
+export function hoveredEditor(x: number, y: number): string | null {
+  const body = hoveredElement(x, y, '[data-editor-drop]');
+  return body instanceof HTMLElement ? body.dataset.editorDrop ?? null : null;
+}
+
 export function hoveredRowInfo(
   x: number, y: number,
 ): { path: string | null; host?: string; root?: string } {
