@@ -212,7 +212,10 @@ whatever is installed on that host now — not the version of the peer waiting b
 parked while the remote installation was upgraded therefore passes the handshake and is then refused
 by name by the older peer. The query is bounded rather than open-ended so that case settles: no
 answer within the wait ends the accepted session, closes its placeholder tab, and shuts down the
-remote workspace rather than leaving an uninspectable peer behind.
+remote workspace rather than leaving an uninspectable peer behind. The wait also ends at once,
+without an answer, when the session ends locally while it is outstanding — its placeholder tab
+closed, the session detached or terminated, or the app shutting down — rather than running out the
+full wait first.
 
 Output the far side prints outside the protocol does not end the session. The remote's own error
 reporting shares the connection the frames travel on, so a line that is not a frame at all is treated

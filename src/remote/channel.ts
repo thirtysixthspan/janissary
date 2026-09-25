@@ -136,7 +136,6 @@ export class RemoteChannel {
     for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
     this.captures.settleAll();
-    this.state = 'closed';
   }
 
   // A PTY kill can discard bytes that have been written but not yet delivered to ssh. Leave the

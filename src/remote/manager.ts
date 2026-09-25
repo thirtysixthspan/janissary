@@ -5,7 +5,7 @@ import type { RemoteChannel } from './channel.js';
 import type { ServerFrame } from './protocol.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
-import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
+import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, markEntryEnded, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
 import type { RemoteResume } from './resume.js';
 import { remoteChannelClosed } from './manager-closed.js';
 import { createRemoteEntry } from './entry-factory.js';
@@ -136,12 +136,10 @@ export class RemoteManager {
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
     else {
-      // Captured before `finish()` — fifteen lines below, the channel forgets its own session id as
-      // part of closing.
+      // Captured before `finish()`, which forgets the channel's session id as part of closing.
       const session = entry.channel.sessionId;
-      entry.attach.stop();
       entry.channel.finish();
-      this.channelClosed(entry);
+      this.channelClosed(entry, true);
       entry.channel.closeAfterShutdown();
       dropTerminatedSessionRecord(this.managers, session);
     }
@@ -151,7 +149,7 @@ export class RemoteManager {
 
   closeAll(): void {
     const entries = new Set(this.entries.values());
-    for (const entry of entries) { entry.attach.stop(); entry.closed = true; entry.channel.finish(); entry.channel.closeAfterShutdown(); }
+    for (const entry of entries) { markEntryEnded(entry); entry.channel.finish(); entry.channel.closeAfterShutdown(); }
     this.entries.clear();
   }
 
@@ -171,8 +169,8 @@ export class RemoteManager {
     };
   }
 
-  private channelClosed(entry: Entry): void {
-    remoteChannelClosed(this.managers, this.entries, entry);
+  private channelClosed(entry: Entry, ending = false): void {
+    remoteChannelClosed(this.managers, this.entries, entry, ending);
     this.sessionsChanged();
   }
 
