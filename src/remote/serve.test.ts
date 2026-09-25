@@ -796,9 +796,14 @@ describe('detached peer rendezvous', () => {
       }, { onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn() });
       restored.child.onExit(() => channel.closed());
       channel.receive(`${encodeHandshake()}\n`);
+      // Closed the way every local path ends a session: an immediate kill can drop the shutdown frame
+      // before the pty hands it to the relay, which leaves the peer parked with its workspace.
       channel.finish();
-      channel.close();
-      await vi.waitFor(() => expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false));
+      channel.closeAfterShutdown();
+      await vi.waitFor(
+        () => expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false),
+        { timeout: 10_000 },
+      );
     } finally {
       if (proxy) await stop(proxy.child);
       await stop(peer.child);
