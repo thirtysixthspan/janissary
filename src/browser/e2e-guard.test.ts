@@ -285,7 +285,7 @@ describe('startE2EGuard while the browser is still starting', () => {
     expect(upstream.received).toEqual([]);
   });
 
-  it('closes the client with the launch failure when the browser will not start', async () => {
+  it('closes the client with a fixed phrase when the browser will not start', async () => {
     const upstream = await startUpstream();
     const port = await startGuardWith(() => Promise.reject(new Error('e2e browser failed to start: EADDRINUSE')));
     const client = connect(port);
@@ -293,8 +293,27 @@ describe('startE2EGuard while the browser is still starting', () => {
       client.on('close', (code: number, reason: Buffer) => resolve({ code, reason: reason.toString('utf8') }));
     });
     await opened(client);
-    expect(await closed).toEqual({ code: 1008, reason: 'e2e browser failed to start: EADDRINUSE' });
+    expect(await closed).toEqual({ code: 1008, reason: 'e2e browser failed to start' });
     expect(upstream.received).toEqual([]);
+  });
+
+  // The client is a confined agent that is denied the installation, the browser's scratch path and
+  // the host account's home directory. A close reason that quoted a filesystem error would hand it
+  // all three; the account reaches the human through the report and the browser's log instead.
+  it('keeps a filesystem path out of the reason a failed start closes the client with', async () => {
+    const port = await startGuardWith(() => Promise.reject(new Error(
+      'e2e browser failed to start: EACCES: permission denied, mkdir \'/Users/ada/.janissary/workspace/chat/browsers/claude-4kx2\'',
+    )));
+    const client = connect(port);
+    const closed = new Promise<{ code: number; reason: string }>((resolve) => {
+      client.on('close', (code: number, reason: Buffer) => resolve({ code, reason: reason.toString('utf8') }));
+    });
+    await opened(client);
+    const { reason } = await closed;
+    expect(reason).toBe('e2e browser failed to start');
+    expect(reason).not.toContain('ada');
+    expect(reason).not.toContain('.janissary');
+    expect(reason).not.toContain('EACCES');
   });
 
   // The guard outlives the browser: a failure is one client's answer, not the listener's last.

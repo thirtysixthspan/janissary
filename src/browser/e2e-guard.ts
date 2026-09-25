@@ -1,5 +1,4 @@
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
-import { errorText } from '../error-text.js';
 import { inspectClientFrame, inspectServerFrame, type FrameVerdict } from './e2e-frame-filter.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 
@@ -53,19 +52,15 @@ function frameText(data: RawData): string {
 }
 
 // Close code 1008 is "policy violation", which is what this is. The reason rides in the close frame
-// and must stay short — the protocol caps it at 123 bytes — so the filter's reasons are phrases.
+// and the protocol caps it at 123 bytes, so every reason the guard authors is a short phrase.
+//
+// A browser that would not start gets a phrase too, and the reason is trust rather than brevity. The
+// failures behind it are filesystem and spawn errors whose text names the janissary installation, the
+// browser's scratch path and the host account's home directory — and the client reading it is a
+// confined agent denied all three. The whole account is not lost by this: it is in the report
+// `stopSession` composes and in the browser's log file, which the human reads and the agent does not.
 const POLICY_VIOLATION = 1008;
-
-// The one case where the reason is janissary's own sentence rather than a filter phrase is a browser
-// that would not start, and that can be a filesystem error with a path in it. Bounded to fit the
-// close frame regardless; the client only needs to know the browser did not come up, and the full
-// account reaches the user through the ordinary death report rather than through here.
-const MAX_CLOSE_REASON = 120;
-
-function launchFailure(reason: unknown): string {
-  const text = errorText(reason);
-  return text.length <= MAX_CLOSE_REASON ? text : text.slice(0, MAX_CLOSE_REASON);
-}
+const BROWSER_DID_NOT_START = 'e2e browser failed to start';
 
 function endSession(client: WebSocket, upstream: WebSocket | undefined, reason: string): void {
   try { client.close(POLICY_VIOLATION, reason); } catch { /* already closing */ }
@@ -122,9 +117,9 @@ function bridge(client: WebSocket, ensureUpstream: () => Promise<string>): void 
     try {
       const upstreamUrl = await ensureUpstream();
       if (client.readyState === WebSocket.OPEN) upstream = dialUpstream(client, upstreamUrl, pending, judge);
-    } catch (error) {
+    } catch {
       refused = true;
-      endSession(client, upstream, launchFailure(error));
+      endSession(client, upstream, BROWSER_DID_NOT_START);
     }
   })();
 }

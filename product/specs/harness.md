@@ -254,7 +254,9 @@ Launching the tab does not launch a browser. The endpoint is published at launch
 already listening behind it, but the Chromium itself starts the first time the AI connects to that
 endpoint — that connect is the request, and the guard holds it while the browser comes up rather
 than refusing it, so the connect takes noticeably longer than an ordinary handshake and then succeeds
-(or reports why it could not). A `-b` tab whose AI never drives a browser therefore never starts
+(or is closed with a reason saying the browser did not start, with the account of which failure it was
+left to the user's notifications and the band rather than to a client inside the sandbox). A `-b` tab
+whose AI never drives a browser therefore never starts
 one. A tab launched without `-b` has no endpoint at all, so the request has nowhere to arrive.
 
 The held connect is answered only once the browser behind it is actually accepting connections, so a

@@ -43,7 +43,7 @@ const { chromium } = createRequire(import.meta.url)(process.env.JANISSARY_PLAYWR
 
 It is `chromium.connect(endpoint)`, not `connectOverCDP`. The endpoint speaks Playwright's own protocol.
 
-**The first connect starts the browser, and it is patient while that happens.** The endpoint is handed to you before the browser exists — deliberately: nothing about your tab waits on Chromium. So your first `connect()` is not a lookup, it is the request for one, and the guard holds your handshake open while the browser comes up instead of refusing it. Expect that connect to take noticeably longer than an ordinary one, and expect it to succeed. A failure means the browser would not start, and the close reason says why; a later connect simply tries again, because nothing about the first attempt is consumed. Once a browser is running, connects are ordinary.
+**The first connect starts the browser, and it is patient while that happens.** The endpoint is handed to you before the browser exists — deliberately: nothing about your tab waits on Chromium. So your first `connect()` is not a lookup, it is the request for one, and the guard holds your handshake open while the browser comes up instead of refusing it. Expect that connect to take noticeably longer than an ordinary one, and expect it to succeed. If the browser would not start, the connection closes with a reason saying exactly that and nothing more — the account of which failure it was is on the human's notifications tab, not in the frame you are reading. A later connect simply tries again, because nothing about the first attempt is consumed. Once a browser is running, connects are ordinary.
 
 ## What to point it at
 

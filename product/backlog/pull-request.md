@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep a janissary-side filesystem path out of the close reason the confined agent reads, closing the security gap the launch-failure reason opens across the guard's trust boundary.
-
-Existing Issue: `launchFailure` in `src/browser/e2e-guard.ts` puts the raw text of a start failure into the close frame, and the failures that reach it come from the scratch allocation and the child spawn, so a filesystem or spawn error hands an agent inside a workspace the janissary installation root, the browser scratch path and the host account's home directory in the one string `ai/guidelines/sandbox-e2e-browser.md` tells it to read. Severity: 3/10
-
-Existing Risk: 3/10 - A confined agent learns the host account name and the shape of the installation it is denied, through a channel whose every other reason is a fixed phrase from `src/browser/e2e-frame-filter.ts` and where no such detail is needed to decide anything.
-
-Proposal Risk: 2/10 - The agent loses the one diagnostic it had, which failure occurred, and falls back on the notification line and the band the human reads, which already carry the same account in full.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1201: keep filesystem paths out of the launch-failure close reason the guard sends to the agent". Replace the body of `launchFailure` in `src/browser/e2e-guard.ts` with a fixed phrase in the guard's own vocabulary — `e2e browser failed to start` — and let the full account reach the human through the report that `stopSession` already composes with `withChildOutput` in `src/browser/e2e-session.ts`. Keep the length bound, since a websocket close frame is still capped at 123 bytes, and keep the truncation as a guard against a future caller that passes something long. Update the two sentences that promise the client a reason: the first-connect paragraph in `ai/guidelines/sandbox-e2e-browser.md` should say the close reason says the browser did not start and that the human's notifications tab carries the detail, and the "or reports why it could not" clause in `product/specs/harness.md` should say the same. In `src/browser/e2e-guard.test.ts`, change the case asserting a rejected supplier's reason to expect the fixed phrase, and add a case whose supplier rejects with an `EACCES` error naming a path, asserting that no part of that path reaches the close frame. The filter's own reasons are the precedent to follow: short phrases, no filesystem detail, and the same answer shape whatever the client did.
-
-
 * Bound how often a tab's browser is restarted and reported, handling the repeat-failure loop that connect-triggered restarts open where a death used to be final.
 
 Existing Issue: Every lazy browser generation is its own session carrying the tab's `onGone`, so a launch that fails the same way every time, or a browser that crashes each time it comes up, spawns a fresh child and delivers a full death report — a notification, a new log file, a rewritten band, and a kept scratch directory — on every connect, with no backoff or limit, while `E2EBrowserOptions.onGone` still documents itself as invoked once. Severity: 5/10
