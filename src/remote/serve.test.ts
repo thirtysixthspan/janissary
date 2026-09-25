@@ -443,6 +443,23 @@ describe('RemoteServer', () => {
     server.shutdown(0);
   });
 
+  // A PTY that will not start is that one process failing, not the session: the tab that asked hears
+  // an exit, and the server stays up to answer whatever comes next.
+  it('answers a spawn whose PTY will not start with that process\'s exit, and keeps serving', async () => {
+    const { server, frames, exit } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-spawn-fails' })}\n`);
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+    vi.mocked(spawnPty).mockImplementationOnce(() => { throw new Error('pty refused'); });
+
+    expect(() => server.receive(`${encodeFrame({ ...SPAWN_FRAME, harness: 'claude' })}\n`)).not.toThrow();
+    server.receive(`${encodeFrame({ type: 'session-state' })}\n`);
+
+    expect(frames).toContainEqual({ type: 'exit', id: 'r1', exitCode: 1 });
+    expect(frames.find((frame) => frame.type === 'session-state-result')?.processes).toEqual([]);
+    expect(exit).not.toHaveBeenCalled();
+    server.shutdown(0);
+  });
+
   // A peer that has not provisioned is holding nothing, which is a fact worth stating: answering
   // with the provisioning refusal instead would read to the local side as an unreachable host.
   it('answers an empty list before a workspace exists rather than refusing', () => {

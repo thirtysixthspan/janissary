@@ -234,6 +234,14 @@ An ACP-level failure is not a channel-level fault. An agent that fails to spawn 
 is reported on its own error frame and routed to the session that owns it; only a malformed or
 unknown frame interrupts the channel. An established session then attempts to attach.
 
+A process that fails to start on the remote host is not a channel-level fault either. A pseudo-terminal
+that will not start, or a persistent shell whose program is missing or not executable, is answered
+as that one process exiting with code 1 (`RemoteServer.spawn` in `src/remote/serve.ts` and
+`RemoteProcesses.spawnPipe` in `src/remote/serve-processes.ts`). The far end keeps running: every other
+process sharing the channel is untouched, and later requests, including a session-state query, are
+still answered. A failed start sends exactly one exit for that process, and the error text itself is
+not forwarded to the tab.
+
 ### Lifecycle and cleanup
 
 A remote channel's lifetime is its last user's lifetime. The launching tab, every agent joined from

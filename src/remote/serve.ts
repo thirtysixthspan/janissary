@@ -178,7 +178,14 @@ export class RemoteServer {
   private spawn(frame: Extract<ClientFrame, { type: 'spawn' }>): void {
     if (!this.requireWorkspace()) return;
     this.peer?.track(frame);
-    this.processes?.spawn(frame);
+    // A process that will not start is that process's failure, not the session's: it answers as an
+    // exit, which also drops what the peer tracked a line above, and every other frame keeps working.
+    try {
+      this.processes?.spawn(frame);
+    } catch {
+      this.emit({ type: 'exit', id: frame.id, exitCode: 1 });
+      return;
+    }
     if (frame.harness !== undefined) this.followTranscript(frame.harness);
   }
 

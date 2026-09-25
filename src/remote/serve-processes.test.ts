@@ -4,6 +4,7 @@ import { spawnPty } from '../pty.js';
 import { killShellGroup, spawnShell } from '../shell/index.js';
 import { messageBus } from '../bus.js';
 import { RemoteProcesses } from './serve-processes.js';
+import type { ServerFrame } from './protocol.js';
 
 vi.mock('../pty.js');
 vi.mock('../shell/index.js');
@@ -162,6 +163,58 @@ describe('RemoteProcesses session state', () => {
     onExit.onExit('pty1', 0);
 
     expect(processes.states()).toEqual([]);
+  });
+});
+
+// A missing or unexecutable `$SHELL` is reported by the child's `'error'` event rather than a throw,
+// and an unheard `'error'` would take the whole server down with it.
+describe('RemoteProcesses when a persistent shell cannot start', () => {
+  function emittingShell() {
+    const listeners = new Map<string, Array<(value: unknown) => void>>();
+    return {
+      stdin: { writable: true, write: vi.fn() },
+      stdout: { on: vi.fn() },
+      stderr: { on: vi.fn() },
+      kill: vi.fn(),
+      on: (event: string, listener: (value: unknown) => void) => {
+        listeners.set(event, [...(listeners.get(event) ?? []), listener]);
+      },
+      emit: (event: string, value: unknown) => {
+        const registered = listeners.get(event) ?? [];
+        for (const listener of registered) listener(value);
+      },
+    };
+  }
+
+  function spawnFailingShell() {
+    const shell = emittingShell();
+    vi.mocked(spawnShell).mockReset().mockReturnValue(shell as never);
+    const send = vi.fn();
+    const processes = new RemoteProcesses(send, '/remote/workspace', 'agent');
+    processes.spawn({
+      type: 'spawn', id: 'r1', program: 'bash', command: 'bash', mode: 'pipe', cols: 80, rows: 24,
+    });
+    return { shell, send, processes };
+  }
+
+  it('ends the process with exit code 1 and drops it from the table', () => {
+    const { shell, send, processes } = spawnFailingShell();
+
+    shell.emit('error', new Error('spawn /bin/nope ENOENT'));
+
+    expect(send).toHaveBeenCalledWith({ type: 'exit', id: 'r1', exitCode: 1 });
+    expect(processes.states()).toEqual([]);
+  });
+
+  it('sends only one exit when the child also reports an exit after the error', () => {
+    const { shell, send } = spawnFailingShell();
+
+    shell.emit('error', new Error('spawn /bin/nope EACCES'));
+    shell.emit('exit', -2);
+
+    expect(send.mock.calls.filter(([frame]) => (frame as ServerFrame).type === 'exit')).toEqual([
+      [{ type: 'exit', id: 'r1', exitCode: 1 }],
+    ]);
   });
 });
 

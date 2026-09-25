@@ -4,17 +4,6 @@
 
 ## development
 
-* Contain a failed process spawn inside the remote server so it answers with that process's exit instead of crashing the whole shared session.
-
-Existing Debt: The remote server has no failure boundary around a spawn — the PTY spawn deliberately rethrows after cleaning up its browser, the piped spawn never listens for the child's `'error'` event, and nothing between the server's stdin `data` handler and the process spawn catches — so one bad spawn escapes to the top of the process. Severity: 6/10
-
-Existing Risk: 7/10 - A spawn that fails on the far machine (a missing or unexecutable `$SHELL`, a PTY that will not start) kills `remote-serve` without its `shutdown()`: no `exit` frame reaches the requesting tab, running processes are not killed, the clone and parked-peer record stay on disk, and the local reconnect finds a dead pid and ends every tab sharing that channel.
-
-Proposal Risk: 3/10 - A failed spawn surfaces as that one process exiting with code 1, but the other frame handlers stay unguarded, so a throw from a different frame type can still take the server down until a general per-frame boundary exists.
-
-Proposal: In `RemoteServer.spawn` in `src/remote/serve.ts`, wrap `this.processes?.spawn(frame)` in try/catch and on failure `emit` `{ type: 'exit', id: frame.id, exitCode: 1 }` — `emit` feeds the detached peer too, whose `exit` handling in `src/remote/serve-detach.ts` already drops the id `this.peer?.track(frame)` recorded a line earlier. In `RemoteProcesses.spawnPipe` in `src/remote/serve-processes.ts`, add `shell.once('error', () => this.finish(id, 1))` so an asynchronous spawn error ends the entry through the existing `finish` rather than raising an unhandled `'error'` event. Keep `spawnPty`'s rethrow: its contract, pinned by `src/remote/serve-processes-browser.test.ts` ("when the PTY fails to start"), is that the caller handles it, and this change makes the caller do so. Add a `src/remote/serve.test.ts` case that makes the PTY spawn throw and asserts an `exit` frame for that id and that a following `session-state` request is still answered; `src/remote/serve.test.ts` has no spawn-failure case today. Reporting the spawn error text to the tab, rather than only an exit code, is a follow-up.
-
-
 * Treat the remote server's refusal frame as a provisioning failure only until the session is ready, so a refused frame on a healthy session reports an error instead of closing the tab.
 
 Existing Debt: The remote server reports every refusal — an undecodable frame, an unexpected frame type, a missing workspace — through the provisioning frame `workspace-failed`, and the local entry factory forwards that frame to the tab's failure handler at any point in the session, where the harness launch handler reads a post-ready failure as a reason to close the tab. Severity: 5/10
