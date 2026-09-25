@@ -50,8 +50,8 @@ const CASES: Array<[
   ['fileNavigatorOpen', { index: 0, relPath: 'a', command: 'open external' }, [
     { index: 0, relPath: 'a', command: 'launch' },
   ]],
-  ['fileNavigatorCreateFile', { index: 0, destination: '.' }, [{ index: 0 }]],
-  ['fileNavigatorCreateDirectory', { index: 0, destination: '.' }, [{ index: 0, destination: 1 }]],
+  ['fileNavigatorCreateFile', { label: 'files', destination: '.' }, [{ label: 'files' }, { index: 0, destination: '.' }]],
+  ['fileNavigatorCreateDirectory', { label: 'files', destination: '.' }, [{ label: 'files', destination: 1 }, { index: 0, destination: '.' }]],
   ['fileNavigatorSelectionAction', { index: 0, paths: ['a'] }, [{ index: 0, paths: [1] }]],
   ['runFileNavigatorSelectionAction', { index: 0, paths: ['a'], action: 'play' }, [
     { index: 0, paths: ['a'] },
@@ -63,8 +63,8 @@ const CASES: Array<[
     { id: '4', navigators: [] },
     { id: 4, navigators: {} },
   ]],
-  ['undoFileNavigatorItem', { index: 0, overwrite: true }, [{ index: 0, skipConflicts: 'yes' }]],
-  ['redoFileNavigatorItem', { index: 0 }, [{ index: 0, overwrite: 1 }]],
+  ['undoFileNavigatorItem', { label: 'files', overwrite: true }, [{ label: 'files', skipConflicts: 'yes' }, { index: 0 }]],
+  ['redoFileNavigatorItem', { label: 'files' }, [{ label: 'files', overwrite: 1 }, { index: 0 }]],
   ['openFileNavigatorFor', { label: 'files' }, [{}]],
 ];
 

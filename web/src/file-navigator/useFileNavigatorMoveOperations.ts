@@ -24,9 +24,9 @@ type PendingConflict =
       title: string;
     };
 
-// The two move requests name the navigator by `label` so a tab closing ahead of it cannot redirect
-// them onto another tree; undo/redo still address it by `index`.
-export function useFileNavigatorMoveOperations(client: JanusClient, index: number, label: string) {
+// Every request here names the navigator by `label`, so a tab closing ahead of it between the
+// client's snapshot and the request cannot redirect a move, undo, redo or retry onto another tree.
+export function useFileNavigatorMoveOperations(client: JanusClient, label: string) {
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
 
   const sendBatchMove = async (
@@ -89,7 +89,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
   };
 
   const history = async (method: Method) => {
-    const result = await client.request<UndoRedoResult>({ method, params: { index } });
+    const result = await client.request<UndoRedoResult>({ method, params: { label } });
     if (!result.ok) { setPendingConflict(null); return; }
     const source = method === 'undoFileNavigatorItem' ? 'undo' : 'redo';
     if (result.value.conflict) {
@@ -124,7 +124,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
       void client.request<UndoRedoResult>({
         method: pendingConflict.method,
         params: {
-          index,
+          label,
           overwrite: policy === 'overwrite-all' || undefined,
           skipConflicts: policy === 'skip-conflicts' || undefined,
         },
@@ -146,7 +146,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     } else {
       client.send({
         method: pendingConflict.source === 'undo' ? 'undoFileNavigatorItem' : 'redoFileNavigatorItem',
-        params: { index, overwrite: true },
+        params: { label, overwrite: true },
       });
     }
     setPendingConflict(null);

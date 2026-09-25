@@ -43,13 +43,13 @@ export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], Param
   fileNavigatorOpeners: (p) => isInteger(p.index) && isString(p.relPath)
     && typeof p.edit === 'boolean' && optionalBoolean(p.all),
   fileNavigatorOpen: (p) => isInteger(p.index) && isString(p.relPath) && isOneOf(p.command, OPENER_COMMANDS),
-  fileNavigatorCreateFile: (p) => isInteger(p.index) && isString(p.destination),
-  fileNavigatorCreateDirectory: (p) => isInteger(p.index) && isString(p.destination),
+  fileNavigatorCreateFile: (p) => isString(p.label) && isString(p.destination),
+  fileNavigatorCreateDirectory: (p) => isString(p.label) && isString(p.destination),
   fileNavigatorSelectionAction: (p) => isInteger(p.index) && isStringArray(p.paths),
   runFileNavigatorSelectionAction: (p) => isInteger(p.index) && isStringArray(p.paths) && isString(p.action),
   reportFileNavigatorSelection: (p) => isInteger(p.id)
     && Array.isArray(p.navigators) && p.navigators.every((record) => isSelectionRecord(record)),
-  undoFileNavigatorItem: (p) => isInteger(p.index) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
-  redoFileNavigatorItem: (p) => isInteger(p.index) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
+  undoFileNavigatorItem: (p) => isString(p.label) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
+  redoFileNavigatorItem: (p) => isString(p.label) && optionalBoolean(p.overwrite) && optionalBoolean(p.skipConflicts),
   openFileNavigatorFor: (p) => isString(p.label),
 };

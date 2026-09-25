@@ -4,18 +4,10 @@
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../file-navigator/operation-report.js';
 import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution } from '../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './file-navigator-selection.js';
 export { fileNavigatorCommit, fileNavigatorNothingToCommit } from './file-navigator-commit.js';
 import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
-
-type HistoryReplayResult = {
-  total?: number;
-  failedPaths?: string[];
-  failureReasons?: Record<string, string>;
-  conflict?: unknown;
-  conflicts?: unknown;
-};
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;
@@ -124,37 +116,36 @@ export function renameFileNavigatorItem(
 
 export function undoFileNavigatorItem(
   managers: Managers,
-  index: number,
+  label: string,
   overwrite?: boolean,
   skipConflicts?: boolean,
-) {
-  return replayFileNavigatorHistory(managers, index, overwrite, skipConflicts, (label, o, s) =>
-    managers.fileNavigator.undo(label, o, s),
+): MaybePromise<UndoRedoResult> {
+  return replayFileNavigatorHistory(managers, label, overwrite, skipConflicts, (l, o, s) =>
+    managers.fileNavigator.undo(l, o, s),
   );
 }
 
 export function redoFileNavigatorItem(
   managers: Managers,
-  index: number,
+  label: string,
   overwrite?: boolean,
   skipConflicts?: boolean,
-) {
-  return replayFileNavigatorHistory(managers, index, overwrite, skipConflicts, (label, o, s) =>
-    managers.fileNavigator.redo(label, o, s),
+): MaybePromise<UndoRedoResult> {
+  return replayFileNavigatorHistory(managers, label, overwrite, skipConflicts, (l, o, s) =>
+    managers.fileNavigator.redo(l, o, s),
   );
 }
 
 function replayFileNavigatorHistory(
   managers: Managers,
-  index: number,
+  label: string,
   overwrite: boolean | undefined,
   skipConflicts: boolean | undefined,
   replay: (
     label: string, overwrite?: boolean, skipConflicts?: boolean,
-  ) => MaybePromise<HistoryReplayResult>,
-) {
-  const label = managers.tab.tabs[index]?.label;
-  if (!label) return {};
+  ) => MaybePromise<UndoRedoResult>,
+): MaybePromise<UndoRedoResult> {
+  if (!isOpenTab(managers, label)) return {};
   return mapMaybe(replay(label, overwrite, skipConflicts), (result) => {
     reportHistoryFailure(managers, label, result);
     return result;
@@ -167,7 +158,7 @@ function replayFileNavigatorHistory(
 function reportHistoryFailure(
   managers: Managers,
   label: string,
-  result: HistoryReplayResult,
+  result: UndoRedoResult,
 ): void {
   if (result.conflict || result.conflicts) return;
   if (result.total === undefined || !result.failedPaths) return;
@@ -205,15 +196,13 @@ export function fileNavigatorOpen(
 }
 
 export function fileNavigatorCreateFile(
-  managers: Managers, index: number, destination: string,
+  managers: Managers, label: string, destination: string,
 ): MaybePromise<void> {
-  const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.createFile(label, destination) : undefined;
+  return isOpenTab(managers, label) ? managers.fileNavigator.createFile(label, destination) : undefined;
 }
 
 export function fileNavigatorCreateDirectory(
-  managers: Managers, index: number, destination: string,
+  managers: Managers, label: string, destination: string,
 ): MaybePromise<string | undefined> {
-  const label = managers.tab.tabs[index]?.label;
-  return label ? managers.fileNavigator.createDirectory(label, destination) : undefined;
+  return isOpenTab(managers, label) ? managers.fileNavigator.createDirectory(label, destination) : undefined;
 }

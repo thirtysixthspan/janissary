@@ -63,7 +63,7 @@ function makeHarnessBodyElement(ptyId: string): HTMLElement {
 }
 
 function useFileNavigatorDrag(
-  rows: FileNavigatorRow[], client: JanusClient, index: number,
+  rows: FileNavigatorRow[], client: JanusClient,
   absoluteRootOrDropRef: string | React.RefObject<CommandInputDropHandle | null> = '',
   displayRootOrEditorRef: string | React.RefObject<EditorDropHandle | null> = '',
   targetCwd = '',
@@ -72,7 +72,7 @@ function useFileNavigatorDrag(
   remoteHost?: string,
 ) {
   const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
-  return useFileNavigatorDragImplementation(rows, client, index, 'files', {
+  return useFileNavigatorDragImplementation(rows, client, 'files', {
     absoluteRoot: legacy ? '' : absoluteRootOrDropRef,
     displayRoot: typeof displayRootOrEditorRef === 'string' ? displayRootOrEditorRef : '',
     targetCwd,
@@ -102,7 +102,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('does not start a drag for a small movement below the threshold', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 1, clientY: 1 })); });
@@ -112,7 +112,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('starts a drag once movement passes the threshold', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -126,7 +126,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('updates dragPosition on further movement and clears it on drop', () => {
     const client = makeMoveClient();
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -143,7 +143,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('drop() sends moveFileNavigatorItem directly for a valid non-conflicting target', () => {
     const client = makeMoveClient();
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -157,7 +157,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('drop() opens the conflict flow instead of sending immediately for a conflicting target', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
@@ -177,7 +177,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('confirmOverwrite sends the move and clears the pending conflict', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
@@ -192,7 +192,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('opens the conflict dialog when the server reports a conflict the loaded rows could not show', async () => {
     const client = makeMoveClient({ conflictPaths: ['notes.txt'] });
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -216,7 +216,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('cancelConflict clears the pending conflict without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const destRow = makeRowElement('dest');
     document.elementFromPoint = vi.fn().mockReturnValue(destRow);
 
@@ -231,7 +231,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('a window blur during an active drag cancels it without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -247,7 +247,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('a window blur after a drag has already ended does not affect subsequent gestures', () => {
     const client = makeMoveClient();
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -267,7 +267,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('pressing Escape during an active drag cancels it without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -283,7 +283,7 @@ describe('useFileNavigatorDrag', () => {
 
   it("a keydown that isn't Escape does not cancel an active drag", () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -296,7 +296,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('pressing Escape with no active drag does nothing', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
 
     act(() => { globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
 
@@ -306,7 +306,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('a release with no valid target resets drag state without sending anything', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     document.elementFromPoint = vi.fn().mockReturnValue(null);
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -323,7 +323,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
       const bar = makeCommandBarElement();
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
 
@@ -339,7 +339,7 @@ describe('useFileNavigatorDrag', () => {
       const client = makeMoveClient();
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
       const bar = makeCommandBarElement();
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(bar);
@@ -359,7 +359,7 @@ describe('useFileNavigatorDrag', () => {
     it('a drag released over a tree row still moves the file as before, unaffected by the command-bar wiring', () => {
       const client = makeMoveClient();
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3, dropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -374,7 +374,7 @@ describe('useFileNavigatorDrag', () => {
     it('a release over neither a row nor the command bar is a no-op', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
       document.elementFromPoint = vi.fn().mockReturnValue(null);
 
       act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -388,7 +388,7 @@ describe('useFileNavigatorDrag', () => {
     it('a drag over where the command bar would be finds no marker when no CommandInput is mounted (e.g. a harness tab)', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const dropRef = { current: makeDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
       // No [data-command-bar] element exists anywhere — elementFromPoint returns a plain, unrelated element.
       const plain = document.createElement('div');
       document.body.append(plain);
@@ -412,7 +412,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const editorDropHandle = makeEditorDropHandle();
       const editorDropRef = { current: editorDropHandle };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, undefined, editorDropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
       const body = makeEditorBodyElement();
       document.elementFromPoint = vi.fn().mockReturnValue(body);
 
@@ -427,7 +427,7 @@ describe('useFileNavigatorDrag', () => {
     it('hovering the editor-body marker suppresses the row drop-target highlight', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const editorDropRef = { current: makeEditorDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, undefined, editorDropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
       const body = makeEditorBodyElement();
       document.elementFromPoint = vi.fn().mockReturnValue(body);
 
@@ -441,7 +441,7 @@ describe('useFileNavigatorDrag', () => {
     it('a drag released over a tree row still moves the file as before, unaffected by the editor wiring', () => {
       const client = makeMoveClient();
       const editorDropRef = { current: makeEditorDropHandle() };
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3, undefined, editorDropRef));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, undefined, editorDropRef));
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -459,7 +459,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() =>
-        useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work'));
+        useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => {
@@ -482,7 +482,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const left = registerHarness('pty-left');
       const right = registerHarness('pty-right');
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-right'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -497,7 +497,7 @@ describe('useFileNavigatorDrag', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() =>
-        useFileNavigatorDrag(makeRows(), client, 0, '/srv/project', 'project', '/srv', undefined, undefined, 'devbox'));
+        useFileNavigatorDrag(makeRows(), client, '/srv/project', 'project', '/srv', undefined, undefined, 'devbox'));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => { result.current.onRowMouseDown({ path: 'src/a.ts' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -510,7 +510,7 @@ describe('useFileNavigatorDrag', () => {
     it('hovering the harness marker suppresses the row drop-target highlight', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
       registerHarness('pty-1');
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-1'));
 
       act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -522,7 +522,7 @@ describe('useFileNavigatorDrag', () => {
 
     it('a release over a harness body whose PTY registered nothing changes nothing', () => {
       const client = { send: vi.fn() } as unknown as JanusClient;
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
       document.elementFromPoint = vi.fn().mockReturnValue(makeHarnessBodyElement('pty-unregistered'));
 
       act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -536,7 +536,7 @@ describe('useFileNavigatorDrag', () => {
     it('a drag released over a tree row still moves the file as before, unaffected by the harness wiring', () => {
       const client = makeMoveClient();
       const harness = registerHarness('pty-1');
-      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
       const otherRow = makeRowElement('other');
       document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
 
@@ -555,7 +555,7 @@ describe('useFileNavigatorDrag', () => {
       request: vi.fn().mockResolvedValue({ total: 2, failedPaths: [] }),
     } as unknown as JanusClient;
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 4, '/work/tree', 'tree', '/work'));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work'));
     const target = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(target);
 
@@ -587,7 +587,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => {
@@ -610,7 +610,7 @@ describe('useFileNavigatorDrag', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
     const editorDropRef = { current: makeEditorDropHandle() };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 0, '/work/tree', 'tree', '/work', undefined, editorDropRef));
+      useFileNavigatorDrag(makeRows(), client, '/work/tree', 'tree', '/work', undefined, editorDropRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeEditorBodyElement());
 
     act(() => {
@@ -637,7 +637,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result, unmount } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -660,7 +660,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = makeDropHandle();
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
@@ -674,7 +674,7 @@ describe('useFileNavigatorDrag', () => {
 
   it('starting a second gesture releases the first gesture\'s listeners', () => {
     const client = { send: vi.fn() } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client));
     const bar = makeCommandBarElement();
     document.elementFromPoint = vi.fn().mockReturnValue(bar);
 
@@ -695,7 +695,7 @@ describe('useFileNavigatorDrag', () => {
     const commandHandle = { insertAtCaret: vi.fn(() => { throw new Error('surface closed'); }), setDropHighlighted: vi.fn() };
     const commandRef = { current: commandHandle };
     const { result } = renderHook(() =>
-      useFileNavigatorDrag(makeRows(), client, 0, '', '', '', commandRef));
+      useFileNavigatorDrag(makeRows(), client, '', '', '', commandRef));
     document.elementFromPoint = vi.fn().mockReturnValue(makeCommandBarElement());
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });

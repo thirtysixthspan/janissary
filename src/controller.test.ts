@@ -1881,8 +1881,8 @@ describe('Controller direct RPC delegators', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-undo-'));
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    const index = c.view().findIndex((t) => t.view === 'files');
-    expect(c.undoFileNavigatorItem(index)).toEqual({});
+    const label = c.view().find((t) => t.view === 'files')!.label;
+    expect(c.undoFileNavigatorItem(label)).toEqual({});
   });
 
   it('openFileNavigatorFor RPC opens a file navigator rooted at the target tab\'s cwd', () => {

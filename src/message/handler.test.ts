@@ -473,16 +473,16 @@ describe('handle', () => {
   it('routes undoFileNavigatorItem and replies with its result', () => {
     const controller = makeController();
     (controller.undoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflict: { fromRelPath: 'a', toRelPath: 'b' } });
-    const replies = dispatchCall(controller, 25, { method: 'undoFileNavigatorItem', params: { index: 0, overwrite: true } });
-    expect(controller.undoFileNavigatorItem).toHaveBeenCalledWith(0, true, undefined);
+    const replies = dispatchCall(controller, 25, { method: 'undoFileNavigatorItem', params: { label: 'files', overwrite: true } });
+    expect(controller.undoFileNavigatorItem).toHaveBeenCalledWith('files', true, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 25, result: { conflict: { fromRelPath: 'a', toRelPath: 'b' } } }]);
   });
 
   it('routes redoFileNavigatorItem and replies with its result', () => {
     const controller = makeController();
     (controller.redoFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({});
-    const replies = dispatchCall(controller, 26, { method: 'redoFileNavigatorItem', params: { index: 0 } });
-    expect(controller.redoFileNavigatorItem).toHaveBeenCalledWith(0, undefined, undefined);
+    const replies = dispatchCall(controller, 26, { method: 'redoFileNavigatorItem', params: { label: 'files' } });
+    expect(controller.redoFileNavigatorItem).toHaveBeenCalledWith('files', undefined, undefined);
     expect(replies).toEqual([{ t: 'rpc-reply', id: 26, result: {} }]);
   });
 

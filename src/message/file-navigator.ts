@@ -95,10 +95,10 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
       );
     }
     case 'fileNavigatorCreateFile': {
-      return controller.fileNavigatorCreateFile(message.params.index, message.params.destination);
+      return controller.fileNavigatorCreateFile(message.params.label, message.params.destination);
     }
     case 'fileNavigatorCreateDirectory': {
-      return controller.fileNavigatorCreateDirectory(message.params.index, message.params.destination);
+      return controller.fileNavigatorCreateDirectory(message.params.label, message.params.destination);
     }
     case 'fileNavigatorSelectionAction': {
       return controller.fileNavigatorSelectionAction(message.params.index, message.params.paths);
@@ -108,14 +108,14 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     }
     case 'undoFileNavigatorItem': {
       return controller.undoFileNavigatorItem(
-        message.params.index,
+        message.params.label,
         message.params.overwrite,
         message.params.skipConflicts,
       );
     }
     case 'redoFileNavigatorItem': {
       return controller.redoFileNavigatorItem(
-        message.params.index,
+        message.params.label,
         message.params.overwrite,
         message.params.skipConflicts,
       );

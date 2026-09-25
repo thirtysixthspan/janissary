@@ -18,6 +18,8 @@ import {
   revealFileNavigatorItem,
   renameFileNavigatorItem,
   fileNavigatorOpeners,
+  fileNavigatorCreateFile,
+  fileNavigatorCreateDirectory,
 } from './file-navigator.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
@@ -176,7 +178,7 @@ describe('controller-file-navigator', () => {
     const append = vi.fn();
     const conflict = { fromRelPath: 'a.ts', toRelPath: 'b.ts' };
     const managers = makeManagersWithNotifications('agent', { undo: () => ({ conflict }) }, append);
-    undoFileNavigatorItem(managers, 0);
+    undoFileNavigatorItem(managers, 'agent');
     expect(append).not.toHaveBeenCalled();
   });
 
@@ -207,26 +209,26 @@ describe('controller-file-navigator', () => {
   it('undoFileNavigatorItem returns the manager result when the tab exists', () => {
     const conflict = { fromRelPath: 'a.ts', toRelPath: 'b.ts' };
     const managers = makeManagers('agent', { undo: () => ({ conflict }) });
-    const result = undoFileNavigatorItem(managers, 0, true);
+    const result = undoFileNavigatorItem(managers, 'agent', true);
     expect(result).toEqual({ conflict });
   });
 
-  it('undoFileNavigatorItem returns an empty object when the tab index has no label', () => {
+  it('undoFileNavigatorItem returns an empty object when no open tab carries the label', () => {
     const managers = makeManagers(undefined, { undo: () => ({ conflict: { fromRelPath: 'a', toRelPath: 'b' } }) });
-    const result = undoFileNavigatorItem(managers, 0);
+    const result = undoFileNavigatorItem(managers, 'agent');
     expect(result).toEqual({});
   });
 
   it('redoFileNavigatorItem returns the manager result when the tab exists', () => {
     const conflict = { fromRelPath: 'a.ts', toRelPath: 'b.ts' };
     const managers = makeManagers('agent', { redo: () => ({ conflict }) });
-    const result = redoFileNavigatorItem(managers, 0, true);
+    const result = redoFileNavigatorItem(managers, 'agent', true);
     expect(result).toEqual({ conflict });
   });
 
-  it('redoFileNavigatorItem returns an empty object when the tab index has no label', () => {
+  it('redoFileNavigatorItem returns an empty object when no open tab carries the label', () => {
     const managers = makeManagers(undefined, { redo: () => ({ conflict: { fromRelPath: 'a', toRelPath: 'b' } }) });
-    const result = redoFileNavigatorItem(managers, 0);
+    const result = redoFileNavigatorItem(managers, 'agent');
     expect(result).toEqual({});
   });
 
@@ -303,6 +305,7 @@ describe('controller-file-navigator', () => {
     const mutate = vi.fn(() => ({ total: 1, failedPaths: ['a.ts'] }));
     const managers = makeManagersWithNotifications('other', {
       move: mutate, moveMany: mutate, paste: mutate, delete: mutate, deleteMany: mutate, rename: mutate,
+      undo: mutate, redo: mutate, createFile: mutate, createDirectory: mutate,
     }, append);
     await moveFileNavigatorItem(managers, 'gone', 'a.ts', 'b');
     await moveFileNavigatorItems(managers, 'gone', ['a.ts'], 'b');
@@ -310,6 +313,10 @@ describe('controller-file-navigator', () => {
     await deleteFileNavigatorItem(managers, 'gone', 'a.ts');
     await deleteFileNavigatorItems(managers, 'gone', ['a.ts']);
     await renameFileNavigatorItem(managers, 'gone', 'a.ts', 'c.ts');
+    expect(await undoFileNavigatorItem(managers, 'gone')).toEqual({});
+    expect(await redoFileNavigatorItem(managers, 'gone', true)).toEqual({});
+    expect(await fileNavigatorCreateFile(managers, 'gone', 'src')).toBeUndefined();
+    expect(await fileNavigatorCreateDirectory(managers, 'gone', 'src')).toBeUndefined();
     expect(mutate).not.toHaveBeenCalled();
     expect(append).not.toHaveBeenCalled();
   });
@@ -321,6 +328,23 @@ describe('controller-file-navigator', () => {
     tabs.shift();
     deleteFileNavigatorItem(managers, 'files-2', 'a.ts');
     expect(deleteItem).toHaveBeenCalledWith('files-2', 'a.ts');
+  });
+
+  // Undo of a copy-paste deletes the pasted files, so replaying another tree's history after a tab
+  // ahead closed would delete files the user never asked about.
+  it('replays and creates in the named navigator after a tab ahead of it has closed', () => {
+    const undo = vi.fn(() => ({}));
+    const createFile = vi.fn();
+    const createDirectory = vi.fn(() => 'src/new');
+    const tabs = [{ label: 'agent' }, { label: 'files' }, { label: 'files-2' }];
+    const managers = { tab: { tabs }, fileNavigator: { undo, createFile, createDirectory } } as unknown as Managers;
+    tabs.shift();
+    undoFileNavigatorItem(managers, 'files-2');
+    fileNavigatorCreateFile(managers, 'files-2', 'src');
+    expect(fileNavigatorCreateDirectory(managers, 'files-2', 'src')).toBe('src/new');
+    expect(undo).toHaveBeenCalledWith('files-2', undefined, undefined);
+    expect(createFile).toHaveBeenCalledWith('files-2', 'src');
+    expect(createDirectory).toHaveBeenCalledWith('files-2', 'src');
   });
 
   it('fileNavigatorOpeners returns the manager result when the tab exists', () => {

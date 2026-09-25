@@ -15,6 +15,7 @@ type Params = {
   files: FileNavigatorView;
   client: JanusClient;
   index: number;
+  label: string;
   selection: ReturnType<typeof useFileNavigatorSelection>;
   opener: ReturnType<typeof useFileNavigatorOpener>;
   paste: ReturnType<typeof useFileNavigatorPaste>;
@@ -39,11 +40,12 @@ export type FileNavigatorActions = {
   menuActions: FileNavigatorMenuActions;
 };
 
-// Every edit travels as the navigator-scoped RPC: the server resolves the tab index to the
-// navigator's own label and root, so no command is issued and nothing lands in any tab's
-// transcript, command history, or queue — local and remote trees alike.
+// Every edit travels as the navigator-scoped RPC: the server resolves it to the navigator's own
+// label and root, so no command is issued and nothing lands in any tab's transcript, command
+// history, or queue — local and remote trees alike. The two create requests change the filesystem,
+// so they name the navigator by `label` rather than by tab index.
 export function createFileNavigatorActions({
-  files, client, index, selection, opener, paste, deletion, rename, rowEvents, commit,
+  files, client, index, label, selection, opener, paste, deletion, rename, rowEvents, commit,
   multiOpenSelection, setPendingNewDir,
 }: Params): FileNavigatorActions {
   const editFile = (path: string) =>
@@ -51,13 +53,13 @@ export function createFileNavigatorActions({
 
   const createNewFile = () => {
     const destination = newFileTargetDir(files.rows, selection.cursor) ?? '';
-    client.send({ method: 'fileNavigatorCreateFile', params: { index, destination } });
+    client.send({ method: 'fileNavigatorCreateFile', params: { label, destination } });
   };
 
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
     setPendingNewDir(newDirectoryTargetPath(targetDir));
-    client.send({ method: 'fileNavigatorCreateDirectory', params: { index, destination: targetDir ?? '' } });
+    client.send({ method: 'fileNavigatorCreateDirectory', params: { label, destination: targetDir ?? '' } });
   };
 
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);
