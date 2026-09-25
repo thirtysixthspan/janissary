@@ -263,8 +263,10 @@ up by the time the launch's patience runs out ends that connect with a reason sa
 start, rather than leaving the client waiting; a later connect tries again.
 
 Because the endpoint is minted at launch and never changes, the next connect after a browser's death
-starts a fresh one behind the very same endpoint: a new process, a new scratch directory, a new
-internal address under the guard, and nothing for the AI to re-read. The death itself is reported
+starts a fresh one behind the very same endpoint: a new process, a new scratch directory, and nothing
+for the AI to re-read. The private address behind the guard belongs to the tab for as long as the tab
+is open, so the replacement is a different process behind the same one rather than a new address to
+learn. The death itself is reported
 exactly as before, and the restart is a later connect's doing rather than anything automatic.
 
 Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,

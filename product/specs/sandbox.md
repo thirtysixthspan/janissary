@@ -312,9 +312,11 @@ normalization a browser's own URL parser applies — ASCII tabs and newlines rem
 leading controls and spaces trimmed — so a scheme padded or split by those characters names the same
 thing to the guard as it does to the browser. Ordinary page content that merely mentions
 `file://` relays through untouched. The guard listens on loopback only and accepts connections on
-one unguessable path; the browser's own address behind it is not handed to the harness, and is named
-per connection rather than fixed, so that endpoint can outlive every browser behind it without ever
-being republished.
+one unguessable path; the browser's own address behind it is not handed to the harness, and the guard
+asks for the live upstream on each client rather than pairing one at startup, so the published
+endpoint can outlive every browser behind it without ever being republished. That private address
+itself is one fixed value for as long as the tab is open: a browser that dies and is replaced is a
+different process behind the same address.
 
 A frame from the harness asking the browser itself to close, or to be killed, ends the session the
 same way. The browser belongs to the tab rather than to the guest driving it, and it is the only one
