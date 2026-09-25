@@ -68,7 +68,8 @@ describe('EditorMetaName', () => {
   it('enter commits the typed name', () => {
     const jigs = setup(makeView({ name: 'untitled.md', newFile: true }));
     fireEvent.change(input(), { target: { value: 'plan.md' } });
-    fireEvent.keyDown(input(), { key: 'Enter' });
+    const notPrevented = fireEvent.keyDown(input(), { key: 'Enter' });
+    expect(notPrevented).toBe(false);
     expect(jigs.commit).toHaveBeenCalledWith('plan.md');
     expect(jigs.cancel).not.toHaveBeenCalled();
     expect(screen.queryByRole('textbox')).toBeNull();
