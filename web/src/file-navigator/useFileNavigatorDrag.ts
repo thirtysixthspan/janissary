@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
-import { hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
+import { hoveredEditor, hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
 import { joinCommandPaths, joinDropFileNames } from './file-navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
-import type { CommandInputDropHandle, EditorDropHandle } from '../shared/drop-handles';
-import { harnessDropHandle } from '../harness-drop-registry';
+import type { CommandInputDropHandle } from '../shared/drop-handles';
+import { editorDropHandle, harnessDropHandle } from '../shared/drop-registry';
 
 const DRAG_THRESHOLD_PX = 4;
 
@@ -24,7 +24,6 @@ export type FileNavigatorDragOptions = {
   displayRoot: string;
   targetCwd: string;
   dropRef?: RefObject<CommandInputDropHandle | null>;
-  editorDropRef?: RefObject<EditorDropHandle | null>;
   remoteHost?: string;
 };
 
@@ -32,7 +31,7 @@ export function useFileNavigatorDrag(
   rows: FileNavigatorRow[],
   client: JanusClient,
   label: string,
-  { absoluteRoot, displayRoot, targetCwd, dropRef, editorDropRef, remoteHost }: FileNavigatorDragOptions,
+  { absoluteRoot, displayRoot, targetCwd, dropRef, remoteHost }: FileNavigatorDragOptions,
 ) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [draggedCount, setDraggedCount] = useState(0);
@@ -49,7 +48,7 @@ export function useFileNavigatorDrag(
   // never outlive the surface that started it.
   const endGestureRef = useRef<(() => void) | null>(null);
   const overCommandBarRef = useRef(false);
-  const overEditorRef = useRef(false);
+  const overEditorRef = useRef<string | null>(null);
   const overHarnessRef = useRef<string | null>(null);
 
   const releaseGestureListeners = () => {
@@ -68,7 +67,7 @@ export function useFileNavigatorDrag(
     setDragPosition(null);
     setDropTarget(null);
     setCommandBarHighlighted(false);
-    overEditorRef.current = false;
+    overEditorRef.current = null;
     overHarnessRef.current = null;
   };
   const drop = () => {
@@ -78,8 +77,11 @@ export function useFileNavigatorDrag(
         dropRef?.current?.insertAtCaret(joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, ' '));
         return;
       }
-      if (gesture?.started && overEditorRef.current) {
-        editorDropRef?.current?.insertAtCaret(
+      // Keyed by the label on the editor body under the pointer, so the drop lands in that editor or
+      // nowhere — never in another editor that happens to hold focus in the other split pane.
+      const editorLabel = overEditorRef.current;
+      if (gesture?.started && editorLabel !== null) {
+        editorDropHandle(editorLabel)?.insertAtCaret(
           joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, '\n'),
         );
         return;
@@ -123,13 +125,13 @@ export function useFileNavigatorDrag(
     setDragPosition({ x: event.clientX, y: event.clientY });
     const overBar = hoveredElement(event.clientX, event.clientY, '[data-command-bar]') !== null;
     if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
-    const overEditor = !overBar && hoveredElement(event.clientX, event.clientY, '[data-editor-drop]') !== null;
+    const overEditor = overBar ? null : hoveredEditor(event.clientX, event.clientY);
     overEditorRef.current = overEditor;
-    const overHarness = overBar || overEditor ? null : hoveredHarnessPty(event.clientX, event.clientY);
+    const overHarness = overBar || overEditor !== null ? null : hoveredHarnessPty(event.clientX, event.clientY);
     overHarnessRef.current = overHarness;
     const row = hoveredRowInfo(event.clientX, event.clientY);
     const otherRoot = row.root !== undefined && row.root !== absoluteRoot;
-    setDropTarget(overBar || overEditor || overHarness !== null || otherRoot ? null : resolveDropTarget(
+    setDropTarget(overBar || overEditor !== null || overHarness !== null || otherRoot ? null : resolveDropTarget(
       rowsRef.current, gesture.operationPaths, row.path, remoteHost, row.host,
     ));
   };
@@ -183,7 +185,7 @@ export function useFileNavigatorDrag(
     releaseGestureListeners();
     overCommandBarRef.current = false;
     dropRef?.current?.setDropHighlighted(false);
-    overEditorRef.current = false;
+    overEditorRef.current = null;
     overHarnessRef.current = null;
   }, [dropRef]);
 

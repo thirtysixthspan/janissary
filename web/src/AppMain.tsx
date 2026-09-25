@@ -17,7 +17,6 @@ import { mountedPickerOverlayProps } from './pickers/picker-overlay-props';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab-handles';
-import type { EditorDropHandle } from './shared/drop-handles';
 
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,
@@ -39,7 +38,6 @@ type AppMainProps = Omit<
   shellHandles: React.RefObject<Map<string, ShellTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
-  editorDropReference: React.RefObject<EditorDropHandle | null>;
   dirtyPluginTabs: ReadonlySet<string>;
   onPluginDirty: (label: string, dirty: boolean) => void;
   harnessLaunch: HarnessLaunchView | null;
@@ -63,7 +61,7 @@ export function AppMain({
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
-  harnessHandles, shellHandles, questionPanelRef, tabHandles, editorDropReference,
+  harnessHandles, shellHandles, questionPanelRef, tabHandles,
   dirtyPluginTabs, onPluginDirty,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
   guardRef,
@@ -87,7 +85,7 @@ export function AppMain({
 
   return (
     <AppShell
-      tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropReference} tabNameMaxLength={tabNameMaxLength}
+      tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
       notificationsVisible={current.view === 'notifications'}
       targetCwd={current.cwd}
       activeTabNameMaxLength={activeTabNameMaxLength}
@@ -111,7 +109,7 @@ export function AppMain({
           },
         }}
         mountedProps={{
-          harnessHandles, tabHandles, editorDropRef: editorDropReference, questionPanelRef,
+          harnessHandles, tabHandles, questionPanelRef,
           onPluginDirty,
           ...mountedPickerOverlayProps(pickers),
         }}

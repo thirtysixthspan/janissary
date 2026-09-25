@@ -3,7 +3,6 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { DirtyTabHandle, HarnessTabHandle } from './shared/tab-handles';
 import { EditorTab } from './editor/EditorTab';
-import type { EditorDropHandle } from './shared/drop-handles';
 import { HarnessTabLayer } from './harness/HarnessTabLayer';
 import type { PickerOverlayProps } from './pickers/picker-overlay-props';
 import { TaskPicker } from './pickers/TaskPicker';
@@ -21,7 +20,6 @@ type Properties = {
   closeTab: (index: number) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
-  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
   visibleLabels?: string[];
   onSplit?: (index: number) => void;
@@ -57,7 +55,7 @@ function TabBodyDiv({
 // editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, closeTab, harnessHandles, tabHandles, editorDropRef, questionPanelRef,
+  tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
   visibleLabels = [current.label], onSplit, onPluginDirty,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
@@ -87,7 +85,7 @@ export function MountedViewLayers({
       {indexedTabs(tabs, isEditorTabView).map(({ t, index }) => (
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
           <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label}
-            visible={visibleLabels.includes(t.label)} dropRef={editorDropRef}
+            visible={visibleLabels.includes(t.label)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
         </TabBodyDiv>

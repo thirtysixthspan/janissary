@@ -3,7 +3,7 @@ import type { JanusClient } from './ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { closeQuitsApp } from '@shared/tab/placement';
 import { AppMain } from './AppMain';
-import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
+import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { DirtyTabHandle } from './shared/tab-handles';
 import { useTabHandles } from './useTabHandles';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
@@ -46,9 +46,6 @@ export function App({ client }: { client: JanusClient }) {
   // file-navigator drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
   // into whichever tab's command bar is currently rendered here.
   const dropReference = useRef<CommandInputDropHandle | null>(null);
-  // Same imperative-escape-hatch pattern as `dropReference`, but targeting whichever editor tab
-  // is currently active — set by `EditorTab` itself during its own render (see `MountedViewLayers`).
-  const editorDropReference = useRef<EditorDropHandle | null>(null);
   const transcriptReference = useRef<HTMLDivElement>(null);
   const { harnessHandles, shellHandles, questionPanelRef } = useTabHandles();
   const currentRef = useRef<TabView | undefined>(undefined);
@@ -160,7 +157,7 @@ export function App({ client }: { client: JanusClient }) {
       reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
       focusLeft={focusLeft} focusRight={focusRight}
       harnessHandles={harnessHandles} shellHandles={shellHandles} questionPanelRef={questionPanelRef}
-      tabHandles={tabHandles} editorDropReference={editorDropReference}
+      tabHandles={tabHandles}
       dirtyPluginTabs={dirtyPluginTabs} onPluginDirty={onPluginDirty}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}

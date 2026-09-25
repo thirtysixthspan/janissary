@@ -23,7 +23,7 @@ import { nextDock } from '../dock-cycle';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({
-  files, client, index, label, dock, autoFocus = true, dropRef, editorDropRef,
+  files, client, index, label, dock, autoFocus = true, dropRef,
   targetCwd = files.absoluteRoot, onSplit, multiOpen,
 }: Properties) {
   const intents = useFileNavigatorIntents(client, index);
@@ -36,7 +36,6 @@ export function FileNavigatorTab({
     displayRoot: files.root,
     targetCwd,
     dropRef,
-    editorDropRef,
     remoteHost: files.remote?.host,
   });
   const rename = useFileNavigatorRename(

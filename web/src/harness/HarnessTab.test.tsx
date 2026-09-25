@@ -5,7 +5,7 @@ import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
-import { harnessDropHandle } from '../harness-drop-registry';
+import { harnessDropHandle } from '../shared/drop-registry';
 import { DefaultContextMenu } from '../context-menu/DefaultContextMenu';
 import { terminalSelectionText } from '../shared/terminal/terminal-selection';
 

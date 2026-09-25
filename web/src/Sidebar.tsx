@@ -7,7 +7,7 @@ import { DockedPluginBody } from './plugins/DockedPluginBody';
 import { TabStrip } from './TabStrip';
 import { ResizeButton } from './ResizeButton';
 import { beginResizeDrag } from './drag-resize';
-import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
+import type { CommandInputDropHandle } from './shared/drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab-view-guards';
@@ -23,7 +23,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // can drive it too — see `useLayoutState`), resized by dragging either the gutter button
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
-  side, tabs, client, dropRef, editorDropRef, targetCwd,
+  side, tabs, client, dropRef, targetCwd,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
 }: {
@@ -33,8 +33,6 @@ export function Sidebar({
   // The active tab's command-bar drop handle, threaded down to a docked `FileNavigatorTab` so a drag
   // can find and insert into that tab's command bar. See `App.tsx`'s `dropRef`.
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  // The active tab's editor drop handle, threaded down the same way. See `App.tsx`'s `editorDropRef`.
-  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
@@ -98,7 +96,7 @@ export function Sidebar({
         {isFilesTabView(current.tab) && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} label={current.tab.label} dock={current.tab.dock} autoFocus={false}
-            dropRef={dropRef} editorDropRef={editorDropRef} targetCwd={targetCwd ?? current.tab.cwd}
+            dropRef={dropRef} targetCwd={targetCwd ?? current.tab.cwd}
             multiOpen={multiOpenablePaths}
           />
         )}

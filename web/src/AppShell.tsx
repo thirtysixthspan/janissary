@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Sidebar } from './Sidebar';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
-import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
+import type { CommandInputDropHandle } from './shared/drop-handles';
 import { useConnectionStatus } from './useConnectionStatus';
 import { ConnectionStatusLabel } from './ConnectionStatusLabel';
 import { ToastStack } from './toasts/ToastStack';
@@ -12,7 +12,7 @@ import { useToastPosition } from './toasts/useToastPosition';
 // The root layout: left sidebar / center column (everything App renders today) / right sidebar.
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppShell({
-  tabs, client, children, dropRef, editorDropRef, targetCwd,
+  tabs, client, children, dropRef, targetCwd,
   notificationsVisible,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
@@ -23,7 +23,6 @@ export function AppShell({
   client: JanusClient;
   children: React.ReactNode;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
-  editorDropRef?: React.RefObject<EditorDropHandle | null>;
   targetCwd?: string;
   tabNameMaxLength?: number;
   activeTabNameMaxLength?: number;
@@ -42,7 +41,7 @@ export function AppShell({
   return (
     <div className="app">
       <Sidebar
-        side="left" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef}
+        side="left" tabs={tabs} client={client} dropRef={dropRef}
         targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
@@ -50,7 +49,7 @@ export function AppShell({
       />
       <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
       <Sidebar
-        side="right" tabs={tabs} client={client} dropRef={dropRef} editorDropRef={editorDropRef}
+        side="right" tabs={tabs} client={client} dropRef={dropRef}
         targetCwd={targetCwd} tabNameMaxLength={tabNameMaxLength}
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
