@@ -41,13 +41,16 @@ export function fileNavigatorReroot(managers: Managers, index: number, relPath?:
   if (label) managers.fileNavigator.reroot(label, relPath);
 }
 
+// A conflict answer is returned for the client to confirm, not reported: nothing failed, the move
+// is waiting on the user's say-so to replace what is already there.
 export function moveFileNavigatorItem(
-  managers: Managers, index: number, fromRelPath: string, toRelPath: string,
-): MaybePromise<void> {
+  managers: Managers, index: number, fromRelPath: string, toRelPath: string, overwrite?: boolean,
+): MaybePromise<BulkMoveResult> {
   const label = managers.tab.tabs[index]?.label;
-  if (!label) return;
-  return mapMaybe(managers.fileNavigator.move(label, fromRelPath, toRelPath), (result) => {
-    reportOperationFailure(managers, label, 'move', result);
+  if (!label) return { total: 0, failedPaths: [] };
+  return mapMaybe(managers.fileNavigator.move(label, fromRelPath, toRelPath, overwrite), (result) => {
+    if (!('conflictPaths' in result)) reportOperationFailure(managers, label, 'move', result);
+    return result;
   });
 }
 

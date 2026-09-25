@@ -10,7 +10,7 @@ import { nextFreeName } from '../editor/next-free-name.js';
 import { readDirSorted, type FileNavigatorEntry } from './index.js';
 import { containedPath, realDirectory } from './batch-paths.js';
 import { deleteBatch, moveBatch, type DeleteManyResult, type MoveManyResult } from './batch.js';
-import { deleteItem, moveItem, renameItem } from './filesystem.js';
+import { deleteItem, moveItem, renameItem, type MoveOneResult } from './filesystem.js';
 import { listProjectFiles } from './search.js';
 import { readRowStat, type RowStat } from './stats.js';
 import { pasteBatch, type PasteManyResult } from './paste.js';
@@ -76,7 +76,9 @@ export interface FileSystemPort {
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
-  move(root: string, fromRelPath: string, toRelPath: string): MaybePromise<FileOperationResult<{ from: string; to: string }>>;
+  // Refuses to replace an existing destination unless `overwrite` is set, answering the conflict as
+  // `{ conflictPaths }` instead — the same contract `moveMany` keeps for an unset policy.
+  move(root: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): MaybePromise<MoveOneResult>;
   moveMany(root: string, sources: string[], destination: string, policy?: BulkConflictPolicy): MaybePromise<MoveManyResult>;
   delete(root: string, relPath: string): MaybePromise<FileOperationResult>;
   deleteMany(root: string, paths: string[]): MaybePromise<DeleteManyResult>;
@@ -158,7 +160,7 @@ export class LocalFileSystemPort implements FileSystemPort {
     return absolute ? runFileOperation(() => writeFileSync(absolute, content)) : failureResult(OUTSIDE_ROOT_REASON);
   }
 
-  move(root: string, from: string, to: string) { return moveItem(root, from, to); }
+  move(root: string, from: string, to: string, overwrite?: boolean) { return moveItem(root, from, to, overwrite); }
   moveMany(root: string, sources: string[], destination: string, policy?: BulkConflictPolicy) {
     return moveBatch(root, sources, destination, policy);
   }

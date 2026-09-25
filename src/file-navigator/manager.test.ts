@@ -551,6 +551,36 @@ describe('FileNavigatorManager', () => {
     expect(readFileSync(path.join(root, 'dest', 'notes.txt'), 'utf8')).toBe('hi');
   });
 
+  it('answers a conflict for a move onto an existing file, recording nothing and leaving both files', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'new');
+    writeFileSync(path.join(root, 'dest', 'notes.txt'), 'old');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    expect(manager.move(label, 'notes.txt', 'dest')).toEqual({ conflictPaths: ['notes.txt'] });
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('new');
+    expect(readFileSync(path.join(root, 'dest', 'notes.txt'), 'utf8')).toBe('old');
+    expect(manager.undo(label)).toEqual({});
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('new');
+  });
+
+  it('replaces an existing file when the move carries overwrite, recording the move for undo', () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'notes.txt'), 'new');
+    writeFileSync(path.join(root, 'dest', 'notes.txt'), 'old');
+    const manager = run();
+    manager.open('files', 'janus');
+    const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    expect(manager.move(label, 'notes.txt', 'dest', true)).toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(path.join(root, 'notes.txt'))).toBe(false);
+    expect(readFileSync(path.join(root, 'dest', 'notes.txt'), 'utf8')).toBe('new');
+    manager.undo(label);
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('new');
+  });
+
   it('rejects moving an item onto itself', () => {
     writeFileSync(path.join(root, 'notes.txt'), 'hi');
     const manager = run();

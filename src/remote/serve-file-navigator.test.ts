@@ -49,6 +49,21 @@ describe('RemoteFileNavigators', () => {
     expect(statSync(path.join(root, 'src', 'untitled')).isDirectory()).toBe(true);
   });
 
+  it('refuses a move onto an existing file unless the request carries overwrite', async () => {
+    mkdirSync(path.join(root, 'dest'));
+    writeFileSync(path.join(root, 'a.txt'), 'new');
+    writeFileSync(path.join(root, 'dest', 'a.txt'), 'old');
+
+    expect(await request('move', { from: 'a.txt', to: 'dest' })).toMatchObject({ result: { conflictPaths: ['a.txt'] } });
+    expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('new');
+    expect(readFileSync(path.join(root, 'dest', 'a.txt'), 'utf8')).toBe('old');
+
+    expect(await request('move', { from: 'a.txt', to: 'dest', overwrite: true }))
+      .toMatchObject({ result: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } } });
+    expect(existsSync(path.join(root, 'a.txt'))).toBe(false);
+    expect(readFileSync(path.join(root, 'dest', 'a.txt'), 'utf8')).toBe('new');
+  });
+
   it.each([
     ['read-file', { path: '../outside' }],
     ['watch', { path: '../outside' }],

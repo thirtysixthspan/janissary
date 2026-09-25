@@ -47,6 +47,27 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     setPendingConflict(null);
   };
 
+  const askToOverwrite = (fromRelPath: string, toRelPath: string) => {
+    setPendingConflict({
+      kind: 'scalar',
+      fromRelPath,
+      toRelPath,
+      source: 'move',
+      title: `"${basename(fromRelPath)}" already exists here. Overwrite it?`,
+    });
+  };
+
+  // Sent without `overwrite`, so the server refuses an occupied destination instead of replacing
+  // it — including one inside a collapsed folder whose rows the client never loaded — and its
+  // conflict answer opens the same dialog a visible conflict does.
+  const sendScalarMove = async (fromRelPath: string, toRelPath: string) => {
+    const result = await client.request<BulkMoveResult>({
+      method: 'moveFileNavigatorItem',
+      params: { index, fromRelPath, toRelPath },
+    });
+    if (result.ok && 'conflictPaths' in result.value) askToOverwrite(fromRelPath, toRelPath);
+  };
+
   const requestMove = (
     sourcePaths: string[],
     destinationPath: string,
@@ -54,22 +75,8 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
     clientConflict: boolean,
   ) => {
     if (sourcePaths.length === 1) {
-      const fromRelPath = sourcePaths[0];
-      if (clientConflict) {
-        const name = basename(fromRelPath);
-        setPendingConflict({
-          kind: 'scalar',
-          fromRelPath,
-          toRelPath: destinationPath,
-          source: 'move',
-          title: `"${name}" already exists here. Overwrite it?`,
-        });
-      } else {
-        client.send({
-          method: 'moveFileNavigatorItem',
-          params: { index, fromRelPath, toRelPath: destinationPath },
-        });
-      }
+      if (clientConflict) askToOverwrite(sourcePaths[0], destinationPath);
+      else void sendScalarMove(sourcePaths[0], destinationPath);
       return;
     }
     void sendBatchMove(
@@ -131,6 +138,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
           index,
           fromRelPath: pendingConflict.fromRelPath,
           toRelPath: pendingConflict.toRelPath,
+          overwrite: true,
         },
       });
     } else {

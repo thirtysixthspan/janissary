@@ -40,7 +40,9 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     case 'fileNavigatorReroot': { controller.fileNavigatorReroot(message.params.index, message.params.path); break;
     }
     case 'moveFileNavigatorItem': {
-      return controller.moveFileNavigatorItem(message.params.index, message.params.fromRelPath, message.params.toRelPath);
+      return controller.moveFileNavigatorItem(
+        message.params.index, message.params.fromRelPath, message.params.toRelPath, message.params.overwrite,
+      );
     }
     case 'moveFileNavigatorItems': {
       return controller.moveFileNavigatorItems(

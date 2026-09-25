@@ -48,6 +48,13 @@ function makeEditorBodyElement(): HTMLElement {
   return body;
 }
 
+// A single-item move goes out as a request so the server can answer a conflict; this client answers
+// every request with `value`, a plain successful move unless a test says otherwise.
+function makeMoveClient(value?: unknown): JanusClient {
+  const answer = value ?? { total: 1, failedPaths: [] };
+  return { send: vi.fn(), request: vi.fn().mockResolvedValue({ ok: true, value: answer }) } as unknown as JanusClient;
+}
+
 function makeHarnessBodyElement(ptyId: string): HTMLElement {
   const body = document.createElement('div');
   body.dataset.harnessDrop = ptyId;
@@ -118,7 +125,7 @@ describe('useFileNavigatorDrag', () => {
   });
 
   it('updates dragPosition on further movement and clears it on drop', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
+    const client = makeMoveClient();
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
@@ -135,7 +142,7 @@ describe('useFileNavigatorDrag', () => {
   });
 
   it('drop() sends moveFileNavigatorItem directly for a valid non-conflicting target', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
+    const client = makeMoveClient();
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
@@ -144,7 +151,7 @@ describe('useFileNavigatorDrag', () => {
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+    expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -179,7 +186,31 @@ describe('useFileNavigatorDrag', () => {
     act(() => { result.current.drop(); });
     act(() => { result.current.confirmOverwrite(); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'notes.txt', toRelPath: 'dest' } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'notes.txt', toRelPath: 'dest', overwrite: true } });
+    expect(result.current.pendingConflict).toBeNull();
+  });
+
+  it('opens the conflict dialog when the server reports a conflict the loaded rows could not show', async () => {
+    const client = makeMoveClient({ conflictPaths: ['notes.txt'] });
+    const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
+    const otherRow = makeRowElement('other');
+    document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
+
+    act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+    act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+    await act(async () => { result.current.drop(); await Promise.resolve(); });
+
+    expect(client.send).not.toHaveBeenCalled();
+    expect(result.current.pendingConflict).toEqual({
+      kind: 'scalar',
+      fromRelPath: 'notes.txt',
+      toRelPath: 'other',
+      source: 'move',
+      title: '"notes.txt" already exists here. Overwrite it?',
+    });
+
+    act(() => { result.current.confirmOverwrite(); });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other', overwrite: true } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -215,7 +246,7 @@ describe('useFileNavigatorDrag', () => {
   });
 
   it('a window blur after a drag has already ended does not affect subsequent gestures', () => {
-    const client = { send: vi.fn() } as unknown as JanusClient;
+    const client = makeMoveClient();
     const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0));
     const otherRow = makeRowElement('other');
     document.elementFromPoint = vi.fn().mockReturnValue(otherRow);
@@ -225,7 +256,7 @@ describe('useFileNavigatorDrag', () => {
     act(() => { result.current.drop(); });
     act(() => { globalThis.dispatchEvent(new Event('blur')); });
 
-    expect(client.send).toHaveBeenCalledTimes(1);
+    expect(client.request).toHaveBeenCalledTimes(1);
 
     act(() => { result.current.onRowMouseDown({ path: 'notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
@@ -305,7 +336,7 @@ describe('useFileNavigatorDrag', () => {
     });
 
     it('hovering the command-bar marker highlights it and unhighlighting on move-away clears it', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = makeMoveClient();
       const dropHandle = makeDropHandle();
       const dropRef = { current: dropHandle };
       const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 0, dropRef));
@@ -326,7 +357,7 @@ describe('useFileNavigatorDrag', () => {
     });
 
     it('a drag released over a tree row still moves the file as before, unaffected by the command-bar wiring', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = makeMoveClient();
       const dropRef = { current: makeDropHandle() };
       const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3, dropRef));
       const otherRow = makeRowElement('other');
@@ -336,7 +367,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
 
@@ -408,7 +439,7 @@ describe('useFileNavigatorDrag', () => {
     });
 
     it('a drag released over a tree row still moves the file as before, unaffected by the editor wiring', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = makeMoveClient();
       const editorDropRef = { current: makeEditorDropHandle() };
       const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3, undefined, editorDropRef));
       const otherRow = makeRowElement('other');
@@ -418,7 +449,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(editorDropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
   });
@@ -503,7 +534,7 @@ describe('useFileNavigatorDrag', () => {
     });
 
     it('a drag released over a tree row still moves the file as before, unaffected by the harness wiring', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = makeMoveClient();
       const harness = registerHarness('pty-1');
       const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, 3));
       const otherRow = makeRowElement('other');
@@ -513,7 +544,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(harness.insertAtCaret).not.toHaveBeenCalled();
     });
   });

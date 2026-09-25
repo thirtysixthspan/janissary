@@ -388,8 +388,8 @@ describe('session-state frames', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 19', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(19);
+  it('is 20', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(20);
   });
 });
 

@@ -22,7 +22,9 @@ const CASES: Array<[
   ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b' }, [
     { index: 0, fromRelPath: 'a' },
     { index: 0, fromRelPath: 'a', toRelPath: [] },
+    { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: 'yes' },
   ]],
+  ['moveFileNavigatorItem', { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: true }, []],
   ['moveFileNavigatorItems', { index: 0, sourcePaths: ['a'], destinationPath: 'b', policy: 'overwrite-all' }, [
     { index: 0, sourcePaths: 'a', destinationPath: 'b' },
     { index: 0, sourcePaths: ['a', 2], destinationPath: 'b' },

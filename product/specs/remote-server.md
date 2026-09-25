@@ -180,6 +180,13 @@ local side can close the placeholder at once instead of showing an error. A vers
 checks and never answers with it, so a launch against one would still land on a leftover's failed
 clone while both ends looked healthy — it is refused at the handshake like any other mismatch.
 
+Refusing to overwrite on a single-item navigator move moves the protocol to 20. A remote tree's
+single move now carries an `overwrite` flag, sent only from the conflict dialog's **Overwrite**.
+Without that flag, the far side answers an occupied destination with the conflicting path and moves
+nothing. A version-19 remote ignores the flag and renames straight over whatever is there. So a drop
+into a collapsed remote folder would keep destroying a same-named file while both ends looked
+healthy. It is refused at the handshake like any other mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
