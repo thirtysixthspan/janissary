@@ -4,17 +4,6 @@
 
 ## development
 
-* Release the agent-messaging queue when its tab closes, so a message in flight at close cannot block delivery to every later tab that reuses the name.
-
-Existing Debt: The agent communication manager keeps a per-tab message queue and an in-progress set keyed by label but has no `closeTab` and is missing from the managers' tab-release list, whose compile-time check proves only that listed managers can release, not that every manager holding label-keyed state is listed. Severity: 5/10
-
-Existing Risk: 5/10 - A `command` or `request` message running `shell …` is waiting on its end sentinel when the tab closes, closing kills the shell so the completion never fires and the label is never cleared from the in-progress set, and because labels return to the pool, a new tab given the same name silently never receives `msg` or `broadcast` again for the rest of the run.
-
-Proposal Risk: 2/10 - The stuck flag is cleared on close and a stale completion cannot clear a newer message's flag, but the release list stays opt-in, so the next manager to add label-keyed state can leak the same way.
-
-Proposal: `AgentCommunicationManager` in `src/agent/communication-manager.ts` holds `queues: Map<string, Message[]>` and `processing: Set<string>`, and `pumpQueue` in `src/agent/message-queue.ts` returns early while `processing.has(label)` and clears the flag only from the `done` callback the handler calls. Add `closeTab(label)` to the manager that deletes the label's queue and its `processing` entry, and make `pumpQueue` tolerate a stale `done`: record the message being processed (or a per-label generation) when adding to `processing`, and have `done` delete the flag and re-pump only while that record is still current. Add `'communication'` (its key in `Managers`) to `MANAGER_TAB_RELEASE` in `src/managers.ts`; `closeTabResources` in `src/tab/cleanup.ts` walks that list, and `src/tab/cleanup.test.ts` pins the walk and `src/managers.test.ts` its uniqueness. Add a case to `src/agent/communication-manager.test.ts`: a request is in flight, the tab closes, a new tab opens with the same label, and a `msg` to it is delivered; also a case that a late `done` from the closed tab's message does not clear the new tab's in-progress flag.
-
-
 * Stop Cmd+W and Shift+Tab from acting behind an open modal dialog by giving the app one shared "a modal is open" signal that the window-level shortcut hooks consult.
 
 Existing Debt: Nothing in the client records whether a modal dialog is open — each dialog blocks keys by swallowing them in its own capture-phase window listener, which cannot stop other capture listeners on the same target — so the global Cmd+W and Shift+Tab hooks each rely on a hand-picked list of overlays (or none) that has fallen behind the dialogs the app now has. Severity: 5/10

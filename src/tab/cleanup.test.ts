@@ -24,6 +24,7 @@ function makeManagers(): Managers {
     questions: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
+    communication: { closeTab: vi.fn() },
   } as unknown as Managers;
 }
 
@@ -55,13 +56,23 @@ describe('closeTabResources', () => {
       const walk = managers[name].closeTab as ReturnType<typeof vi.fn>;
       walk.mockImplementation((_label: string) => { visited.push(name); });
     }
-    for (const name of ['monitor', 'command', 'communication', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
+    for (const name of ['monitor', 'command', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
       (managers as unknown as Record<string, unknown>)[name] = undefined;
     }
 
     closeTabResources(tab, managers, new Map(), 2);
 
     expect(visited).toEqual([...MANAGER_TAB_RELEASE].filter((name) => name !== 'remote'));
+  });
+
+  // A message in flight at close never completes, and its label's in-progress flag would otherwise
+  // block every later tab that reuses the name from receiving `msg` or `broadcast`.
+  it('releases the closed tab\'s agent-messaging queue', () => {
+    const managers = makeManagers();
+
+    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+
+    expect(managers.communication.closeTab).toHaveBeenCalledWith('main');
   });
 
   it('releases the remote channel only when the closed tab carries the remote payload', () => {

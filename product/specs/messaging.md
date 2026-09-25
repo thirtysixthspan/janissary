@@ -8,6 +8,8 @@
 
 A messaged command is never moved into a terminal: an interactive program is refused outright with `Cannot run interactive command remotely: <cmd>`, and a program that would otherwise be detected mid-run (see `shell.md`) simply runs without taking over the tab. Both follow from the same requirement — the sender is owed captured text, and a command that took the screen has none to give.
 
+Closing a tab releases its queue (`AgentCommunicationManager.closeTab`, called from the tab-close walk): messages still waiting for it are discarded, and a message it was handling at close no longer holds the queue. That message's shell command dies with the tab and never reports back, so without the release a later tab that reuses the same name would never receive `msg` or `broadcast` again. A completion that does arrive late from the closed tab's message is ignored, so it cannot start the next message for a newer tab of the same name while that tab's own message is still running.
+
 On the sender's side, the sent message is entered into the sender's transcript as `→ <to> (<kind>): <text>`, so the sender has a record of what they sent.
 
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to multiple agents at once. `all` (or `*`) targets every other agent; a comma-separated list targets a specific set. The sender is always excluded, and the result reports which recipients were reached and any unknown names. The kind accepts the same `i`/`r`/`c` aliases as `msg`.
