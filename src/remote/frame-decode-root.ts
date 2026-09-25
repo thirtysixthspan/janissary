@@ -48,7 +48,8 @@ export function decodeRootRefused(record: Record<string, unknown>): DecodeResult
   return refusal ? { type: 'root-refused', refusal } : malformed('root-refused');
 }
 
-// `provision.origin`: absent, or a nonempty string. `false` means present and invalid.
+// `provision.origin`, and the same field on `attach` and `capture-request`: absent, or a nonempty
+// string. `false` means present and invalid.
 export function decodeOrigin(value: unknown): string | undefined | false {
   if (value === undefined) return undefined;
   return nonEmptyString(value) ? value : false;

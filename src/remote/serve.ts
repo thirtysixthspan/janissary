@@ -132,7 +132,7 @@ export class RemoteServer {
     case 'input': { this.peer?.input(frame); this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.processes?.kill(frame.id); return; }
-    case 'capture-request': { answerCaptureRequest(frame, this.processes, this.lookupRoot(), (f) => this.emit(f)); return; }
+    case 'capture-request': { answerCaptureRequest(frame, this.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
     case 'filesystem-open': {
       if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
       this.files.open(frame.session);
@@ -151,14 +151,15 @@ export class RemoteServer {
     }
   }
 
-  // The root a relaying process reaches a parked peer through: this server's own once settled.
-  private lookupRoot(): string | undefined {
-    return this.root ?? rootForRelay(this.pathArgument, this.options.home);
+  // The root a relaying process reaches a parked peer through: this server's own once settled, and
+  // otherwise the one the frame's origin classifies to.
+  private lookupRoot(origin: string | undefined): string | undefined {
+    return this.root ?? rootForRelay(this.pathArgument, origin, this.options.home);
   }
 
   // A parked peer's record cannot exist without a root, so no root answers as a missing session does.
   private attach(frame: Extract<ClientFrame, { type: 'attach' }>): void {
-    const root = this.workspaceDir ? undefined : this.lookupRoot();
+    const root = this.workspaceDir ? undefined : this.lookupRoot(frame.origin);
     if (root === undefined) { this.emit({ type: 'attach-result', accepted: false }); return; }
     this.relay = relayPeer(root, frame.session, (data) => { process.stdout.write(data); }, (terminated) => {
       if (terminated) this.emit({ type: 'attach-result', accepted: false });

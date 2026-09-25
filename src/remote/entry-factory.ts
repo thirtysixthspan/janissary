@@ -45,8 +45,9 @@ export function remoteCaptureCommand(address: RemoteAddress): string {
   return sshRemoteCommand(address, ['-o BatchMode=yes', '-o NumberOfPasswordPrompts=0', '-o ConnectTimeout=10']);
 }
 
-// The launching project's origin, credential-free, for the far side to check its root against.
-function provisionOrigin(managers: Managers): { origin?: string } {
+// The launching project's origin, credential-free, for the far side to check its root against — and
+// to find that root again when an attach or a parked-capture query relays into a session there.
+export function provisionOrigin(managers: Managers): { origin?: string } {
   const origin = managers.workspace?.origin();
   return origin === undefined ? {} : { origin: withoutCredentials(origin) };
 }
@@ -89,7 +90,9 @@ export function createRemoteEntry({
       onTerminalData: terminal,
       onAttached: () => {
         if ((entry.attach.active || state.resuming) && channel.sessionId) {
-          channel.send({ type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
+          channel.send({
+            type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }), ...provisionOrigin(managers),
+          });
         } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(), ...provisionOrigin(managers) });
       },
       onFrame: (frame) => {

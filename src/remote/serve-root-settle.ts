@@ -47,10 +47,11 @@ export async function rootForProvision(
   return result;
 }
 
-// The root an `attach` or a parked-capture query relays through: today's rules, with no origin
-// comparison and no offer, since only a new launch compares origins.
-export function rootForRelay(pathArgument: string | undefined, home?: string): string | undefined {
-  const outcome = resolveRemoteRoot(pathArgument, undefined, { home });
+// The root an `attach` or a parked-capture query relays through, classified with the frame's origin
+// the way a launch is, so a session rooted at `<home>/<repo-name>` is found again. Only an existing
+// root counts: an offer or a refusal is no root, since a relay never clones.
+export function rootForRelay(pathArgument: string | undefined, origin: string | undefined, home?: string): string | undefined {
+  const outcome = resolveRemoteRoot(pathArgument, origin, { home });
   return 'root' in outcome ? outcome.root : undefined;
 }
 

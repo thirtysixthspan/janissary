@@ -70,9 +70,10 @@ export class RemoteChannel {
   // Ask the far side for a fresh screen capture of process `id`, resolving with the reply, or
   // `undefined` on no capture yet or a channel that closes first (see `CaptureRequestTracker`).
   // `session` is the peer to ask: this channel's own `sessionId` while attached, or a parked
-  // session's id for the one-off query a throwaway channel makes while fully detached.
-  requestCapture(id: string, session: string): Promise<CaptureResult> {
-    return this.captures.request(id, session, (frame) => this.send(frame));
+  // session's id for the one-off query a throwaway channel makes while fully detached, which also
+  // passes the launching project's `origin` so the far side finds that session's root.
+  requestCapture(id: string, session: string, origin?: string): Promise<CaptureResult> {
+    return this.captures.request(id, session, (frame) => this.send(frame), origin);
   }
 
   send(frame: ClientFrame): void {

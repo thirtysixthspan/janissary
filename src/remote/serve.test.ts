@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { spawn as spawnTerminal } from 'node-pty';
@@ -675,6 +675,58 @@ describe('RemoteServer — settling the root', () => {
     const { server, frames } = serverAt(path.join(tmpDir, 'never-there'));
     server.receive(`${encodeFrame({ type: 'capture-request', session: randomUUID(), id: 'r1', request: 'q1' })}\n`);
     expect(frames).toEqual([{ type: 'capture-reply', id: 'r1', request: 'q1' }]);
+  });
+
+  // A home-directory launch roots its session at `<home>/<repo-name>` (`origin` here, after the
+  // suite's `origin.git`), and the relay reaches it only by classifying with the frame's origin.
+  describe('relaying into a session rooted at <home>/<repo-name>', () => {
+    const relayHome = () => path.join(tmpDir, 'relay-home');
+    const homeServer = () => {
+      const frames: ServerFrame[] = [];
+      const server = new RemoteServer('~', (frame) => { frames.push(frame); }, vi.fn(), { settle: settleAt, home: relayHome() });
+      return { server, frames };
+    };
+
+    beforeEach(() => { mkdirSync(relayHome(), { recursive: true }); });
+    afterEach(() => { rmSync(relayHome(), { recursive: true, force: true }); });
+
+    const parkAtHomeClone = async (capture?: (id: string) => { text: string; capturedAt: number } | undefined) => {
+      const root = path.join(relayHome(), 'origin');
+      execSync(`git clone "${origin()}" "${root}"`, { stdio: 'pipe' });
+      const peer = new DetachedPeer(root, randomUUID(), vi.fn(), vi.fn(), capture);
+      await peer.start(vi.fn());
+      peer.detach();
+      return peer;
+    };
+
+    it('relays an attach carrying the origin into the peer parked under the home clone', async () => {
+      const peer = await parkAtHomeClone();
+      const output: string[] = [];
+      const write = vi.spyOn(process.stdout, 'write').mockImplementation((data) => { output.push(String(data)); return true; });
+      const { server } = homeServer();
+      try {
+        server.receive(`${encodeFrame({ type: 'attach', session: peer.session, origin: origin() })}\n`);
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+      } finally { server.shutdown(0); write.mockRestore(); peer.dispose(); }
+    });
+
+    it('answers a parked-capture query carrying the origin from the peer parked under the home clone', async () => {
+      const peer = await parkAtHomeClone((id) => (id === 'r1' ? { text: 'home screen', capturedAt: 7 } : undefined));
+      const { server, frames } = homeServer();
+      try {
+        server.receive(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'r1', request: 'q1', origin: origin() })}\n`);
+        await vi.waitFor(() => expect(frames).toEqual([
+          { type: 'capture-reply', id: 'r1', request: 'q1', text: 'home screen', capturedAt: 7 },
+        ]));
+      } finally { peer.dispose(); }
+    });
+
+    it('answers accepted: false for a missing home clone, offering nothing and creating nothing', () => {
+      const { server, frames } = homeServer();
+      server.receive(`${encodeFrame({ type: 'attach', session: randomUUID(), origin: origin() })}\n`);
+      expect(frames).toEqual([{ type: 'attach-result', accepted: false }]);
+      expect(existsSync(path.join(relayHome(), 'origin'))).toBe(false);
+    });
   });
 });
 

@@ -129,7 +129,8 @@
 // `attach`, so a root that is missing or wrong reaches the local side as a structured answer instead
 // of dying before the handshake. The handshake stops carrying `root`, since it is not known yet when
 // the line is written. `provision` gains `origin`, the launching project's origin, so the far side
-// can check it holds a clone of *this* project. A new `clone-offer` asks whether to create a missing
+// can check it holds a clone of *this* project, and `attach` and `capture-request` gain it too, so a
+// relay finds a root the launch cloned into the home directory. A new `clone-offer` asks whether to create a missing
 // clone, answered by `clone-answer`; `root-refused` carries the reason a root could not be settled;
 // and `workspace-ready` gains `cloned`, reporting a clone made on the way. A version-20 remote
 // resolves its root before the handshake and never offers, so it is refused here like every other
@@ -183,8 +184,10 @@ import { decodeKnownFrame } from './frame-decode.js';
 export type ClientFrame =
   // Ask to take over a session that outlived its transport. `session` is the id the handshake
   // announced when the peer was first created, and it is the only credential the far side checks:
-  // `relayPeer` refuses any `attach` whose id does not match the peer it found.
-  | { type: 'attach'; session: string; restore?: boolean }
+  // `relayPeer` refuses any `attach` whose id does not match the peer it found. `origin` is the
+  // attaching project's, as `provision` carries it, so a relay finds the root a launch cloned into
+  // the home directory.
+  | { type: 'attach'; session: string; restore?: boolean; origin?: string }
   // No payload: there is one workspace per peer, so "which processes are alive" has a single
   // answer and nothing to address it by.
   | { type: 'session-state' }
@@ -225,7 +228,8 @@ export type ClientFrame =
   // ignored by a `RemoteServer` that already holds the live workspace (it answers from its own
   // detection pipeline instead), and required by a freshly relaying process with no workspace of its
   // own, which forwards the query into the parked peer matching `session` without attaching it.
-  | { type: 'capture-request'; session: string; id: string; request: string }
+  // `origin` finds that peer's root the way `attach.origin` does.
+  | { type: 'capture-request'; session: string; id: string; request: string; origin?: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
   | {

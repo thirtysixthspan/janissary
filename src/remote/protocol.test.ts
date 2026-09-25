@@ -391,7 +391,9 @@ describe('session-state frames', () => {
 // `filesystem-reply` carries `result` here because it and `error` are mutually exclusive; the error
 // form has its own case below.
 const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame, { type: K }> } = {
-  'attach': { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+  'attach': {
+    type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, origin: 'git@github.com:owner/repo.git',
+  },
   'session-state': { type: 'session-state' },
   'shutdown': { type: 'shutdown' },
   'provision': {
@@ -406,7 +408,10 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'input': { type: 'input', id: 'r1', data: 'hello' },
   'resize': { type: 'resize', id: 'r1', cols: 120, rows: 50 },
   'kill': { type: 'kill', id: 'r1' },
-  'capture-request': { type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1' },
+  'capture-request': {
+    type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1',
+    origin: 'git@github.com:owner/repo.git',
+  },
   'filesystem-open': { type: 'filesystem-open', session: 'files1' },
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
   'filesystem-request': {
@@ -509,6 +514,14 @@ describe('root settling frames', () => {
     ['root-refused with no refusal', { type: 'root-refused' }],
     ['provision with an empty origin', { type: 'provision', label: 'claude', origin: '' }],
     ['provision with a non-string origin', { type: 'provision', label: 'claude', origin: 7 }],
+    ['attach with an empty origin', { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', origin: '' }],
+    ['attach with a non-string origin', { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', origin: 7 }],
+    ['capture-request with an empty origin', {
+      type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1', origin: '',
+    }],
+    ['capture-request with a non-string origin', {
+      type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1', origin: 7,
+    }],
     ['workspace-ready with a cloned record missing its path', { type: 'workspace-ready', dir: '/w', cloned: { url: 'u' } }],
     ['workspace-ready with a non-record cloned', { type: 'workspace-ready', dir: '/w', cloned: '/p' }],
   ])('refuses %s', (_name, record) => {

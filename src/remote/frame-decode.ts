@@ -63,6 +63,18 @@ function decodeProvision(record: Record<string, unknown>): DecodeResult {
   };
 }
 
+function decodeAttach(record: Record<string, unknown>): DecodeResult {
+  const { session, restore } = record;
+  const origin = decodeOrigin(record.origin);
+  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session)
+    || !(restore === undefined || typeof restore === 'boolean') || origin === false) return malformed('attach');
+  return {
+    type: 'attach', session,
+    ...(restore !== undefined && { restore }),
+    ...(origin !== undefined && { origin }),
+  };
+}
+
 function decodeSpawn(record: Record<string, unknown>): DecodeResult {
   const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove } = record;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
@@ -161,11 +173,7 @@ function unhandledRemoteFrame(type: never): never {
 // before calling — so the switch is exhaustive over the union rather than open over `string`.
 export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<string, unknown>): DecodeResult {
   switch (type) {
-  case 'attach': {
-    if (record.restore !== undefined && typeof record.restore !== 'boolean') return malformed(type);
-    return typeof record.session === 'string' && /^[a-f\d-]{36}$/.test(record.session)
-      ? { type, session: record.session, ...(record.restore !== undefined && { restore: record.restore }) } : malformed(type);
-  }
+  case 'attach': { return decodeAttach(record); }
   case 'attach-result': {
     if (typeof record.accepted !== 'boolean') return malformed(type);
     if (record.truncated !== undefined && typeof record.truncated !== 'boolean') return malformed(type);

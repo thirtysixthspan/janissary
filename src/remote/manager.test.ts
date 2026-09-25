@@ -492,7 +492,7 @@ const RECORDED_SESSION = '12345678-1234-1234-1234-123456789abc';
 describe('RemoteManager attach from a record', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  function resumeHarness() {
+  function resumeHarness(origin?: string) {
     let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
     const write = vi.fn();
     const kill = vi.fn();
@@ -504,6 +504,7 @@ describe('RemoteManager attach from a record', () => {
         }),
         reassignTransports: vi.fn(),
       },
+      workspace: { origin: () => origin },
       tab: { findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs: [], byLabel: vi.fn(), cur: () => ({ label: 'creator' }) },
     } as unknown as Managers;
     const remote = new RemoteManager(managers);
@@ -533,6 +534,17 @@ describe('RemoteManager attach from a record', () => {
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
     expect(sent.map((frame) => frame.type)).toEqual(['attach']);
     expect(sent[0]).toEqual({ type: 'attach', session: RECORDED_SESSION, restore: true });
+  });
+
+  // The far side classifies the attach's root with it, so a session a launch rooted at
+  // `<home>/<repo-name>` is found again.
+  it('sends the launching project\'s origin, with its credential removed, on attach', () => {
+    const h = resumeHarness('https://ghp_secret@github.com/owner/repo.git');
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
+    const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
+    expect(sent).toEqual([{
+      type: 'attach', session: RECORDED_SESSION, restore: true, origin: 'https://github.com/owner/repo.git',
+    }]);
   });
 
   // No `workspace-ready` ever comes for an attach, so the recorded directory is what settles the

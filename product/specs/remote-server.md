@@ -295,7 +295,9 @@ fails and nothing is offered, as it does when no usable folder name can be deriv
 Nothing is offered, and the launch fails with the host's real reason, for an explicit path that
 exists but is not a git repository (other than the home directory), a repository with no `origin`
 remote, and an explicit path whose repository has a different `origin`. Nothing is offered either
-when the launching project has no `origin`, and attaching a parked session never offers.
+when the launching project has no `origin`, and attaching a parked session never offers. Attaching,
+and a detached capture, find a session rooted in the home-directory folder the same way a launch
+found it.
 
 The question is a y/n prompt in the placeholder tab's terminal, where ssh's own prompts already
 render. It leaves out the host, which the tab's host chip already shows:
@@ -595,8 +597,10 @@ repository with an `origin` remote.
 The root is not settled at startup. The server announces itself at once, and the root is settled by
 the first request that needs one: a new launch's provisioning request settles it against the
 launching project's `origin` and may offer to clone it (see [Missing clone](#missing-clone)). An
-attach settles it by the rules above alone, with no comparison and no offer, and is refused as a
-missing session when there is no root. Until the root is settled, a request for the running
+attach, and a detached capture query, resolve it against the same `origin` the way a launch does, so
+a session rooted in the remote user's home directory is found again, but they never offer: anything
+other than an existing clone of this project is refused as a missing session. From a project with
+no `origin`, they resolve it by the rules above alone. Until the root is settled, a request for the running
 processes answers with an empty list, and any request that needs a workspace is refused. Losing the
 ssh session before then ends the server instead of parking it, since there is nothing to park.
 

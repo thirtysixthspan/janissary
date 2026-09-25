@@ -90,11 +90,11 @@ function walkUp(cwd: string, classifier: Classifier | undefined): RootOutcome {
  * `/`. With no argument it walks up from the ssh login directory, the same walk `findRepoRoot`
  * already does locally. Either way the root must be a git repository with an `origin` remote.
  *
- * With `origin` (a `provision` from a project that has one), that remote must also be a clone of
- * this project, and a missing clone is offered rather than refused: at an explicit path that does
- * not exist, or under the home directory when no path was given or the path is the home directory.
- * Without it (an `attach`, or a project with no origin) every outcome is today's: a root or a
- * refusal, never an offer.
+ * With `origin` (a `provision`, `attach`, or parked-capture query from a project that has one), that
+ * remote must also be a clone of this project, and a missing clone is offered rather than refused: at
+ * an explicit path that does not exist, or under the home directory when no path was given or the
+ * path is the home directory. A relay reads an offer as no root, so only a launch ever makes one.
+ * Without it (a project with no origin) every outcome is today's: a root or a refusal, never an offer.
  */
 export function resolveRemoteRoot(argument: string | undefined, origin?: string, options: RootOptions = {}): RootOutcome {
   const cwd = options.cwd ?? process.cwd();

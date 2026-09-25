@@ -7,7 +7,7 @@ import type { RemoteSessionRecord } from '../sessions/store.js';
 
 type TransportHandlers = { onData: (data: string) => void; onExit: () => void };
 
-function harness() {
+function harness(origin?: string) {
   let handlers: TransportHandlers | undefined;
   const write = vi.fn();
   const kill = vi.fn();
@@ -18,6 +18,7 @@ function harness() {
         return { id: 'query', program: 'ssh', write, resize: vi.fn(), kill };
       }),
     },
+    workspace: { origin: () => origin },
   } as unknown as Managers;
   const record = {
     address: 'devbox', workspaceLabel: 'claude', session: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -40,6 +41,28 @@ describe('queryParkedCapture', () => {
     expect(h.kill).not.toHaveBeenCalled();
     vi.advanceTimersByTime(REMOTE_SHUTDOWN_DRAIN_MS);
     expect(h.kill).toHaveBeenCalledOnce();
+  });
+
+  // The relay classifies the parked session's root with it, so a session a launch rooted at
+  // `<home>/<repo-name>` is found.
+  it('asks with the launching project\'s origin, with its credential removed', () => {
+    const h = harness('https://ghp_secret@github.com/owner/repo.git');
+    void queryParkedCapture(h.managers, h.record, 'h1');
+    h.transport().onData(`${encodeHandshake()}\n`);
+
+    expect(h.write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({
+      type: 'capture-request', session: h.record.session, id: 'h1', request: '1', origin: 'https://github.com/owner/repo.git',
+    })}\n`);
+  });
+
+  it('asks with no origin for a project without one', () => {
+    const h = harness();
+    void queryParkedCapture(h.managers, h.record, 'h1');
+    h.transport().onData(`${encodeHandshake()}\n`);
+
+    expect(h.write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({
+      type: 'capture-request', session: h.record.session, id: 'h1', request: '1',
+    })}\n`);
   });
 
   it('returns a remote protocol failure to the caller', async () => {

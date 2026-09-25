@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let an attach or a parked-capture query find a session rooted at the cloned home-directory folder, closing the functionality gap that ends every such session on its first reconnect.
-
-Existing Issue: A session provisioned through the no-path or `~` home flow is rooted at `~/<repo-name>`, but an attach and a parked-capture query resolve their root with no origin, by the address path or the walk-up from the login directory alone, so they look for the peer record in a directory that does not hold it and refuse the session. Severity: 7/10
-
-Existing Risk: 7/10 - Every automatic reconnect after a laptop sleep or network drop, every attach from the sessions tab, and every detached `harness capture` of such a session fails and ends the session, discarding a running harness or agent on exactly the launch shape this pull request advertises as "later launches just work".
-
-Proposal Risk: 3/10 - Attach gains the same origin comparison a launch has, so a host whose home folder was replaced by a different repository after the session parked would refuse the attach, which is the correct answer but a newly reachable one that needs its own test.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1200: resolve an attach's and a parked-capture query's root through the home-directory lookup so sessions rooted at ~/<repo-name> can be reattached". `RemoteServer.attach` and the `capture-request` arm in src/remote/serve.ts call `lookupRoot`, which uses `rootForRelay` in src/remote/serve-root-settle.ts, which calls `resolveRemoteRoot(pathArgument, undefined, …)` in src/remote/serve-root.ts. With no origin, a no-path address walks up from the login directory and never reaches `~/<repo-name>`, and a `~` address is refused as not a repository, while `DetachedPeer` in src/remote/serve-detach.ts wrote its record under `<root>/.janissary/remote/`. Add an optional `origin` to the `attach` and `capture-request` client frames in src/remote/protocol.ts, decoded as `provision.origin` is (`decodeOrigin` in src/remote/frame-decode-root.ts; protocol 21 has not shipped, so no version bump is needed). Send it from `onAttached` in src/remote/entry-factory.ts, reusing `provisionOrigin`, and from the capture query in src/harness/capture-remote.ts. Make `rootForRelay` accept the origin, classify with it, and accept only a `root` outcome, treating an offer or a refusal as no root, so an attach never offers a clone. Keep a relay without an origin behaving as today. Extend src/remote/serve.test.ts: an attach whose home-flow root exists at `<home>/<repo-name>` relays into a peer recorded there (the existing relay tests show how to park a `DetachedPeer` under a root), and an attach with a missing root still answers `accepted: false`. Extend src/remote/serve-root.test.ts or a new settle test for `rootForRelay` with and without an origin, and src/remote/protocol.test.ts for the new optional fields. The existing detached-peer rendezvous tests in src/remote/serve.test.ts must keep passing.
-
-
 * Run the remote root clone's ssh non-interactively, closing the functionality gap where an unanswerable ssh prompt hangs the launch.
 
 Existing Issue: The root clone sets only `GIT_TERMINAL_PROMPT=0`, which does not reach ssh, so a clone over an scp or `ssh://` origin (the path taken whenever no GitHub token is forwarded) lets ssh open the remote's controlling terminal for a host-key confirmation or key passphrase that renders in the placeholder while the placeholder's keystrokes are dropped after the handshake. Severity: 5/10
