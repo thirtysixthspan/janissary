@@ -176,6 +176,24 @@ describe('EditorTab', () => {
     await waitFor(() => expect(document.activeElement).toBe(textareaFor('untitled.md')));
   });
 
+  it('accepting a new name with Return leaves the cursor on line 1 without typing a line break', async () => {
+    const { client } = makeClient();
+    const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    const rows = () => [...container.querySelectorAll(':scope .editor-row .editor-content')].map((n) => n.textContent);
+    await waitFor(() => expect(rows().length).toBeGreaterThan(0));
+    const before = rows();
+    const input = await waitForContainerChild<HTMLInputElement>(container, '.editor-name-input');
+    fireEvent.change(input, { target: { value: 'plan.md' } });
+
+    const notPrevented = fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(notPrevented).toBe(false);
+    await waitFor(() => expect(document.activeElement).toBe(textareaFor('untitled.md')));
+    expect(rows()).toEqual(before);
+    expect(container.querySelector(':scope .editor-row-current .editor-gutter')?.textContent).toBe('1');
+  });
+
   it('escape in the metadata row keeps the default name and returns focus to the buffer', async () => {
     const { client, renameEditorFile } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });

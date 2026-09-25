@@ -110,7 +110,8 @@ works like the tab-label rename: Enter (or clicking away) accepts the typed name
 and metadata row update together; the accepted name follows the same literal-filename rules above.
 If the accepted name equals the current one, nothing is renamed. Escape keeps the default name even
 when characters had been typed over it. After accepting or dismissing, keyboard focus and the input
-caret return to the top of the editor buffer. The metadata row's file name keeps working as a
+caret return to the top of the editor buffer; the Enter that accepts the name is never also typed
+into the buffer, so the caret stays on line 1 and the buffer is unchanged. The metadata row's file name keeps working as a
 double-click-to-rename field afterwards, the same way a tab label is renamed.
 
 Renaming the same file from the file navigator instead (see `file-navigator-tab.md`) has the same

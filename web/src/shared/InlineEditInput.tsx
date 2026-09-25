@@ -28,7 +28,7 @@ export function InlineEditInput({ className, value, maxLength, size, onChange, o
       onChange={(e) => onChange(e.currentTarget.value)}
       onBlur={onCommit}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') { e.currentTarget.blur(); }
+        if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
         else if (e.key === 'Escape') { onCancel(); }
       }}
     />
