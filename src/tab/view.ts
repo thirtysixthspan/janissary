@@ -57,10 +57,10 @@ export function buildTabView(
     cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone.
-    // The browser flag means the tab *has* a browser, not that it was launched with `-b`: a browser
-    // that is gone leaves `tab.browser` set (`profile save` reads it) while `browserError` records
-    // that nothing is there to connect to any more, so the flag drops with the same broadcast that
-    // raises the tab's gone-browser band.
+    // The browser flag reports the tab's launch: `tab.browser` is set from `-b` at spawn and is left
+    // set afterwards (`profile save` reads it), so a `-b` tab is lit before any browser exists and the
+    // only thing that darkens it is the gone-browser report, which the band carries. See the Metadata
+    // row in `product/specs/tabs.md` for why it is not a live-browser indicator.
     flags: [
       ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
       ...(tab.autoApprove ? ['autoApprove'] : []),

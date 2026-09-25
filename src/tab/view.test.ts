@@ -139,16 +139,17 @@ describe('buildTabView', () => {
     expect(view.flags).toContain('autoApprove');
   });
 
-  it('includes \'browser\' in flags when the tab has a browser attached', () => {
+  it('includes \'browser\' in flags for a tab launched with -b', () => {
     const tab = makeTab('claude', '#fff');
     tab.browser = true;
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
     expect(view.flags).toContain('browser');
   });
 
-  // `tab.browser` stays set for `profile save` after the browser dies, so the flag is derived from
-  // the harness view's gone-browser report as well — the row must not claim a browser that is gone.
-  it('drops \'browser\' from flags once the harness reports its browser gone', () => {
+  // The flag is lit from the launch flag, so it stands for the tab's `-b` launch rather than for a
+  // browser behind it — and the one thing that darkens it is the gone-browser report the band carries.
+  // A later connect's fresh browser does not bring it back; see the Metadata row in `tabs.md`.
+  it('drops \'browser\' from flags once the harness reports a browser gone', () => {
     const tab = makeTab('claude', '#fff');
     tab.browser = true;
     tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' };
