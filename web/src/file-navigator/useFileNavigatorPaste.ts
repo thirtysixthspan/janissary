@@ -25,7 +25,7 @@ function conflictTitle(sources: string[], destinationPath: string): string {
 // Owns the paste flow (`Ctrl+V`), mirroring `useFileNavigatorMoveOperations`'s conflict/retry
 // shape. Subscribes to the app-wide clipboard so the tree re-renders when it changes elsewhere
 // (a copy/cut in another navigator, or this one), which is what keeps the cut-row dimming live.
-export function useFileNavigatorPaste(client: JanusClient, index: number, absoluteRoot: string, host?: string) {
+export function useFileNavigatorPaste(client: JanusClient, label: string, absoluteRoot: string, host?: string) {
   useSyncExternalStore(subscribeClipboard, getClipboardSnapshot, getClipboardSnapshot);
   const [pendingConflict, setPendingConflict] = useState<PendingPasteConflict | null>(null);
 
@@ -38,7 +38,7 @@ export function useFileNavigatorPaste(client: JanusClient, index: number, absolu
   ) => {
     const result = await client.request<BulkMoveResult>({
       method: 'pasteFileNavigatorItems',
-      params: { index, sources, destinationPath, mode, policy, sourceHost },
+      params: { label, sources, destinationPath, mode, policy, sourceHost },
     });
     // No answer, so nothing was pasted: dismiss the dialog and leave the tree alone. The clipboard
     // is deliberately left as it is — a cut whose paste never happened still has somewhere to go.

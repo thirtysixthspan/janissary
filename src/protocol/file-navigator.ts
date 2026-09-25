@@ -70,11 +70,15 @@ export type FileNavigatorRpcCall =
   // directory's tree-relative path. A same-named entry already at the destination is replaced only
   // when `overwrite` is set (sent from the conflict dialog's confirm); otherwise the reply is
   // `{ conflictPaths }` and nothing moves.
-  | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string; overwrite?: boolean } }
+  //
+  // The six mutating methods from here to `renameFileNavigatorItem` name the navigator by `label`,
+  // not by `index`: a tab closing ahead of it between the client's snapshot and the request would
+  // otherwise shift the position onto a different navigator and mutate files under its root.
+  | { method: 'moveFileNavigatorItem'; params: { label: string; fromRelPath: string; toRelPath: string; overwrite?: boolean } }
   | {
       method: 'moveFileNavigatorItems';
       params: {
-        index: number;
+        label: string;
         sourcePaths: string[];
         destinationPath: string;
         policy?: BulkConflictPolicy;
@@ -86,7 +90,7 @@ export type FileNavigatorRpcCall =
   | {
       method: 'pasteFileNavigatorItems';
       params: {
-        index: number;
+        label: string;
         sources: string[];
         destinationPath: string;
         mode: 'copy' | 'cut';
@@ -96,13 +100,13 @@ export type FileNavigatorRpcCall =
     }
   // Delete a file or directory (recursively) from a file navigator tab, after the client has already
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
-  | { method: 'deleteFileNavigatorItem'; params: { index: number; relPath: string } }
-  | { method: 'deleteFileNavigatorItems'; params: { index: number; paths: string[] } }
+  | { method: 'deleteFileNavigatorItem'; params: { label: string; relPath: string } }
+  | { method: 'deleteFileNavigatorItems'; params: { label: string; paths: string[] } }
   // Rename a file or directory in place within a file navigator tab (in-directory only — the client has
   // already confirmed an overwrite with the user, if the new name collides with a sibling).
   // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
   // (no path separators).
-  | { method: 'renameFileNavigatorItem'; params: { index: number; relPath: string; newName: string } }
+  | { method: 'renameFileNavigatorItem'; params: { label: string; relPath: string; newName: string } }
   // List every gitignore-aware file under a file navigator tab's own root, for its Search-files
   // pop-up. Replies (deferred) with `{ paths }` — root-relative, matching the tree's own rows.
   | { method: 'fileNavigatorSearch'; params: { index: number } }

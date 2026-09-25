@@ -24,7 +24,9 @@ type PendingConflict =
       title: string;
     };
 
-export function useFileNavigatorMoveOperations(client: JanusClient, index: number) {
+// The two move requests name the navigator by `label` so a tab closing ahead of it cannot redirect
+// them onto another tree; undo/redo still address it by `index`.
+export function useFileNavigatorMoveOperations(client: JanusClient, index: number, label: string) {
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
 
   const sendBatchMove = async (
@@ -35,7 +37,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
   ) => {
     const result = await client.request<BulkMoveResult>({
       method: 'moveFileNavigatorItems',
-      params: { index, sourcePaths, destinationPath, policy },
+      params: { label, sourcePaths, destinationPath, policy },
     });
     // No answer, so nothing moved and there is no conflict report to act on: dismiss the dialog and
     // leave the tree as it stands, rather than reading a field off a result that is not there.
@@ -63,7 +65,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
   const sendScalarMove = async (fromRelPath: string, toRelPath: string) => {
     const result = await client.request<BulkMoveResult>({
       method: 'moveFileNavigatorItem',
-      params: { index, fromRelPath, toRelPath },
+      params: { label, fromRelPath, toRelPath },
     });
     if (result.ok && 'conflictPaths' in result.value) askToOverwrite(fromRelPath, toRelPath);
   };
@@ -135,7 +137,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, index: numbe
       client.send({
         method: 'moveFileNavigatorItem',
         params: {
-          index,
+          label,
           fromRelPath: pendingConflict.fromRelPath,
           toRelPath: pendingConflict.toRelPath,
           overwrite: true,

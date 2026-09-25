@@ -32,13 +32,14 @@ export function useFileNavigatorDrag(
   rows: FileNavigatorRow[],
   client: JanusClient,
   index: number,
+  label: string,
   { absoluteRoot, displayRoot, targetCwd, dropRef, editorDropRef, remoteHost }: FileNavigatorDragOptions,
 ) {
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [draggedCount, setDraggedCount] = useState(0);
   const [dragPosition, setDragPosition] = useState<{ x: number; y: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget>(null);
-  const moves = useFileNavigatorMoveOperations(client, index);
+  const moves = useFileNavigatorMoveOperations(client, index, label);
   const rowsRef = useRef(rows);
   rowsRef.current = rows;
   const dropTargetRef = useRef<DropTarget>(null);

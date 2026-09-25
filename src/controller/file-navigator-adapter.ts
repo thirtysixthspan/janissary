@@ -12,12 +12,12 @@ export type FileNavigatorControllerAdapter = {
   fileNavigatorNothingToCommit(index: number): void;
   fileNavigatorSetDetail(index: number, details: FileNavigatorDetail): void;
   fileNavigatorReroot(index: number, relPath?: string): void;
-  moveFileNavigatorItem(index: number, fromRelPath: string, toRelPath: string, overwrite?: boolean): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItem>;
-  moveFileNavigatorItems(index: number, sourcePaths: string[], destinationPath: string, policy?: BulkConflictPolicy): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItems>;
-  pasteFileNavigatorItems(index: number, sources: string[], destinationPath: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy, sourceHost?: string): ReturnType<typeof fileNavigatorRpc.pasteFileNavigatorItems>;
-  deleteFileNavigatorItem(index: number, relPath: string): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItem>;
-  deleteFileNavigatorItems(index: number, paths: string[]): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItems>;
-  renameFileNavigatorItem(index: number, relPath: string, newName: string): ReturnType<typeof fileNavigatorRpc.renameFileNavigatorItem>;
+  moveFileNavigatorItem(label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItem>;
+  moveFileNavigatorItems(label: string, sourcePaths: string[], destinationPath: string, policy?: BulkConflictPolicy): ReturnType<typeof fileNavigatorRpc.moveFileNavigatorItems>;
+  pasteFileNavigatorItems(label: string, sources: string[], destinationPath: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy, sourceHost?: string): ReturnType<typeof fileNavigatorRpc.pasteFileNavigatorItems>;
+  deleteFileNavigatorItem(label: string, relPath: string): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItem>;
+  deleteFileNavigatorItems(label: string, paths: string[]): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItems>;
+  renameFileNavigatorItem(label: string, relPath: string, newName: string): ReturnType<typeof fileNavigatorRpc.renameFileNavigatorItem>;
   fileNavigatorSearch(index: number): Promise<string[]>;
   revealFileNavigatorItem(index: number, relPath: string): void;
   fileNavigatorOpeners(index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution;
@@ -43,12 +43,12 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     fileNavigatorNothingToCommit: (index) => fileNavigatorRpc.fileNavigatorNothingToCommit(managers, index),
     fileNavigatorSetDetail: (index, details) => fileNavigatorRpc.fileNavigatorSetDetail(managers, index, details),
     fileNavigatorReroot: (index, relPath) => fileNavigatorRpc.fileNavigatorReroot(managers, index, relPath),
-    moveFileNavigatorItem: (index, from, to, overwrite) => fileNavigatorRpc.moveFileNavigatorItem(managers, index, from, to, overwrite),
-    moveFileNavigatorItems: (index, sources, destination, policy) => fileNavigatorRpc.moveFileNavigatorItems(managers, index, sources, destination, policy),
-    pasteFileNavigatorItems: (index, sources, destination, mode, policy, sourceHost) => fileNavigatorRpc.pasteFileNavigatorItems(managers, index, sources, destination, mode, policy, sourceHost),
-    deleteFileNavigatorItem: (index, relPath) => fileNavigatorRpc.deleteFileNavigatorItem(managers, index, relPath),
-    deleteFileNavigatorItems: (index, paths) => fileNavigatorRpc.deleteFileNavigatorItems(managers, index, paths),
-    renameFileNavigatorItem: (index, relPath, newName) => fileNavigatorRpc.renameFileNavigatorItem(managers, index, relPath, newName),
+    moveFileNavigatorItem: (label, from, to, overwrite) => fileNavigatorRpc.moveFileNavigatorItem(managers, label, from, to, overwrite),
+    moveFileNavigatorItems: (label, sources, destination, policy) => fileNavigatorRpc.moveFileNavigatorItems(managers, label, sources, destination, policy),
+    pasteFileNavigatorItems: (label, sources, destination, mode, policy, sourceHost) => fileNavigatorRpc.pasteFileNavigatorItems(managers, label, sources, destination, mode, policy, sourceHost),
+    deleteFileNavigatorItem: (label, relPath) => fileNavigatorRpc.deleteFileNavigatorItem(managers, label, relPath),
+    deleteFileNavigatorItems: (label, paths) => fileNavigatorRpc.deleteFileNavigatorItems(managers, label, paths),
+    renameFileNavigatorItem: (label, relPath, newName) => fileNavigatorRpc.renameFileNavigatorItem(managers, label, relPath, newName),
     fileNavigatorSearch: (index) => fileNavigatorRpc.fileNavigatorSearch(managers, index),
     revealFileNavigatorItem: (index, relPath) => fileNavigatorRpc.revealFileNavigatorItem(managers, index, relPath),
     fileNavigatorOpeners: (index, relPath, edit, all) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit, all),

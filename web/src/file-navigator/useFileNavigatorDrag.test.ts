@@ -72,7 +72,7 @@ function useFileNavigatorDrag(
   remoteHost?: string,
 ) {
   const legacy = typeof absoluteRootOrDropRef !== 'string' || typeof displayRootOrEditorRef !== 'string';
-  return useFileNavigatorDragImplementation(rows, client, index, {
+  return useFileNavigatorDragImplementation(rows, client, index, 'files', {
     absoluteRoot: legacy ? '' : absoluteRootOrDropRef,
     displayRoot: typeof displayRootOrEditorRef === 'string' ? displayRootOrEditorRef : '',
     targetCwd,
@@ -151,7 +151,7 @@ describe('useFileNavigatorDrag', () => {
     act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
     act(() => { result.current.drop(); });
 
-    expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+    expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other' } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -186,7 +186,7 @@ describe('useFileNavigatorDrag', () => {
     act(() => { result.current.drop(); });
     act(() => { result.current.confirmOverwrite(); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'notes.txt', toRelPath: 'dest', overwrite: true } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'dest', overwrite: true } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -210,7 +210,7 @@ describe('useFileNavigatorDrag', () => {
     });
 
     act(() => { result.current.confirmOverwrite(); });
-    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other', overwrite: true } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other', overwrite: true } });
     expect(result.current.pendingConflict).toBeNull();
   });
 
@@ -367,7 +367,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
 
@@ -449,7 +449,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(editorDropRef.current.insertAtCaret).not.toHaveBeenCalled();
     });
   });
@@ -544,7 +544,7 @@ describe('useFileNavigatorDrag', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
       act(() => { result.current.drop(); });
 
-      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 3, fromRelPath: 'notes.txt', toRelPath: 'other' } });
+      expect(client.request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { label: 'files', fromRelPath: 'notes.txt', toRelPath: 'other' } });
       expect(harness.insertAtCaret).not.toHaveBeenCalled();
     });
   });
@@ -573,7 +573,7 @@ describe('useFileNavigatorDrag', () => {
     expect(client.request).toHaveBeenCalledWith({
       method: 'moveFileNavigatorItems',
       params: {
-        index: 4,
+        label: 'files',
         sourcePaths: ['notes.txt', 'second.txt'],
         destinationPath: 'other',
         policy: undefined,

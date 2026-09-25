@@ -1512,15 +1512,15 @@ describe('Controller files tab', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.moveFileNavigatorItem(index, 'notes.txt', 'dest');
+    c.moveFileNavigatorItem(c.view()[index].label, 'notes.txt', 'dest');
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'notes.txt')).toBe(false);
   });
 
-  it('moveFileNavigatorItem RPC on an out-of-range index does nothing', () => {
+  it('moveFileNavigatorItem RPC on a label no open tab carries does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    expect(() => c.moveFileNavigatorItem(99, 'a', 'b')).not.toThrow();
+    expect(() => c.moveFileNavigatorItem('gone', 'a', 'b')).not.toThrow();
   });
 
   it('deleteFileNavigatorItem RPC deletes a file and rebuilds the tree', () => {
@@ -1528,15 +1528,15 @@ describe('Controller files tab', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    c.deleteFileNavigatorItem(index, 'notes.txt');
+    c.deleteFileNavigatorItem(c.view()[index].label, 'notes.txt');
     const tab = c.view()[index];
     expect(tab.files?.rows.some((r) => r.path === 'notes.txt')).toBe(false);
   });
 
-  it('deleteFileNavigatorItem RPC on an out-of-range index does nothing', () => {
+  it('deleteFileNavigatorItem RPC on a label no open tab carries does nothing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    expect(() => c.deleteFileNavigatorItem(99, 'a')).not.toThrow();
+    expect(() => c.deleteFileNavigatorItem('gone', 'a')).not.toThrow();
   });
 
   it('fileNavigatorReroot RPC on an out-of-range index does nothing', () => {

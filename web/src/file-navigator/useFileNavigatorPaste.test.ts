@@ -21,20 +21,20 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('copy', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 2, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     act(() => { result.current.paste(makeRows(), 'dest'); });
 
     expect(request).toHaveBeenCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 2, sources: ['/other/a.txt'], destinationPath: 'dest', mode: 'copy', policy: undefined },
+      params: { label: 'files', sources: ['/other/a.txt'], destinationPath: 'dest', mode: 'copy', policy: undefined },
     });
   });
 
   it('an empty clipboard sends nothing', () => {
     const request = vi.fn();
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     act(() => { result.current.paste(makeRows(), null); });
 
@@ -45,7 +45,7 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('copy', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
 
@@ -58,13 +58,13 @@ describe('useFileNavigatorPaste', () => {
       .mockResolvedValueOnce({ ok: true, value: { conflictPaths: ['/other/a.txt'] } })
       .mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
 
     await act(async () => { result.current.confirmOverwrite(); await Promise.resolve(); });
     expect(request).toHaveBeenLastCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/other/a.txt'], destinationPath: '', mode: 'copy', policy: 'overwrite-all' },
+      params: { label: 'files', sources: ['/other/a.txt'], destinationPath: '', mode: 'copy', policy: 'overwrite-all' },
     });
 
     request.mockResolvedValueOnce({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });
@@ -72,7 +72,7 @@ describe('useFileNavigatorPaste', () => {
     await act(async () => { result.current.skipConflicts(); await Promise.resolve(); });
     expect(request).toHaveBeenLastCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/other/a.txt'], destinationPath: '', mode: 'copy', policy: 'skip-conflicts' },
+      params: { label: 'files', sources: ['/other/a.txt'], destinationPath: '', mode: 'copy', policy: 'skip-conflicts' },
     });
   });
 
@@ -80,7 +80,7 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('cut', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
     expect(getClipboardSnapshot()).toBeNull();
@@ -89,26 +89,26 @@ describe('useFileNavigatorPaste', () => {
   it('duplicate copies a nested row into its own parent directory', () => {
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 4, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     act(() => { result.current.duplicate({ path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false }); });
 
     expect(request).toHaveBeenCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 4, sources: ['/root/src/index.ts'], destinationPath: 'src', mode: 'copy', policy: undefined },
+      params: { label: 'files', sources: ['/root/src/index.ts'], destinationPath: 'src', mode: 'copy', policy: undefined },
     });
   });
 
   it('duplicate targets the tree root for a top-level row', () => {
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     act(() => { result.current.duplicate({ path: 'dest', name: 'dest', depth: 0, dir: true }); });
 
     expect(request).toHaveBeenCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/root/dest'], destinationPath: '', mode: 'copy', policy: undefined },
+      params: { label: 'files', sources: ['/root/dest'], destinationPath: '', mode: 'copy', policy: undefined },
     });
   });
 
@@ -116,7 +116,7 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('cut', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     await act(async () => {
       result.current.duplicate({ path: 'notes.txt', name: 'notes.txt', depth: 0, dir: false });
@@ -125,7 +125,7 @@ describe('useFileNavigatorPaste', () => {
 
     expect(request).toHaveBeenCalledWith({
       method: 'pasteFileNavigatorItems',
-      params: { index: 0, sources: ['/root/notes.txt'], destinationPath: '', mode: 'copy', policy: undefined },
+      params: { label: 'files', sources: ['/root/notes.txt'], destinationPath: '', mode: 'copy', policy: undefined },
     });
     expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/other/a.txt'] });
   });
@@ -134,7 +134,7 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('copy', ['/other/b.txt']);
     const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
     expect(getClipboardSnapshot()).toEqual({ mode: 'copy', paths: ['/other/b.txt'] });
@@ -147,7 +147,7 @@ describe('useFileNavigatorPaste', () => {
     setClipboard('cut', ['/other/a.txt']);
     const request = vi.fn().mockResolvedValue({ ok: false });
     const client = { request } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorPaste(client, 0, '/root'));
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
 
     await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
 

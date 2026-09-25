@@ -21,7 +21,7 @@ export function ViewTabBody({
 }) {
   const border = { borderLeft: tabBodyBorder(tab.dotColor, active) };
   if (isFilesTabView(tab)) {
-    return <div className="tab-body" style={border}><FileNavigatorTab files={tab.files} client={client} index={index} onSplit={onSplit} multiOpen={multiOpenablePaths} /></div>;
+    return <div className="tab-body" style={border}><FileNavigatorTab files={tab.files} client={client} index={index} label={tab.label} onSplit={onSplit} multiOpen={multiOpenablePaths} /></div>;
   }
   if (tab.view === 'notifications') {
     return <div className="tab-body" style={border}><NotificationsTab lines={tab.bufferLines} client={client} index={index} /></div>;
