@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { openModal } from './modal-open';
 
 /**
  * The application's terse confirmation: a title, a confirm button, a cancel button, and one keyboard
@@ -45,13 +46,17 @@ export function ConfirmDialog({
 
   useEffect(() => {
     dialogRef.current?.focus();
+    const releaseModal = openModal();
     const onKeyDown = (event: KeyboardEvent) => {
       event.preventDefault();
       event.stopPropagation();
       actionsRef.current[event.key.toLowerCase()]?.();
     };
     globalThis.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => { globalThis.removeEventListener('keydown', onKeyDown, { capture: true }); };
+    return () => {
+      globalThis.removeEventListener('keydown', onKeyDown, { capture: true });
+      releaseModal();
+    };
   }, []);
 
   return (

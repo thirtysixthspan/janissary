@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import { isReportingTab } from './tab-entries';
+import { isModalOpen } from './shared/modal-open';
 
 export type Section = 'left' | 'center' | 'right' | 'reporting';
 
@@ -48,7 +49,8 @@ function focusSection(section: Section, focusCenter: () => void): void {
 // (left sidebar → center → right sidebar → reporting, wrapping), landing on each section's
 // currently-visible tab. Runs in the capture phase so it intercepts the chord ahead of xterm
 // (which would otherwise consume it inside a focused terminal) and ahead of the browser's own
-// focus traversal.
+// focus traversal. It stands down while a modal dialog is open, so the chord cannot pull focus out
+// of the dialog.
 export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -58,6 +60,7 @@ export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.defaultPrevented || isModalOpen()) return;
       const present = getPresentSections(tabsRef.current);
       const current = resolveCurrentSection(document.activeElement);
       const next = nextSection(current, present);

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { openModal } from './modal-open';
 
 // A key→handler map, keyed by lowercased `KeyboardEvent.key` ('y', 'enter', 'arrowleft', …).
 export type DialogKeyMap = Record<string, () => void>;
@@ -15,7 +16,9 @@ function dispatchByKey(keys: DialogKeyMap): (e: KeyboardEvent) => void {
 
 // Global keyboard + click-outside wiring shared by the app's modal dialogs: focuses the dialog on
 // mount, registers capture-phase keydown/click listeners, and tears them down on unmount. Clicks
-// outside the dialog are swallowed so the modal keeps focus.
+// outside the dialog are swallowed so the modal keeps focus. While mounted the dialog is also
+// registered with the app-wide modal signal (see modal-open), which the window-level shortcuts
+// consult because this listener cannot stop theirs.
 //
 // Each dialog supplies either a raw keydown handler (it decides what to swallow) or a key→handler
 // map (every key is swallowed, mapped ones dispatch). Either way it is held in a ref refreshed on
@@ -30,6 +33,7 @@ export function useDialogKeyboard(
 
   useEffect(() => {
     dialogRef.current?.focus();
+    const releaseModal = openModal();
 
     const handleKeyDown = (e: KeyboardEvent) => onKeyDownRef.current(e);
     const onClickOutside = (e: MouseEvent) => {
@@ -42,6 +46,7 @@ export function useDialogKeyboard(
     return () => {
       globalThis.removeEventListener('keydown', handleKeyDown, { capture: true });
       globalThis.removeEventListener('click', onClickOutside, { capture: true });
+      releaseModal();
     };
   }, [dialogRef]);
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ConfirmDialog } from './ConfirmDialog';
+import { isModalOpen } from './modal-open';
 
 // The keyboard contract had never been tested in either of the two copies this component replaced —
 // what their suites covered was the wording and the click paths. Sharing the component is only safe
@@ -83,5 +84,13 @@ describe('ConfirmDialog', () => {
     unmount();
     press('Escape');
     expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  // Window-level shortcuts such as Cmd+W run ahead of this listener, so they ask the modal signal.
+  it('registers as an open modal while mounted and releases it on unmount', () => {
+    const { unmount } = dialog();
+    expect(isModalOpen()).toBe(true);
+    unmount();
+    expect(isModalOpen()).toBe(false);
   });
 });

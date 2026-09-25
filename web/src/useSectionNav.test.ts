@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
+import { useRef } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
+import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { getPresentSections, resolveCurrentSection, nextSection, useSectionNav } from './useSectionNav';
 
 function makeTab(overrides: Partial<TabView> = {}): TabView {
@@ -108,6 +110,20 @@ describe('useSectionNav', () => {
     document.dispatchEvent(event);
 
     expect(document.activeElement).toBe(document.querySelector('#files-target'));
+    expect(focusCenter).not.toHaveBeenCalled();
+  });
+
+  it('does nothing while a dialog built on useDialogKeyboard is open', () => {
+    document.body.innerHTML = '<div class="app-center"></div><div class="sidebar-left"><div class="files-tab" tabindex="0" id="files-target"></div></div>';
+    const tabs = [makeTab({ dock: 'left', view: 'files' })];
+    const focusCenter = vi.fn();
+    renderHook(() => useSectionNav(tabs, focusCenter));
+    renderHook(() => { useDialogKeyboard(useRef<HTMLDivElement>(null), { escape: vi.fn() }); });
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(document.activeElement).not.toBe(document.querySelector('#files-target'));
     expect(focusCenter).not.toHaveBeenCalled();
   });
 

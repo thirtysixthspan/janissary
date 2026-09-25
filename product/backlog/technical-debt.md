@@ -4,17 +4,6 @@
 
 ## development
 
-* Stop Cmd+W and Shift+Tab from acting behind an open modal dialog by giving the app one shared "a modal is open" signal that the window-level shortcut hooks consult.
-
-Existing Debt: Nothing in the client records whether a modal dialog is open — each dialog blocks keys by swallowing them in its own capture-phase window listener, which cannot stop other capture listeners on the same target — so the global Cmd+W and Shift+Tab hooks each rely on a hand-picked list of overlays (or none) that has fallen behind the dialogs the app now has. Severity: 5/10
-
-Existing Risk: 6/10 - With the save-changes dialog open for a dirty background tab, Cmd+W closes the clean active tab behind it, and Shift+Tab moves focus out of any modal into a sidebar section, so a keyboard user can close the wrong tab or lose the dialog's focus in normal use.
-
-Proposal Risk: 2/10 - Every dialog built on the shared keyboard hook registers itself, so a new dialog is covered by default, and only a modal that bypasses that hook could still be missed.
-
-Proposal: `useDialogKeyboard` in `web/src/shared/useDialogKeyboard.ts` registers a capture-phase `keydown` listener on `globalThis` and calls `preventDefault()`/`stopPropagation()`, which do not stop `useCmdW` in `web/src/useCmdW.ts` or `useSectionNav` in `web/src/useSectionNav.ts`, both also capture-phase listeners on `globalThis`. `useCmdW` bails only on `pickerOpenRef`, `routeRef`, and `quitConfirmOpenRef` (fed by `web/src/useCmdWRefs.ts` from the picker overlays and the two quit dialogs), so it ignores `SaveChangesDialog`, `HarnessLaunchDialog`, `ScheduleDialog`, the file-navigator conflict dialogs, and every `ConfirmDialogShell` user; `useSectionNav` has no check at all. Add a small framework-free modal counter in `web/src/shared/` (an `open()` returning a release function plus an `isOpen()` read), have `useDialogKeyboard` open it on mount and release it in the same effect cleanup, and make both `useCmdW` and `useSectionNav` return early when it reports open (checking `e.defaultPrevented` as well costs nothing and covers listener-order cases). Keep the existing ref checks in `useCmdW` for the pickers, which are not built on `useDialogKeyboard`. Add one case each to `web/src/useCmdW.test.tsx` and `web/src/useSectionNav.test.ts` with a dialog mounted through `useDialogKeyboard`, asserting the chord does nothing; the existing picker, route-chooser, and quit-dialog cases in `useCmdW.test.tsx` must keep passing.
-
-
 * Route agent-to-agent `command` and `request` messages through the same command resolution the command bar uses, instead of the capture manager's own parallel dispatcher.
 
 Existing Debt: Because a registered command's `run` returns nothing, the capture manager that serves agent messages re-implements dispatch beside the registry — matching `shell` by its own regex, branching on command names for `acp` and `browser`, guessing the output from the tab's last log entry, and duplicating the unknown-command router — contradicting principle 5's "one command, one execution path". Severity: 6/10
