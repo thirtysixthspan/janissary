@@ -22,7 +22,7 @@ function attachedChannel(session?: string) {
     onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn(),
   });
   channel.sessionId = session;
-  channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+  channel.receive(`${encodeHandshake()}\n`);
   const reply = (id: string, data: string) => { channel.receive(`${encodeFrame({ type: 'output', id, data })}\n`); };
   return { channel, sent, reply };
 }

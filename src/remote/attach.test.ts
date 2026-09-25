@@ -32,7 +32,7 @@ function setup() {
   const remote = new RemoteManager(managers);
   const handlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() };
   const channel = remote.create(tab.label, { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local', handlers);
-  transports[0].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+  transports[0].onData(`${encodeHandshake(sessionId)}\n`);
   const frame = (value: ServerFrame) => transports.at(-1)!.onData(`${encodeFrame(value)}\n`);
   frame({ type: 'workspace-ready', dir: '/remote/work' });
   return { tab, remote, channel, managers, handlers, transports, frame };
@@ -54,7 +54,7 @@ describe('remote attachment', () => {
     vi.advanceTimersByTime(250);
     expect(h.transports).toHaveLength(2);
     expect(h.remote.get('work')).toBe(h.channel);
-    h.transports[1].onData(`${encodeHandshake('/remote', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')}\n`);
+    h.transports[1].onData(`${encodeHandshake('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')}\n`);
     expect(h.transports[1].write).toHaveBeenCalledExactlyOnceWith(`${encodeFrame({ type: 'attach', session: sessionId })}\n`);
     h.channel.send({ type: 'input', id: 'r1', data: 'discard' });
     expect(h.transports[1].write).toHaveBeenCalledTimes(1);
@@ -70,7 +70,7 @@ describe('remote attachment', () => {
 
   it('leaves a harness tab\'s log untouched on a truncated replay', () => {
     const h = setup(); h.transports[0].onExit(); vi.advanceTimersByTime(250);
-    h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    h.transports[1].onData(`${encodeHandshake(sessionId)}\n`);
     const before = h.tab.log.length;
     h.frame({ type: 'attach-result', accepted: true, truncated: true });
     expect(h.tab.log.length).toBe(before);
@@ -80,7 +80,7 @@ describe('remote attachment', () => {
   it('appends a drop notice to a non-harness tab\'s log on a truncated replay', () => {
     const h = setup(); h.tab.view = 'agent'; h.tab.harness = undefined;
     h.transports[0].onExit(); vi.advanceTimersByTime(250);
-    h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    h.transports[1].onData(`${encodeHandshake(sessionId)}\n`);
     h.frame({ type: 'attach-result', accepted: true, truncated: true });
     expect(h.tab.log.at(-1)?.output).toContain('dropped to limit memory use');
     h.remote.dispose();
@@ -97,7 +97,7 @@ describe('remote attachment', () => {
 
   it('stops on refusal, retains the ended tab and transcript, and notifies exactly once', () => {
     const h = setup(); h.transports[0].onExit(); vi.advanceTimersByTime(250);
-    h.transports[1].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    h.transports[1].onData(`${encodeHandshake(sessionId)}\n`);
     h.frame({ type: 'attach-result', accepted: false });
     h.transports[1].onExit(); vi.advanceTimersByTime(60_000);
     expect(h.transports).toHaveLength(2);
@@ -148,7 +148,7 @@ describe('remote attachment', () => {
     const remote = new RemoteManager(managers);
     const channel = remote.create('work', { destination: 'devbox', host: 'devbox', address: 'devbox' }, '/local',
       { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
-    transports[0].onData(`${encodeHandshake('/remote', sessionId)}\n`);
+    transports[0].onData(`${encodeHandshake(sessionId)}\n`);
     const frame = (value: ServerFrame) => transports.at(-1)!.onData(`${encodeFrame(value)}\n`);
     frame({ type: 'workspace-ready', dir: '/remote/work' });
     expect(remote.attach('joined', 'work')).toBe(true);

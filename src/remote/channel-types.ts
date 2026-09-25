@@ -1,4 +1,4 @@
-import type { RemoteHandshake, ServerFrame } from './protocol.js';
+import type { RemoteFrame, RemoteHandshake, ServerFrame } from './protocol.js';
 
 // The pure type declarations `RemoteChannel` is built against, split out so the class file itself
 // holds only the state machine — the same reason `SessionListener` and `AcpSessionListener` already
@@ -28,8 +28,25 @@ export type NavigatorListener = {
 // ready workspace, a failed one, or a refused label), the transcript pushes, and the browser-gone
 // report. Everything else inbound is routed to a `SessionListener` instead. `browser-exited` carries
 // a session id but is not that session's output — the tab it names is resolved by the manager,
-// since joined tabs share a channel.
-export type ChannelFrame = Extract<ServerFrame, { type: 'workspace-ready' | 'workspace-failed' | 'name-in-use' | 'transcript' | 'browser-exited' | 'attach-result' | 'session-state-result' }>;
+// since joined tabs share a channel. `clone-offer` and `root-refused` are the provisioning answer
+// too, for a project root that is missing or unusable.
+export type ChannelFrame = Extract<ServerFrame, {
+  type: 'workspace-ready' | 'workspace-failed' | 'name-in-use' | 'clone-offer' | 'root-refused' | 'transcript'
+    | 'browser-exited' | 'attach-result' | 'session-state-result';
+}>;
+
+// The same list as data, keyed by the union so a frame added to `ChannelFrame` without an entry here
+// is a compile error rather than one the channel refuses as unexpected.
+const CHANNEL_FRAME_KEYS: Record<ChannelFrame['type'], true> = {
+  'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, 'clone-offer': true, 'root-refused': true,
+  transcript: true, 'browser-exited': true, 'attach-result': true, 'session-state-result': true,
+};
+
+export const CHANNEL_FRAME_TYPES: ReadonlySet<string> = new Set(Object.keys(CHANNEL_FRAME_KEYS));
+
+export function isChannelFrame(frame: RemoteFrame): frame is ChannelFrame {
+  return CHANNEL_FRAME_TYPES.has(frame.type);
+}
 
 export type RemoteChannelHandlers = {
   // Bytes produced before the handshake — ssh's banner, motd, and authentication prompts.

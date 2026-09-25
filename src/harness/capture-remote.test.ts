@@ -32,7 +32,7 @@ describe('queryParkedCapture', () => {
     vi.useFakeTimers();
     const h = harness();
     const result = queryParkedCapture(h.managers, h.record, 'h1');
-    h.transport().onData(`${encodeHandshake('/srv')}\n`);
+    h.transport().onData(`${encodeHandshake()}\n`);
     h.transport().onData(`${encodeFrame({ type: 'capture-reply', id: 'h1', request: '1', text: 'screen', capturedAt: 1 })}\n`);
 
     await expect(result).resolves.toEqual({ text: 'screen', capturedAt: 1 });

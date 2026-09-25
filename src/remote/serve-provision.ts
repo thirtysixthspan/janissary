@@ -49,6 +49,7 @@ export type ProvisionContext = {
  */
 export async function provisionRemoteWorkspace(
   context: ProvisionContext, label: string, forwarded: ProjectTokens, identity: GitIdentity,
+  cloned?: { url: string; path: string },
 ): Promise<void> {
   const { emit, workspaces } = context;
   if (!context.idle()) return;
@@ -61,15 +62,6 @@ export async function provisionRemoteWorkspace(
   const failure = removeLeftoverWorkspace(label);
   if (failure !== undefined) { emit({ type: 'name-in-use', label, path: workspacePath(label), reason: failure }); return; }
   context.peer?.setLabel(label);
-  const result = workspaces.create(label);
-  if ('error' in result) { emit({ type: 'workspace-failed', message: result.error }); return; }
-  try {
-    await result.ready;
-  } catch (error) {
-    emit({ type: 'workspace-failed', message: errorText(error) });
-    return;
-  }
-  if (context.stopping()) { workspaces.removeAll(); return; }
   const own = getProjectTokens();
   // Per token, a forwarded value wins and this machine's own file is the fallback — spreading own
   // first and forwarded over it says exactly that, since `loadProjectTokens` omits absent
@@ -80,6 +72,17 @@ export async function provisionRemoteWorkspace(
   // on either machine and are working as intended, so a mirrored notice would speak on the
   // ordinary case rather than warn about anything.
   const tokens = { ...own, ...forwarded };
+  // The clone fetches with the same GitHub credential the workspace's processes will get, so a host
+  // with no GitHub access of its own can still clone a private repository.
+  const result = workspaces.create(label, tokens.github);
+  if ('error' in result) { emit({ type: 'workspace-failed', message: result.error }); return; }
+  try {
+    await result.ready;
+  } catch (error) {
+    emit({ type: 'workspace-failed', message: errorText(error) });
+    return;
+  }
+  if (context.stopping()) { workspaces.removeAll(); return; }
   // The identity, unlike the tokens, is replaced whole or not at all: a name from the local
   // machine paired with an email from this one belongs to nobody, so a forwarded identity either
   // stands on its own or this machine's own stays as the fallback.
@@ -95,5 +98,6 @@ export async function provisionRemoteWorkspace(
     dir: result.dir,
     notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github)),
     ...(leftover !== undefined && { cleaned: leftover }),
+    ...(cloned !== undefined && { cloned }),
   });
 }

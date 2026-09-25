@@ -14,7 +14,7 @@ export type { AcpSessionListener } from './channel-acp.js';
 export type {
   ChannelTransport, NavigatorListener, ChannelFrame, RemoteChannelHandlers,
 } from './channel-types.js';
-import type { ChannelTransport, NavigatorListener, RemoteChannelHandlers } from './channel-types.js';
+import { isChannelFrame, type ChannelTransport, type NavigatorListener, type RemoteChannelHandlers } from './channel-types.js';
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
 
@@ -40,6 +40,9 @@ export class RemoteChannel {
   get ptyId(): string { return this.transport.id; }
 
   get attached(): boolean { return this.state === 'attached'; }
+
+  // Still a plain terminal: the handshake has not landed, so keystrokes answer ssh's own prompts.
+  get authenticating(): boolean { return this.state === 'authenticating'; }
 
   // Route this process id's output and exit frames. The id is chosen by the caller and is the same
   // id the spawn frame carries.
@@ -233,16 +236,8 @@ export class RemoteChannel {
       return;
     }
     if (dispatchAcp(this.acpSessions, frame)) return;
-    switch (frame.type) {
-    case 'workspace-ready':
-    case 'attach-result':
-    case 'session-state-result':
-    case 'workspace-failed':
-    case 'name-in-use':
-    case 'browser-exited':
-    case 'transcript': { this.handlers.onFrame(frame); return; }
-    default: { this.fail(`Unexpected remote frame "${frame.type}".`); }
-    }
+    if (isChannelFrame(frame)) { this.handlers.onFrame(frame); return; }
+    this.fail(`Unexpected remote frame "${frame.type}".`);
   }
 
   private fail(message: string): void {

@@ -2,8 +2,10 @@ import { existsSync, mkdirSync, renameSync, rmSync, readdirSync, readFileSync, w
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import { execSync, execFile, spawn, type ChildProcess } from 'node:child_process';
+import { execSync, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { toHttpsUrl } from '../git/repository-url.js';
+import { startGitClone } from '../git/clone.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -102,16 +104,6 @@ export function getRemoteUrl(repoPath: string): string {
   return url;
 }
 
-// Handles `git@github.com:owner/repo.git` and `ssh://git@github.com/owner/repo.git`; an
-// already-HTTPS URL passes through unchanged.
-export function toHttpsUrl(url: string): string {
-  const scpMatch = /^git@([^:]+):(.+?)(\.git)?$/.exec(url);
-  if (scpMatch) return `https://${scpMatch[1]}/${scpMatch[2]}.git`;
-  const sshMatch = /^ssh:\/\/git@([^/]+)\/(.+?)(\.git)?$/.exec(url);
-  if (sshMatch) return `https://${sshMatch[1]}/${sshMatch[2]}.git`;
-  return url;
-}
-
 export type ProvisionHandle = {
   // The workspace's target directory — known up front, before the clone starts.
   dir: string;
@@ -127,33 +119,22 @@ export type ProvisionHandle = {
 // clone; only the slow parts (the clone itself, plus the setup that has to run after it) are
 // asynchronous here. Exposes `cancel()` so a caller can kill an in-flight clone (e.g. the tab
 // it belongs to was closed before it finished) instead of only being able to wait for it.
-export function provisionWorkspace(name: string, remoteUrl: string): ProvisionHandle {
+//
+// A local `-w` clone passes no `githubToken` and clones over whatever transport already works on
+// the host (this runs unsandboxed, so SSH is fine here) — intentional: user-driven workspace
+// creation; only local-user commands reach this sink. A remote workspace passes the forwarded
+// GitHub credential, which `startGitClone` applies to a github.com origin only.
+export function provisionWorkspace(name: string, remoteUrl: string, githubToken?: string): ProvisionHandle {
   ensureWorkspaceDir();
   const target = workspacePath(name);
-  let cancelled = false;
-  let child: ChildProcess | undefined;
+  const clone = startGitClone(remoteUrl, target, { githubToken });
 
   async function run(): Promise<void> {
-    // Clone over whatever transport already works on the host (this runs unsandboxed, so SSH is
-    // fine here) — intentional: user-driven workspace creation; only local-user commands reach
-    // this sink. Run via `spawn` (no shell) rather than `execSync` so it doesn't block the event
-    // loop and so the child process can be killed on cancel.
-    child = spawn('git', ['clone', remoteUrl, target], { stdio: 'ignore' });
-    const activeChild = child;
-    const code = await new Promise<number | null>((resolve, reject) => {
-      activeChild.on('error', reject);
-      activeChild.on('exit', resolve);
-    });
-    if (cancelled) throw new Error('Workspace provisioning cancelled.');
-    if (code !== 0) throw new Error(`git clone exited with code ${String(code)}`);
+    await clone.ready;
     await finishProvisioning(name, target, remoteUrl);
   }
 
-  return {
-    dir: target,
-    ready: run(),
-    cancel: () => { cancelled = true; child?.kill(); },
-  };
+  return { dir: target, ready: run(), cancel: clone.cancel };
 }
 
 async function finishProvisioning(name: string, target: string, remoteUrl: string): Promise<void> {

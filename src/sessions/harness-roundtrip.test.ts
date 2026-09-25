@@ -59,7 +59,7 @@ function harness() {
     const transport: Transport = { id: `ssh-${transports.length}`, handlers, connected: true };
     transports.push(transport);
     setTimeout(() => {
-      handlers.onData(transport.id, `${encodeHandshake('/remote-only/project', SESSION)}\n`);
+      handlers.onData(transport.id, `${encodeHandshake(SESSION)}\n`);
     }, 0);
     return {
       id: transport.id, program, resize: vi.fn(),

@@ -124,13 +124,23 @@
 // the request carries the new `overwrite` flag, answering `{ conflictPaths }` instead. A version-19
 // remote drops the flag and renames straight over whatever is there, so a drop into a collapsed
 // folder would keep silently destroying a same-named file while both ends looked healthy.
-export const REMOTE_PROTOCOL_VERSION = 20;
+//
+// Version 21 moves settling the remote project root from startup to the first `provision` or
+// `attach`, so a root that is missing or wrong reaches the local side as a structured answer instead
+// of dying before the handshake. The handshake stops carrying `root`, since it is not known yet when
+// the line is written. `provision` gains `origin`, the launching project's origin, so the far side
+// can check it holds a clone of *this* project. A new `clone-offer` asks whether to create a missing
+// clone, answered by `clone-answer`; `root-refused` carries the reason a root could not be settled;
+// and `workspace-ready` gains `cloned`, reporting a clone made on the way. A version-20 remote
+// resolves its root before the handshake and never offers, so it is refused here like every other
+// mismatch rather than failing a launch with no reason at all.
+export const REMOTE_PROTOCOL_VERSION = 21;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
 export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 
-export type RemoteHandshake = { version: number; root: string; session?: string };
+export type RemoteHandshake = { version: number; session?: string };
 
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
@@ -164,6 +174,7 @@ export type RemoteFilesystemArguments = {
 
 import type { ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
+import type { RootRefusal } from './root-refusal.js';
 import { decodeKnownFrame } from './frame-decode.js';
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
@@ -182,8 +193,12 @@ export type ClientFrame =
   | { type: 'shutdown' }
   // `identity` is the git name and email of the user who opened janissary locally, so commits made
   // in the remote workspace are attributed to them rather than to whatever account the ssh
-  // destination resolved to.
-  | { type: 'provision'; label: string; tokens?: ProjectTokens; identity?: GitIdentity }
+  // destination resolved to. `origin` is the launching project's `origin` with any embedded
+  // credential removed: the far side's root must be a clone of that repository, and a missing one
+  // is offered from it.
+  | { type: 'provision'; label: string; tokens?: ProjectTokens; identity?: GitIdentity; origin?: string }
+  // The user's answer to `clone-offer`, typed into the placeholder tab's terminal.
+  | { type: 'clone-answer'; accept: boolean }
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY
@@ -244,8 +259,14 @@ export type ServerFrame =
   // it ended up with. Both are facts about the machine they hold on, so they are reported from
   // there; `serve-notice.ts` composes them into this one string.
   // `cleaned` is the absolute path of a leftover workspace under the same label that was removed
-  // before this one was cloned, so the local side can say so.
-  | { type: 'workspace-ready'; dir: string; notice?: string; cleaned?: string }
+  // before this one was cloned, so the local side can say so. `cloned` is the project root this
+  // provision cloned first, after an accepted `clone-offer`.
+  | { type: 'workspace-ready'; dir: string; notice?: string; cleaned?: string; cloned?: { url: string; path: string } }
+  // The answer to a `provision` whose project root is missing: may `url` be cloned into `path`?
+  // `home` is present when `path` is `<home>/<repo-name>`, so the prompt can say where it looked.
+  | { type: 'clone-offer'; path: string; url: string; home?: string }
+  // The answer to a `provision` whose project root cannot be used, and nothing was provisioned.
+  | { type: 'root-refused'; refusal: RootRefusal }
   | { type: 'workspace-failed'; message: string }
   // The answer to a `provision` whose label is taken on this host: with neither optional field,
   // something is running under it; with both, a leftover workspace at `path` could not be removed
@@ -326,12 +347,12 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   attach: true, 'session-state': true, shutdown: true,
-  provision: true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true,
+  provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
-  'attach-result': true, 'session-state-result': true,
+  'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
   'shell-history': true, 'browser-exited': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
   'filesystem-reply': true, 'filesystem-event': true,
@@ -404,8 +425,8 @@ export function decodeFrame(line: string): RemoteFrame | { error: string; stray?
   return decodeKnownFrame(type, record);
 }
 
-export function encodeHandshake(root: string, session?: string): string {
-  return `${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: REMOTE_PROTOCOL_VERSION, root, session })}`;
+export function encodeHandshake(session?: string): string {
+  return `${HANDSHAKE_SENTINEL} ${JSON.stringify({ version: REMOTE_PROTOCOL_VERSION, session })}`;
 }
 
 // Read the handshake line's payload, rejecting a protocol version this build does not speak. The
@@ -430,8 +451,7 @@ export function parseHandshake(line: string): RemoteHandshake | { error: string 
   if (record.session !== undefined && (typeof record.session !== 'string' || !/^[a-f\d-]{36}$/.test(record.session))) {
     return { error: 'Malformed remote session id.' };
   }
-  return { version, root: typeof record.root === 'string' ? record.root : '',
-    ...(typeof record.session === 'string' && { session: record.session }) };
+  return { version, ...(typeof record.session === 'string' && { session: record.session }) };
 }
 
 // How many trailing characters of `text` must be held back because they could be the start of

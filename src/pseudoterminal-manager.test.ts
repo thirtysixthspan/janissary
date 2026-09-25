@@ -197,6 +197,28 @@ describe('PseudoterminalManager', () => {
     expect(write).toHaveBeenCalledWith('shutdown');
   });
 
+  it('routes a transport\'s keystrokes through its input handler instead of the PTY', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    const onInput = vi.fn();
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn(), onInput });
+
+    manager.input('pty1', 'y');
+
+    expect(onInput).toHaveBeenCalledWith('y');
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('writes a transport\'s keystrokes to the PTY when it has no input handler', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+
+    manager.input('pty1', 'password\r');
+
+    expect(write).toHaveBeenCalledWith('password\r');
+  });
+
   it('closeTab still kills the tab\'s own PTYs while leaving its transport', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     managers.remote = { get: vi.fn() } as unknown as Managers['remote'];

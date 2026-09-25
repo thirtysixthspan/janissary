@@ -82,7 +82,7 @@ function managerHarness(ready = true, session?: string) {
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn() };
   remote.create('creator', address('devbox'), '/local', handlers);
-  transport?.onData(`${encodeHandshake('/remote', session)}\n`);
+  transport?.onData(`${encodeHandshake(session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, transport: () => transport };
 }
@@ -141,7 +141,7 @@ describe('RemoteManager shared channels', () => {
     expect(h.remote.get('joined')).toBeUndefined();
     expect(h.remote.get('creator')).toBe(replacement);
     expect(replacementHandlers.onClosed).not.toHaveBeenCalled();
-    h.transport()?.onData(`${encodeHandshake('/new')}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
+    h.transport()?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
     await expect(h.remote.readyOf('creator')).resolves.toBe('/new/ws');
   });
 
@@ -161,7 +161,7 @@ describe('RemoteManager shared channels', () => {
     await expect(oldReady).rejects.toThrow();
     expect(h.handlers.onFailed).not.toHaveBeenCalled();
     expect(replacementHandlers.onFailed).not.toHaveBeenCalled();
-    h.transport()?.onData(`${encodeHandshake('/new')}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
+    h.transport()?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/new/ws' })}\n`);
     await expect(h.remote.readyOf('creator')).resolves.toBe('/new/ws');
   });
 
@@ -213,7 +213,7 @@ describe('RemoteManager shared channels', () => {
   it('hands a removed leftover\'s path to onReady', () => {
     const h = managerHarness(false);
     h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', cleaned: '/remote/ws' })}\n`);
-    expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws', undefined, '/remote/ws');
+    expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws', undefined, '/remote/ws', undefined);
   });
 
   it('settles readiness and clears the cache once on final-owner release', async () => {
@@ -406,7 +406,7 @@ function browserHarness(tabs: Tab[]) {
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   remote.create('creator', address('devbox'), '/local', { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn() });
-  transport?.onData(`${encodeHandshake('/remote')}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
+  transport?.onData(`${encodeHandshake()}\n${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
   return {
     managers,
     closeTab,
@@ -520,7 +520,7 @@ describe('RemoteManager attach from a record', () => {
     expect(h.spawnTransport).toHaveBeenCalledWith(
       'creator', 'ssh', expect.any(String), process.cwd(), expect.any(Object),
     );
-    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
     h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
     expect(h.handlers.onReady).toHaveBeenCalledWith('/remote/ws');
@@ -529,7 +529,7 @@ describe('RemoteManager attach from a record', () => {
 
   it('sends attach carrying the recorded session id, and never provision', () => {
     const h = resumeHarness();
-    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
     expect(sent.map((frame) => frame.type)).toEqual(['attach']);
     expect(sent[0]).toEqual({ type: 'attach', session: RECORDED_SESSION, restore: true });
@@ -539,7 +539,7 @@ describe('RemoteManager attach from a record', () => {
   // placeholder tab. Without it the tab would sit as a placeholder and close over a live session.
   it('settles the tab from the recorded workspace directory on an accepted attach', async () => {
     const h = resumeHarness();
-    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
     h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
 
     await expect(h.remote.readyOf('creator')).resolves.toBe('/remote/ws');
@@ -552,7 +552,7 @@ describe('RemoteManager attach from a record', () => {
   // a different fact from an unreachable host and has to be reported as one.
   it('reports a refused attach as refused rather than retrying it', () => {
     const h = resumeHarness();
-    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
     h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: false })}\n`);
 
     expect(h.onResult).toHaveBeenCalledExactlyOnceWith(false);
@@ -560,7 +560,7 @@ describe('RemoteManager attach from a record', () => {
 
   it('answers the caller once, leaving a later transport loss to the ordinary reconnect path', () => {
     const h = resumeHarness();
-    h.transport()?.onData(`${encodeHandshake('/remote', RECORDED_SESSION)}\n`);
+    h.transport()?.onData(`${encodeHandshake(RECORDED_SESSION)}\n`);
     h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     h.transport()?.onData(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
 
@@ -632,5 +632,116 @@ describe('RemoteManager detach', () => {
   it('refuses a label it does not hold', () => {
     const h = managerHarness(true, RECORDED_SESSION);
     expect(h.remote.detach('nothing-here')).toBe(false);
+  });
+});
+
+// A fresh launch whose host settles its project root: the origin it sends, the keystrokes the
+// placeholder routes, the clone offer it answers, and the refusal or clone it hears back.
+function rootHarness(origin: string | undefined) {
+  let transport: { onData: (data: string) => void; onExit: () => void; onInput?: (data: string) => void } | undefined;
+  const write = vi.fn();
+  const managers = {
+    pty: {
+      spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
+        transport = handlers;
+        return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill: vi.fn() };
+      }),
+      reassignTransports: vi.fn(),
+    },
+    sessions: { dropSession: vi.fn() },
+    workspace: { origin: () => origin },
+    tab: { findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs: [], byLabel: vi.fn(), cur: () => ({ label: 'creator' }) },
+  } as unknown as Managers;
+  const terminal: string[] = [];
+  const subscription = messageBus.on('pty', 'data', (event) => { if (event.id === 'ssh1') terminal.push(event.data); });
+  const remote = new RemoteManager(managers);
+  const handlers: RemoteLaunchHandlers = {
+    onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn(), onRootRefused: vi.fn(),
+  };
+  remote.create('creator', address('devbox'), '/local', handlers);
+  const sent = () => write.mock.calls.map(([data]: [string]) => data).join('');
+  return {
+    remote, handlers, write, terminal, sent, transport: () => transport!,
+    dispose: () => { subscription.unsubscribe(); remote.dispose(); },
+  };
+}
+
+describe('RemoteManager — settling the remote root', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('sends the launching project\'s origin, with its credential removed, on provision', () => {
+    const h = rootHarness('https://ghp_secret@github.com/owner/repo.git');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    expect(h.sent()).toContain('"origin":"https://github.com/owner/repo.git"');
+    expect(h.sent()).not.toContain('ghp_secret');
+    h.dispose();
+  });
+
+  it('sends no origin for a project without one', () => {
+    const h = rootHarness(undefined);
+    h.transport().onData(`${encodeHandshake()}\n`);
+    expect(h.sent()).toContain('"type":"provision"');
+    expect(h.sent()).not.toContain('origin');
+    h.dispose();
+  });
+
+  it('passes keystrokes to ssh before the handshake and drops them after it', () => {
+    const h = rootHarness(undefined);
+    h.transport().onInput?.('hunter2\r');
+    expect(h.write).toHaveBeenCalledWith('hunter2\r');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    h.write.mockClear();
+    h.transport().onInput?.('stray keys');
+    expect(h.write).not.toHaveBeenCalled();
+    h.dispose();
+  });
+
+  it('draws a clone offer, answers it from a y, and shows the cloning line', () => {
+    const h = rootHarness('git@github.com:owner/repo.git');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    h.transport().onData(`${encodeFrame({ type: 'clone-offer', path: '/srv/proj', url: 'https://github.com/owner/repo.git' })}\n`);
+    expect(h.terminal.join('')).toContain('/srv/proj is not a clone of this project. Clone https://github.com/owner/repo.git into /srv/proj? [y/N] ');
+    h.write.mockClear();
+    h.transport().onInput?.('x');
+    expect(h.write).not.toHaveBeenCalled();
+    h.transport().onInput?.('y');
+    expect(h.sent()).toBe(`${encodeFrame({ type: 'clone-answer', accept: true })}\n`);
+    expect(h.terminal.join('')).toContain('y\r\nCloning https://github.com/owner/repo.git into /srv/proj…');
+    h.write.mockClear();
+    h.transport().onInput?.('y');
+    expect(h.write).not.toHaveBeenCalled();
+    h.dispose();
+  });
+
+  it('answers a declining key with accept: false', () => {
+    const h = rootHarness('git@github.com:owner/repo.git');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    h.transport().onData(`${encodeFrame({ type: 'clone-offer', path: '/srv/proj', url: 'u' })}\n`);
+    h.write.mockClear();
+    h.transport().onInput?.('\r');
+    expect(h.sent()).toBe(`${encodeFrame({ type: 'clone-answer', accept: false })}\n`);
+    expect(h.terminal.join('')).toContain('n\r\n');
+    h.dispose();
+  });
+
+  it('fails the launch with the composed refusal on root-refused', async () => {
+    const h = rootHarness('git@github.com:owner/repo.git');
+    const ready = h.remote.readyOf('creator');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    const refusal = { kind: 'declined', path: '/srv/proj', url: 'u' } as const;
+    h.transport().onData(`${encodeFrame({ type: 'root-refused', refusal })}\n`);
+    await expect(ready).rejects.toThrow('Cannot launch "creator": /srv/proj on devbox is not a clone of this project — clone declined.');
+    expect(h.handlers.onRootRefused).toHaveBeenCalledWith(refusal);
+    expect(h.handlers.onFailed).not.toHaveBeenCalled();
+    h.dispose();
+  });
+
+  it('hands a cloned root to onReady', () => {
+    const h = rootHarness('git@github.com:owner/repo.git');
+    h.transport().onData(`${encodeHandshake()}\n`);
+    const cloned = { url: 'https://github.com/owner/repo.git', path: '/srv/proj' };
+    h.transport().onData(`${encodeFrame({ type: 'workspace-ready', dir: '/srv/proj/ws', cloned })}\n`);
+    expect(h.handlers.onReady).toHaveBeenCalledWith('/srv/proj/ws', undefined, undefined, cloned);
+    h.dispose();
   });
 });

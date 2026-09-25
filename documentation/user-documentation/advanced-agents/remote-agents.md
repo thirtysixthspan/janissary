@@ -98,14 +98,24 @@ The message appears in the placeholder tab, which closes a few seconds later. A 
 
 SSH's own text shows up verbatim when it can't connect or authentication fails, since it was already rendering in that terminal. Janissary adds these:
 
-- `Remote path not found: <path>`
-- `<path> is not a git repository.`
-- `<root> has no "origin" remote.`
 - `Remote janissary speaks protocol version <n>; this one speaks <m>. Update janissary so both hosts match.`
+- A `Cannot launch "<name>": …` line when the host has no usable clone of this project, for example `Cannot launch "fariz": /srv/proj on devbox is a clone of git@github.com:you/other.git, not git@github.com:you/project.git.` It also goes to the notifications feed.
 
 The version check is stricter than it looks, and deliberately so. It covers what the two sides put in each message, not just the shape of the messages, so an older install that would quietly drop a forwarded token is refused at the handshake rather than opening a tab that runs perfectly and can't push or can't sign in.
 
-You'll also see a failure if `janus` isn't on the remote's `PATH`, if no git repository is found above your login directory, or if the session ends before the workspace is ready.
+You'll also see a failure if `janus` isn't on the remote's `PATH`, or if the session ends before the workspace is ready.
+
+### When the host has no clone of the project
+
+The remote path has to be a clone of this project: a git repository whose `origin` is the same repository as yours, over any transport. When the clone is missing, the placeholder asks whether to create one:
+
+```
+/srv/proj is not a clone of this project. Clone https://github.com/you/project.git into /srv/proj? [y/N]
+```
+
+Press `y` to clone. `n`, Enter, Escape, or Ctrl-C declines. The question comes up when the address names a path that doesn't exist, or when it names no path (or `~`) and nothing is found above your login directory. In the second case the clone goes into a folder named after the repository in the remote home directory, such as `~/project`, and later `on <host>` launches use that folder without asking.
+
+The clone uses this project's `.janissary/github-token` when the `origin` is on GitHub, so a host with no GitHub access of its own can still clone a private repository. The token is never written to the remote host. Once the workspace is ready, `Cloned <url> into <path> on <host>.` appears in the notifications feed.
 
 ## Lifecycle
 

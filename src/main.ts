@@ -7,7 +7,7 @@ import { initStateDirectories, clearStateDirectories } from './state-dirs.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project/init.js';
-import { runRemoteServer } from './remote/serve.js';
+import { runRemoteServer } from './remote/serve-start.js';
 import { parseE2EBrowserArgs, runE2EBrowser } from './browser/e2e-child.js';
 import { loadConfig } from './config.js';
 import { loadLearnedCommands } from './interactive/learned.js';

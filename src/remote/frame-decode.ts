@@ -8,6 +8,9 @@ import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 import { decodeSessionStateResult } from './frame-decode-sessions.js';
 import { decodeShellHistory } from './frame-decode-history.js';
 import {
+  decodeCloneAnswer, decodeCloneOffer, decodeCloned, decodeOrigin, decodeRootRefused,
+} from './frame-decode-root.js';
+import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition,
 } from './frame-decode-detect.js';
 import {
@@ -49,12 +52,14 @@ function decodeIdentity(value: unknown): GitIdentity | undefined {
 function decodeProvision(record: Record<string, unknown>): DecodeResult {
   const tokens = decodeTokens(record.tokens);
   const identity = decodeIdentity(record.identity);
-  if (!nonEmptyString(record.label) || tokens === undefined || identity === undefined) return malformed('provision');
+  const origin = decodeOrigin(record.origin);
+  if (!nonEmptyString(record.label) || tokens === undefined || identity === undefined || origin === false) return malformed('provision');
   return {
     type: 'provision',
     label: record.label,
     ...(Object.hasOwn(record, 'tokens') && { tokens }),
     ...(Object.hasOwn(record, 'identity') && { identity }),
+    ...(origin !== undefined && { origin }),
   };
 }
 
@@ -102,11 +107,14 @@ function decodeBrowserExited(record: Record<string, unknown>): DecodeResult {
 
 function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
   const { dir, notice, cleaned } = record;
-  if (!nonEmptyString(dir) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)) return malformed('workspace-ready');
+  const cloned = decodeCloned(record.cloned);
+  if (!nonEmptyString(dir) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)
+    || cloned === false) return malformed('workspace-ready');
   return {
     type: 'workspace-ready', dir,
     ...(notice !== undefined && { notice }),
     ...(cleaned !== undefined && { cleaned }),
+    ...(cloned !== undefined && { cloned }),
   };
 }
 
@@ -170,6 +178,9 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'session-state-result': { return decodeSessionStateResult(record); }
   case 'shutdown': { return { type }; }
   case 'provision': { return decodeProvision(record); }
+  case 'clone-answer': { return decodeCloneAnswer(record); }
+  case 'clone-offer': { return decodeCloneOffer(record); }
+  case 'root-refused': { return decodeRootRefused(record); }
   case 'spawn': { return decodeSpawn(record); }
   case 'input': { return decodeAddressedData(type, record); }
   case 'resize': { return decodeResize(record); }
