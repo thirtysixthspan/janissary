@@ -1,15 +1,8 @@
-import { nonEmptyString } from './filesystem-argument-checks.js';
-import type { RemoteFrame } from './protocol.js';
+import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
 
 // The ACP family's decoders, in their own module for the same reason `frame-decode-history.ts` has
 // one: `frame-decode.ts` is the dispatcher, and six frame shapes are more validation than a
 // dispatcher arm should hold.
-
-type DecodeResult = RemoteFrame | { error: string };
-
-function malformed(type: string): DecodeResult {
-  return { error: `Malformed remote frame "${type}".` };
-}
 
 // Reject an array and `null` the way `decodeTokens` in `frame-decode.ts` does, and every non-string
 // value with them: an environment override map is spread straight over the ACP subprocess's

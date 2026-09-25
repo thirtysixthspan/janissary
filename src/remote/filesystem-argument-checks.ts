@@ -3,11 +3,8 @@ import type { HistoryStep } from '../file-navigator/moves.js';
 
 // The value-shape predicates every filesystem operation's argument validator is built from, and the
 // one decode helper two of them share. Kept apart from both the operation table and the frame
-// decoder so neither has to import the other to reach them.
-
-export function nonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
+// decoder so neither has to import the other to reach them. `nonEmptyString`, which every frame
+// decoder needs too, lives in `frame-decode-shared.ts`.
 
 export function stringValue(value: unknown): value is string {
   return typeof value === 'string';

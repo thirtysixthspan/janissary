@@ -4,17 +4,6 @@
 
 ## development
 
-* Restore the field the remote session-state decoder drops and pin every remote frame's optional fields with one round-trip test, so hand-written decoders cannot lose fields silently.
-
-Existing Debt: The remote protocol's decoders rebuild each frame field by field, and while the frame-type lists make a missing frame type a compile error, nothing catches a missing field — the session-state decoder already drops the `autoApprove` flag the server sends — and the shared decoder helpers are copied across six decode modules instead of living in one. Severity: 4/10
-
-Existing Risk: 4/10 - The drop is dormant only because attach reads `autoApprove` from this machine's local session record rather than the peer's answer, so the first change that trusts the answer reattaches an auto-approve harness without auto-approve — the "looks healthy while doing the wrong thing" failure the remote protocol's own header warns about.
-
-Proposal Risk: 2/10 - A fixture per frame type makes the compiler demand one for each new frame and the round trip catches a dropped field, but only for fields the fixture fills, since a new optional field on an existing frame type forces no fixture edit.
-
-Proposal: `decodeProcessState` in `src/remote/frame-decode-sessions.ts` destructures only `{ id, program, mode, harness, agentName }`, although `RemoteProcessState` in `src/remote/protocol.ts` declares `autoApprove?: boolean` and `RemoteProcesses.states()` in `src/remote/serve-processes.ts` sends it; add it with the same undefined-or-boolean check the spawn decoder in `src/remote/frame-decode.ts` applies to its own `autoApprove`. Today the `managers.harness.attachRemote` call in `src/sessions/attach.ts` takes the flag from `record.processes` (the local store), which is why nothing is visibly broken. In `src/remote/protocol.test.ts`, add a `Record<RemoteFrame['type'], RemoteFrame>` of fixtures with every optional field populated and one `it.each` asserting each survives the file's existing `roundTrip` helper; the current `session-state-result` fixture omits `autoApprove`, which is why the drop went unnoticed. Then move the duplicated helpers into one `src/remote/frame-decode-shared.ts`: the six `DecodeResult` type and `malformed` function copies in `src/remote/frame-decode.ts`, `frame-decode-acp.ts`, `frame-decode-detect.ts`, `frame-decode-filesystem.ts`, `frame-decode-history.ts`, and `frame-decode-sessions.ts` (two take the frame type for the message and one does not, so keep both forms or unify on the named one without changing any refusal text the tests assert), the two `optionalNonEmptyString` copies, and `nonEmptyString`, which the decoders currently import from the unrelated `src/remote/filesystem-argument-checks.ts`. The wire format does not change, so `REMOTE_PROTOCOL_VERSION` stays as it is; the refusal cases in `src/remote/protocol.test.ts` must keep passing unchanged.
-
-
 * Share the server's tab-placement rules with the web client through one module, instead of the client re-deriving which tabs sit in the center strip, which pane they occupy, which can split, and when closing a tab quits the app.
 
 Existing Debt: The server decides placement in its split module and the quit-on-last-tab rule in its close module, and the client re-implements each rule as its own inline predicate in about eight places, contrary to principle 1's rule that the client never computes state the server also computes. Severity: 5/10

@@ -1,7 +1,8 @@
 import path from 'node:path';
 import {
-  history, historyPaths, nonEmptyString, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
+  history, historyPaths, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
 } from './filesystem-argument-checks.js';
+import { nonEmptyString } from './frame-decode-shared.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
 } from './filesystem-refusal-shapes.js';

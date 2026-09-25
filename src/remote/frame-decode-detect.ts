@@ -1,16 +1,9 @@
-import { nonEmptyString } from './filesystem-argument-checks.js';
-import type { RemoteFrame } from './protocol.js';
+import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
 
 // The decoders for the version-18 detection family — `capture-request`/`capture-reply` and
 // `gate-event`/`busy-transition` — in their own module for the same reason `frame-decode-history.ts`
 // has one: `frame-decode.ts` is the dispatcher, and four frame shapes are more validation than a
 // dispatcher arm should hold.
-
-type DecodeResult = RemoteFrame | { error: string };
-
-function malformed(type: string): DecodeResult {
-  return { error: `Malformed remote frame "${type}".` };
-}
 
 // `new Date(timestamp).toISOString()`, which `harnessArtifactFilename` calls on every capturedAt
 // this family carries, throws RangeError outside this range — a peer-supplied value must be bounded
