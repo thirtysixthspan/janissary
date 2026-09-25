@@ -27,7 +27,11 @@ function highlightRanges(text: string, ranges: [number, number][]): React.ReactN
 
 function EditorFindRow({ result, selected, onSelect }: { result: FuzzyMatchResult; selected: boolean; onSelect: () => void }) {
   return (
-    <div className={`picker-row editor-find-row${selected ? ' selected' : ''}`} onClick={onSelect}>
+    <div
+      className={`picker-row editor-find-row${selected ? ' selected' : ''}`}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onSelect}
+    >
       <span className="editor-find-line">{result.index + 1}</span>
       <span className="editor-find-text">{highlightRanges(result.path, result.ranges)}</span>
     </div>

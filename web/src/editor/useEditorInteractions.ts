@@ -41,6 +41,10 @@ function pageLines(body: HTMLDivElement | null): number {
   return viewportPageLines(body.clientHeight, lineHeight);
 }
 
+function isPlainEscape(event: KeyLike): boolean {
+  return event.key === 'Escape' && !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+}
+
 function verticalResolver(body: HTMLDivElement | null, caret: HTMLSpanElement | null): ResolveVertical {
   return (dir) => {
     if (!body || !caret) return null;
@@ -69,6 +73,7 @@ export function useEditorInteractions({
     if (event.nativeEvent.isComposing) return;
     event.stopPropagation();
     if (handleSuggestKeyDown(event, api, suggest, measuredPageLines())) return;
+    if (find.findOpen && isPlainEscape(event)) { event.preventDefault(); find.close(); return; }
 
     const state = api.state;
     const context = {

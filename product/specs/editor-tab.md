@@ -414,13 +414,16 @@ whole-word options. Two identical lines appear as two rows with their own line n
 first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
-buffer behind the overlay so the match is read in context. Clicking a row does the same. There is no
+buffer behind the overlay so the match is read in context. Clicking a row does the same, and keeps
+focus in the overlay's input. There is no
 separate commit step — Return does nothing, because the jump has already happened. The cursor move
 is not an edit: it never dirties the buffer and never becomes an undo step, so an undo right after a
 jump undoes the last real edit.
 
 Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the
-buffer ready to type. Switching away from the editor tab also closes it; returning to the tab shows
+buffer ready to type. Escape closes the overlay the same way when focus has moved back into the
+buffer while it is open; that Escape only closes the overlay and does not also collapse a selection.
+Switching away from the editor tab also closes it; returning to the tab shows
 no overlay, and Cmd+F opens a fresh, empty one. Nothing about the overlay — its query or its
 selection — survives a close.
 
