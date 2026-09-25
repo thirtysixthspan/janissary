@@ -24,7 +24,7 @@ describe('buildTabView', () => {
   // what the tab shows in place of `exited`.
   it('keeps the tab-level sessionTerminated off the wire while the harness view carries it', () => {
     const tab = makeTab('claude', '#fff');
-    const ended = 'Remote janus on devbox terminated — create a new agent or shell to continue.';
+    const ended = 'Remote janus on devbox terminated.';
     tab.view = 'harness';
     tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'exited', sessionTerminated: ended };
     tab.sessionTerminated = ended;

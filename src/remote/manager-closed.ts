@@ -25,7 +25,7 @@ export function remoteChannelClosed(
     entry.rejectReady(new Error(`Remote session to ${entry.address.host} ended before its workspace was ready.`));
   } else if (entry.workspaceDir && entry.labels.size > 0) {
     notify(managers, 'remote-session-terminated', entry.labels.values().next().value!,
-      `Remote janus on ${entry.address.host} terminated — create a new agent or shell to continue.`);
+      `Remote janus on ${entry.address.host} terminated.`);
   }
   clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   const handlers = [...entry.handlers.values()];

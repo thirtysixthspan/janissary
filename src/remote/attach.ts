@@ -104,7 +104,7 @@ export function resumeRemote(entry: RemoteEntry): void {
 export function terminateRemoteSession(
   managers: Managers, labels: Iterable<string>, host: string, what: string, announce = true,
 ): void {
-  const text = `${what} on ${host} terminated — create a new agent or shell to continue.`;
+  const text = `${what} on ${host} terminated.`;
   let notified = false;
   for (const label of labels) {
     const tab = managers.tab.byLabel(label);
