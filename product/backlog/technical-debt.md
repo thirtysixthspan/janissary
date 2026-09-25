@@ -4,17 +4,6 @@
 
 ## development
 
-* Finish moving the file navigator's filesystem-changing requests from tab position to tab label, covering undo, redo, the overwrite retry and create file or folder.
-
-Existing Debt: The migration that made delete, move, paste and rename address a navigator by label stopped short, so undo, redo and the two create requests still resolve `managers.tab.tabs[index]` on the server, and the module now has two addressing schemes that each new request must choose between. Severity: 5/10
-
-Existing Risk: 6/10 - If a tab ahead of the navigator closes on its own (a harness process exiting) between the client's snapshot and the request, undo replays another tree's history, which for a copy-paste deletes that tree's pasted files, and the overwrite retry sent seconds after a conflict dialog widens that window.
-
-Proposal Risk: 2/10 - Every filesystem-changing request names its tree by label and a closed label is a no-op; the residual risk is a read-only request still sent by index, which can at worst show the wrong tree rather than change files.
-
-Proposal: `undoFileNavigatorItem`, `redoFileNavigatorItem`, `replayFileNavigatorHistory`, `fileNavigatorCreateFile` and `fileNavigatorCreateDirectory` in `src/controller/file-navigator.ts` resolve `managers.tab.tabs[index]?.label`, while the file's header already says requests arrive by label. Following the pattern the earlier label migration used, change those four request params from `index: number` to `label: string` in `src/protocol/file-navigator.ts`, the decoders in `src/client-params/file-navigator.ts` (check `isString(p.label)`), the dispatcher in `src/message/file-navigator.ts` and the adapter in `src/controller/file-navigator-adapter.ts`, and guard with the existing `isOpenTab`, returning the same empty result on a miss. Delete the loose local `HistoryReplayResult` type and type `replay` as `MaybePromise<UndoRedoResult>`. On the client, `history` and `retry` in `web/src/file-navigator/useFileNavigatorMoveOperations.ts` send the `label` the hook already receives (and drop its "undo/redo still address it by `index`" comment), and `createNewFile` and the new-folder action in `web/src/file-navigator/file-navigator-menu-actions.ts` send `label`, which `FileNavigatorTab` already holds. Update the addressing paragraph in `product/specs/file-navigator-tab.md`. `src/controller/file-navigator.test.ts`, `src/client-params/file-navigator.test.ts`, `src/client-params/index.test.ts`, `src/message/handler.test.ts`, `src/controller.test.ts`, `web/src/file-navigator/useFileNavigatorMoveOperations.test.ts` and `web/src/file-navigator/FileNavigatorTab.test.tsx` pin the current request shapes and will need their fixtures moved to labels.
-
-
 * Route a file-navigator drop onto an editor by the editor body under the pointer, the way harness drops already are, instead of through one shared "active editor" ref.
 
 Existing Debt: Editor drops go through a single ref that the focused `EditorTab` overwrites during render and never clears, a design that assumed only one tab body could be visible, while split panes now show two editors and harness drops already solved the same problem with a per-target registry. Severity: 5/10

@@ -15,7 +15,7 @@ function makeClient(...results: unknown[]): JanusClient {
 describe('useFileNavigatorMoveOperations', () => {
   it('requests scalar move confirmation and retries or cancels it', () => {
     const client = makeClient();
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 2, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     act(() => {
       result.current.requestMove(['src/report.md'], 'archive', 'archive', true);
@@ -44,7 +44,7 @@ describe('useFileNavigatorMoveOperations', () => {
 
   it('requests a scalar move without overwrite and asks only when the server reports a conflict', async () => {
     const client = makeClient({ total: 1, failedPaths: [] }, { conflictPaths: ['src/report.md'] });
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 2, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     await act(async () => {
       result.current.requestMove(['src/notes.md'], 'archive', 'archive', false);
@@ -78,7 +78,7 @@ describe('useFileNavigatorMoveOperations', () => {
 
   it('requests batch move confirmation and retries with the selected policy', async () => {
     const client = makeClient({ conflictPaths: ['a.txt'] }, { total: 2, failedPaths: [] });
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 1, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     await act(async () => {
       result.current.requestMove(['a.txt', 'b.txt'], 'archive', 'archive', false);
@@ -107,27 +107,28 @@ describe('useFileNavigatorMoveOperations', () => {
       { conflict: { fromRelPath: 'a.txt', toRelPath: 'archive' } },
       { total: 1, failedPaths: [] },
     );
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 4, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     await act(async () => {
       result.current.sendUndo();
       await Promise.resolve();
     });
     expect(result.current.pendingConflict?.kind).toBe('scalar');
+    expect(client.request).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { label: 'files' } });
 
     await act(async () => {
       result.current.confirmOverwrite();
       await Promise.resolve();
     });
     expect(client.send).toHaveBeenCalledWith({
-      method: 'undoFileNavigatorItem', params: { index: 4, overwrite: true },
+      method: 'undoFileNavigatorItem', params: { label: 'files', overwrite: true },
     });
     expect(result.current.pendingConflict).toBeNull();
   });
 
   it('requests history batch confirmation and cancels without retrying', async () => {
     const client = makeClient({ conflicts: [{ fromRelPath: 'a.txt', toRelPath: 'archive' }] });
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 5, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     await act(async () => {
       result.current.sendRedo();
@@ -145,6 +146,23 @@ describe('useFileNavigatorMoveOperations', () => {
     expect(result.current.pendingConflict).toBeNull();
   });
 
+  it('retries a history batch conflict against the same navigator label', async () => {
+    const client = makeClient({ conflicts: [{ fromRelPath: 'a.txt', toRelPath: 'archive' }] }, {});
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
+
+    await act(async () => {
+      result.current.sendRedo();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      result.current.skipConflicts();
+      await Promise.resolve();
+    });
+    expect(client.request).toHaveBeenLastCalledWith({
+      method: 'redoFileNavigatorItem', params: { label: 'files', overwrite: undefined, skipConflicts: true },
+    });
+  });
+
   // `request` resolves `{ ok: false }` when the socket is not open, when the connection ended before
   // the reply, and when the server answered with an error. Both of these used to read a field off the
   // bare result value and throw mid-`.then`, so the batch move silently never opened its overwrite dialog.
@@ -155,7 +173,7 @@ describe('useFileNavigatorMoveOperations', () => {
     ['an undo', (api: { sendUndo: () => void }) => { void api.sendUndo(); }],
   ])('leaves %s unanswered by the server with no conflict raised', async (_label, start) => {
     const client = { send: vi.fn(), request: vi.fn(() => Promise.resolve({ ok: false })) } as unknown as JanusClient;
-    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 3, 'files'));
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 'files'));
 
     await act(async () => {
       start(result.current as never);

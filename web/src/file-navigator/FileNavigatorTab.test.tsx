@@ -1083,7 +1083,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: 'src' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: 'src' } });
     });
 
     it('clicking New file with a file row selected creates it in its containing directory', () => {
@@ -1092,7 +1092,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: 'src' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: 'src' } });
     });
 
     it('clicking New file with no row selected creates it at the tree root', () => {
@@ -1100,7 +1100,7 @@ describe('FileNavigatorTab', () => {
       const client = { send } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: '' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: '' } });
     });
 
     it('creates under the tree root when the navigator is rooted somewhere else', () => {
@@ -1110,7 +1110,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={files} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New file'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: 'src' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: 'src' } });
     });
 
     it('Cmd+N while focused creates the same new file', () => {
@@ -1119,7 +1119,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', metaKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: '' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: '' } });
     });
 
     it('Ctrl+N while focused creates the same new file', () => {
@@ -1128,7 +1128,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       fireEvent.keyDown(tree, { key: 'n', ctrlKey: true });
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { index: 0, destination: '' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateFile', params: { label: 'files', destination: '' } });
     });
 
     it('sends no command message when creating a file locally', () => {
@@ -1162,7 +1162,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('src'));
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { index: 0, destination: 'src' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
     });
 
     it("creates in a selected file's containing directory", () => {
@@ -1171,7 +1171,7 @@ describe('FileNavigatorTab', () => {
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('index.ts'));
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { index: 0, destination: 'src' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
     });
 
     it('creates at the tree root when nothing is selected', () => {
@@ -1179,7 +1179,7 @@ describe('FileNavigatorTab', () => {
       const client = { send } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { index: 0, destination: '' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
     });
 
     it('creates under the tree root when the navigator is rooted somewhere else', () => {
@@ -1188,7 +1188,7 @@ describe('FileNavigatorTab', () => {
       const files = makeFiles({ root: '/Users/ash/dev/bctci', absoluteRoot: '/Users/ash/dev/bctci' });
       render(<FileNavigatorTab files={files} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { index: 0, destination: '' } });
+      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
     });
 
     it('sends no command message when creating a directory locally', () => {
@@ -1241,7 +1241,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={2} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true }); });
-      expect(request).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { index: 2 } });
+      expect(request).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { label: 'files' } });
     });
 
     it('Ctrl+Z sends undoFileNavigatorItem', async () => {
@@ -1250,7 +1250,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true }); });
-      expect(request).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { index: 0 } });
+      expect(request).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { label: 'files' } });
     });
 
     it('Cmd+Shift+Z sends redoFileNavigatorItem', async () => {
@@ -1259,7 +1259,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={1} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', metaKey: true, shiftKey: true }); });
-      expect(request).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { index: 1 } });
+      expect(request).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { label: 'files' } });
     });
 
     it('Ctrl+Shift+Z sends redoFileNavigatorItem', async () => {
@@ -1268,7 +1268,7 @@ describe('FileNavigatorTab', () => {
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       await act(async () => { fireEvent.keyDown(tree, { key: 'z', ctrlKey: true, shiftKey: true }); });
-      expect(request).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { index: 0 } });
+      expect(request).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { label: 'files' } });
     });
 
     it('a conflict response from undo opens MoveConflictDialog', async () => {
@@ -1290,7 +1290,7 @@ describe('FileNavigatorTab', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
 
-      expect(send).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { index: 4, overwrite: true } });
+      expect(send).toHaveBeenCalledWith({ method: 'undoFileNavigatorItem', params: { label: 'files', overwrite: true } });
       expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 
@@ -1304,7 +1304,7 @@ describe('FileNavigatorTab', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
 
-      expect(send).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { index: 5, overwrite: true } });
+      expect(send).toHaveBeenCalledWith({ method: 'redoFileNavigatorItem', params: { label: 'files', overwrite: true } });
       expect(screen.queryByRole('alertdialog')).toBeNull();
     });
 

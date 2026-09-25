@@ -22,13 +22,13 @@ export type FileNavigatorControllerAdapter = {
   revealFileNavigatorItem(index: number, relPath: string): void;
   fileNavigatorOpeners(index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution;
   fileNavigatorOpen(index: number, relPath: string, command: Parameters<typeof fileNavigatorRpc.fileNavigatorOpen>[3]): ReturnType<typeof fileNavigatorRpc.fileNavigatorOpen>;
-  fileNavigatorCreateFile(index: number, destination: string): ReturnType<typeof fileNavigatorRpc.fileNavigatorCreateFile>;
-  fileNavigatorCreateDirectory(index: number, destination: string): ReturnType<typeof fileNavigatorRpc.fileNavigatorCreateDirectory>;
+  fileNavigatorCreateFile(label: string, destination: string): ReturnType<typeof fileNavigatorRpc.fileNavigatorCreateFile>;
+  fileNavigatorCreateDirectory(label: string, destination: string): ReturnType<typeof fileNavigatorRpc.fileNavigatorCreateDirectory>;
   fileNavigatorSelectionAction(index: number, paths: string[]): FileSelectionAction | null;
   runFileNavigatorSelectionAction(index: number, paths: string[], action: string): void;
   reportFileNavigatorSelection(id: number, navigators: FileNavigatorSelectionRecord[]): void;
-  undoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.undoFileNavigatorItem>;
-  redoFileNavigatorItem(index: number, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
+  undoFileNavigatorItem(label: string, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.undoFileNavigatorItem>;
+  redoFileNavigatorItem(label: string, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
   launchAgentFor(label: string): void;
@@ -53,13 +53,13 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     revealFileNavigatorItem: (index, relPath) => fileNavigatorRpc.revealFileNavigatorItem(managers, index, relPath),
     fileNavigatorOpeners: (index, relPath, edit, all) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit, all),
     fileNavigatorOpen: (index, relPath, command) => fileNavigatorRpc.fileNavigatorOpen(managers, index, relPath, command),
-    fileNavigatorCreateFile: (index, destination) => fileNavigatorRpc.fileNavigatorCreateFile(managers, index, destination),
-    fileNavigatorCreateDirectory: (index, destination) => fileNavigatorRpc.fileNavigatorCreateDirectory(managers, index, destination),
+    fileNavigatorCreateFile: (label, destination) => fileNavigatorRpc.fileNavigatorCreateFile(managers, label, destination),
+    fileNavigatorCreateDirectory: (label, destination) => fileNavigatorRpc.fileNavigatorCreateDirectory(managers, label, destination),
     fileNavigatorSelectionAction: (index, paths) => fileNavigatorRpc.fileNavigatorSelectionAction(managers, index, paths),
     runFileNavigatorSelectionAction: (index, paths, action) => fileNavigatorRpc.runFileNavigatorSelectionAction(managers, index, paths, action),
     reportFileNavigatorSelection: (id, navigators) => resolveTreeSelections(id, navigators),
-    undoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.undoFileNavigatorItem(managers, index, overwrite, skipConflicts),
-    redoFileNavigatorItem: (index, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, index, overwrite, skipConflicts),
+    undoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.undoFileNavigatorItem(managers, label, overwrite, skipConflicts),
+    redoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, label, overwrite, skipConflicts),
     setDock: (index, dock) => managers.tab.setDock(index, dock),
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
     launchAgentFor: (label) => managers.profile.newAgentAt(label),

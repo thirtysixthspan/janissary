@@ -300,6 +300,7 @@ describe('FileNavigatorOverlays', () => {
       files: { root: '/ws', absoluteRoot: '/ws', rows: commitRows },
       client: { send: vi.fn() } as unknown as JanusClient,
       index: 0,
+      label: 'files',
       selection: {
         selected: new Set(selected),
         operationPaths: normalizeOperationPaths(commitRows, new Set(selected)),

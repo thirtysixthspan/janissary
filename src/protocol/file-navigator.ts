@@ -73,7 +73,8 @@ export type FileNavigatorRpcCall =
   //
   // The six mutating methods from here to `renameFileNavigatorItem` name the navigator by `label`,
   // not by `index`: a tab closing ahead of it between the client's snapshot and the request would
-  // otherwise shift the position onto a different navigator and mutate files under its root.
+  // otherwise shift the position onto a different navigator and mutate files under its root. The
+  // other filesystem-changing methods — create file or folder, undo and redo — do the same.
   | { method: 'moveFileNavigatorItem'; params: { label: string; fromRelPath: string; toRelPath: string; overwrite?: boolean } }
   | {
       method: 'moveFileNavigatorItems';
@@ -121,8 +122,8 @@ export type FileNavigatorRpcCall =
       method: 'fileNavigatorOpen';
       params: { index: number; relPath: string; command: FileOpenerChoice['command'] };
     }
-  | { method: 'fileNavigatorCreateFile'; params: { index: number; destination: string } }
-  | { method: 'fileNavigatorCreateDirectory'; params: { index: number; destination: string } }
+  | { method: 'fileNavigatorCreateFile'; params: { label: string; destination: string } }
+  | { method: 'fileNavigatorCreateDirectory'; params: { label: string; destination: string } }
   // What a tab plugin contributes for a whole selection of rows, for the row context menu. Replies
   // with a `FileSelectionAction` when every selected path is a file of one plugin's own claimed
   // types and that plugin contributes an entry, and with `null` otherwise. Resolving never activates
@@ -139,8 +140,8 @@ export type FileNavigatorRpcCall =
   // Undo/redo the most recent move in a file navigator tab's per-tab undo/redo stack. `overwrite`
   // retries a pending entry after the client has confirmed an overwrite of a conflicting
   // destination; the reply's `result` carries `{ conflict }` when one is found instead.
-  | { method: 'undoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
-  | { method: 'redoFileNavigatorItem'; params: { index: number; overwrite?: boolean; skipConflicts?: boolean } }
+  | { method: 'undoFileNavigatorItem'; params: { label: string; overwrite?: boolean; skipConflicts?: boolean } }
+  | { method: 'redoFileNavigatorItem'; params: { label: string; overwrite?: boolean; skipConflicts?: boolean } }
   // Open a file navigator rooted at the named tab's cwd, triggered by the 📁 button in a
   // harness/agent tab's metadata row. If a file navigator tab is already open, its root is retargeted
   // to that cwd in place; otherwise a fresh one opens docked in the left sidebar. Either way the

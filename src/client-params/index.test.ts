@@ -63,6 +63,6 @@ describe('the client params decoder table', () => {
     expect(clientParamsValid('fileNavigatorReroot', { index: 0 })).toBe(true);
     expect(clientParamsValid('fileNavigatorReroot', { index: 0, path: '..' })).toBe(true);
     expect(clientParamsValid('fileNavigatorReroot', { index: 0, path: 3 })).toBe(false);
-    expect(clientParamsValid('undoFileNavigatorItem', { index: 0, overwrite: 'yes' })).toBe(false);
+    expect(clientParamsValid('undoFileNavigatorItem', { label: 'files', overwrite: 'yes' })).toBe(false);
   });
 });

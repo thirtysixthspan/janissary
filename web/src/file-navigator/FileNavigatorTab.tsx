@@ -31,7 +31,7 @@ export function FileNavigatorTab({
   const [pendingNewDir, setPendingNewDir] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const treeId = useId();
-  const drag = useFileNavigatorDrag(files.rows, client, index, label, {
+  const drag = useFileNavigatorDrag(files.rows, client, label, {
     absoluteRoot: files.absoluteRoot,
     displayRoot: files.root,
     targetCwd,
@@ -88,7 +88,7 @@ export function FileNavigatorTab({
   const {
     editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
   } = createFileNavigatorActions({
-    files, client, index, selection, opener, paste, deletion, rename, rowEvents, commit,
+    files, client, index, label, selection, opener, paste, deletion, rename, rowEvents, commit,
     multiOpenSelection, setPendingNewDir,
   });
 
