@@ -54,7 +54,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
 
   const api = useEditor(requestSave);
   const { state } = api;
-  const suggest = useEditorSuggest(client, editor.url, api.setState, requestSave);
+  const suggest = useEditorSuggest(client, editor.url, api.setState, api.replace, requestSave);
   const mouse = useEditorMouse(api, bodyRef, () => textareaRef.current?.focus(), suggest);
   const tokens = useSyntaxHighlight(state, editor.name);
   useEditorSync(state, editor.url, client);

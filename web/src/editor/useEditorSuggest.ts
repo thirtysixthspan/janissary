@@ -7,10 +7,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SuggestHunk } from '@shared/protocol';
 import type { EditorState } from './model';
-import { fromText, toText, clampPos } from './model';
+import { toText, clampPos } from './model';
 import type { JanusClient } from '../ws';
 import { parseSuggestRequest } from './suggest-request';
-import { spliceHunk } from './suggestDiff';
+import { applyHunk } from './suggestDiff';
 import { applyKeyAction, type EditSurface } from './applyKeyAction';
 import type { KeyAction } from './keys';
 import { UndoBuffer } from './undo';
@@ -66,6 +66,9 @@ export function useEditorSuggest(
   client: JanusClient,
   url: string,
   setState: (s: EditorState) => void,
+  // Accepting a hunk goes through this undo-recording swap rather than `setState`, so the change
+  // is its own undo step; `setState` is left for cursor moves that are not edits.
+  replace: (s: EditorState) => void,
   onSave: () => void = () => {},
 ): EditorSuggestApi {
   const [personas, setPersonas] = useState<string[]>([]);
@@ -166,29 +169,28 @@ export function useEditorSuggest(
   // the query line only if at least one hunk was accepted (Decision 8); otherwise it stays open
   // with its text intact so it can be edited and retried. A call against an already-resolved index
   // is a no-op.
-  const resolveHunk = (index: number, accepted: boolean, state: EditorState): EditorState => {
+  const resolveHunk = (index: number, accepted: boolean) => {
     const p = pendingRef.current;
-    if (!p || p.resolved[index]) return state;
+    if (!p || p.resolved[index]) return;
     const acceptedAny = p.acceptedAny || accepted;
     const resolved = p.resolved.map((r, i) => (i === index ? true : r));
-    if (resolved.some((r) => !r)) { setPendingBoth({ ...p, resolved, acceptedAny }); return state; }
+    if (resolved.some((r) => !r)) { setPendingBoth({ ...p, resolved, acceptedAny }); return; }
     setPendingBoth(null);
     if (acceptedAny) closeQueryLine();
-    return state;
   };
 
+  // A hunk whose anchor no longer matches is dropped: no buffer write, so no undo step either.
   const acceptHunk = (state: EditorState, index: number) => {
     const p = pendingRef.current;
     if (!p || p.resolved[index]) return;
-    const hunk = p.hunks[index];
-    const text = toText(state);
-    const newText = spliceHunk(text, hunk);
-    const applied = newText === null ? state : fromText(newText, state.cursor.line);
-    setState(resolveHunk(index, newText !== null, applied));
+    const applied = applyHunk(state, p.hunks[index]);
+    if (applied) replace(applied);
+    resolveHunk(index, applied !== null);
   };
 
-  const declineHunk = (state: EditorState, index: number) => {
-    setState(resolveHunk(index, false, state));
+  // Declining never changes the buffer, so it writes nothing to it.
+  const declineHunk = (_state: EditorState, index: number) => {
+    resolveHunk(index, false);
   };
 
   return {

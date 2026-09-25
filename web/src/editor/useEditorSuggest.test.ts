@@ -34,13 +34,13 @@ function typeQuery(result: { current: ReturnType<typeof useEditorSuggest> }, tex
 describe('useEditorSuggest', () => {
   it('fetches the persona list on mount', async () => {
     const { client } = makeClient(['summarizer', 'reviewer']);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer', 'reviewer']));
   });
 
   it('opens the query line seeded with a leading > and closes it', async () => {
     const { client } = makeClient();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(2); });
@@ -55,7 +55,7 @@ describe('useEditorSuggest', () => {
   it('fires an editorSuggest request from the query text and opens the pending set', async () => {
     const { client, request } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old', replacement: 'new' }] }]);
     const setState = vi.fn();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite this');
 
@@ -76,7 +76,7 @@ describe('useEditorSuggest', () => {
     const { client, request } = makeClient(['summarizer']);
     const { promise, resolve } = withResolvers<RequestResult<{ hunks: { anchor: string; replacement: string }[] }>>();
     request.mockImplementationOnce(() => promise);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite this');
 
@@ -96,7 +96,7 @@ describe('useEditorSuggest', () => {
 
   it('records the query as having no suggestion when the reply has no hunks', async () => {
     const { client } = makeClient(['summarizer'], [{ hunks: [] }]);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite this');
 
@@ -110,7 +110,7 @@ describe('useEditorSuggest', () => {
 
   it('does not fire for a query that is not a valid request', async () => {
     const { client, request } = makeClient(['summarizer']);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' just some text');
 
@@ -121,7 +121,7 @@ describe('useEditorSuggest', () => {
 
   it('does not fire when no query line is open', async () => {
     const { client, request } = makeClient(['summarizer']);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     result.current.fireOnLine(makeState('old'));
@@ -131,7 +131,7 @@ describe('useEditorSuggest', () => {
 
   it('ignores a second request while one is already pending', async () => {
     const { client, request } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'a', replacement: 'b' }] }]);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer do it');
 
@@ -143,11 +143,12 @@ describe('useEditorSuggest', () => {
     expect(request).toHaveBeenCalledTimes(2); // persona list + the one query, never a second query
   });
 
-  it('accepts a hunk, applies it, and closes the query line once all hunks resolve', async () => {
+  it('accepts a hunk through the undo-recording replace, applies it, and closes the query line once all hunks resolve', async () => {
     const { client } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old text', replacement: 'new text' }] }]);
     let latest: EditorState | undefined;
-    const setState = vi.fn((s: EditorState) => { latest = s; });
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const setState = vi.fn();
+    const replace = vi.fn((s: EditorState) => { latest = s; });
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, replace));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite');
 
@@ -157,16 +158,37 @@ describe('useEditorSuggest', () => {
 
     act(() => { result.current.acceptHunk(bufferState, 0); });
 
+    expect(replace).toHaveBeenCalledTimes(1);
     expect(latest?.lines).toEqual(['new text']);
+    expect(setState).not.toHaveBeenCalled();
     expect(result.current.pending).toBeNull();
     expect(result.current.queryLine).toBeNull();
   });
 
+  it('writes nothing to the buffer when an accepted hunk no longer matches, and keeps the query line open', async () => {
+    const { client } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old text', replacement: 'new text' }] }]);
+    const setState = vi.fn();
+    const replace = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, replace));
+    await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
+    typeQuery(result, ' summarizer rewrite');
+
+    await act(async () => { result.current.fireOnLine(makeState('old text')); });
+    await waitFor(() => expect(result.current.pending).not.toBeNull());
+
+    act(() => { result.current.acceptHunk(makeState('edited since'), 0); });
+
+    expect(replace).not.toHaveBeenCalled();
+    expect(setState).not.toHaveBeenCalled();
+    expect(result.current.pending).toBeNull();
+    expect(result.current.queryLine?.state.lines).toEqual(['> summarizer rewrite']);
+  });
+
   it('declines every hunk, leaves the buffer unchanged, and keeps the query line open with its text', async () => {
     const { client } = makeClient(['summarizer'], [{ hunks: [{ anchor: 'old text', replacement: 'new text' }] }]);
-    let latest: EditorState | undefined;
-    const setState = vi.fn((s: EditorState) => { latest = s; });
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const setState = vi.fn();
+    const replace = vi.fn();
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, replace));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite');
 
@@ -176,7 +198,8 @@ describe('useEditorSuggest', () => {
 
     act(() => { result.current.declineHunk(bufferState, 0); });
 
-    expect(latest?.lines).toEqual(['old text']);
+    expect(setState).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
     expect(result.current.pending).toBeNull();
     expect(result.current.queryLine?.state.lines).toEqual(['> summarizer rewrite']);
   });
@@ -185,7 +208,7 @@ describe('useEditorSuggest', () => {
     const { client } = makeClient(['summarizer'], [{
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
     }]);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite');
 
@@ -203,8 +226,8 @@ describe('useEditorSuggest', () => {
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
     }]);
     let latest: EditorState | undefined;
-    const setState = vi.fn((s: EditorState) => { latest = s; });
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const replace = vi.fn((s: EditorState) => { latest = s; });
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), replace));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite');
 
@@ -224,7 +247,7 @@ describe('useEditorSuggest', () => {
   it('exits the query into the buffer at the anchor line ± direction, at the given column', async () => {
     const { client } = makeClient();
     const setState = vi.fn();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(2); });
@@ -239,7 +262,7 @@ describe('useEditorSuggest', () => {
   it('does not exit the query when there is no buffer line in that direction', async () => {
     const { client } = makeClient();
     const setState = vi.fn();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', setState, vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(0); });
@@ -253,7 +276,7 @@ describe('useEditorSuggest', () => {
 
   it('enters the query from the buffer at its first line when moving down, last line when moving up', async () => {
     const { client } = makeClient();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(1); });
@@ -272,7 +295,7 @@ describe('useEditorSuggest', () => {
   it('applyQueryAction saves via the onSave passed in, and edits the query line text', async () => {
     const { client } = makeClient();
     const onSave = vi.fn();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), onSave));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn(), onSave));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(0); });
@@ -285,7 +308,7 @@ describe('useEditorSuggest', () => {
 
   it('does not carry undo history from a previous query session into a freshly opened one', async () => {
     const { client } = makeClient();
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
 
     act(() => { result.current.openQueryLine(0); });
@@ -301,7 +324,7 @@ describe('useEditorSuggest', () => {
     const { client } = makeClient(['summarizer'], [{
       hunks: [{ anchor: 'a', replacement: '1' }, { anchor: 'b', replacement: '2' }],
     }]);
-    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn()));
+    const { result } = renderHook(() => useEditorSuggest(client, '/open/1', vi.fn(), vi.fn()));
     await waitFor(() => expect(result.current.personas).toEqual(['summarizer']));
     typeQuery(result, ' summarizer rewrite');
 

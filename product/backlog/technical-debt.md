@@ -4,17 +4,6 @@
 
 ## development
 
-* Record an accepted editor suggestion as its own undo step by giving the suggestion hook the editor's undo-recording replace instead of the raw state setter.
-
-Existing Debt: The editor already exposes a `replace` that records one discrete undo step for an outside transform — the editor plugins use it — but the suggestion hook was wired to the raw `setState`, so accepting a suggested hunk rewrites the buffer outside the undo history and rebuilds the state from text, dropping the cursor column and any extra selections. Severity: 4/10
-
-Existing Risk: 5/10 - After accepting a suggestion, the next Cmd+Z restores the snapshot from before the previous typing group, undoing the accepted change and the user's own last edit together, with no step that undoes just the suggestion — typed work is lost and has to be re-entered.
-
-Proposal Risk: 2/10 - Acceptance becomes one undo step through the same path the plugins use, and the remaining risk is cursor placement after the splice, which a test can pin.
-
-Proposal: `EditorTab` in `web/src/editor/EditorTab.tsx` calls `useEditorSuggest(client, editor.url, api.setState, requestSave)`, and `acceptHunk` in `web/src/editor/useEditorSuggest.ts` does `setState(resolveHunk(index, newText !== null, applied))` with `applied = fromText(newText, state.cursor.line)`; `replace` in `web/src/editor/useEditor.ts` does `undo.record(current, 'other')` before setting state, and `web/src/editor/plugins/useEditorPlugins.ts` uses `api.replace`. The hook's other `setState` uses (the query line and the jump-to-line cursor move) are not content edits and should keep the raw setter, so add a separate `replace` parameter to `useEditorSuggest` used only by `acceptHunk`, and pass `api.replace` from `EditorTab.tsx`. While there, preserve the cursor column (clamped with `clampPos` from `web/src/editor/model.ts`) rather than resetting it through `fromText`, and change `resolveHunk` to return nothing, since every branch returns its `state` argument unchanged. Tests: `web/src/editor/useEditorSuggest.test.ts` mocks `setState` and checks only `lines`, so update its accept cases to expect the new port; add a `web/src/editor/EditorTab.test.tsx` case that accepts a hunk and presses Cmd+Z, asserting the buffer returns to exactly its pre-accept text. This conflicts with no other open item, but it touches `EditorTab.tsx`, which the commit-extraction entry above also edits — land them in either order and rebase the other.
-
-
 * Restore the field the remote session-state decoder drops and pin every remote frame's optional fields with one round-trip test, so hand-written decoders cannot lose fields silently.
 
 Existing Debt: The remote protocol's decoders rebuild each frame field by field, and while the frame-type lists make a missing frame type a compile error, nothing catches a missing field — the session-state decoder already drops the `autoApprove` flag the server sends — and the shared decoder helpers are copied across six decode modules instead of living in one. Severity: 4/10
