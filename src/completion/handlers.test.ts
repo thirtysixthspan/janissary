@@ -142,16 +142,20 @@ describe('completeSyntaxTheme', () => {
   });
 });
 
-// These exercise the completion mechanics against the real bundled catalog, so they are written to
-// survive a catalog refresh: the single-match case uses the one prefix that stays unambiguous however
-// many models are added beside it, and the multi-match case derives its expectation from the catalog
-// rather than restating it.
+// These exercise the completion mechanics against the real bundled catalog, so both cases derive
+// their expectations from it rather than restating it: a fixed prefix that is unambiguous today stops
+// being so as soon as a refresh adds a model beside it.
+const uniquelyCompleted = modelsFor('claude').find((model) =>
+  modelsFor('claude').filter((other) => other.startsWith(model.slice(0, -1))).length === 1,
+)!;
+
 describe('completeHarnessModel', () => {
   it('completes a single match for the harness model flag', () => {
+    const prefix = uniquelyCompleted.slice(0, -1);
     const r = completeHarnessModel(
-      'harness', ['harness', 'claude', '--model'], 'claude-f', 'harness claude --model claude-f', '', 23,
+      'harness', ['harness', 'claude', '--model'], prefix, `harness claude --model ${prefix}`, '', 23,
     );
-    expect(r?.newInput).toBe('harness claude --model claude-fable-5 ');
+    expect(r?.newInput).toBe(`harness claude --model ${uniquelyCompleted} `);
   });
 
   it('completes multiple matches to their longest common prefix', () => {
