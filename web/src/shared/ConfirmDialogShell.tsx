@@ -1,5 +1,5 @@
 import React from 'react';
-import { useConfirmDialogKeys } from '../useConfirmDialogKeys';
+import { useConfirmDialogKeys } from './useConfirmDialogKeys';
 
 type Properties = {
   title: string;

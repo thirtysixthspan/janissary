@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the launch-dialog and confirm-dialog keyboard hooks the shared layer already depends on into the shared directory, finishing the client shared-primitives relocation.
-
-Existing Debt: §2 (colocate; promote to shared only on the second consumer) — `web/src/shared/ConfirmDialogShell.tsx` imports `useConfirmDialogKeys` from `../useConfirmDialogKeys`, and both `web/src/harness/HarnessLaunchDialog.tsx` and `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` import `use-launch-dialog` from the root, yet their sibling dialog primitives (`useDialogKeyboard`, `ModalDialog`, `ConfirmDialogShell` itself) were just moved into `web/src/shared/` by the shared-primitives relocation, leaving these two hooks stranded in the root flat namespace. Severity: 3/10
-
-Existing Risk: 3/10 - The root remains a place where shell composition, the protocol client, and generic shared primitives are indistinguishable to an importer, so the next dialog primitive gets added to the root by precedent and the shared layer keeps drifting back out of `shared/`.
-
-Proposal Risk: 1/10 - The move is mechanical and the only way it bites is a stale relative import, which the typecheck fails loudly on the moment it lands.
-
-Proposal: Move `web/src/use-launch-dialog.ts` to `web/src/shared/use-launch-dialog.ts` and `web/src/useConfirmDialogKeys.ts` to `web/src/shared/useConfirmDialogKeys.ts`. Update the three import sites: `web/src/harness/HarnessLaunchDialog.tsx` and `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` change `../use-launch-dialog` to `../shared/use-launch-dialog`, and `web/src/shared/ConfirmDialogShell.tsx` changes `../useConfirmDialogKeys` to `./useConfirmDialogKeys`. No exported signature changes, so no other file is affected, and the two hooks land beside their colocated neighbor `web/src/shared/useDialogKeyboard.ts`. Neither hook has a direct test file; the dialog render suites that go through `ConfirmDialogShell` must keep passing unchanged.
-
-
 * Consolidate the identical list-selection clamp arithmetic reimplemented by the conversations, sessions, and schedules plugin lists into one shared module.
 
 Existing Debt: §2 (promote to shared on the second real consumer) — `web/src/plugins/conversations/conversation-list-keys.ts`'s `nextConversationSelection`, `web/src/plugins/sessions/sessions-keys.ts`'s `nextSessionSelection`, and `web/src/plugins/schedules/schedules-keys.ts`'s `nextSelection` are three copies of the same non-wrapping clamp over ArrowDown/ArrowUp/Home/End, each list component re-declaring its own key set, and `sessions-keys.ts`'s header comment hand-tracks the equivalence to the conversations list. Severity: 3/10
