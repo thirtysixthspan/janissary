@@ -8,6 +8,7 @@ function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
   managers.questions = new Questions();
+  managers.schedule = { get: () => [] } as unknown as Managers['schedule'];
   return managers;
 }
 
