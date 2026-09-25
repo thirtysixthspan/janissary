@@ -4,28 +4,6 @@
 
 ## development
 
-* Move the command bar's server-completion request out of the agent tab body into the command-input feature where the rest of the completion rules live.
-
-Existing Debt: §5 (components render, they do not decide) — `web/src/agent-tabs/AgentTabBody.tsx` builds the completion request inline in the JSX it hands `CommandArea` (`complete={async (text, cursor) => { const result = await client.request<CompletionResult>({ method: 'complete', ... }); return result.ok ? result.value : undefined; }}`), so the request shape and the failed-result unwrap live inside the component body. Severity: 4/10
-
-Existing Risk: 4/10 - The unwrap semantics (an `ok: false` result silently completes with nothing) exist nowhere but inside a rendered callback, so a change to the completion contract — caching, aborting a stale request — starts life as JSX in the app's most-churned component, and a regression is a broken typeahead in every agent tab.
-
-Proposal Risk: 2/10 - The request becomes a directly callable function a unit test can pin, but nothing pins the current unwrap until such a test is written, so a transcription slip would land unnoticed until a rendered completion misbehaved.
-
-Proposal: `web/src/agent-tabs/AgentTabBody.tsx` inlines the server completion call. Extract it into a new module beside the command-input feature's existing completion logic — `web/src/agent-tabs/command-input/server-completion.ts` exporting a `completeOnServer(client, text, cursor)` that returns the unwrapped result — and pass `complete={(text, cursor) => completeOnServer(client, text, cursor)}` from the component. Scope the edit to `web/src/agent-tabs/AgentTabBody.tsx` plus the new module: `web/src/agent-tabs/command-input/CommandInput.tsx` keeps its `complete` prop contract, so no other import changes. `web/src/agent-tabs/command-input/CommandInput.test.tsx` stubs `complete` directly and needs no edit. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/agent-tabs/AgentTabBody.tsx`.
-
-
-* Move the harness tab's drag-into-terminal PTY write into a hook beside the component so the harness side of the drop contract stops living in JSX.
-
-Existing Debt: §5 (components render, they do not decide) — `web/src/harness/HarnessTab.tsx` registers its drop handle in a component-body effect whose `insertAtCaret` focuses the terminal and sends the `ptyInput` RPC, putting the write-to-PTY protocol call in the component. Severity: 4/10
-
-Existing Risk: 3/10 - The navigator-into-harness drop contract is spread across three files (the navigator's drag hook, the drop registry, and this component), and the harness side is exercisable only by rendering `HarnessTab` with the xterm layer mounted, so every change to the contract is re-verified through a full render.
-
-Proposal Risk: 2/10 - The write becomes a hook-level seam testable without the tab's markup, but the registry handshake remains a three-file contract and nothing stops the next drop consumer from wiring its own `insertAtCaret` by hand.
-
-Proposal: Extract a `useHarnessPtyDrop` hook into `web/src/harness/` beside `HarnessTab.tsx`, owning the publish/teardown of the drop handle and the `ptyInput` send, and reduce the component's effect to a single call. `web/src/harness-drop-registry.ts`'s `registerHarnessDrop` signature does not change, and `web/src/file-navigator/useFileNavigatorDrag.ts` consumes the registry rather than the component, so the blast radius is the one harness file plus the new hook. `web/src/harness/HarnessTab.test.tsx`'s file-navigator-drop-target cases (handle registered under the PTY id, dropped path typed into the PTY, nothing published without a PTY) render the component and must keep passing without edits. The target is terminal/PTY code, so this is written without a playbook trigger and needs hand-planning.
-
-
 * Move the launch-dialog and confirm-dialog keyboard hooks the shared layer already depends on into the shared directory, finishing the client shared-primitives relocation.
 
 Existing Debt: §2 (colocate; promote to shared only on the second consumer) — `web/src/shared/ConfirmDialogShell.tsx` imports `useConfirmDialogKeys` from `../useConfirmDialogKeys`, and both `web/src/harness/HarnessLaunchDialog.tsx` and `web/src/ScheduleLaunchDialog/ScheduleDialog.tsx` import `use-launch-dialog` from the root, yet their sibling dialog primitives (`useDialogKeyboard`, `ModalDialog`, `ConfirmDialogShell` itself) were just moved into `web/src/shared/` by the shared-primitives relocation, leaving these two hooks stranded in the root flat namespace. Severity: 3/10
@@ -191,6 +169,17 @@ Proposal Risk: 2/10 - The destructive requests carry the label they were compute
 Proposal: In `src/protocol/file-navigator.ts`, change the params of the six destructive methods — `deleteFileNavigatorItem`, `deleteFileNavigatorItems`, `moveFileNavigatorItem`, `moveFileNavigatorItems`, `pasteFileNavigatorItems`, and `renameFileNavigatorItem` — from `index: number` to `label: string`. Update their decoders in `src/client-params/file-navigator.ts`, their dispatch in `src/message/file-navigator.ts`, and the six matching functions in `src/controller/file-navigator.ts`, which today open with `const label = managers.tab.tabs[index]?.label` and can use the label directly; the `FileNavigatorManager` methods they call already take a label and do not change. On the client, the senders — `web/src/file-navigator/useFileNavigatorDelete.ts`, `useFileNavigatorMoveOperations.ts`, `useFileNavigatorPaste.ts`, and `useFileNavigatorRename.ts` — take the navigator's label from `FileNavigatorTab` in place of, or beside, `index`. If the sitting is tight, do the two delete methods first, since a wrong-target delete is the one undo cannot reverse. Tests: `src/controller/file-navigator.test.ts` covers "index has no label" and happy-path delegation and moves onto labels, `src/message/file-navigator.test.ts` and `src/client-params/file-navigator.test.ts` change with the params, and a new controller case should assert an unknown label mutates nothing. The single-move overwrite entry above also edits `moveFileNavigatorItem`'s params; land either first and rebase the other. `undoFileNavigatorItem`/`redoFileNavigatorItem`, the non-destructive methods, and `closeTab` in `src/protocol/core-rpc.ts` stay on `index` in this sitting.
 
 ## deferred
+
+* Move the command bar's server-completion request out of the agent tab body into the command-input feature where the rest of the completion rules live. — deferred: blocked by `ai/tasks/hygiene/improve-modularity.md`, whose Step 6 quality gate requires the target file's FTA score to drop, but extracting the completion request raises `AgentTabBody.tsx` from 52.67 to 53.03 (the new import outweighs the lines removed), so the playbook restores the file.
+
+Existing Debt: §5 (components render, they do not decide) — `web/src/agent-tabs/AgentTabBody.tsx` builds the completion request inline in the JSX it hands `CommandArea` (`complete={async (text, cursor) => { const result = await client.request<CompletionResult>({ method: 'complete', ... }); return result.ok ? result.value : undefined; }}`), so the request shape and the failed-result unwrap live inside the component body. Severity: 4/10
+
+Existing Risk: 4/10 - The unwrap semantics (an `ok: false` result silently completes with nothing) exist nowhere but inside a rendered callback, so a change to the completion contract — caching, aborting a stale request — starts life as JSX in the app's most-churned component, and a regression is a broken typeahead in every agent tab.
+
+Proposal Risk: 2/10 - The request becomes a directly callable function a unit test can pin, but nothing pins the current unwrap until such a test is written, so a transcription slip would land unnoticed until a rendered completion misbehaved.
+
+Proposal: `web/src/agent-tabs/AgentTabBody.tsx` inlines the server completion call. Extract it into a new module beside the command-input feature's existing completion logic — `web/src/agent-tabs/command-input/server-completion.ts` exporting a `completeOnServer(client, text, cursor)` that returns the unwrapped result — and pass `complete={(text, cursor) => completeOnServer(client, text, cursor)}` from the component. Scope the edit to `web/src/agent-tabs/AgentTabBody.tsx` plus the new module: `web/src/agent-tabs/command-input/CommandInput.tsx` keeps its `complete` prop contract, so no other import changes. `web/src/agent-tabs/command-input/CommandInput.test.tsx` stubs `complete` directly and needs no edit. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/agent-tabs/AgentTabBody.tsx`.
+
 
 ## declined
 
