@@ -32,6 +32,12 @@ export { PluginActionsHeader } from './PluginActionsHeader';
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
 export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../shared/icons';
 
+// The arrow/Home/End selection rule for a list of records, published so every plugin list moves its
+// current row the same way. The conversations, sessions, and schedules lists each carried their own
+// identical copy before this, kept in step only by comments. Additive, so `TAB_PLUGIN_API_VERSION`
+// does not move.
+export { nextListSelection } from '../shared/list-selection';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host
