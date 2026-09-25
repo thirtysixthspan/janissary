@@ -121,9 +121,20 @@ const REQUIRES_APPROVAL_FOUR_OPTION = [
   ' Esc to cancel · Tab to amend',
 ].join('\n');
 
+// A four-option read gate: "allow reading from …" plus "switch to auto mode" push `No` to option 4.
+const READ_FOUR_OPTION = [
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, allow reading from dev/ from this project',
+  '   3. Yes, and switch to auto mode · auto mode handles these prompts for you',
+  '   4. No',
+  '',
+  ' Esc to cancel · Tab to amend',
+].join('\n');
+
 const ALL_GATES = {
   BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP,
-  REQUIRES_APPROVAL_FOUR_OPTION,
+  REQUIRES_APPROVAL_FOUR_OPTION, READ_FOUR_OPTION,
 };
 
 // A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
