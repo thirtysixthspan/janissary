@@ -21,6 +21,7 @@ import { EditorLines } from './EditorLines';
 import { PendingSuggestPanel } from './PendingSuggestPanel';
 import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
+import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
 import type { EditorDropHandle } from '../shared/drop-handles';
 import type { DirtyTabHandle } from '../shared/tab-handles';
 
@@ -126,28 +127,18 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const gutterCh = state ? String(state.lines.length).length + 1 : 2;
   const selectionText = state ? selectionsText(state) : '';
   const onMetaMouseUp = () => { if (!globalThis.getSelection()?.toString()) textareaRef.current?.focus(); };
-  // The metadata row's rename input: committing an accepted name follows the same editor-tab rename
-  // semantics as renaming the tab label, so the tab label and path move together via the next
-  // state broadcast. Enter accepted or Escape keeps the caret at the top of the editor buffer.
+  // The metadata row's rename input: Enter accepted or Escape keeps the caret at the top of the
+  // editor buffer.
   const focusBuffer = () => { textareaRef.current?.focus(); };
-  const commitEditorName = (next: string) => {
-    client.renameEditorFile(editor.url, next);
-    focusBuffer();
-  };
-  // The metadata row's commit-to-origin icon: the save lands first (its failure is already on
-  // screen as the row's error), then the commit/push cycle arms server-side on the same file.
-  const commitOrigin = () => {
-    void saveRef.current()
-      .then(() => client.commitEditorFile(editor.url, `sync: ${editor.name}`))
-      .catch(() => {});
-  };
+  const commitEditorName = (next: string) => { renameAndRefocus(client, editor.url, next, focusBuffer); };
+  const commitOrigin = () => { void commitAfterSave(client, () => saveRef.current(), editor.url, editor.name); };
 
   return (
     <div className="editor-tab" data-doc-shot="editor-view">
       <EditorMetaRow
         editor={editor} dirty={file.dirty} savedFlash={file.savedFlash} error={file.saveError ?? file.loadError}
         onSave={requestSave} onMouseUp={onMetaMouseUp} connectionsButton={connections.connectionsButton}
-        onSyncClick={() => client.send({ method: 'resyncEditorTab', params: { url: editor.url } })}
+        onSyncClick={() => { sendResync(client, editor.url); }}
         onSplit={onSplit}
         onRename={commitEditorName}
         onRenameCancel={focusBuffer}

@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the editor tab's commit-to-origin, rename, and resync protocol sequences into a plain module beside the component so the commit choreography is testable without rendering the editor.
-
-Existing Debt: §5 (components render, they do not decide) — `web/src/editor/EditorTab.tsx` composes the commit-to-origin sequence in its body (save first via `saveRef`, then `client.commitEditorFile`, with failures swallowed because a save error is already on screen in the metadata row), plus the rename-and-refocus handler `commitEditorName` and the resync send written inline in the JSX's `onSyncClick`, so the tab's protocol rules live in the same file as its markup. Severity: 6/10
-
-Existing Risk: 5/10 - The ordering rule (the save must land before the commit arms server-side, and a failed save suppresses it) is pinned only through a rendered interaction test, so every change in this actively growing commit/push area re-derives it by eye and a slip arms a commit over content that never got written.
-
-Proposal Risk: 2/10 - The sequence becomes plain functions callable and testable directly, but the transcription is behavior-preserving by eye: the render tests pin the happy path, so a slip in the swallow-on-save-failure branch would surface only through a rendered commit.
-
-Proposal: `web/src/editor/EditorTab.tsx` holds three protocol intents in its body. Extract them into a new `web/src/editor/editor-file-commands.ts` as plain functions taking the injected `JanusClient` and the pieces they need — a commit-after-save function carrying the ordering and its failure swallowing, the rename-and-refocus intent for the metadata row, and a resync sender — and have the component call them in place of the inline blocks. Scope the edit to `web/src/editor/EditorTab.tsx` plus the new module: the component's props, `web/src/editor/EditorMetaRow.tsx`'s contract, and every import path stay as they are. `web/src/editor/EditorTab.test.tsx` (the rename, commit-to-origin, and resync cases around its `makeClient` stub) needs no edit and must keep passing. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/editor/EditorTab.tsx`.
-
-
 * Move the command bar's server-completion request out of the agent tab body into the command-input feature where the rest of the completion rules live.
 
 Existing Debt: §5 (components render, they do not decide) — `web/src/agent-tabs/AgentTabBody.tsx` builds the completion request inline in the JSX it hands `CommandArea` (`complete={async (text, cursor) => { const result = await client.request<CompletionResult>({ method: 'complete', ... }); return result.ok ? result.value : undefined; }}`), so the request shape and the failed-result unwrap live inside the component body. Severity: 4/10
