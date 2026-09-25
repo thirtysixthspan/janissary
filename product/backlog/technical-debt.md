@@ -4,17 +4,6 @@
 
 ## development
 
-* Consolidate the identical list-selection clamp arithmetic reimplemented by the conversations, sessions, and schedules plugin lists into one shared module.
-
-Existing Debt: §2 (promote to shared on the second real consumer) — `web/src/plugins/conversations/conversation-list-keys.ts`'s `nextConversationSelection`, `web/src/plugins/sessions/sessions-keys.ts`'s `nextSessionSelection`, and `web/src/plugins/schedules/schedules-keys.ts`'s `nextSelection` are three copies of the same non-wrapping clamp over ArrowDown/ArrowUp/Home/End, each list component re-declaring its own key set, and `sessions-keys.ts`'s header comment hand-tracks the equivalence to the conversations list. Severity: 3/10
-
-Existing Risk: 3/10 - A gesture change (PageUp support, wrap-at-ends, first-click-confirms semantics) must be re-applied in three plugin features by hand, and the equivalence is maintained by comments, so one list silently drifts from the others.
-
-Proposal Risk: 2/10 - One shared rule replaces three copies, but the module becomes the meeting point of four list features and could accrete per-feature flags if the next variant is folded in instead of kept a separate colocated helper.
-
-Proposal: Add `web/src/shared/list-selection.ts` exporting `nextListSelection(length, selected, key)` with the non-wrapping clamp the three copies implement, and retarget the three keys modules — `web/src/plugins/conversations/conversation-list-keys.ts`, `web/src/plugins/sessions/sessions-keys.ts`, and `web/src/plugins/schedules/schedules-keys.ts` — to delegate to it, leaving their call sites in `ConversationList.tsx`, `SessionList.tsx`, and `SchedulesTab.tsx` untouched. The navigator's richer `handleFileNavigatorKey` in `web/src/file-navigator/file-navigator-keys.ts` is deliberately out of scope. The three colocated suites (`conversation-list-keys.test.ts`, `sessions-keys.test.ts`, `schedules-keys.test.ts`) pin today's arithmetic and must keep passing unchanged. Four files across four directories change, so no single-file extraction applies and this is hand-planned.
-
-
 * Have the tab manager's persisted-state builder include the tab's schedule itself, so every save path keeps it instead of only the handful of callers that remember to pass it.
 
 Existing Debt: A tab's schedule lives in the schedule manager's label-keyed map rather than on the tab record, and the one builder every state-file write goes through adds `schedule` only when a caller passes it as an extra, so five call sites carry it by hand and the twenty-odd other persists (shell finish, PTY exit, queue edits, rename, reorder, editor retarget, profile placement, ACP) write the state file without it. Severity: 7/10

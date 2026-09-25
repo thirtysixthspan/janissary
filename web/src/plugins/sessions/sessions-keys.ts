@@ -12,21 +12,9 @@ export function sessionClickSelection(
   return { selected: clicked, opens: confirmed === clicked };
 }
 
-// Up/Down without wrapping, Home/End to the ends. No wrap, so holding a key settles at an end
-// instead of cycling past it.
-export function nextSessionSelection(
-  length: number,
-  selected: number | null,
-  key: string,
-): number | null {
-  if (length === 0) return null;
-  const index = selected ?? 0;
-  if (key === 'ArrowDown') return Math.min(index + 1, length - 1);
-  if (key === 'ArrowUp') return Math.max(index - 1, 0);
-  if (key === 'Home') return 0;
-  if (key === 'End') return length - 1;
-  return selected;
-}
+// Up/Down without wrapping, Home/End to the ends: the rule every plugin record list shares, published
+// by the plugin API so this list cannot drift from the conversations and schedules lists.
+export { nextListSelection as nextSessionSelection } from '../api';
 
 // What opening a row does. An active, reconnecting, ssh, or navigator row focuses its tab; a
 // detached row attaches it; a terminated row does nothing, because there is nothing left out there.

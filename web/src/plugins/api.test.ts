@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../ws';
-import { createPluginClientCapabilities } from './api';
+import { createPluginClientCapabilities, nextListSelection } from './api';
+import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
 import { createPluginHost, type PluginHost } from './host';
 
 function makeClient(request?: () => Promise<unknown>) {
@@ -118,5 +119,14 @@ describe('createPluginClientCapabilities', () => {
     const action = 'a control the host rendered';
     expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn(), action).splitAction)
       .toBe(action);
+  });
+});
+
+// Every plugin record list reaches its Arrow/Home/End rule through this surface, so it must be the
+// one shared rule rather than a copy that could drift from it.
+describe('nextListSelection', () => {
+  it('publishes the shared list-selection rule itself', () => {
+    expect(nextListSelection).toBe(sharedNextListSelection);
+    expect(nextListSelection(3, 2, 'ArrowDown')).toBe(2);
   });
 });
