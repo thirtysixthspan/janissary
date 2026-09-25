@@ -257,6 +257,11 @@ than refusing it, so the connect takes noticeably longer than an ordinary handsh
 (or reports why it could not). A `-b` tab whose AI never drives a browser therefore never starts
 one. A tab launched without `-b` has no endpoint at all, so the request has nowhere to arrive.
 
+The held connect is answered only once the browser behind it is actually accepting connections, so a
+launch is never called finished on the strength of having been started. A browser that has not come
+up by the time the launch's patience runs out ends that connect with a reason saying it did not
+start, rather than leaving the client waiting; a later connect tries again.
+
 Because the endpoint is minted at launch and never changes, the next connect after a browser's death
 starts a fresh one behind the very same endpoint: a new process, a new scratch directory, a new
 internal address under the guard, and nothing for the AI to re-read. The death itself is reported

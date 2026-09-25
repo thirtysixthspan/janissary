@@ -3,6 +3,7 @@ import { errorText } from '../error-text.js';
 import { startE2EGuard } from './e2e-guard.js';
 import { loopbackWsUrl } from './e2e-loopback.js';
 import { allocateBrowserPorts, type BrowserPorts } from './e2e-ports.js';
+import { waitForListening } from './e2e-ready.js';
 import { allocateBrowserScratch } from './e2e-scratch.js';
 import { newSession, stopSession, type E2ESession } from './e2e-session.js';
 import { spawnBrowserChild } from './e2e-spawn.js';
@@ -116,7 +117,9 @@ type LazyBrowser = {
   internalPath: string;
   label: string;
   // The live browser, or undefined when none is running. Read through `closed` rather than unset,
-  // because a browser that died on its own leaves the record behind and only the flag says so.
+  // because a browser that died on its own leaves the record behind and only the flag says so — and
+  // set as soon as the child is forked rather than once it is listening, so a tab that closes during
+  // a launch closes this child like any other.
   generation: E2ESession | undefined;
   // The start in flight, shared by every client that arrives while one is running. Cleared once it
   // settles, so a start that failed costs the next connect nothing and a start that succeeded is
@@ -181,13 +184,16 @@ export function startLazyE2EBrowserServer(options: E2EBrowserOptions): E2EBrowse
 // needs no start at all, so this is idempotent rather than a request that spends something.
 async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
   if (lazy.session.closed) throw new Error('e2e browser is no longer available');
-  if (lazy.generation && !lazy.generation.closed) return upstreamOf(lazy);
-  lazy.starting ??= startBrowser(lazy);
+  // The in-flight start is asked about first, because `generation` is set for the whole of a launch
+  // and a client arriving while the child is still binding must wait for that launch rather than be
+  // handed an address nothing is listening on yet.
+  lazy.starting ??= lazy.generation && !lazy.generation.closed ? Promise.resolve(upstreamOf(lazy)) : startBrowser(lazy);
   // A start that has run is no longer the answer to anything: a browser that came up answers from
   // `generation`, and one that failed must leave nothing behind for a later client to inherit as
   // though it had already been refused.
+  const starting = lazy.starting;
   try {
-    return await lazy.starting;
+    return await starting;
   } finally {
     lazy.starting = undefined;
   }
@@ -196,15 +202,24 @@ async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
 // A throw here is what ends the client that asked: the guard closes that session with this reason and
 // stays listening, so the next connect tries again against the same endpoint and the same ports. The
 // death is reported on the ordinary path first, which is what puts it in front of the user.
+//
+// A start is not finished when the child has been forked but when the child is listening, because the
+// guard dials the moment this resolves and a dial into a port Chromium has not bound yet is a refused
+// connection rather than a slow one. The wait is inside the `try` on purpose: a child that dies
+// during it and a launch that never binds are the same failure to every caller above, and this
+// sequence already reports one and closes one client with it.
 async function startBrowser(lazy: LazyBrowser): Promise<string> {
   const generation = newSession(lazy.session.onGone);
   try {
     generation.scratch = allocateBrowserScratch(lazy.label);
     generation.child = spawnBrowserChild(generation, lazy.ports.browserPort, lazy.internalPath);
+    // Recorded before the wait, not after it: a tab that closes while the browser is still coming up
+    // closes this record like any other, and a child nothing can reach would be one left running.
+    lazy.generation = generation;
+    await waitForListening(generation, lazy.ports.browserPort);
   } catch (error) {
     stopSession(generation, `e2e browser failed to start: ${errorText(error)}`);
     throw error;
   }
-  lazy.generation = generation;
   return upstreamOf(lazy);
 }

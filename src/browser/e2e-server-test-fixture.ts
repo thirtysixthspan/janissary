@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 import { PassThrough } from 'node:stream';
 import type * as E2EPorts from './e2e-ports.js';
+import type { E2ESession } from './e2e-session.js';
 import { startE2EBrowserServer, startLazyE2EBrowserServer } from './e2e-server.js';
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   scratchRemove: vi.fn(),
   releasedPorts: [] as number[],
   portsThrow: '',
+  // Whether the stubbed child has bound its port. A case that wants to watch a connect be held calls
+  // `holdBrowserPort` and says otherwise; every other case lets the child be listening from the
+  // moment it is forked, which is what a launched browser looks like by the time a connect asks.
+  browserListening: true,
   chromiumBundleDir: vi.fn(() => '/pw/Chrome.app'),
   playwrightPackagePaths: vi.fn(() => ({
     entry: '/app/node_modules/playwright/index.js',
@@ -30,6 +35,20 @@ vi.mock('./playwright-paths.js', () => ({
   playwrightPackagePaths: mocks.playwrightPackagePaths,
 }));
 vi.mock('./e2e-scratch.js', () => ({ allocateBrowserScratch: mocks.allocateBrowserScratch }));
+// The stand-in for the real wait, which probes a real port and would leave every case here waiting
+// on a socket nobody opens. It answers on the same two facts the real one does — the child is
+// listening, or the session ended — so a case can hold a connect open by holding the port. The
+// module itself is pinned on real sockets by `e2e-ready.test.ts`.
+vi.mock('./e2e-ready.js', () => ({
+  waitForListening: (session: E2ESession) => new Promise<void>((resolve, reject) => {
+    const probe = (): void => {
+      if (mocks.browserListening) return resolve();
+      if (session.closed) return reject(new Error('e2e browser exited before it was listening'));
+      setTimeout(probe, 5);
+    };
+    probe();
+  }),
+}));
 vi.mock('./e2e-ports.js', async (importOriginal) => {
   const actual = await importOriginal<typeof E2EPorts>();
   return {
@@ -79,6 +98,7 @@ export function resetE2EServerFixture(): void {
   vi.clearAllMocks();
   mocks.releasedPorts.length = 0;
   mocks.portsThrow = '';
+  mocks.browserListening = true;
   child = makeChild();
   guardClose = vi.fn();
   mocks.spawn.mockReturnValue(child);
@@ -108,6 +128,16 @@ export function start(onGone = vi.fn()) {
 
 export function startLazy(onGone = vi.fn()) {
   return { onGone, ...startLazyE2EBrowserServer({ label: 'bot', onGone }) };
+}
+
+// The stubbed child has not bound its port yet, so the next connect is held where it is until
+// `browserIsListening` says otherwise.
+export function holdBrowserPort(): void {
+  mocks.browserListening = false;
+}
+
+export function browserIsListening(): void {
+  mocks.browserListening = true;
 }
 
 // What one guard was told. The internal address the browser sits behind is no longer part of that —

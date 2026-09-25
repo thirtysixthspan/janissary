@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  child, e2eServerMocks, guardCall, guardClose, internalPort, resetE2EServerFixture, startLazy,
+  browserIsListening, child, e2eServerMocks, guardCall, guardClose, holdBrowserPort, internalPort,
+  resetE2EServerFixture, startLazy,
 } from './e2e-server-test-fixture.js';
 
 // The connect-triggered browser. What this suite pins is that a `-b` tab costs nothing until the
@@ -15,6 +16,16 @@ beforeEach(resetE2EServerFixture);
 // itself is tested in `e2e-guard.test.ts`; this is the far half of it.
 function connect() {
   return guardCall().ensureUpstream();
+}
+
+// Whether `promise` has settled by the time a browser would have had several goes at binding. The
+// only thing asserted through it is that a connect is still waiting, so an over-long wait is as good
+// an answer as a prompt one.
+async function settled(promise: Promise<unknown>): Promise<boolean> {
+  const answer = { done: false };
+  void promise.then(() => { answer.done = true; }, () => { answer.done = true; });
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  return answer.done;
 }
 
 describe('startLazyE2EBrowserServer before the agent connects', () => {
@@ -77,6 +88,20 @@ describe('startLazyE2EBrowserServer on the first connect', () => {
     expect(mocks.spawn).toHaveBeenCalledTimes(1);
     expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(1);
   });
+
+  // The launch window the lazy start opens, and the reason the answer is held rather than guessed:
+  // the guard dials the moment the supplier resolves, so a supplier that answered on the spawn would
+  // be handing back a port Chromium has not bound yet.
+  it('holds the connect until the browser is actually listening', async () => {
+    holdBrowserPort();
+    startLazy();
+    const pending = connect();
+    expect(await settled(pending)).toBe(false);
+    expect(mocks.spawn).toHaveBeenCalledTimes(1);
+    browserIsListening();
+    const upstreamUrl = await pending;
+    expect(upstreamUrl).toBe(`ws://127.0.0.1:${internalPort()}${new URL(upstreamUrl).pathname}`);
+  });
 });
 
 describe('startLazyE2EBrowserServer when a browser will not start', () => {
@@ -96,6 +121,20 @@ describe('startLazyE2EBrowserServer when a browser will not start', () => {
     await connect();
     expect(mocks.spawn).toHaveBeenCalledTimes(2);
     expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(2);
+  });
+
+  // A browser that fails to launch exits after the spawn returned, so its exit is the only thing
+  // that can end a wait. The client is told what happened instead of being closed for nothing.
+  it('rejects with the exit itself when the child dies before it is listening', async () => {
+    holdBrowserPort();
+    const { onGone } = startLazy();
+    const pending = connect();
+    child.handlers.get('exit')?.(1, null);
+    await expect(pending).rejects.toThrow('e2e browser exited before it was listening');
+    expect(onGone).toHaveBeenCalledTimes(1);
+    expect(onGone).toHaveBeenCalledWith('e2e browser exited (code 1)', undefined);
+    expect(guardClose).not.toHaveBeenCalled();
+    expect(mocks.releasedPorts).toEqual([]);
   });
 });
 
