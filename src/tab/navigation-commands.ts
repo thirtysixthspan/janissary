@@ -69,8 +69,6 @@ export function reorderTabToOp(
   const first = Math.min(from, to);
   const last = Math.max(from, to);
   const affectedTabs = result.tabs.slice(first, last + 1);
-  for (const tab of affectedTabs) {
-    if (!tab.view) persist(buildAgentState(tab));
-  }
+  for (const tab of affectedTabs) persist(buildAgentState(tab));
   messageBus.emit('state', { type: 'dirty' });
 }

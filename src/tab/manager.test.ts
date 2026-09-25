@@ -165,6 +165,33 @@ describe('TabManager queue', () => {
     saveSpy.mockRestore();
   });
 
+  // `product/specs/application-state.md`: only agent tabs reach the state directory. A reorder,
+  // rename, retarget, scheduled tick or appended entry can persist any tab, so the rule lives here.
+  it.each(['editor', 'plugin', 'harness', 'files'] as const)('persist writes nothing for a live %s tab', (view) => {
+    const tm = makeTabManager();
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+    const tab = { ...makeTab('viewtab', '#aaa'), view };
+    tm.tabs.push(tab);
+
+    tm.persist(tm.buildAgentState(tab));
+    expect(saveSpy).not.toHaveBeenCalled();
+
+    saveSpy.mockRestore();
+  });
+
+  it.each([undefined, 'agent'] as const)('persist still writes a live agent tab with view %s', (view) => {
+    const tm = makeTabManager();
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+    const tab = { ...makeTab('worker', '#aaa'), view };
+    tm.tabs.push(tab);
+
+    tm.persist(tm.buildAgentState(tab));
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveSpy.mock.calls[0][0].name).toBe('worker');
+
+    saveSpy.mockRestore();
+  });
+
   it('bounds persistence warnings per agent until a save recovers', () => {
     let failing = true;
     const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {
