@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import React, { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { isModalOpen } from './modal-open';
 import { useDialogKeyboard, type DialogKeyMap } from './useDialogKeyboard';
 
 function Dialog({ keys }: { keys: ((e: KeyboardEvent) => void) | DialogKeyMap }) {
@@ -84,6 +85,14 @@ describe('useDialogKeyboard', () => {
 
     expect(fireEvent.click(outside)).toBe(false);
     expect(fireEvent.click(inside)).toBe(true);
+  });
+
+  it('registers as an open modal while mounted and releases it on unmount', () => {
+    const { unmount } = render(<Dialog keys={{}} />);
+
+    expect(isModalOpen()).toBe(true);
+    unmount();
+    expect(isModalOpen()).toBe(false);
   });
 
   it('removes both capture listeners on unmount', () => {

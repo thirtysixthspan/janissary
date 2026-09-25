@@ -12,7 +12,7 @@
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |
 | ↓ | Walk forward through command history |
-| Cmd+W / Ctrl+W | Close the current tab (also works when focus is inside an embedded web page; no-op while any modal overlay is on screen — the route chooser, the syntax-theme or app-theme picker, Quick Open, the tab navigator, or the history, queue, task, or profile picker — or while the quit dialog is up) |
+| Cmd+W / Ctrl+W | Close the current tab (also works when focus is inside an embedded web page; no-op while any modal overlay is on screen — the route chooser, the syntax-theme or app-theme picker, Quick Open, the tab navigator, or the history, queue, task, or profile picker — while the quit dialog is up, or while any modal dialog is open, such as the save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation; the dialog keeps the chord and no tab behind it closes) |
 | Shift+↑ / Ctrl+↑ | Scroll transcript up (accelerated — distance doubles each second held) |
 | Shift+↓ / Ctrl+↓ | Scroll transcript down (accelerated — distance doubles each second held) |
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |
@@ -31,7 +31,7 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
-| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. |
+| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds

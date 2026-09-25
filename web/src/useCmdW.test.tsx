@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { useCmdW } from './useCmdW';
 
 function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen }: {
@@ -21,6 +22,17 @@ function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen }: {
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
 
   return null;
+}
+
+// A modal built on the shared dialog hook, mounted after useCmdW the way a dialog opens over the app.
+function Dialog() {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(dialogRef, { escape: vi.fn() });
+  return <div ref={dialogRef} tabIndex={-1} />;
+}
+
+function renderIdle(closeTab: (n: number) => void) {
+  render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
 }
 
 function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean } = {}) {
@@ -84,6 +96,32 @@ describe('useCmdW', () => {
     const closeTab = vi.fn();
     render(<TestComponent closeTab={closeTab} active={2} quitOpen pickerOpen={false} routeOpen={false} />);
     dispatchKey('w', { metaKey: true });
+    expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('does nothing while a dialog built on useDialogKeyboard is open', () => {
+    const closeTab = vi.fn();
+    renderIdle(closeTab);
+    render(<Dialog />);
+    dispatchKey('w', { metaKey: true });
+    expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it('closes the tab again once the dialog has closed', () => {
+    const closeTab = vi.fn();
+    renderIdle(closeTab);
+    const { unmount } = render(<Dialog />);
+    unmount();
+    dispatchKey('w', { metaKey: true });
+    expect(closeTab).toHaveBeenCalledWith(2);
+  });
+
+  it('does nothing when an earlier listener already prevented the chord', () => {
+    const closeTab = vi.fn();
+    renderIdle(closeTab);
+    const event = new KeyboardEvent('keydown', { key: 'w', metaKey: true, bubbles: true, cancelable: true });
+    event.preventDefault();
+    globalThis.dispatchEvent(event);
     expect(closeTab).not.toHaveBeenCalled();
   });
 

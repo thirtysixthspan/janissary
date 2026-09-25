@@ -1,5 +1,6 @@
 import type React from 'react';
 import { useEffect } from 'react';
+import { isModalOpen } from './shared/modal-open';
 
 export function useCmdW(
   closeTab: (index: number) => void,
@@ -11,6 +12,7 @@ export function useCmdW(
   useEffect(() => {
     const onCloseTab = (e: KeyboardEvent) => {
       if (!((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'w')) return;
+      if (e.defaultPrevented || isModalOpen()) return;
       if (pickerOpenRef.current || routeRef.current || quitConfirmOpenRef.current) return;
       e.preventDefault();
       closeTab(activeTabRef.current ?? 0);
