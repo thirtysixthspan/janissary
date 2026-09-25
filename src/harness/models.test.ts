@@ -48,6 +48,14 @@ describe('harness-models', () => {
   it('rejects an unknown codex model id', () => {
     expect(isKnownModel('codex', 'not-a-real-model')).toBe(false);
   });
+
+  it.each([
+    ['claude', 'claude-opus-5-5'],
+    ['codex', 'gpt-6-sol'],
+    ['opencode', 'opencode-go/deepseek-v4.1-flash'],
+  ])('accepts the September 2026 %s addition %s', (harness, model) => {
+    expect(isKnownModel(harness, model)).toBe(true);
+  });
 });
 
 // The bundled catalog is hand-edited whenever a provider ships or retires a model, so these guard

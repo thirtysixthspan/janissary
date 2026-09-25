@@ -761,7 +761,9 @@ model, and dropping either would reject a profile that pins it.
 
 The `opencode` list carries OpenCode Zen's free tier rather than its full catalog. Zen's paid models
 are mostly other providers' models re-exposed, and reachable more directly through the entries
-already listed.
+already listed. A model a provider offers only for a limited time is listed like any other while the
+provider lists it, and removed under the same rule once it is gone; the same model offered by both
+OpenCode Zen and OpenCode Go appears once under each prefix.
 
 `--effort <level>` selects an effort level with no validation against any fixed set of levels — the
 level is forwarded verbatim, translated to whichever flag the target harness actually understands so

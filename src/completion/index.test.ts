@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { completeCommandLine } from './index.js';
+import { modelsFor } from '../harness/models.js';
 
 let dir: string;
 
@@ -195,10 +196,13 @@ describe('completeCommandLine — syntax theme', () => {
 describe('completeCommandLine — harness model', () => {
   const noFiles = '/no/such/dir/xyz';
 
-  // `claude-f` rather than a longer prefix: it is the one that stays unambiguous however many models
-  // a catalog refresh adds beside it, so this pins the routing rather than the catalog's contents.
+  // The prefix is derived from the catalog rather than fixed, so this pins the routing rather than the
+  // catalog's contents: any fixed prefix goes ambiguous once a refresh adds a model beside it.
   it('completes a model name after --model for the named harness', () => {
-    const r = completeCommandLine('harness claude --model claude-f', 31, noFiles);
-    expect(r.newInput).toBe('harness claude --model claude-fable-5 ');
+    const claude = modelsFor('claude');
+    const model = claude.find((id) => claude.filter((other) => other.startsWith(id.slice(0, -1))).length === 1)!;
+    const line = `harness claude --model ${model.slice(0, -1)}`;
+    const r = completeCommandLine(line, line.length, noFiles);
+    expect(r.newInput).toBe(`harness claude --model ${model} `);
   });
 });
