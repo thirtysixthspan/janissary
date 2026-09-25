@@ -97,8 +97,8 @@ const BROWSER_GUID_PREFIX = 'browser@';
 // The two methods on that object that end the tab's browser rather than the client's own use of it.
 const TEARDOWN_METHODS = new Set(['close', 'killForTests']);
 
-// The browser belongs to the tab, not to the guest driving it, and it is the only one that tab will
-// ever get. Playwright's own client never sends either of these — `connect()` turns `Browser.close()`
+// The browser belongs to the tab, not to the guest driving it, and a browser a script could close is
+// one the tab would have to restart and count against its restart budget. Playwright's own client never sends either of these — `connect()` turns `Browser.close()`
 // into a disconnect — and a `launchServer` dispatcher discards them if something else does. Both are
 // Playwright's choices rather than this repo's, which is the reason to hold the position here too.
 function isBrowserTeardown(frame: unknown): boolean {

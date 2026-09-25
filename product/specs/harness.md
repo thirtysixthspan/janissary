@@ -284,8 +284,9 @@ Handing an agent a browser endpoint would be a way out of the sandbox unless som
 so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
 the browser-control protocol and refuses `file:` URLs, ending the session rather than failing one
 call. It refuses one more thing: a request to close or kill the browser itself. The browser is the
-tab's, not the guest's, and it is the only one that tab will ever get, so no script can spend it —
-asking ends that script's own session and leaves the browser running for the next connection. Closing
+tab's, not the guest's, and a browser a script could close is one the tab would have to restart and
+count against its restart budget, so no script can end it — asking ends that script's own session and
+leaves the browser running for the next connection. Closing
 a page or a context is ordinary work and is untouched. Behind that guard the browser itself runs in a
 fresh, empty scratch directory of its own — never
 a copy of the project — and on macOS it is sandboxed to that directory, so a `file:` read that got
@@ -300,8 +301,8 @@ flag is rejected.
 When the browser is gone — a launch that failed, a browser that exited, or a guard that died — the
 report is delivered twice: a line in the notifications tab naming the tab it belonged to, and the
 same text on the `-b` tab itself, in a band above its terminal where a failed workspace clone already
-reports itself. The notifications tab is opt-in, and the agent whose next connection attempt is about
-to fail is working in the `-b` tab, so neither delivery covers the other. The band rather than the
+reports itself. The notifications tab is opt-in, and the agent that was driving the browser is working
+in the `-b` tab, so neither delivery covers the other. The band rather than the
 tab's transcript, because a harness tab's body is its terminal and nothing renders that transcript;
 and rather than a line written into the terminal, because the harness's next repaint would paint over
 it. The tab keeps running — only its browser is gone. Closing a `-b` tab whose browser is still

@@ -136,8 +136,7 @@ These event types can produce a notification line:
   carries the browser's own last words beneath the message. When the browser said anything at all,
   the line also carries a link that opens the full account in an editor tab — the message is held to
   a readable tail, and a crash trace is longer than that tail. Like the explicit events it fires even
-  while that tab is the active one, since the agent whose next connection is about to fail is working
-  in it.
+  while that tab is the active one, since the agent that was driving the browser is working in it.
 - **`file-operation`** — a file navigator copy, cut/paste, move, delete, or undo/redo replay fails
   for one or more of the items it acted on (see `file-navigator-tab.md`). The line reads
   `Could not <verb> <failed> of <total> items: <names>`, naming the failing items in selection

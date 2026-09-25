@@ -9,8 +9,8 @@ import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js
 
 // The one confined Chromium, spawned for a session. Split out of `e2e-server.ts` because this is
 // where a browser's containment is decided — the profile, the workspace, the two temp variables, and
-// the reporting of whatever the child says — and both the eager and the on-demand start sequences
-// below in that file need all of it without either of them owning it.
+// the reporting of whatever the child says — and the one start sequence in that file needs all of it
+// without owning it.
 
 /**
  * Spawn `janus e2e-browser` through `sandboxSpawn`, which wraps it in the minimal browser profile
