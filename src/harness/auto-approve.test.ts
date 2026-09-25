@@ -108,7 +108,23 @@ const BASH_TEMP_CLEANUP = [
   ' Esc to cancel · Tab to amend · ctrl+e to explain',
 ].join('\n');
 
-const ALL_GATES = { BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP };
+// A four-option gate: two "Yes, and …" options push `No` down to option 4.
+const REQUIRES_APPROVAL_FOUR_OPTION = [
+  ' This command requires approval',
+  '',
+  ' Do you want to proceed?',
+  ' ❯ 1. Yes',
+  '   2. Yes, and don’t ask again for: python3 -',
+  '   3. Yes, and switch to auto mode · auto mode handles these prompts for you',
+  '   4. No',
+  '',
+  ' Esc to cancel · Tab to amend',
+].join('\n');
+
+const ALL_GATES = {
+  BASH_IN_PROJECT, BASH_OUT_OF_PROJECT, FETCH, SUBAGENT_TWO_OPTION, MCP_TOOL, GATE_WITH_TASK_LIST, BASH_TEMP_CLEANUP,
+  REQUIRES_APPROVAL_FOUR_OPTION,
+};
 
 // A codex command-execution overlay: distinct title and `›` selection glyph from claude's gates.
 const CODEX_GATE = [
@@ -140,6 +156,16 @@ describe('detectPermissionGate — claude', () => {
   it('does not match a resolved prompt (menu gone)', () => {
     const resolved = [' Do you want to proceed?', '', ' Running…', '   touch gate-probe.txt'].join('\n');
     expect(detectPermissionGate(resolved, 'claude')).toBe(false);
+  });
+
+  it('does not match a menu whose later options are all Yes', () => {
+    const noNo = [' Do you want to proceed?', ' ❯ 1. Yes', '   2. Yes, and don’t ask again', '   4. Yes, and switch to auto mode'].join('\n');
+    expect(detectPermissionGate(noNo, 'claude')).toBe(false);
+  });
+
+  it('does not count a `1. No` line as the No option', () => {
+    const firstNo = [' Do you want to proceed?', ' ❯ 1. Yes', '   1. No'].join('\n');
+    expect(detectPermissionGate(firstNo, 'claude')).toBe(false);
   });
 
   it('does not match y/n-looking prose', () => {

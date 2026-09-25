@@ -11,11 +11,13 @@ function isYesDefaultLine(line: string): boolean {
   return afterMarker.slice('1.'.length).trimStart().startsWith('Yes');
 }
 
-// A `No` option line, numbered `2.` (two-option gates) or `3.` (three-option gates), tolerating a
-// missing space after the number (the MCP capture rendered `2.Yes` with no space).
+// A `No` option line, numbered `2.` through `9.` (two-option gates end at `2. No`, three-option at
+// `3. No`, and the "This command requires approval" gate at `4. No`), tolerating a missing space
+// after the number (the MCP capture rendered `2.Yes` with no space).
 function isNoOptionLine(line: string): boolean {
   const trimmed = line.trim();
-  if (!(trimmed.startsWith('2.') || trimmed.startsWith('3.'))) return false;
+  const number = trimmed.charAt(0);
+  if (number < '2' || number > '9' || trimmed.charAt(1) !== '.') return false;
   return trimmed.slice('2.'.length).trimStart().startsWith('No');
 }
 

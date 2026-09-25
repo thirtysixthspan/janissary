@@ -362,7 +362,10 @@ harness plus injected prompt — at a future time (see [[scheduling]]).
 
 How it works: the app watches the harness's rendered-screen text (not an image), captured about a
 second after output settles. When that text shows claude's permission menu — the highlighted
-`❯ 1. Yes` default followed by a final `2. No`/`3. No` option — the app injects the Enter keystroke
+`❯ 1. Yes` default followed by a final `No` option numbered anywhere from `2.` to `9.` (`2. No` on a
+two-option gate, `3. No` on a three-option gate, `4. No` on the "This command requires approval"
+gate that also offers "Yes, and don't ask again" and "Yes, and switch to auto mode") — the app
+injects the Enter keystroke
 to accept the highlighted "Yes" (it is a numbered menu, so a literal `y` would not work) and records
 an `auto-approve` notification, rendered as `<label>: Auto-approved a permission prompt` (see
 [[notifications]]). Detection keys on the menu structure and on the absence of claude's live input
