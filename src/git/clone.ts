@@ -1,5 +1,5 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { isGitHubUrl, toHttpsUrl } from './repository-url.js';
+import { cloneUrlError, isGitHubUrl, toHttpsUrl } from './repository-url.js';
 
 // The one `git clone` every clone janissary makes goes through: a local `-w` workspace, a remote
 // workspace, and a remote project root. Run via `spawn` (no shell) rather than `execSync` so it
@@ -33,13 +33,13 @@ function cloneCommand(url: string, target: string, options: GitCloneOptions): { 
   if (githubToken === undefined || !isGitHubUrl(url)) {
     // A clone whose errors are being kept runs where no terminal can answer git, so a credential
     // prompt fails it instead of hanging it.
-    return { args: ['clone', url, target], ...(keepStderr && { env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }) };
+    return { args: ['clone', '--', url, target], ...(keepStderr && { env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }) };
   }
   // The empty value first resets every inherited helper (the reset `finishProvisioning` explains),
   // so the token is the only credential this clone can offer; a `git -c` value is never written to
   // the clone's own config.
   return {
-    args: ['-c', 'credential.helper=', '-c', `credential.helper=${TOKEN_HELPER}`, 'clone', toHttpsUrl(url), target],
+    args: ['-c', 'credential.helper=', '-c', `credential.helper=${TOKEN_HELPER}`, 'clone', '--', toHttpsUrl(url), target],
     env: { ...process.env, GIT_TERMINAL_PROMPT: '0', [TOKEN_VARIABLE]: githubToken },
   };
 }
@@ -48,7 +48,12 @@ function firstLine(text: string): string | undefined {
   return text.split('\n').map((line) => line.trim()).find((line) => line.length > 0);
 }
 
+// A URL git would read as an option or as a command transport is refused before anything spawns,
+// so a crafted origin cannot run a command on the machine doing the clone. The refusal settles
+// `ready` the way a failed clone does, and there is nothing to cancel.
 export function startGitClone(url: string, target: string, options: GitCloneOptions = {}): GitCloneHandle {
+  const refusal = cloneUrlError(url);
+  if (refusal !== undefined) return { ready: Promise.reject(new Error(`Refusing to clone ${url}: ${refusal}.`)), cancel: () => {} };
   const { args, env } = cloneCommand(url, target, options);
   let cancelled = false;
   let stderr = '';

@@ -105,6 +105,21 @@ describe('runRootOffer', () => {
     expect(existsSync(path.join(tmpDir, 'failed'))).toBe(false);
   });
 
+  it('reports an origin that is a command transport as a failed clone, creating nothing', async () => {
+    const target = path.join(tmpDir, 'injected', 'proj');
+    const injected = 'ext::sh -c touch% /tmp/pwned';
+    const { run, offered } = start(target, injected);
+    await offered();
+    run.answer(true);
+    await expect(run.result).resolves.toEqual({
+      refusal: {
+        kind: 'clone-failed', path: target, url: injected,
+        reason: `Refusing to clone ${injected}: the "ext::" transport runs a command rather than fetching a repository.`,
+      },
+    });
+    expect(existsSync(path.join(tmpDir, 'injected'))).toBe(false);
+  });
+
   it('keeps an existing empty folder, emptied, when its clone fails', async () => {
     const target = path.join(home, 'missing');
     mkdirSync(target);

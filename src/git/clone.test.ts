@@ -76,6 +76,7 @@ describe('startGitClone', () => {
     expect(call.args).toContain(url);
     expect(call.args.join(' ')).not.toContain('ghp_secret_token');
     expect(call.args.slice(0, 2)).toEqual(['-c', 'credential.helper=']);
+    expect(call.args.slice(4, 6)).toEqual(['clone', '--']);
     expect(call.env?.JANUS_CLONE_GITHUB_TOKEN).toBe('ghp_secret_token');
     expect(call.env?.GIT_TERMINAL_PROMPT).toBe('0');
     const config = readFileSync(path.join(target, '.git', 'config'), 'utf8');
@@ -83,11 +84,34 @@ describe('startGitClone', () => {
     expect(config).not.toContain('credential');
   });
 
+  // A crafted origin must not reach git as an option or a command transport: the clone is refused
+  // before anything spawns, and settles the way a failed clone does.
+  it.each([
+    ['--upload-pack=touch /tmp/pwned', 'which git would read as an option'],
+    ['ext::sh -c touch% /tmp/pwned', 'the "ext::" transport runs a command'],
+  ])('refuses %s without spawning git', async (url, reason) => {
+    const target = path.join(tmpDir, 'refused-clone');
+    const spawned = spawnSpy.calls.length;
+    const clone = startGitClone(url, target, { keepStderr: true });
+    await expect(clone.ready).rejects.toThrow(`Refusing to clone ${url}: `);
+    await expect(clone.ready).rejects.toThrow(reason);
+    expect(spawnSpy.calls).toHaveLength(spawned);
+    expect(existsSync(target)).toBe(false);
+    expect(() => clone.cancel()).not.toThrow();
+  });
+
+  it('separates the url and target from git\'s options', async () => {
+    const target = path.join(tmpDir, 'separated-clone');
+    await startGitClone(bareDir, target).ready;
+    expect(spawnSpy.calls.at(-1)!.args).toEqual(['clone', '--', bareDir, target]);
+    expect(existsSync(path.join(target, 'README.md'))).toBe(true);
+  });
+
   it('never sends a GitHub token to another host', async () => {
     const clone = startGitClone(bareDir, path.join(tmpDir, 'no-token-clone'), { githubToken: 'ghp_secret_token' });
     await clone.ready;
     const call = spawnSpy.calls.at(-1)!;
-    expect(call.args).toEqual(['clone', bareDir, path.join(tmpDir, 'no-token-clone')]);
+    expect(call.args).toEqual(['clone', '--', bareDir, path.join(tmpDir, 'no-token-clone')]);
     expect(call.env?.JANUS_CLONE_GITHUB_TOKEN).toBeUndefined();
   });
 });

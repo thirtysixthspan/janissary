@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reject an offered origin URL that could inject git options or command transports before the remote root clone spawns git, closing the security hole the offer path opens.
-
-Existing Issue: The remote root clone spawns git with the provisioning frame's origin as a bare argument, and git parses its own options and command transports from that position, so an origin beginning with a dash or written as an `ext::` or `ssh::` command URL reaches `git clone` unvalidated. Severity: 6/10
-
-Existing Risk: 5/10 - A crafted origin in the launching project's git config, something a malicious or compromised checkout can rewrite, is cloned on the remote host the moment a user launches against it, handing that origin's author command execution under the remote account.
-
-Proposal Risk: 2/10 - A guard that rejects shapes it did not anticipate could refuse a legitimate origin, and the remote workspace clone shares the same helper, so a rejected shape would fail launches that clone fine today; both paths need tests beside the new ones.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1200: guard the remote root clone against git option and command-transport injection through the offered origin". The new surface is the root clone: `provisionOrigin` in src/remote/entry-factory.ts sends the launching project's origin over the `provision` frame with only `withoutCredentials` (src/git/repository-url.ts) applied, and `cloneCommand` in src/git/clone.ts passes that string straight into `spawn('git', ['clone', url, target])` on the remote, where `startGitClone` runs it. Git resolves `-`-leading arguments as options there (`--separate-git-dir`, `--upload-pack`), and git's `ext::`/`ssh::` command-transport URLs execute their command on the machine running the clone. Change `cloneCommand` to refuse spawning: reject a URL that starts with `-` or whose scheme is `ext:` or `ssh:` (the command transports) with a clear error before `spawn`, so every failure still flows through the existing `clone-failed` path in src/remote/serve-root-offer.ts and the local side words it as the clone-failed line it already has; passing `--` between the subcommand and the URL is an acceptable additional hardening for the option half. The scp form, `ssh://`, HTTPS, and local paths used by the existing tests must keep cloning, and the token-credential arguments before `clone` are unaffected. Extend src/git/clone.test.ts with cases asserting a dash-leading URL and an `ext::` URL reject without spawning while a normal bare-repository clone still runs, and add a repository-url case pinning that the validator leaves every accepted form unchanged. Verify the workspace clone (src/workspace/index.ts through `provisionWorkspace` and src/workspace/manager.ts's `create`) still provisions from an ordinary origin, since it shares `startGitClone`; its behavior on a normal origin must not move.
-
-
 * Strip embedded credentials from the origins and error text the remote echoes back in its root refusals, closing the security gap that lets the host's own git credentials reach the notifications feed.
 
 Existing Issue: The `different-origin` refusal carries the remote repository's own origin verbatim and `clone-failed` carries git's first stderr line, and neither is scrubbed before the local side composes them into the placeholder display and the notifications feed, although both strings may embed a username or password. Severity: 4/10

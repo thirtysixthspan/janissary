@@ -310,7 +310,10 @@ typed into the placeholder go only to a pending prompt; anything else typed ther
 `<url>` is the URL that is actually cloned. The clone uses the launching project's GitHub token, the
 same one forwarded for the workspace (see [What is computed where](#what-is-computed-where)), when
 the `origin` is on `github.com`, and then fetches the `origin`'s HTTPS form. Otherwise it clones the
-`origin` as it is, with the host's own git access. The clone runs silently: while it runs the
+`origin` as it is, with the host's own git access. An `origin` that git would read as an option (one
+starting with `-`) or as a command transport (`ext::` or `fd::`) is never handed to git: the clone
+fails at once with that reason and nothing is created. The same refusal covers every workspace
+clone. The clone runs silently: while it runs the
 terminal shows `Cloning <url> into <path>…`, and git's own output is not shown. Once the workspace is
 ready, `Cloned <url> into <path> on <host>.` is posted to the notifications feed, attributed to the
 launch's creator.

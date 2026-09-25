@@ -75,6 +75,25 @@ export function repositoryName(url: string): string | undefined {
   return workspaceLabelError(name) === undefined ? name : undefined;
 }
 
+// Remote helpers that run a command or talk over inherited file descriptors rather than fetching a
+// repository from somewhere.
+const COMMAND_TRANSPORTS = new Set(['ext', 'fd']);
+
+/**
+ * Why `url` must not be handed to `git clone`, or undefined when it may be. Git reads a leading `-`
+ * as an option (`--upload-pack=<command>` among them), and an `ext::` or `fd::` URL is a command
+ * transport. Every other form, including other `<transport>::` helpers, passes unchanged.
+ */
+export function cloneUrlError(url: string): string | undefined {
+  if (url.startsWith('-')) return 'the URL starts with "-", which git would read as an option';
+  const helper = /^([A-Za-z][\w+.-]*)::/.exec(url);
+  const transport = helper?.[1].toLowerCase();
+  if (transport !== undefined && COMMAND_TRANSPORTS.has(transport)) {
+    return `the "${transport}::" transport runs a command rather than fetching a repository`;
+  }
+  return undefined;
+}
+
 /**
  * `url` with any embedded credential removed. An HTTP(S) origin loses both its username and its
  * password, since a token often sits in the username alone (`https://<token>@github.com/…`); an

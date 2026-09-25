@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  isGitHubUrl, repositoryName, sameRepository, toHttpsUrl, withoutCredentials,
+  cloneUrlError, isGitHubUrl, repositoryName, sameRepository, toHttpsUrl, withoutCredentials,
 } from './repository-url.js';
 
 describe('toHttpsUrl', () => {
@@ -78,6 +78,33 @@ describe('repositoryName', () => {
       expect(repositoryName(url)).toBeUndefined();
     },
   );
+});
+
+describe('cloneUrlError', () => {
+  it.each(['--upload-pack=touch /tmp/pwned', '-oProxyCommand=touch /tmp/pwned:repo', '-c'])(
+    'refuses %s as a git option', (url) => {
+      expect(cloneUrlError(url)).toBe('the URL starts with "-", which git would read as an option');
+    },
+  );
+
+  it.each([
+    ['ext::sh -c touch% /tmp/pwned', 'ext'],
+    ['EXT::sh -c id', 'ext'],
+    ['fd::3', 'fd'],
+  ])('refuses %s as a command transport', (url, transport) => {
+    expect(cloneUrlError(url)).toBe(`the "${transport}::" transport runs a command rather than fetching a repository`);
+  });
+
+  it.each([
+    'git@github.com:owner/repo.git',
+    'ssh://git@github.com/owner/repo.git',
+    'https://github.com/owner/repo.git',
+    'file:///srv/git/repo.git',
+    '/srv/git/repo.git',
+    'codecommit::us-east-1://repo',
+  ])('accepts %s', (url) => {
+    expect(cloneUrlError(url)).toBeUndefined();
+  });
 });
 
 describe('withoutCredentials', () => {
