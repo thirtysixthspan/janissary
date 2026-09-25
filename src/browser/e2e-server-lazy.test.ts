@@ -225,3 +225,33 @@ describe('startLazyE2EBrowserServer close', () => {
     expect(mocks.spawn).not.toHaveBeenCalled();
   });
 });
+
+// A guard that cannot listen leaves whatever is behind it with no route to it, so it has to release
+// the same things a tab closing does — the eager start gets that from its one session, and the lazy
+// start gets it only once the guard's failure runs the teardown the handle runs.
+describe('startLazyE2EBrowserServer when the guard cannot listen', () => {
+  const failed = 'e2e browser guard failed to listen: EADDRINUSE';
+
+  it('kills the live browser, removes its directory, and frees the ports', async () => {
+    const { onGone } = startLazy();
+    await connect();
+    guardCall().onError(failed);
+    expect(guardClose).toHaveBeenCalledTimes(1);
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect(mocks.scratchRemove).toHaveBeenCalledTimes(1);
+    expect(mocks.releasedPorts).toHaveLength(2);
+    // One failure, said once: the browser that was working is released, not reported as gone too.
+    expect(onGone).toHaveBeenCalledTimes(1);
+    expect(onGone).toHaveBeenCalledWith(failed, undefined);
+  });
+
+  it('releases the ports and reports the guard error alone when no browser was started', () => {
+    const { onGone } = startLazy();
+    guardCall().onError(failed);
+    expect(guardClose).toHaveBeenCalledTimes(1);
+    expect(mocks.releasedPorts).toHaveLength(2);
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(onGone).toHaveBeenCalledTimes(1);
+    expect(onGone).toHaveBeenCalledWith(failed, undefined);
+  });
+});

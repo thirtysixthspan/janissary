@@ -152,31 +152,32 @@ export function startLazyE2EBrowserServer(options: E2EBrowserOptions): E2EBrowse
   const session = newSession(options.onGone);
   session.ports = ports;
   const lazy: LazyBrowser = { session, ports, internalPath, label: options.label, generation: undefined, starting: undefined };
+  // Everything a tab owns, released in one order whatever asked. The guard first, so nothing can ask
+  // for a browser while this is tearing one down, and the ports with it — a port still reserved for a
+  // guard that has stopped listening is a port a later launch would be refused. Then whatever browser
+  // is running, ended the way a browser the user closed ends: killed, with its directory removed and
+  // nothing reported. Clearing the record first is what makes a second call a no-op.
+  const teardown = (): void => {
+    const { generation } = lazy;
+    lazy.generation = undefined;
+    stopSession(lazy.session);
+    if (generation) stopSession(generation);
+  };
   try {
     session.guard = startE2EGuard({
       port: ports.guardPort, wsPath: publishedPath,
       ensureUpstream: () => ensureUpstream(lazy),
-      onError: (message) => stopSession(session, message),
+      // A guard that cannot listen is the fourth ending, and it leaves a browser behind it that
+      // nothing can reach — so it runs the same release a tab closing does. The message goes through
+      // the tab session, whose report the human reads; the generation behind it is released silently,
+      // because the failure has already been said once.
+      onError: (message) => { stopSession(session, message); teardown(); },
     });
   } catch (error) {
     stopSession(session, `e2e browser failed to start: ${errorText(error)}`);
   }
 
-  return {
-    env: browserEnv(ports.guardPort, publishedPath),
-    // The guard first, so nothing can ask for a browser while this is tearing one down, and the ports
-    // with it — a port still reserved for a guard that has stopped listening is a port a later launch
-    // would be refused. Then whatever browser is running, ended the way a browser the user closed
-    // ends: killed, with its directory removed and nothing reported.
-    handle: {
-      close: () => {
-        const { generation } = lazy;
-        lazy.generation = undefined;
-        stopSession(lazy.session);
-        if (generation) stopSession(generation);
-      },
-    },
-  };
+  return { env: browserEnv(ports.guardPort, publishedPath), handle: { close: teardown } };
 }
 
 // The connect-triggered start. One in-flight start serves every client that arrives while it runs —

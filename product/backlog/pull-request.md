@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Release a tab's live browser when the guard itself fails, handling the case the two-session split opens in the lazy start's error path.
-
-Existing Issue: The lazy start hands the guard an `onError` that calls `stopSession` on the tab session alone, so a guard that fails after a browser has been started leaves that browser's child running, its scratch directory in place and its port handed back to the band with nothing reporting it, where the eager start released the whole session from the same callback. Severity: 4/10
-
-Existing Risk: 4/10 - A guard-level failure after a browser is up — a bind race on the published port, or an accept failure such as a file-descriptor exhaustion — leaves a confined Chromium with no route to it that nothing kills, holding a browser-band port a later launch can then be refused, until janissary restarts.
-
-Proposal Risk: 2/10 - Routing the guard's failure through the same teardown as `close()` means a guard error now also tears down a browser that was working, which is the honest answer but a behavior change that needs its own case.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1201: release a lazy tab's live browser when the guard reports it cannot listen". In `src/browser/e2e-server.ts`, extract the body of the `close()` returned by `startLazyE2EBrowserServer` into one `teardown` function and pass that as the guard's `onError`, so a guard failure and a tab closing run the same release: the tab session first, which closes the guard and frees the ports, then any live generation, which kills the child and removes its scratch directory. Keep the ordering the existing `close()` comment records — guard before generation, so nothing can ask for a browser while a teardown is in progress — and keep `lazy.generation` being cleared first so a second call stays a no-op. `startE2EBrowserServer` needs no equivalent change: its one session already holds everything the callback must release. Mirror the eager suite's existing case in `src/browser/e2e-server-lifecycle.test.ts` with two cases in `src/browser/e2e-server-lazy.test.ts`: one that starts a browser, invokes `guardCall().onError('e2e browser guard failed to listen: EADDRINUSE')` and asserts the child is killed, the live scratch directory is removed, both ports are released and `onGone` fired once, and one with no browser started, which must still release the ports and report the guard error alone. The eager case in `src/browser/e2e-server-lifecycle.test.ts` must keep passing untouched.
-
-
 * Deliver the plan's claim that the metadata-row globe icon tracks a browser, which the shipped flag derived from the launch flag does not do.
 
 Existing Issue: The icon is derived from `tab.browser`, which `src/harness/manager.ts` sets from the `-b` launch flag at spawn, and `browserError` is written once and never cleared, so a `-b` tab shows a browser from launch before one exists and never shows one again after a death even though the next connect starts a fresh browser behind the same endpoint. Severity: 5/10
