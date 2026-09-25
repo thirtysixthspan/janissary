@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useDialogKeyboard } from './shared/useDialogKeyboard';
-import type { JanusClient } from './ws';
+import { useDialogKeyboard } from './useDialogKeyboard';
+import type { JanusClient } from '../ws';
 
 // Shared cancel/create wiring for the "New harness" and "New schedule" launch dialogs: a Close
 // RPC on cancel, a command RPC (built from `fields`) plus the same Close RPC on create, Escape/Enter
