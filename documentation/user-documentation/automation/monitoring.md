@@ -38,6 +38,8 @@ The reporting tab gutter has an up/down-arrow button at the right. Drag it verti
 the reporting area: drag up for more reporting space, or down for more main-tab space.
 Neither the reporting area nor the main tab area can shrink below 15% of the window height.
 
+Drag a monitor tab's label within the strip to reorder the reporting tabs. The selected monitor stays visible after the move, and reordering never changes the active tab in the main tab area.
+
 - A **reset** button discards the monitor's accumulated context and reloads just its persona priming, the same recovery the monitor performs automatically after a session error.
 - A **context snapshot** button opens the monitor's current accumulated context (persona priming, batched updates, questions, and replies) as a point-in-time snapshot in a text tab.
 
@@ -66,7 +68,7 @@ New activity from every target is buffered and sent to the monitor's session as 
 
 A monitor's reply is parsed for two possible marker lines: `[SUMMARY]:` recaps activity with no action attached, and `[SUGGESTION]:` offers something actionable, optionally paired with a `[COMMAND]:` line. Marker text can continue across multiple lines. If a reply includes both markers, the suggestion is delivered and the summary is ignored. A reply with neither marker (like a bare `OK`) delivers nothing.
 
-In a reporting tab, a suggestion that carries a command shows it as a clickable line: clicking runs it in the tab the suggestion is about, queuing behind anything already queued there. Each suggestion also carries thumbs-up / thumbs-down buttons; either one removes the suggestion from the feed.
+In a reporting tab, a suggestion that carries a command shows it as a clickable line: clicking runs it in the tab the suggestion is about, queuing behind anything already queued there. Each suggestion also carries thumbs-up / thumbs-down buttons; either one removes the suggestion from the feed. What one monitor reports never lands in another monitor's feed.
 
 ## Asking a monitor directly
 
@@ -83,7 +85,7 @@ A monitor has no tools by default. A persona file can opt into `web_search` and 
 [//]: # tools: web_search, web_fetch
 ```
 
-These are the only two tools a persona can ever request this way. No filesystem or terminal access is ever granted to a monitor.
+These are the only two tools a persona can ever request this way. No filesystem or terminal access is ever granted to a monitor. A persona naming anything else fails to load with `Persona "<name>" requests unknown tool "<x>" (supported: web_search, web_fetch).`, and the monitor never starts. Only the claude adapter can grant them; a harness that doesn't ask for tool permission over ACP runs the monitor tool-less whatever the persona asks for.
 
 ## Stopping a monitor
 
@@ -96,3 +98,5 @@ monitors                    list active monitors with their targets and suggesti
 A monitor's session also ends on its own when its owner tab closes or every one of its tab targets has been removed. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
 
 Closing a reporting tab stops the monitors feeding it. If two owners share a reporting tab, closing one owner stops only that owner's monitor; the reporting tab remains while another monitor still feeds it.
+
+A reply or error that turns up after its monitor was stopped, or after its session was replaced by a reset or an automatic error recovery, is ignored: nothing is suggested, no reporting tab reopens, and no session is restarted. Stopping a monitor mid-prompt never leaves an untracked session behind. `monitor ask` is the one exception, and only for the command bar: a late reply still closes the running `monitor ask` entry with the text it would have shown, so you are never left waiting. The session is still not restarted.

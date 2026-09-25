@@ -32,7 +32,7 @@ agent           create a tab with a random unused name
 agent bilal     create a tab named "bilal"
 ```
 
-The new tab is focused immediately. Names are always lowercased, and each must be unique — reusing one prints `Agent "<name>" is already active.` and creates nothing. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if every pool name is taken, bare `agent` prints `All agent names are in use.`
+The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if every pool name is taken, bare `agent` posts `All agent names are in use.` to that same feed.
 
 ## Reading the tab strip
 

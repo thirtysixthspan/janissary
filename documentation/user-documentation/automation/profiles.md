@@ -130,6 +130,8 @@ A harness entry's `run` and `schedule` live in memory only — closing the tab o
 
 Launching a profile that's already running resets it: any open tab whose label matches a profile entry is closed first — processes killed, schedules dropped, workspaces removed — then everything opens fresh, with schedules re-based to now and new clones where asked. The only tab spared is the one you ran `profile launch` from; if the profile has an entry by that name, it's reported and skipped so the launch report has somewhere to land.
 
+An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once the reset above has closed the matching tabs, an entry whose name is still taken — by an open tab, by a live [sessions](/user-documentation/tab-types/sessions) row, or, for a remote entry, by something running on its host — is refused. Its `Cannot launch "<name>": …` line goes to the [notifications](/user-documentation/tab-types/notifications) feed against the tab you ran `profile launch` from, the entry is listed under `Skipped:` as `<name> (launch refused — see notifications)`, and every other entry still opens. A leftover workspace folder sitting under an entry's name is removed before its clone, the same as for any other launch — see [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent#when-a-workspace-folder-is-already-there).
+
 ## Saving the running session as a profile
 
 

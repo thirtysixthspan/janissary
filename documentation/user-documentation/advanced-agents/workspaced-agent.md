@@ -45,6 +45,12 @@ Commits are a separate matter, and they *are* yours. The name and email git reso
 
 A codex harness needs one extra thing. Codex hides credential-looking variables from the commands it runs, and the GitHub token looks exactly like one — so a push from a codex tab fails as if you had never set a token up. The standard `.codex/config.toml` that `janus init` writes tells codex to keep it. If you scaffolded the project with `janus init` and trusted the project the first time you opened codex in it, this is already handled. Claude and opencode tabs need nothing extra — they pass the token through to `git` and `gh` as-is.
 
+## When a workspace folder is already there
+
+A `-w` launch checks the folder its name would use before it clones anything. A folder a live Janissary still holds is not a leftover: an open tab working in it, or a Janissary instance running inside it. A plain shell sitting there doesn't count, and a name differing from the holder's only by case is the same folder. A name you typed is then refused with `Cannot launch "emrah": "emrah" is already running (<path>).`, and a default name moves on to the next free one.
+
+A folder nothing holds is a leftover from an earlier run. It is removed before the clone starts, uncommitted or unpushed work in it and all, the removal is announced as `Removed leftover workspace "emrah" (<path>) before launching.` in the [notifications](/user-documentation/tab-types/notifications) feed, and the launch goes ahead. If the removal fails, nothing is announced and the launch is refused instead: `Cannot launch "emrah": could not remove leftover workspace "emrah" (<path>) — <reason>.` Whatever it could not remove is left in place, and the next launch under that name treats it as a leftover again. A launch without a workspace touches neither folder. The same happens on a remote host — see [Remote agents](/user-documentation/advanced-agents/remote-agents#when-the-name-is-already-in-use).
+
 ## Lifecycle
 
 <img class="agent-float left" src="/agents/demir-south-east.png" alt="" />

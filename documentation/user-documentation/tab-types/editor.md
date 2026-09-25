@@ -32,6 +32,33 @@ A plain click on the header (the file name, size, or location) puts focus straig
 
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, and the usual editing keys all work as you'd expect, including holding a key down to repeat it. `Shift` with any arrow extends the selection, the same in both directions.
 
+The chords you already know from other editors work too:
+
+| Key | Action |
+|---|---|
+| `Cmd+A` | Select the whole file |
+| `Cmd+C` / `Cmd+X` | Copy / cut the selection |
+| `Cmd+S` | Save the file |
+| `Cmd+Z` / `Cmd+Shift+Z` | Undo / redo |
+| `Cmd+←` / `Cmd+→` | Start / end of the line |
+| `Cmd+↑` / `Cmd+↓` | Start / end of the file |
+
+A set of emacs-style keys answers as well, for a keyboard without those chords:
+
+| Key | Action |
+|---|---|
+| `Ctrl+A` / `Ctrl+E` | Start / end of the line |
+| `Ctrl+B` / `Ctrl+F` | Cursor one character left / right. `Ctrl+F` moves right here; `Cmd+F` opens find |
+| `Ctrl+N` / `Ctrl+P` | Cursor one visual row down / up |
+| `Ctrl+D` | Delete the character after the cursor |
+| `Ctrl+K` | Delete from the cursor to the end of the line |
+| `Ctrl+Y` | Paste back what `Ctrl+K` cut |
+| `Ctrl+S` | Save the file |
+| `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
+| `Ctrl+Home` / `Ctrl+End` | Start / end of the file |
+
+Note that `Ctrl+A` and `Ctrl+D` mean something different here than they do in a [file navigator](/user-documentation/tab-types/file-navigator): in the editor they move to the start of the line and delete forward.
+
 A long line wraps across several visual rows instead of scrolling horizontally. `↑`/`↓` (or `Ctrl+P`/`Ctrl+N`) move the cursor one visual row at a time, so crossing a wrapped line takes as many presses as it has rows on screen; once you reach the wrapped line's first or last row, the next press continues into the line above or below it.
 
 Typing with an IME — composing characters from several keystrokes, as Japanese or Chinese input methods do — works normally: the editor waits for composition to finish before applying what you typed.

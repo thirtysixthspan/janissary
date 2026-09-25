@@ -78,12 +78,16 @@ Selecting and copying work the same in every terminal in the app, including
 
 <img class="agent-float left" src="/agents/ahmed-south.png" alt="" />
 
-The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead (collisions get the same `-2` suffix):
+The tab is labeled with the harness name by default; a second `harness claude` becomes `claude-2`, and so on. `as <label>` picks your own label instead, and a label you typed is never handed a suffix: when it is already in use, no tab opens and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed, attributed to the tab you typed the command in, with nothing written to that tab's transcript.
 
 ```
-harness opencode as quality        → tab "quality"
-harness opencode as quality        → tab "quality-2"
+harness claude                → tab "claude"
+harness claude                → tab "claude-2" (that default label is taken)
+harness opencode as quality   → tab "quality"
+harness opencode as quality   → refused: Cannot launch "quality": a tab named "quality" is already open.
 ```
+
+A default label walks past everything in use to the next free `-2`, `-3`, and so on. A label is in use when an open tab has it, when the [sessions](/user-documentation/tab-types/sessions) tab holds a harness or agent row with it that is provisioning, active, reconnecting, or detached, or when something with that name is already running on the host a remote launch targets. A terminated, ssh, or file-navigator row never takes a label, and labels compare without regard to case. [Agents](/user-documentation/getting-started/agents#names) lists the three refusal lines.
 
 - `harness` with no name opens the **New harness** dialog in the app (see below). Only the classic terminal UI prints `Usage: harness <claude|opencode|codex> [as <label>] [-w].` instead.
 - An unknown name: `Unknown harness "foo". Choose from: claude, opencode, codex.`
@@ -124,9 +128,18 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 
 Harnesses start inside a disposable clone by default — the same isolation agents get. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` opts out. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
 
+A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
+
 ## Auto-approving permission prompts
 
-Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved. For codex, the app recognizes its approval overlay and confirms the highlighted one-time approval choice — never a persistent "always allow" option. Opencode remains unsupported:
+Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved.
+
+Both permission menus are numbered lists rather than yes/no questions, so the app sends `Enter` to take whatever option is highlighted. That is always the one-time answer, never a choice that widens the permission for later:
+
+- **claude** — the highlighted `❯ 1. Yes`, whatever else the gate offers. Its later "Yes, and don't ask again" and "Yes, and switch to auto mode" options are never the one taken.
+- **codex** — the app recognizes the approval overlay and confirms its highlighted one-time approval choice, never a persistent allowlist option.
+
+Opencode remains unsupported:
 
 - `harness opencode -y` (or any harness without a recognized permission prompt): `-y/--yes is only supported for the claude and codex harnesses.`
 
