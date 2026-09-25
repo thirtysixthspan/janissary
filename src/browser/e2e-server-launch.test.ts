@@ -2,7 +2,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
-import { e2eServerMocks, resetE2EServerFixture, start } from './e2e-server-test-fixture.js';
+import {
+  e2eServerMocks, guardCall, internalPath, internalPort, resetE2EServerFixture, start,
+} from './e2e-server-test-fixture.js';
 
 const mocks = e2eServerMocks();
 beforeEach(resetE2EServerFixture);
@@ -10,21 +12,17 @@ beforeEach(resetE2EServerFixture);
 describe('startE2EBrowserServer environment', () => {
   it('publishes the guard\'s endpoint and never the browser\'s own', () => {
     const { env } = start();
-    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as {
-      port: number; wsPath: string; upstreamPort: number; upstreamPath: string;
-    };
     const endpoint = env.JANISSARY_BROWSER_WS_ENDPOINT ?? '';
-    expect(endpoint).toBe(`ws://127.0.0.1:${guardCall.port}${guardCall.wsPath}`);
-    expect(endpoint).not.toContain(guardCall.upstreamPath);
-    expect(endpoint).not.toContain(String(guardCall.upstreamPort));
+    expect(endpoint).toBe(`ws://127.0.0.1:${guardCall().port}${guardCall().wsPath}`);
+    expect(endpoint).not.toContain(internalPath());
+    expect(endpoint).not.toContain(String(internalPort()));
   });
 
   it('mints two distinct unguessable paths', () => {
     start();
-    const call = mocks.startE2EGuard.mock.calls[0][0] as { wsPath: string; upstreamPath: string };
-    expect(call.wsPath).not.toBe(call.upstreamPath);
-    expect(call.wsPath.length).toBeGreaterThan(24);
-    expect(call.upstreamPath.length).toBeGreaterThan(24);
+    expect(guardCall().wsPath).not.toBe(internalPath());
+    expect(guardCall().wsPath.length).toBeGreaterThan(24);
+    expect(internalPath().length).toBeGreaterThan(24);
   });
 
   it('names the shared loopback address in the endpoint it hands the agent', () => {
@@ -47,18 +45,14 @@ describe('startE2EBrowserServer environment', () => {
 });
 
 describe('startE2EBrowserServer ports', () => {
-  function guardCall(index: number) {
-    return mocks.startE2EGuard.mock.calls[index][0] as { port: number; upstreamPort: number };
-  }
-
   it('never points the guard at its own listening port', () => {
     start();
-    expect(guardCall(0).port).not.toBe(guardCall(0).upstreamPort);
+    expect(guardCall().port).not.toBe(internalPort());
   });
 
   it('keeps the private browser port out of the harness environment', () => {
     const server = start();
-    expect(Object.values(server.env)).not.toContain(String(guardCall(0).upstreamPort));
+    expect(Object.values(server.env)).not.toContain(String(internalPort()));
     expect(server).not.toHaveProperty('browserPort');
   });
 
@@ -76,7 +70,7 @@ describe('startE2EBrowserServer ports', () => {
   it('gives two live browsers four distinct ports', () => {
     const first = start();
     const second = start();
-    const ports = [guardCall(0).port, guardCall(0).upstreamPort, guardCall(1).port, guardCall(1).upstreamPort];
+    const ports = [guardCall(0).port, internalPort(0), guardCall(1).port, internalPort(1)];
     expect(new Set(ports).size).toBe(4);
     first.handle.close();
     second.handle.close();
@@ -87,9 +81,9 @@ describe('startE2EBrowserServer ports', () => {
     const second = start();
     first.handle.close();
     const third = start();
-    const stillLive = [guardCall(1).port, guardCall(1).upstreamPort];
+    const stillLive = [guardCall(1).port, internalPort(1)];
     expect(stillLive).not.toContain(guardCall(2).port);
-    expect(stillLive).not.toContain(guardCall(2).upstreamPort);
+    expect(stillLive).not.toContain(internalPort(2));
     second.handle.close();
     third.handle.close();
   });
@@ -125,7 +119,7 @@ describe('startE2EBrowserServer workspace', () => {
     start();
     const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2];
     // TMPDIR for Playwright's own temp dirs, MAC_CHROMIUM_TMPDIR because Chromium's macOS temp
-    // resolution ignores TMPDIR entirely — see the env construction in e2e-server.ts.
+    // resolution ignores TMPDIR entirely — see the env construction in e2e-spawn.ts.
     expect(spawnOptions.env.TMPDIR).toBe('/ws/browsers/bot-token.tmp');
     expect(spawnOptions.env.MAC_CHROMIUM_TMPDIR).toBe('/ws/browsers/bot-token.tmp');
   });
@@ -138,25 +132,22 @@ describe('startE2EBrowserServer workspace', () => {
 
   it('passes the child the internal port and directory, not the published ones', () => {
     start();
-    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPort: number; upstreamPath: string };
-    const [, args] = mocks.spawn.mock.calls[0] as [string, string[]];
+    const args = (mocks.spawn.mock.calls[0] as [string, string[]])[1];
     expect(args).toContain('e2e-browser');
-    expect(args[args.indexOf('--port') + 1]).toBe(String(guardCall.upstreamPort));
+    expect(args[args.indexOf('--port') + 1]).toBe(String(internalPort()));
     expect(args[args.indexOf('--dir') + 1]).toBe('/ws/browsers/bot-token');
   });
 
   it('keeps the internal path out of the child\'s argument vector', () => {
     start();
-    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPath: string };
     const [command, args] = mocks.spawn.mock.calls[0] as [string, string[]];
-    expect([command, ...args].join(' ')).not.toContain(guardCall.upstreamPath);
+    expect([command, ...args].join(' ')).not.toContain(internalPath());
   });
 
   it('hands the internal path to the child in its environment instead', () => {
     start();
-    const guardCall = mocks.startE2EGuard.mock.calls[0][0] as { upstreamPath: string };
     const spawnOptions = (mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv }])[2];
-    expect(spawnOptions.env.JANISSARY_E2E_WS_PATH).toBe(guardCall.upstreamPath);
+    expect(spawnOptions.env.JANISSARY_E2E_WS_PATH).toBe(internalPath());
   });
 });
 
@@ -164,7 +155,6 @@ describe('startE2EBrowserServer child launch', () => {
   function spawnCall() {
     return mocks.spawn.mock.calls[0] as [string, string[], { env: NodeJS.ProcessEnv; stdio: unknown }];
   }
-
   // Both output slots piped, not ignored: what the browser says on its way out is the only account
   // of why it went, and an unread pipe would block the child once its buffer filled.
   it('pipes the child\'s output rather than discarding it', () => {

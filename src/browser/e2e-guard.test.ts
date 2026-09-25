@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { WebSocket, WebSocketServer } from 'ws';
-import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
+import { E2E_LOOPBACK_HOST, loopbackWsUrl } from './e2e-loopback.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
 
 // The guard against a stub upstream `ws` server. This is the layer that most needs pinning: it is
@@ -60,10 +60,12 @@ async function freePort(): Promise<number> {
 }
 
 async function startGuard(upstream: Upstream): Promise<number> {
+  return startGuardWith(() => Promise.resolve(loopbackWsUrl(upstream.port, UPSTREAM_PATH)));
+}
+
+async function startGuardWith(ensureUpstream: () => Promise<string>): Promise<number> {
   const port = await freePort();
-  const handle: E2EGuardHandle = startE2EGuard({
-    port, wsPath: PUBLISHED_PATH, upstreamPort: upstream.port, upstreamPath: UPSTREAM_PATH,
-  });
+  const handle: E2EGuardHandle = startE2EGuard({ port, wsPath: PUBLISHED_PATH, ensureUpstream });
   cleanups.push(() => handle.close());
   return port;
 }
@@ -246,6 +248,90 @@ describe('startE2EGuard', () => {
     const port = await startGuard(upstream);
     const client = connect(port, UPSTREAM_PATH);
     await expect(opened(client)).rejects.toThrow();
+  });
+});
+
+// The browser is not up yet when the agent first connects, and the connect is what brings it up. The
+// client's handshake is held across that gap and its frames wait in order, so the one thing that can
+// tell a client whether a browser started is the connect it already made.
+describe('startE2EGuard while the browser is still starting', () => {
+  it('holds the frames a client sends before the browser is there, and forwards them in order', async () => {
+    const upstream = await startUpstream();
+    const browser = Promise.withResolvers<string>();
+    const port = await startGuardWith(() => browser.promise);
+    const client = connect(port);
+    await opened(client);
+    client.send(GOTO_HTTPS);
+    client.send(CLOSE_CONTEXT);
+    await settle();
+    expect(upstream.received).toEqual([]);
+
+    browser.resolve(loopbackWsUrl(upstream.port, UPSTREAM_PATH));
+    await settle();
+    expect(upstream.received).toEqual([GOTO_HTTPS, CLOSE_CONTEXT]);
+  });
+
+  // The judgement happens on arrival, not on relay, or a client could smuggle a `file:` navigation
+  // through the one window in which the guard is not yet holding a browser to refuse it into.
+  it('still refuses a file: URL sent before the browser is there', async () => {
+    const upstream = await startUpstream();
+    const browser = Promise.withResolvers<string>();
+    const port = await startGuardWith(() => browser.promise);
+    const client = connect(port);
+    await opened(client);
+    const code = closeCode(client);
+    client.send(GOTO_FILE);
+    expect(await code).toBe(1008);
+    expect(upstream.received).toEqual([]);
+  });
+
+  it('closes the client with the launch failure when the browser will not start', async () => {
+    const upstream = await startUpstream();
+    const port = await startGuardWith(() => Promise.reject(new Error('e2e browser failed to start: EADDRINUSE')));
+    const client = connect(port);
+    const closed = new Promise<{ code: number; reason: string }>((resolve) => {
+      client.on('close', (code: number, reason: Buffer) => resolve({ code, reason: reason.toString('utf8') }));
+    });
+    await opened(client);
+    expect(await closed).toEqual({ code: 1008, reason: 'e2e browser failed to start: EADDRINUSE' });
+    expect(upstream.received).toEqual([]);
+  });
+
+  // The guard outlives the browser: a failure is one client's answer, not the listener's last.
+  it('keeps listening after a launch failure, and serves the next client', async () => {
+    const upstream = await startUpstream();
+    let attempts = 0;
+    const port = await startGuardWith(() => {
+      attempts += 1;
+      return attempts === 1
+        ? Promise.reject(new Error('e2e browser failed to start: EACCES'))
+        : Promise.resolve(loopbackWsUrl(upstream.port, UPSTREAM_PATH));
+    });
+    const failed = connect(port);
+    await opened(failed);
+    await new Promise<void>((resolve) => failed.on('close', () => resolve()));
+
+    const retried = connect(port);
+    await opened(retried);
+    retried.send(GOTO_HTTPS);
+    await settle();
+    expect(attempts).toBe(2);
+    expect(upstream.received).toEqual([GOTO_HTTPS]);
+  });
+
+  // A client that gave up while the browser was starting has nothing left to relay to, and dialling
+  // on its behalf would open a session nothing would ever close.
+  it('does not dial a browser for a client that has already gone', async () => {
+    const upstream = await startUpstream();
+    const browser = Promise.withResolvers<string>();
+    const port = await startGuardWith(() => browser.promise);
+    const client = connect(port);
+    await opened(client);
+    client.terminate();
+    await new Promise<void>((resolve) => client.on('close', () => resolve()));
+    browser.resolve(loopbackWsUrl(upstream.port, UPSTREAM_PATH));
+    await settle();
+    expect(upstream.received).toEqual([]);
   });
 });
 

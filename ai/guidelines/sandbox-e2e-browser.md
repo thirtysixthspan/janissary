@@ -4,7 +4,7 @@
 
 You are reading this because you may be running inside a janissary workspace with a browser attached. This is the operating manual for using it.
 
-Inside a workspace you **cannot launch your own browser**. Playwright keeps its Chromium under `$HOME`, which the sandbox denies reading, so `chromium.launch()` fails on a permission error. That is the sandbox working as designed, not a bug to route around — do not go looking for another copy of Chromium, and do not try to install one. When a browser is available to you, janissary has already started it and handed you the way in.
+Inside a workspace you **cannot launch your own browser**. Playwright keeps its Chromium under `$HOME`, which the sandbox denies reading, so `chromium.launch()` fails on a permission error. That is the sandbox working as designed, not a bug to route around — do not go looking for another copy of Chromium, and do not try to install one. When a browser is available to you, janissary has handed you the way in and will start one when you connect to it.
 
 ## Testing Janissary from an existing sandbox
 
@@ -43,7 +43,7 @@ const { chromium } = createRequire(import.meta.url)(process.env.JANISSARY_PLAYWR
 
 It is `chromium.connect(endpoint)`, not `connectOverCDP`. The endpoint speaks Playwright's own protocol.
 
-**Retry once on the first connect.** The endpoint is handed to you before the browser has finished starting, deliberately: nothing about your tab waits on Chromium. A script that connects in the first fraction of a second may need a second attempt a moment later. One retry is enough; a failure that persists means something else.
+**The first connect starts the browser, and it is patient while that happens.** The endpoint is handed to you before the browser exists — deliberately: nothing about your tab waits on Chromium. So your first `connect()` is not a lookup, it is the request for one, and the guard holds your handshake open while the browser comes up instead of refusing it. Expect that connect to take noticeably longer than an ordinary one, and expect it to succeed. A failure means the browser would not start, and the close reason says why; a later connect simply tries again, because nothing about the first attempt is consumed. Once a browser is running, connects are ordinary.
 
 ## What to point it at
 
@@ -73,9 +73,9 @@ There is no partial result to salvage from any of these, and reconnecting to ret
 
 ## When it stops working
 
-**A connect that used to work now fails.** The browser is most likely gone — it crashed, or was killed. There is no supervisor and nothing restarts it. The human's notifications tab will have a line saying so. You cannot bring it back; report it rather than retrying in a loop.
+**A connect that used to work now fails.** The browser is most likely gone — it crashed, or was killed. The human's notifications tab will have a line saying so. Connect again: the endpoint you hold is still being served, and a connect is a request for a browser, so it starts a fresh one behind the same address. That is a different browser from the one that died, with its own fresh state — treat a crash that comes back on the next connect as the fault to report, not as a browser you are losing repeatedly.
 
-**The first connect never works at all.** Beyond the one retry above, this usually means the browser never came up. The likeliest cause is that another process on the host took one of the two ports the launch had chosen, in the moment between choosing it and binding it — janissary keeps its own launches from colliding with each other, but it cannot reserve a port against the rest of the machine. The notifications tab will have the line. Nothing is left running and nothing retries; report it rather than looping.
+**The first connect fails outright.** The close reason says why the browser would not start, and the notifications tab has the same account. The likeliest cause is that another process on the host took one of the ports janissary had chosen, in the moment between choosing it and binding it — janissary keeps its own launches from colliding with each other, but it cannot reserve a port against the rest of the machine. A later connect simply tries again; report it if it keeps failing rather than looping.
 
 **`-b` together with `--offline`.** These two are contradictory and janissary does not reject the pair. `--offline` denies your process the network, which includes the route to your own browser, so both variables are set and `connect()` times out with nothing wrong. If you see that exact combination in your tab's launch, this is the explanation — it is expected, not a fault to debug.
 

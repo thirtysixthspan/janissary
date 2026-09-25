@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  child, e2eServerMocks, guardClose, resetE2EServerFixture, start,
+  child, e2eServerMocks, guardCall, guardClose, internalPort, resetE2EServerFixture, start,
 } from './e2e-server-test-fixture.js';
 
 const mocks = e2eServerMocks();
@@ -228,12 +228,9 @@ describe('startE2EBrowserServer failure cleanup', () => {
 
   it('releases everything but the scratch directory when the guard cannot listen', () => {
     start();
-    const guardOptions = mocks.startE2EGuard.mock.calls[0][0] as {
-      port: number; upstreamPort: number; onError: (message: string) => void;
-    };
-    guardOptions.onError('e2e browser guard failed to listen: EADDRINUSE');
+    guardCall().onError('e2e browser guard failed to listen: EADDRINUSE');
     expect(released()).toEqual({ guard: 1, child: 1, scratch: 0 });
-    expect(mocks.releasedPorts).toEqual([guardOptions.port, guardOptions.upstreamPort]);
+    expect(mocks.releasedPorts).toEqual([guardCall().port, internalPort()]);
   });
 
   it('releases everything but the scratch directory when the child exits unexpectedly', () => {
