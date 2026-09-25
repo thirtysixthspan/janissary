@@ -94,7 +94,7 @@ the sidebar's own strip (see `sidebars.md`).
 ### Events that notify
 
 - **`schedule-late`** — a scheduled command is delivered more than five seconds late: `<command> ran <duration> late (system was asleep)` if it was already overdue when the machine last resumed, or `<command> ran <duration> late` otherwise.
-- **`remote-session-terminated`** — a remote peer, harness, or shell is confirmed to have terminated: `<what> on <host> terminated — create a new agent or shell to continue.` The affected tab stays open; no replacement session starts automatically.
+- **`remote-session-terminated`** — a remote peer, harness, or shell is confirmed to have terminated: `<what> on <host> terminated.` The line states the ending and nothing more, and is the wording the sessions tab's own termination line uses; the two remain distinct events, this one reporting a session that ended on its own. The affected tab stays open; no replacement session starts automatically.
 - **`remote-session`** — a remote session was detached, attached, terminated, or forgotten from the sessions tab or a tab's metadata row: `<what> on <host> detached — attach it from the sessions tab.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, or `<what> on <host> forgotten — its record was removed.` `<what>` is the name the session's row shows. Distinct from `remote-session-terminated`, which reports a session terminating on its own rather than a decision the user made; each line is plain text carrying no click target, and is recorded so the change survives the tabs it happened to.
 
 These event types can produce a notification line:

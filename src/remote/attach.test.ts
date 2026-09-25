@@ -101,7 +101,7 @@ describe('remote attachment', () => {
     h.frame({ type: 'attach-result', accepted: false });
     h.transports[1].onExit(); vi.advanceTimersByTime(60_000);
     expect(h.transports).toHaveLength(2);
-    expect(h.tab.harness).toMatchObject({ status: 'exited', sessionTerminated: 'Remote janus on devbox terminated — create a new agent or shell to continue.' });
+    expect(h.tab.harness).toMatchObject({ status: 'exited', sessionTerminated: 'Remote janus on devbox terminated.' });
     expect(h.tab.log[0].output).toBe('earlier work');
     expect(h.managers.tab.closeTab).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledOnce(); expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
@@ -122,6 +122,21 @@ describe('remote attachment', () => {
     expect(h.tab.sessionTerminated).toContain(harness ? "Remote harness 'work'" : 'Remote shell');
     expect(notify).toHaveBeenCalledOnce(); expect(clearRemoteFileCacheForWorkspace).toHaveBeenCalledOnce();
     expect(h.managers.tab.closeTab).not.toHaveBeenCalled(); expect(h.transports).toHaveLength(1);
+    h.remote.dispose();
+  });
+
+  // The ending is a statement, not a set of instructions: whatever rides the tab, the harness status
+  // and the notification all read the same bare sentence, with no clause appended.
+  it.each([true, false])('states a per-process termination without advice appended, harness=%s', (harness) => {
+    const h = setup();
+    if (!harness) { h.tab.view = 'agent'; h.tab.harness = undefined; }
+    h.channel.attach('r1', { onOutput: vi.fn(), onExit: vi.fn() });
+    h.channel.send({ type: 'spawn', id: 'r1', program: 'work', command: 'work', mode: harness ? 'pty' : 'pipe',
+      harness: harness ? 'claude' : undefined, agentName: 'work', cols: 80, rows: 24 });
+    h.frame({ type: 'exit', id: 'r1', exitCode: 3 });
+    const expected = harness ? "Remote harness 'work' on devbox terminated." : 'Remote shell on devbox terminated.';
+    expect(h.tab.sessionTerminated).toBe(expected);
+    expect(notify).toHaveBeenCalledExactlyOnceWith(expect.anything(), 'remote-session-terminated', 'work', expected);
     h.remote.dispose();
   });
 

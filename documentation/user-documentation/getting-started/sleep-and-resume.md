@@ -20,7 +20,7 @@ Requests still outstanding when the connection closes fail and aren't retried au
 
 ## Remote sessions
 
-A [remote agent or harness](/user-documentation/advanced-agents/remote-agents) keeps running on its host when your connection drops, and reconnecting opens a fresh SSH connection back into the same workspace and processes. Output it produces while you're disconnected is kept up to a fixed size; a long gap that produces more than that drops the oldest of it, and the tab notes that some output was dropped once you're back. A remote session that's confirmed to have stopped isn't restarted. The tab stays open, keeps its transcript, and explains what happened, such as `Remote janus on devbox terminated — create a new agent or shell to continue.` Being unreachable on its own is never treated as a stop. A plain `ssh <destination>` tab has none of this: a dropped SSH connection just closes the tab.
+A [remote agent or harness](/user-documentation/advanced-agents/remote-agents) keeps running on its host when your connection drops, and reconnecting opens a fresh SSH connection back into the same workspace and processes. Output it produces while you're disconnected is kept up to a fixed size; a long gap that produces more than that drops the oldest of it, and the tab notes that some output was dropped once you're back. A remote session that's confirmed to have stopped isn't restarted. The tab stays open, keeps its transcript, and explains what happened, such as `Remote janus on devbox terminated.` Being unreachable on its own is never treated as a stop. A plain `ssh <destination>` tab has none of this: a dropped SSH connection just closes the tab.
 
 ## Overdue scheduled commands
 
