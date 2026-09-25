@@ -157,7 +157,16 @@ export class RemoteProcesses {
     const onChunk = (chunk: string) => this.send({ type: 'output', id, data: chunk });
     shell.stdout?.on('data', onChunk);
     shell.stderr?.on('data', onChunk);
-    shell.on('exit', (code) => this.finish(id, code ?? 0));
+    // A shell that cannot start raises `'error'` instead of throwing, and Node may or may not follow
+    // it with `'exit'`. Whichever arrives first ends the entry; the other must not send a second exit.
+    let ended = false;
+    const end = (exitCode: number) => {
+      if (ended) return;
+      ended = true;
+      this.finish(id, exitCode);
+    };
+    shell.on('exit', (code) => end(code ?? 0));
+    shell.on('error', () => end(1));
     // The shell inherits this server's own directory, so put it in the workspace the same way the
     // local `ShellManager` does for a freshly spawned shell.
     shell.stdin?.write(`cd "${this.workspaceDir}"\n`);
