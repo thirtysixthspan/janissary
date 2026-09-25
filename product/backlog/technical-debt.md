@@ -4,17 +4,6 @@
 
 ## development
 
-* Give a remote entry one idempotent "ended locally" routine that every way an entry ends calls, instead of five hand-written teardown sequences that have drifted apart.
-
-Existing Debt: Terminate, detach, the last-label release, close-all and channel-closed each re-list the steps that release a remote entry from memory, only two of the five release a pending session-state wait, and `release` steers `remoteChannelClosed` through the side effect of `channel.finish()` clearing `sessionId` rather than by saying what it means. Severity: 6/10
-
-Existing Risk: 5/10 - Closing the placeholder tab while an accepted attach waits for the peer's answer leaves that wait running for the full thirty-second timeout and then reports the wrong outcome, and every new per-entry resource (a timer, a query, a cache) has to be added to five places, of which history shows it reaches about two.
-
-Proposal Risk: 2/10 - One routine owns what "ended locally" releases; the remaining exposure is the ordering between that routine and the channel close, which the existing manager and resume suites pin and a new last-release case would catch.
-
-Proposal: The five paths are `terminateRemoteEntry` and `detachRemoteEntry` in `src/remote/attach.ts`, `RemoteManager.release` (its last-label branch) and `RemoteManager.closeAll` in `src/remote/manager.ts`, and `remoteChannelClosed` in `src/remote/manager-closed.ts`. `cancelSessionState` in `src/remote/resume.ts`, whose own comment says a waiter should be released as soon as the entry can no longer answer, is called only from terminate and detach; `closeAll` runs `attach.stop(); closed = true; finish(); closeAfterShutdown()` without cancelling the wait, clearing the workspace file cache or dropping handlers. Add an idempotent `markEntryEnded(entry)` beside the helpers in `src/remote/attach.ts` that sets `closed`, stops `attach`, calls `cancelSessionState`, clears the workspace file cache and clears the entry's handlers, and call it from all five paths. In `release`, replace the reliance on `entry.channel.finish()` clearing `sessionId` before `this.channelClosed(entry)` with an explicit signal (an `ending` flag passed to `remoteChannelClosed`, or calling the end routine directly), and delete the stale "fifteen lines below" comment there. In `src/remote/channel.ts`, `finish()` assigns `this.state = 'closed'` twice; drop the duplicate. Add a `src/remote/resume.test.ts` case asserting that a pending session-state wait is released by the last `release`. `src/remote/manager.test.ts` (the shared-channel, detach, close-all and last-release drain blocks), `src/remote/resume.test.ts`, `src/remote/channel.test.ts` and `src/sessions/attach.test.ts` pin the behavior that must not move.
-
-
 * Finish moving the file navigator's filesystem-changing requests from tab position to tab label, covering undo, redo, the overwrite retry and create file or folder.
 
 Existing Debt: The migration that made delete, move, paste and rename address a navigator by label stopped short, so undo, redo and the two create requests still resolve `managers.tab.tabs[index]` on the server, and the module now has two addressing schemes that each new request must choose between. Severity: 5/10

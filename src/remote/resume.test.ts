@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { detachRemoteEntry, terminateRemoteEntry, type RemoteEntry } from './attach.js';
 import { answerSessionState, askSessionState, handleAttachResult, SESSION_STATE_TIMEOUT_MS, type ResumeState } from './resume.js';
+import { RemoteManager } from './manager.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
@@ -77,6 +78,26 @@ describe('askSessionState', () => {
     const query = askSessionState(target);
     detachRemoteEntry(target);
     await expect(query).resolves.toBeUndefined();
+  });
+
+  // Closing the placeholder tab while an accepted attach waits for the peer's answer is the last
+  // label letting the entry go. That is an ending like the other two, and it goes through the same
+  // routine, so the waiter hears at once instead of at the deadline.
+  it('releases its waiter when the last label releases the entry', async () => {
+    const remote = new RemoteManager({
+      pty: {
+        spawnTransport: vi.fn(() => ({ id: 'ssh1', program: 'ssh', write: vi.fn(), resize: vi.fn(), kill: vi.fn() })),
+        reassignTransports: vi.fn(),
+      },
+      tab: { findIndex: vi.fn(() => -1), closeTab: vi.fn(), tabs: [], byLabel: vi.fn() },
+    } as unknown as Managers);
+    remote.create('claude', { address: 'devbox', destination: 'devbox', host: 'devbox' }, '/local', {
+      onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(),
+    });
+    const query = askSessionState(remote.liveEntries()[0]);
+    remote.release('claude');
+    await expect(query).resolves.toBeUndefined();
+    remote.dispose();
   });
 
   // The deadline must not outlive the answer it was guarding, or it would fire against whatever

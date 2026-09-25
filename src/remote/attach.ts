@@ -89,6 +89,26 @@ export function dropRemoteLabels(entries: Map<string, RemoteEntry>, entry: Remot
   entry.labels.clear();
 }
 
+/**
+ * Everything the entry releases once it has ended locally, whichever way it ended — terminate,
+ * detach, the last label's release, close-all, or a channel whose transport went for good. Adding a
+ * per-entry resource means adding its release here, once, rather than to each of those paths.
+ *
+ * Idempotent: a second call finds the entry closed and releases nothing. The launch handlers are
+ * returned rather than called, since only some endings tell the tabs (see `terminateRemoteEntry`).
+ * The labels are left for the caller, which knows the table they sit in (`dropRemoteLabels`).
+ */
+export function markEntryEnded(entry: RemoteEntry): RemoteLaunchHandlers[] {
+  if (entry.closed) return [];
+  entry.closed = true;
+  entry.attach.stop();
+  cancelSessionState(entry);
+  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
+  const handlers = [...entry.handlers.values()];
+  entry.handlers.clear();
+  return handlers;
+}
+
 // Only an entry already mid-backoff after losing its transport benefits from a resume: it has
 // something to collapse the wait on. An attached channel's transport is healthy by definition — a
 // resume signal has nothing to fix there, so forcing a replacement would only discard an
@@ -161,11 +181,7 @@ export function dropTerminatedSessionRecord(managers: Managers, session: string 
  */
 export function detachRemoteEntry(entry: RemoteEntry): boolean {
   if (entry.closed || !entry.workspaceDir || !entry.channel.sessionId) return false;
-  entry.closed = true;
-  entry.attach.stop();
-  cancelSessionState(entry);
-  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
-  entry.handlers.clear();
+  markEntryEnded(entry);
   entry.channel.disconnect();
   return true;
 }
@@ -181,20 +197,15 @@ export function detachRemoteEntry(entry: RemoteEntry): boolean {
  */
 export function terminateRemoteEntry(managers: Managers, entry: RemoteEntry, announce = true): RemoteLaunchHandlers[] {
   if (entry.closed) return [];
-  entry.closed = true;
-  entry.attach.stop();
-  cancelSessionState(entry);
+  const handlers = markEntryEnded(entry);
   if (announce) terminateRemoteSession(managers, entry.labels, entry.address.host, 'Remote janus');
   // The muted line carries: a settlement that narrated the ending itself (the sessions tab, a
   // pressed attach) keeps the per-process end lines quiet for the finish sweep below too, so one
   // event is one line however many exits it passes through.
   else entry.announceEnds = false;
-  clearRemoteFileCacheForWorkspace(entry.address.host, entry.workspaceLabel);
   const session = entry.channel.sessionId;
   entry.channel.finish();
   entry.channel.closeAfterShutdown();
-  const handlers = [...entry.handlers.values()];
-  entry.handlers.clear();
   dropTerminatedSessionRecord(managers, session);
   return handlers;
 }
