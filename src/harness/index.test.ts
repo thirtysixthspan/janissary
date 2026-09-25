@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { parseHarnessCommand, HARNESS_NAMES, buildHarnessCommand } from './index.js';
+
+const CODEX_NO_DAEMON_PROBE = '$(codex --help 2>/dev/null | grep -q -e --no-daemon && echo --no-daemon)';
 
 describe('parseHarnessCommand', () => {
   it('accepts valid harness names', () => {
@@ -289,18 +295,57 @@ describe('buildHarnessCommand', () => {
   });
 
   it('translates effort to codex\'s reasoning-effort config override', () => {
-    expect(buildHarnessCommand('codex', undefined, 'high')).toBe("codex -c 'model_reasoning_effort=high'");
+    expect(buildHarnessCommand('codex', undefined, 'high')).toBe(`codex ${CODEX_NO_DAEMON_PROBE} -c 'model_reasoning_effort=high'`);
   });
 
   it('appends both --model and codex\'s effort override when both are given', () => {
     expect(buildHarnessCommand('codex', 'gpt-5', 'high')).toBe(
-      "codex --model 'gpt-5' -c 'model_reasoning_effort=high'",
+      `codex ${CODEX_NO_DAEMON_PROBE} --model 'gpt-5' -c 'model_reasoning_effort=high'`,
     );
+  });
+
+  it('probes codex for --no-daemon even with no model or effort', () => {
+    expect(buildHarnessCommand('codex')).toBe(`codex ${CODEX_NO_DAEMON_PROBE}`);
   });
 
   it('drops effort for opencode, which has no effort flag, keeping the model', () => {
     expect(buildHarnessCommand('opencode', 'opencode-go/deepseek-v4-pro', 'high')).toBe(
       "opencode --model 'opencode-go/deepseek-v4-pro'",
     );
+  });
+});
+
+// Runs the built codex command through real shells with a fake `codex` first on PATH: `--help`
+// prints HELP_TEXT, anything else echoes its arguments one per line, so the output is exactly the
+// argv the real launch would receive.
+describe('buildHarnessCommand codex --no-daemon probe', () => {
+  const shells = ['/bin/sh', '/bin/bash', '/bin/zsh'].filter((shell) => existsSync(shell));
+  let binDir: string;
+
+  beforeAll(() => {
+    binDir = mkdtempSync(path.join(tmpdir(), 'fake-codex-'));
+    const fake = path.join(binDir, 'codex');
+    writeFileSync(fake, '#!/bin/sh\nif [ "$1" = "--help" ]; then printf \'%s\\n\' "$HELP_TEXT"; exit 0; fi\nprintf \'%s\\n\' "$@"\n');
+    chmodSync(fake, 0o755);
+  });
+
+  afterAll(() => { rmSync(binDir, { recursive: true, force: true }); });
+
+  function launchArgs(shell: string, helpText: string): string[] {
+    const output = execFileSync(shell, ['-c', buildHarnessCommand('codex', 'gpt-5', 'high')], {
+      env: { PATH: `${binDir}:/usr/bin:/bin`, HELP_TEXT: helpText },
+      encoding: 'utf8',
+    });
+    return output.split('\n').slice(0, -1);
+  }
+
+  it.each(shells)('passes --no-daemon when the installed codex supports it (%s)', (shell) => {
+    const help = 'Options:\n      --no-daemon\n          Run without the shared background server';
+    expect(launchArgs(shell, help)).toEqual(['--no-daemon', '--model', 'gpt-5', '-c', 'model_reasoning_effort=high']);
+  });
+
+  it.each(shells)('adds no argument for an older codex without the flag (%s)', (shell) => {
+    const help = 'Options:\n      --no-alt-screen\n          Disable alternate screen mode';
+    expect(launchArgs(shell, help)).toEqual(['--model', 'gpt-5', '-c', 'model_reasoning_effort=high']);
   });
 });
