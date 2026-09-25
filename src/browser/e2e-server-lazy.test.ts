@@ -3,6 +3,7 @@ import {
   browserIsListening, child, e2eServerMocks, guardCall, guardClose, holdBrowserPort, internalPort,
   resetE2EServerFixture, startLazy,
 } from './e2e-server-test-fixture.js';
+import { E2EClientRefusal } from './e2e-refusal.js';
 
 // The connect-triggered browser. What this suite pins is that a `-b` tab costs nothing until the
 // agent asks, that asking is patient rather than instant, and that a browser which dies leaves the
@@ -194,6 +195,19 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // The guard passes a refusal's phrase through to the client and collapses every other rejection to
+  // its fixed start-failure phrase, so the type is what decides what the agent reads.
+  it('refuses as a client refusal, so the guard hands the agent the phrase itself', async () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    startLazy();
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await expect(connect()).rejects.not.toBeInstanceOf(E2EClientRefusal);
+    }
+    const refusal = connect();
+    await expect(refusal).rejects.toBeInstanceOf(E2EClientRefusal);
+    await expect(refusal).rejects.toThrow(REFUSED);
   });
 
   it('says the budget is spent once, however many connects arrive after it', async () => {

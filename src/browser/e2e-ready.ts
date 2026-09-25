@@ -33,8 +33,8 @@ function accepting(port: number): Promise<boolean> {
  *
  * The session is read rather than polled for a port alone because a child that fails to launch exits
  * *after* the spawn returned, and that exit is the only account of why the port is not coming. A
- * rejection here is what turns it into a close reason the client is given, instead of the bare close
- * the guard sends for a supplier that said nothing at all.
+ * rejection here is what turns it into the report the human reads, and what has the guard close the
+ * client with its fixed start-failure phrase instead of dialing a port nothing is listening on.
  *
  * `boundMs` is the wait's own bound, defaulted to a cold launch's worth of patience; it is a
  * parameter only so the expiry can be tested without waiting half a minute for it.

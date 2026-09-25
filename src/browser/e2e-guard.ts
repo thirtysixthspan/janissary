@@ -1,6 +1,7 @@
 import { WebSocket, WebSocketServer, type RawData } from 'ws';
 import { inspectClientFrame, inspectServerFrame, type FrameVerdict } from './e2e-frame-filter.js';
 import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
+import { E2EClientRefusal } from './e2e-refusal.js';
 
 // The protocol filter that sits between a sandboxed agent and the browser server it drives. It is
 // the only endpoint the agent is ever given (`startE2EBrowserServer` publishes this one and keeps
@@ -23,8 +24,9 @@ export type E2EGuardOptions = {
   wsPath: string;
   // The browser server behind it, on loopback under its own unguessable path (see
   // `e2e-loopback.ts`), asked for on each incoming client. Resolving names the live one to dial and
-  // hands the client the session it was waiting for; rejecting ends that client with the reason the
-  // rejection carries, and the guard stays listening so a later client asks again.
+  // hands the client the session it was waiting for; rejecting ends that client, and the guard stays
+  // listening so a later client asks again. The client is told the rejection's own message only when
+  // it is an `E2EClientRefusal`, and the fixed start-failure phrase otherwise.
   ensureUpstream: () => Promise<string>;
   // Called once if the guard cannot listen at all (the port was taken between being picked and
   // being bound). Never called for an ordinary per-session error.
@@ -59,6 +61,8 @@ function frameText(data: RawData): string {
 // browser's scratch path and the host account's home directory — and the client reading it is a
 // confined agent denied all three. The whole account is not lost by this: it is in the report
 // `stopSession` composes and in the browser's log file, which the human reads and the agent does not.
+// The one exception is a refusal the supplier authored for the client (see `e2e-refusal.ts`), whose
+// message is a fixed phrase by construction and is what the agent needs to stop retrying.
 const POLICY_VIOLATION = 1008;
 const BROWSER_DID_NOT_START = 'e2e browser failed to start';
 
@@ -117,9 +121,9 @@ function bridge(client: WebSocket, ensureUpstream: () => Promise<string>): void 
     try {
       const upstreamUrl = await ensureUpstream();
       if (client.readyState === WebSocket.OPEN) upstream = dialUpstream(client, upstreamUrl, pending, judge);
-    } catch {
+    } catch (error) {
       refused = true;
-      endSession(client, upstream, BROWSER_DID_NOT_START);
+      endSession(client, upstream, error instanceof E2EClientRefusal ? error.message : BROWSER_DID_NOT_START);
     }
   })();
 }

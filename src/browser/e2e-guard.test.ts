@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { WebSocket, WebSocketServer } from 'ws';
 import { E2E_LOOPBACK_HOST, loopbackWsUrl } from './e2e-loopback.js';
 import { startE2EGuard, type E2EGuardHandle } from './e2e-guard.js';
+import { E2EClientRefusal, WILL_NOT_RESTART } from './e2e-refusal.js';
 
 // The guard against a stub upstream `ws` server. This is the layer that most needs pinning: it is
 // the only thing standing between a sandboxed agent's Playwright client and a browser that would
@@ -314,6 +315,20 @@ describe('startE2EGuard while the browser is still starting', () => {
     expect(reason).not.toContain('ada');
     expect(reason).not.toContain('.janissary');
     expect(reason).not.toContain('EACCES');
+  });
+
+  // The one reason that is the agent's to read: a tab past its restart budget is not a browser that
+  // failed to start, and the phrase is what tells the agent that connecting again will not help.
+  it('closes the client with a refusal\'s own phrase when the supplier refuses', async () => {
+    const upstream = await startUpstream();
+    const port = await startGuardWith(() => Promise.reject(new E2EClientRefusal(WILL_NOT_RESTART)));
+    const client = connect(port);
+    const closed = new Promise<{ code: number; reason: string }>((resolve) => {
+      client.on('close', (code: number, reason: Buffer) => resolve({ code, reason: reason.toString('utf8') }));
+    });
+    await opened(client);
+    expect(await closed).toEqual({ code: 1008, reason: 'e2e browser will not be restarted' });
+    expect(upstream.received).toEqual([]);
   });
 
   // The guard outlives the browser: a failure is one client's answer, not the listener's last.

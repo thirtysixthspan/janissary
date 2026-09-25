@@ -4,6 +4,7 @@ import { startE2EGuard } from './e2e-guard.js';
 import { loopbackWsUrl } from './e2e-loopback.js';
 import { allocateBrowserPorts, type BrowserPorts } from './e2e-ports.js';
 import { waitForListening } from './e2e-ready.js';
+import { E2EClientRefusal, WILL_NOT_RESTART } from './e2e-refusal.js';
 import { allocateBrowserScratch } from './e2e-scratch.js';
 import { newSession, stopSession, type E2ESession } from './e2e-session.js';
 import { spawnBrowserChild } from './e2e-spawn.js';
@@ -148,8 +149,6 @@ type LazyBrowser = {
 // that retries its connect would otherwise spawn one per attempt, forever.
 const RESTART_LIMIT = 3;
 const UPTIME_RESET = 30_000;
-// What a client is told once the budget is gone, and what the human is told, in the same words.
-const WILL_NOT_RESTART = 'e2e browser will not be restarted';
 
 function upstreamOf(lazy: LazyBrowser): string {
   return loopbackWsUrl(lazy.ports.browserPort, lazy.internalPath);
@@ -223,13 +222,14 @@ async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
   noteFailure(lazy);
   // Past the budget this tab is not given a browser again, and saying so is the last thing said about
   // it: the guard keeps listening, so a tab the user can still read and close is a tab the user can
-  // still read and close.
+  // still read and close. The client is told in the same words as the human, which is why this is the
+  // one rejection thrown as a refusal the guard passes through rather than collapses.
   if (lazy.failures >= RESTART_LIMIT) {
     if (!lazy.reported) {
       lazy.reported = true;
       lazy.session.onGone(WILL_NOT_RESTART, undefined);
     }
-    throw new Error(WILL_NOT_RESTART);
+    throw new E2EClientRefusal(WILL_NOT_RESTART);
   }
   // The in-flight start is asked about first, because `generation` is set for the whole of a launch
   // and a client arriving while the child is still binding must wait for that launch rather than be
