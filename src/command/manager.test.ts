@@ -305,6 +305,7 @@ describe('CommandManager drain and route chooser', () => {
     managers.ssh = { run: vi.fn(() => null) } as unknown as Managers['ssh'];
     managers.pty = { openInlinePty: vi.fn() } as unknown as Managers['pty'];
     managers.database = { openDbs: vi.fn(() => []) } as unknown as Managers['database'];
+    managers.schedule = { get: vi.fn() } as unknown as Managers['schedule'];
     managers.command = new MockedCommandManager(managers);
 
     managers.tab.enqueue('janus', 'zzzunknown');

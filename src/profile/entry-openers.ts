@@ -41,7 +41,7 @@ export function openAgentEntry(
   if (state.cwd) managers.tab.setCwd(state.name, expandUserPath(state.cwd, { root: managers.tab.launchDir }));
   if (state.context) managers.tab.setContext(state.name, state.context);
   if (state.schedule) managers.schedule.set(state.name, state.schedule);
-  managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: state.schedule }));
+  managers.tab.persist(managers.tab.buildAgentState(tab));
   return undefined;
 }
 

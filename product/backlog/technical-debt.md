@@ -4,17 +4,6 @@
 
 ## development
 
-* Have the tab manager's persisted-state builder include the tab's schedule itself, so every save path keeps it instead of only the handful of callers that remember to pass it.
-
-Existing Debt: A tab's schedule lives in the schedule manager's label-keyed map rather than on the tab record, and the one builder every state-file write goes through adds `schedule` only when a caller passes it as an extra, so five call sites carry it by hand and the twenty-odd other persists (shell finish, PTY exit, queue edits, rename, reorder, editor retarget, profile placement, ACP) write the state file without it. Severity: 7/10
-
-Existing Risk: 7/10 - A scheduled `shell …` fires, the schedule tick persists the schedule, and the shell's finish callback immediately rewrites the whole state file without it, so quitting and relaunching with `--relaunch` loses the schedule that `product/specs/scheduling.md` promises survives relaunch — silent loss of user configuration on an everyday path.
-
-Proposal Risk: 2/10 - Every write carries the live schedule by construction, but the schedule still lives in a label-keyed map on its manager rather than on the tab (principle 2), so the next per-tab persisted field added the same way can repeat the bug.
-
-Proposal: `buildAgentStateFromTab` in `src/tab/agent-state.ts` assembles the snapshot from the tab alone plus an optional `extra`, and `saveAgentState` in `src/agent/state.ts` replaces the whole file with it, so a write without `schedule` erases the persisted schedule. Change `TabManager.buildAgentState` in `src/tab/manager.ts` to default the field — `buildAgentStateFromTab(tab, { schedule: this.managers.schedule.get(tab.label), ...extra })` — keeping `extra` last so the three writes inside `src/schedule/manager.ts` (`tick`, `cancel`, `clearAll`, which pass the post-change `next` or `[]`) still win. `ScheduleManager.get` returns `undefined` for a tab with no schedule, so unscheduled tabs' files do not change shape. Then delete the now-redundant `{ schedule: … }` extras in `src/controller/events.ts`, `src/agent/communication-manager.ts`, `src/commands/schedule.ts`, and `src/profile/entry-openers.ts` (the last calls `managers.schedule.set` immediately before its persist, so the default yields the same value). Leave the `tab.view !== 'harness'` exclusion some schedule writers apply exactly as it is. Add two cases to `src/tab/manager.test.ts`: a schedule registered with the schedule manager appears in `buildAgentState(tab)` with no extra, and an explicit `extra.schedule` overrides it. `src/schedule/manager.test.ts` and `src/commands/schedule.test.ts` mock `buildAgentState: () => ({})`, so they do not pin this behavior and nothing today covers a non-schedule write after a schedule is set.
-
-
 * Give the single-item file-navigator move the same server-side conflict check the multi-item move already has, so a drag can no longer silently replace an existing file.
 
 Existing Debt: The navigator's two move paths have different safety contracts — the multi-item move checks the destination on disk and returns `conflictPaths`, while the single-item move goes straight to `renameSync` and relies on a client-side conflict check that can only see loaded rows — and the ready-made server helper `hasNameConflict` has no production caller. Severity: 6/10

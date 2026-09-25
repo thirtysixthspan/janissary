@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { existsSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -11,6 +11,7 @@ function setup({ content = 'content', newFile = false } = {}) {
   managers.tab = new TabManager(managers);
   const watched: Array<{ label: string; filePath: string }> = [];
   managers.editorWatch = { watch: (label: string, filePath: string) => { watched.push({ label, filePath }); } } as unknown as Managers['editorWatch'];
+  managers.schedule = { get: vi.fn() } as unknown as Managers['schedule'];
   const dir = mkdtempSync(path.join(tmpdir(), 'janus-rename-editor-'));
   if (!newFile) writeFileSync(path.join(dir, 'untitled.md'), content);
   const url = managers.tab.registerFile(path.join(dir, 'untitled.md'));

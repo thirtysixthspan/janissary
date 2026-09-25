@@ -30,7 +30,7 @@ export class AgentCommunicationManager {
     const appendContext = (label: string, text: string) => {
       this.managers.tab.appendContext(label, text);
       const tab = this.managers.tab.byLabel(label);
-      if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.managers.schedule.get(tab.label) }));
+      if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
     };
 
     if (message.kind === 'info') {

@@ -1,6 +1,6 @@
 # Scheduling
 
-The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in a tab — the issuing agent's tab by default, or another tab named with an `in <tab>` clause. Each tab owns its schedule; agent entries are stored in the `schedule` array of the agent's state file (`.janissary/state/<name>.json`) and survive `--relaunch`. Harness tabs can hold schedules too, but theirs live in memory only (harness tabs have no persisted agent state) and end when the tab closes.
+The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in a tab — the issuing agent's tab by default, or another tab named with an `in <tab>` clause. Each tab owns its schedule; agent entries are stored in the `schedule` array of the agent's state file (`.janissary/state/<name>.json`) and survive `--relaunch`. Every write of an agent's state file carries the tab's current schedule, because `TabManager.buildAgentState` reads it from the schedule manager itself. So a save made for any other reason (a shell command finishing, a queue edit, a rename) keeps the schedule instead of erasing it. Harness tabs can hold schedules too, but theirs live in memory only (harness tabs have no persisted agent state) and end when the tab closes.
 
 ### Schedule forms
 

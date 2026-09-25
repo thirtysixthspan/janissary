@@ -11,7 +11,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('state', 'dirty', () => sinks.emitState());
   messageBus.on('transcript', 'entry:appended', (event) => {
     if (event.type !== 'entry:appended') return;
-    managers.tab.persist(managers.tab.buildAgentState(event.tab, { schedule: managers.schedule.get(event.tab.label) }));
+    managers.tab.persist(managers.tab.buildAgentState(event.tab));
     // A cross-agent `msg`/`broadcast` delivery sets `entry.from`; feed the notifications tab
     // (focus suppression and the per-event toggle are enforced inside `notify`).
     if (event.entry.from) notify(managers, 'incoming-message', event.tabLabel, event.entry.from);
