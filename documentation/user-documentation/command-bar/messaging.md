@@ -38,6 +38,18 @@ A `request`'s response arrives in the sender's transcript as a `response from <a
 
 The sender is never included as a target, even if named explicitly. If any named recipient doesn't exist, the result reports it by name rather than silently dropping it.
 
+## What a messaged command can run
+
+<img class="agent-float" src="/agents/hakim-south-west.png" alt="" />
+
+A messaged `request` or `command` is never moved into a terminal, because it has to hand captured text back to the sender and a takeover has none to give. An interactive program is refused with `Cannot run interactive command remotely: vim`, and so is a forced-terminal spelling of one: `shell --pty <cmd>`, `!!<cmd>`, or a bare `shell --pty` or `!!`, which names your `$SHELL` instead. This is the first thing you hit when you message an editor or a REPL to another agent.
+
+`acp` and `browser` answer through their own command's capture rather than by reading back the last thing they wrote to the recipient's transcript. Every other command answers with the last entry it appended there.
+
+## When the recipient tab closes
+
+Closing a tab drops the messages still queued for it, and a command running in it at that moment never reports back. A response that arrives after the close is ignored. A later tab that reuses the name starts with an empty queue and takes its own `msg` and `broadcast` as normal.
+
 ## Completing recipient names
 
 Press `Tab` at the recipient position of `msg` or `broadcast` to complete an active agent's name; for `broadcast`, `all` is offered too, and each entry of a comma-separated list completes independently. See [Tab completion](/user-documentation/command-bar/tab-completion) for the full picture of what completes where.

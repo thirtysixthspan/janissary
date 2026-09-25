@@ -50,7 +50,7 @@
 
 | Key | Action |
 | --- | ------ |
-| `←` / `→` | Move cursor in the input field |
+| `←` / `→` / `Ctrl+B` / `Ctrl+F` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
@@ -68,9 +68,9 @@
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
-| `Cmd+W` / `Ctrl+W` | Close the current tab |
+| `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
 | `Tab` | Complete a file path, an agent name for `msg` / `broadcast`, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
-| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus |
+| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a modal dialog is open |
 | `Enter` | Execute the current command |
 | `Ctrl+C` | Exit |
 
@@ -106,6 +106,16 @@
 
 | Key | Action |
 | --- | ------ |
+| `Cmd+A` / `Ctrl+A` | Select the whole buffer (in a file navigator, select the current row's siblings) |
+| `Cmd+C` / `Cmd+X` | Copy / cut the selection |
+| `Cmd+S` / `Ctrl+S` | Save the file |
+| `Cmd+Z` / `Ctrl+Z` | Undo; add `Shift` to redo |
+| `Cmd+←` / `Cmd+→` | Start / end of the line (`Ctrl+A` / `Ctrl+E` in the editor) |
+| `Cmd+↑` / `Cmd+↓` | Start / end of the file (`Ctrl+Home` / `Ctrl+End` in the editor) |
+| `Ctrl+B` / `Ctrl+F` | Move the cursor one character left / right (`Cmd+F` opens find) |
+| `Ctrl+N` / `Ctrl+P` | Move the cursor one visual row down / up |
+| `Ctrl+D` | Delete the character after the cursor |
+| `Ctrl+K` / `Ctrl+Y` | Delete to the end of the line / paste it back |
 | `Cmd+/` | Comment or uncomment the selected lines, or the caret's line |
 | `Cmd+]` / `Cmd+[` | Indent / outdent the selected lines by two spaces |
 | `Tab` / `Shift+Tab` | Indent a multiline selection / outdent the selected lines |

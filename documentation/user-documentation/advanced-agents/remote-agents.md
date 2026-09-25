@@ -94,7 +94,7 @@ File moves and clipboard pastes stay on one machine. Dropping between hosts is n
 
 ## When a launch fails
 
-The message appears in the placeholder tab, which closes a few seconds later. A failed remote launch looks the same as a failed local clone.
+The message appears in the placeholder tab, which closes a few seconds later. A launch refused because its name is already in use on the host is the exception: nothing is shown, and the placeholder closes at once. A failed remote launch otherwise looks the same as a failed local clone.
 
 SSH's own text shows up verbatim when it can't connect or authentication fails, since it was already rendering in that terminal. Janissary adds these:
 
@@ -116,6 +116,17 @@ The remote path has to be a clone of this project: a git repository whose `origi
 Press `y` to clone. `n`, Enter, Escape, or Ctrl-C declines. The question comes up when the address names a path that doesn't exist, or when it names no path (or `~`) and nothing is found above your login directory. In the second case the clone goes into a folder named after the repository in the remote home directory, such as `~/project`, and later `on <host>` launches use that folder without asking.
 
 The clone uses this project's `.janissary/github-token` when the `origin` is on GitHub, so a host with no GitHub access of its own can still clone a private repository. The token is never written to the remote host. Once the workspace is ready, `Cloned <url> into <path> on <host>.` appears in the notifications feed.
+
+### When the name is already in use
+
+The host checks the name before it clones anything, since only the host knows what is running there. A workspace of that name counts as running when a Janissary connection on that host, attached or parked, is holding it and its process is alive, or when a janissary instance running inside it holds its lock. A plain shell sitting in the folder does not count, and a name differing only by case is the same name.
+
+- **Running:** nothing is provisioned, and the placeholder tab closes at once without showing an error. A name you typed gets one line in the notifications feed: `Cannot launch "build": "build" is already running on devbox.` A default name, a bare `harness claude` or an unnamed `agent on devbox`, is tried again over a fresh SSH connection under the next free name, silently, up to five attempts in all. Only after the fifth does anything appear, as `Cannot launch "claude": "claude" through "claude-5" are already running on devbox.` for a harness or `Cannot launch agent on devbox: 5 names tried (ada, bekir, cem) are already running on devbox.` for an agent.
+- **Leftover:** a workspace folder of that name with nothing running in it is removed, uncommitted or unpushed work included, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "build" on devbox (<path>) before launching.` appears in the notifications feed.
+- **Leftover that can't be removed:** the placeholder closes at once and `Cannot launch "build": could not remove leftover workspace "build" on devbox (<path>) — <reason>.` is posted. The folder is left in place for the next attempt.
+- **A host that can't answer:** when the connection ends before the host replies, the placeholder shows that connection's error as it always would, and `Cannot launch "claude": could not check devbox for an existing "claude" — <reason>.` is posted alongside it.
+
+Every one of those lines goes to the notifications feed, attributed to the tab you typed the launch in, and nothing is written to that tab's transcript. Attaching a parked session is not a new launch, so it is never checked.
 
 ## Lifecycle
 

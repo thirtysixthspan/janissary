@@ -36,7 +36,9 @@ for agent-prompt routing.
 
 Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per agent, so after `janus --relaunch` a restored tab's shell starts where it left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
 
-Closing a tab kills its shell; quitting the app kills them all.
+A shell can also end on its own in the middle of a command: `exit`, `exec`, a `set -e` script hitting a failure, `kill -9 $$`, or a crash. The command it was running finishes with whatever it had printed, followed by `(shell exited)` on its own line, the tab stops showing as busy, and anything already queued behind it runs straight away instead of waiting. The next command in that tab starts a fresh shell in the tab's working directory.
+
+Closing a tab kills its shell; quitting the app kills them all. A shell Janissary killed that way doesn't report `(shell exited)` — its running command is simply abandoned along with it.
 
 ## Your startup files don't run
 

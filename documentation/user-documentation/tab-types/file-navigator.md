@@ -198,7 +198,10 @@ are also removed from that move. A destination at or inside a selected directory
 move. If two selected items have the same output name, both stay in place and appear in the failure
 report.
 
-For one item, a name conflict opens a dialog with **Overwrite** and **Cancel**. A bulk move checks
+For one item, a name conflict opens a dialog with **Overwrite** and **Cancel**. The check runs
+against what is actually on disk, so it catches a conflict the tree cannot show you, such as a file
+already sitting in a collapsed destination folder, and nothing is replaced until you press
+**Overwrite**. A move in a remote tree is checked the same way, on that host. A bulk move checks
 all destinations first. If any conflict exists, the dialog says `Some items already exist in "<folder>".`
 and offers **Overwrite all**, **Skip conflicts**, and **Cancel**. Other items still move when an
 individual item fails; failures are reported as one line in the notifications feed instead of a
