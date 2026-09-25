@@ -108,6 +108,8 @@ export function connectAcp(options: AcpOptions): AcpSession {
         }
       })();
     },
+    // Only the connection-level exit report is suppressed: a pending prompt's `onEnd`/`onError`
+    // still fire after this, unlike `src/remote/acp-session.ts`, whose `kill` detaches them.
     kill: () => {
       killed = true;
       try { proc.kill(); } catch { /* already gone */ }
