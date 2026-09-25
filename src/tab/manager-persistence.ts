@@ -5,6 +5,11 @@ import type { AgentStatePersistence } from './persistence.js';
 // The one decision every write into the state directory passes through, lifted out of `TabManager`
 // to keep it under the file-size limit — see `ai/guidelines/code-guidelines.md`.
 //
+// Only agent tabs are persisted (`product/specs/application-state.md`). A reorder, rename, retarget,
+// scheduled tick or appended entry can reach here for any tab, and `--relaunch` would recreate a
+// saved editor, plugin or harness label as an empty agent tab, so the rule is applied here rather
+// than left to each caller.
+//
 // A closed tab is refused: teardown removed its file, and a write arriving afterwards would put it
 // back. Two can — `ShellManager.run`'s update closure persists the `tab` object it captured at
 // dispatch, and `ScheduleManager.tick` persists per tab on its one-second loop.
@@ -18,6 +23,8 @@ import type { AgentStatePersistence } from './persistence.js';
 export function persistAgentState(
   persistence: AgentStatePersistence, tabs: Tab[], state: AgentState,
 ): void {
-  if (tabs.some((tab) => tab.label === state.name)) persistence.reopen(state.name);
+  const tab = tabs.find((candidate) => candidate.label === state.name);
+  if (tab?.view !== undefined && tab.view !== 'agent') return;
+  if (tab) persistence.reopen(state.name);
   persistence.save(state);
 }

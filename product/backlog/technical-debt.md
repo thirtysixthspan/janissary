@@ -4,17 +4,6 @@
 
 ## development
 
-* Decide once, at the single agent-state save path, that only agent tabs are persisted, instead of leaving each of a dozen save call sites to remember the rule.
-
-Existing Debt: Whether a tab may be written to the state directory is a property of the tab, but the one save path (`persistAgentState` and `AgentStatePersistence.save`) refuses only closed and remote tabs, so the agent-only rule the spec states is enforced, inconsistently, by individual callers. Severity: 6/10
-
-Existing Risk: 6/10 - A keyboard reorder, a rename, an editor retarget, a scheduled tick or any appended transcript entry on an editor, plugin or harness tab writes an agent state file for it, and `--relaunch` then recreates that label as an empty agent tab, contradicting `product/specs/application-state.md` and growing with every new save call site that forgets the check.
-
-Proposal Risk: 2/10 - The rule lives in one place and new callers cannot bypass it; what remains is that `AgentState` still carries no `view`, so a state file already written by an older build before the fix would still rehydrate as a ghost tab until the state directory is cleared.
-
-Proposal: `persistAgentState` in `src/tab/manager-persistence.ts` is the one function every write passes through (`TabManager.persist` in `src/tab/manager.ts` calls it). Today the "agent tabs only" check exists only at some callers: `reorderTabToOp` in `src/tab/navigation-commands.ts` checks `if (!tab.view)`, `ScheduleManager` in `src/schedule/manager.ts` checks `tab.view !== 'harness'` three times (so editor and plugin tabs pass), while `reorderTabOp` in the same navigation file, `renameTabOp` in `src/tab/rename.ts` (which has an explicit editor branch that persists), `src/tab/retarget-editor.ts`, `renameEditorFile` in `src/editor/rename.ts`, and the `entry:appended` listener in `src/controller/events.ts` persist unconditionally. `rehydrateTabs` in `src/tab/rehydrate.ts` rebuilds every saved state with `makeTab`, leaving `view` undefined. Change `persistAgentState` to look up the live tab for `state.name` in `tabs` and return without saving when that tab has a `view` other than `'agent'` (keep the existing closed-tab reopen and let `save` keep its remote refusal), then delete the now-redundant `!tab.view` check in `reorderTabToOp` and the three `view !== 'harness'` checks in `ScheduleManager`. Add cases to `src/tab/manager.test.ts` asserting that persisting an editor, plugin or harness tab writes nothing and an agent tab still writes. `src/controller.test.ts` (the case about not persisting view tabs), `src/tab/manager.test.ts`, `src/tab/cleanup.test.ts` and `src/schedule/manager.test.ts` pin current behavior; the two schedule cases that assert `persist` is not called for harness tabs mock `persist` directly and must be rewritten to assert through the real `TabManager.persist` path once the schedule checks move.
-
-
 * Give a remote entry one idempotent "ended locally" routine that every way an entry ends calls, instead of five hand-written teardown sequences that have drifted apart.
 
 Existing Debt: Terminate, detach, the last-label release, close-all and channel-closed each re-list the steps that release a remote entry from memory, only two of the five release a pending session-state wait, and `release` steers `remoteChannelClosed` through the side effect of `channel.finish()` clearing `sessionId` rather than by saying what it means. Severity: 6/10

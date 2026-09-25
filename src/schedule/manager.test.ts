@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
@@ -8,6 +8,9 @@ import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import type { ScheduleEntry } from './types.js';
 import { messageBus } from '../bus.js';
+import { TabManager } from '../tab/manager.js';
+import { makeTab } from '../tab/index.js';
+import * as agentState from '../agent/state.js';
 
 function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab } {
   const tab: Tab = {
@@ -38,6 +41,19 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
     pty: { input: () => {} },
   } as unknown as Managers;
   return { managers, tab };
+}
+
+// A real `TabManager` holding one extra tab, so a schedule change runs through the actual
+// `TabManager.persist` path and its agent-only rule rather than a mocked `persist`.
+function withRealTabManager(overrides: Partial<Tab>): {
+  managers: Managers; saveSpy: MockInstance<typeof agentState.saveAgentState>;
+} {
+  const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+  const managers = {} as Managers;
+  managers.tab = new TabManager(managers);
+  managers.schedule = new ScheduleManager(managers);
+  managers.tab.tabs.push({ ...makeTab(overrides.label ?? 'claude', '#aaa'), ...overrides });
+  return { managers, saveSpy };
 }
 
 describe('ScheduleManager tick', () => {
@@ -434,22 +450,18 @@ describe('ScheduleManager cancel', () => {
     emitSpy.mockRestore();
   });
 
-  it('removes a harness tab entry and emits without persisting', () => {
-    const { managers } = makeManagers({
-      view: 'harness',
-      harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' },
-    });
-    const persist = vi.fn();
-    (managers.tab as unknown as { persist: typeof persist }).persist = persist;
-    const mgr = new ScheduleManager(managers);
-    mgr.set('janus', [entry('a')]);
+  it('removes a harness tab entry and emits without writing agent state', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'claude', view: 'harness' });
+    const mgr = managers.schedule;
+    mgr.set('claude', [entry('a')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
-    expect(mgr.cancel('janus', 'a')).toBe(true);
-    expect(mgr.get('janus')).toEqual([]);
-    expect(persist).not.toHaveBeenCalled();
+    expect(mgr.cancel('claude', 'a')).toBe(true);
+    expect(mgr.get('claude')).toEqual([]);
+    expect(saveSpy).not.toHaveBeenCalled();
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
+    saveSpy.mockRestore();
   });
 
   it('leaves the schedule unchanged, does not emit, and returns false for an unknown id', () => {
@@ -501,13 +513,15 @@ describe('ScheduleManager clearAll', () => {
     emitSpy.mockRestore();
   });
 
-  it('clears a harness tab schedule without persisting it', () => {
-    const { mgr, persist } = makeMgr([{ label: 'claude', view: 'harness' }]);
+  it('clears a harness tab schedule without writing agent state', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'claude', view: 'harness' });
+    const mgr = managers.schedule;
     mgr.set('claude', [entry('a')]);
 
     expect(mgr.clearAll()).toBe(true);
     expect(mgr.get('claude')).toEqual([]);
-    expect(persist).not.toHaveBeenCalled();
+    expect(saveSpy).not.toHaveBeenCalled();
+    saveSpy.mockRestore();
   });
 
   it('leaves an already-empty schedule untouched and does not persist it', () => {

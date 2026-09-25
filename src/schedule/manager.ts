@@ -98,7 +98,7 @@ export class ScheduleManager {
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
     const tab = this.managers.tab.byLabel(label);
-    if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
+    if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
     this.announceChange();
     return true;
@@ -110,7 +110,7 @@ export class ScheduleManager {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
       const tab = this.managers.tab.byLabel(label);
-      if (tab && tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
+      if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
@@ -130,7 +130,7 @@ export class ScheduleManager {
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
   // rescheduled to its next run; a one-shot drops off. Tabs whose schedule changed are persisted
-  // (harness tabs excepted — they have no persisted agent state).
+  // (`TabManager.persist` writes agent tabs only).
   private tick(): void {
     const now = Date.now();
     let changed = false;
@@ -142,7 +142,7 @@ export class ScheduleManager {
       if (!remaining) continue;
       this.schedules.set(label, remaining);
       changed = true;
-      if (tab.view !== 'harness') this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
+      this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
   }
