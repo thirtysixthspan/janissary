@@ -109,3 +109,9 @@ export function withoutCredentials(url: string): string {
   const after = parsed.toString();
   return after === before ? url : after;
 }
+
+// `text` with every embedded URL passed through `withoutCredentials` — for a sentence that may quote
+// one, such as git's own error line, where the whole string is not itself a URL.
+export function withoutCredentialsIn(text: string): string {
+  return text.replaceAll(/[a-z][\w+.-]*:\/\/[^\s'"]+/gi, (url) => withoutCredentials(url));
+}

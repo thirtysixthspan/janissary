@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { startGitClone, type GitCloneHandle } from '../git/clone.js';
 import { errorText } from '../error-text.js';
+import { withoutCredentialsIn } from '../git/repository-url.js';
 import type { ServerFrame } from './protocol.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RootOffer, RootOutcome } from './serve-root.js';
@@ -106,7 +107,7 @@ class OfferRun {
       await this.cloneInto(url, target, created);
     } catch (error) {
       removeCreated(target, created);
-      return { refusal: { kind: 'clone-failed', path: target, url, reason: errorText(error) } };
+      return { refusal: { kind: 'clone-failed', path: target, url, reason: withoutCredentialsIn(errorText(error)) } };
     }
     return { root: target, cloned: { url, path: target } };
   }

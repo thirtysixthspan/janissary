@@ -121,6 +121,13 @@ describe('resolveRemoteRoot with the launching project\'s origin', () => {
     });
   });
 
+  it('reports another repository\'s origin without its embedded credential', () => {
+    const root = repository(path.join(tmpDir, 'proj'), 'https://user:ghp_token@github.com/owner/other.git');
+    expect(resolveRemoteRoot(root, ORIGIN, { home })).toEqual({
+      refusal: { kind: 'different-origin', path: root, other: 'https://github.com/owner/other.git', url: ORIGIN },
+    });
+  });
+
   it('refuses an explicit path that exists but is not a repository', () => {
     const plain = path.join(tmpDir, 'plain');
     mkdirSync(plain);

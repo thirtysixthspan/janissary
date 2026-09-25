@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  cloneUrlError, isGitHubUrl, repositoryName, sameRepository, toHttpsUrl, withoutCredentials,
+  cloneUrlError, isGitHubUrl, repositoryName, sameRepository, toHttpsUrl, withoutCredentials, withoutCredentialsIn,
 } from './repository-url.js';
 
 describe('toHttpsUrl', () => {
@@ -104,6 +104,23 @@ describe('cloneUrlError', () => {
     'codecommit::us-east-1://repo',
   ])('accepts %s', (url) => {
     expect(cloneUrlError(url)).toBeUndefined();
+  });
+});
+
+describe('withoutCredentialsIn', () => {
+  it('strips a token from a url quoted inside git\'s error line', () => {
+    expect(withoutCredentialsIn("fatal: repository 'https://ghp_token@github.com/o/repo.git/' not found"))
+      .toBe("fatal: repository 'https://github.com/o/repo.git/' not found");
+  });
+
+  it('strips every url in the text and keeps an ssh:// login', () => {
+    expect(withoutCredentialsIn('from https://u:p@a.example/r to ssh://git:pw@b.example/r'))
+      .toBe('from https://a.example/r to ssh://git@b.example/r');
+  });
+
+  it('leaves text with no credential unchanged', () => {
+    const line = 'fatal: could not read Username for \'https://github.com\': terminal prompts disabled';
+    expect(withoutCredentialsIn(line)).toBe(line);
   });
 });
 

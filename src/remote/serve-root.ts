@@ -3,7 +3,9 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { findRepoRoot, getRemoteUrl } from '../workspace/index.js';
 import { expandUserPath } from '../paths.js';
-import { isGitHubUrl, repositoryName, sameRepository, toHttpsUrl } from '../git/repository-url.js';
+import {
+  isGitHubUrl, repositoryName, sameRepository, toHttpsUrl, withoutCredentials,
+} from '../git/repository-url.js';
 import type { RootRefusal } from './root-refusal.js';
 
 // Where `janus remote-serve` is rooted, settled on the first `provision` or `attach` rather than at
@@ -51,7 +53,7 @@ function repositoryRoot(directory: string, origin: string | undefined): RootOutc
   const other = originOf(directory);
   if (other === undefined) return { refusal: { kind: 'no-origin', path: directory } };
   if (origin !== undefined && !sameRepository(other, origin)) {
-    return { refusal: { kind: 'different-origin', path: directory, other, url: origin } };
+    return { refusal: { kind: 'different-origin', path: directory, other: withoutCredentials(other), url: origin } };
   }
   return { root: directory };
 }

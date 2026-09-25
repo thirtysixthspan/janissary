@@ -10,12 +10,13 @@ import { acquireRootLock } from './serve-root-lock.js';
 
 // Every clone really runs against a local bare repository, except in the one test that needs a clone
 // still running when it is cancelled: that one swaps in a clone that writes a file and never ends.
-const cloneMock = vi.hoisted(() => ({ hang: false, cancel: vi.fn() }));
+const cloneMock = vi.hoisted(() => ({ hang: false, cancel: vi.fn(), failWith: undefined as string | undefined }));
 vi.mock('../git/clone.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Clone>();
   return {
     ...actual,
     startGitClone: (url: string, target: string, options: Clone.GitCloneOptions) => {
+      if (cloneMock.failWith !== undefined) return { ready: Promise.reject(new Error(cloneMock.failWith)), cancel: () => {} };
       if (!cloneMock.hang) return actual.startGitClone(url, target, options);
       mkdirSync(target, { recursive: true });
       writeFileSync(path.join(target, 'partial'), 'x');
@@ -54,6 +55,7 @@ afterAll(() => {
 
 beforeEach(() => {
   cloneMock.hang = false;
+  cloneMock.failWith = undefined;
   cloneMock.cancel.mockReset();
   home = mkdtempSync(path.join(tmpDir, 'home-'));
 });
@@ -118,6 +120,20 @@ describe('runRootOffer', () => {
       },
     });
     expect(existsSync(path.join(tmpDir, 'injected'))).toBe(false);
+  });
+
+  it('reports a failed clone\'s reason without the credential its url carried', async () => {
+    const target = path.join(tmpDir, 'credentialed', 'proj');
+    cloneMock.failWith = "fatal: repository 'https://user:ghp_secret@github.com/owner/repo.git/' not found";
+    const { run, offered } = start(target);
+    await offered();
+    run.answer(true);
+    await expect(run.result).resolves.toEqual({
+      refusal: {
+        kind: 'clone-failed', path: target, url: origin,
+        reason: "fatal: repository 'https://github.com/owner/repo.git/' not found",
+      },
+    });
   });
 
   it('keeps an existing empty folder, emptied, when its clone fails', async () => {

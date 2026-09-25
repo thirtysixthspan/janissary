@@ -329,8 +329,10 @@ An empty `~/<repo-name>` that already existed keeps its folder and loses only wh
 it. Nothing that existed before the clone is touched.
 
 Every root failure appears in the placeholder before it closes and is posted to the notifications
-feed, attributed to the tab the launch was typed in (or a profile launch's issuing tab). `<path>` in
-the declined and clone-failed lines is the folder the clone would have gone into:
+feed, attributed to the tab the launch was typed in (or a profile launch's issuing tab). The other
+repository's origin and git's error line have any embedded credential removed before they are
+reported, so a token in the host's own git configuration never reaches the placeholder or the feed.
+`<path>` in the declined and clone-failed lines is the folder the clone would have gone into:
 
 - Declined: `Cannot launch "<name>": <path> on <host> is not a clone of this project — clone declined.`
 - Clone failed: `Cannot launch "<name>": cloning <url> into <path> on <host> failed — <reason>.`, where `<reason>` is git's first error line.
