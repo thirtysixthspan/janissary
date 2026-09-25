@@ -2,10 +2,6 @@
 
 ## ready
 
-* the following error occurs when an agent cannot be launched on a remote because the remote path does not point to a clone of the project repository:
-Cannot launch "fariz": could not check thecandykingdom for an existing "fariz" — Remote session to thecandykingdom ended before its workspace was ready.
-add a check for the correct repository clone on the remote, if the remote is missing the clone, ask the user if they want to clone the repository in the target directory. If the target path is a home directory, clone into a sub directory. 
-
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 * detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
