@@ -1,5 +1,5 @@
 import type { Tab, CenterPane } from './types.js';
-import { isCenterActionTab } from './split.js';
+import { isCenterActionTab } from './placement.js';
 
 type ProfileTabCandidate = { label: string; number?: number; pane?: CenterPane };
 

@@ -1,5 +1,6 @@
 import type { CenterPane, Tab } from './types.js';
-import { centerPane, isCenterActionTab, moveToOtherPane } from './split.js';
+import { centerPane, isCenterActionTab } from './placement.js';
+import { moveToOtherPane } from './split.js';
 import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
 
 export function focusedPane(tabs: Tab[], activeTab: number): CenterPane {

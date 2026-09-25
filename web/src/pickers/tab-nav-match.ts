@@ -1,5 +1,6 @@
 import type { TabView } from '@shared/protocol';
-import { isReportingTab, type TabEntry } from '../tab-entries';
+import { isCenterActionTab } from '@shared/tab/placement';
+import type { TabEntry } from '../tab-entries';
 
 export type TabNavEntry = TabEntry;
 
@@ -15,7 +16,7 @@ export function displayLabel(tab: TabView): string {
 export function filterTabs(tabs: TabView[], query: string): TabNavEntry[] {
   const entries = tabs
     .map((tab, index) => ({ tab, index }))
-    .filter(({ tab }) => !tab.dock && !isReportingTab(tab));
+    .filter(({ tab }) => isCenterActionTab(tab));
   const q = query.trim().toLowerCase();
   if (!q) return entries;
 

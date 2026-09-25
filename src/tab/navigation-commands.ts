@@ -2,7 +2,7 @@ import type { Tab } from './types.js';
 import type { AgentState } from '../agent/types.js';
 import { messageBus } from '../bus.js';
 import { computeReorder, computeReorderTo } from './reorder.js';
-import { isCenterActionTab } from './split.js';
+import { isCenterActionTab } from './placement.js';
 
 // Active-tab navigation coordination extracted from TabManager: wraps the pure tab-array
 // computations in reorder.ts with the focus-history bookkeeping, persistence, and messageBus

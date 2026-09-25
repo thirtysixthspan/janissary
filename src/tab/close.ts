@@ -2,6 +2,7 @@ import type { Tab } from './types.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { closeTabResources } from './cleanup.js';
+import { closeQuitsApp } from './placement.js';
 import { removeTabAt } from './reorder.js';
 import { isSshTab } from './view-guards.js';
 
@@ -26,7 +27,7 @@ export function closeTabOp(
   const nonDockedCount = tabs.filter((t) => !t.dock).length;
   closeTabResources(tab, managers, openFiles, nonDockedCount);
   // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
-  if (!tab.dock && nonDockedCount <= 1) {
+  if (closeQuitsApp(tabs, index)) {
     messageBus.emit('app', { type: 'exit' });
     return;
   }

@@ -1,5 +1,6 @@
 import type { Tab } from './types.js';
-import { centerPane, hasSplit, isCenterActionTab } from './split.js';
+import { centerPane, isCenterActionTab } from './placement.js';
+import { hasSplit } from './split.js';
 import { focusedPane, repairPaneSelections } from './split-selection.js';
 
 export function applyOpenResult(

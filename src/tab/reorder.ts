@@ -1,6 +1,6 @@
 import type { Tab } from './types.js';
 import { renumberTabs } from './utils.js';
-import { centerPane, isCenterActionTab } from './split.js';
+import { centerPane, isCenterActionTab } from './placement.js';
 
 // Resolves TabManager.reorderTab: swaps the active tab with its left/right neighbor (skipping
 // docked tabs, per swapTabsLeft/swapTabsRight) and moves `activeTab` along with it. Returns
