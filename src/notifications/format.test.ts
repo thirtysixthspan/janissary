@@ -89,6 +89,7 @@ describe('notificationText', () => {
   it.each([
     ['launch-refused', 'Cannot launch "foo": a tab named "foo" is already open.'],
     ['launch-workspace-cleaned', 'Removed leftover workspace "foo" (/p/.janissary/workspace/foo) before launching.'],
+    ['launch-root-cloned', 'Cloned https://github.com/o/repo.git into /home/ada/repo on devbox.'],
     ['remote-refused', 'Remote janus on devbox refused a request: Unexpected remote frame "capture-request".'],
   ] as const)('renders the %s message verbatim', (event, text) => {
     expect(notificationText(event, 'janus', text)).toBe(text);

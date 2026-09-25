@@ -391,13 +391,16 @@ describe('session-state frames', () => {
 // `filesystem-reply` carries `result` here because it and `error` are mutually exclusive; the error
 // form has its own case below.
 const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame, { type: K }> } = {
-  'attach': { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+  'attach': {
+    type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true, origin: 'git@github.com:owner/repo.git',
+  },
   'session-state': { type: 'session-state' },
   'shutdown': { type: 'shutdown' },
   'provision': {
     type: 'provision', label: 'claude', tokens: { github: 'github_pat_scoped' },
-    identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
+    identity: { name: 'Ada Lovelace', email: 'ada@example.com' }, origin: 'git@github.com:owner/repo.git',
   },
+  'clone-answer': { type: 'clone-answer', accept: true },
   'spawn': {
     type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude',
     cols: 100, rows: 40, offline: true, agentName: 'joined', browser: true, autoApprove: true,
@@ -405,7 +408,10 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'input': { type: 'input', id: 'r1', data: 'hello' },
   'resize': { type: 'resize', id: 'r1', cols: 120, rows: 50 },
   'kill': { type: 'kill', id: 'r1' },
-  'capture-request': { type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1' },
+  'capture-request': {
+    type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1',
+    origin: 'git@github.com:owner/repo.git',
+  },
   'filesystem-open': { type: 'filesystem-open', session: 'files1' },
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
   'filesystem-request': {
@@ -422,7 +428,15 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     type: 'session-state-result',
     processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, agentName: 'bekir' }],
   },
-  'workspace-ready': { type: 'workspace-ready', dir: '/srv/ws/claude', notice: 'isolation on', cleaned: '/srv/ws/claude' },
+  'workspace-ready': {
+    type: 'workspace-ready', dir: '/srv/ws/claude', notice: 'isolation on', cleaned: '/srv/ws/claude',
+    cloned: { url: 'https://github.com/owner/repo.git', path: '/home/ada/repo' },
+  },
+  'clone-offer': { type: 'clone-offer', path: '/home/ada/repo', url: 'https://github.com/owner/repo.git', home: '/home/ada' },
+  'root-refused': {
+    type: 'root-refused',
+    refusal: { kind: 'clone-failed', path: '/srv/proj', url: 'https://github.com/owner/repo.git', reason: 'fatal: denied' },
+  },
   'workspace-failed': { type: 'workspace-failed', message: 'no origin' },
   'name-in-use': { type: 'name-in-use', label: 'claude', path: '/srv/ws/claude', reason: 'EACCES' },
   'output': { type: 'output', id: 'r1', data: 'done' },
@@ -462,11 +476,64 @@ describe('optional frame fields', () => {
   });
 });
 
+describe('root settling frames', () => {
+  it.each([
+    { kind: 'not-found', path: '/srv/proj' },
+    { kind: 'no-repository-found', path: '/home/ada' },
+    { kind: 'not-repository', path: '/srv/proj' },
+    { kind: 'no-origin', path: '/srv/proj' },
+    { kind: 'different-origin', path: '/srv/proj', other: 'git@github.com:o/other.git', url: 'git@github.com:o/repo.git' },
+    { kind: 'occupied', path: '/home/ada/repo' },
+    { kind: 'no-repo-name', path: '/home/ada', url: 'https://github.com' },
+    { kind: 'declined', path: '/srv/proj', url: 'https://github.com/o/repo.git' },
+  ] as const)('round-trips a $kind refusal', (refusal) => {
+    expect(roundTrip({ type: 'root-refused', refusal })).toEqual({ type: 'root-refused', refusal });
+  });
+
+  it('round-trips the offer without a home and the frames without their optional fields', () => {
+    for (const frame of [
+      { type: 'clone-offer', path: '/srv/proj', url: 'git@github.com:o/repo.git' },
+      { type: 'clone-answer', accept: false },
+      { type: 'provision', label: 'claude' },
+      { type: 'workspace-ready', dir: '/srv/ws' },
+    ] as const) expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('drops a field the refusal kind does not carry', () => {
+    const line = JSON.stringify({ type: 'root-refused', refusal: { kind: 'occupied', path: '/p', url: 'u' } });
+    expect(decodeFrame(line)).toEqual({ type: 'root-refused', refusal: { kind: 'occupied', path: '/p' } });
+  });
+
+  it.each([
+    ['clone-offer without a url', { type: 'clone-offer', path: '/srv/proj' }],
+    ['clone-offer with an empty home', { type: 'clone-offer', path: '/srv/proj', url: 'u', home: '' }],
+    ['clone-answer with a non-boolean accept', { type: 'clone-answer', accept: 'yes' }],
+    ['root-refused with an unknown kind', { type: 'root-refused', refusal: { kind: 'exploded', path: '/p' } }],
+    ['root-refused without a path', { type: 'root-refused', refusal: { kind: 'not-found' } }],
+    ['root-refused missing a field its kind carries', { type: 'root-refused', refusal: { kind: 'clone-failed', path: '/p', url: 'u' } }],
+    ['root-refused with no refusal', { type: 'root-refused' }],
+    ['provision with an empty origin', { type: 'provision', label: 'claude', origin: '' }],
+    ['provision with a non-string origin', { type: 'provision', label: 'claude', origin: 7 }],
+    ['attach with an empty origin', { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', origin: '' }],
+    ['attach with a non-string origin', { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', origin: 7 }],
+    ['capture-request with an empty origin', {
+      type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1', origin: '',
+    }],
+    ['capture-request with a non-string origin', {
+      type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1', origin: 7,
+    }],
+    ['workspace-ready with a cloned record missing its path', { type: 'workspace-ready', dir: '/w', cloned: { url: 'u' } }],
+    ['workspace-ready with a non-record cloned', { type: 'workspace-ready', dir: '/w', cloned: '/p' }],
+  ])('refuses %s', (_name, record) => {
+    expect(decodeFrame(JSON.stringify(record))).toEqual({ error: expect.stringContaining('Malformed remote frame') });
+  });
+});
+
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 20', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(20);
+  it('is 21', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(21);
   });
 });
 
@@ -476,7 +543,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt', 'attach', 'capture-request',
+      'acp-close', 'acp-open', 'acp-prompt', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'session-state', 'shutdown', 'spawn',
     ]);
@@ -485,8 +552,8 @@ describe('admitted frame types', () => {
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
-      'busy-transition', 'capture-reply', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use', 'output',
-      'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
+      'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
+      'output', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
   });
 
@@ -512,16 +579,17 @@ describe('admitted frame types', () => {
 });
 
 describe('handshake', () => {
-  it('announces the sentinel, this build\'s version, and the resolved root', () => {
-    const line = encodeHandshake('/srv/proj');
+  // The root is settled after the handshake, by the first `provision` or `attach`, so the line
+  // cannot carry it.
+  it('announces the sentinel and this build\'s version, and no root', () => {
+    const line = encodeHandshake();
     expect(line.startsWith(HANDSHAKE_SENTINEL)).toBe(true);
-    expect(parseHandshake(line)).toEqual({ version: REMOTE_PROTOCOL_VERSION, root: '/srv/proj' });
+    expect(line).not.toContain('root');
+    expect(parseHandshake(line)).toEqual({ version: REMOTE_PROTOCOL_VERSION });
   });
 
   it('parses a handshake preceded by terminal output on the same line', () => {
-    expect(parseHandshake(`motd tail ${encodeHandshake('/srv/proj')}`)).toEqual({
-      version: REMOTE_PROTOCOL_VERSION, root: '/srv/proj',
-    });
+    expect(parseHandshake(`motd tail ${encodeHandshake()}`)).toEqual({ version: REMOTE_PROTOCOL_VERSION });
   });
 
   it('rejects a mismatched protocol version, naming both versions', () => {

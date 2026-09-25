@@ -1,11 +1,16 @@
 import { messageBus } from '../bus.js';
 import { getGitIdentity } from '../git/identity.js';
+import { withoutCredentials } from '../git/repository-url.js';
+import { rootRefusalMessage } from '../launch-name/messages.js';
 import type { Managers } from '../managers.js';
 import type { PtySession } from '../pty.js';
 import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
 import { Attach, terminateRemoteProcess, type RemoteEntry } from './attach.js';
 import { RemoteChannel } from './channel.js';
+import {
+  cloneAnswerEcho, cloneKeyAnswer, clonePromptText, cloningLine, type CloneOfferText,
+} from './clone-prompt.js';
 import { notifyBrowserGone, reportRemoteRefusal, reportTruncatedReplay } from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
@@ -40,6 +45,13 @@ export function remoteCaptureCommand(address: RemoteAddress): string {
   return sshRemoteCommand(address, ['-o BatchMode=yes', '-o NumberOfPasswordPrompts=0', '-o ConnectTimeout=10']);
 }
 
+// The launching project's origin, credential-free, for the far side to check its root against — and
+// to find that root again when an attach or a parked-capture query relays into a session there.
+export function provisionOrigin(managers: Managers): { origin?: string } {
+  const origin = managers.workspace?.origin();
+  return origin === undefined ? {} : { origin: withoutCredentials(origin) };
+}
+
 export function createRemoteEntry({
   managers, label, address, cwd, handlers, resume, channelClosed, sessionsChanged,
 }: RemoteEntryFactoryOptions): RemoteEntry {
@@ -51,6 +63,22 @@ export function createRemoteEntry({
   const ready = new Promise<string>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
   void ready.catch(() => {});
   const deferred: { channel?: RemoteChannel; session?: PtySession } = {};
+  const terminal = (data: string) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data });
+  // A clone offer waiting for its y/n, answered by keystrokes typed into the placeholder.
+  let offer: CloneOfferText | undefined;
+
+  // Keys typed into the placeholder: ssh's own prompts while the channel authenticates, then only a
+  // pending clone offer's answer. Anything else is dropped rather than written into the framed stream.
+  const onInput = (data: string) => {
+    if (channel.authenticating) { channel.write(data); return; }
+    const answer = offer === undefined ? 'ignore' : cloneKeyAnswer(data);
+    if (offer === undefined || answer === 'ignore') return;
+    const accept = answer === 'accept';
+    terminal(cloneAnswerEcho(accept));
+    if (accept) terminal(cloningLine(offer));
+    offer = undefined;
+    channel.send({ type: 'clone-answer', accept });
+  };
 
   const channel = new RemoteChannel(
     {
@@ -59,11 +87,13 @@ export function createRemoteEntry({
       kill: () => deferred.session?.kill(),
     },
     {
-      onTerminalData: (data) => messageBus.emit('pty', { type: 'data', id: deferred.session?.id ?? '', data }),
+      onTerminalData: terminal,
       onAttached: () => {
         if ((entry.attach.active || state.resuming) && channel.sessionId) {
-          channel.send({ type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }) });
-        } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity() });
+          channel.send({
+            type: 'attach', session: channel.sessionId, ...(state.resuming && { restore: true }), ...provisionOrigin(managers),
+          });
+        } else channel.send({ type: 'provision', label, tokens: getProjectTokens(), identity: getGitIdentity(), ...provisionOrigin(managers) });
       },
       onFrame: (frame) => {
         switch (frame.type) {
@@ -74,8 +104,14 @@ export function createRemoteEntry({
         }
         case 'workspace-ready': {
           if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
-          entry.handlers.get(label)?.onReady(frame.dir, frame.notice, frame.cleaned);
+          entry.handlers.get(label)?.onReady(frame.dir, frame.notice, frame.cleaned, frame.cloned);
           sessionsChanged();
+          break;
+        }
+        case 'clone-offer': { offer = frame; terminal(clonePromptText(frame)); break; }
+        case 'root-refused': {
+          if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(rootRefusalMessage(label, address.host, frame.refusal))); }
+          entry.handlers.get(label)?.onRootRefused?.(frame.refusal);
           break;
         }
         case 'workspace-failed': {
@@ -122,6 +158,7 @@ export function createRemoteEntry({
       'ssh', remoteServeCommand(address), resume ? process.cwd() : cwd, {
         onData: (data) => { if (current === generation) channel.receive(data); },
         onExit: () => { if (current === generation) channel.closed(); },
+        onInput,
       });
   };
   const entry: RemoteEntry = {

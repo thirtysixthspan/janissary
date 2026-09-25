@@ -4,8 +4,8 @@ import type { Managers } from '../managers.js';
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteResume } from '../remote/resume.js';
 import type { SpawnTabOptions } from './spawn-options.js';
-import { LaunchCheckUnanswered, LaunchNameRefusal } from '../launch-name/refusal.js';
-import { failRemoteLaunch, reportRemoteCleanup } from '../launch-name/fail-remote.js';
+import { LaunchCheckUnanswered, LaunchNameRefusal, RemoteRootRefusal } from '../launch-name/refusal.js';
+import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone } from '../launch-name/fail-remote.js';
 
 // The "open a channel, insert the placeholder, resolve `ready` from frames" sequence, kept out of
 // `HarnessManager` — which was already split once for size (see `command-parse.ts`) — and shared by
@@ -17,13 +17,15 @@ import { failRemoteLaunch, reportRemoteCleanup } from '../launch-name/fail-remot
 // which machine the clone lands on. `cwd` and `notice` are only meaningful once it resolves: the
 // remote workspace's path, and the remote's own sandbox notice (isolation is the remote host's
 // decision, so the notice has to come from there rather than be computed locally).
-// `cleaned` is the path of a leftover workspace the remote removed before cloning this one.
+// `cleaned` is the path of a leftover workspace the remote removed before cloning this one, and
+// `cloned` the project root it cloned onto the host first.
 export type RemoteLaunchState = {
   ptyId: string;
   ready: Promise<void>;
   cwd: () => string;
   notice: () => string | undefined;
   cleaned: () => string | undefined;
+  cloned: () => { url: string; path: string } | undefined;
 };
 
 function closeTab(managers: Managers, label: string): void {
@@ -43,8 +45,9 @@ function closeTab(managers: Managers, label: string): void {
  * the host never got to check the label. A channel that dies afterwards simply closes the tab, the
  * way a harness tab closes when its process exits.
  *
- * A host that refuses the label rejects `ready` with a `LaunchNameRefusal` instead, which the
- * failure funnel (`failRemoteLaunch`) tells apart from every other failure.
+ * A host that refuses the label rejects `ready` with a `LaunchNameRefusal` instead, and one that
+ * cannot settle a project root with a `RemoteRootRefusal`, which the failure funnel
+ * (`failRemoteLaunch`) tells apart from every other failure.
  */
 export function startRemoteLaunch(
   managers: Managers, label: string, address: RemoteAddress, cwd: string, resume?: RemoteResume,
@@ -52,14 +55,16 @@ export function startRemoteLaunch(
   // The channel is opened inside the executor, which runs synchronously, so `ptyId` is filled in
   // before this function returns and no resolver has to be lifted out of the promise.
   const state = {
-    dir: cwd, notice: undefined as string | undefined, cleaned: undefined as string | undefined, ptyId: '', settled: false,
+    dir: cwd, notice: undefined as string | undefined, cleaned: undefined as string | undefined,
+    cloned: undefined as { url: string; path: string } | undefined, ptyId: '', settled: false,
   };
   const ready = new Promise<void>((resolve, reject) => {
     const channel = managers.remote.create(label, address, cwd, {
-      onReady: (remoteDir, remoteNotice, cleaned) => {
+      onReady: (remoteDir, remoteNotice, cleaned, cloned) => {
         state.dir = remoteDir;
         state.notice = remoteNotice;
         state.cleaned = cleaned;
+        state.cloned = cloned;
         state.settled = true;
         resolve();
       },
@@ -67,6 +72,11 @@ export function startRemoteLaunch(
         if (state.settled) return;
         state.settled = true;
         reject(new LaunchNameRefusal(frame.label, address.host, frame.path, frame.reason));
+      },
+      onRootRefused: (refusal) => {
+        if (state.settled) return;
+        state.settled = true;
+        reject(new RemoteRootRefusal(address.host, refusal));
       },
       // An attach hears about a launch that never reached an answer here, at the launch's own
       // failure funnel, rather than through a second path of its own.
@@ -87,7 +97,10 @@ export function startRemoteLaunch(
     state.ptyId = channel.ptyId;
   });
 
-  return { ptyId: state.ptyId, ready, cwd: () => state.dir, notice: () => state.notice, cleaned: () => state.cleaned };
+  return {
+    ptyId: state.ptyId, ready, cwd: () => state.dir, notice: () => state.notice, cleaned: () => state.cleaned,
+    cloned: () => state.cloned,
+  };
 }
 
 /**
@@ -113,6 +126,7 @@ export function startRemoteTab(
     (l) => managers.tab.tabs.some((t) => t.label === l),
     () => {
       reportRemoteCleanup(managers, options.nameRetry, label, remote.host, launch.cleaned());
+      reportRemoteClone(managers, options.nameRetry, remote.host, launch.cloned());
       onReady(launch.cwd(), launch.notice());
     },
     (message, error) => { failHarnessSpawn(managers, options, message, error); },

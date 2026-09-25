@@ -34,7 +34,8 @@ export { formatTimestamp, provenanceTimestamp, notificationText } from './format
 // `launch-refused` reports a harness or agent launch stopped because its name clashes with an open
 // tab, a sessions-table row, or something running on the target host, and
 // `launch-workspace-cleaned` reports a leftover workspace removed so a launch could go ahead. Both
-// carry their line verbatim. `remote-refused` reports a remote host refusing a request after its
+// carry their line verbatim, as does `launch-root-cloned`, which reports a missing project root a
+// remote launch cloned onto its host after the user accepted the offer. `remote-refused` reports a remote host refusing a request after its
 // workspace was ready: the session is still alive, so the tab stays open and this line is the only
 // sign of the refusal. It carries its line verbatim too.
 export type NotificationEventType =
@@ -60,6 +61,7 @@ export type NotificationEventType =
   | 'plugin-note'
   | 'launch-refused'
   | 'launch-workspace-cleaned'
+  | 'launch-root-cloned'
   | 'remote-refused';
 
 // A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
@@ -114,6 +116,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'plugin-note': true,
   'launch-refused': true,
   'launch-workspace-cleaned': true,
+  'launch-root-cloned': true,
   'remote-refused': true,
 };
 

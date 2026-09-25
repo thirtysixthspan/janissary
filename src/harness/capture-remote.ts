@@ -1,5 +1,5 @@
 import { RemoteChannel } from '../remote/channel.js';
-import { remoteCaptureCommand } from '../remote/entry-factory.js';
+import { provisionOrigin, remoteCaptureCommand } from '../remote/entry-factory.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';
@@ -45,7 +45,9 @@ export function queryParkedCapture(
       kill: () => deferred.session?.kill(),
     }, {
       onTerminalData: (data) => { terminal += data; },
-      onAttached: () => { void channel.requestCapture(processId, record.session).then(finish); },
+      onAttached: () => {
+        void channel.requestCapture(processId, record.session, provisionOrigin(managers).origin).then(finish);
+      },
       onFrame: () => {},
       onError: (message) => finish({ error: message }, false),
       onClose: () => finish(terminal ? { error: terminal.trim() } : undefined, false),

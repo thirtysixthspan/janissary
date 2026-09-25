@@ -1,10 +1,10 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
-import { LaunchCheckUnanswered, LaunchNameRefusal } from './refusal.js';
+import { LaunchCheckUnanswered, LaunchNameRefusal, RemoteRootRefusal } from './refusal.js';
 import {
-  checkUnansweredRefusal, cleanedNotice, harnessRetriesRefusal, poolRetriesRefusal, remoteRunningRefusal,
-  removalFailedRefusal,
+  checkUnansweredRefusal, cleanedNotice, clonedNotice, harnessRetriesRefusal, poolRetriesRefusal, remoteRunningRefusal,
+  removalFailedRefusal, rootRefusalMessage,
 } from './messages.js';
 
 // The one failure funnel a provisioning placeholder closes through, for harness and agent tabs
@@ -77,15 +77,27 @@ export function reportRemoteCleanup(
   notify(managers, 'launch-workspace-cleaned', retry.creator, cleanedNotice(label, cleaned, host));
 }
 
+// A remote launch that cloned its host's missing project root first: say so, once, attributed to
+// the launch's creator, the way a leftover cleanup is.
+export function reportRemoteClone(
+  managers: Managers, retry: RemoteNameRetry | undefined, host: string, cloned: { url: string; path: string } | undefined,
+): void {
+  if (retry === undefined || cloned === undefined) return;
+  notify(managers, 'launch-root-cloned', retry.creator, clonedNotice(cloned.url, cloned.path, host));
+}
+
+// A root refusal is shown on the placeholder in its composed form rather than the rejection's own
+// text, and posted with the same wording, so the reason survives the placeholder closing.
 export function failRemoteLaunch(managers: Managers, failure: RemoteLaunchFailure): void {
   const { error, retry } = failure;
   if (error instanceof LaunchNameRefusal && retry) {
     refuse(managers, failure, error, retry);
     return;
   }
-  failure.show(failure.message);
-  if (error instanceof LaunchCheckUnanswered && retry) {
-    notify(managers, 'launch-refused', retry.creator, checkUnansweredRefusal(failure.label, error.host, error.message));
-  }
+  const rootRefusal = error instanceof RemoteRootRefusal ? rootRefusalMessage(failure.label, error.host, error.refusal) : undefined;
+  failure.show(rootRefusal ?? failure.message);
+  const posted = rootRefusal
+    ?? (error instanceof LaunchCheckUnanswered ? checkUnansweredRefusal(failure.label, error.host, error.message) : undefined);
+  if (posted !== undefined && retry) notify(managers, 'launch-refused', retry.creator, posted);
   setTimeout(() => closeTab(managers, failure.label), PROVISION_FAILURE_CLOSE_DELAY_MS);
 }

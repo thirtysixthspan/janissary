@@ -4,7 +4,8 @@ import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, toHttpsUrl, trustWorkspace, untrustWorkspace } from './index.js';
+import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, trustWorkspace, untrustWorkspace } from './index.js';
+import { toHttpsUrl } from '../git/repository-url.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -163,20 +164,6 @@ describe('createWorkspace', () => {
     handle.cancel();
     await expect(handle.ready).rejects.toThrow();
     expect(existsSync(handle.dir)).toBe(false);
-  });
-});
-
-describe('toHttpsUrl', () => {
-  it('converts an scp-style ssh url to https', () => {
-    expect(toHttpsUrl('git@github.com:owner/repo.git')).toBe('https://github.com/owner/repo.git');
-  });
-
-  it('converts an ssh:// url to https', () => {
-    expect(toHttpsUrl('ssh://git@github.com/owner/repo.git')).toBe('https://github.com/owner/repo.git');
-  });
-
-  it('leaves an already-https url unchanged', () => {
-    expect(toHttpsUrl('https://github.com/owner/repo.git')).toBe('https://github.com/owner/repo.git');
   });
 });
 

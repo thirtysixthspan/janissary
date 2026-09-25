@@ -1,4 +1,5 @@
 import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
+import { decodeOrigin } from './frame-decode-root.js';
 
 // The decoders for the version-18 detection family — `capture-request`/`capture-reply` and
 // `gate-event`/`busy-transition` — in their own module for the same reason `frame-decode-history.ts`
@@ -14,10 +15,12 @@ function validCapturedAt(value: unknown): value is number {
 
 export function decodeCaptureRequest(record: Record<string, unknown>): DecodeResult {
   const { session, id, request } = record;
-  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session) || !nonEmptyString(id) || !nonEmptyString(request)) {
+  const origin = decodeOrigin(record.origin);
+  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session) || !nonEmptyString(id) || !nonEmptyString(request)
+    || origin === false) {
     return malformed('capture-request');
   }
-  return { type: 'capture-request', session, id, request };
+  return { type: 'capture-request', session, id, request, ...(origin !== undefined && { origin }) };
 }
 
 export function decodeCaptureReply(record: Record<string, unknown>): DecodeResult {

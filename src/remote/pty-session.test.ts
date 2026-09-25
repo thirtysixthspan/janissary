@@ -31,7 +31,7 @@ function attachedChannel() {
   const channel = new RemoteChannel(transport, {
     onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn(),
   });
-  channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+  channel.receive(`${encodeHandshake()}\n`);
   return { channel, sent };
 }
 
@@ -197,7 +197,7 @@ describe('createRemotePtySession', () => {
     // attaching window and the state that opens the hold, letting a frame for an id with no
     // listener yet be held instead of dropped.
     channel.sessionId = '12345678-1234-1234-1234-123456789abc';
-    channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
+    channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
     channel.receive(`${encodeFrame({
       type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1_700_000_000_000, capture: 'the screen text',
     })}\n`);
@@ -259,7 +259,7 @@ describe('a remote PTY inside PseudoterminalManager', () => {
     const { channel } = attachedChannel();
     channel.sessionId = '11111111-2222-3333-4444-555555555555';
     channel.replaceTransport({ id: 'ssh2', write: vi.fn(), kill: vi.fn() });
-    channel.receive(`${encodeHandshake('/remote')}\n`);
+    channel.receive(`${encodeHandshake()}\n`);
     channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
     channel.receive(`${encodeFrame({ type: 'output', id: 'restored', data: 'previous turn\r\n' })}\n`);
     const manager = new PseudoterminalManager(makeManagers([makeTab('claude', 'red')]));

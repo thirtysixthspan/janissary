@@ -52,6 +52,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'plugin-note':
     case 'launch-refused':
     case 'launch-workspace-cleaned':
+    case 'launch-root-cloned':
     case 'remote-refused': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }

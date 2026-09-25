@@ -163,7 +163,8 @@ These event types can produce a notification line:
   decode it (see [[audio-tab]]).
 - **`launch-refused`** — a harness or agent launch was refused because its name is already in use:
   by an open tab, by a live row in the sessions tab, or by something running on the target host, or
-  because a leftover workspace under that name could not be removed. Pool exhaustion
+  because a leftover workspace under that name could not be removed, or because a remote host had no
+  project root the launch could use, such as a missing clone that was declined. Pool exhaustion
   (`All agent names are in use.`) is reported the same way. The line is the refusal itself, such as
   `Cannot launch "foo": a tab named "foo" is already open.`, attributed to the tab the command was
   typed in (or the issuing tab of a profile launch); nothing is written to that tab's transcript. See
@@ -172,6 +173,9 @@ These event types can produce a notification line:
   so a launch could go ahead: `Removed leftover workspace "<name>" (<path>) before launching.`, or
   with ` on <host>` after the name when the folder was on a remote host. Attributed like
   `launch-refused`.
+- **`launch-root-cloned`** — a remote launch found no clone of the project on its host, the user
+  accepted the offer to clone one, and the workspace is now ready: `Cloned <url> into <path> on
+  <host>.` Attributed like `launch-refused` (see `remote-server.md`).
 - **`remote-refused`** — a remote host refused a request after its workspace was ready: `Remote
   janus on <host> refused a request: <message>`, where the message is the host's own. The session is
   still alive and the tab stays open, so this line is the only sign of the refusal. Attributed to the
@@ -182,7 +186,7 @@ The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `a
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
-`launch-refused`, `launch-workspace-cleaned`, and `remote-refused` events have no toggle, and like the other explicit
+`launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. A `question` event fires only for a
 background tab.
 

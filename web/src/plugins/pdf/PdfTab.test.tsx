@@ -69,7 +69,13 @@ async function mount(document_: LoadedPdf | null = makeDocument(), client = capa
     document_ ? { ok: true, document: document_ } : { ok: false, reason: 'password-protected' },
   );
   const view = render(<PdfTab payload={payload} capabilities={client} />);
-  if (document_) await screen.findByLabelText('Show pages');
+  if (!document_) return view;
+  await screen.findByLabelText('Show pages');
+  // A page observes itself in an effect that can run after the header appears, and a notification
+  // sent before then is lost, so wait until the stage's page is being watched.
+  await waitFor(() => {
+    expect(watchers.some((watcher) => watcher.elements.some((element) => element.matches('.pdf-stage .pdf-page')))).toBe(true);
+  });
   return view;
 }
 

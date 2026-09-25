@@ -3,8 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const notify = vi.hoisted(() => vi.fn());
 vi.mock('../notifications/index.js', () => ({ notify }));
 
-import { failRemoteLaunch, reportRemoteCleanup, MAX_REMOTE_NAME_ATTEMPTS, type RemoteNameRetry } from './fail-remote.js';
-import { LaunchCheckUnanswered, LaunchNameRefusal } from './refusal.js';
+import {
+  failRemoteLaunch, reportRemoteCleanup, reportRemoteClone, MAX_REMOTE_NAME_ATTEMPTS, type RemoteNameRetry,
+} from './fail-remote.js';
+import { LaunchCheckUnanswered, LaunchNameRefusal, RemoteRootRefusal } from './refusal.js';
+import { clonedNotice, rootRefusalMessage } from './messages.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(labels: string[]): { managers: Managers; labels: string[] } {
@@ -129,6 +132,21 @@ describe('failRemoteLaunch', () => {
     expect(labels).toEqual(['janus']);
   });
 
+  it('shows a root refusal in its composed form, posts it, and closes after the delay', async () => {
+    const { managers, labels } = makeManagers(['janus', 'fariz']);
+    const show = vi.fn();
+    const error = new RemoteRootRefusal('thecandykingdom', { kind: 'declined', path: '/srv/proj', url: 'u' });
+    const line = 'Cannot launch "fariz": /srv/proj on thecandykingdom is not a clone of this project — clone declined.';
+
+    failRemoteLaunch(managers, { label: 'fariz', kind: 'agent', error, message: error.message, retry: retry(), show });
+
+    expect(show).toHaveBeenCalledWith(line);
+    expect(notify).toHaveBeenCalledExactlyOnceWith(managers, 'launch-refused', 'janus', line);
+    expect(labels).toEqual(['janus', 'fariz']);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(labels).toEqual(['janus']);
+  });
+
   it('treats a refusal with no retry context (an attach) as an ordinary failure', () => {
     const { managers } = makeManagers(['janus', 'claude']);
     const show = vi.fn();
@@ -155,5 +173,47 @@ describe('reportRemoteCleanup', () => {
     reportRemoteCleanup(managers, retry(), 'claude', 'devbox', undefined);
     reportRemoteCleanup(managers, undefined, 'claude', 'devbox', '/srv/ws/claude');
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('reportRemoteClone', () => {
+  beforeEach(() => { notify.mockClear(); });
+
+  it('posts the root clone against the creator', () => {
+    const { managers } = makeManagers([]);
+    reportRemoteClone(managers, retry(), 'devbox', { url: 'https://github.com/o/repo.git', path: '/home/ada/repo' });
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-root-cloned', 'janus',
+      'Cloned https://github.com/o/repo.git into /home/ada/repo on devbox.');
+  });
+
+  it('posts nothing when nothing was cloned, or for an attach', () => {
+    const { managers } = makeManagers([]);
+    reportRemoteClone(managers, retry(), 'devbox', undefined);
+    reportRemoteClone(managers, undefined, 'devbox', { url: 'u', path: '/p' });
+    expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe('rootRefusalMessage', () => {
+  const url = 'https://github.com/o/repo.git';
+  it.each([
+    [{ kind: 'declined', path: '/srv/proj', url }, 'Cannot launch "fariz": /srv/proj on devbox is not a clone of this project — clone declined.'],
+    [{ kind: 'clone-failed', path: '/srv/proj', url, reason: 'fatal: Authentication failed.' },
+      `Cannot launch "fariz": cloning ${url} into /srv/proj on devbox failed — fatal: Authentication failed.`],
+    [{ kind: 'different-origin', path: '/srv/proj', other: 'git@github.com:o/other.git', url },
+      `Cannot launch "fariz": /srv/proj on devbox is a clone of git@github.com:o/other.git, not ${url}.`],
+    [{ kind: 'not-repository', path: '/srv/proj' }, 'Cannot launch "fariz": /srv/proj on devbox is not a git repository.'],
+    [{ kind: 'occupied', path: '/home/ada/repo' }, 'Cannot launch "fariz": /home/ada/repo on devbox exists and is not a clone of this project.'],
+    [{ kind: 'no-origin', path: '/srv/proj' }, 'Cannot launch "fariz": /srv/proj on devbox has no "origin" remote.'],
+    [{ kind: 'no-repo-name', path: '/home/ada', url: 'https://github.com/' },
+      'Cannot launch "fariz": cannot name a folder for https://github.com/ under /home/ada on devbox.'],
+    [{ kind: 'not-found', path: '/srv/proj' }, 'Cannot launch "fariz": /srv/proj on devbox does not exist.'],
+    [{ kind: 'no-repository-found', path: '/home/ada' }, 'Cannot launch "fariz": no git repository found at or above /home/ada on devbox.'],
+  ] as const)('words a $kind refusal', (refusal, line) => {
+    expect(rootRefusalMessage('fariz', 'devbox', refusal)).toBe(line);
+  });
+
+  it('words the clone notice', () => {
+    expect(clonedNotice(url, '/home/ada/repo', 'devbox')).toBe(`Cloned ${url} into /home/ada/repo on devbox.`);
   });
 });

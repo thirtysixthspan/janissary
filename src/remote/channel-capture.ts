@@ -1,7 +1,8 @@
-import type { ServerFrame } from './protocol.js';
+import type { ClientFrame, ServerFrame } from './protocol.js';
 
 export type CaptureResult = { text: string; capturedAt: number } | { error: string } | undefined;
 
+type CaptureRequestFrame = Extract<ClientFrame, { type: 'capture-request' }>;
 type CaptureReplyFrame = Extract<ServerFrame, { type: 'capture-reply' }>;
 
 // The request/reply bookkeeping behind `RemoteChannel.requestCapture()`: a spawn id can have at most
@@ -12,11 +13,11 @@ export class CaptureRequestTracker {
   private pending = new Map<string, (result: CaptureResult) => void>();
   private nextRequest = 0;
 
-  request(id: string, session: string, send: (frame: { type: 'capture-request'; session: string; id: string; request: string }) => void): Promise<CaptureResult> {
+  request(id: string, session: string, send: (frame: CaptureRequestFrame) => void, origin?: string): Promise<CaptureResult> {
     return new Promise((resolve) => {
       const request = String(++this.nextRequest);
       this.pending.set(request, resolve);
-      send({ type: 'capture-request', session, id, request });
+      send({ type: 'capture-request', session, id, request, ...(origin !== undefined && { origin }) });
     });
   }
 

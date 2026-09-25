@@ -61,7 +61,9 @@ export function requestParkedCapture(
 export function answerCaptureRequest(
   frame: { session: string; id: string; request: string },
   processes: { latestCapture: (id: string) => ScreenCapture | undefined } | undefined,
-  root: string,
+  // Undefined when this process has no root to find a parked peer under, which answers as "no
+  // capture yet" does.
+  root: string | undefined,
   emit: (frame: ServerFrame) => void,
 ): void {
   if (processes) {
@@ -69,6 +71,7 @@ export function answerCaptureRequest(
     emit({ type: 'capture-reply', id: frame.id, request: frame.request, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
     return;
   }
+  if (root === undefined) { emit({ type: 'capture-reply', id: frame.id, request: frame.request }); return; }
   void requestParkedCapture(root, frame.session, frame.id, frame.request).then((capture) => {
     emit({ type: 'capture-reply', id: frame.id, request: frame.request, ...(capture && { text: capture.text, capturedAt: capture.capturedAt }) });
   });

@@ -11,7 +11,9 @@ import type { Managers } from './managers.js';
 // owns the tabs these PTYs belong to; this module owns the sessions and their I/O, handing
 // tab-affecting events back through the host.
 export class PseudoterminalManager {
-  private ptys = new Map<string, { session: PtySession; tabLabel: string; transport?: boolean }>();
+  private ptys = new Map<string, {
+    session: PtySession; tabLabel: string; transport?: boolean; onInput?: (data: string) => void;
+  }>();
   private cols = 80;
   private rows = 24;
   private remoteCounter = 0;
@@ -44,16 +46,20 @@ export class PseudoterminalManager {
   // rather than a terminal stream once its handshake lands. It is registered like any other PTY so
   // client keystrokes (`input`), `closeTab`, and `closeAll` all reach it, but marked as a transport
   // so it is never listed as one of the tab's `terminal:` connections.
+  //
+  // `handlers.onInput`, when given, receives the client's keystrokes instead of the PTY: once a
+  // transport is framed, a stray key written straight into it would corrupt the stream, so its owner
+  // decides where each keystroke goes.
   spawnTransport(
     label: string, program: string, command: string, cwd: string,
-    handlers: { onData: (data: string) => void; onExit: () => void },
+    handlers: { onData: (data: string) => void; onExit: () => void; onInput?: (data: string) => void },
     options?: { sandbox?: SandboxOptions; shellArgs?: string[] },
   ): PtySession {
     const session = spawnPty(program, command, cwd, {
       onData: (_id, data) => handlers.onData(data),
       onExit: (id, exitCode) => { this.handleExit(id, exitCode); handlers.onExit(); },
     }, this.cols, this.rows, options?.sandbox, undefined, options?.shellArgs);
-    this.ptys.set(session.id, { session, tabLabel: label, transport: true });
+    this.ptys.set(session.id, { session, tabLabel: label, transport: true, onInput: handlers.onInput });
     return session;
   }
 
@@ -82,8 +88,12 @@ export class PseudoterminalManager {
     return id;
   }
 
-  // Forward client keystrokes to a PTY.
-  input(id: string, data: string): void { this.ptys.get(id)?.session.write(data); }
+  // Forward client keystrokes to a PTY, or to a transport's own input handler when it has one.
+  input(id: string, data: string): void {
+    const entry = this.ptys.get(id);
+    if (entry?.onInput) entry.onInput(data);
+    else entry?.session.write(data);
+  }
 
   // Resize a single PTY (a client viewport change) and mirror the new size onto the bus so
   // server-side observers (the harness screen reader) track the real PTY's dimensions.

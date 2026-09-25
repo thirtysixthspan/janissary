@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { spawn as spawnTerminal } from 'node-pty';
@@ -8,14 +8,14 @@ import { initWorkspaceDir } from '../workspace/index.js';
 import { loadProjectTokens } from '../project/tokens.js';
 import { loadGitIdentity, getGitIdentity } from '../git/identity.js';
 import { spawnPty } from '../pty.js';
-import { resolveRemoteRoot } from './serve-root.js';
-import { RemoteServer, wireShutdown, CHANNEL_SIGNALS } from './serve.js';
+import { RemoteServer } from './serve.js';
+import { wireShutdown, CHANNEL_SIGNALS } from './serve-start.js';
+import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel.js';
-import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake } from './protocol.js';
+import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTOCOL_VERSION } from './protocol.js';
 import type { ServerFrame } from './protocol.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace } from './serve-provision.js';
-import type { WorkspaceManager } from '../workspace/manager.js';
 import { randomUUID } from 'node:crypto';
 import { createConnection } from 'node:net';
 import { readFileSync } from 'node:fs';
@@ -93,43 +93,15 @@ afterAll(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-describe('resolveRemoteRoot', () => {
-  it('roots the server exactly at a path argument', () => {
-    expect(resolveRemoteRoot(repoDir)).toEqual({ root: repoDir });
-  });
+// The server settles its root on the first provision. The settle it is handed skips the real one's
+// config, token, and workspace-dir loading, which `beforeAll` has already pointed at the suite's own
+// temp directories, so nothing here reads or trusts anything in the real home directory.
+const testSettle = (root: string) => new WorkspaceManager(root);
 
-  it('walks up from the ssh login directory when given no argument', () => {
-    const nested = path.join(repoDir, 'a', 'b');
-    mkdirSync(nested, { recursive: true });
-    const previous = process.cwd();
-    try {
-      process.chdir(nested);
-      expect(resolveRemoteRoot(undefined)).toEqual({ root: repoDir });
-    } finally {
-      process.chdir(previous);
-    }
-  });
-
-  // No upward walk for an explicit argument: `on host:/tmp` must fail loudly rather than silently
-  // serving whatever repository happens to sit above /tmp.
-  it('refuses a path argument that is not a git repository', () => {
-    expect(resolveRemoteRoot(plainDir)).toEqual({ error: `${plainDir} is not a git repository.` });
-  });
-
-  it('refuses a path argument that does not exist', () => {
-    const missing = path.join(tmpDir, 'nope');
-    expect(resolveRemoteRoot(missing)).toEqual({ error: `Remote path not found: ${missing}` });
-  });
-
-  it('refuses a repository with no origin remote', () => {
-    expect(resolveRemoteRoot(originlessDir)).toEqual({ error: `${originlessDir} has no "origin" remote.` });
-  });
-});
-
-function makeServer() {
+function makeServer(pathArgument: string | undefined = repoDir, home = homeDir) {
   const frames: ServerFrame[] = [];
   const exit = vi.fn();
-  const server = new RemoteServer(repoDir, (frame) => { frames.push(frame); }, exit);
+  const server = new RemoteServer(pathArgument, (frame) => { frames.push(frame); }, exit, { settle: testSettle, home });
   return { server, frames, exit };
 }
 
@@ -371,13 +343,22 @@ describe('RemoteServer', () => {
 
   it('detaches on SIGHUP and shuts down on SIGTERM', () => {
     const { server, exit } = makeServer();
+    const detach = vi.spyOn(server, 'detach').mockImplementation(() => {});
     const handlers = new Map<string, () => void>();
     wireShutdown(server, (signal, handler) => { handlers.set(signal, handler); });
 
     expect([...handlers.keys()]).toEqual([...CHANNEL_SIGNALS]);
     handlers.get('SIGHUP')!();
+    expect(detach).toHaveBeenCalledOnce();
     expect(exit).not.toHaveBeenCalled();
     handlers.get('SIGTERM')!();
+    expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  // No root means no peer to park, so a lost transport before the first provision ends the process.
+  it('shuts down instead of parking when the transport goes before a root is settled', () => {
+    const { server, exit } = makeServer();
+    server.detach();
     expect(exit).toHaveBeenCalledWith(0);
   });
 
@@ -519,7 +500,7 @@ describe('RemoteServer provision — label check', () => {
     server.shutdown(0);
   });
 
-  it('keeps a leftover and answers workspace-failed when the root has lost its origin remote', async () => {
+  it('keeps a leftover and refuses the root when it has lost its origin remote', async () => {
     const leftover = path.join(workspaceBase(), 'originless-label');
     mkdirSync(leftover, { recursive: true });
     writeFileSync(path.join(leftover, 'uncommitted.txt'), 'stale work');
@@ -528,7 +509,7 @@ describe('RemoteServer provision — label check', () => {
     try {
       server.receive(`${encodeFrame({ type: 'provision', label: 'originless-label' })}\n`);
       await vi.waitFor(() => expect(frames).toHaveLength(1));
-      expect(frames[0]).toMatchObject({ type: 'workspace-failed', message: expect.stringMatching(/^Failed to create workspace:/) });
+      expect(frames[0]).toEqual({ type: 'root-refused', refusal: { kind: 'no-origin', path: repoDir } });
       expect(existsSync(path.join(leftover, 'uncommitted.txt'))).toBe(true);
     } finally {
       execSync(`git remote add origin "${path.join(tmpDir, 'origin.git')}"`, { cwd: repoDir, stdio: 'pipe' });
@@ -581,17 +562,188 @@ describe('RemoteServer provision — label check', () => {
     }, 'ordered-label', {}, {});
     expect(order).toEqual(['label', 'clone']);
   });
+
+  it('clones the workspace with the forwarded GitHub token', async () => {
+    const create = vi.fn(() => ({ error: 'stop here' }));
+    await provisionRemoteWorkspace({
+      emit: () => {},
+      workspaces: { create } as unknown as WorkspaceManager,
+      peer: undefined,
+      idle: () => true,
+      stopping: () => false,
+      provisioned: vi.fn(),
+    }, 'token-label', { github: 'github_pat_forwarded' }, {});
+    expect(create).toHaveBeenCalledWith('token-label', 'github_pat_forwarded');
+  });
 });
+
+describe('RemoteServer — settling the root', () => {
+  const origin = () => path.join(tmpDir, 'origin.git');
+  // Settles the way `settleRoot` does for the workspace base, but against the suite's own Claude
+  // config, and puts the base back on the shared repository afterwards.
+  const claudeJson = () => path.join(tmpDir, '.claude.json');
+  const settleAt = (root: string) => { initWorkspaceDir(root, claudeJson()); return new WorkspaceManager(root); };
+  const serverAt = (pathArgument: string) => {
+    const frames: ServerFrame[] = [];
+    const exit = vi.fn();
+    const server = new RemoteServer(pathArgument, (frame) => { frames.push(frame); }, exit, { settle: settleAt, home: homeDir });
+    return { server, frames, exit };
+  };
+
+  it('writes the handshake at once, carrying no root, before any root is resolved', () => {
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const stubs = [
+      vi.spyOn(process.stdout, 'on').mockImplementation(() => process.stdout),
+      vi.spyOn(process.stdin, 'on').mockImplementation(() => process.stdin),
+      vi.spyOn(process.stdin, 'setEncoding').mockImplementation(() => process.stdin),
+      vi.spyOn(process.stdin, 'resume').mockImplementation(() => process.stdin),
+    ];
+    try {
+      const { server, frames } = serverAt(path.join(tmpDir, 'never-there'));
+      server.listen();
+      const line = String(write.mock.calls[0][0]);
+      expect(line).not.toContain('root');
+      expect(parseHandshake(line)).toEqual({ version: REMOTE_PROTOCOL_VERSION, session: server.sessionId });
+      expect(frames).toEqual([]);
+    } finally {
+      write.mockRestore();
+      for (const stub of stubs) stub.mockRestore();
+    }
+  });
+
+  it('answers root-refused for an unusable root and starts nothing', () => {
+    const { server, frames } = serverAt(plainDir);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'plain-label', origin: origin() })}\n`);
+    expect(frames).toEqual([{ type: 'root-refused', refusal: { kind: 'not-repository', path: plainDir } }]);
+    expect(existsSync(path.join(plainDir, '.janissary'))).toBe(false);
+  });
+
+  it('refuses a root whose origin is another repository', () => {
+    const { server, frames } = serverAt(repoDir);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'other-label', origin: 'git@github.com:owner/other.git' })}\n`);
+    expect(frames).toEqual([{
+      type: 'root-refused',
+      refusal: { kind: 'different-origin', path: repoDir, other: origin(), url: 'git@github.com:owner/other.git' },
+    }]);
+  });
+
+  it('offers a missing root, clones it on a yes, and reports the clone on workspace-ready', async () => {
+    const target = path.join(tmpDir, 'offered', 'proj');
+    const { server, frames } = serverAt(target);
+    try {
+      server.receive(`${encodeFrame({ type: 'provision', label: 'offered-label', origin: origin() })}\n`);
+      await vi.waitFor(() => expect(frames).toEqual([{ type: 'clone-offer', path: target, url: origin() }]));
+      server.receive(`${encodeFrame({ type: 'clone-answer', accept: true })}\n`);
+      await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'workspace-ready')).toBe(true));
+      expect(frames.find((frame) => frame.type === 'workspace-ready')).toMatchObject({
+        dir: path.join(target, '.janissary', 'workspace', 'offered-label'),
+        cloned: { url: origin(), path: target },
+      });
+      expect(existsSync(path.join(target, 'README.md'))).toBe(true);
+      server.shutdown(0);
+    } finally {
+      initWorkspaceDir(repoDir, claudeJson());
+      rmSync(path.join(tmpDir, 'offered'), { recursive: true, force: true });
+    }
+  });
+
+  it('declines a pending offer on shutdown, creating nothing', async () => {
+    const target = path.join(tmpDir, 'abandoned');
+    const { server, frames, exit } = serverAt(target);
+    server.receive(`${encodeFrame({ type: 'provision', label: 'abandoned-label', origin: origin() })}\n`);
+    await vi.waitFor(() => expect(frames.map((frame) => frame.type)).toEqual(['clone-offer']));
+    server.shutdown(0);
+    expect(exit).toHaveBeenCalledWith(0);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(frames.map((frame) => frame.type)).toEqual(['clone-offer']);
+    expect(existsSync(target)).toBe(false);
+  });
+
+  it('refuses a clone-answer with no offer pending', () => {
+    const { server, frames } = serverAt(repoDir);
+    server.receive(`${encodeFrame({ type: 'clone-answer', accept: true })}\n`);
+    expect(frames).toEqual([{ type: 'workspace-failed', message: 'Unexpected remote frame "clone-answer".' }]);
+  });
+
+  it('answers attach with accepted: false when no root can be resolved', () => {
+    const { server, frames } = serverAt(path.join(tmpDir, 'never-there'));
+    server.receive(`${encodeFrame({ type: 'attach', session: randomUUID() })}\n`);
+    expect(frames).toEqual([{ type: 'attach-result', accepted: false }]);
+  });
+
+  it('answers a parked-capture query with no capture when no root can be resolved', () => {
+    const { server, frames } = serverAt(path.join(tmpDir, 'never-there'));
+    server.receive(`${encodeFrame({ type: 'capture-request', session: randomUUID(), id: 'r1', request: 'q1' })}\n`);
+    expect(frames).toEqual([{ type: 'capture-reply', id: 'r1', request: 'q1' }]);
+  });
+
+  // A home-directory launch roots its session at `<home>/<repo-name>` (`origin` here, after the
+  // suite's `origin.git`), and the relay reaches it only by classifying with the frame's origin.
+  describe('relaying into a session rooted at <home>/<repo-name>', () => {
+    const relayHome = () => path.join(tmpDir, 'relay-home');
+    const homeServer = () => {
+      const frames: ServerFrame[] = [];
+      const server = new RemoteServer('~', (frame) => { frames.push(frame); }, vi.fn(), { settle: settleAt, home: relayHome() });
+      return { server, frames };
+    };
+
+    beforeEach(() => { mkdirSync(relayHome(), { recursive: true }); });
+    afterEach(() => { rmSync(relayHome(), { recursive: true, force: true }); });
+
+    const parkAtHomeClone = async (capture?: (id: string) => { text: string; capturedAt: number } | undefined) => {
+      const root = path.join(relayHome(), 'origin');
+      execSync(`git clone "${origin()}" "${root}"`, { stdio: 'pipe' });
+      const peer = new DetachedPeer(root, randomUUID(), vi.fn(), vi.fn(), capture);
+      await peer.start(vi.fn());
+      peer.detach();
+      return peer;
+    };
+
+    it('relays an attach carrying the origin into the peer parked under the home clone', async () => {
+      const peer = await parkAtHomeClone();
+      const output: string[] = [];
+      const write = vi.spyOn(process.stdout, 'write').mockImplementation((data) => { output.push(String(data)); return true; });
+      const { server } = homeServer();
+      try {
+        server.receive(`${encodeFrame({ type: 'attach', session: peer.session, origin: origin() })}\n`);
+        await vi.waitFor(() => expect(output.join('')).toContain('"accepted":true'));
+      } finally { server.shutdown(0); write.mockRestore(); peer.dispose(); }
+    });
+
+    it('answers a parked-capture query carrying the origin from the peer parked under the home clone', async () => {
+      const peer = await parkAtHomeClone((id) => (id === 'r1' ? { text: 'home screen', capturedAt: 7 } : undefined));
+      const { server, frames } = homeServer();
+      try {
+        server.receive(`${encodeFrame({ type: 'capture-request', session: peer.session, id: 'r1', request: 'q1', origin: origin() })}\n`);
+        await vi.waitFor(() => expect(frames).toEqual([
+          { type: 'capture-reply', id: 'r1', request: 'q1', text: 'home screen', capturedAt: 7 },
+        ]));
+      } finally { peer.dispose(); }
+    });
+
+    it('answers accepted: false for a missing home clone, offering nothing and creating nothing', () => {
+      const { server, frames } = homeServer();
+      server.receive(`${encodeFrame({ type: 'attach', session: randomUUID(), origin: origin() })}\n`);
+      expect(frames).toEqual([{ type: 'attach-result', accepted: false }]);
+      expect(existsSync(path.join(relayHome(), 'origin'))).toBe(false);
+    });
+  });
+});
+
 describe('detached peer rendezvous', () => {
   it.each(['pipe', 'pty'] as const)('keeps a real %s shell and workspace through terminal hangup and a fresh remote-serve process', async (mode) => {
     const script = `
       import { RemoteServer } from ${JSON.stringify(new URL('serve.ts', import.meta.url).href)};
+      import { wireShutdown } from ${JSON.stringify(new URL('serve-start.ts', import.meta.url).href)};
+      import { WorkspaceManager } from ${JSON.stringify(new URL('../workspace/manager.ts', import.meta.url).href)};
       import { initWorkspaceDir } from ${JSON.stringify(new URL('../workspace/index.ts', import.meta.url).href)};
       import { getConfig } from ${JSON.stringify(new URL('../config.ts', import.meta.url).href)};
       getConfig().sandboxWorkspaces = false;
       initWorkspaceDir(process.argv[1], process.argv[1] + '/absent-config');
       if (process.stdin.isTTY) process.stdin.setRawMode(true);
-      new RemoteServer(process.argv[1]).listen();
+      const server = new RemoteServer(process.argv[1], undefined, undefined, { settle: (root) => new WorkspaceManager(root) });
+      wireShutdown(server);
+      server.listen();
     `;
     const start = () => {
       const child = spawnTerminal(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script, repoDir], {
@@ -617,6 +769,7 @@ describe('detached peer rendezvous', () => {
     };
     try {
       await vi.waitFor(() => expect(peer.lines[0]).toContain('__JANUS_REMOTE__'), { timeout: 10_000 });
+      expect(peer.lines[0]).not.toContain('"root"');
       const handshake = parseHandshake(peer.lines[0]);
       if ('error' in handshake || !handshake.session) throw new Error('missing peer identity');
       peer.send({ type: 'provision', label: 'real-sleep-shell' });
@@ -642,10 +795,15 @@ describe('detached peer rendezvous', () => {
         id: 'closing-ssh', write: (data) => restored.child.write(data), kill: () => restored.child.kill(),
       }, { onTerminalData: vi.fn(), onAttached: vi.fn(), onFrame: vi.fn(), onError: vi.fn(), onClose: vi.fn() });
       restored.child.onExit(() => channel.closed());
-      channel.receive(`${encodeHandshake(repoDir)}\n`);
+      channel.receive(`${encodeHandshake()}\n`);
+      // Closed the way every local path ends a session: an immediate kill can drop the shutdown frame
+      // before the pty hands it to the relay, which leaves the peer parked with its workspace.
       channel.finish();
-      channel.close();
-      await vi.waitFor(() => expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false));
+      channel.closeAfterShutdown();
+      await vi.waitFor(
+        () => expect(existsSync(path.join(repoDir, '.janissary', 'workspace', 'real-sleep-shell'))).toBe(false),
+        { timeout: 10_000 },
+      );
     } finally {
       if (proxy) await stop(proxy.child);
       await stop(peer.child);

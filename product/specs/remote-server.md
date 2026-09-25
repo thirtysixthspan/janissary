@@ -81,10 +81,10 @@ local workspace clone does:
 - ssh cannot connect, or authentication fails — ssh's own text, shown verbatim, since it was already
   rendering in that terminal.
 - `janus` is not on the remote's PATH.
-- The remote path is not a git repository (`<path> is not a git repository.`).
-- The remote path does not exist (`Remote path not found: <path>`).
-- No git repository is found above the ssh login directory, when the address carried no path.
-- The remote repository has no `origin` remote (`<root> has no "origin" remote.`).
+- The host has no project root the launch can use: the path is not a git repository, the repository
+  has no `origin` remote or is a clone of another repository, or a missing clone was declined or
+  could not be made. The reason appears in the placeholder and is posted to the notifications feed
+  (see [Missing clone](#missing-clone)).
 - The two janissary installations speak different protocol versions — the message names both
   versions and says to update janissary so the hosts match.
 - The ssh session ends before the workspace is ready. For a new launch this also means the host never
@@ -195,6 +195,16 @@ nothing. A version-19 remote ignores the flag and renames straight over whatever
 into a collapsed remote folder would keep destroying a same-named file while both ends looked
 healthy. It is refused at the handshake like any other mismatch.
 
+Checking that the host holds a clone of this project moves the protocol to 21. The remote server no
+longer settles its project root before announcing itself, so the handshake no longer carries the
+root. The provisioning request now carries the launching project's `origin`, with any embedded
+credential removed. The host answers a missing clone with an offer to clone it, the launch answers
+the offer with the user's yes or no, and a root that cannot be used is answered with a refusal frame
+that says why, so the local side can word it with the tab's name and the host. A workspace-ready
+answer can now say that the project root was cloned first. A version-20 remote settles its root
+before the handshake and never offers a clone, so a launch against one would fail with no reason
+at all. It is refused at the handshake like any other mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -234,7 +244,12 @@ represent; an out-of-range or fractional value is refused rather than accepted a
 it is turned into a capture filename.
 A name-refusal frame must carry a nonempty name, and its path and reason come together or not at
 all, each nonempty when present; a workspace-ready frame's removed-leftover path is optional but,
-when present, must be nonempty.
+when present, must be nonempty, and its cloned-root record is optional but, when present, must carry
+a nonempty URL and path. A provisioning request's origin is optional but, when present, must be
+nonempty. A clone offer must carry a nonempty path and URL, and its home directory is optional but
+nonempty when present; a clone answer's `accept` must be a boolean. A root refusal must carry one of
+its declared kinds, a nonempty path, and every nonempty field that kind carries; an unknown kind is
+malformed.
 An invalid known frame is refused as `Malformed remote frame "<type>".` and an unknown frame type is
 refused by name. Undeclared properties are discarded rather than forwarded to process, workspace, or
 ACP handlers.
@@ -250,6 +265,86 @@ as that one process exiting with code 1 (`RemoteServer.spawn` in `src/remote/ser
 process sharing the channel is untouched, and later requests, including a session-state query, are
 still answered. A failed start sends exactly one exit for that process, and the error text itself is
 not forwarded to the tab.
+
+#### Missing clone
+
+A remote launch only works when the host holds a clone of *this* project: a git repository whose
+`origin` names the same repository as the launching project's `origin`. Two origins name the same
+repository when they share host, owner, and repository over any transport. The scp form
+(`git@github.com:o/r.git`), the `ssh://` form, and the HTTPS form are equivalent, host case is
+ignored, and a trailing `.git` is ignored.
+
+When the clone is missing, the host offers to create one in exactly three cases:
+
+- **The address names a path that does not exist** (`on host:/srv/proj` with no `/srv/proj`). The
+  clone creates it, along with any missing parent folders.
+- **The address names no path, and no clone of this project is found above the ssh login
+  directory.** That covers finding no git repository at all, and finding one whose `origin` is a
+  different repository, such as a home directory kept as a dotfiles repository.
+- **The address names the remote user's home directory** (`on host:~`, or its absolute form), which
+  exists and is not a git repository. It is treated exactly like the no-path case.
+
+In the last two cases the target is a folder in the remote user's home directory named after the
+repository: the `origin` URL's last path segment without `.git`, so
+`git@github.com:thirtysixthspan/janissary.git` clones into `~/janissary`. Before offering, the launch
+looks for that folder. When it already holds a clone of this project, the launch is rooted there with
+no question asked, so after one accepted offer every later `on host` launch just works. When it is
+an empty folder, the offer is made and the clone goes into it. When it is anything else, the launch
+fails and nothing is offered, as it does when no usable folder name can be derived from the `origin`.
+
+Nothing is offered, and the launch fails with the host's real reason, for an explicit path that
+exists but is not a git repository (other than the home directory), a repository with no `origin`
+remote, and an explicit path whose repository has a different `origin`. Nothing is offered either
+when the launching project has no `origin`, and attaching a parked session never offers. Attaching,
+and a detached capture, find a session rooted in the home-directory folder the same way a launch
+found it.
+
+The question is a y/n prompt in the placeholder tab's terminal, where ssh's own prompts already
+render. It leaves out the host, which the tab's host chip already shows:
+
+- For a missing path: `<path> is not a clone of this project. Clone <url> into <path>? [y/N] `
+- For a home-directory target: `<home> has no clone of this project. Clone <url> into <home>/<repo-name>? [y/N] `
+
+`y` or `Y` clones. `n`, `N`, Enter, Escape, or Ctrl-C declines. Any other key is ignored and the
+prompt stays up. The deciding key is echoed as `y` or `n`. Once ssh has finished authenticating, keys
+typed into the placeholder go only to a pending prompt; anything else typed there is dropped.
+
+`<url>` is the URL that is actually cloned. The clone uses the launching project's GitHub token, the
+same one forwarded for the workspace (see [What is computed where](#what-is-computed-where)), when
+the `origin` is on `github.com`, and then fetches the `origin`'s HTTPS form. Otherwise it clones the
+`origin` as it is, with the host's own git access. An `origin` that git would read as an option (one
+starting with `-`) or as a command transport (`ext::` or `fd::`) is never handed to git: the clone
+fails at once with that reason and nothing is created. The same refusal covers every workspace
+clone. The clone runs silently: while it runs the
+terminal shows `Cloning <url> into <path>…`, and git's own output is not shown. Once the workspace is
+ready, `Cloned <url> into <path> on <host>.` is posted to the notifications feed, attributed to the
+launch's creator.
+
+Two launches can reach the same missing target on the same host at the same time, such as two tabs
+from one profile. Only the first shows the prompt, and it holds the target until its clone finishes.
+The other waits silently, then uses the clone without asking. If the first is declined, cancelled, or
+its clone fails, the waiting launch asks for itself.
+
+Closing the placeholder tab, or losing the ssh session, while the prompt is up counts as declining.
+Doing so while the clone runs stops it. A cancelled or failed clone removes the folders it created.
+An empty `~/<repo-name>` that already existed keeps its folder and loses only what the clone put in
+it. Nothing that existed before the clone is touched.
+
+Every root failure appears in the placeholder before it closes and is posted to the notifications
+feed, attributed to the tab the launch was typed in (or a profile launch's issuing tab). The other
+repository's origin and git's error line have any embedded credential removed before they are
+reported, so a token in the host's own git configuration never reaches the placeholder or the feed.
+`<path>` in the declined and clone-failed lines is the folder the clone would have gone into:
+
+- Declined: `Cannot launch "<name>": <path> on <host> is not a clone of this project — clone declined.`
+- Clone failed: `Cannot launch "<name>": cloning <url> into <path> on <host> failed — <reason>.`, where `<reason>` is git's first error line.
+- Different origin: `Cannot launch "<name>": <path> on <host> is a clone of <other-url>, not <this-url>.`
+- Existing path that is not a repository: `Cannot launch "<name>": <path> on <host> is not a git repository.`
+- Occupied `~/<repo-name>`: `Cannot launch "<name>": <path> on <host> exists and is not a clone of this project.`
+- No origin: `Cannot launch "<name>": <path> on <host> has no "origin" remote.`
+- No usable folder name for a home target: `Cannot launch "<name>": cannot name a folder for <url> under <home> on <host>.`
+- Missing path when the launching project has no `origin`: `Cannot launch "<name>": <path> on <host> does not exist.`
+- No repository above the login directory when the launching project has no `origin`: `Cannot launch "<name>": no git repository found at or above <dir> on <host>.`
 
 ### Lifecycle and cleanup
 
@@ -330,7 +425,7 @@ has died is ignored, and it is left in place.
 - **Running:** nothing is provisioned. For a typed name or a profile entry's name the placeholder closes at once and `Cannot launch "<name>": "<name>" is already running on <host>.` is posted. For a default name (a bare harness name, or an agent pool name) the placeholder closes and the launch is repeated silently over a fresh ssh connection under the next free name, up to 5 attempts in all. After the fifth, one refusal is posted: `Cannot launch "<first>": "<first>" through "<last>" are already running on <host>.` for a harness, or `Cannot launch agent on <host>: 5 names tried (<n1>, <n2>, …) are already running on <host>.` for an agent.
 - **Leftover:** a workspace folder under the name with nothing running in it is removed, even with uncommitted or unpushed work in it, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "<name>" on <host> (<path>) before launching.` is posted.
 - **Leftover that cannot be removed:** nothing is provisioned, the placeholder closes at once, and `Cannot launch "<name>": could not remove leftover workspace "<name>" on <host> (<path>) — <reason>.` is posted. This covers a failed update of the host's Claude trust file, which is tried before the folder is touched, and a removal that fails partway, which leaves the rest in place for the next launch to try again.
-- **Leftover with nothing to clone:** when the host's project root has lost its git repository or `origin` remote, the leftover is kept and the host answers with the same workspace failure a clone would have given.
+- **Leftover with nothing to clone:** when the host's project root has lost its git repository or `origin` remote, the leftover is kept and the launch fails with that reason (see [Missing clone](#missing-clone)).
 - **Name that is not a single folder name:** a name that is empty, `.` or `..`, or contains `/` or `\` would reach outside the host's workspace base. The host checks it before anything else, provisions and removes nothing, and answers with a workspace failure carrying `Cannot launch "<name>": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".`, which the placeholder shows before it closes.
 
 These lines go to the notifications feed only, attributed to the tab the launch was typed in (or the
@@ -421,8 +516,18 @@ processes; it is never written to the remote filesystem. That injection is indep
 remote's own isolation state — a remote where the sandbox is inactive, which is every non-macOS
 remote, still receives the token in its workspaced processes. If the local project has no token, the
 remote's own `github-token` remains the fallback, resolved on that machine from its project's
-`.janissary/` and then its home `~/.janissary/` (see [[workspaced-agent]]). The initial clone uses whatever
-transport the *remote* repository's `origin` already has.
+`.janissary/` and then its home `~/.janissary/` (see [[workspaced-agent]]).
+
+Both clones made on the remote use the same GitHub token: the workspace clone, and a project root
+cloned after an accepted offer (see [Missing clone](#missing-clone)). It is used only when the
+`origin` is on `github.com`, so a GitHub token is never sent to another host, and the clone then
+fetches the `origin`'s HTTPS form. That lets a host with no GitHub access of its own clone a private
+repository. The workspace clone uses the forwarded token when there is one and the remote's own
+`github-token` otherwise. The root clone uses only the forwarded one. The token is never written to
+the remote filesystem, never placed in a URL, and never stored in either clone's git config. With no
+token, or an `origin` on another host, a clone uses whatever transport the remote repository's
+`origin` already has, with the host's own git access. This machine's other git credentials, such as
+its credential helper or ssh keys, are never used.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
 `.janissary/gemini-token` travel the same way, in the same map on the same frame, and are injected as
@@ -488,6 +593,16 @@ channel.
 With a directory argument it is rooted exactly there, with no upward walk. Without one it walks up
 from the ssh login directory looking for a git repository. Either way the root must be a git
 repository with an `origin` remote.
+
+The root is not settled at startup. The server announces itself at once, and the root is settled by
+the first request that needs one: a new launch's provisioning request settles it against the
+launching project's `origin` and may offer to clone it (see [Missing clone](#missing-clone)). An
+attach, and a detached capture query, resolve it against the same `origin` the way a launch does, so
+a session rooted in the remote user's home directory is found again, but they never offer: anything
+other than an existing clone of this project is refused as a missing session. From a project with
+no `origin`, they resolve it by the rules above alone. Until the root is settled, a request for the running
+processes answers with an empty list, and any request that needs a workspace is refused. Losing the
+ssh session before then ends the server instead of parking it, since there is nothing to park.
 
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
 inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside

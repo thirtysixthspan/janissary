@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteChannel } from './channel.js';
 import type { ServerFrame } from './protocol.js';
+import type { RootRefusal } from './root-refusal.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
 import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
 import type { RemoteResume } from './resume.js';
@@ -16,13 +17,17 @@ export { remoteServeCommand } from './entry-factory.js';
 export type RemoteLaunchHandlers = {
   // `notice` is the remote's own workspace-isolation notice, when it has one to give: isolation is
   // active where the remote is macOS and inactive otherwise, which is the remote's fact to report.
-  // `cleaned` is the path of a leftover workspace the remote removed before cloning this one.
-  onReady: (dir: string, notice?: string, cleaned?: string) => void;
+  // `cleaned` is the path of a leftover workspace the remote removed before cloning this one, and
+  // `cloned` the project root it cloned first, after the user accepted its offer.
+  onReady: (dir: string, notice?: string, cleaned?: string, cloned?: { url: string; path: string }) => void;
   onFailed: (message: string) => void;
   onClosed: () => void;
   // The remote refused the launch's label (`name-in-use`). Optional because only a provisioning
   // launch can hear it: an attach or a terminate never provisions.
   onNameRefused?: (frame: Extract<ServerFrame, { type: 'name-in-use' }>) => void;
+  // The remote could not settle a project root for the launch (`root-refused`). Optional for the
+  // same reason.
+  onRootRefused?: (refusal: RootRefusal) => void;
 };
 
 

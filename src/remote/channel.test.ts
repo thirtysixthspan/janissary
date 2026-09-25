@@ -53,12 +53,12 @@ describe('RemoteChannel — authenticating', () => {
 });
 
 describe('RemoteChannel — handshake', () => {
-  it('flips to attached, reports the resolved root, and stops echoing to the terminal', () => {
+  it('flips to attached, reports the handshake, and stops echoing to the terminal', () => {
     const h = harness();
-    h.channel.receive(`motd\n${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`motd\n${encodeHandshake()}\n`);
     expect(h.terminal).toEqual(['motd\n']);
     expect(h.channel.attached).toBe(true);
-    expect(h.attached).toHaveBeenCalledWith({ version: REMOTE_PROTOCOL_VERSION, root: '/srv/proj' });
+    expect(h.attached).toHaveBeenCalledWith({ version: REMOTE_PROTOCOL_VERSION });
 
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'x' })}\n`);
     expect(h.terminal).toEqual(['motd\n']);
@@ -66,7 +66,7 @@ describe('RemoteChannel — handshake', () => {
 
   it('holds the sentinel back until its line is complete', () => {
     const h = harness();
-    const line = encodeHandshake('/srv/proj');
+    const line = encodeHandshake();
     h.channel.receive(line.slice(0, 10));
     expect(h.channel.attached).toBe(false);
     expect(h.terminal).toEqual([]);
@@ -86,7 +86,7 @@ describe('RemoteChannel — handshake', () => {
 describe('RemoteChannel — attached', () => {
   function attachedChannel() {
     const h = harness();
-    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeHandshake()}\n`);
     return h;
   }
 
@@ -214,6 +214,30 @@ describe('RemoteChannel — attached', () => {
     expect(h.errors).toEqual([]);
   });
 
+  it('hands a clone offer and a root refusal to onFrame', () => {
+    const h = attachedChannel();
+    const offer = { type: 'clone-offer', path: '/home/ada/repo', url: 'https://github.com/o/repo.git', home: '/home/ada' } as const;
+    const refused = { type: 'root-refused', refusal: { kind: 'not-repository', path: '/srv/proj' } } as const;
+    h.channel.receive(`${encodeFrame(offer)}\n${encodeFrame(refused)}\n`);
+    expect(h.frames).toEqual([offer, refused]);
+    expect(h.errors).toEqual([]);
+  });
+
+  it('still hands every other tab-level frame to onFrame', () => {
+    const h = attachedChannel();
+    const frames = [
+      { type: 'workspace-ready', dir: '/srv/ws' },
+      { type: 'workspace-failed', message: 'nope' },
+      { type: 'transcript', blocks: ['b'] },
+      { type: 'browser-exited', id: 'r1' },
+      { type: 'attach-result', accepted: true },
+      { type: 'session-state-result', processes: [] },
+    ] as const;
+    for (const frame of frames) h.channel.receive(`${encodeFrame(frame)}\n`);
+    expect(h.frames).toEqual(frames);
+    expect(h.errors).toEqual([]);
+  });
+
   it('fails the channel on a frame outside the union', () => {
     const h = attachedChannel();
     h.channel.receive(`${JSON.stringify({ type: 'exec', id: 'r1' })}\n`);
@@ -267,7 +291,7 @@ describe('RemoteChannel — attached', () => {
 describe('RemoteChannel — ACP session routing', () => {
   function acpHarness() {
     const h = harness();
-    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeHandshake()}\n`);
     const listener = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
     return { ...h, listener };
   }
@@ -375,14 +399,14 @@ describe('RemoteChannel — closing', () => {
 });
 it('preserves all session routing while replacing a dropped peer transport', () => {
   const h = harness();
-  h.channel.receive(`${encodeHandshake('/remote', '12345678-1234-1234-1234-123456789abc')}\n`);
+  h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
   const onOutput = vi.fn(), onReply = vi.fn(), onChunk = vi.fn(), onClose = vi.fn();
   h.channel.attach('p', { onOutput, onExit: vi.fn() });
   h.channel.attachNavigator('n', { onReply, onEvent: vi.fn(), onClose });
   h.channel.attachAcp('a', { onReady: vi.fn(), onChunk, onEnd: vi.fn(), onError: vi.fn() });
   h.channel.closed(); expect(onClose).not.toHaveBeenCalled();
   h.channel.replaceTransport({ id: 'new', write: vi.fn(), kill: vi.fn() });
-  h.channel.receive(`${encodeHandshake('/remote')}\n`);
+  h.channel.receive(`${encodeHandshake()}\n`);
   expect(h.channel.attached).toBe(false);
   h.channel.receive(`${encodeFrame({ type: 'attach-result', accepted: true })}\n`);
   expect(h.channel.attached).toBe(true);
@@ -401,7 +425,7 @@ it('settles a capture-request made while still authenticating with an error, rat
 
 it('answers new filesystem requests during a disconnect without sending or replaying them', () => {
   const h = harness();
-  h.channel.receive(`${encodeHandshake('/remote', '12345678-1234-1234-1234-123456789abc')}\n`);
+  h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
   const reply = vi.fn();
   h.channel.attachNavigator('n', { onReply: reply, onEvent: vi.fn() });
   h.channel.closed();
@@ -420,7 +444,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
     // As a resume does: the session id is set before the handshake, so the channel enters its
     // attaching window and the state that opens the hold.
     h.channel.sessionId = '12345678-1234-1234-1234-123456789abc';
-    h.channel.receive(`${encodeHandshake('/srv/proj', '12345678-1234-1234-1234-123456789abc')}\n`);
+    h.channel.receive(`${encodeHandshake('12345678-1234-1234-1234-123456789abc')}\n`);
     return h;
   }
 
@@ -507,7 +531,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
 
   it('drops what it is holding when the channel ends for good', () => {
     const h = harness();
-    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeHandshake()}\n`);
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'held' })}\n`);
     h.channel.closed();
 
@@ -533,7 +557,7 @@ describe('RemoteChannel — frames for an id with no listener yet', () => {
   // truncated-replay line is raised into a tab that was never disconnected.
   it('drops an unlistened frame on a live channel with no attach in flight', () => {
     const h = harness();
-    h.channel.receive(`${encodeHandshake('/srv/proj')}\n`);
+    h.channel.receive(`${encodeHandshake()}\n`);
     h.channel.receive(`${encodeFrame({ type: 'output', id: 'r1', data: 'late' })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'exit', id: 'r9', exitCode: 1 })}\n`);
 

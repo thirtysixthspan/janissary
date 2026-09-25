@@ -25,11 +25,12 @@ export class WorkspaceManager {
   // that depends on this succeeding — e.g. a tab), then kick off the clone in the background.
   // Returns the target directory and a `ready` promise, or an `{ error }` when there's no repo, no
   // `origin` remote, or `origin` can't be read. Shared by the agent and harness `--workspace`
-  // paths so both behave identically.
-  create(name: string): ProvisioningWorkspace | { error: string } {
+  // paths so both behave identically. `githubToken` is a remote workspace's forwarded credential;
+  // a local clone passes none.
+  create(name: string, githubToken?: string): ProvisioningWorkspace | { error: string } {
     const origin = this.originUrl();
     if ('error' in origin) return origin;
-    const handle = provisionWorkspace(name, origin.url);
+    const handle = provisionWorkspace(name, origin.url, githubToken);
     this.refs.set(handle.dir, 1);
     this.pending.set(name, { cancel: handle.cancel, dir: handle.dir });
     return { dir: handle.dir, ready: this.trackReady(name, handle.ready) };
@@ -41,6 +42,12 @@ export class WorkspaceManager {
   preflight(): string | undefined {
     const origin = this.originUrl();
     return 'error' in origin ? origin.error : undefined;
+  }
+
+  // The project root's `origin` URL, or undefined when there is no repository or no `origin`.
+  origin(): string | undefined {
+    const origin = this.originUrl();
+    return 'url' in origin ? origin.url : undefined;
   }
 
   private originUrl(): { url: string } | { error: string } {
