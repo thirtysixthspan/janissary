@@ -603,7 +603,13 @@ Each proposed change's inserted lines carry their own thumbs-up/thumbs-down icon
 on the last inserted line — the same icons and click-to-resolve interaction as a monitor reporting
 tab's suggestion (see [[monitoring]]). Clicking thumbs-up applies that one change; thumbs-down drops
 it; either resolves that change independently of any others still pending, which keep previewing
-until resolved in turn — there is no required order. While any change is pending, every keystroke
+until resolved in turn — there is no required order. Each accepted change is its own undo step, the
+same as a plugin's change: an undo right after an accept restores the buffer exactly as it was
+before that accept, and the edits made before the request stay in place for later undos to reach.
+Accepting a change leaves the caret, and any other selections, where they were, pulled back to the
+nearest position that still exists if the change shortened their line or removed it. A change whose
+text no longer matches the buffer is dropped without touching the buffer or recording an undo step,
+and declining a change never writes to the buffer at all. While any change is pending, every keystroke
 other than the accept/decline clicks is suppressed rather than reaching the buffer, so editing is
 blocked until the whole set is resolved. Switching to another tab and back leaves the pending set
 exactly as it was.

@@ -1117,6 +1117,36 @@ describe('EditorTab', () => {
       expect(container.querySelector('.editor-row-query')).toBeNull();
     });
 
+    it('records an accepted hunk as its own undo step, separate from the typing before it', async () => {
+      const { client, request } = makeClient();
+      request.mockReset();
+      request.mockResolvedValueOnce({ ok: true, value: { names: ['summarizer'] } });
+      request.mockResolvedValueOnce({ ok: true, value: { hunks: [{ anchor: 'line one', replacement: 'LINE ONE' }] } });
+      stubRequestFileContent('line one\n');
+      const { container } = await renderLoaded(client, makeView({ line: 2 }));
+      const bufferText = () => [...container.querySelectorAll(':scope .editor-row:not(.editor-row-query) .editor-content')]
+        .map((row) => (row.textContent ?? '').replaceAll('\u{200B}', '')).join('\n');
+
+      type('typed');
+      fireEvent.keyDown(textarea(), { key: 'Enter' });
+      expect(bufferText()).toBe('line one\ntyped\n');
+
+      openAndType(' summarizer rewrite this');
+      fireEvent.keyDown(textarea(), { key: 'Enter', metaKey: true });
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).not.toBeNull());
+      fireEvent.click(screen.getByLabelText('Accept'));
+      await waitFor(() => expect(container.querySelector('.editor-diff-controls')).toBeNull());
+      expect(bufferText()).toBe('LINE ONE\ntyped\n');
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      expect(bufferText()).toBe('line one\ntyped\n');
+
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      expect(bufferText()).toBe('line one\ntyped');
+      fireEvent.keyDown(textarea(), { key: 'z', metaKey: true });
+      expect(bufferText()).toBe('line one\n');
+    });
+
     it('declines every hunk, leaving the buffer unchanged, and keeps the query line open with its text', async () => {
       const { client, request } = makeClient();
       request.mockReset();
