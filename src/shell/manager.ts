@@ -55,6 +55,10 @@ export class ShellManager {
   // The promotion state of each tab's currently-running command, so the manual `open in terminal`
   // intent has something to act on.
   private promotions = new Map<string, ShellPromotion>();
+  // Shells this manager killed itself. Killing ends a shell's streams, which completes its running
+  // command; for a killed shell that completion is dropped, because the tab it would report to may
+  // already be closed. Only an exit the shell made on its own reaches the command's handlers.
+  private retired = new WeakSet<ShellProcess>();
 
   constructor(private managers: Managers) {}
 
@@ -147,20 +151,28 @@ export class ShellManager {
     for (const entry of restoredTranscript(runs)) this.managers.tab.append(label, entry);
   }
 
-  // The pty-backed variant: registered as a transport so the manager reaps it with the tab and never
-  // lists it among the tab's `terminal:` connections, while its bytes come back here to be scraped
-  // rather than being published straight to the client.
+  // The pty-backed variant: registered as a transport so the pty manager never lists it among the
+  // tab's `terminal:` connections, while its bytes come back here to be scraped rather than being
+  // published straight to the client. The pty manager's tab close skips transports, so `close` here
+  // is what kills it. An exit the shell made on its own ends its streams, which completes the running
+  // command and lets `getShell` respawn it; the pty id is cleared only while it is still this
+  // shell's, so a late exit from a replaced shell cannot disable promotion for its successor.
   private spawnPtyShellFor(label: string, cwd: string | undefined, sandbox: SandboxOptions): ShellProcess {
     let onData: (data: string) => void = () => {};
-    const { shell, ptyId } = createPtyShell((handler) => {
+    let onExit: () => void = () => {};
+    const { shell, ptyId, exited } = createPtyShell((handler) => {
       onData = handler;
       const session = this.managers.pty.spawnTransport(
         label, SHELL_NAME, SHELL_NAME, cwd ?? process.cwd(),
-        { onData: (data) => onData(data), onExit: () => this.shellPtyIds.delete(label) },
+        { onData: (data) => onData(data), onExit: () => onExit() },
         { sandbox, shellArgs: ptyShellArgs() },
       );
       return { write: (data) => session.write(data), kill: () => session.kill(), id: session.id };
     });
+    onExit = () => {
+      if (this.shellPtyIds.get(label) === ptyId) this.shellPtyIds.delete(label);
+      exited();
+    };
     this.shellPtyIds.set(label, ptyId);
     return shell;
   }
@@ -233,6 +245,7 @@ export class ShellManager {
       await previous;
       await new Promise<void>((resolve) => {
         executeShellCommand(shell, command, index, handlers.onChunk, (result) => {
+          if (this.retired.has(shell)) { resolve(); return; }
           handlers.onDone(result);
           queryShellPwd(shell, index, (pwd) => {
             if (pwd) handlers.onPwd(pwd);
@@ -257,6 +270,7 @@ export class ShellManager {
     const shell = this.shells.get(label);
     this.adopted.delete(label);
     if (!shell) return false;
+    this.retired.add(shell);
     shell.kill();
     this.shells.delete(label);
     this.shellQueues.delete(label);
@@ -269,7 +283,7 @@ export class ShellManager {
 
   // Kill every shell (app shutdown).
   closeAll(): void {
-    for (const [, shell] of this.shells) shell.kill();
+    for (const [, shell] of this.shells) { this.retired.add(shell); shell.kill(); }
     this.shells.clear();
     this.shellQueues.clear();
     this.shellPtyIds.clear();
