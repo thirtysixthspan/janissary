@@ -775,6 +775,17 @@ the launch never breaks on a flag the binary would reject:
 - **opencode** — has no effort flag of its own, so the level is silently dropped rather than passed
   as an argument opencode would reject.
 
+A codex harness tab always runs its session in its own process rather than through codex's shared
+background server, which recent codex releases start by default and hand every later session to.
+Inside a workspace that server cannot start at all — recording it needs `ps`, which the sandbox
+cannot run (see [[sandbox]]) — and a workspaced session handed to a server some other, unconfined
+codex already started would run outside the workspace with that process's environment and
+credentials instead of its own tab's. The same holds for a tab without a workspace, which owns its
+process and closes it with the tab. The launch asks the installed codex whether it offers the switch
+first, so a codex release from before the shared server launches exactly as it did, rather than
+exiting on an option it does not know. This applies to a remote codex tab the same way, checked
+against the codex installed on that host.
+
 `--model` and `--effort` may be given independently or together, in any order relative to each other
 and to `as <label>`, `-w`/`--workspace`, `--offline`, and `-y`/`--yes`.
 

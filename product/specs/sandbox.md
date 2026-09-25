@@ -139,6 +139,13 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   via `sysctlbyname`; denied, the probe traps (`SIGTRAP`) rather than erroring, crashing the harness
   outright instead of falling back gracefully.
 - Network is allowed by default; `--offline` swaps in a profile variant that denies it.
+- Setuid binaries — `ps` among them — cannot run inside the sandbox: Seatbelt refuses to execute
+  one from a confined process even though `process-exec` is otherwise allowed. This is deliberately
+  left in place. The only way past it is to run the binary outside the sandbox entirely, and an
+  unconfined, root-owned `ps` can print the environment of every process on the machine, including
+  the ambient credentials the environment scrub below keeps out of a workspace. codex's shared
+  background server is the known casualty: it records itself with `ps`, so a codex harness tab runs
+  without that server (see [[harness]]).
 
 ### Environment scrubbing
 
