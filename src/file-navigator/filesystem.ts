@@ -57,16 +57,29 @@ export function copyItem(source: string, destination: string, overwrite: boolean
     cpSync(source, destination, { recursive: true, errorOnExist: !overwrite, force: false }));
 }
 
+// What a single-item move answers: the move itself, or — when something already occupies the
+// destination and the caller did not ask to replace it — the source that would have overwritten it,
+// in the same `conflictPaths` shape the batch move uses.
+export type MoveOneResult = FileOperationResult<{ from: string; to: string }> | { conflictPaths: string[] };
+
+// Moves one item into the directory `toRelPath`. An existing entry at the destination is replaced
+// only when `overwrite` is set, and then through `moveReplacingDestination`; otherwise the move is
+// refused as a conflict before anything on disk changes. A destination that is the source itself (a
+// move into the item's own parent) is not a conflict — it stays the no-op rename it always was.
 export function moveItem(
   root: string,
   fromRelPath: string,
   toRelPath: string,
-): FileOperationResult<{ from: string; to: string }> {
+  overwrite = false,
+): MoveOneResult {
   const source = containedPath(root, fromRelPath);
   const destination = toRelPath ? containedPath(root, toRelPath) : path.resolve(root);
   if (!source || !destination) return failureResult(OUTSIDE_ROOT_REASON);
   const name = path.basename(source);
-  const moved = renamePath(source, path.join(destination, name));
+  const target = path.join(destination, name);
+  const occupied = target !== source && exists(target);
+  if (occupied && !overwrite) return { conflictPaths: [fromRelPath] };
+  const moved = occupied ? moveReplacingDestination(source, target) : renamePath(source, target);
   return moved.ok
     ? { ok: true, value: { from: fromRelPath, to: toRelPath ? `${toRelPath}/${name}` : name } }
     : moved;

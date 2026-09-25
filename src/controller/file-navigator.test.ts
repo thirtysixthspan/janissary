@@ -126,7 +126,22 @@ describe('controller-file-navigator', () => {
       move: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
     });
     moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts');
-    expect(calls).toEqual([['agent', 'a.ts', 'b.ts']]);
+    moveFileNavigatorItem(managers, 0, 'c.ts', 'b.ts', true);
+    expect(calls).toEqual([['agent', 'a.ts', 'b.ts', undefined], ['agent', 'c.ts', 'b.ts', true]]);
+  });
+
+  it('moveFileNavigatorItem returns a conflict answer to the caller and posts no notification', () => {
+    const append = vi.fn();
+    const managers = makeManagersWithNotifications('agent', {
+      move: () => ({ conflictPaths: ['a.ts'] }),
+    }, append);
+    expect(moveFileNavigatorItem(managers, 0, 'a.ts', 'b.ts')).toEqual({ conflictPaths: ['a.ts'] });
+    expect(append).not.toHaveBeenCalled();
+  });
+
+  it('moveFileNavigatorItem answers an empty result for an out-of-range index', () => {
+    const managers = makeManagers('agent', {});
+    expect(moveFileNavigatorItem(managers, 9, 'a.ts', 'b.ts')).toEqual({ total: 0, failedPaths: [] });
   });
 
   it('deleteFileNavigatorItem delegates to FileNavigatorManager.delete when the tab exists', () => {

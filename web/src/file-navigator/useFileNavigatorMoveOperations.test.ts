@@ -31,7 +31,7 @@ describe('useFileNavigatorMoveOperations', () => {
     act(() => { result.current.confirmOverwrite(); });
     expect(client.send).toHaveBeenCalledWith({
       method: 'moveFileNavigatorItem',
-      params: { index: 2, fromRelPath: 'src/report.md', toRelPath: 'archive' },
+      params: { index: 2, fromRelPath: 'src/report.md', toRelPath: 'archive', overwrite: true },
     });
     expect(result.current.pendingConflict).toBeNull();
 
@@ -40,6 +40,40 @@ describe('useFileNavigatorMoveOperations', () => {
       result.current.cancelConflict();
     });
     expect(result.current.pendingConflict).toBeNull();
+  });
+
+  it('requests a scalar move without overwrite and asks only when the server reports a conflict', async () => {
+    const client = makeClient({ total: 1, failedPaths: [] }, { conflictPaths: ['src/report.md'] });
+    const { result } = renderHook(() => useFileNavigatorMoveOperations(client, 2));
+
+    await act(async () => {
+      result.current.requestMove(['src/notes.md'], 'archive', 'archive', false);
+      await Promise.resolve();
+    });
+    expect(client.request).toHaveBeenLastCalledWith({
+      method: 'moveFileNavigatorItem',
+      params: { index: 2, fromRelPath: 'src/notes.md', toRelPath: 'archive' },
+    });
+    expect(result.current.pendingConflict).toBeNull();
+
+    await act(async () => {
+      result.current.requestMove(['src/report.md'], 'archive', 'archive', false);
+      await Promise.resolve();
+    });
+    expect(result.current.pendingConflict).toEqual({
+      kind: 'scalar',
+      fromRelPath: 'src/report.md',
+      toRelPath: 'archive',
+      source: 'move',
+      title: '"report.md" already exists here. Overwrite it?',
+    });
+    expect(client.send).not.toHaveBeenCalled();
+
+    act(() => { result.current.confirmOverwrite(); });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'moveFileNavigatorItem',
+      params: { index: 2, fromRelPath: 'src/report.md', toRelPath: 'archive', overwrite: true },
+    });
   });
 
   it('requests batch move confirmation and retries with the selected policy', async () => {

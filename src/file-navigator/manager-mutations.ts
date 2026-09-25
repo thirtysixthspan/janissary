@@ -32,10 +32,10 @@ function afterMutation(context: MutationContext, label: string, state: FilesTabS
 }
 
 export function moveItem(
-  context: MutationContext, label: string, fromRelPath: string, toRelPath: string,
-): MaybePromise<BatchResult> {
+  context: MutationContext, label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean,
+): MaybePromise<BulkMoveResult> {
   return withFilesState(context.tabs, label, unavailable(fromRelPath), (state) => moveOne(
-    state, fromRelPath, toRelPath, afterMutation(context, label, state),
+    state, fromRelPath, toRelPath, afterMutation(context, label, state), overwrite,
   ));
 }
 

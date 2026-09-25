@@ -919,7 +919,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('dragging a file over a directory row highlights it as the drop target', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } }) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
@@ -932,7 +932,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('dragging a file over another file row highlights that file\'s parent directory instead', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } }) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
@@ -947,8 +947,8 @@ describe('FileNavigatorTab', () => {
     });
 
     it('drop released over a file row moves the dragged item into that file\'s parent directory', () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const indexRow = screen.getByText('index.ts').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(indexRow);
@@ -957,11 +957,11 @@ describe('FileNavigatorTab', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
 
-      expect(send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
+      expect(request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
     });
 
     it('dragging a file renders a ghost label with its name that follows the cursor', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } }) } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
@@ -977,8 +977,8 @@ describe('FileNavigatorTab', () => {
     });
 
     it('drop on a valid directory sends moveFileNavigatorItem with the right paths', () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
       render(<FileNavigatorTab files={makeFiles()} client={client} index={2} />);
       const srcRow = screen.getByText('src').closest('[role="treeitem"]') as HTMLElement;
       document.elementFromPoint = vi.fn().mockReturnValue(srcRow);
@@ -987,7 +987,7 @@ describe('FileNavigatorTab', () => {
       act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 20 })); });
       act(() => { globalThis.dispatchEvent(new MouseEvent('mouseup')); });
 
-      expect(send).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
+      expect(request).toHaveBeenCalledWith({ method: 'moveFileNavigatorItem', params: { index: 2, fromRelPath: 'README.md', toRelPath: 'src' } });
     });
 
     it('shows no drop target when a remote row is dragged over a local tree', () => {
@@ -1039,7 +1039,7 @@ describe('FileNavigatorTab', () => {
     });
 
     it('dragging over a sibling command bar (docked sidebar mount) highlights it via dropRef instead of a tree row', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+      const client = { send: vi.fn(), request: vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } }) } as unknown as JanusClient;
       const dropHandle: CommandInputDropHandle = { insertAtCaret: vi.fn(), setDropHighlighted: vi.fn() };
       const dropRef = { current: dropHandle };
       const tab: TabView = {

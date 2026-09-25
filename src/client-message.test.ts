@@ -58,6 +58,7 @@ describe('isClientMessage', () => {
       'editorPersonas',
       'fileNavigatorOpeners',
       'fileNavigatorSelectionAction',
+      'moveFileNavigatorItem',
       'moveFileNavigatorItems',
       'pasteFileNavigatorItems',
       'redoFileNavigatorItem',

@@ -3,6 +3,7 @@ import type { RemoteChannel, NavigatorListener } from '../remote/channel.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../remote/protocol.js';
 import type { DeleteManyResult, MoveManyResult } from './batch.js';
 import type { FileOperationResult } from './file-operation-result.js';
+import type { MoveOneResult } from './filesystem.js';
 import type {
   FileSystemPort, GitMetadata, ReplayResult, WatchHandle,
 } from './filesystem-port.js';
@@ -12,6 +13,7 @@ import type { RowStat } from './stats.js';
 import type { HistoryStep } from './moves.js';
 import { mapRemoteHistory } from './remote-port-history.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './remote-port-git.js';
+import { remoteMove, remoteMoveMany } from './remote-port-moves.js';
 import type { CommitResult } from '../git/commit.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
 import {
@@ -107,29 +109,12 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     });
   }
 
-  async move(root: string, from: string, to: string): Promise<FileOperationResult<{ from: string; to: string }>> {
-    const result = await this.request<FileOperationResult<{ from: string; to: string }>>(
-      'move', { from: await this.paths.to(root, from), to: await this.paths.to(root, to) },
-    );
-    if (!result.ok) return result;
-    return { ok: true, value: { from, to: await this.paths.from(root, result.value.to) } };
+  move(root: string, from: string, to: string, overwrite?: boolean): Promise<MoveOneResult> {
+    return remoteMove(this.requester(), this.paths, root, from, to, overwrite);
   }
 
-  async moveMany(root: string, sources: string[], destination: string, policy?: BulkConflictPolicy): Promise<MoveManyResult> {
-    const result = await this.request<MoveManyResult>('move-many', {
-      sources: await Promise.all(sources.map((item) => this.paths.to(root, item))),
-      destination: await this.paths.to(root, destination), policy,
-    });
-    if ('conflictPaths' in result) {
-      return { conflictPaths: await Promise.all(result.conflictPaths.map((item) => this.paths.from(root, item))) };
-    }
-    return {
-      ...result,
-      failedPaths: await Promise.all(result.failedPaths.map((item) => this.paths.from(root, item))),
-      moved: await Promise.all(result.moved.map(async (item) => ({
-        from: await this.paths.from(root, item.from), to: await this.paths.from(root, item.to),
-      }))),
-    };
+  moveMany(root: string, sources: string[], destination: string, policy?: BulkConflictPolicy): Promise<MoveManyResult> {
+    return remoteMoveMany(this.requester(), this.paths, root, sources, destination, policy);
   }
 
   async delete(root: string, relPath: string): Promise<FileOperationResult> {
@@ -182,8 +167,9 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     try { await this.request('unwatch', { path }); } catch { /* teardown is best effort */ }
   }
 
-  // `request` as a plain value, for the git operations that live in `remote-port-git.ts`: they need
-  // to send frames without learning anything about this port's session bookkeeping.
+  // `request` as a plain value, for the git and move operations that live in `remote-port-git.ts`
+  // and `remote-port-moves.ts`: they need to send frames without learning anything about this
+  // port's session bookkeeping.
   private requester(): RemoteRequest {
     return (operation, args) => this.request(operation, args);
   }

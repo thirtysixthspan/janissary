@@ -379,7 +379,17 @@ describe('handle', () => {
   it('routes moveFileNavigatorItem', () => {
     const controller = makeController();
     dispatchCall(controller, 19, { method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b' } });
-    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b');
+    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b', undefined);
+  });
+
+  it('routes moveFileNavigatorItem with its overwrite flag and replies with its result', () => {
+    const controller = makeController();
+    (controller.moveFileNavigatorItem as ReturnType<typeof vi.fn>).mockReturnValue({ conflictPaths: ['a'] });
+    const replies = dispatchCall(controller, 45, {
+      method: 'moveFileNavigatorItem', params: { index: 0, fromRelPath: 'a', toRelPath: 'b', overwrite: true },
+    });
+    expect(controller.moveFileNavigatorItem).toHaveBeenCalledWith(0, 'a', 'b', true);
+    expect(replies).toEqual([{ t: 'rpc-reply', id: 45, result: { conflictPaths: ['a'] } }]);
   });
 
   it('routes deleteFileNavigatorItem', () => {

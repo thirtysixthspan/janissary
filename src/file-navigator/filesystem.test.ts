@@ -130,6 +130,43 @@ describe('moveItem', () => {
     expect(moveItem(directory, '../a.txt', '')).toMatchObject({ ok: false, reason: expect.stringContaining('outside') });
     expect(moveItem(directory, 'a.txt', '..')).toMatchObject({ ok: false, reason: expect.stringContaining('outside') });
   });
+
+  it('refuses a move onto an existing same-named file without overwrite, leaving both files intact', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'new');
+    writeFileSync(path.join(directory, 'dest', 'a.txt'), 'old');
+    expect(moveItem(directory, 'a.txt', 'dest')).toEqual({ conflictPaths: ['a.txt'] });
+    expect(readFileSync(path.join(directory, 'a.txt'), 'utf8')).toBe('new');
+    expect(readFileSync(path.join(directory, 'dest', 'a.txt'), 'utf8')).toBe('old');
+  });
+
+  it('refuses a move onto an existing same-named directory without overwrite', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest', 'a'), { recursive: true });
+    writeFileSync(path.join(directory, 'dest', 'a', 'keep.txt'), 'keep');
+    mkdirSync(path.join(directory, 'a'));
+    expect(moveItem(directory, 'a', 'dest')).toEqual({ conflictPaths: ['a'] });
+    expect(readFileSync(path.join(directory, 'dest', 'a', 'keep.txt'), 'utf8')).toBe('keep');
+  });
+
+  it('replaces an existing same-named file when overwrite is set', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'new');
+    writeFileSync(path.join(directory, 'dest', 'a.txt'), 'old');
+    expect(moveItem(directory, 'a.txt', 'dest', true)).toEqual({ ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } });
+    expect(existsSync(path.join(directory, 'a.txt'))).toBe(false);
+    expect(readFileSync(path.join(directory, 'dest', 'a.txt'), 'utf8')).toBe('new');
+  });
+
+  it('treats a move into the item\'s own parent as a no-op rename rather than a conflict with itself', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'dest', 'a.txt'), 'a');
+    expect(moveItem(directory, 'dest/a.txt', 'dest')).toEqual({ ok: true, value: { from: 'dest/a.txt', to: 'dest/a.txt' } });
+    expect(readFileSync(path.join(directory, 'dest', 'a.txt'), 'utf8')).toBe('a');
+  });
 });
 
 describe('renameItem', () => {

@@ -119,7 +119,12 @@
 // first closes the placeholder at once, the second shows its error first. A version-18 remote never
 // checks and never sends it, so a launch against one would land on a leftover's failed clone exactly
 // as before while both ends looked healthy.
-export const REMOTE_PROTOCOL_VERSION = 19;
+//
+// Version 20 has the navigator's single-item `move` refuse to replace an existing destination unless
+// the request carries the new `overwrite` flag, answering `{ conflictPaths }` instead. A version-19
+// remote drops the flag and renames straight over whatever is there, so a drop into a collapsed
+// folder would keep silently destroying a same-named file while both ends looked healthy.
+export const REMOTE_PROTOCOL_VERSION = 20;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

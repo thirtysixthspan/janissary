@@ -333,7 +333,13 @@ operation without changing the visible highlights. Items already in the destinat
 no-ops; the other selected items still move. A destination at or inside any selected source
 directory is blocked for the whole selection.
 
-For one item, a visible name conflict continues to offer **Overwrite** or **Cancel**. A bulk move
+For one item, a name conflict offers **Overwrite** or **Cancel**. A conflict among rows already on
+screen opens the dialog before anything is sent. Every other single-item move is checked against
+disk by the server before anything moves, including a drop into a collapsed folder whose contents
+the tree has not loaded. The server never replaces an existing entry unless the request came from
+the dialog's **Overwrite**. When it finds one, it moves nothing and answers with the conflict, and
+the same dialog opens. **Cancel** leaves both items where they were. This holds for remote trees as
+well as local ones. A bulk move
 preflights every destination before moving anything. If conflicts exist, one dialog says
 `Some items already exist in "<folder>".` and offers **Overwrite all**, **Skip conflicts**, and
 **Cancel**. Two selected sources with the same output name are left unmoved and reported as

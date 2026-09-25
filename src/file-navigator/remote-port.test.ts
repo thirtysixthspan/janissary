@@ -109,6 +109,27 @@ describe('RemoteFileSystemPort', () => {
       .toMatchObject({ operation: 'git-commit', args: { paths: [], root: 'src' } });
   });
 
+  it('sends a single move without an overwrite flag and maps a conflict answer back onto the tree', async () => {
+    const h = harness();
+    const pending = h.port.move('/remote/ws/src', 'a.txt', 'dest');
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    const request = h.sent.findLast((frame) => frame.type === 'filesystem-request');
+    expect(request).toMatchObject({ operation: 'move', args: { from: 'src/a.txt', to: 'src/dest' } });
+    expect(request?.type === 'filesystem-request' && Object.hasOwn(request.args, 'overwrite')).toBe(false);
+    h.reply({ conflictPaths: ['src/a.txt'] });
+    await expect(pending).resolves.toEqual({ conflictPaths: ['a.txt'] });
+  });
+
+  it('sends the overwrite flag on a confirmed single move and maps the moved path back', async () => {
+    const h = harness();
+    const pending = h.port.move('/remote/ws/src', 'a.txt', 'dest', true);
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'move', args: { from: 'src/a.txt', to: 'src/dest', overwrite: true } });
+    h.reply({ ok: true, value: { from: 'src/a.txt', to: 'src/dest/a.txt' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } });
+  });
+
   it('hands a refusal to the caller as a failure result rather than rejecting', async () => {
     const h = harness();
     const write = h.port.writeFile('/remote/ws', '../outside', Buffer.from(''));

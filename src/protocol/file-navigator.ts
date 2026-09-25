@@ -67,8 +67,10 @@ export type FileNavigatorRpcCall =
   | { method: 'fileNavigatorReroot'; params: { index: number; path?: string } }
   // Move a file or directory in a file navigator tab into a different directory (drag-and-release).
   // `fromRelPath` is the dragged item's tree-relative path; `toRelPath` is the destination
-  // directory's tree-relative path.
-  | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string } }
+  // directory's tree-relative path. A same-named entry already at the destination is replaced only
+  // when `overwrite` is set (sent from the conflict dialog's confirm); otherwise the reply is
+  // `{ conflictPaths }` and nothing moves.
+  | { method: 'moveFileNavigatorItem'; params: { index: number; fromRelPath: string; toRelPath: string; overwrite?: boolean } }
   | {
       method: 'moveFileNavigatorItems';
       params: {

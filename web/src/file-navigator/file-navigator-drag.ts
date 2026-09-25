@@ -26,8 +26,9 @@ export function parentPath(path: string): string {
 // valid target additionally reports
 // whether it already has a child with the same name as the dragged item — checked by name only,
 // and only among that child's rows that are already loaded (a collapsed directory's children
-// aren't in `rows` at all, so a conflict inside one can't be detected client-side; the server
-// re-verifies against disk before acting regardless).
+// aren't in `rows` at all, so a conflict inside one can't be detected client-side). The flag is only
+// a hint that opens the dialog early: the server checks the destination on disk before every move
+// and answers a conflict it was not told to overwrite, which opens the same dialog.
 export function resolveDropTarget(
   rows: FileNavigatorRow[],
   draggedPaths: string | string[],

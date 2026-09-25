@@ -46,7 +46,8 @@ export const CLIENT_METHOD_CONTRACTS = {
   init: 'ack',
   launchAgentFor: 'ack',
   monitorContextSnapshot: 'ack',
-  moveFileNavigatorItem: 'ack',
+  // Answers `{ conflictPaths }` when the destination is occupied, which is what opens the dialog.
+  moveFileNavigatorItem: 'result',
   moveFileNavigatorItems: 'result',
   moveTab: 'ack',
   moveTabToOtherPane: 'ack',

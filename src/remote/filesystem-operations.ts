@@ -104,11 +104,15 @@ const MUTATION_OPERATIONS = {
     ),
   }),
   move: descriptorFor({
-    valid: (args) => stringValue(args.from) && stringValue(args.to),
-    decode: (args) => ({ from: args.from as string, to: args.to as string }),
+    valid: (args) => stringValue(args.from) && stringValue(args.to)
+      && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
+    decode: (args) => ({
+      from: args.from as string, to: args.to as string,
+      ...(args.overwrite !== undefined && { overwrite: args.overwrite as boolean }),
+    }),
     paths: (args) => [args.from, args.to],
     rootDestination: true, refusal: refusedItem,
-    run: (context, args) => context.filesystem.move(context.root, args.from, args.to),
+    run: (context, args) => context.filesystem.move(context.root, args.from, args.to, args.overwrite),
   }),
   'move-many': descriptorFor({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination) && policy(args.policy),

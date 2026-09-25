@@ -112,13 +112,14 @@ export class FileNavigatorManager {
   }
 
   // Move a file or directory into a different directory (drag-and-release in the tree). Rejects
-  // moving an item onto itself or into one of its own descendants; a same-named entry already at
-  // the destination is overwritten (the client has already confirmed that via its own dialog
-  // before sending this). Pushes the move onto the tab's undo stack and clears its redo stack —
-  // mirroring the editor's own "any new edit invalidates the redo stack" rule. Rebuilds so the
-  // tree reflects the change immediately, without waiting on the directory watcher's own debounce.
-  move(label: string, fromRelPath: string, toRelPath: string): MaybePromise<BatchResult> {
-    return moveItem(this.mutationContext(), label, fromRelPath, toRelPath);
+  // moving an item onto itself or into one of its own descendants. A same-named entry already at
+  // the destination is overwritten only when `overwrite` is set — the client sends it from its
+  // conflict dialog's confirm — and otherwise answers `{ conflictPaths }` with nothing moved. Pushes
+  // the move onto the tab's undo stack and clears its redo stack — mirroring the editor's own "any
+  // new edit invalidates the redo stack" rule. Rebuilds so the tree reflects the change
+  // immediately, without waiting on the directory watcher's own debounce.
+  move(label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): MaybePromise<BulkMoveResult> {
+    return moveItem(this.mutationContext(), label, fromRelPath, toRelPath, overwrite);
   }
 
   moveMany(
