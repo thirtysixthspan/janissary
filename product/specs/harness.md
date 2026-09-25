@@ -250,12 +250,43 @@ The browser is always headless, since the AI never needs to look at a window. Ea
 own browser; browsers are never shared or pooled between tabs. The flag is accepted for every
 harness, with or without a workspace, and combines with the other options in any order.
 
+Launching the tab does not launch a browser. The endpoint is published at launch and a guard is
+already listening behind it, but the Chromium itself starts the first time the AI connects to that
+endpoint — that connect is the request, and the guard holds it while the browser comes up rather
+than refusing it, so the connect takes noticeably longer than an ordinary handshake and then succeeds
+(or is closed with a reason saying the browser did not start, with the account of which failure it was
+left to the user's notifications and the band rather than to a client inside the sandbox). A `-b` tab
+whose AI never drives a browser therefore never starts
+one. A tab launched without `-b` has no endpoint at all, so the request has nowhere to arrive.
+
+The held connect is answered only once the browser behind it is actually accepting connections, so a
+launch is never called finished on the strength of having been started. A browser that has not come
+up by the time the launch's patience runs out ends that connect with a reason saying it did not
+start, rather than leaving the client waiting; a later connect tries again.
+
+Because the endpoint is minted at launch and never changes, the next connect after a browser's death
+starts a fresh one behind the very same endpoint: a new process, a new scratch directory, and nothing
+for the AI to re-read. The private address behind the guard belongs to the tab for as long as the tab
+is open, so the replacement is a different process behind the same one rather than a new address to
+learn. The death itself is reported
+exactly as before, and the restart is a later connect's doing rather than anything automatic.
+
+That restart is bounded, because a browser that will not start is a loop otherwise. A start that ends
+in a failure — a spawn that is refused, a child that dies before it is listening, a launch that never
+starts listening in time — counts against the tab, as does a browser that dies within thirty seconds
+of coming up; a browser that was up for longer than that is treated as one that ran, and the count
+starts again. After three such starts the tab is
+given no further browser: the next connect is closed with a reason saying the browser will not be
+restarted, one last report says so on the notifications line and the band, and the guard keeps
+listening, so the tab keeps running and keeps its endpoint. One failure is never the end of it.
+
 Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,
 so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
 the browser-control protocol and refuses `file:` URLs, ending the session rather than failing one
 call. It refuses one more thing: a request to close or kill the browser itself. The browser is the
-tab's, not the guest's, and it is the only one that tab will ever get, so no script can spend it —
-asking ends that script's own session and leaves the browser running for the next connection. Closing
+tab's, not the guest's, and a browser a script could close is one the tab would have to restart and
+count against its restart budget, so no script can end it — asking ends that script's own session and
+leaves the browser running for the next connection. Closing
 a page or a context is ordinary work and is untouched. Behind that guard the browser itself runs in a
 fresh, empty scratch directory of its own — never
 a copy of the project — and on macOS it is sandboxed to that directory, so a `file:` read that got
@@ -270,13 +301,13 @@ flag is rejected.
 When the browser is gone — a launch that failed, a browser that exited, or a guard that died — the
 report is delivered twice: a line in the notifications tab naming the tab it belonged to, and the
 same text on the `-b` tab itself, in a band above its terminal where a failed workspace clone already
-reports itself. The notifications tab is opt-in, and the agent whose next connection attempt is about
-to fail is working in the `-b` tab, so neither delivery covers the other. The band rather than the
+reports itself. The notifications tab is opt-in, and the agent that was driving the browser is working
+in the `-b` tab, so neither delivery covers the other. The band rather than the
 tab's transcript, because a harness tab's body is its terminal and nothing renders that transcript;
 and rather than a line written into the terminal, because the harness's next repaint would paint over
-it. The tab keeps running — only its browser is gone. Nothing restarts it; a later attempt to connect
-simply fails. Closing a `-b` tab whose browser is still running stops it and removes its scratch
-directory — only that browser's own directory, which no tab and no other browser shares.
+it. The tab keeps running — only its browser is gone. Closing a `-b` tab whose browser is still
+running stops it and removes its scratch directory — only that browser's own directory, which no tab
+and no other browser shares.
 
 The report carries whatever the browser said on its own output before it went, on the lines below the
 message: Playwright's launch error, a sandbox profile that would not compile, a port that would not
@@ -314,11 +345,12 @@ half of the account janissary cannot observe for itself, which is exactly what t
 Everything else the browser said stays on the message as before; only the browser's restatement of
 its own ending comes off it.
 
-A browser that ends on its own releases what it held at the moment it ends, rather than holding it
-until its tab closes: the endpoint stops accepting connections, the browser process is gone, and the
-ports it took go back. That holds for a launch that never got that far too — whatever part of it had
-started is undone. The notification arrives once, after the release, and never for a browser the user
-closed themselves.
+A browser that ends on its own releases what that browser held at the moment it ends, rather than
+holding it until its tab closes: the browser process is gone and the private address behind the guard
+goes with it. What the tab keeps is the endpoint itself and the guard serving it, so the next connect
+has something to ask; those, and the ports they occupy, are released when the tab closes. That holds
+for a launch that never got that far too — whatever part of it had started is undone. The
+notification arrives once, after the release, and never for a browser the user closed themselves.
 
 The one thing an ending the user did not ask for keeps is the browser's scratch directory. Everything
 the browser wrote is inside it, and a browser that died is the case where that is worth reading, so
@@ -330,8 +362,10 @@ them as it always did.
 
 A `-b` tab says so in its metadata row: a globe icon among the row's flag icons, to the right of the
 workspaced and auto-permitting ones, with "E2E browser" as its tooltip (see Metadata row in
-`tabs.md`). The icon tracks the browser rather than the launch flag, so it disappears on the same
-update that raises the gone-browser band above the terminal.
+`tabs.md`). It is lit from launch, before any browser has been started, and the icon disappears on the
+same update that raises the gone-browser band above the terminal — and stays gone, because a later
+connect's fresh browser is behind the same endpoint and the band and the notification line are where
+its death is reported.
 
 The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
 checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.

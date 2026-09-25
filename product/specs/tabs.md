@@ -144,16 +144,21 @@ tab's name behaves like clicking any other UI control rather than highlighting t
 
 Today there are three possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
-only — see Auto-approve permissions in `harness.md`), and **E2E browser** (a globe icon), shown while
-the tab has a headless browser attached (harness tabs only — see End-to-end browser in `harness.md`).
+only — see Auto-approve permissions in `harness.md`), and **E2E browser** (a globe icon), shown for a tab
+launched with `-b` (harness tabs only — see End-to-end browser in `harness.md`).
 They appear in that order, so the browser icon sits to the right of the other two. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
 same kind are expected in the future.
 
-The browser flag reports the browser the tab has, not the flag it was launched with. A `-b` tab whose
-browser is gone loses the icon at the moment it gains the gone-browser band described in `harness.md`,
-because there is no longer a browser to connect to. Nothing brings either back, since nothing restarts
-the browser.
+The browser flag reports the tab's launch, not a browser running behind it. It is lit from the moment a
+`-b` tab opens, whether or not a browser has been started yet, and it drops on the same update that
+brings the gone-browser band described in `harness.md` — that is, when a browser is reported gone. It
+does not come back: a later connect starts a fresh browser behind the same endpoint, and the row stays
+dark because a browser that died is reported through the band and the notifications line, which are
+where that report lives. A flag that tracked a live browser would need janissary to publish a
+browser-started event beside the browser-gone one, on the tab and across a remote connection; the
+behavior the browser flag describes is decided in the plan behind the connect-triggered browser, not
+by the icon.
 
 Agent tabs and harness tabs also show a file-navigator button (a folder icon) in an action group at
 the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the

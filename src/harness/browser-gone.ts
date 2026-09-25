@@ -5,8 +5,8 @@ import type { Managers } from '../managers.js';
 
 // The tab's browser is gone, delivered twice. The notifications tab carries it as before, and the
 // tab itself now carries it too, above its terminal, the way a failed workspace clone does. A
-// notification is worth nothing to a user who keeps that feed closed, and the agent whose next
-// `connect()` is about to fail is working in this tab.
+// notification is worth nothing to a user who keeps that feed closed, and the agent that was driving
+// the browser is working in this tab.
 //
 // Everything the browser said is kept beside those two reports, in a file the notification line
 // links, because the reports themselves are bounded to a readable tail and a crash trace is

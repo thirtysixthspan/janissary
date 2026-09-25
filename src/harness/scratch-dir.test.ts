@@ -2,11 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { harnessSpawnEnv } from './scratch-dir.js';
 
 // The environment merge in isolation. The browser server itself is stubbed — starting a real one
-// would launch Chromium, which no test in this suite does (see `e2e-server.test.ts` for the
+// would launch Chromium, which no test in this suite does (see `e2e-server-lazy.test.ts` for the
 // lifecycle, and `temp/`-run manual checks for a real browser).
 
-const { startE2EBrowserServer } = vi.hoisted(() => ({ startE2EBrowserServer: vi.fn() }));
-vi.mock('../browser/e2e-server.js', () => ({ startE2EBrowserServer }));
+const { startE2EBrowserServer, startLazyE2EBrowserServer } = vi.hoisted(() => ({
+  startE2EBrowserServer: vi.fn(),
+  startLazyE2EBrowserServer: vi.fn(),
+}));
+vi.mock('../browser/e2e-server.js', () => ({ startE2EBrowserServer, startLazyE2EBrowserServer }));
 
 vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }));
 
@@ -17,7 +20,7 @@ const BROWSER_ENV = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() } });
+  startLazyE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle: { close: vi.fn() } });
 });
 
 function spawnEnv(name: string, browser: boolean) {
@@ -40,7 +43,7 @@ describe('harnessSpawnEnv without a browser', () => {
   it('never starts a browser', () => {
     spawnEnv('claude', false);
     spawnEnv('opencode', false);
-    expect(startE2EBrowserServer).not.toHaveBeenCalled();
+    expect(startLazyE2EBrowserServer).not.toHaveBeenCalled();
   });
 });
 
@@ -60,7 +63,7 @@ describe('harnessSpawnEnv with a browser', () => {
 
   it('hands back the handle so the caller can own its disposal', () => {
     const handle = { close: vi.fn() };
-    startE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle });
+    startLazyE2EBrowserServer.mockReturnValue({ env: BROWSER_ENV, handle });
     expect(spawnEnv('claude', true).handle).toBe(handle);
   });
 
@@ -74,13 +77,22 @@ describe('harnessSpawnEnv with a browser', () => {
 
   it('starts the browser under the tab\'s label, so its workspace is named for the tab', () => {
     spawnEnv('claude', true);
-    expect(startE2EBrowserServer).toHaveBeenCalledWith(expect.objectContaining({ label: 'bot' }));
+    expect(startLazyE2EBrowserServer).toHaveBeenCalledWith(expect.objectContaining({ label: 'bot' }));
+  });
+
+  // The eager entry point is the same sequence plus a kick, and the whole point of the connect-
+  // triggered browser is that nothing kicks. This is the one place that knows which of the two a
+  // harness reaches for, so it is where that is worth saying.
+  it('reaches for the connect-triggered builder, never the one that starts a browser now', () => {
+    spawnEnv('claude', true);
+    expect(startLazyE2EBrowserServer).toHaveBeenCalledTimes(1);
+    expect(startE2EBrowserServer).not.toHaveBeenCalled();
   });
 
   it('passes the caller\'s onGone through untouched', () => {
     const onBrowserGone = vi.fn();
     harnessSpawnEnv({ name: 'claude', cwd: '/ws/proj', label: 'bot', browser: true, onBrowserGone });
-    const passed = startE2EBrowserServer.mock.calls[0][0] as { onGone: (m: string) => void };
+    const passed = startLazyE2EBrowserServer.mock.calls[0][0] as { onGone: (m: string) => void };
     passed.onGone('e2e browser exited');
     expect(onBrowserGone).toHaveBeenCalledWith('e2e browser exited');
   });

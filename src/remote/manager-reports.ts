@@ -13,8 +13,8 @@ import type { RemoteEntry } from './attach.js';
  * wrong one. A frame for an already-closed tab is dropped.
  *
  * Delivered onto the tab as well as into the notifications tab, for the same reason the local path
- * does it: the agent whose next `connect()` is about to fail is working in that tab, and a
- * notification is worth nothing to a user who keeps the feed closed.
+ * does it: the agent that was driving the browser is working in that tab, and a notification is
+ * worth nothing to a user who keeps the feed closed.
  */
 export function notifyBrowserGone(managers: Managers, sessionId: string, message?: string): void {
   const tab = managers.tab.harnessTabByPtyId(sessionId);

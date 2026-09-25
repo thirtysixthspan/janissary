@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { startE2EBrowserServer, type E2EBrowserHandle } from '../browser/e2e-server.js';
+import { startLazyE2EBrowserServer, type E2EBrowserHandle } from '../browser/e2e-server.js';
 
 // Experimental: the claude CLI's own scratch/cwd-tracking files default to /tmp. Pointing
 // CLAUDE_CODE_TMPDIR at a project-local directory instead means a sandboxed harness tab doesn't
@@ -32,6 +32,10 @@ export type HarnessSpawnEnv = {
  * Both local and remote spawns call this, which is what makes the "a remote launch builds its own
  * copy on the far side" rule hold for the browser variables too.
  *
+ * The browser behind the endpoint is not started here. `-b` publishes the endpoint and the guard
+ * that serves it; the Chromium comes up when the harness first connects to it, which is why a `-b`
+ * tab that never drives a browser never pays for one.
+ *
  * With no browser requested the result is exactly `harnessEnv`'s, `undefined` and all, so the
  * non-`-b` path is byte-for-byte what it was before this existed.
  */
@@ -43,6 +47,6 @@ export function harnessSpawnEnv(
 ): HarnessSpawnEnv {
   const base = harnessEnv(options.name, options.cwd);
   if (!options.browser) return { env: base };
-  const browser = startE2EBrowserServer({ label: options.label, onGone: options.onBrowserGone });
+  const browser = startLazyE2EBrowserServer({ label: options.label, onGone: options.onBrowserGone });
   return { env: { ...base, ...browser.env }, handle: browser.handle };
 }
