@@ -197,6 +197,28 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
     }
   });
 
+  // A launch that hangs until the probe gives up is thirty seconds old when it is judged, the same age
+  // as a browser that ran. It never came up, so it is a failed start however long it took to fail.
+  it('counts a launch that times out before it is listening', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.probeTimesOut = true;
+      startLazy();
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const timedOut = expect(connect()).rejects.toThrow('did not start listening in time');
+        await vi.advanceTimersByTimeAsync(30_000);
+        await timedOut;
+      }
+      // Advanced once more so a fourth launch, had one been started, ends as a mismatch, not a hang.
+      const refused = expect(connect()).rejects.toThrow(REFUSED);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await refused;
+      expect(mocks.spawn).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // The guard passes a refusal's phrase through to the client and collapses every other rejection to
   // its fixed start-failure phrase, so the type is what decides what the agent reads.
   it('refuses as a client refusal, so the guard hands the agent the phrase itself', async () => {

@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   // `holdBrowserPort` and says otherwise; every other case lets the child be listening from the
   // moment it is forked, which is what a launched browser looks like by the time a connect asks.
   browserListening: true,
+  // Whether the wait gives up the way the real probe does at its bound, thirty seconds on, rather than
+  // waiting on the flag above. For a launch that hangs, which only the clock ends.
+  probeTimesOut: false,
   chromiumBundleDir: vi.fn(() => '/pw/Chrome.app'),
   playwrightPackagePaths: vi.fn(() => ({
     entry: '/app/node_modules/playwright/index.js',
@@ -41,6 +44,10 @@ vi.mock('./e2e-scratch.js', () => ({ allocateBrowserScratch: mocks.allocateBrows
 // module itself is pinned on real sockets by `e2e-ready.test.ts`.
 vi.mock('./e2e-ready.js', () => ({
   waitForListening: (session: E2ESession) => new Promise<void>((resolve, reject) => {
+    if (mocks.probeTimesOut) {
+      setTimeout(() => reject(new Error('e2e browser did not start listening in time')), 30_000);
+      return;
+    }
     const probe = (): void => {
       if (mocks.browserListening) return resolve();
       if (session.closed) return reject(new Error('e2e browser exited before it was listening'));
@@ -99,6 +106,7 @@ export function resetE2EServerFixture(): void {
   mocks.releasedPorts.length = 0;
   mocks.portsThrow = '';
   mocks.browserListening = true;
+  mocks.probeTimesOut = false;
   child = makeChild();
   guardClose = vi.fn();
   mocks.spawn.mockReturnValue(child);

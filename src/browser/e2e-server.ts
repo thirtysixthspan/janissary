@@ -133,14 +133,17 @@ type LazyBrowser = {
   starting: Promise<string> | undefined;
   // Consecutive generations that ended in a report, judged when the next one is asked for rather
   // than when they died: nothing watches a live child, and a client asking again is the only moment
-  // a dead one is noticed. A generation still here is a browser in use, and one found dead this soon
-  // after it was spawned is a start that did not take — which is what the budget is made of.
+  // a dead one is noticed. A generation still here is a browser in use, and one found dead that never
+  // came up, or died this soon after coming up, is a start that did not take — which is what the
+  // budget is made of.
   failures: number;
   // Whether the tab has already been told the budget is spent. The one report that ends it, since
   // `stopSession` is not what delivers it: nothing is being released, only said.
   reported: boolean;
-  // When the generation behind the guard was spawned, which is what tells the two apart.
-  spawnedAt: number;
+  // When the generation behind the guard started listening, which is what tells the two apart, or
+  // undefined while it has not. Not when it was spawned: a launch that hangs until the probe gives up
+  // is as old as a browser that ran by the time it is judged, and it never ran at all.
+  listeningAt: number | undefined;
 };
 
 // How many starts may end in a report before a tab stops being given a browser at all, and how long
@@ -172,7 +175,7 @@ function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBro
   session.ports = ports;
   const lazy: LazyBrowser = {
     session, ports, internalPath, label: options.label,
-    generation: undefined, starting: undefined, failures: 0, reported: false, spawnedAt: 0,
+    generation: undefined, starting: undefined, failures: 0, reported: false, listeningAt: undefined,
   };
   // Everything a tab owns, released in one order whatever asked. The guard first, so nothing can ask
   // for a browser while this is tearing one down, and the ports with it — a port still reserved for a
@@ -204,14 +207,16 @@ function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBro
 }
 
 // What the generation behind the guard did, counted as it is found rather than as it ends. Found
-// dead, it is either a start that did not take or a browser that has been used; a generation outliving
-// the interval is the second, and it makes the whole budget whole again. The record is cleared as it
-// is judged, so one death is never counted twice by two clients arriving together.
+// dead, it is either a start that did not take or a browser that has been used; a generation that was
+// listening for longer than the interval is the second, and it makes the whole budget whole again. The
+// record is cleared as it is judged, so one death is never counted twice by two clients arriving
+// together.
 function noteFailure(lazy: LazyBrowser): void {
-  const { generation } = lazy;
+  const { generation, listeningAt } = lazy;
   if (!generation?.closed) return;
   lazy.generation = undefined;
-  lazy.failures = Date.now() - lazy.spawnedAt < UPTIME_RESET ? lazy.failures + 1 : 0;
+  const ran = listeningAt !== undefined && Date.now() - listeningAt >= UPTIME_RESET;
+  lazy.failures = ran ? 0 : lazy.failures + 1;
 }
 
 // The connect-triggered start. One in-flight start serves every client that arrives while it runs —
@@ -257,15 +262,17 @@ async function ensureUpstream(lazy: LazyBrowser): Promise<string> {
 // sequence already reports one and closes one client with it.
 async function startBrowser(lazy: LazyBrowser): Promise<string> {
   const generation = newSession(lazy.session.onGone);
+  // Stamped only once the wait below resolves, so a launch that never comes up is judged as one.
+  lazy.listeningAt = undefined;
   // Recorded before anything is acquired rather than once the child is listening, for two reasons: a
   // tab that closes during a launch closes this child like any other, and a start that failed is a
   // generation the next connect can find and count rather than a launch that left nothing to judge.
-  lazy.spawnedAt = Date.now();
   lazy.generation = generation;
   try {
     generation.scratch = allocateBrowserScratch(lazy.label);
     generation.child = spawnBrowserChild(generation, lazy.ports.browserPort, lazy.internalPath);
     await waitForListening(generation, lazy.ports.browserPort);
+    lazy.listeningAt = Date.now();
   } catch (error) {
     stopSession(generation, `e2e browser failed to start: ${errorText(error)}`);
     throw error;
