@@ -23,16 +23,19 @@ export function sendMessage(
 }
 
 export function pumpQueue(
-  queues: Map<string, Message[]>, processing: Set<string>, label: string,
+  queues: Map<string, Message[]>, processing: Map<string, number>, label: string,
   handle: (message: Message, done: () => void) => void,
   pump: (label: string) => void,
 ): void {
   if (processing.has(label)) return;
   const queue = queues.get(label);
   if (!queue || queue.length === 0) return;
-  processing.add(label);
   const message = queue.shift()!;
+  processing.set(label, message.id);
   handle(message, () => {
+    // A tab closing mid-message releases its label, and a new tab can reuse the name before this
+    // message's completion arrives — so only the message that still holds the flag may clear it.
+    if (processing.get(label) !== message.id) return;
     processing.delete(label);
     if ((queues.get(label)?.length ?? 0) > 0) setTimeout(() => pump(label), 0);
   });

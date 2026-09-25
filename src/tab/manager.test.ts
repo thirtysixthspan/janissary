@@ -22,6 +22,7 @@ function makeManagers(): Managers {
     editorAcp: { closeTab: vi.fn() },
     schedule: { delete: vi.fn(), closeTab: vi.fn(), get: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
+    communication: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
   } as unknown as Managers;

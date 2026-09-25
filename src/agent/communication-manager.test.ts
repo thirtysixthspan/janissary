@@ -75,3 +75,68 @@ describe('AgentCommunicationManager', () => {
     expect(append).toHaveBeenCalledWith('bilal', { input: '', output: 'two', from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
   });
 });
+
+// A capture that never finishes on its own, the way a shell command waiting on its end sentinel
+// never finishes once closing the tab kills the shell. Each run's completion is kept so a test can
+// fire it late.
+const setupPendingCapture = () => {
+  const append = vi.fn();
+  const pending: Array<(output: string) => void> = [];
+  const tabs: Tab[] = [makeTab('aslan', '#ff0000'), makeTab('bilal', '#00ff00')];
+  const managers = {
+    tab: { tabs, byLabel: (label: string) => tabs.find((t) => t.label === label), append, appendContext: vi.fn(), persist: vi.fn(), buildAgentState: vi.fn() },
+    schedule: { get: vi.fn() },
+    capture: { run: vi.fn((_label: string, _text: string, onResult: (o: string) => void) => { pending.push(onResult); }) },
+  } as never;
+  const bus = new AgentCommunicationManager(managers);
+  const reopen = (label: string) => {
+    bus.closeTab(label);
+    tabs[tabs.findIndex((t) => t.label === label)] = makeTab(label, '#0000ff');
+  };
+  const info = (output: string) => ({ input: '', output, from: 'aslan', fromColor: '#ff0000', msgKind: 'info' });
+  const flush = () => new Promise((r) => setTimeout(r, 20));
+  return { bus, append, pending, reopen, info, flush };
+};
+
+describe('AgentCommunicationManager — tab close', () => {
+  it('delivers to a new tab that reuses the label of a tab closed mid-request', () => {
+    const { bus, append, reopen, info } = setupPendingCapture();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'request', text: 'sleep 100' });
+
+    reopen('bilal');
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'hello again' });
+
+    expect(append).toHaveBeenCalledWith('bilal', info('hello again'));
+  });
+
+  it('drops messages still queued for the closed tab', async () => {
+    const { bus, append, reopen, info, flush } = setupPendingCapture();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'sleep 100' });
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'stale' });
+
+    reopen('bilal');
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'fresh' });
+    await flush();
+
+    expect(append).toHaveBeenCalledWith('bilal', info('fresh'));
+    expect(append).not.toHaveBeenCalledWith('bilal', info('stale'));
+  });
+
+  it('ignores a late completion from the closed tab\'s message while the new tab\'s message runs', async () => {
+    const { bus, append, pending, reopen, info, flush } = setupPendingCapture();
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'first' });
+
+    reopen('bilal');
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'command', text: 'second' });
+    bus.send({ from: 'aslan', to: 'bilal', kind: 'info', text: 'after second' });
+    expect(pending).toHaveLength(2);
+
+    pending[0]('late output from the closed tab');
+    await flush();
+    expect(append).not.toHaveBeenCalledWith('bilal', info('after second'));
+
+    pending[1]('second done');
+    await flush();
+    expect(append).toHaveBeenCalledWith('bilal', info('after second'));
+  });
+});

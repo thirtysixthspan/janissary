@@ -10,7 +10,9 @@ export type Message = { id: number; from: string; to: string; kind: MessageKind;
 
 export class AgentCommunicationManager {
   private queues = new Map<string, Message[]>();
-  private processing = new Set<string>();
+  // Label → id of the message being handled, so a completion from a closed tab's message can be
+  // told apart from one belonging to a newer tab that reused the label.
+  private processing = new Map<string, number>();
   private nextId = 0;
 
   constructor(private managers: Managers) {}
@@ -19,6 +21,14 @@ export class AgentCommunicationManager {
   // either way, routing and queuing key off the tab's canonical label.
   send(message: Omit<Message, 'id'>): boolean {
     return sendMessage(this.managers, this.queues, message, () => ++this.nextId, (label) => this.pump(label));
+  }
+
+  // Drops the closed tab's queued messages and its in-progress flag. A message in flight at close
+  // (a shell command waiting on a sentinel that dies with the shell) never calls `done`, and without
+  // this the flag would block every later tab that reuses the label.
+  closeTab(label: string): void {
+    this.queues.delete(label);
+    this.processing.delete(label);
   }
 
   private pump(label: string): void {
