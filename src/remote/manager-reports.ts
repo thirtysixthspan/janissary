@@ -26,6 +26,19 @@ export function notifyBrowserGone(managers: Managers, sessionId: string, message
 }
 
 /**
+ * The remote host refused a request after the entry settled. The far side reports every refusal as
+ * `workspace-failed`, but once the workspace is ready that frame no longer means provisioning failed:
+ * the session is alive and one request was turned away — most often a frame type a peer on an older
+ * protocol does not know. So the tab stays open and the refusal goes to the notifications feed, on
+ * the entry's first remaining label, since a harness tab's body is its PTY and nothing renders its log.
+ */
+export function reportRemoteRefusal(managers: Managers, entry: RemoteEntry, message: string): void {
+  const label = entry.labels.values().next().value;
+  if (label === undefined) return;
+  notify(managers, 'remote-refused', label, `Remote janus on ${entry.address.host} refused a request: ${message}`);
+}
+
+/**
  * The detached peer's replay buffer overflowed and dropped its oldest frames. A harness tab's body
  * is its PTY and nothing renders `tab.log` there, so only a non-harness (agent) tab gets a visible
  * line — the same reasoning `terminateRemoteSession`'s non-harness branch already uses.

@@ -34,7 +34,9 @@ export { formatTimestamp, provenanceTimestamp, notificationText } from './format
 // `launch-refused` reports a harness or agent launch stopped because its name clashes with an open
 // tab, a sessions-table row, or something running on the target host, and
 // `launch-workspace-cleaned` reports a leftover workspace removed so a launch could go ahead. Both
-// carry their line verbatim.
+// carry their line verbatim. `remote-refused` reports a remote host refusing a request after its
+// workspace was ready: the session is still alive, so the tab stays open and this line is the only
+// sign of the refusal. It carries its line verbatim too.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -57,7 +59,8 @@ export type NotificationEventType =
   | 'plugin-failure'
   | 'plugin-note'
   | 'launch-refused'
-  | 'launch-workspace-cleaned';
+  | 'launch-workspace-cleaned'
+  | 'remote-refused';
 
 // A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
 // active tab never notifies about its own activity) apply to these five.
@@ -111,6 +114,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'plugin-note': true,
   'launch-refused': true,
   'launch-workspace-cleaned': true,
+  'remote-refused': true,
 };
 
 function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {

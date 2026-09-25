@@ -4,17 +4,6 @@
 
 ## development
 
-* Treat the remote server's refusal frame as a provisioning failure only until the session is ready, so a refused frame on a healthy session reports an error instead of closing the tab.
-
-Existing Debt: The remote server reports every refusal — an undecodable frame, an unexpected frame type, a missing workspace — through the provisioning frame `workspace-failed`, and the local entry factory forwards that frame to the tab's failure handler at any point in the session, where the harness launch handler reads a post-ready failure as a reason to close the tab. Severity: 5/10
-
-Existing Risk: 6/10 - After an upgrade on one side, a peer still running the older protocol refuses a frame type it does not know (a `capture-request`, say), the refusal arrives as `workspace-failed`, and a working remote harness tab is closed along with its session — a harmless, recoverable refusal becomes a lost session.
-
-Proposal Risk: 3/10 - A post-ready refusal is shown to the user and the tab stays open, but one wire frame still means two things, so a future consumer of `workspace-failed` can repeat the misreading until a dedicated refusal frame lands under a protocol bump.
-
-Proposal: `RemoteServer.refuse` in `src/remote/serve.ts` emits `workspace-failed` for every refusal. In the `case 'workspace-failed'` arm of `createRemoteEntry` in `src/remote/entry-factory.ts`, read `entry.settled` before the arm sets it; when the entry was already settled, do not call `entry.handlers.get(label)?.onFailed(frame.message)` — report the message on the tab instead, through a small helper beside `notifyBrowserGone` and `reportTruncatedReplay` in `src/remote/manager-reports.ts` (append it to the tab's transcript or raise it through the notifications `notify` helper) — and leave the tab and channel open. Pre-ready behavior must not move: the `onFailed` consumers registered through `src/remote/manager.ts` — the launch in `src/harness/remote-launch.ts`, `src/sessions/attach.ts`, and `src/sessions/terminate-session.ts` — still need the rejection they wait on before the workspace is ready. Add a `src/remote/manager.test.ts` case where a channel that has reached `workspace-ready` then receives `workspace-failed`, asserting the tab stays open and the message is reported. The server-side refusals pinned by `src/remote/serve.test.ts` ("refuses a frame outside the union", "refuses a frame only it may send") stay as they are; a separate `refused` frame is a later change under `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`.
-
-
 * Have the monitor ignore prompt callbacks from a session it has already stopped or replaced, so stopping a monitor mid-prompt cannot respawn an agent process nothing tracks.
 
 Existing Debt: The local and remote ACP sessions disagree on what `kill()` means — the remote session detaches its handlers, while the local one suppresses only the connection-level exit report and still delivers the pending prompt's `onEnd`/`onError` — and the monitor's flush and ask callbacks act on whatever answers without checking that the monitor is still registered or still on that session. Severity: 5/10

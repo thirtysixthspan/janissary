@@ -51,7 +51,8 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'plugin-failure':
     case 'plugin-note':
     case 'launch-refused':
-    case 'launch-workspace-cleaned': { return detail ?? ''; }
+    case 'launch-workspace-cleaned':
+    case 'remote-refused': { return detail ?? ''; }
     case 'question': { return `Question from ${tabLabel}`; }
     case 'transcript-unavailable': { return 'no harness transcript found'; }
     case 'ssh-recording-failed': { return 'ssh recording failed'; }

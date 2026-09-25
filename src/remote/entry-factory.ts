@@ -6,7 +6,7 @@ import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
 import { Attach, terminateRemoteProcess, type RemoteEntry } from './attach.js';
 import { RemoteChannel } from './channel.js';
-import { notifyBrowserGone, reportTruncatedReplay } from './manager-reports.js';
+import { notifyBrowserGone, reportRemoteRefusal, reportTruncatedReplay } from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
 import { createRemoteTranscriptSource } from './transcript-source.js';
@@ -79,6 +79,7 @@ export function createRemoteEntry({
           break;
         }
         case 'workspace-failed': {
+          if (entry.settled) { reportRemoteRefusal(managers, entry, frame.message); break; }
           if (!entry.closed) { entry.settled = true; entry.rejectReady(new Error(frame.message)); }
           entry.handlers.get(label)?.onFailed(frame.message);
           break;
