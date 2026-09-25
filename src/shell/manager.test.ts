@@ -32,6 +32,7 @@ function makeManagers(): Managers {
   managers.pty = {
     spawnTransport: spawnTransportMock,
   } as unknown as Managers['pty'];
+  managers.schedule = { get: vi.fn() } as unknown as Managers['schedule'];
   return managers;
 }
 

@@ -20,7 +20,7 @@ function resolveTargetTab(target: string | undefined, own: string, managers: Com
 // state (they cannot be rehydrated), so their schedules live in memory only.
 function persistSchedule(tab: Tab, managers: CommandManagers): void {
   if (tab.view === 'harness') return;
-  managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: managers.schedule.get(tab.label) }));
+  managers.tab.persist(managers.tab.buildAgentState(tab));
 }
 
 function scheduleChange(parsed: Exclude<ScheduleParseResult, { error: string }>, current: ScheduleEntry[], suffix: string) {

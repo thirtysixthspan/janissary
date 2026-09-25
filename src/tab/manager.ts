@@ -138,7 +138,7 @@ export class TabManager extends TabOpeningState {
   forgetPersisted(label: string): void { this.persistence.forget(label); }
   buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState {
     return buildAgentStateFromTab(
-      tab, extra,
+      tab, { schedule: this.managers.schedule.get(tab.label), ...extra },
     );
   }
 

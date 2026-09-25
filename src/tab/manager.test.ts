@@ -6,6 +6,7 @@ import { TabManager } from './manager.js';
 import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
+import type { ScheduleEntry } from '../schedule/types.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
 
@@ -19,7 +20,7 @@ function makeManagers(): Managers {
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
-    schedule: { delete: vi.fn(), closeTab: vi.fn() },
+    schedule: { delete: vi.fn(), closeTab: vi.fn(), get: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
@@ -626,5 +627,47 @@ describe('TabManager retargetEditorTab', () => {
     const tab = tm.tabs[index];
     expect(tab.editor?.path).toBe('/tree/notes.txt');
     expect(managers.editorWatch.watch).not.toHaveBeenCalled();
+  });
+});
+
+// A tab's schedule lives on the schedule manager, and the state file is replaced whole on every
+// write, so a snapshot that left it out erased the persisted schedule. `buildAgentState` now reads
+// it itself, so every save path keeps it without the caller having to remember.
+describe('TabManager buildAgentState schedule', () => {
+  const entry: ScheduleEntry = { id: 'fetch', command: 'echo hi', spec: 'every 5m', nextRun: 1, recurring: true, intervalMs: 300_000 };
+
+  function makeScheduledTabManager(schedules: Record<string, ScheduleEntry[]>): TabManager {
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers);
+    Object.assign(managers, makeManagers());
+    managers.schedule = { get: (label: string) => schedules[label] } as unknown as Managers['schedule'];
+    return managers.tab;
+  }
+
+  it('includes the schedule registered with the schedule manager when no extra is passed', () => {
+    const tm = makeScheduledTabManager({ janus: [entry] });
+    expect(tm.buildAgentState(tm.cur()).schedule).toEqual([entry]);
+  });
+
+  it('lets an explicit extra schedule override the registered one', () => {
+    const tm = makeScheduledTabManager({ janus: [entry] });
+    expect(tm.buildAgentState(tm.cur(), { schedule: [] }).schedule).toEqual([]);
+  });
+
+  it('leaves the schedule undefined for a tab with none', () => {
+    const tm = makeScheduledTabManager({});
+    expect(tm.buildAgentState(tm.cur()).schedule).toBeUndefined();
+  });
+
+  it('keeps the schedule on a write that has nothing to do with scheduling', () => {
+    const written: AgentState[] = [];
+    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation((state: AgentState) => { written.push(state); });
+    const tm = makeScheduledTabManager({ janus: [entry] });
+
+    tm.enqueue('janus', 'echo queued');
+
+    expect(written.at(-1)?.commandQueue).toEqual(['echo queued']);
+    expect(written.at(-1)?.schedule).toEqual([entry]);
+    saveSpy.mockRestore();
   });
 });
