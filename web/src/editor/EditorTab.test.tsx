@@ -1330,6 +1330,39 @@ describe('EditorTab', () => {
       expect(document.activeElement).toBe(textarea());
     });
 
+    it('closes on Escape pressed in the buffer after focus left the overlay', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      textarea().focus();
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+
+      expect(noFindInput()).toBeNull();
+      expect(currentLine(container)).toBe('line two');
+      expect(document.activeElement).toBe(textarea());
+    });
+
+    it('spends a buffer Escape on the overlay, leaving the selection for the next one', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+      openFind();
+      textarea().focus();
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+
+      expect(noFindInput()).toBeNull();
+      expect(container.querySelector('.editor-body')).toHaveAttribute('data-editor-selection', 'l');
+
+      fireEvent.keyDown(textarea(), { key: 'Escape' });
+
+      expect(container.querySelector('.editor-body')).toHaveAttribute('data-editor-selection', '');
+    });
+
     it('closes when the tab goes inactive and reopens empty', async () => {
       const { client } = makeClient();
       const view = makeView();

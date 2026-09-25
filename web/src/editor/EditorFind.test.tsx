@@ -101,6 +101,13 @@ describe('EditorFind', () => {
     expect(onChangeSelected).toHaveBeenCalledWith(1);
   });
 
+  it('keeps focus in the input when a row is pressed', () => {
+    const { container } = renderFind();
+    const pressed = fireEvent.mouseDown(container.querySelectorAll('.editor-find-row')[1]);
+    expect(pressed).toBe(false);
+    expect(document.activeElement).toBe(input());
+  });
+
   it('keeps its keystrokes off the surfaces behind it', () => {
     const spy = vi.fn();
     renderFind();
