@@ -176,6 +176,40 @@ describe('RemoteManager shared channels', () => {
     expect(h.handlers.onClosed).not.toHaveBeenCalled();
   });
 
+  // The far side answers every refusal with `workspace-failed`. Once the workspace is ready that frame
+  // is one turned-away request, not a failed launch, so it must not reach the handler that closes the tab.
+  it('reports a refusal after workspace-ready and keeps the tab and channel open', () => {
+    const h = managerHarness();
+    const channel = h.remote.get('creator');
+    h.transport()?.onData(`${encodeFrame({ type: 'workspace-failed', message: 'Unexpected remote frame "capture-request".' })}\n`);
+    expect(h.handlers.onFailed).not.toHaveBeenCalled();
+    expect(h.handlers.onClosed).not.toHaveBeenCalled();
+    expect(h.closeTab).not.toHaveBeenCalled();
+    expect(h.kill).not.toHaveBeenCalled();
+    expect(h.remote.get('creator')).toBe(channel);
+    expect(h.remote.workspaceOf('creator')).toBe('/remote/ws');
+    expect(notify).toHaveBeenCalledExactlyOnceWith(expect.anything(), 'remote-refused', 'creator',
+      'Remote janus on devbox refused a request: Unexpected remote frame "capture-request".');
+  });
+
+  it('reports a post-ready refusal on a surviving joined tab once the creator is released', () => {
+    const h = managerHarness();
+    h.remote.attach('joined', 'creator');
+    h.remote.release('creator');
+    h.transport()?.onData(`${encodeFrame({ type: 'workspace-failed', message: 'No remote workspace has been provisioned.' })}\n`);
+    expect(notify).toHaveBeenCalledExactlyOnceWith(expect.anything(), 'remote-refused', 'joined', expect.stringContaining('devbox'));
+    expect(h.remote.get('joined')).toBeDefined();
+  });
+
+  it('still fails the launch on a refusal before workspace-ready, without a refusal report', async () => {
+    const h = managerHarness(false);
+    const ready = h.remote.readyOf('creator');
+    h.transport()?.onData(`${encodeFrame({ type: 'workspace-failed', message: 'provision failed' })}\n`);
+    await expect(ready).rejects.toThrow('provision failed');
+    expect(h.handlers.onFailed).toHaveBeenCalledExactlyOnceWith('provision failed');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it('hands a removed leftover\'s path to onReady', () => {
     const h = managerHarness(false);
     h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', cleaned: '/remote/ws' })}\n`);

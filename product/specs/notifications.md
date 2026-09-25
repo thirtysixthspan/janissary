@@ -172,13 +172,17 @@ These event types can produce a notification line:
   so a launch could go ahead: `Removed leftover workspace "<name>" (<path>) before launching.`, or
   with ` on <host>` after the name when the folder was on a remote host. Attributed like
   `launch-refused`.
+- **`remote-refused`** — a remote host refused a request after its workspace was ready: `Remote
+  janus on <host> refused a request: <message>`, where the message is the host's own. The session is
+  still alive and the tab stays open, so this line is the only sign of the refusal. Attributed to the
+  first tab still holding the remote connection (see `remote-server.md`).
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
-`launch-refused`, and `launch-workspace-cleaned` events have no toggle, and like the other explicit
+`launch-refused`, `launch-workspace-cleaned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. A `question` event fires only for a
 background tab.
 
@@ -188,7 +192,7 @@ An ambient event on the **currently active** tab never produces a notification �
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
 events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
-`plugin-note`, `schedule-late`, `remote-session-terminated`, and `remote-session` events **bypass focus suppression**: they still
+`plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is

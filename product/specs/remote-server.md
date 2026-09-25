@@ -95,6 +95,14 @@ The host refusing the launch's name is the one exception to that display: the pl
 once, without showing an error, and the refusal is reported only in the notifications feed (see
 [Name check before provisioning](#name-check-before-provisioning)).
 
+The host answers every refusal with the same provisioning-failure frame: a frame it cannot decode, a
+frame type it does not expect, a request that needs a workspace it does not have. That frame is a
+provisioning failure only until the workspace is ready (or an attach is accepted). After that it means
+one request was turned away, most often a frame type a host on an older protocol does not know, and
+the session is still alive. So the tab and its connection stay open, and a `remote-refused`
+notification reads `Remote janus on <host> refused a request: <message>`, attributed to the first tab
+still holding the connection (`reportRemoteRefusal` in `src/remote/manager-reports.ts`).
+
 The protocol version covers what the frames carry, not only their shape. A field one end fills in
 and the other is expected to honor is as much a part of the contract as a new frame type, because an
 end that merely ignores it looks healthy while doing the wrong thing. Forwarding the initiating
