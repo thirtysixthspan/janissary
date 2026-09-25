@@ -1,15 +1,9 @@
-import { nonEmptyString } from './filesystem-argument-checks.js';
-import type { RemoteFrame, ShellHistoryRun } from './protocol.js';
+import type { ShellHistoryRun } from './protocol.js';
+import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
 
 // The `shell-history` decoder, in its own module for the same reason `frame-decode-sessions.ts` has
 // one: `frame-decode.ts` is the dispatcher, and a frame carrying a list of records is more validation
 // than a dispatcher arm should hold.
-
-type DecodeResult = RemoteFrame | { error: string };
-
-function malformed(): DecodeResult {
-  return { error: 'Malformed remote frame "shell-history".' };
-}
 
 function decodeRun(value: unknown): ShellHistoryRun | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
@@ -25,11 +19,11 @@ function decodeRun(value: unknown): ShellHistoryRun | undefined {
  * command's output.
  */
 export function decodeShellHistory(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !Array.isArray(record.runs)) return malformed();
+  if (!nonEmptyString(record.id) || !Array.isArray(record.runs)) return malformed('shell-history');
   const runs: ShellHistoryRun[] = [];
   for (const entry of record.runs) {
     const decoded = decodeRun(entry);
-    if (!decoded) return malformed();
+    if (!decoded) return malformed('shell-history');
     runs.push(decoded);
   }
   return { type: 'shell-history', id: record.id, runs };

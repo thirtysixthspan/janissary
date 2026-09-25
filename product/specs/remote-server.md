@@ -226,7 +226,8 @@ is required rather than optional, because an absent flag would default a dead se
 A browser-exit frame's message is optional but, when present, must be a nonempty string; it carries
 newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
 must carry an array of process entries, each with a nonempty spawn id and program and a declared
-mode; one malformed entry makes the whole reply malformed rather than shortening the list, because a
+mode, and an auto-approve setting that is either absent or a boolean — a valid setting is kept, not
+dropped on the way in; one malformed entry makes the whole reply malformed rather than shortening the list, because a
 short list is indistinguishable from a process that exited and an empty one ends the session. A
 gate-event or capture-reply frame's `capturedAt` must be an integer within the range a timestamp can
 represent; an out-of-range or fractional value is refused rather than accepted and later failing when

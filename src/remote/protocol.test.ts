@@ -385,6 +385,83 @@ describe('session-state frames', () => {
   });
 });
 
+// Keyed by every frame type and mapped over the union, so the compiler demands a fixture for each new
+// frame type. Each fixture fills every optional field its frame declares, which is what catches a
+// hand-written decoder that validates a field and then forgets to copy it into the decoded frame.
+// `filesystem-reply` carries `result` here because it and `error` are mutually exclusive; the error
+// form has its own case below.
+const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame, { type: K }> } = {
+  'attach': { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },
+  'session-state': { type: 'session-state' },
+  'shutdown': { type: 'shutdown' },
+  'provision': {
+    type: 'provision', label: 'claude', tokens: { github: 'github_pat_scoped' },
+    identity: { name: 'Ada Lovelace', email: 'ada@example.com' },
+  },
+  'spawn': {
+    type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', harness: 'claude',
+    cols: 100, rows: 40, offline: true, agentName: 'joined', browser: true, autoApprove: true,
+  },
+  'input': { type: 'input', id: 'r1', data: 'hello' },
+  'resize': { type: 'resize', id: 'r1', cols: 120, rows: 50 },
+  'kill': { type: 'kill', id: 'r1' },
+  'capture-request': { type: 'capture-request', session: '12345678-1234-1234-1234-123456789abc', id: 'r1', request: 'q1' },
+  'filesystem-open': { type: 'filesystem-open', session: 'files1' },
+  'filesystem-close': { type: 'filesystem-close', session: 'files1' },
+  'filesystem-request': {
+    type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file',
+    args: { path: 'notes.txt', content: 'héllo\nworld' },
+  },
+  'acp-open': {
+    type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
+  },
+  'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
+  'acp-close': { type: 'acp-close', id: 'racp1' },
+  'attach-result': { type: 'attach-result', accepted: true, truncated: true },
+  'session-state-result': {
+    type: 'session-state-result',
+    processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: true, agentName: 'bekir' }],
+  },
+  'workspace-ready': { type: 'workspace-ready', dir: '/srv/ws/claude', notice: 'isolation on', cleaned: '/srv/ws/claude' },
+  'workspace-failed': { type: 'workspace-failed', message: 'no origin' },
+  'name-in-use': { type: 'name-in-use', label: 'claude', path: '/srv/ws/claude', reason: 'EACCES' },
+  'output': { type: 'output', id: 'r1', data: 'done' },
+  'exit': { type: 'exit', id: 'r1', exitCode: 1 },
+  'browser-exited': { type: 'browser-exited', id: 'r1', message: 'e2e browser exited' },
+  'transcript': { type: 'transcript', blocks: ['first'] },
+  'shell-history': { type: 'shell-history', id: 'agent', runs: [{ source: 'input', text: 'ls\n' }] },
+  'gate-event': { type: 'gate-event', id: 'r1', message: 'Auto-approved', capturedAt: 1_700_000_000_000, capture: 'screen' },
+  'busy-transition': { type: 'busy-transition', id: 'r1', busy: true, unread: true },
+  'capture-reply': { type: 'capture-reply', id: 'r1', request: 'q1', text: 'screen', capturedAt: 1_700_000_000_000 },
+  'filesystem-reply': { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content: 'héllo' } },
+  'filesystem-event': { type: 'filesystem-event', session: 'files1', path: 'src' },
+  'acp-ready': { type: 'acp-ready', id: 'racp1' },
+  'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
+  'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
+  'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
+};
+
+describe('optional frame fields', () => {
+  it.each(Object.values(FULLY_POPULATED_FRAMES))('keeps every optional field of $type', (frame) => {
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('keeps the error of a filesystem-reply that carries one', () => {
+    const frame: RemoteFrame = { type: 'filesystem-reply', session: 'files1', request: 'q1', error: 'EACCES' };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('refuses a session-state-result process whose autoApprove is not a boolean', () => {
+    const record = {
+      type: 'session-state-result',
+      processes: [{ id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude', autoApprove: 'yes' }],
+    };
+    expect(decodeFrame(JSON.stringify(record))).toEqual({
+      error: expect.stringContaining('Malformed remote frame "session-state-result"'),
+    });
+  });
+});
+
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.

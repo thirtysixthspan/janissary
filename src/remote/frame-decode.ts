@@ -1,6 +1,9 @@
 import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RemoteFrame } from './protocol.js';
+import {
+  malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
+} from './frame-decode-shared.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 import { decodeSessionStateResult } from './frame-decode-sessions.js';
 import { decodeShellHistory } from './frame-decode-history.js';
@@ -11,22 +14,8 @@ import {
   decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError,
 } from './frame-decode-acp.js';
 
-type DecodeResult = RemoteFrame | { error: string };
-
 const TOKEN_NAMES = new Set<string>(PROJECT_TOKENS.map(({ name }) => name));
 const IDENTITY_KEYS = new Set<string>(['name', 'email']);
-
-function malformed(type: string): DecodeResult {
-  return { error: `Malformed remote frame "${type}".` };
-}
-
-function nonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
-}
-
-function optionalNonEmptyString(value: unknown): value is string | undefined {
-  return value === undefined || nonEmptyString(value);
-}
 
 function positiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;

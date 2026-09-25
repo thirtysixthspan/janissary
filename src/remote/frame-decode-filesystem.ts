@@ -1,12 +1,6 @@
-import { isRecord, nonEmptyString, stringValue } from './filesystem-argument-checks.js';
+import { isRecord, stringValue } from './filesystem-argument-checks.js';
 import { isFilesystemOperation, operationDescriptor } from './filesystem-operations.js';
-import type { RemoteFrame } from './protocol.js';
-
-type DecodeResult = RemoteFrame | { error: string };
-
-function malformed(type: string): DecodeResult {
-  return { error: `Malformed remote frame "${type}".` };
-}
+import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
 
 function decodeRequest(record: Record<string, unknown>): DecodeResult {
   const operation = record.operation;
