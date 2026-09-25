@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the technical-debt gap the diff creates by leaving the eager browser start exported, with two start sequences in the file and one caller between them.
-
-Existing Issue: `startE2EBrowserServer` in `src/browser/e2e-server.ts` survives in full, with its own guard options, its own session wiring and two dedicated suites, but its only production caller is gone — `harnessSpawnEnv` in `src/harness/scratch-dir.ts`, and through it `RemoteProcesses.spawnPty` in `src/remote/serve-processes.ts`, now reach the lazy builder — so a second implementation of the same acquisition sequence is kept alive by nothing but its own tests. Severity: 4/10
-
-Existing Risk: 4/10 - The two sequences share only `portsOrReport` and `browserEnv`, so a fix to the guard options, the scratch allocation or the child's launch has to be written twice, and one written into only the uncalled copy leaves a suite passing against a path nothing runs.
-
-Proposal Risk: 3/10 - Collapsing the eager path into the lazy one makes the launch and lifecycle suites asynchronous and touches every case in them, so the risk lands on the tests rather than on behavior.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1201: collapse the eager browser start into the lazy one so the file keeps a single acquisition sequence". Make the lazy builder the only implementation in `src/browser/e2e-server.ts` and give the eager entry point an explicit kick: `startE2EBrowserServer` becomes `startLazyE2EBrowserServer` followed by a `void ensureUpstream(lazy)` whose rejection is swallowed, because the failure already reports through `onGone` and ends the client, and a launch must never throw at a caller that is part-way through building a tab. Delete the eager sequence's own `newSession`, guard and spawn block once the kick covers it, leaving `portsOrReport` and `browserEnv` shared as they are. Re-point `src/browser/e2e-server-launch.test.ts` and `src/browser/e2e-server-lifecycle.test.ts` at the lazy builder through a helper that starts a browser before a case runs: the cases reading the guard options, the internal port and path, the child's argument vector and environment keep their assertions, and the ones that are synchronous today become async. If a caller outside this tree turns out to need the eager entry point, say so in its doc comment instead of leaving it looking equivalent, and pin both entry points from `src/harness/scratch-dir.test.ts`. The new connect-is-the-request cases in `src/browser/e2e-server-lazy.test.ts` and the guard's buffering and refusal cases in `src/browser/e2e-guard.test.ts` must keep passing untouched. What must not survive the change is two places in the file that independently allocate ports, mint path tokens, start a guard and spawn a child, because that is the duplication the next fix to this path will land in only one copy of.
-
-
 * Keep a janissary-side filesystem path out of the close reason the confined agent reads, closing the security gap the launch-failure reason opens across the guard's trust boundary.
 
 Existing Issue: `launchFailure` in `src/browser/e2e-guard.ts` puts the raw text of a start failure into the close frame, and the failures that reach it come from the scratch allocation and the child spawn, so a filesystem or spawn error hands an agent inside a workspace the janissary installation root, the browser scratch path and the host account's home directory in the one string `ai/guidelines/sandbox-e2e-browser.md` tells it to read. Severity: 3/10

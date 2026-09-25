@@ -122,8 +122,16 @@ export function resetE2EServerFixture(): void {
   }));
 }
 
-export function start(onGone = vi.fn()) {
-  return { onGone, ...startE2EBrowserServer({ label: 'bot', onGone }) };
+// The eager entry point, with a browser up before the case runs: the kick it performs is the guard's
+// own supplier, so asking the guard is asking for the browser. A kick that failed is swallowed here
+// as it is in production — the case is about what was released and reported, not about the throw.
+export async function start(onGone = vi.fn()) {
+  const server = { onGone, ...startE2EBrowserServer({ label: 'bot', onGone }) };
+  // Nothing to ask when the port band was full: there is no guard and no browser to ask for.
+  if (mocks.startE2EGuard.mock.calls.length > 0) {
+    try { await guardCall().ensureUpstream(); } catch { /* reported through onGone, as in production */ }
+  }
+  return server;
 }
 
 export function startLazy(onGone = vi.fn()) {

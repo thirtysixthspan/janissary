@@ -14,9 +14,10 @@ import { playwrightPackagePaths } from './playwright-paths.js';
 // machinery and because both the local harness manager and the remote server import it. It holds no
 // label-keyed state — the caller owns the handle it returns and disposes it (see `HarnessRuntime`).
 //
-// Two start sequences, one per decision about when the Chromium comes up. Both publish the same
-// endpoint, mint the same two unguessable paths, and report through the same `onGone`; they differ
-// only in whether the child is spawned here at launch or by the guard on the agent's first connect.
+// One acquisition sequence, and one decision a caller makes about it: whether to ask for a browser
+// now (`startE2EBrowserServer`) or leave that to the AI's first connect (`startLazyE2EBrowserServer`).
+// Both publish the same endpoint, mint the same two unguessable paths, and report through the same
+// `onGone`; they differ only in whether the child is spawned by the kick or by a client.
 
 export type E2EBrowserHandle = {
   // Idempotent, and safe before the child has finished starting — or before anything has been asked
@@ -72,38 +73,40 @@ function browserEnv(guardPort: number, publishedPath: string): NodeJS.ProcessEnv
 }
 
 /**
- * Start a browser for one harness tab and return the environment it is reached through, without
- * waiting for anything. A script that connects within the first fraction of a second may need one
- * retry; a launch that fails outright is reported through `onGone` after the fact rather than as a
- * notice on the tab's first frame, since the variable is already set by then.
+ * Start a browser for one harness tab now rather than on the AI's first connect, and return the
+ * environment it is reached through without waiting for anything. Everything this tab owns is
+ * acquired exactly as the connect-triggered start acquires it, and the only difference is the kick
+ * below: the browser is asked for here instead of being left to the first client.
  *
  * It never throws. The caller is part-way through building a tab, and a browser that could not be
- * acquired is a notification, not a failed tab — so a throw anywhere in the sequence below is
- * reported through `onGone` and rolled back against whatever had already been acquired.
+ * acquired is a notification, not a failed tab — so a failure anywhere in the sequence is reported
+ * through `onGone`, rolled back against whatever had already been acquired, and swallowed here. A
+ * launch that fails outright is reported after the fact rather than as a notice on the tab's first
+ * frame, since the variable is already set by then.
  */
 export function startE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserServer {
-  const ports = portsOrReport(options);
-  if (!ports) return { env: {}, handle: { close: () => {} } };
-  // Two unguessable paths, not one: the agent is given the first and the second never leaves this
-  // process, so holding the published endpoint does not reveal a route around the guard.
-  const publishedPath = `/${makeToken()}`;
-  const internalPath = `/${makeToken()}`;
-
-  const session = newSession(options.onGone);
-  session.ports = ports;
-  try {
-    session.scratch = allocateBrowserScratch(options.label);
-    session.guard = startE2EGuard({
-      port: ports.guardPort, wsPath: publishedPath,
-      ensureUpstream: () => Promise.resolve(loopbackWsUrl(ports.browserPort, internalPath)),
-      onError: (message) => stopSession(session, message),
+  return buildE2EBrowserServer(options, (lazy) => {
+    void ensureUpstream(lazy).catch(() => {
+      // Reported through `onGone` and already ended the client that asked, by the same `stopSession`
+      // the connect-triggered path reports through. Nothing is left to say about it here.
     });
-    session.child = spawnBrowserChild(session, ports.browserPort, internalPath);
-  } catch (error) {
-    stopSession(session, `e2e browser failed to start: ${errorText(error)}`);
-  }
+  });
+}
 
-  return { env: browserEnv(ports.guardPort, publishedPath), handle: { close: () => stopSession(session) } };
+/**
+ * Start a browser for one harness tab only when the AI first asks for it: the guard is listening
+ * from the first moment, holding the published endpoint steady, and the Chromium behind it is
+ * spawned when a client first connects to that endpoint. The connect is the request and its own
+ * success is the answer, and it is held while the browser comes up, so the launch costs a `-b` tab
+ * nothing until the agent asks for a browser.
+ *
+ * The endpoint never changes — not across a start, a death, or the restart behind it — so the
+ * environment handed to the harness at spawn is complete and final. A browser that dies is reported
+ * exactly as any other death is, the guard keeps listening, and the next connect spawns a fresh
+ * browser behind the same endpoint. It never throws, for the same reason the eager start does not.
+ */
+export function startLazyE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserServer {
+  return buildE2EBrowserServer(options);
 }
 
 // What a lazily-started tab holds between its guard and whichever browser is behind it right now.
@@ -132,20 +135,16 @@ function upstreamOf(lazy: LazyBrowser): string {
 }
 
 /**
- * Start a browser for one harness tab exactly as the eager start does, except that no browser is
- * started: the guard is listening from the first moment, holding the published endpoint steady, and
- * the Chromium behind it is spawned when a client first connects to that endpoint. The connect is
- * the request and its own success is the answer, and it is held while the browser comes up, so the
- * launch costs a `-b` tab nothing until the agent asks for a browser.
- *
- * The endpoint never changes — not across a start, a death, or the restart behind it — so the
- * environment handed to the harness at spawn is complete and final. A browser that dies is reported
- * exactly as any other death is, the guard keeps listening, and the next connect spawns a fresh
- * browser behind the same endpoint. It never throws, for the same reason the eager start does not.
+ * The one acquisition sequence: two ports, two unguessable paths, a guard in front, and a teardown
+ * behind. `kick` is the whole difference between the two entry points — the eager one asks for a
+ * browser here, the lazy one leaves it to the first connect — and it runs after the guard is
+ * listening, so a browser is never started against a tab that has already lost its endpoint.
  */
-export function startLazyE2EBrowserServer(options: E2EBrowserOptions): E2EBrowserServer {
+function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBrowser) => void): E2EBrowserServer {
   const ports = portsOrReport(options);
   if (!ports) return { env: {}, handle: { close: () => {} } };
+  // Two unguessable paths, not one: the agent is given the first and the second never leaves this
+  // process, so holding the published endpoint does not reveal a route around the guard.
   const publishedPath = `/${makeToken()}`;
   const internalPath = `/${makeToken()}`;
 
@@ -176,6 +175,7 @@ export function startLazyE2EBrowserServer(options: E2EBrowserOptions): E2EBrowse
   } catch (error) {
     stopSession(session, `e2e browser failed to start: ${errorText(error)}`);
   }
+  kick?.(lazy);
 
   return { env: browserEnv(ports.guardPort, publishedPath), handle: { close: teardown } };
 }

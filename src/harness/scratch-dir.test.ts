@@ -5,8 +5,11 @@ import { harnessSpawnEnv } from './scratch-dir.js';
 // would launch Chromium, which no test in this suite does (see `e2e-server-lazy.test.ts` for the
 // lifecycle, and `temp/`-run manual checks for a real browser).
 
-const { startLazyE2EBrowserServer } = vi.hoisted(() => ({ startLazyE2EBrowserServer: vi.fn() }));
-vi.mock('../browser/e2e-server.js', () => ({ startLazyE2EBrowserServer }));
+const { startE2EBrowserServer, startLazyE2EBrowserServer } = vi.hoisted(() => ({
+  startE2EBrowserServer: vi.fn(),
+  startLazyE2EBrowserServer: vi.fn(),
+}));
+vi.mock('../browser/e2e-server.js', () => ({ startE2EBrowserServer, startLazyE2EBrowserServer }));
 
 vi.mock('node:fs', () => ({ mkdirSync: vi.fn() }));
 
@@ -75,6 +78,15 @@ describe('harnessSpawnEnv with a browser', () => {
   it('starts the browser under the tab\'s label, so its workspace is named for the tab', () => {
     spawnEnv('claude', true);
     expect(startLazyE2EBrowserServer).toHaveBeenCalledWith(expect.objectContaining({ label: 'bot' }));
+  });
+
+  // The eager entry point is the same sequence plus a kick, and the whole point of the connect-
+  // triggered browser is that nothing kicks. This is the one place that knows which of the two a
+  // harness reaches for, so it is where that is worth saying.
+  it('reaches for the connect-triggered builder, never the one that starts a browser now', () => {
+    spawnEnv('claude', true);
+    expect(startLazyE2EBrowserServer).toHaveBeenCalledTimes(1);
+    expect(startE2EBrowserServer).not.toHaveBeenCalled();
   });
 
   it('passes the caller\'s onGone through untouched', () => {
