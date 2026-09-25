@@ -14,6 +14,9 @@ import { shellStartupArgs } from './startup.js';
 export type PtyShell = {
   shell: ShellProcess;
   ptyId: string;
+  // Mark the shell dead after it exited on its own: its streams end, as they would on `kill()`, so
+  // the running command sees the end and `stdin.writable` tells the manager to respawn.
+  exited: () => void;
 };
 
 export type PtyShellSpawn = {
@@ -53,10 +56,13 @@ export function createPtyShell(spawn: (onData: (data: string) => void) => PtyShe
   const { marker, echoArgument } = seedMarker();
   let seeded = false;
   let pending = '';
+  let live = true;
 
   // Until the seed marker arrives, buffer rather than forward: the echoed seed command and any
-  // prompt the shell printed before `PS1` was cleared must never reach a command's output.
+  // prompt the shell printed before `PS1` was cleared must never reach a command's output. Once the
+  // shell is dead its stdout has ended, and a trailing chunk written there would raise an error.
   const onData = (data: string): void => {
+    if (!live) return;
     if (seeded) { stdout.write(data); return; }
     pending += data;
     const index = pending.indexOf(marker);
@@ -68,7 +74,6 @@ export function createPtyShell(spawn: (onData: (data: string) => void) => PtyShe
   };
 
   const session = spawn(onData);
-  let live = true;
 
   const stdin = new Writable({
     write(chunk: Buffer | string, _encoding, callback) {
@@ -77,10 +82,17 @@ export function createPtyShell(spawn: (onData: (data: string) => void) => PtyShe
     },
   });
 
+  const endStreams = (): void => {
+    live = false;
+    stdin.end();
+    stdout.end();
+  };
+
   session.write(`${SEED_COMMAND}; echo ${echoArgument}\n`);
 
   return {
     ptyId: session.id,
+    exited: () => { if (live) endStreams(); },
     shell: {
       stdin,
       stdout,
@@ -89,8 +101,7 @@ export function createPtyShell(spawn: (onData: (data: string) => void) => PtyShe
         if (!live) return false;
         live = false;
         session.kill();
-        stdin.end();
-        stdout.end();
+        endStreams();
         return true;
       },
     },

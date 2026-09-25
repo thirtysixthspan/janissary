@@ -434,3 +434,90 @@ describe('ShellManager — promotion to a terminal', () => {
     ]);
   });
 });
+
+describe('ShellManager — a pty shell that exits', () => {
+  let tmpDir: string;
+  let managers: Managers;
+  let shellManager: ShellManager;
+  const label = 'janus';
+  const ESC = String.fromCodePoint(27);
+
+  // The exit hook the manager handed the pty manager for the `call`th transport it spawned.
+  const transportExit = (call: number): (() => void) =>
+    (spawnTransportMock.mock.calls[call][4] as { onExit: () => void }).onExit;
+
+  const tab = (): { activePty?: string; log: { input: string; output: string; running?: boolean }[] } =>
+    managers.tab.tabs.find((t) => t.label === label)!;
+
+  beforeEach(() => {
+    resetShellMocks();
+    let spawned = 0;
+    spawnTransportMock.mockImplementation(() => ({
+      id: `pty${++spawned}`, program: 'bash', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+    }));
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-exit-'));
+    mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
+    loadConfig(tmpDir);
+    managers = makeManagers();
+    shellManager = new ShellManager(managers);
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('finishes the running command and respawns the shell on the next one', async () => {
+    const onComplete = vi.fn();
+    shellManager.run(label, 'exit', { onComplete });
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    const firstShell = executeShellCmdMock.mock.calls[0][0] as { stdin: { writable: boolean } };
+
+    transportExit(0)();
+    expect(firstShell.stdin.writable).toBe(false);
+    completeCommand('(shell exited)');
+
+    expect(onComplete).toHaveBeenCalledWith('(shell exited)');
+    expect(tab().log.at(-1)).toMatchObject({ input: 'exit', output: '(shell exited)', running: false });
+    expect(managers.tab.isBusy(label)).toBe(false);
+
+    await vi.waitFor(() => { expect(queryShellPwdMock).toHaveBeenCalledTimes(1); });
+    resolvePwd();
+
+    shellManager.run(label, 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(2); });
+    expect(spawnTransportMock).toHaveBeenCalledTimes(2);
+    expect(executeShellCmdMock.mock.calls[1][0]).not.toBe(firstShell);
+  });
+
+  // `connection close shell` retires the first shell and the next command starts a second; the first
+  // pty's exit lands only afterwards and must not strip the second shell's id, or promotion breaks.
+  it('keeps the replacement shell\'s pty id when the old shell\'s exit arrives late', async () => {
+    shellManager.run(label, 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    shellManager.close(label);
+
+    shellManager.run(label, 'mytui');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(2); });
+    expect(spawnTransportMock).toHaveBeenCalledTimes(2);
+
+    transportExit(0)();
+    streamOutput([`${ESC}[?1049h`]);
+
+    expect(tab().activePty).toBe('pty2');
+  });
+
+  // Killing a shell ends its streams too, which completes its command — but the tab it would report
+  // to may be gone, so a command on a shell the manager retired itself stays silent.
+  it('drops the completion of a command whose shell the manager killed', async () => {
+    const onComplete = vi.fn();
+    shellManager.run(label, 'sleep 100', { onComplete });
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    shellManager.closeTab(label);
+    completeCommand('(shell exited)');
+
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(queryShellPwdMock).not.toHaveBeenCalled();
+    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
+  });
+});

@@ -4,17 +4,6 @@
 
 ## development
 
-* Make a pty-backed tab shell that exits on its own look dead to the shell manager, so the tab's next command respawns it instead of queuing forever behind one that can never finish.
-
-Existing Debt: The shell manager decides a tab's shell is alive by `stdin.writable`, but the pty adapter ends its streams only inside its own `kill()` — unlike the remote adapter, which ends them on exit — and the command runner has no end-of-stream path, while the per-tab shell state is split over five label-keyed maps whose pty exit hook closes over the label rather than the session it belongs to. Severity: 6/10
-
-Existing Risk: 6/10 - With `interactiveShellDetection` on (the default), a shell ended by `exit`, `exec`, `set -e`, `kill -9 $$`, or a crash leaves the running entry spinning, the busy dot lit, and every later command in the tab chained behind a promise that never resolves until the user finds `connection close shell`, and an old pty's late exit deletes the replacement shell's pty id, silently disabling promotion for that tab.
-
-Proposal Risk: 3/10 - Exit is observed and the tab recovers on its next command, but the five maps remain, so the next per-shell field still arrives as another label-keyed map carrying the same stale-closure hazard.
-
-Proposal: In `createPtyShell` in `src/shell/pty-session.ts`, expose a way to mark the shell exited that sets `live = false` and ends `stdin` and `stdout` exactly as `kill()` does minus `session.kill()`, and call it from the `onExit` handler `ShellManager.spawnPtyShellFor` passes to `managers.pty.spawnTransport` in `src/shell/manager.ts` — the same shape `src/remote/shell-session.ts` already uses (`onExit: () => { live = false; stdin.end(); stdout.end(); }`). Guard that handler's id delete with `if (this.shellPtyIds.get(label) === ptyId)` so a stale exit cannot clear a newer shell's id. In `executeShellCmd` and `queryShellPwd` in `src/shell/index.ts`, also listen for the stdout `'end'` event and complete with the partial output plus a short "(shell exited)" note, detaching listeners on completion as the sentinel path does, so `ShellManager.execute`'s per-tab queue unblocks for piped and remote shells as well. Correct the comment above `spawnPtyShellFor`, which says the pty manager "reaps it with the tab" — `PseudoterminalManager.closeTab` in `src/pseudoterminal-manager.ts` skips every transport, and only `ShellManager.close` kills it. Tests: `src/shell/pty-session.test.ts` should cover an exit the process started itself (streams end, `stdin.writable` false); `src/shell/manager.test.ts` fakes every shell as `{ stdin: { writable: true } }` and needs a case where the shell exits mid-command and `onDone` fires and the next `run` spawns a fresh shell; `src/shell/index.test.ts` needs a stream-end case. Folding the five maps into one per-tab record is a follow-up, not part of this sitting.
-
-
 * Contain a failed process spawn inside the remote server so it answers with that process's exit instead of crashing the whole shared session.
 
 Existing Debt: The remote server has no failure boundary around a spawn — the PTY spawn deliberately rethrows after cleaning up its browser, the piped spawn never listens for the child's `'error'` event, and nothing between the server's stdin `data` handler and the process spawn catches — so one bad spawn escapes to the top of the process. Severity: 6/10

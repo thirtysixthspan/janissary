@@ -37,7 +37,7 @@ vi.mock('./sandbox/index.js', () => ({
   sandboxSpawn: vi.fn((_options, command, args, env) => ({ command, args, env })),
 }));
 
-import { spawnShell, executeShellCmd, killShellGroup, queryShellPwd } from './index.js';
+import { spawnShell, executeShellCmd, killShellGroup, queryShellPwd, SHELL_EXITED_NOTE } from './index.js';
 import { shellCommandInput } from './command-input.js';
 import { shellStartupArgs } from './startup.js';
 
@@ -210,6 +210,58 @@ describe('executeShellCmd', () => {
     expect(onComplete).toHaveBeenCalledWith('hello\nworld');
     expect(onProgress).toHaveBeenCalledTimes(2);
   });
+
+  // A shell that exits mid-command never prints the sentinel; the end of its output is the only
+  // signal left, and without it the tab's command queue would wait forever.
+  it('completes with the partial output and an exit note when the shell\'s output ends', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+
+    executeShellCmd(shell, 'make', 1, vi.fn(), onComplete);
+    shell.stdout.emit('data', 'building...\n');
+    shell.stdout.emit('end');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(`building...\n${SHELL_EXITED_NOTE}`);
+    expect(shell.stdout.removeListener).toHaveBeenCalledWith('end', expect.any(Function));
+    expect(shell.stdout.removeListener).toHaveBeenCalledWith('data', expect.any(Function));
+    expect(shell.stderr.removeListener).toHaveBeenCalledWith('data', expect.any(Function));
+  });
+
+  it('completes with the exit note alone when the shell ends before printing anything', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+
+    executeShellCmd(shell, 'exit', 1, vi.fn(), onComplete);
+    shell.stdout.emit('end');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(SHELL_EXITED_NOTE);
+  });
+
+  it('ignores the end of output once the sentinel has completed the command', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+
+    vi.spyOn(Date, 'now').mockReturnValue(4000);
+    executeShellCmd(shell, 'ls', 1, vi.fn(), onComplete);
+    shell.stdout.emit('data', 'a\n__JS_END_1_4000__\n');
+    shell.stdout.emit('end');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith('a');
+  });
+
+  // A command queued behind the one that saw the exit captured the same dead shell; its `'end'`
+  // has already fired, so it has to finish without waiting for one.
+  it('completes at once, without writing, when the shell can no longer be written to', () => {
+    const shell = mockChildProcess();
+    (shell.stdin as { writable: boolean }).writable = false;
+    const onComplete = vi.fn();
+
+    executeShellCmd(shell, 'ls', 1, vi.fn(), onComplete);
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(SHELL_EXITED_NOTE);
+    expect(shell.stdin!.write).not.toHaveBeenCalled();
+    expect(shell.stdout!.on).not.toHaveBeenCalled();
+  });
 });
 
 describe('queryShellPwd', () => {
@@ -233,5 +285,28 @@ describe('queryShellPwd', () => {
     const writeArg = (shell.stdin.write as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
     expect(writeArg).toMatch(/^pwd\n/);
     expect(writeArg).toContain('__PWD_5_');
+  });
+
+  it('completes with an empty result when the shell\'s output ends before the answer', () => {
+    const shell = mockChildProcess();
+    const onResult = vi.fn();
+
+    queryShellPwd(shell, 6, onResult);
+    shell.stdout.emit('data', '/home/us');
+    shell.stdout.emit('end');
+
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('');
+    expect(shell.stdout.removeListener).toHaveBeenCalledWith('end', expect.any(Function));
+  });
+
+  it('completes at once with an empty result when the shell can no longer be written to', () => {
+    const shell = mockChildProcess();
+    (shell.stdin as { writable: boolean }).writable = false;
+    const onResult = vi.fn();
+
+    queryShellPwd(shell, 7, onResult);
+
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('');
+    expect(shell.stdin!.write).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,10 @@ Output from the shell's stdout and stderr is captured via `data` event listeners
 
 Shells are created on demand (lazy initialization at the first shell command per tab). On application exit (`quit`/`exit` or Ctrl+C), all shell processes are killed; closing a single tab (`close`) kills just that tab's shell. Shell processes are also killed if the shell process crashes or exits unexpectedly — a new shell is spawned automatically on the next command.
 
+A shell can end on its own in the middle of a command: `exit`, `exec`, `set -e` catching a failure, `kill -9 $$`, or a crash. The command it was running then finishes with whatever it had printed, followed by `(shell exited)` on its own line (or just `(shell exited)` if it printed nothing). Its entry stops running, the tab's busy marker clears, and any command already queued behind it in the tab finishes the same way at once instead of waiting. The next command the tab runs starts a fresh shell in the tab's working directory. This holds for every kind of tab shell: the pseudo-terminal one, the piped one used when interactive detection is off, and a remote tab's shell.
+
+A shell that Janissary kills itself, when its tab closes, on `connection close shell`, or at exit, does not report `(shell exited)`; its running command is simply abandoned with the shell. When the old shell's exit is reported after a fresh one has already started, it does not affect the fresh shell, which can still be promoted to a terminal (see Interactive detection below).
+
 ### Unmount safety
 
 Shell `data` event listeners check an unmount flag before updating React state. On component unmount, all shell processes are killed and their references are cleared from the shells map.

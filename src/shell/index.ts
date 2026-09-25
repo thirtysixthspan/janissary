@@ -50,6 +50,22 @@ export function killShellGroup(shell: ChildProcess): void {
   try { process.kill(-pid, 'SIGTERM'); } catch { shell.kill(); }
 }
 
+// Appended to a command's output when the shell exited before printing the command's sentinel.
+export const SHELL_EXITED_NOTE = '(shell exited)';
+
+function withExitNote(output: string): string {
+  const trimmed = output.trim();
+  return trimmed ? `${trimmed}\n${SHELL_EXITED_NOTE}` : SHELL_EXITED_NOTE;
+}
+
+// A shell that can no longer answer: nothing can be written to it, or its output has already ended.
+// A stream whose `'end'` has fired never fires it again, so waiting on one would wait forever.
+function shellGone(shell: ShellProcess): boolean {
+  return !shell.stdin?.writable || shell.stdout?.readableEnded === true;
+}
+
+// Runs `command` and completes on its sentinel. If the shell's output ends first — the shell exited
+// on its own — it completes with what arrived plus `SHELL_EXITED_NOTE`, so the tab's queue unblocks.
 export function executeShellCmd(
   shell: ShellProcess,
   command: string,
@@ -57,12 +73,14 @@ export function executeShellCmd(
   onProgress: (outputBuffer: string) => void,
   onComplete: (result: string) => void,
 ): void {
+  if (shellGone(shell)) { onComplete(SHELL_EXITED_NOTE); return; }
   const prompt = `__JS_END_${tabIndex}_${Date.now()}__`;
   let outputBuffer = '';
 
   const done = () => {
     shell.stdout!.removeListener('data', onChunk);
     shell.stderr!.removeListener('data', onChunk);
+    shell.stdout!.removeListener('end', onEnd);
   };
 
   const onChunk = (chunk: string) => {
@@ -77,30 +95,50 @@ export function executeShellCmd(
     }
   };
 
+  const onEnd = () => {
+    done();
+    onComplete(withExitNote(outputBuffer));
+  };
+
   shell.stdout!.on('data', onChunk);
   shell.stderr!.on('data', onChunk);
-  if (shell.stdin?.writable) shell.stdin.write(shellCommandInput(command, prompt));
+  shell.stdout!.on('end', onEnd);
+  shell.stdin!.write(shellCommandInput(command, prompt));
 }
 
+// Asks the shell for its working directory. A shell that is gone, or whose output ends before the
+// answer, completes with an empty result, which callers treat as nothing to report.
 export function queryShellPwd(
   shell: ShellProcess,
   tabIndex: number,
   onResult: (pwd: string) => void,
 ): void {
+  if (shellGone(shell)) { onResult(''); return; }
   const prompt = `__PWD_${tabIndex}_${Date.now()}__`;
   let buffer = '';
+
+  const done = () => {
+    shell.stdout!.removeListener('data', onData);
+    shell.stderr!.removeListener('data', onData);
+    shell.stdout!.removeListener('end', onEnd);
+  };
 
   const onData = (chunk: string) => {
     buffer += chunk;
     const endIndex = buffer.indexOf(prompt);
     if (endIndex !== -1) {
-      shell.stdout!.removeListener('data', onData);
-      shell.stderr!.removeListener('data', onData);
+      done();
       onResult(buffer.slice(0, Math.max(0, endIndex)).trim());
     }
   };
 
+  const onEnd = () => {
+    done();
+    onResult('');
+  };
+
   shell.stdout!.on('data', onData);
   shell.stderr!.on('data', onData);
-  if (shell.stdin?.writable) shell.stdin.write(shellPwdQueryInput(prompt));
+  shell.stdout!.on('end', onEnd);
+  shell.stdin!.write(shellPwdQueryInput(prompt));
 }
