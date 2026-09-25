@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import { isReportingTab } from './tab-entries';
+import { isReportingTab } from '@shared/tab/placement';
 import { isModalOpen } from './shared/modal-open';
 
 export type Section = 'left' | 'center' | 'right' | 'reporting';

@@ -1,22 +1,11 @@
 import type { CenterPane, Tab } from './types.js';
+import { centerPane, isCenterActionTab, isSplitEligibleTab } from './placement.js';
 
 export type SplitState = {
   tabs: Tab[];
   activeLabel: string;
   secondaryLabel?: string;
 };
-
-export function centerPane(tab: Tab): CenterPane {
-  return tab.pane ?? 'left';
-}
-
-export function isCenterActionTab(tab: Tab): boolean {
-  return !tab.dock && tab.view !== 'monitor';
-}
-
-export function isSplitEligibleTab(tab: Tab): boolean {
-  return isCenterActionTab(tab) && tab.view !== 'notifications';
-}
 
 export function hasSplit(tabs: Tab[]): boolean {
   return tabs.some((tab) => isSplitEligibleTab(tab) && tab.pane === 'right');

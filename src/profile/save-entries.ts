@@ -10,7 +10,7 @@ import type {
 import type { TabPluginDeclaration } from '../plugins/api.js';
 import type { TreeSelection } from '../file-navigator/selection-request.js';
 import type { Managers } from '../managers.js';
-import { centerPane } from '../tab/split.js';
+import { centerPane } from '../tab/placement.js';
 
 // Entry builders for `profile save`: the inverse of the loader's partitioning pass. Each returns
 // one element of the profile's `tabs` array, carrying its `type` discriminator, the flat tab

@@ -8,7 +8,8 @@ import { renameTabOp } from './rename.js';
 import { applyDock } from './dock.js';
 import { insertTabInGroup } from './index.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
-import { centerPane, hasSplit, isCenterActionTab } from './split.js';
+import { centerPane, isCenterActionTab } from './placement.js';
+import { hasSplit } from './split.js';
 import { focusedPane, recentLabel, moveTabToOtherPaneSelection } from './split-selection.js';
 
 export type TabOperationsPort = {

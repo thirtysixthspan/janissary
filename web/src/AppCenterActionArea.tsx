@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
+import { isSplitEligibleTab } from '@shared/tab/placement';
 import type { TabEntry } from './tab-entries';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { CenterActionArea } from './CenterActionArea';
@@ -36,7 +37,7 @@ export function AppCenterActionArea({
       return (
         <ViewTabBody
           tab={tab} client={client} index={entry.index}
-          active={focused} onSplit={tab.view === 'notifications' ? undefined : onSplit}
+          active={focused} onSplit={isSplitEligibleTab(tab) ? onSplit : undefined}
         />
       );
     }

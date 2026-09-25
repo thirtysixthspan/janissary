@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import type { BufferLine, TabView } from '@shared/protocol';
+import { closeQuitsApp } from '@shared/tab/placement';
 import { resolveSearchInterception } from './command-interceptions';
 import type { useTranscriptSearch } from '../../shared/search-bar/useTranscriptSearch';
 
@@ -47,7 +48,7 @@ export function useCommandBarSubmit(params: Params): (text: string) => void {
       else openTabNavWithQuery(text.trim().slice(3).trim());
       return;
     }
-    if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && tabs.filter((t) => !t.dock).length === 1)) {
+    if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && closeQuitsApp(tabs, activeTab))) {
       openQuitConfirm();
       return;
     }

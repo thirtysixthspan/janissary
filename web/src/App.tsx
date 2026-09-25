@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { JanusClient } from './ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
+import { closeQuitsApp } from '@shared/tab/placement';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle, EditorDropHandle } from './shared/drop-handles';
 import type { DirtyTabHandle } from './shared/tab-handles';
@@ -101,7 +102,7 @@ export function App({ client }: { client: JanusClient }) {
   );
 
   const closeTab = useCallback((index: number) => {
-    if (tabs.filter((t) => !t.dock).length === 1) { guardedOpenQuitConfirm(); return; }
+    if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
     if (guardRef.current?.(index)) return; client.send({ method: 'closeTab', params: { index } });
   }, [client, tabs, guardedOpenQuitConfirm]);
 

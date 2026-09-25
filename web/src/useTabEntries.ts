@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { TabView } from '@shared/protocol';
-import { isReportingTab, type TabEntry } from './tab-entries';
+import { isCenterActionTab, isReportingTab } from '@shared/tab/placement';
+import type { TabEntry } from './tab-entries';
 import type { JanusClient } from './ws';
 
 export function reorderTabEntries(
@@ -19,7 +20,7 @@ export function reorderTabEntries(
 // limit.
 export function useTabEntries(tabs: TabView[]) {
   const actionEntries = useMemo(
-    () => tabs.map((tab, index) => ({ tab, index })).filter((e) => !isReportingTab(e.tab) && !e.tab.dock),
+    () => tabs.map((tab, index) => ({ tab, index })).filter((e) => isCenterActionTab(e.tab)),
     [tabs],
   );
   const reportingEntries = useMemo(
