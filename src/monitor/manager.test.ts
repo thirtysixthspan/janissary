@@ -390,6 +390,71 @@ describe('MonitorManager', () => {
     expect(manager.list()).toEqual([]);
   });
 
+  it('a flush error arriving after stop does not respawn a session', () => {
+    const { managers, appended } = makeFakeManagers([janus]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    emitEntry(janus, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+
+    manager.stop('janus', 'security');
+    sessions[0].fail('ACP connection closed');
+
+    expect(sessions).toHaveLength(1);
+    expect(appended.some((a) => a.entry.output.includes('restarting monitor session'))).toBe(false);
+    expect(manager.list()).toEqual([]);
+  });
+
+  it('a flush reply arriving after stop does not reopen the reporting tab', () => {
+    const { managers } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+
+    manager.stop('janus', 'assistant');
+    expect(managers.tab.monitorTab('assistant')).toBeUndefined();
+    sessions[0].reply('[SUGGESTION]: Late advice');
+
+    expect(managers.tab.monitorTab('assistant')).toBeUndefined();
+  });
+
+  it('a context reset mid-flush respawns exactly once when the old prompt then fails', () => {
+    const { managers, appended } = makeFakeManagers([janus, agent2]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'assistant', [{ kind: 'tab', label: 'agent2' }]);
+    emitEntry(agent2, 'ls', 'x');
+    vi.advanceTimersByTime(FLUSH_MS);
+
+    manager.resetContext('assistant');
+    sessions[0].fail('ACP connection closed');
+
+    expect(sessions).toHaveLength(2);
+    expect(sessions[1].kill).not.toHaveBeenCalled();
+    expect(appended.some((a) => a.entry.output.includes('restarting monitor session'))).toBe(false);
+
+    emitEntry(agent2, 'pwd', '/tmp');
+    vi.advanceTimersByTime(FLUSH_MS);
+    expect(sessions[1].prompts).toHaveLength(2); // the replacement keeps flushing
+  });
+
+  it('an ask error arriving after stop finishes the running entry without respawning', () => {
+    const { managers, finished } = makeFakeManagers([janus]);
+    const { spawn, sessions } = fakeSpawnFactory();
+    const manager = new MonitorManager(managers, spawn, FLUSH_MS);
+    manager.start('janus', 'security', []);
+    expect(manager.ask('janus', 'security', 'anything risky?')).toBeNull();
+
+    manager.stop('janus', 'security');
+    sessions[0].fail('ACP connection closed');
+
+    expect(sessions).toHaveLength(1);
+    expect(finished.at(-1)?.output).toBe('monitor security: ACP connection closed — restarting monitor session');
+  });
+
   it('snapshot returns one record per live monitor with name, persona, authored targets, and inline', () => {
     const { managers } = makeFakeManagers([janus, agent2]);
     const { spawn } = fakeSpawnFactory();

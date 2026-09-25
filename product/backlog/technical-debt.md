@@ -4,17 +4,6 @@
 
 ## development
 
-* Have the monitor ignore prompt callbacks from a session it has already stopped or replaced, so stopping a monitor mid-prompt cannot respawn an agent process nothing tracks.
-
-Existing Debt: The local and remote ACP sessions disagree on what `kill()` means — the remote session detaches its handlers, while the local one suppresses only the connection-level exit report and still delivers the pending prompt's `onEnd`/`onError` — and the monitor's flush and ask callbacks act on whatever answers without checking that the monitor is still registered or still on that session. Severity: 5/10
-
-Existing Risk: 6/10 - Stopping a monitor while its prompt is in flight kills the process, the prompt rejects, and the flush's error handler respawns, spawning and priming a fresh ACP subprocess that is no longer in the monitor registry so neither `closeAll` nor `dispose` ever kills it; a late `onEnd` instead re-opens the reporting tab the stop just closed, and a context reset mid-flush respawns twice.
-
-Proposal Risk: 3/10 - Late callbacks from a dead or replaced session no longer respawn or deliver, but the local and remote `kill()` contracts still differ, so a new consumer of the local session can be caught by post-kill callbacks the same way.
-
-Proposal: In `MonitorManager` in `src/monitor/manager.ts`, make `respawn(reg)` a no-op unless the registration is still the one stored under its key in `this.monitors`, and in `flush` capture `const session = reg.session` before prompting and have `onEnd` return after clearing `inFlight` (without `recordReply`/`deliver`) when `reg.session !== session` or the registration is gone. In `askMonitor` in `src/monitor/ask.ts`, keep the `finishRunning` calls unconditional — they close the owner tab's running entry, which relies on the local session still reporting after a kill — and rely on the guarded `respawn` passed in as `onRespawn`. Leave `connectAcp` in `src/acp/index.ts`, `stopMonitor` in `src/monitor/stop.ts`, and `respawnMonitorSession` in `src/monitor/session.ts` unchanged, and add a comment beside `connectAcp`'s `kill` stating that pending prompt handlers still fire after it, unlike `src/remote/acp-session.ts`. Tests: the "stop kills the dedicated session and stops feeding" case in `src/monitor/manager.test.ts` never makes the fake session `fail(...)` or `reply(...)` after `stop`; add both — after `stop`, `fail()` must leave the spawned-session count unchanged and `reply()` must not recreate the reporting tab — plus a `src/monitor/ask.test.ts` case where the monitor is stopped before the ask's error arrives. The missing cancellation in `runAcpToolLoop` (`src/acp/loop.ts`), which keeps issuing turns after a close, is a separate item.
-
-
 * Release the agent-messaging queue when its tab closes, so a message in flight at close cannot block delivery to every later tab that reuses the name.
 
 Existing Debt: The agent communication manager keeps a per-tab message queue and an in-progress set keyed by label but has no `closeTab` and is missing from the managers' tab-release list, whose compile-time check proves only that listed managers can release, not that every manager holding label-keyed state is listed. Severity: 5/10

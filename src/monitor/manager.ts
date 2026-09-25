@@ -9,7 +9,7 @@ import { spawnMonitorSession } from './acp.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
 import { seedFeedEntries, flushFeedEntries } from './feeds.js';
-import { generateSessionDelimiter, frameEntry } from './framing.js';
+import { generateSessionDelimiter, frameUpdatePrompt } from './framing.js';
 import { recordContext, snapshotMonitorContext, formatContext, type MonitorContextEntry } from './context.js';
 import { listMonitors, monitorConnections, monitorNames } from './info.js';
 import { askMonitor } from './ask.js';
@@ -127,9 +127,18 @@ export class MonitorManager {
     openMonitorSession(reg, this.managers, this.spawn);
   }
 
+  // Whether `reg` is still registered and still running on `session`. A local session keeps
+  // delivering a pending prompt's callbacks after `kill()`, so a callback from a monitor that was
+  // stopped or whose session was replaced must not act on it.
+  private isCurrent(reg: MonitorSub, session: AcpSession): boolean {
+    return this.monitors.get(`${reg.owner}:${reg.name}`) === reg && reg.session === session;
+  }
+
   // A prompt failed (typically the ACP subprocess died). Replace the session with a
-  // fresh, re-primed one so the monitor recovers instead of staying dead.
-  private respawn(reg: MonitorSub): void {
+  // fresh, re-primed one so the monitor recovers instead of staying dead. A no-op for a
+  // stopped monitor or a session already replaced, so no untracked subprocess is spawned.
+  private respawn(reg: MonitorSub, session: AcpSession = reg.session): void {
+    if (!this.isCurrent(reg, session)) return;
     respawnMonitorSession(reg, this.managers, this.spawn);
     if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
   }
@@ -155,25 +164,26 @@ export class MonitorManager {
     if (reg.buffer.length === 0) return;
     const batch = reg.buffer;
     reg.buffer = [];
-    const body = batch
-      .map(({ tabLabel, entry }) => frameEntry(tabLabel, entry, reg.delimiter))
-      .join('\n\n');
-    const prompt = `[Monitor update]\n${body}`;
+    const prompt = frameUpdatePrompt(batch, reg.delimiter);
     recordContext(reg, prompt, 'input');
     reg.inFlight = true;
     let reply = '';
-    reg.session.prompt(prompt, {
+    const session = reg.session;
+    // A stale callback leaves `inFlight` alone too: a replacement session's priming owns the slot.
+    session.prompt(prompt, {
       onChunk: (text) => { reply += text; },
       onEnd: () => {
+        if (!this.isCurrent(reg, session)) return;
         reg.inFlight = false;
         recordReply(reg, this.managers, reply);
         const suggestion = parseSuggestion(reply);
         if (suggestion) this.deliver(reg, batch.at(-1)!.tabLabel, suggestion);
       },
       onError: (message) => {
+        if (!this.isCurrent(reg, session)) return;
         this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message} — restarting monitor session` });
         if (isRateLimitError(message)) notify(this.managers, 'rate-limited', reg.owner);
-        this.respawn(reg);
+        this.respawn(reg, session);
       },
     });
   }
@@ -198,7 +208,8 @@ export class MonitorManager {
     const reg = this.monitors.get(`${owner}:${name}`);
     if (!reg) return `No "${name}" monitor running from this tab.`;
     if (reg.inFlight) return `The ${name} monitor is busy; try again in a moment.`;
-    askMonitor(reg, owner, name, question, this.managers, () => this.respawn(reg));
+    const session = reg.session;
+    askMonitor(reg, owner, name, question, this.managers, () => this.respawn(reg, session));
     return null;
   }
 

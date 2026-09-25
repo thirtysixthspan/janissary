@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateSessionDelimiter, frameEntry, TRUST_FRAMING_INSTRUCTIONS } from './framing.js';
+import { generateSessionDelimiter, frameEntry, frameUpdatePrompt, TRUST_FRAMING_INSTRUCTIONS } from './framing.js';
 
 describe('generateSessionDelimiter', () => {
   it('generates a unique token each call', () => {
@@ -30,6 +30,16 @@ describe('frameEntry', () => {
     const firstDelimiterIndex = wrapped.indexOf('DELIM-2');
     const labelIndex = wrapped.indexOf('[notes]');
     expect(labelIndex).toBeLessThan(firstDelimiterIndex);
+  });
+});
+
+describe('frameUpdatePrompt', () => {
+  it('frames each entry in order under the update header, separated by a blank line', () => {
+    const prompt = frameUpdatePrompt([
+      { tabLabel: 'a', entry: { input: 'ls', output: 'x' } },
+      { tabLabel: 'b', entry: { input: 'pwd', output: '/tmp' } },
+    ], 'DELIM-4');
+    expect(prompt).toBe(`[Monitor update]\n${frameEntry('a', { input: 'ls', output: 'x' }, 'DELIM-4')}\n\n${frameEntry('b', { input: 'pwd', output: '/tmp' }, 'DELIM-4')}`);
   });
 });
 
