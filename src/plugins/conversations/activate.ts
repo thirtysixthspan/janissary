@@ -1,7 +1,8 @@
-import type {
-  ConversationsView,
-  TabPluginActivation,
-  TabPluginServerCapabilities,
+import {
+  parseDockArgument,
+  type ConversationsView,
+  type TabPluginActivation,
+  type TabPluginServerCapabilities,
 } from '../api.js';
 import {
   isConversationsPayload,
@@ -22,19 +23,12 @@ function listPayload(data: ConversationsView): ConversationListPayload {
   return { kind: 'list', entries: [...data.summaries] };
 }
 
-function parseDock(argument: string): 'left' | 'right' | null | undefined {
-  const trimmed = argument.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (trimmed === 'left' || trimmed === 'right') return trimmed;
-  return undefined;
-}
-
 export function activate(): TabPluginActivation {
   const tabs = new ConversationTabs();
   return {
     isPayload: isConversationsPayload,
     command: (argument, capabilities) => {
-      const dock = parseDock(argument);
+      const dock = parseDockArgument(argument);
       if (dock !== undefined) {
         capabilities.openOrFocusTab(LIST_KEY, () => ({
           title: 'conversations', payload: listPayload(dataFrom(capabilities)),
