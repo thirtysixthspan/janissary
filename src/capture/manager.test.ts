@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { CaptureManager } from './manager.js';
 import { makeTab } from '../tab/index.js';
+import { appendTab } from '../tab/transcript/events.js';
+import { capLog } from '../tab/transcript/log.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(overrides: Partial<Managers> = {}): Managers {
@@ -18,6 +21,13 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     database: { openDbs: vi.fn(() => []) },
     ...overrides,
   } as unknown as Managers;
+}
+
+function managersRunning(tab: Tab, run: () => void): Managers {
+  return makeManagers({
+    tab: { findIndex: vi.fn(() => 0), tabs: [tab], byLabel: () => tab },
+    command: { executeCommand: vi.fn(() => { run(); return Promise.resolve(); }) },
+  } as unknown as Partial<Managers>);
 }
 
 describe('CaptureManager.run', () => {
@@ -113,7 +123,7 @@ describe('CaptureManager.run', () => {
       command: {
         executeCommand: vi.fn(() => new Promise<void>((resolve) => {
           finish = () => {
-            tab.log.push({ input: 'close', output: 'closed tab' });
+            appendTab([tab], 'main', { input: 'close', output: 'closed tab' }, (log) => log, vi.fn());
             resolve();
           };
         })),
@@ -128,6 +138,38 @@ describe('CaptureManager.run', () => {
     expect(callback).not.toHaveBeenCalled();
     finish();
     await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('closed tab'); });
+  });
+
+  // A tab at its transcript cap drops its oldest entry on every append, so its log length stays the
+  // same; the reply still has to be the entry the command appended.
+  it('reports the logged output of a command run in a tab whose transcript is at its cap', async () => {
+    const tab = makeTab('main', 'red');
+    tab.log = [1, 2, 3].map((n) => ({ input: `old ${n}`, output: `old output ${n}` }));
+    const managers = managersRunning(tab, () => {
+      appendTab([tab], 'main', { input: 'close', output: 'closed tab' }, (log) => capLog(log, 3), vi.fn());
+    });
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'close', callback);
+
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('closed tab'); });
+    expect(tab.log).toHaveLength(3);
+  });
+
+  it('answers empty when the command appended only to another tab', async () => {
+    const tab = makeTab('main', 'red');
+    tab.log = [{ input: 'earlier', output: 'earlier output' }];
+    const other = makeTab('other', 'blue');
+    const managers = managersRunning(tab, () => {
+      appendTab([other], 'other', { input: 'close', output: 'closed tab' }, (log) => log, vi.fn());
+    });
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'close', callback);
+
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith(''); });
   });
 
   // The divergence this registry entry closes: `harness`/`ssh` were matched by inline regular

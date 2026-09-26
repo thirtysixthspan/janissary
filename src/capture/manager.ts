@@ -2,6 +2,7 @@ import { isInteractive } from '../interactive/index.js';
 import { commands } from '../commands/index.js';
 import { resolveCommand, type Resolution } from '../resolve.js';
 import { routeUnknownCommand } from './router.js';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
 type Reply = (out: string) => void;
@@ -44,10 +45,17 @@ export class CaptureManager {
   private async runCommand(name: string, cmd: string, label: string, index: number, callback: Reply): Promise<void> {
     const command = commands.find((c) => c.name === name);
     if (command?.capture) { command.capture(cmd, label, this.managers, callback); return; }
-    const tab = this.managers.tab.byLabel(label);
-    const before = tab?.log.length ?? 0;
-    await this.managers.command.executeCommand(name, cmd, label, index);
-    const after = tab?.log.length ?? 0;
-    callback(after > before ? tab!.log[after - 1].output : '');
+    // Counted from the append events rather than the log's length: a tab at its transcript cap
+    // drops its oldest entry on every append, so its length stops growing.
+    let appended = 0;
+    const subscription = messageBus.on('transcript', 'entry:appended', (event) => {
+      if (event.tabLabel === label) appended += 1;
+    });
+    try {
+      await this.managers.command.executeCommand(name, cmd, label, index);
+    } finally {
+      subscription.unsubscribe();
+    }
+    callback(appended > 0 ? this.managers.tab.byLabel(label)?.log.at(-1)?.output ?? '' : '');
   }
 }

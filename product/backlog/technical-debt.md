@@ -4,17 +4,6 @@
 
 ## development
 
-* Have a messaged command read back the entries it actually appended, counted from the transcript bus, instead of inferring them from the log's length, which stops growing once the tab reaches its transcript cap.
-
-Existing Debt: `CaptureManager.runCommand` decides whether a messaged command produced output by comparing `tab.log.length` before and after `executeCommand`, but `appendEntry` caps the log at `transcriptMaxLines` by slicing from the front, so once a tab is full its length never changes and the read-back — the seam `ai/guidelines/architecture-principles.md` §5 already names as the remaining one — reports nothing. Severity: 4/10
-
-Existing Risk: 5/10 - A long-lived agent tab that reaches the cap (25,000 entries by default, far fewer when a user lowers `transcriptMaxLines`) silently answers every `msg … command` / `request` routed through the registry with an empty reply, so the sending agent concludes the command did nothing and acts on that, while the recipient's transcript shows the output was produced.
-
-Proposal Risk: 2/10 - The read-back is driven by the append event itself, so the cap no longer matters, but it still reads the tab's last entry after the command settles, so a command that appends and then has an unrelated entry land in the same tab before it resolves reports that later entry, exactly as it does today.
-
-Proposal: In `src/capture/manager.ts`, `runCommand` captures `before = tab?.log.length`, awaits `this.managers.command.executeCommand(...)`, and replies `after > before ? tab!.log[after - 1].output : ''`. `appendTab` in `src/tab/transcript/events.ts` emits `transcript` / `entry:appended` with `tabLabel` for every append, capped or not (and a separate `entries:trimmed` when the cap drops entries). Subscribe to `messageBus.on('transcript', 'entry:appended', ...)` filtered on `event.tabLabel === label` just before the `await`, count the appends, unsubscribe in a `finally`, and reply with `managers.tab.byLabel(label)?.log.at(-1)?.output ?? ''` when the count is above zero — which keeps today's behavior of reporting the last entry's output as finished by the time `executeCommand` resolves, and removes the `tab!` non-null assertion. `src/capture/manager.test.ts` ("executes a matched command and reports its logged output") pins the ordinary path and must keep passing; add a case where the tab's log is already at the configured cap (stub `getConfig` from `src/config.ts`, or seed the log to `transcriptMaxLines`) and assert the reply is the command's output rather than `''`, which fails on the current code.
-
-
 * Make the `closeTab` RPC name the tab the user closed by its label, as `focusTab` already does, rather than by an array position the server resolves against whatever its tab list has become by the time the message arrives.
 
 Existing Debt: The tab list is server-owned and changes without any client action — `insertTabInGroup` places new plugin, editor, and file-navigator tabs mid-list and makes them active — yet `closeTab`, like `renameTab`, `setDock`, `moveTabToOtherPane`, `reorderTabTo`, and `setActiveTab`, addresses its target by index, so the client's intent is only correct if no tab moved between its last snapshot and the server's receipt; `product/plans/complete/close-dialog-tab-identity.md` fixed the client half of this for the save dialog and explicitly left "making the wire command name a tab" as separate work. Severity: 5/10
