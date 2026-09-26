@@ -62,3 +62,120 @@ describe('dispatchFileNavigatorMessage', () => {
     expect(result).toEqual({ command: 'edit', choices: [] });
   });
 });
+
+// A controller whose every method is a recorder, so a case can be checked for the call it makes
+// without stubbing a result the case is not about. Kept separate from the stub above, which exists
+// to give four particular methods a return value.
+function makeRecording() {
+  const record = vi.fn();
+  const controller = {
+    managers: {},
+    fileNavigatorSetDetail: record,
+    fileNavigatorOpen: record,
+    fileNavigatorCreateFile: record,
+    fileNavigatorCreateDirectory: record,
+    fileNavigatorSelectionAction: record,
+    runFileNavigatorSelectionAction: record,
+    pasteFileNavigatorItems: record,
+  } as unknown as Controller;
+  return { controller, record };
+}
+
+describe('dispatchFileNavigatorMessage cases with no answer', () => {
+  it('routes fileNavigatorSetDetail and acknowledges', () => {
+    const { controller, record } = makeRecording();
+    const result = dispatch(controller, 1, {
+      method: 'fileNavigatorSetDetail',
+      params: { index: 3, details: { open: false } },
+    });
+    expect(record).toHaveBeenCalledExactlyOnceWith(3, { open: false });
+    expect(result).toBeUndefined();
+  });
+
+  it('routes runFileNavigatorSelectionAction and acknowledges', () => {
+    // Fire-and-forget: what the action produces is the plugin's own tab, not a reply.
+    const { controller, record } = makeRecording();
+    const result = dispatch(controller, 1, {
+      method: 'runFileNavigatorSelectionAction',
+      params: { index: 2, paths: ['a.mp3'], action: 'queue' },
+    });
+    expect(record).toHaveBeenCalledExactlyOnceWith(2, ['a.mp3'], 'queue');
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('dispatchFileNavigatorMessage cases that reply', () => {
+  it('replies with the opener resolution fileNavigatorOpen produced', () => {
+    const { controller, record } = makeRecording();
+    record.mockReturnValue('files-1:3');
+    const result = dispatch(controller, 1, {
+      method: 'fileNavigatorOpen',
+      params: { index: 3, relPath: 'src/a.ts', command: 'edit' },
+    });
+    expect(record).toHaveBeenCalledExactlyOnceWith(3, 'src/a.ts', 'edit');
+    expect(result).toBe('files-1:3');
+  });
+
+  it('replies with the path fileNavigatorCreateFile produced', () => {
+    const { controller, record } = makeRecording();
+    record.mockReturnValue('src/new.ts');
+    const result = dispatch(controller, 1, {
+      method: 'fileNavigatorCreateFile',
+      params: { label: 'files-1', destination: 'src/new.ts' },
+    });
+    expect(record).toHaveBeenCalledExactlyOnceWith('files-1', 'src/new.ts');
+    expect(result).toBe('src/new.ts');
+  });
+
+  it('replies with the path fileNavigatorCreateDirectory produced', () => {
+    const { controller, record } = makeRecording();
+    record.mockReturnValue('src/new');
+    const result = dispatch(controller, 1, {
+      method: 'fileNavigatorCreateDirectory',
+      params: { label: 'files-1', destination: 'src/new' },
+    });
+    expect(record).toHaveBeenCalledExactlyOnceWith('files-1', 'src/new');
+    expect(result).toBe('src/new');
+  });
+
+  it('replies with the selection action, or with null when none applies', () => {
+    const offered = makeRecording();
+    offered.record.mockReturnValue({ label: 'Add to playlist', action: 'queue' });
+    expect(dispatch(offered.controller, 1, {
+      method: 'fileNavigatorSelectionAction',
+      params: { index: 0, paths: ['a.mp3'] },
+    })).toEqual({ label: 'Add to playlist', action: 'queue' });
+    expect(offered.record).toHaveBeenCalledExactlyOnceWith(0, ['a.mp3']);
+
+    const none = makeRecording();
+    none.record.mockReturnValue(null);
+    expect(dispatch(none.controller, 1, {
+      method: 'fileNavigatorSelectionAction',
+      params: { index: 0, paths: [] },
+    })).toBeNull();
+  });
+
+  // A paste carries the host it came from only when it crossed machines, so the short call is the
+  // common case and the six-argument one is the exception — both have to reach the same controller
+  // method, or a remote paste would be treated as a local one.
+  it('carries the source host through only when the paste crossed machines', () => {
+    const local = makeRecording();
+    dispatch(local.controller, 1, {
+      method: 'pasteFileNavigatorItems',
+      params: { label: 'files-1', sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'copy' },
+    });
+    expect(local.record.mock.calls[0]).toHaveLength(5);
+
+    const remote = makeRecording();
+    dispatch(remote.controller, 1, {
+      method: 'pasteFileNavigatorItems',
+      params: {
+        label: 'files-1', sources: ['/a/b.txt'], destinationPath: 'dest', mode: 'cut',
+        policy: 'overwrite-all', sourceHost: 'devbox',
+      },
+    });
+    expect(remote.record).toHaveBeenCalledExactlyOnceWith(
+      'files-1', ['/a/b.txt'], 'dest', 'cut', 'overwrite-all', 'devbox',
+    );
+  });
+});
