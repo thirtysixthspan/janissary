@@ -6,6 +6,7 @@ import {
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { PluginRequestPort } from './requests.js';
+import { noteInOriginTab } from './transcript-note.js';
 
 // The default context menu's own entry point, beside an opener/command, a tab-bound intent, and the
 // file navigator's selection action. Shaped on `selection.ts`: the host owns activation, guarding,
@@ -44,14 +45,6 @@ function invokeDefaultMenuAction(
   return activation.defaultMenuAction(selection, capabilities);
 }
 
-// A rejection has no waiting client here — the menu sent the request and closed — so it goes to the
-// transcript of the tab the menu was raised from, exactly as a rejected command does.
-function note(port: PluginRequestPort, origin: PluginFailureOrigin, output: string): void {
-  if (port.managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-    port.managers.tab.append(origin.label, { input: origin.command, output });
-  }
-}
-
 export async function runPluginDefaultMenuAction(
   port: PluginRequestPort,
   id: string,
@@ -66,5 +59,5 @@ export async function runPluginDefaultMenuAction(
   const outcome = await port.invoke(record, activation, origin, (capabilities) =>
     invokeDefaultMenuAction(record.declaration, activation, action, selection, capabilities));
   if (outcome.status === 'failed') port.disable(record, outcome.error, origin);
-  else if (outcome.status === 'rejected') note(port, origin, outcome.reason);
+  else if (outcome.status === 'rejected') noteInOriginTab(port.managers, origin, outcome.reason);
 }
