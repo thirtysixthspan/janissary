@@ -1,54 +1,27 @@
-import type { AgentState } from '../agent/types.js';
 import type { LogEntry, Tab } from './types.js';
-import type { RunningEntryFields, RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
-import { recordHistory } from './history.js';
-import { capLog } from './transcript-log.js';
-import {
-  appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab, updateRunningEntry,
+import { appendTab, markUnreadTab } from './transcript-events.js';
+
+// The tab operations under the names the tab layer speaks of them: `startRunningTab` says what a
+// function does to a `Tab[]`, `startRunning` says what it means to a tab. Most of this module is
+// therefore that naming and nothing else, and it is re-exported rather than wrapped — a wrapper that
+// only forwards restates the whole parameter list, which is duplication with no behaviour in it.
+// `append` below is the one that earns a body: it is the only operation here that has to wire a step
+// the underlying function does not take.
+export {
+  startRunningTab as startRunning,
+  finishRunningTab as finishRunning,
+  updateRunningEntry as updateRunning,
+  clearTranscriptTab as clearTranscript,
+  type RunningEntryFields,
+  type RunningEntryMatch,
+  type UpdateRunningHooks,
 } from './transcript-events.js';
-
-export type { RunningEntryFields, RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
-
-export function startRunning(
-  tabs: Tab[], label: string, input: string, append: (label: string, entry: LogEntry) => void,
-  fields?: RunningEntryFields,
-): void {
-  startRunningTab(tabs, label, input, append, fields);
-}
-
-export function finishRunning(
-  tabs: Tab[], label: string, output: string, deleteBusy: (label: string) => void,
-  persist: (state: AgentState) => void, buildAgentState: (tab: Tab) => AgentState,
-  markUnread: (label: string) => void, match?: RunningEntryMatch,
-): void {
-  finishRunningTab(tabs, label, output, deleteBusy, persist, buildAgentState, markUnread, match);
-}
-
-export function updateRunning(
-  tabs: Tab[], label: string, match: RunningEntryMatch | undefined,
-  output: string, running: boolean, hooks: UpdateRunningHooks,
-): void {
-  updateRunningEntry(tabs, label, match, output, running, hooks);
-}
-
-export function capToConfiguredMax(log: LogEntry[], maxLines: number): LogEntry[] {
-  return capLog(log, maxLines);
-}
+export { capLog as capToConfiguredMax } from './transcript-log.js';
+export { recordHistory as recordHistoryForTab } from './history.js';
 
 export function append(
   tabs: Tab[], label: string, entry: LogEntry, cap: (log: LogEntry[]) => LogEntry[],
   activeLabel: string | undefined, secondaryTabLabel: string | undefined,
 ): void {
   appendTab(tabs, label, entry, cap, (target) => markUnreadTab(tabs, target, activeLabel, secondaryTabLabel));
-}
-
-export function clearTranscript(
-  tabs: Tab[], label: string, persist: (state: AgentState) => void,
-  buildAgentState: (tab: Tab) => AgentState,
-): void {
-  clearTranscriptTab(tabs, label, persist, buildAgentState);
-}
-
-export function recordHistoryForTab(tab: Tab, text: string): string {
-  return recordHistory(tab, text);
 }
