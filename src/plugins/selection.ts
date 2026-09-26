@@ -5,8 +5,8 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import { runClientlessPluginEntry } from './clientless-entry.js';
 import type { PluginRequestPort } from './requests.js';
-import { noteInOriginTab } from './transcript-note.js';
 
 // The third host-to-plugin entry point, beside an opener/command and a tab-bound intent: the entry a
 // declaration contributes for a whole file navigator selection. It lives here rather than on the
@@ -41,12 +41,6 @@ export async function runPluginSelectionAction(
   paths: readonly string[],
   origin: PluginFailureOrigin,
 ): Promise<void> {
-  const record = port.record(id);
-  if (!record) return;
-  const activation = await port.ensureActive(record, origin);
-  if (!activation) return;
-  const outcome = await port.invoke(record, activation, origin, (capabilities) =>
+  await runClientlessPluginEntry(port, id, origin, (record, activation, capabilities) =>
     invokeSelectionAction(record.declaration, activation, action, paths, capabilities));
-  if (outcome.status === 'failed') port.disable(record, outcome.error, origin);
-  else if (outcome.status === 'rejected') noteInOriginTab(port.managers, origin, outcome.reason);
 }
