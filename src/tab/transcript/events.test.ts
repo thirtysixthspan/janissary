@@ -147,10 +147,30 @@ describe('updateRunningEntry', () => {
     const emit = vi.spyOn(messageBus, 'emit');
 
     updateRunningEntry([mk()], 'bob', { markdown: true }, '', false, { trailing: true, finalize: vi.fn() });
-    expect(emit).not.toHaveBeenCalledWith('transcript', expect.anything());
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
 
     updateRunningEntry([mk()], 'bob', undefined, 'done', false, { finalize: vi.fn() });
-    expect(emit).not.toHaveBeenCalledWith('transcript', expect.anything());
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
+  });
+
+  it('emits entry:updated when a running entry finishes with empty output', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'cd src', output: '', running: true }]);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([tab], 'bob', { command: 'cd src' }, '', false, { trailing: true, finalize: vi.fn() });
+
+    expect(tab.log).toEqual([{ input: 'cd src', output: '', running: false }]);
+    expect(emit).toHaveBeenCalledWith('transcript', { type: 'entry:updated', tabLabel: 'bob', tab });
+  });
+
+  it('emits no entry:updated while the entry is still running or when no running entry matches', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: '', running: true }]);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    updateRunningEntry([tab], 'bob', { command: 'ls' }, 'partial', true, {});
+    updateRunningEntry([tab], 'bob', { command: 'other' }, 'x', false, {});
+
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:updated' }));
   });
 
   it('matches a running entry by its input text when given a command match', () => {
@@ -218,13 +238,14 @@ describe('finishRunningTab', () => {
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
 
-  it('skips the transcript emit when there is no output', () => {
+  it('skips the trailing append but still reports the update when there is no output', () => {
     const tab = makeTab('bob', 'red', 1, [], [{ input: 'sleep', output: '', running: true }]);
     const emit = vi.spyOn(messageBus, 'emit');
 
     finishRunningTab([tab], 'bob', '', vi.fn(), vi.fn(), buildAgentState, vi.fn());
 
-    expect(emit).not.toHaveBeenCalledWith('transcript', expect.anything());
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
+    expect(emit).toHaveBeenCalledWith('transcript', { type: 'entry:updated', tabLabel: 'bob', tab });
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
 });

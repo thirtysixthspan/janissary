@@ -12,9 +12,10 @@ const VALID_NAME = /^[\w.-]+$/;
 
 let transcriptDir = '';
 
-// Subscribes to the bus and persists transcript files whenever entries are appended or a tab is
-// cleared. In-place edits (streaming, runShell completion) are persisted by direct calls to save()
-// from the controller since there is no bus event for them. A closed tab's file is removed by tab
+// Subscribes to the bus and persists transcript files whenever an entry is appended
+// (`entry:appended`), an entry already in the log is rewritten in place — a running entry
+// finishing, an inline terminal exiting (`entry:updated`) — or a tab is cleared. Streaming updates
+// to a still-running entry are not saved; the finishing rewrite is. A closed tab's file is removed by tab
 // teardown through `remove`, not from the bus, so the removal is ordered with the rest of the
 // teardown rather than racing it.
 export class TranscriptStore {
@@ -78,6 +79,9 @@ export class TranscriptStore {
     if (projectDir) transcriptDir = path.join(projectDir, '.janissary', 'transcripts');
     messageBus.on('transcript', 'entry:appended', (event) => {
       if (event.type === 'entry:appended') TranscriptStore.save(event.tabLabel, event.tab.log);
+    });
+    messageBus.on('transcript', 'entry:updated', (event) => {
+      if (event.type === 'entry:updated') TranscriptStore.save(event.tabLabel, event.tab.log);
     });
     messageBus.on('transcript', 'tab:cleared', (event) => {
       if (event.type === 'tab:cleared') TranscriptStore.clearTab(event.tabLabel);

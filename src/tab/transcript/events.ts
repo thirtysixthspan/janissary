@@ -24,7 +24,7 @@ export type UpdateRunningHooks = {
 
 // The one running-entry update every producer goes through: finds the running entry its match
 // selects (the most recent one), rewrites its output/running, and fires the finalize, unread,
-// trailing-entry, and dirty steps the shared choreography owns.
+// entry-updated, trailing-entry, and dirty steps the shared choreography owns.
 export function updateRunningEntry(
   tabs: Tab[], label: string, match: RunningEntryMatch | undefined,
   output: string, running: boolean, hooks: UpdateRunningHooks,
@@ -40,6 +40,7 @@ export function updateRunningEntry(
     if (!running) {
       hooks.finalize?.(tab);
       hooks.markUnread?.(label);
+      if (index !== -1) messageBus.emit('transcript', { type: 'entry:updated', tabLabel: label, tab });
       if (hooks.trailing && output) {
         messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output }, tab });
       }

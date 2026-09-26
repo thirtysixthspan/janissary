@@ -217,7 +217,7 @@ export class PseudoterminalManager {
           log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
           tab.log = log;
           this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
-          messageBus.emit('transcript', { type: 'entry:appended', tabLabel: tab.label, entry: log[index], tab });
+          messageBus.emit('transcript', { type: 'entry:updated', tabLabel: tab.label, tab });
         }
       }
     }
