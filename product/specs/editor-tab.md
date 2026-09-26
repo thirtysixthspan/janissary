@@ -244,6 +244,9 @@ on a remote host.
 - **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save
   attempt shows the same prompt again.
 
+Either answer returns keyboard focus to the buffer, so typing continues and the next Ctrl+S / Cmd+S
+reaches the editor, without the buffer scrolling.
+
 Reaching this prompt through the close dialog's **Save** does not close the tab: the question is
 still open and nothing has been written. The close dialog steps aside so this one can be answered,
 and closing the tab again after the overwrite succeeds closes it.
