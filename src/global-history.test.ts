@@ -122,6 +122,66 @@ describe('global-history', () => {
     expect(writer).toHaveBeenNthCalledWith(2, filePath, expect.stringContaining('"command": "hello"'));
   });
 
+  it('leaves a corrupt history file byte-for-byte unchanged after a record', () => {
+    const home = makeHome();
+    const dir = path.join(home, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const filePath = path.join(dir, 'history.json');
+    writeFileSync(filePath, '{not valid json');
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    initGlobalHistory(home);
+
+    recordGlobalHistory('kept in memory', 'tab-a');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('{not valid json');
+    expect(globalCommands()).toEqual(['kept in memory']);
+  });
+
+  it('does not overwrite a file that becomes unreadable after a successful start', () => {
+    const home = makeHome();
+    initGlobalHistory(home);
+    recordGlobalHistory('first', 'tab-a');
+    const filePath = path.join(home, '.janissary', 'history.json');
+    writeFileSync(filePath, '[{"command": "trunc');
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    recordGlobalHistory('second', 'tab-a');
+    recordGlobalHistory('third', 'tab-a');
+
+    expect(readFileSync(filePath, 'utf8')).toBe('[{"command": "trunc');
+    expect(globalCommands()).toEqual(['first', 'second', 'third']);
+    expect(warning).toHaveBeenCalledTimes(1);
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining('could not read history.json'));
+  });
+
+  it('keeps entries another instance wrote to the file since startup', () => {
+    const home = makeHome();
+    initGlobalHistory(home);
+    recordGlobalHistory('mine', 'tab-a');
+    const filePath = path.join(home, '.janissary', 'history.json');
+    const onDisk = JSON.parse(readFileSync(filePath, 'utf8')) as unknown[];
+    writeFileSync(filePath, JSON.stringify([...onDisk, { command: 'theirs', tab: 'other', timestamp: 2 }]));
+
+    recordGlobalHistory('mine again', 'tab-a');
+
+    expect(globalCommands()).toEqual(['mine', 'theirs', 'mine again']);
+    initGlobalHistory(home);
+    expect(globalCommands()).toEqual(['mine', 'theirs', 'mine again']);
+  });
+
+  it('judges a consecutive duplicate against the last command on disk', () => {
+    const home = makeHome();
+    initGlobalHistory(home);
+    recordGlobalHistory('repeat', 'tab-a');
+    const filePath = path.join(home, '.janissary', 'history.json');
+    const onDisk = JSON.parse(readFileSync(filePath, 'utf8')) as unknown[];
+    writeFileSync(filePath, JSON.stringify([...onDisk, { command: 'theirs', tab: 'other', timestamp: 2 }]));
+
+    recordGlobalHistory('repeat', 'tab-a');
+
+    expect(globalCommands()).toEqual(['repeat', 'theirs', 'repeat']);
+  });
+
   it('retains valid history and bounds warnings across failed updates', () => {
     const originalWriter = atomicWrite.atomicWriteFile;
     const writer = vi.spyOn(atomicWrite, 'atomicWriteFile');

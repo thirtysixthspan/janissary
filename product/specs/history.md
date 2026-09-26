@@ -47,3 +47,10 @@ All commands across all tabs are recorded in a shared global history buffer. The
 Global-history updates atomically replace the stored file, so an interrupted or failed update leaves
 the previous valid history intact. A malformed history file or persistence failure produces a
 warning; repeated storage failures are suppressed until history can be read or written successfully.
+
+The history file is shared by every running instance. Each update re-reads the file and appends to
+what is on disk at that moment, so instances running side by side keep each other's commands, and
+ghost text picks up commands another instance recorded. Consecutive-duplicate suppression compares
+against the last command in the file. A history file that exists but cannot be read — at startup or
+at a later update — is never overwritten for the rest of the run: commands are still recorded in
+memory and still ghost-complete, but the file is left untouched.
