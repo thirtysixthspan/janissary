@@ -1,11 +1,11 @@
 import {
   writeAgentEntry, writeEditorEntry, writeFilesEntry, writeHarnessEntry,
   writePluginEntry, writeSshEntry,
-} from './save-entries.js';
-import type { Managers } from '../managers.js';
-import type { ProfileTabFile } from './types.js';
-import type { Tab } from '../tab/types.js';
-import type { TreeSelection } from '../file-navigator/selection-request.js';
+} from './entries.js';
+import type { Managers } from '../../managers.js';
+import type { ProfileTabFile } from '../types.js';
+import type { Tab } from '../../tab/types.js';
+import type { TreeSelection } from '../../file-navigator/selection-request.js';
 
 // Per-tab routing for `profile save`, split out of save.ts to keep its cognitive complexity down.
 // Each tab produces one element of the profile's single `tabs` array, appended in tab-strip order,

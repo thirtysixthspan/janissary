@@ -1,7 +1,7 @@
-import type { ProfileLayoutFile, ProfileMonitorFile } from './types.js';
-import { getClientLayout } from '../client-layout.js';
-import { getWindowBoundsReader } from '../window-resizer.js';
-import type { Managers } from '../managers.js';
+import type { ProfileLayoutFile, ProfileMonitorFile } from '../types.js';
+import { getClientLayout } from '../../client-layout.js';
+import { getWindowBoundsReader } from '../../window-resizer.js';
+import type { Managers } from '../../managers.js';
 
 // Reserved-section builders for `profile save`: each returns the value `saveProfile` attaches under
 // the matching plain key, so a saved profile round-trips through `profile launch`. The array

@@ -5,7 +5,7 @@ import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { poolCandidates } from '../launch-name/check.js';
 import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
-import { saveProfile, formatSaveSummary } from './save.js';
+import { saveProfile, formatSaveSummary } from './save/index.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';

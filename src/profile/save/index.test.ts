@@ -2,19 +2,19 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { saveProfile, formatSaveSummary, type SaveSummary } from './save.js';
-import { initProfileDir, profilePath } from '../profiles.js';
-import { loadProfile } from './file.js';
-import { setClientLayout } from '../client-layout.js';
-import { setWindowBoundsReader } from '../window-resizer.js';
+import { saveProfile, formatSaveSummary, type SaveSummary } from './index.js';
+import { initProfileDir, profilePath } from '../../profiles.js';
+import { loadProfile } from '../file.js';
+import { setClientLayout } from '../../client-layout.js';
+import { setWindowBoundsReader } from '../../window-resizer.js';
 import {
   makeTab, makeHarnessTab, makePluginTab, makeEditorTab, makeFilesTab,
   makeNotificationsTab,
-} from '../tab/index.js';
-import { tabPluginCatalog } from '../plugins/catalog.js';
-import type { Managers } from '../managers.js';
-import type { FileNavigatorDetail, MonitorTarget, Tab } from '../tab/types.js';
-import type { LoadedProfile, ProfileFile } from './types.js';
+} from '../../tab/index.js';
+import { tabPluginCatalog } from '../../plugins/catalog.js';
+import type { Managers } from '../../managers.js';
+import type { FileNavigatorDetail, MonitorTarget, Tab } from '../../tab/types.js';
+import type { LoadedProfile, ProfileFile } from '../types.js';
 
 type Snapshot = { name: string; persona: string; targets: MonitorTarget[]; inline: boolean }[];
 
