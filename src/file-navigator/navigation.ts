@@ -28,12 +28,22 @@ export function toggleDir(port: NavPort, label: string, relPath: string): void {
   port.rebuild(label);
 }
 
+// Stop watching every directory a tab has expanded, and forget that it had. The root's own watcher
+// is not touched here: a caller that is about to watch a different root unwatches that separately,
+// while collapsing in place leaves the root being watched.
+//
+// The expanded set is cleared along with the watchers because a stale entry would claim a row the
+// tree no longer shows, and the tree is rebuilt from that set.
+export function dropExpandedWatchers(port: BasePort, state: FilesTabState): void {
+  for (const relPath of state.expanded) port.unwatchDir(state, relPath);
+  state.expanded.clear();
+}
+
 // Collapse every expanded directory back to just the root.
 export function collapseAllDirs(port: NavPort, label: string): void {
   const state = port.states.get(label);
   if (!state) return;
-  for (const relPath of state.expanded) port.unwatchDir(state, relPath);
-  state.expanded.clear();
+  dropExpandedWatchers(port, state);
   port.rebuild(label);
 }
 
@@ -49,8 +59,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   if (!target) return;
   if (state.remoteRoot && !containedPath(state.remoteRoot, path.relative(state.remoteRoot, target))) return;
   if (target === state.root) return;
-  for (const relPath2 of state.expanded) port.unwatchDir(state, relPath2);
-  state.expanded.clear();
+  dropExpandedWatchers(port, state);
   port.unwatchDir(state, '');
   state.root = target;
   state.gitStatuses = new Map();

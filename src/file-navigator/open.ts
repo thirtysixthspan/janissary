@@ -4,6 +4,7 @@ import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
 import { RemoteFileSystemPort } from './remote-port.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget } from '../tab/types.js';
+import { dropExpandedWatchers } from './navigation.js';
 import type { BasePort } from './port.js';
 import type { FilesTabState } from './state.js';
 
@@ -109,8 +110,7 @@ function retarget(
 ): void {
   const state = port.states.get(label);
   if (!state) return;
-  for (const relPath of state.expanded) port.unwatchDir(state, relPath);
-  state.expanded.clear();
+  dropExpandedWatchers(port, state);
   port.unwatchDir(state, '');
   if (!state.remote) state.filesystem.dispose();
   state.root = root;
