@@ -4,17 +4,6 @@
 
 ## development
 
-* Release a harness tab's recorder and transcript tailer when the tab closes, not only when its PTY reports an exit, so detaching a remote harness stops leaking them.
-
-Existing Debt: `HarnessManager` disposes a harness runtime only on a `pty exit` bus event, has no `closeTab`, and is absent from the tab-release list, but detaching a remote session deliberately never produces that exit, and a reattach under the same PTY id overwrites the old runtime in the map without disposing it. Severity: 5/10
-
-Existing Risk: 5/10 - Every detach of a remote harness leaves an open recording stream and a two-second polling timer running for the life of the process, and after a reattach the orphaned recorder is still subscribed to the reused PTY id, so the resumed session's output is also appended to the previous recording file.
-
-Proposal Risk: 2/10 - Runtimes are released on tab close and on replacement, but a runtime whose `dispose` is not idempotent could now be disposed twice on a local tab (close, then the late exit event), which the existing dispose tests would need to be checked against.
-
-Proposal: `HarnessManager` in `src/harness/manager.ts` keeps `runtimes = new Map<string, HarnessRuntime>()` keyed by PTY id, disposes an entry only in its `messageBus.on('pty', 'exit', ...)` subscription, and sets entries at both `this.runtimes.set(id, sshRuntime(...))` and `this.runtimes.set(id, harnessRuntime(...))`. The runtime built by `harnessRuntime` in `src/harness/observers.ts` owns a `HarnessRecorder` (`src/harness/recorder.ts`, a bus subscription and a `WriteStream`) and a `HarnessTranscriptTailer` (`src/harness/transcript/tailer.ts`, a `setInterval`). `detachRemoteEntry` in `src/remote/attach.ts` calls `channel.disconnect()`, after which `PseudoterminalManager.closeTab` in `src/pseudoterminal-manager.ts` calls the remote session's `kill`, whose `kill` frame `RemoteChannel.send` in `src/remote/channel.ts` drops because the channel is closed, so no exit event ever arrives. Record the owning tab label beside each runtime (for example `Map<string, { label: string; runtime: HarnessRuntime }>`), add `closeTab(label: string): void` that disposes and deletes every runtime for that label, add `'harness'` to `MANAGER_TAB_RELEASE` in `src/managers.ts`, and route both `set` sites through a private `install(id, label, runtime)` that disposes any runtime already stored under `id`. Confirm `HarnessRecorder.dispose` and `HarnessTranscriptTailer.dispose` are idempotent (the tailer already guards with `disposed`) so a local tab's late exit event after `closeTab` is harmless. `src/sessions/harness-roundtrip.test.ts` runs detach and attach cycles but mocks `harnessRuntime` as `() => ({ dispose: vi.fn() })` without asserting it; add an assertion that the first runtime's `dispose` is called on detach, and a `src/harness/manager.test.ts` case for `closeTab` and for a replaced id.
-
-
 * Stop walking the task and profile directories on every state broadcast by caching those listings and refreshing them on a short interval.
 
 Existing Debt: `buildStateEvent` runs a recursive `readdirSync` walk of `ai/tasks` in both the project and the janissary install, plus two profile directory listings, synchronously inside every state broadcast, and the broadcast fires on essentially every mutation including each chunk of shell and ACP output. Severity: 5/10

@@ -98,8 +98,11 @@ character outside `[\w-]` becomes `-`) and the ISO start timestamp has its `:` a
 The file is created **lazily, on the first output**: a harness that exits before producing any output
 (e.g. a binary not found on `PATH`, whose PTY exits immediately) leaves no empty file behind. A
 resize arriving before the first output only updates the pending header dimensions; it does not
-create the file. The file's append stream is opened on that first output and closed when the PTY
-exits or the application shuts down.
+create the file. The file's append stream is opened on that first output and closed when the tab
+closes, when the PTY exits, or when the application shuts down, whichever comes first. Closing the
+tab is enough on its own: a detached remote harness, whose PTY never reports an exit locally, stops
+recording when its tab goes. A PTY that later reuses the same session id (an attach bringing the tab
+back) starts a new recording file rather than appending to the earlier one.
 
 The recordings directory is **cleared at a fresh launch** and **preserved across `--relaunch`**,
 matching `.janissary/captures/` — a run's recordings are bounded to that run, and a relaunch handoff

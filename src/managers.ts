@@ -136,6 +136,7 @@ export const MANAGER_TAB_RELEASE = [
   'shell',
   'schedule',
   'pty',
+  'harness',
   'editorAcp',
   'editorWatch',
   'fileNavigator',

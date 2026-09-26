@@ -16,6 +16,7 @@ function makeManagers(): Managers {
     acp: { closeTab: vi.fn() },
     browser: { closeTab: vi.fn() },
     pty: { closeTab: vi.fn() },
+    harness: { closeTab: vi.fn() },
     tab: { deleteBusy: vi.fn(), forgetPersisted: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn() },
@@ -40,6 +41,7 @@ describe('closeTabResources', () => {
     expect(managers.acp.closeTab).toHaveBeenCalledWith('main');
     expect(managers.browser.closeTab).toHaveBeenCalledWith('main');
     expect(managers.pty.closeTab).toHaveBeenCalledWith('main');
+    expect(managers.harness.closeTab).toHaveBeenCalledWith('main');
     expect(managers.fileNavigator.closeTab).toHaveBeenCalledWith('main');
     expect(managers.editorWatch.closeTab).toHaveBeenCalledWith('main');
     expect(managers.editorAcp.closeTab).toHaveBeenCalledWith('main');
@@ -57,7 +59,7 @@ describe('closeTabResources', () => {
       const walk = managers[name].closeTab as ReturnType<typeof vi.fn>;
       walk.mockImplementation((_label: string) => { visited.push(name); });
     }
-    for (const name of ['monitor', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
+    for (const name of ['monitor', 'connection', 'profile', 'ssh', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
       (managers as unknown as Record<string, unknown>)[name] = undefined;
     }
 

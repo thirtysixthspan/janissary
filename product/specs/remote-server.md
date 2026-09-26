@@ -450,7 +450,9 @@ and "Detached-session auto-accept, notifications, and captures" below); the loca
 side is a consumer of what the remote reports, live while attached and replayed on the next attach
 when it wasn't. Asciicast recordings, by contrast, are still computed **locally** from the streamed
 bytes, exactly as for a local harness — a detached remote harness produces no recording for the gap,
-since there is no local process to write one. `harness transcript` is the other exception: its source
+since there is no local process to write one. Detaching closes the tab's recording file and stops its
+local transcript polling, and the attach that brings the tab back starts a fresh recording file
+rather than appending to the one closed at detach. `harness transcript` is the other exception: its source
 is the harness binary's own session record, which lives in the remote's dot directory, so the remote
 reads it and pushes the rendered blocks across.
 
