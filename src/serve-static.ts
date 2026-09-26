@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { servedContentType } from './open/content-type.js';
 import { serveOpenFile } from './open/route.js';
 import { originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
@@ -57,9 +58,10 @@ export function staticFileServer(options: StaticFileServerOptions) {
       const id = decodeURIComponent(urlPath.slice('/open/'.length));
       const filePath = options.openFilePath(id);
       if (!filePath) { res.writeHead(404).end('not found'); return; }
+      const extensionType = MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
       await serveOpenFile(request, res, filePath, {
         ...SECURITY_HEADERS,
-        'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
+        'content-type': await servedContentType(filePath, extensionType),
       });
       return;
     }

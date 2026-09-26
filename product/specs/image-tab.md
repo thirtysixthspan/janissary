@@ -47,7 +47,8 @@ The web client cannot read a local file path directly, and the app's web server 
 only its own bundled assets. Opening an image therefore **registers** the file, which adds it to an
 allow-list and yields a reference the client can request. The server answers that reference —
 subject to the same origin/authentication checks as the rest of the app — by streaming the bytes
-of that one registered file, with a content type derived from its extension. Only files the user
+of that one registered file, with a content type derived from its extension — except that an image
+whose contents are a PNG is served as a PNG whatever its extension says. Only files the user
 has explicitly opened are served; arbitrary paths are never reachable, so this adds no
 filesystem-traversal surface. A file's registration is dropped when its image tab is closed.
 
@@ -159,10 +160,13 @@ from the image tab's original path, so the client cannot choose another file or 
 Every save is a **PNG**, whatever the source format was. Editing is offered for every format the
 viewer opens, and two consequences follow from the single output format: an **animated GIF flattens**
 to the frame that was decoded, and an **SVG rasterizes** at the size it was rendered, losing its
-vector nature. Each is replaced by the flattened PNG output.
+vector nature. Each is replaced by the flattened PNG output. The file keeps its original name, so a
+saved SVG is PNG content under a `.svg` name; it still opens as an image tab afterwards, in this
+session or any later one, showing the PNG it now holds.
 
-After a successful save the header names the original file for a few seconds and then clears. The
-edits stay live and the tab keeps that original identity, so work can continue and be saved again.
+After a successful save the header names the original file for a few seconds and then clears, and
+its size changes to the size of the file just written. The edits stay live and the tab keeps that
+original identity, so work can continue and be saved again.
 
 Whether the tab counts as saved is a question about the edits, not about how many steps have been
 taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does

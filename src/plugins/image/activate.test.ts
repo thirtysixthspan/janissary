@@ -147,6 +147,24 @@ describe('image plugin intents', () => {
     expect(result).toEqual({ name: 'pic.png' });
   });
 
+  it('restates the written file size on the tab it saved, keeping the rest of the payload', () => {
+    const file = temporaryImage('vector.svg', 283);
+    const fixture = fakeCapabilities();
+    const tabPayload = { ...payload, name: 'vector.svg', path: file, size: '283 B', mode: 'edit' };
+
+    intent(
+      {
+        tab: 'image',
+        intent: 'save-edit',
+        payload: { dataUrl: `data:image/png;base64,${Buffer.alloc(3940).toString('base64')}` },
+        tabPayload,
+      },
+      fixture.capabilities,
+    );
+
+    expect(fixture.updated).toEqual([{ key: file, payload: { ...tabPayload, size: '3.8 KB' } }]);
+  });
+
   it('rejects a malformed save-edit payload without disabling the plugin', () => {
     const fixture = fakeCapabilities();
     expect(() => intent(
