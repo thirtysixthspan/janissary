@@ -2,6 +2,7 @@ import React, { createRef } from 'react';
 import { render, screen, waitFor, fireEvent, createEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
+import { contentHash } from '@shared/editor/save-conflict';
 import { EditorTab } from './EditorTab';
 import { editorDropHandle } from '../shared/drop-registry';
 import type { KeyLike } from './keys';
@@ -68,6 +69,8 @@ async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTa
   return result;
 }
 
+// Every fetch in these tests loads the same text, so an ordinary save is conditional on its hash.
+const LOADED_HASH = contentHash('line one\nline two');
 const textarea = () => screen.getByLabelText('Edit notes.txt');
 
 const textareaFor = (name: string) => screen.getByLabelText(`Edit ${name}`) as unknown as HTMLTextAreaElement;
@@ -222,7 +225,7 @@ describe('EditorTab', () => {
     await waitFor(() => expect(hasEnabledSaveButton(container)).toBe(true));
     fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
     await waitFor(() => expect(hasEnabledSaveButton(container)).toBe(false));
-    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two');
+    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two', LOADED_HASH);
     expect(screen.getByText('Saved')).toBeInTheDocument();
   });
 
@@ -236,7 +239,7 @@ describe('EditorTab', () => {
       return candidate!;
     });
     fireEvent.click(button);
-    await waitFor(() => expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two'));
+    await waitFor(() => expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two', LOADED_HASH));
     await waitFor(() => expect(button).toBeDisabled());
   });
 
@@ -256,7 +259,7 @@ describe('EditorTab', () => {
 
     fireEvent.keyDown(screen.getByLabelText('Edit renamed.txt'), { key: 's', metaKey: true });
     await waitFor(() => {
-      expect(saveFile).toHaveBeenCalledWith('/open/2', 'draft line one\nline two');
+      expect(saveFile).toHaveBeenCalledWith('/open/2', 'draft line one\nline two', LOADED_HASH);
       expect(hasDirtyDot(container)).toBe(false);
     });
   });
@@ -876,7 +879,7 @@ describe('EditorTab', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Overwrite (y)' }));
 
-    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two');
+    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two', undefined);
     await waitFor(() => expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument());
   });
 

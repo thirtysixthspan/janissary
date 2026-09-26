@@ -188,8 +188,9 @@ export class JanusClient {
 
   // Write an editor buffer back to disk. Resolves with the server's error message, or undefined
   // on success (including when the socket is down, which surfaces as a generic failure).
-  async saveFile(url: string, content: string): Promise<string | undefined> {
-    const result = await this.request<unknown>({ method: 'saveFile', params: { url, content } });
+  // `expectedHash` makes the write conditional on the file still holding that content.
+  async saveFile(url: string, content: string, expectedHash?: string): Promise<string | undefined> {
+    const result = await this.request<unknown>({ method: 'saveFile', params: { url, content, expectedHash } });
     return result.ok ? undefined : (result.error ?? 'not connected');
   }
 

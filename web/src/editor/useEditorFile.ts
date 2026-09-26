@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
+import { contentHash, SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
 import type { JanusClient } from '../ws';
 import { toText } from './model';
 import type { EditorApi } from './useEditor';
@@ -32,10 +33,17 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
 
   // Throws on every outcome that leaves the buffer unwritten, on top of showing the error. The
   // shared dirty-handle contract (see `DirtyTabHandle`) says a resolved save means the file is on
-  // disk, and the close guard closes the tab on the strength of that.
-  const writeToDisk = async (text: string) => {
+  // disk, and the close guard closes the tab on the strength of that. With `expectedHash` the server
+  // refuses to replace a file that no longer holds the text the buffer last matched — a change
+  // the watcher never delivered — and that refusal raises the overwrite prompt, not an error.
+  const writeToDisk = async (text: string, expectedHash?: string) => {
     setSaveError(null);
-    const error = await client.saveFile(editor.url, text);
+    const error = await client.saveFile(editor.url, text, expectedHash);
+    if (error === SAVE_CONFLICT_ERROR) {
+      conflictPendingRef.current = true;
+      setConflictOpen(true);
+      throw new Error('Save is waiting on the overwrite confirmation');
+    }
     if (error) { setSaveError(error); throw new Error(error); }
     setLastSaved(text);
     conflictPendingRef.current = false;
@@ -50,7 +58,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
       setConflictOpen(true);
       throw new Error('Save is waiting on the overwrite confirmation');
     }
-    await writeToDisk(toText(s));
+    await writeToDisk(toText(s), lastSaved === null ? undefined : contentHash(lastSaved));
   };
 
   useEffect(() => {

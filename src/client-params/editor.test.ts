@@ -6,6 +6,7 @@ import { PLUGIN_PARAMS } from './plugin.js';
 
 const EDITOR_CASES: Array<[keyof typeof EDITOR_PARAMS, Record<string, unknown>, Array<Record<string, unknown>>]> = [
   ['saveFile', { url: '/open/1', content: 'x' }, [{ url: '/open/1' }, { url: '/open/1', content: 7 }]],
+  ['saveFile', { url: '/open/1', content: 'x', expectedHash: '1-abc' }, [{ url: '/open/1', content: 'x', expectedHash: 7 }]],
   ['editorSync', { url: '/open/1', content: '' }, [{ content: '' }, { url: null, content: '' }]],
   ['resyncEditorTab', { url: '/open/1' }, [{}, { url: 1 }]],
   ['editorSuggest', { url: '/open/1', persona: 'critic', content: 'x', prompt: 'y' }, [

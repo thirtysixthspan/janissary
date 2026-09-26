@@ -9,12 +9,16 @@ import { remoteFileFor } from '../file-navigator/remote/file-cache.js';
 import { notify } from '../notifications/index.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { errorText } from '../error-text.js';
+import { refuseStaleSave } from './stale-save.js';
+import { refreshSyncedTabs } from './refresh-synced.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly
 // opened. Throws on an unknown ref or a write failure; the RPC layer turns that into an error
-// reply for the client's save feedback.
-export function saveFile(managers: Managers, url: string, content: string): MaybePromise<void> {
+// reply for the client's save feedback. `expectedHash`, when given, is the fingerprint of the
+// content the buffer last matched, and the write is refused if the file on disk no longer has it
+// (see `refuseStaleSave`); the overwrite prompt's own write omits it to replace the file anyway.
+export function saveFile(managers: Managers, url: string, content: string, expectedHash?: string): MaybePromise<void> {
   const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
   const filePath = id ? managers.tab.openFilePath(id) : undefined;
   if (!filePath) throw new Error(`saveFile: unknown file ref "${url}"`);
@@ -28,6 +32,7 @@ export function saveFile(managers: Managers, url: string, content: string): Mayb
   const isFirstNewFileSave = wasNewFile && existsSync(filePath) && !remote;
   const targetPath = isFirstNewFileSave ? path.join(path.dirname(filePath), nextFreeName(path.dirname(filePath), path.basename(filePath))) : filePath;
 
+  if (expectedHash !== undefined && !wasNewFile && !remote) refuseStaleSave(managers, tab?.label, filePath, expectedHash);
   atomicWriteFile(targetPath, content);
   if (remote) return saveRemote(managers, remote, content, () => finishSave(
     managers, url, targetPath, filePath, wasNewFile,
@@ -65,7 +70,7 @@ function finishSave(
   // slow or failing network sync never delays the save confirmation the user already saw.
   if (tab?.editor?.sync) {
     tab.editor = { ...tab.editor, sync: 'syncing' };
-    void syncAfterSave(managers, tab.label, tab.editor.name);
+    void syncAfterSave(managers, tab.label, tab.editor.path);
   }
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -87,8 +92,15 @@ async function saveRemote(
   }
 }
 
-async function syncAfterSave(managers: Managers, label: string, filename: string): Promise<void> {
-  const result = await managers.gitSync.saveSync(filename);
+// The cycle's pull may have rewritten this or any other synced file, so every synced tab is
+// re-checked once it settles, whichever way it went. A failure is also a notification, which the
+// sync icon's error tooltip points the user to.
+async function syncAfterSave(managers: Managers, label: string, filePath: string): Promise<void> {
+  const result = await managers.gitSync.saveSync(filePath);
+  refreshSyncedTabs(managers);
+  if ('error' in result) {
+    notify(managers, 'file-operation', label, `Could not sync ${path.basename(filePath)}: ${result.error}`);
+  }
   const tab = managers.tab.editorTab(label);
   if (!tab) return;
   tab.editor = { ...tab.editor, sync: 'error' in result ? 'error' : 'synced' };

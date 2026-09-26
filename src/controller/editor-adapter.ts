@@ -12,7 +12,7 @@ import type { Managers } from '../managers.js';
 import type { MaybePromise } from '../maybe-promise.js';
 
 export type EditorControllerAdapter = {
-  saveFile(url: string, content: string): MaybePromise<void>;
+  saveFile(url: string, content: string, expectedHash?: string): MaybePromise<void>;
   syncEditorBuffer(url: string, content: string): void;
   resyncEditorTab(url: string): void;
   projectFiles(): Promise<{ root: string; paths: string[] }>;
@@ -27,7 +27,7 @@ export type EditorControllerAdapter = {
 
 export function createEditorControllerAdapter(managers: Managers): EditorControllerAdapter {
   return {
-    saveFile: (url, content) => saveFile(managers, url, content),
+    saveFile: (url, content, expectedHash) => saveFile(managers, url, content, expectedHash),
     syncEditorBuffer: (url, content) => syncEditorBuffer(managers, url, content),
     resyncEditorTab: (url) => { void resyncEditorTab(managers, url); },
     projectFiles: () => projectFilesFor(managers),

@@ -8,7 +8,10 @@ export type SuggestHunk = { anchor: string; replacement: string };
 export type EditorRpcCall =
   // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref — the server
   // resolves it through the open-file allow-list, so only explicitly opened files are writable.
-  | { method: 'saveFile'; params: { url: string; content: string } }
+  // `expectedHash` is `contentHash` (`src/editor/save-conflict.ts`) of the text the buffer last
+  // matched on disk; the server refuses with `SAVE_CONFLICT_ERROR` when the file no longer holds
+  // it. Omitted, the write replaces whatever is there — the overwrite prompt's own save.
+  | { method: 'saveFile'; params: { url: string; content: string; expectedHash?: string } }
   // Sync an editor tab's in-progress (unsaved) buffer to the server as transient draft
   // state, debounced client-side after typing pauses. Never written to disk — see saveFile
   // for that. `url` identifies the tab the same way saveFile's does.

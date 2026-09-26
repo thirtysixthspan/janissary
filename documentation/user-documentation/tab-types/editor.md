@@ -163,6 +163,8 @@ Your typing always wins if you start editing while Janissary is still reading an
 
 If you do have unsaved changes, your edits are left alone. The next time you try to save, a dialog appears instead: "This file changed on disk. Overwrite it with your changes?" with **Overwrite** and **Cancel**. Overwrite writes your buffer over the external change; Cancel leaves your buffer as it is, still unsaved, and shows the same prompt again on your next save attempt.
 
+Every save also checks the file on disk at the moment you save. If the file no longer matches what your buffer was loaded from or last saved as, nothing is written and the same dialog appears, even if the change was never picked up while it happened. A save can't quietly replace content you never saw.
+
 As you type, the editor also keeps a transient, unsaved copy of your buffer synced to the server a moment after you stop, so a [monitor](/user-documentation/automation/monitoring) watching the tab can see your in-progress edits without you having to save. That draft is never written to disk and never shown back in the editor; it's cleared the moment you do save.
 
 ## Syntax highlighting

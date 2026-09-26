@@ -6,11 +6,15 @@ import { saveFile } from './save.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { EditorWatchManager } from './watch-manager.js';
+import { contentHash, SAVE_CONFLICT_ERROR } from './save-conflict.js';
+
+const { notify } = vi.hoisted(() => ({ notify: vi.fn() }));
+vi.mock('../notifications/index.js', () => ({ notify }));
 
 function setup(content = 'original') {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+  managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
   const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-'));
   const file = path.join(dir, 'notes.txt');
   writeFileSync(file, content);
@@ -86,7 +90,7 @@ describe('saveFile', () => {
   it('leaves a draft intact when the save fails', () => {
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
-    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const url = managers.tab.registerFile('/no/such/dir/notes.txt');
     managers.tab.openEditorTab({ name: 'notes.txt', path: '/no/such/dir/notes.txt', size: '0 B', url });
     const tab = managers.tab.tabs.find((t) => t.editor);
@@ -109,11 +113,52 @@ describe('saveFile', () => {
   });
 });
 
+describe('saveFile stale-buffer guard', () => {
+  it('refuses to write over content the buffer never saw, and refreshes the tab\'s watcher', () => {
+    const { managers, file, url } = setup('original');
+    const refresh = vi.fn();
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh } as unknown as Managers['editorWatch'];
+    writeFileSync(file, 'changed by a pull');
+
+    expect(() => saveFile(managers, url, 'my edit', contentHash('original'))).toThrow(SAVE_CONFLICT_ERROR);
+
+    expect(readFileSync(file, 'utf8')).toBe('changed by a pull');
+    expect(refresh).toHaveBeenCalledWith(managers.tab.tabs.find((t) => t.editor)?.label);
+  });
+
+  it('writes when the file still holds the content the buffer last matched', () => {
+    const { managers, file, url } = setup('original');
+    saveFile(managers, url, 'my edit', contentHash('original'));
+    expect(readFileSync(file, 'utf8')).toBe('my edit');
+  });
+
+  it('writes over a changed file when no expected hash is sent — the overwrite prompt\'s save', () => {
+    const { managers, file, url } = setup('original');
+    writeFileSync(file, 'changed by a pull');
+    saveFile(managers, url, 'my edit');
+    expect(readFileSync(file, 'utf8')).toBe('my edit');
+  });
+
+  it('matches a file with a byte-order mark against the text the browser read without it', () => {
+    const { managers, file, url } = setup();
+    writeFileSync(file, '\u{FEFF}original');
+    saveFile(managers, url, 'my edit', contentHash('original'));
+    expect(readFileSync(file, 'utf8')).toBe('my edit');
+  });
+
+  it('writes a file that no longer exists rather than refusing', () => {
+    const { managers, file, url } = setup('original');
+    rmSync(file);
+    saveFile(managers, url, 'my edit', contentHash('original'));
+    expect(readFileSync(file, 'utf8')).toBe('my edit');
+  });
+});
+
 describe('saveFile git sync', () => {
   function setupSynced(saveSync: (filename: string) => Promise<{ ok: true } | { error: string }>) {
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
-    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-sync-'));
     const file = path.join(dir, 'synced.txt');
@@ -147,12 +192,12 @@ describe('saveFile git sync', () => {
     await vi.waitFor(() => expect(tab?.editor?.sync).toBe('synced'));
   });
 
-  it('passes the saved file\'s name to the sync cycle', async () => {
+  it('passes the saved file\'s path to the sync cycle, so it commits that file alone', async () => {
     const saveSync = vi.fn().mockResolvedValue({ ok: true });
-    const { managers, url } = setupSynced(saveSync);
+    const { managers, file, url } = setupSynced(saveSync);
     saveFile(managers, url, 'updated content');
 
-    await vi.waitFor(() => expect(saveSync).toHaveBeenCalledWith('synced.txt'));
+    await vi.waitFor(() => expect(saveSync).toHaveBeenCalledWith(file));
   });
 
   it('transitions sync to error when the cycle rejects', async () => {
@@ -163,11 +208,41 @@ describe('saveFile git sync', () => {
     await vi.waitFor(() => expect(tab?.editor?.sync).toBe('error'));
   });
 
+  it('reports a failed cycle in the notifications tab', async () => {
+    notify.mockClear();
+    const { managers, url } = setupSynced(() => Promise.resolve({ error: 'push rejected (non-fast-forward)' }));
+    saveFile(managers, url, 'updated content');
+    const label = managers.tab.tabs.find((t) => t.editor)?.label;
+
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(
+      managers, 'file-operation', label, 'Could not sync synced.txt: push rejected (non-fast-forward)',
+    ));
+  });
+
+  it('re-checks every open synced tab once the cycle\'s pull has run, but no unsynced one', async () => {
+    const { promise, resolve } = Promise.withResolvers<{ ok: true }>();
+    const { managers, url } = setupSynced(() => promise);
+    const refresh = vi.fn();
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh } as unknown as Managers['editorWatch'];
+    const other = managers.tab.openEditorTab({ name: 'other.md', path: '/sync/other.md', size: '1 B', url: managers.tab.registerFile('/sync/other.md'), sync: 'synced' });
+    const plain = managers.tab.openEditorTab({ name: 'plain.md', path: '/plain.md', size: '1 B', url: managers.tab.registerFile('/plain.md') });
+    const saved = managers.tab.tabs.find((t) => t.editor?.name === 'synced.txt')!.label;
+
+    saveFile(managers, url, 'updated content');
+    expect(refresh).not.toHaveBeenCalled();
+    resolve({ ok: true });
+
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(2));
+    expect(refresh).toHaveBeenCalledWith(saved);
+    expect(refresh).toHaveBeenCalledWith(other);
+    expect(refresh).not.toHaveBeenCalledWith(plain);
+  });
+
   it('does not start a sync cycle for a tab with no sync field', () => {
     const saveSync = vi.fn();
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
-    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-nosync-'));
     const file = path.join(dir, 'plain.txt');
@@ -185,7 +260,7 @@ describe('saveFile new-file auto-suffix', () => {
   function setupNewFile(dir: string, name = 'untitled.md') {
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
-    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const file = path.join(dir, name);
     const url = managers.tab.registerFile(file);
     managers.tab.openEditorTab({ name, path: file, size: 'unknown', url, newFile: true });
@@ -221,7 +296,7 @@ describe('saveFile new-file auto-suffix', () => {
     writeFileSync(file, 'original');
     const managers = {} as Managers;
     managers.tab = new TabManager(managers);
-    managers.editorWatch = { watch: () => {}, markSaved: () => {} } as unknown as Managers['editorWatch'];
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const url = managers.tab.registerFile(file);
     managers.tab.openEditorTab({ name: 'existing.txt', path: file, size: '8 B', url });
     saveFile(managers, url, 'updated');
