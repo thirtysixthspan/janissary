@@ -3,7 +3,7 @@
 // a failed chunk fetch, or a budget overrun disables that one plugin and leaves the editor and every
 // other plugin running.
 
-import { errorText } from '@shared/error-text';
+import { errorFirstLine } from '@shared/error-text';
 import type {
   BoundBinding, EditorPluginHandler, EditorPluginLoader, EditorPluginRequest, EditorPluginResult,
 } from './api';
@@ -29,12 +29,6 @@ export type EditorPluginHostOptions = {
   loaders?: Record<string, EditorPluginLoader>;
   timeoutMs?: number;
 };
-
-function failureReason(error: unknown): string {
-  const message = errorText(error);
-  const firstLine = message.split(/\r?\n/, 1)[0].trim().replace(/[.!?;:]+$/u, '').trim();
-  return firstLine || 'Unknown failure';
-}
 
 // `onDisabled` fires once per plugin, the first time it is disabled. The host deliberately knows
 // nothing about how a failure is reported — the hook wires that to the notifications path.
@@ -99,7 +93,7 @@ export function createEditorPluginHost(
         const result = await guardPluginCall(() => handler(request), timeoutMs);
         return { status: 'ok', result: result ?? null };
       } catch (error) {
-        const reason = failureReason(error);
+        const reason = errorFirstLine(error);
         disable(binding.plugin, reason);
         return { status: 'failed', reason };
       }

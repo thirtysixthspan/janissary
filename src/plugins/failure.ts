@@ -1,17 +1,15 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
-import { errorText } from '../error-text.js';
+import { errorFirstLine } from '../error-text.js';
 
 export type PluginFailureOrigin = { label: string; command: string };
 
-export function pluginFailureReason(error: unknown): string {
-  const message = errorText(error);
-  const firstLine = message.split(/\r?\n/, 1)[0].trim().replace(/[.!?;:]+$/u, '').trim();
-  return firstLine || 'Unknown failure';
-}
+// The reason a disabled plugin is recorded and reported with, kept under the name the plugin host
+// and its tests use; the derivation itself is shared with the web editor plugin host.
+export { errorFirstLine as pluginFailureReason } from '../error-text.js';
 
 export function pluginFailureMessage(id: string, error: unknown): string {
-  return `Tab plugin "${id}" disabled: ${pluginFailureReason(error)}.`;
+  return `Tab plugin "${id}" disabled: ${errorFirstLine(error)}.`;
 }
 
 export function reportPluginFailure(
