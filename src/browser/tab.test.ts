@@ -173,6 +173,64 @@ describe('BrowserManager', () => {
     expect(result).toBe('Browser error: boom');
   });
 
+  it('two concurrent first uses on a fresh tab launch one browser', async () => {
+    const manager = new BrowserManager(makeManagers());
+    const [first, second] = await Promise.all([
+      manager.run('main', 'goto https://first.example.com'),
+      manager.run('main', 'goto https://second.example.com'),
+    ]);
+    expect(launchTabBrowser).toHaveBeenCalledTimes(1);
+    expect(first).toBe('title — https://example.com/w1');
+    expect(second).toBe('title — https://example.com/w2');
+  });
+
+  it('closeTab during a launch closes the browser once the launch lands', async () => {
+    const manager = new BrowserManager(makeManagers());
+    const browser = makeTabBrowser();
+    const gate = Promise.withResolvers<void>();
+    launchTabBrowser.mockImplementation(async () => {
+      await gate.promise;
+      return browser;
+    });
+
+    const opening = manager.run('main', 'open');
+    manager.closeTab('main');
+    gate.resolve();
+    await opening;
+
+    expect(manager.has('main')).toBe(false);
+    await vi.waitFor(() => expect(browser.close).toHaveBeenCalled());
+  });
+
+  it('closeAll during a launch closes the browser once the launch lands', async () => {
+    const manager = new BrowserManager(makeManagers());
+    const browser = makeTabBrowser();
+    const gate = Promise.withResolvers<void>();
+    launchTabBrowser.mockImplementation(async () => {
+      await gate.promise;
+      return browser;
+    });
+
+    const goto = manager.run('main', 'goto https://example.com');
+    manager.closeAll();
+    gate.resolve();
+    await goto;
+
+    expect(manager.has('main')).toBe(false);
+    await vi.waitFor(() => expect(browser.close).toHaveBeenCalled());
+  });
+
+  it('a failed launch leaves no record, so a later use of the tab launches again', async () => {
+    const manager = new BrowserManager(makeManagers());
+    launchTabBrowser.mockImplementationOnce(async () => { throw new Error('boom'); });
+
+    expect(await manager.run('main', 'open')).toBe('Browser error: boom');
+    expect(manager.has('main')).toBe(false);
+
+    expect(await manager.run('main', 'open')).toContain('Opened browser window w1');
+    expect(manager.has('main')).toBe(true);
+  });
+
   it('closeTab closes and removes a tab browser', async () => {
     const manager = new BrowserManager(makeManagers());
     await manager.run('main', 'open');

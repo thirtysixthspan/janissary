@@ -1,9 +1,11 @@
-import { launchTabBrowser } from './index.js';
 import { parseBrowserCommand } from './command.js';
 import type { Managers } from '../managers.js';
 import {
   closeBrowserWindow,
+  entryFor,
   formatList,
+  liveEntry,
+  releaseEntry,
   runContent,
   runEval,
   runGoto,
@@ -21,19 +23,22 @@ export class BrowserManager {
     return this.browsers.has(label);
   }
 
-  // Live window state for a tab (for the connections panel / `connection list`).
+  // Live window state for a tab (for the connections panel / `connection list`). A tab whose
+  // browser is still launching has no windows to report yet, so it reports none.
   info(label: string): { ids: string[]; mode: string; current?: string } | null {
-    const entry = this.browsers.get(label);
+    const entry = liveEntry(this.browsers.get(label));
     return entry ? { ids: entry.browser.windowIds(), mode: entry.browser.mode, current: entry.current } : null;
   }
 
   closeTab(label: string): void {
     const entry = this.browsers.get(label);
-    if (entry) { void entry.browser.close(); this.browsers.delete(label); }
+    if (!entry) return;
+    this.browsers.delete(label);
+    releaseEntry(entry);
   }
 
   closeAll(): void {
-    for (const [, entry] of this.browsers) void entry.browser.close();
+    for (const entry of this.browsers.values()) releaseEntry(entry);
     this.browsers.clear();
   }
 
@@ -50,10 +55,12 @@ export class BrowserManager {
     try {
       switch (parsed.action) {
         case 'open': {
-          let entry = this.browsers.get(label);
-          const notice = entry && parsed.headed && entry.browser.mode === 'headless'
+          // The notice is about a browser that is already running, so a launch still in flight has
+          // nothing to report and the mode it asked for is the mode it gets.
+          const running = liveEntry(this.browsers.get(label));
+          const notice = running && parsed.headed && running.browser.mode === 'headless'
             ? ' (this tab is already running headless; close all windows to relaunch headed)' : '';
-          if (!entry) { entry = { browser: await launchTabBrowser(!parsed.headed), counter: 0 }; this.browsers.set(label, entry); }
+          const entry = running ?? await entryFor(this.browsers, label, !parsed.headed);
           const id = `w${++entry.counter}`;
           await entry.browser.openWindow(id);
           entry.current = id;
@@ -63,13 +70,13 @@ export class BrowserManager {
           return formatList(this.browsers.get(label));
         }
         case 'use': {
-          const entry = this.browsers.get(label);
+          const entry = liveEntry(this.browsers.get(label));
           if (!entry || !entry.browser.window(parsed.id)) return `No browser window ${parsed.id}.`;
           entry.current = parsed.id;
           return `Using browser window ${parsed.id}.`;
         }
         case 'close': {
-          const entry = this.browsers.get(label);
+          const entry = liveEntry(this.browsers.get(label));
           if (!entry?.current) return 'No browser window to close.';
           return await closeBrowserWindow(this.browsers, label, entry.current);
         }
