@@ -1,6 +1,6 @@
 # Read formatted Markdown in the transcript
 
-ACP replies and the `help` output appear as formatted GitHub-flavored Markdown in the transcript. You can read headings, lists, tables, task lists, fenced code blocks, blockquotes, links, and horizontal rules without leaving the tab.
+ACP replies and the `help` output appear as formatted GitHub-flavored Markdown in the transcript. You can read headings, lists, tables, task lists, fenced code blocks, blockquotes, links, and horizontal rules without leaving the tab. Everything is colored to match the transcript around it, so headings, inline and fenced code, bordered tables, lists, blockquotes, rules, and links all read as part of the app rather than as a web page dropped into it. A single newline inside a paragraph starts a new line instead of running on, so a reply that hard-wraps its own prose still comes out one line per line of the source.
 
 <img class="agent-float" src="/agents/hakim-south-east.png" alt="" />
 
@@ -8,7 +8,7 @@ ACP replies and the `help` output appear as formatted GitHub-flavored Markdown i
 
 When you use `acp <prompt>`, the reply renders while the agent writes it. The app keeps each Markdown reply together, so multi-line lists, tables, and fenced code blocks keep their structure. A partial table or code fence can look unfinished during the turn and settle as more text arrives.
 
-ACP replies are the agent's prose. Automatic `db` and `browser` tool steps remain plain text and appear as collapsed command/result entries. Expand one with `Ctrl+T` to inspect it. Shell output, database results, browser results, and inter-agent messages also remain plain text.
+Replies come back structured because the app asks for that before your prompt reaches the agent. Every `acp` prompt is prefixed with an instruction to answer in GitHub-flavored Markdown, naming headings, lists, tables, and fenced code blocks. The agent's prose is rendered as Markdown because of that instruction; nothing else in the transcript goes through the same rendering. Automatic `db` and `browser` tool steps remain plain text and appear as collapsed command/result entries. Expand one with `Ctrl+T` to inspect it. Shell output, database results, browser results, and inter-agent messages also remain plain text.
 
 <img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
 
@@ -21,7 +21,7 @@ src/app.ts:42
 tests/test.py:10:5
 ```
 
-Select a link to open that file in an editor at the indicated line. A `file:line:column` link also opens at its line; the column is not used as the editor position. A bare value such as `error:42` is not treated as a file link.
+A single click on a link opens that file in an editor with the target line scrolled to the middle of the tab, so the line and its surroundings are in view without scrolling. A `file:line:column` link also opens at its line; the column is not used as the editor position. A bare value such as `error:42` is not treated as a file link.
 
 ## Use safe links and markup
 

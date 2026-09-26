@@ -8,11 +8,15 @@ What gets completed depends on where in the command you are:
 
 | Context | Candidates |
 |---|---|
-| The recipient of `msg` | Active agent names |
-| The recipient of `broadcast` | Active agent names, plus `all`; completes each segment of a comma-separated list (`ahmed,bil` → `ahmed,bilal`) |
-| The target of [`send`](/user-documentation/command-bar/send), [`queue`](/user-documentation/command-bar/queue), or `close` / `exit` | Every open tab's label, not just agents |
+| The recipient of `msg` | Every open tab's label, not just agents |
+| The recipient of `broadcast` | The same labels, plus `all`; completes each segment of a comma-separated list (`ahmed,bil` → `ahmed,bilal`) |
+| The target of [`send`](/user-documentation/command-bar/send), [`queue`](/user-documentation/command-bar/queue), or `close` / `exit` | Every open tab's label |
+| The tab in a [`schedule … in <tab>`](/user-documentation/automation/scheduling#scheduling-into-another-tab) clause | Every open tab's label |
 | The target of [`connection close`](/user-documentation/command-bar/connections) | Open connection strings (`sqlite:my-db`, `shell:bash`, `acp:opencode`, `browser:w1`, `ssh:my-host`) |
 | After `browser` | Browser subcommands; for those that take a window id (`browser use`, `browser window close`), the current tab's open window ids |
+| After `harness <name>`, at `--model` | That harness's known model names; `--model` may sit anywhere after the harness name |
+| After `syntax` | `theme` at the first argument, and the available theme names after it |
+| After `search` | `transcript`, its only subcommand |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 
 Path completion expands `~` to your home directory, and hides dotfiles unless what you've typed already starts with a `.`.
