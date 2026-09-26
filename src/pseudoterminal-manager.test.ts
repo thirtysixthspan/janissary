@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { spawnPty } from './pty.js';
 import { PseudoterminalManager } from './pseudoterminal-manager.js';
 import { makeTab } from './tab/index.js';
+import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
 import type { Tab } from './tab/types.js';
 
@@ -288,6 +289,21 @@ describe('PseudoterminalManager', () => {
 
     expect(tab.log[0].terminal).toEqual({ ptyId: id, program: 'vim', status: 'exited', exitCode: 1 });
     expect(persist).toHaveBeenCalled();
+  });
+
+  it('handleExit reports the terminal card rewrite as entry:updated, not as a new entry', () => {
+    const tab = makeTab('main', 'red');
+    const { managers } = makeManagers([tab]);
+    const manager = new PseudoterminalManager(managers);
+    const id = manager.spawn('main', 'vim', 'vim file.txt', '/repo');
+    tab.log = [{ input: 'vim file.txt', output: '', terminal: { ptyId: id, program: 'vim', status: 'running' } }];
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    capturedHandlers!.onExit(id, 0);
+
+    expect(emit).toHaveBeenCalledWith('transcript', { type: 'entry:updated', tabLabel: 'main', tab });
+    expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
+    emit.mockRestore();
   });
 
   it('handleExit on an already-removed PTY does not touch tab logs', () => {

@@ -15,6 +15,8 @@ atomically replaces that record, so an interrupted or failed write leaves the pr
 transcript intact. Persistence failures are reported as warnings, with repeated failures for the
 same tab suppressed until a write succeeds.
 
+The record is rewritten whenever an entry changes in place, not only when a new one is added. A command that finishes with no output (`cd`, `mkdir`, a silent script) and an inline terminal that exits are both saved as finished, so a relaunch never restores them as still running. That in-place change is not a new entry: the daily transcript log and any monitor watching the tab do not receive an exited terminal's command a second time.
+
 ### Remembered interactive commands
 
 `.janissary/interactive-commands.json` holds the programs that were seen taking over the terminal, as a plain list. It is written when interactive detection promotes a command, read at startup, and merged with the built-in list of interactive programs so a program is recognized before it runs the next time (see `shell.md`). It sits alongside `config.json` rather than in `state/`, so it survives an ordinary launch; a malformed file is ignored and left untouched. Users edit it directly — delete an entry to forget one program, or the file to forget all of them.

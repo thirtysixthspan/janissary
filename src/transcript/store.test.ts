@@ -122,6 +122,12 @@ describe('TranscriptStore bus subscription', () => {
     expect(TranscriptStore.load('janus')).toEqual(log);
   });
 
+  it('persists the full log on entry:updated', () => {
+    const log = [{ input: 'cd src', output: '', running: false }];
+    messageBus.emit('transcript', { type: 'entry:updated', tabLabel: 'janus', tab: tabWith('janus', log) });
+    expect(TranscriptStore.load('janus')).toEqual(log);
+  });
+
   it('writes [] on tab:cleared', () => {
     TranscriptStore.save('janus', [entry('x', 'y')]);
     messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: 'janus' });

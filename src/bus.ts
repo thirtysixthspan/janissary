@@ -110,6 +110,7 @@ export class MessageBus<C extends ChannelMap> {
 
 export type BusEvent =
   | { type: 'entry:appended'; tabLabel: string; entry: LogEntry; tab: Readonly<Tab> }
+  | { type: 'entry:updated'; tabLabel: string; tab: Readonly<Tab> }
   | { type: 'entries:trimmed'; tabLabel: string; count: number }
   | { type: 'tab:cleared'; tabLabel: string }
   | { type: 'tab:removed'; tabLabel: string };
