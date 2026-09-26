@@ -3,7 +3,7 @@ import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture-file.js';
 import type { PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';
-import type { RemoteChannel } from './channel.js';
+import type { RemoteChannel } from './channel/index.js';
 
 // The decisions a remote process is started with, mirroring `spawnPty`'s own arguments. `program`
 // is the *remote binary's* name (`claude`, not `ssh`), so the connections panel reports a

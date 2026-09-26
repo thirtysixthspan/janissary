@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { NavigatorListener, RemoteChannel } from '../remote/channel.js';
+import type { NavigatorListener, RemoteChannel } from '../remote/channel/index.js';
 import type { ClientFrame } from '../remote/protocol.js';
 import { RemoteFileSystemPort } from './remote-port.js';
 

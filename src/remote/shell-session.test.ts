@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createRemoteShell } from './shell-session.js';
-import { RemoteChannel, type ChannelTransport } from './channel.js';
+import { RemoteChannel, type ChannelTransport } from './channel/index.js';
 import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame, type ShellHistoryRun } from './protocol.js';
 import { executeShellCmd, queryShellPwd } from '../shell/index.js';
 

@@ -1,5 +1,5 @@
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
-import type { RemoteChannel } from './channel.js';
+import type { RemoteChannel } from './channel/index.js';
 
 // What the local side decides and sends across: which agent runs, with what arguments and
 // environment, and whether it is confined offline. The remote supplies the workspace directory it

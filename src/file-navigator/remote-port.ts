@@ -1,5 +1,5 @@
 import type { BulkConflictPolicy } from '../protocol.js';
-import type { RemoteChannel, NavigatorListener } from '../remote/channel.js';
+import type { RemoteChannel, NavigatorListener } from '../remote/channel/index.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../remote/protocol.js';
 import type { DeleteManyResult, MoveManyResult } from './batch.js';
 import type { FileOperationResult } from './file-operation-result.js';

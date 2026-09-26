@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
-import type { RemoteChannel } from '../remote/channel.js';
+import type { RemoteChannel } from '../remote/channel/index.js';
 import type { RemoteLaunchHandlers } from '../remote/manager.js';
 import type { TerminateOutcome } from './terminate-session.js';
 import { terminateParkedSession } from './terminate-session.js';

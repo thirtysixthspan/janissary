@@ -1,6 +1,6 @@
-import type { RemoteFrame } from './protocol.js';
-import type { SessionRouter } from './channel-sessions.js';
-import type { CaptureRequestTracker } from './channel-capture.js';
+import type { RemoteFrame } from '../protocol.js';
+import type { SessionRouter } from './sessions.js';
+import type { CaptureRequestTracker } from './capture.js';
 
 // The process-id-keyed frames — a spawned process's output/exit/history/detection frames, and the
 // reply to an on-demand capture request — routed here rather than inline in `RemoteChannel.dispatch()`

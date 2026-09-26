@@ -1,4 +1,4 @@
-import type { ClientFrame, ServerFrame } from './protocol.js';
+import type { ClientFrame, ServerFrame } from '../protocol.js';
 
 export type CaptureResult = { text: string; capturedAt: number } | { error: string } | undefined;
 
