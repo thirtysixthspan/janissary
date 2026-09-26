@@ -21,9 +21,12 @@ Any subdirectory appears as a row of its own, collapsed by default; its task fil
 once it is expanded (see "Picker behavior" below). Every directory lists its own task files first
 and its subdirectories last, each of the two groups sorted alphabetically — so a section opens on
 its directly runnable tasks, with the expandable subdirectories collected beneath them, and the
-same ordering repeats inside each subdirectory once it is expanded. The list is read fresh from
-disk each time the picker opens, so adding, renaming, or removing a task file (or subdirectory) is
-reflected immediately. Each file row displays its name with the `.md` extension hidden
+same ordering repeats inside each subdirectory once it is expanded. The list travels with the
+app's state updates, and the server re-reads it from disk at most once per second rather than on
+every update, because updates fire on every chunk of shell and agent output and each re-read
+walks both task trees. So
+adding, renaming, or removing a task file (or subdirectory) reaches the picker within about a
+second, not instantly. Each file row displays its name with the `.md` extension hidden
 (`work-an-issue`, not `work-an-issue.md`); the extension is still present in the command
 inserted when the row is picked. Directory rows show a caret-icon chevron indicating their expand state (pointing
 right when collapsed, down when expanded) and are indented one level deeper than their parent.

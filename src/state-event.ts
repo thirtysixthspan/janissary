@@ -2,8 +2,7 @@ import type { ControllerCore } from './controller.js';
 import type { ServerEvent } from './protocol.js';
 import { getConfig } from './config.js';
 import { globalCommands } from './global-history.js';
-import { listTasks } from './tasks.js';
-import { listProfileRows } from './profiles.js';
+import { cachedTasks, cachedProfileRows } from './state-listings.js';
 import { appVersionNumber } from './cli-args.js';
 
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
@@ -20,7 +19,7 @@ export function buildStateEvent(controller: ControllerCore): ServerEvent {
     tabNameMaxLength: getConfig().tabNameMaxLength,
     activeTabNameMaxLength: getConfig().activeTabNameMaxLength,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
-    tasks: listTasks(controller.rootDir),
-    profiles: listProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),
+    tasks: cachedTasks(controller.rootDir),
+    profiles: cachedProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),
   };
 }
