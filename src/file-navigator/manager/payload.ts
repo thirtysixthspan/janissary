@@ -1,7 +1,7 @@
-import { pruneAndBuildRows } from './rebuild.js';
-import { buildCachedRows } from './filesystem-cache.js';
-import type { FilesTabState } from './state.js';
-import type { Tab } from '../tab/types.js';
+import { pruneAndBuildRows } from '../rebuild.js';
+import { buildCachedRows } from '../filesystem-cache.js';
+import type { FilesTabState } from '../state.js';
+import type { Tab } from '../../tab/types.js';
 
 // The two `files` payload writes `FileNavigatorManager` makes, kept here so the manager itself
 // stays under the file-size limit — see `ai/guidelines/code-guidelines.md`. Both attach the tab's

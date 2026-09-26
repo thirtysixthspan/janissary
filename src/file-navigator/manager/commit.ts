@@ -1,8 +1,8 @@
-import { commitFailureLeavesStagedText, commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from './commit-report.js';
-import { commitLeftStagingInPlace } from '../git/commit.js';
-import { notify } from '../notifications/index.js';
-import { armFlash, commitFlashDescriptor, restFlash, stillRooted } from './manager-flash.js';
-import type { MutationContext } from './manager-mutations.js';
+import { commitFailureLeavesStagedText, commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from '../commit-report.js';
+import { commitLeftStagingInPlace } from '../../git/commit.js';
+import { notify } from '../../notifications/index.js';
+import { armFlash, commitFlashDescriptor, restFlash, stillRooted } from './flash.js';
+import type { MutationContext } from './mutations.js';
 
 // The manager internals a commit needs: the mutating operations' own context, plus the git-metadata
 // refresh a landed commit triggers, so rows that were yellow before it stop being yellow after.

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
-import type { PortClosures } from './port.js';
-import type { FilesTabState } from './state.js';
-import type { Managers } from '../managers.js';
+import { makeNavigationPort, makeOpenPort } from './ports.js';
+import type { PortClosures } from '../port.js';
+import type { FilesTabState } from '../state.js';
+import type { Managers } from '../../managers.js';
 
 // The two identically-typed closures — `rebuild` and `refreshGit` — are the transposition these
 // ports used to be able to express, so each spy has to be told apart by which one was called.

@@ -1,8 +1,8 @@
-import type { Managers } from '../managers.js';
-import type { FilesTabState } from './state.js';
-import type { PortClosures } from './port.js';
-import type { NavPort } from './navigation.js';
-import type { OpenPort } from './open.js';
+import type { Managers } from '../../managers.js';
+import type { FilesTabState } from '../state.js';
+import type { PortClosures } from '../port.js';
+import type { NavPort } from '../navigation.js';
+import type { OpenPort } from '../open.js';
 
 export function makeNavigationPort(
   managers: Managers,

@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
-import type { HistoryStep } from './moves.js';
+import { deleteMany, moveMany, pasteMany } from './batch.js';
+import type { HistoryStep } from '../moves.js';
 
 let roots: string[] = [];
 

@@ -1,6 +1,6 @@
-import type { Managers } from '../managers.js';
-import type { FilesTabState } from './state.js';
-import type { Tab } from '../tab/types.js';
+import type { Managers } from '../../managers.js';
+import type { FilesTabState } from '../state.js';
+import type { Tab } from '../../tab/types.js';
 
 export function withFilesState<T>(
   tabs: Map<string, FilesTabState>, label: string, missing: T, use: (state: FilesTabState) => T,

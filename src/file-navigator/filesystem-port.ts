@@ -19,7 +19,7 @@ import type { BulkConflictPolicy } from '../protocol.js';
 import type { UndoRedoResult } from '../protocol.js';
 import type { HistoryStep } from './moves.js';
 import type { MaybePromise } from '../maybe-promise.js';
-import { replayHistory } from './manager-history.js';
+import { replayHistory } from './manager/history.js';
 
 export type WatchHandle = { stop: () => void };
 export type GitMetadata = {

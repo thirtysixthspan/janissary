@@ -9,7 +9,7 @@ import {
   clearRemoteFileCacheForWorkspace, initRemoteFileCache, materializeRemoteFile, remoteFileFor,
 } from './file-cache.js';
 import { saveFile } from '../../editor/save.js';
-import { openNavigatorFile } from '../manager-files.js';
+import { openNavigatorFile } from '../manager/files.js';
 import type { FilesTabState } from '../state.js';
 import { notificationsTab, openNotificationsTab } from '../../notifications/tab.js';
 import { NotificationQueue } from '../../notifications/queue.js';

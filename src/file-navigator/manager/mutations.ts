@@ -1,13 +1,13 @@
-import { clearFilesystemCache } from './filesystem-cache.js';
-import { deleteMany, moveMany, pasteMany } from './manager-batch.js';
-import { createNavigatorDirectory } from './manager-files.js';
-import { replayHistory } from './manager-history.js';
-import { deleteOne, moveOne, renameOne, unavailable } from './manager-item-operations.js';
-import { withFilesState } from './manager-state.js';
-import type { FilesTabState } from './state.js';
-import type { MaybePromise } from '../maybe-promise.js';
-import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '../protocol.js';
+import { clearFilesystemCache } from '../filesystem-cache.js';
+import { deleteMany, moveMany, pasteMany } from './batch.js';
+import { createNavigatorDirectory } from './files.js';
+import { replayHistory } from './history.js';
+import { deleteOne, moveOne, renameOne, unavailable } from './item-operations.js';
+import { withFilesState } from './state.js';
+import type { FilesTabState } from '../state.js';
+import type { MaybePromise } from '../../maybe-promise.js';
+import type { Managers } from '../../managers.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '../../protocol.js';
 
 // The manager internals every mutating operation needs, handed over as one value so the manager's
 // own `rebuild` stays private — it is reachable here only through the bound closure it puts on this.

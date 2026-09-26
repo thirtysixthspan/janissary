@@ -1,13 +1,13 @@
-import { isSameOrDescendantPath } from './index.js';
+import { isSameOrDescendantPath } from '../index.js';
 import {
   DESCENDANT_DESTINATION_REASON,
   failureReasons,
   SOURCE_UNAVAILABLE_REASON,
-} from './file-operation-result.js';
-import type { FilesTabState } from './state.js';
-import type { Managers } from '../managers.js';
-import type { BatchResult, BulkMoveResult } from '../protocol.js';
-import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
+} from '../file-operation-result.js';
+import type { FilesTabState } from '../state.js';
+import type { Managers } from '../../managers.js';
+import type { BatchResult, BulkMoveResult } from '../../protocol.js';
+import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 function failedOperation(path: string, reason: string): BatchResult {
   return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };
