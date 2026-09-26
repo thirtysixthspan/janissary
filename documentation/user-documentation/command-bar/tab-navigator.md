@@ -6,13 +6,13 @@ With several tabs open, `Ctrl+G` (or the `nav` command) jumps straight to any of
 
 ## Opening the navigator
 
-`Ctrl+G` opens a window listing every open tab — agent, harness, SSH, viewer, and reporting tabs alike — floating above the command bar, in the same spot the [history picker](/user-documentation/command-bar/history) appears.
+`Ctrl+G` opens a window listing your open tabs — agent, harness, SSH, and viewer tabs alike — floating above the command bar, in the same spot the [history picker](/user-documentation/command-bar/history) appears. A tab you have [docked into a sidebar](/user-documentation/getting-started/tabs) is not in the list, since it is not in the center strip to jump to; the same goes for a monitor's [reporting tab](/user-documentation/automation/monitoring).
 
 You can also type `nav` at the command bar, optionally followed by a starting query — `nav deploy` opens the navigator already filtered to "deploy". If the navigator is already open, pressing `Ctrl+G` again (or submitting `nav`) closes it instead of reopening it.
 
 ## Filtering
 
-Typing narrows the list to tabs whose label contains what you typed anywhere, case-insensitively, or whose tab number starts with it. The matching part of the label is highlighted. Tabs matched by number come first, then label matches, each group sorted alphabetically. If nothing matches, the window shows `(no matching tabs)`.
+Typing narrows the list to tabs whose name contains what you typed anywhere, case-insensitively, or whose tab number starts with it. The name it matches is the one the strip shows, so a tab you [renamed](/user-documentation/getting-started/tabs#renaming-a-tab) answers to its alias and a view tab answers to its file name. The matching part is highlighted. Tabs matched by number come first, then name matches, each group sorted alphabetically. If nothing matches, the window shows `(no matching tabs)`.
 
 ## Selecting a tab
 

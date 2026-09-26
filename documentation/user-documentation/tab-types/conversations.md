@@ -32,6 +32,8 @@ Replies appear progressively as formatted Markdown. Each turn shows your query, 
 
 Use `↑` on the first input line and `↓` on the last to recall previous queries from this conversation. Moving past the newest query restores your draft. If a previous query starts with what you're typing, the rest appears as ghost text. Press `→` or `End` with the caret at the end to accept it.
 
+Starting from a text selection — through **Chat about this** in the [right-click menu](/user-documentation/getting-started/context-menus) — puts that text in the turn list as a turn you posed, with no reply under it and nothing sent yet. The message box starts empty, because the selection is context rather than a question: it reaches the model only once you write a prompt and send it, and that first query carries the selection along. Nothing about it is kept. Close the tab without sending and the selection is gone for good; reopening the conversation will not bring it back.
+
 The status dot blinks while a reply is streaming. You can draft another query, but `Enter` won't send it until the reply finishes, and your draft stays in place. `Shift+Enter` still adds a newline.
 
 ## Name the conversation
@@ -45,6 +47,10 @@ Double-click the title in the header to rename it. Press `Enter` or click away t
 ## Choose a model
 
 The **Model** selector in the header groups available models under `claude` and `opencode`. Choose a pair for your next query. Changing it starts a fresh session; earlier turns keep the pair that answered them. The selector is disabled while a reply streams. If a saved model is no longer available, the next query uses the first available pair.
+
+The last pair you chose is remembered for the rest of your time with the app: it crosses between conversations and survives a restart, and every conversation you open afterwards starts on it. Sending a query does not change that memory — only picking a different pair does. So a conversation started from the list and one started from **Chat about this** begin identically.
+
+A conversation runs one agent session at a time. Restarting the app, cancelling a reply, changing the model, a failed connection, or closing the tab all end that session; the next query starts another and replays the twenty most recent completed turns into it first, so a conversation picks up its context rather than starting cold.
 
 Restarting the app, cancelling a reply, or a failed connection also ends the live session. Closing the tab while a reply streams cancels that reply. When a query starts a fresh session, it includes the last 20 stored turns as context, including the error text of failed turns. Older history remains available to read in the tab.
 
@@ -67,3 +73,5 @@ Saved conversations live under `~/.janissary/conversations/`, shared across proj
 ## Delete a conversation
 
 Use the row's **Delete** button in the conversation list. Confirming deletes its saved history, private workspace, and everything inside that workspace. Cancelling leaves them intact.
+
+A conversation that opens while you are looking at another tab does not pull focus away from it — you get the empty message box waiting, and it takes your typing when you switch to it. Nothing about a conversation is created until it is needed: its files are written the first time you send a query or use one of the workspace buttons, and using a workspace button first still counts, so the workspace is there after a restart. The record outlives restarts and workspace sweeps, and is removed only when you delete the conversation.
