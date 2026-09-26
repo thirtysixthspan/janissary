@@ -3,7 +3,7 @@ import type { SandboxOptions } from './sandbox/index.js';
 import { messageBus } from './bus.js';
 import { getProjectTokens } from './project/tokens.js';
 import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-session.js';
-import type { RemoteChannel } from './remote/channel.js';
+import type { RemoteChannel } from './remote/channel/index.js';
 import type { Managers } from './managers.js';
 
 // Owns the live PTY sessions (keyed by their id) backing harness tabs, full-tab interactive command

@@ -1,6 +1,6 @@
 import { PassThrough, Writable } from 'node:stream';
 import type { ShellProcess } from '../shell/index.js';
-import type { RemoteChannel } from './channel.js';
+import type { RemoteChannel } from './channel/index.js';
 import type { ShellHistoryRun } from './protocol.js';
 
 // Where an attached shell's replayed history goes. `output` takes bytes that arrived with no live

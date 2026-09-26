@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CaptureRequestTracker } from './channel-capture.js';
+import { CaptureRequestTracker } from './capture.js';
 
 describe('CaptureRequestTracker', () => {
   it('settles overlapping requests for one process by their request ids', async () => {

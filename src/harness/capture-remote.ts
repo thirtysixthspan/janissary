@@ -1,5 +1,5 @@
-import { RemoteChannel } from '../remote/channel.js';
-import { deferredChannelTransport } from '../remote/channel-types.js';
+import { RemoteChannel } from '../remote/channel/index.js';
+import { deferredChannelTransport } from '../remote/channel/types.js';
 import { provisionOrigin, remoteCaptureCommand } from '../remote/entry-factory.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { PtySession } from '../pty.js';

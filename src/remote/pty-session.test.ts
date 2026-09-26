@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRemotePtySession } from './pty-session.js';
-import { RemoteChannel, type ChannelTransport } from './channel.js';
+import { RemoteChannel, type ChannelTransport } from './channel/index.js';
 import { encodeFrame, encodeHandshake, decodeFrame, type RemoteFrame } from './protocol.js';
 import { PseudoterminalManager } from './../pseudoterminal-manager.js';
 import { HarnessScreenReader } from '../harness/screen.js';

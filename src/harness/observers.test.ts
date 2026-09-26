@@ -3,7 +3,7 @@ import { harnessRuntime } from './observers.js';
 import { HarnessScreenReader } from './screen.js';
 import { captureWiring } from './capture-wire.js';
 import type { Managers } from '../managers.js';
-import type { RemoteChannel } from '../remote/channel.js';
+import type { RemoteChannel } from '../remote/channel/index.js';
 
 // `harnessRuntime()` has no dedicated test file today (`observers.test.ts` — the wiring it does is
 // only exercised indirectly through `harness/manager.test.ts`). This covers the one branch the

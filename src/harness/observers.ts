@@ -6,7 +6,7 @@ import { HarnessRuntime } from './runtime.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';
 import { notify } from '../notifications/index.js';
-import type { RemoteChannel } from '../remote/channel.js';
+import type { RemoteChannel } from '../remote/channel/index.js';
 import type { E2EBrowserHandle } from '../browser/e2e-server.js';
 import type { Managers } from '../managers.js';
 

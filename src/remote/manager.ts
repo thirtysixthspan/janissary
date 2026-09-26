@@ -1,7 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { RemoteAddress } from './address.js';
-import type { RemoteChannel } from './channel.js';
+import type { RemoteChannel } from './channel/index.js';
 import type { ServerFrame } from './protocol.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';

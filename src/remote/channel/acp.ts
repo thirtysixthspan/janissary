@@ -1,4 +1,4 @@
-import type { RemoteFrame } from './protocol.js';
+import type { RemoteFrame } from '../protocol.js';
 
 export type AcpSessionListener = {
   onReady: () => void;

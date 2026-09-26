@@ -8,7 +8,7 @@ import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/file
 import { deleteOne, moveOne, renameOne } from '../file-navigator/manager-item-operations.js';
 import { deleteMany } from '../file-navigator/manager-batch.js';
 import type { FilesTabState } from '../file-navigator/state.js';
-import type { RemoteChannel, NavigatorListener } from './channel.js';
+import type { RemoteChannel, NavigatorListener } from './channel/index.js';
 import type { ClientFrame } from './protocol.js';
 
 // A remote port wired straight to a remote server over an in-memory channel, so the same call can

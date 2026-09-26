@@ -7,8 +7,8 @@ import type { PtySession } from '../pty.js';
 import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
 import { Attach, terminateRemoteProcess, type RemoteEntry } from './attach.js';
-import { RemoteChannel } from './channel.js';
-import { deferredChannelTransport } from './channel-types.js';
+import { RemoteChannel } from './channel/index.js';
+import { deferredChannelTransport } from './channel/types.js';
 import {
   cloneAnswerEcho, cloneKeyAnswer, clonePromptText, cloningLine, type CloneOfferText,
 } from './clone-prompt.js';
