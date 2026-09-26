@@ -37,7 +37,6 @@ Record the branch and tested commit this run was handed, the address, process id
 - Once the launch task has started something, every stop — a start failure, a lost browser, anything later — hands teardown back to it before this run reports, so nothing it started outlives the run. Before that, there is nothing to tear down.
 - After Step 4 begins, every stop finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
 - A failed push leaves the local commit in place and the tree as it stands. If a rebase cannot be resolved within the allowed files, abort that rebase and report the push failure.
-- Uncommitted work that was already in the tree is not this run's to remove, and Step 9 is where that is enforced. When a change cannot be attributed to this run, preserve it and report the obstruction; never resolve the uncertainty by discarding.
 
 ## Step 0 — Take the prepared workspace
 
