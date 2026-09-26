@@ -56,6 +56,167 @@ afterEach(() => {
   rmSync(home, { recursive: true, force: true });
 });
 
+// The manager's own bookkeeping: what it answers for a conversation it does not hold, what deleting
+// one has to clean up, and the two places it writes a conversation out on its own initiative.
+describe('ConversationsManager records and refusals', () => {
+  // An empty conversation is not on disk — creating one is not among the things that persist it, and
+  // a rename is explicitly not either. So the in-memory check is the only one that can refuse here.
+  it('refuses to create an id it already holds', () => {
+    const { manager, store } = fixture();
+    expect(manager.create('c1')).toBe(true);
+    expect(manager.create('c1')).toBe(false);
+    expect(store.read('c1')).toBeUndefined();
+  });
+
+  it('refuses to create an id that is already on disk', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    f.store.write({
+      schemaVersion: CONVERSATION_SCHEMA_VERSION, id: 'c2', title: 'Kept',
+      createdAt: 1, updatedAt: 1, pair: { harness: 'claude', model: 'opus' }, turns: [],
+    });
+    f.manager.dispose();
+
+    const reopened = new ConversationsManager({} as Managers, { store: f.store, now: () => 2 });
+
+    expect(reopened.create('c2')).toBe(false);
+    reopened.dispose();
+  });
+
+  it('answers false for a conversation it does not hold, rather than creating one', () => {
+    const { manager } = fixture();
+    expect(manager.load('nope')).toBe(false);
+    expect(manager.send('nope', 'hello')).toBe(false);
+    expect(manager.openFiles('nope')).toBe(false);
+    expect(manager.launchAgent('nope')).toBe(false);
+  });
+
+  it('leaves a conversation it does not hold exactly as it found it', () => {
+    const { manager, setCwd } = fixture();
+    manager.loadOlder('nope');
+    expect(setCwd).not.toHaveBeenCalled();
+  });
+
+  // Deleting has to stop the in-flight response as well as forget the record: a conversation removed
+  // while its answer is still streaming would keep writing into a tab the user has already closed.
+  it('cancels the response and forgets the conversation on delete', () => {
+    const { manager, store } = fixture();
+    manager.create('c1');
+    expect(manager.load('c1')).toBe(true);
+
+    manager.delete('c1');
+
+    expect(manager.load('c1')).toBe(false);
+    expect(store.read('c1')).toBeUndefined();
+  });
+
+  it('deletes a conversation that was never created without complaint', () => {
+    const { manager } = fixture();
+    expect(() => { manager.delete('nope'); }).not.toThrow();
+  });
+
+  // A stored conversation carries no window size, so a later read grows it from the default rather
+  // than from whatever a previous visit recorded — the size is per visit, not a property on disk.
+  it('grows a stored conversation from the default window', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    f.manager.loadOlder('c1');
+    f.manager.loadOlder('c1');
+    expect(f.manager.load('c1')).toBe(true);
+  });
+});
+
+describe('ConversationsManager workspace hand-off', () => {
+  const withTab = (f: ReturnType<typeof fixture>, id: string) => {
+    f.managers.tab.tabs.push({
+      label: 'conversations-1',
+      plugin: { id: 'conversations', instanceKey: id },
+    } as unknown as Tab);
+  };
+
+  it('points the tab at the conversation\'s workspace when files are opened there', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    withTab(f, 'c1');
+
+    expect(f.manager.openFiles('c1')).toBe(true);
+    expect(f.setCwd).toHaveBeenCalledOnce();
+    expect(f.setCwd.mock.calls[0][1]).toContain('c1');
+    expect(f.openOrRetarget).toHaveBeenCalledWith('conversations-1');
+  });
+
+  it('launches an agent in that same workspace', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    withTab(f, 'c1');
+
+    expect(f.manager.launchAgent('c1')).toBe(true);
+    expect(f.newAgentInWorkspace).toHaveBeenCalledExactlyOnceWith('conversations-1', expect.any(String));
+  });
+
+  // An empty conversation is not on disk yet, and its directory has to exist before a file navigator
+  // or an agent can be pointed at it — so opening one writes the record out first.
+  it('writes an empty conversation out before handing over its workspace', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    withTab(f, 'c1');
+    expect(f.store.read('c1')).toBeUndefined();
+
+    f.manager.openFiles('c1');
+
+    expect(f.store.read('c1')).toBeDefined();
+  });
+
+  it('opens nothing for a conversation whose tab is gone', () => {
+    const f = fixture();
+    f.manager.create('c1');
+    expect(f.manager.openFiles('c1')).toBe(false);
+    expect(f.setCwd).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConversationsManager when a conversation tab closes', () => {
+  // Closing a tab is noticed on a queued turn, not synchronously: the removal event and the cancel it
+  // triggers must not interleave with the teardown that is still running.
+  const tabRemoved = async () => {
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'conversations-1' });
+    await Promise.resolve();
+  };
+
+  it('cancels the in-flight response for a conversation whose tab is gone', async () => {
+    const f = fixture();
+    f.manager.create('c1');
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    f.manager.send('c1', 'hello');
+    expect(f.manager.cancel('c1')).toBe(true);
+
+    // Send again, so there is something in flight for the queued cancel to find, and let the tab go.
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    f.manager.send('c1', 'again');
+    await tabRemoved();
+
+    // The queued cancel ran and closed it, so nothing is left listening: a conversation is never left
+    // streaming into a tab that no longer exists.
+    expect(f.manager.cancel('c1')).toBe(false);
+  });
+
+  it('leaves a conversation alone while its tab is still open', async () => {
+    const f = fixture();
+    f.manager.create('c1');
+    mocks.connectAcp.mockReturnValue(fakeSession());
+    f.manager.send('c1', 'hello');
+    f.managers.tab.tabs.push({
+      label: 'conversations-1',
+      plugin: { id: 'conversations', instanceKey: 'c1' },
+    } as unknown as Tab);
+
+    await tabRemoved();
+
+    // Still cancellable, so an unrelated tab closing did not tear this conversation down.
+    expect(f.manager.cancel('c1')).toBe(true);
+  });
+});
+
 describe('ConversationsManager', () => {
   it('streams in bounded ticks and writes once when the turn completes', () => {
     vi.useFakeTimers();
