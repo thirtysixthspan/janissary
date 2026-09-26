@@ -4,7 +4,7 @@ import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { abbreviatePath } from '../paths.js';
 import { messageBus } from '../bus.js';
-import { TabTranscriptState } from './transcript-state.js';
+import { TabTranscriptState } from './transcript/state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';

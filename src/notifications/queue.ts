@@ -1,6 +1,6 @@
 import type { LogEntry } from '../tab/types.js';
 import type { NotificationEventType } from './index.js';
-import { capLog } from '../tab/transcript-log.js';
+import { capLog } from '../tab/transcript/log.js';
 
 // Holding a notification, separated from rendering one. The queue owns every notification the user
 // was given for the length of the run, whether or not a notifications tab exists to show it: the

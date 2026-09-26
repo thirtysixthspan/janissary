@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { transcriptText } from './transcript-text.js';
+import { transcriptText } from './text.js';
 
 describe('transcriptText', () => {
   it('joins input and output per entry, blank-line separated', () => {
