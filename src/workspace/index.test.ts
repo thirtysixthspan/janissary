@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
@@ -110,6 +110,19 @@ describe('untrustWorkspace', () => {
       projects: { '/workspace/keep': { hasTrustDialogAccepted: true } },
     });
   });
+
+  it.each([
+    ['a null root', 'null'],
+    ['an array projects', JSON.stringify({ projects: ['/workspace/remove'] })],
+    ['a string projects', JSON.stringify({ projects: '/workspace/remove' })],
+    ['malformed JSON', '{ "projects": '],
+  ])('leaves a configuration with %s untouched without throwing', (_shape, contents) => {
+    const config = path.join(tmpDir, 'untrust-invalid-claude.json');
+    writeFileSync(config, contents);
+
+    expect(() => untrustWorkspace('/workspace/remove', config)).not.toThrow();
+    expect(readFileSync(config, 'utf8')).toBe(contents);
+  });
 });
 
 describe('createWorkspace', () => {
@@ -186,6 +199,34 @@ describe('removeWorkspace', () => {
     const tmp = workspaceTempPath('test-agent-cleanup');
     expect(existsSync(tmp)).toBe(true);
     removeWorkspace(ws);
+    expect(existsSync(ws)).toBe(false);
+    expect(existsSync(tmp)).toBe(false);
+  });
+
+  it('untrusts the clone in the configuration given to initWorkspaceDir', async () => {
+    const ws = await createWorkspace('test-agent-untrust', repoDir);
+    const config = path.join(tmpDir, '.claude.json');
+    const before = JSON.parse(readFileSync(config, 'utf8')) as { projects: Record<string, unknown> };
+    expect(before.projects[ws]).toEqual({ hasTrustDialogAccepted: true });
+
+    removeWorkspace(ws);
+
+    const after = JSON.parse(readFileSync(config, 'utf8')) as { projects: Record<string, unknown> };
+    expect(Object.hasOwn(after.projects, ws)).toBe(false);
+  });
+
+  it('still removes the clone and its scratch dir when rewriting the configuration fails', async () => {
+    const ws = await createWorkspace('test-agent-bad-config', repoDir);
+    const tmp = workspaceTempPath('test-agent-bad-config');
+    const config = path.join(tmpDir, '.claude.json');
+    const original = readFileSync(config, 'utf8');
+    try {
+      chmodSync(tmpDir, 0o500);
+      expect(() => removeWorkspace(ws)).not.toThrow();
+    } finally {
+      chmodSync(tmpDir, 0o755);
+      writeFileSync(config, original);
+    }
     expect(existsSync(ws)).toBe(false);
     expect(existsSync(tmp)).toBe(false);
   });

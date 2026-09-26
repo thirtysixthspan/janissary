@@ -4,17 +4,6 @@
 
 ## development
 
-* Read and write the Claude configuration through one validated, atomic path when a workspace is untrusted, as trusting one already does.
-
-Existing Debt: Trusting a workspace validates `~/.claude.json` and replaces it atomically, but untrusting one casts the parsed file with `as`, rewrites it in place with `writeFileSync`, ignores the configuration path provisioning was given, and can throw out of `removeWorkspace` before the clone is deleted. Severity: 5/10
-
-Existing Risk: 6/10 - Closing a workspace tab while Claude Code is rewriting its own configuration can leave the user's `~/.claude.json` truncated or with the other writer's changes lost, and a configuration holding `null` throws out of `removeWorkspace`, which stops `WorkspaceManager.removeAll` at shutdown and leaves every later clone on disk.
-
-Proposal Risk: 2/10 - The rewrite becomes a temp-file rename, so it can no longer truncate, but the read-modify-write still races a concurrent Claude Code save, which is the same exposure the trust path already carries.
-
-Proposal: In `src/workspace/index.ts`, `trustWorkspace` goes through `readClaudeConfig` (which checks `isRecord`) and `writeJsonAtomically`, while `untrustWorkspace` does `JSON.parse(...) as Record<string, unknown>`, `data['projects'] as Record<string, unknown> | undefined`, and `writeFileSync(claudeJson, ...)`. Rewrite `untrustWorkspace` to use `readClaudeConfig` and `isRecord` (return quietly when the file is missing, not an object, or its `projects` is not an object) and `writeJsonAtomically` for the write, with no `as` casts. `removeWorkspace` calls `untrustWorkspace(directory)` with the default `~/.claude.json` even though provisioning trusted the clone through the injected `workspaceClaudeConfig` set by `initWorkspaceDir`; pass `workspaceClaudeConfig` there and in `removeLeftoverWorkspace` in `src/launch-name/leftover.ts`, and wrap the call in `removeWorkspace` in a try/catch so a bad configuration never skips the `rmSync` of the clone and its `.tmp` sibling (the comment in `src/launch-name/leftover.ts` already claims `removeWorkspace` swallows every error). `ConversationStore.delete` in `src/conversations/store.ts` passes its own path and needs no change. `src/workspace/index.test.ts` has one happy-path untrust case; add cases for a `null` configuration, a non-object `projects`, and the injected path being the one rewritten, and keep `src/launch-name/leftover.test.ts` and `src/workspace/manager.test.ts` passing.
-
-
 * Merge the global command history with what is already on disk before each write, and stop a history file that failed to load from being overwritten.
 
 Existing Debt: The global history is one file in the home directory shared by every janus process, but each process loads it once at startup, rewrites it wholesale from that in-memory snapshot on every command, and treats a file it could not parse as empty. Severity: 4/10

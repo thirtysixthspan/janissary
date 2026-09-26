@@ -29,6 +29,11 @@ export function workspaceProjectDir(): string {
   return workspaceProjectRoot;
 }
 
+// The Claude configuration provisioning trusts clones through, so removal untrusts the same file.
+export function workspaceClaudeConfigPath(): string {
+  return workspaceClaudeConfig || path.join(homedir(), '.claude.json');
+}
+
 export function ensureWorkspaceDir(): void {
   mkdirSync(workspaceBaseDir, { recursive: true });
 }
@@ -175,16 +180,16 @@ export function untrustWorkspace(
 ): void {
   let data: Record<string, unknown>;
   try {
-    data = JSON.parse(readFileSync(claudeJson, 'utf8')) as Record<string, unknown>;
+    data = readClaudeConfig(claudeJson);
   } catch { return; }
-  const projects = data['projects'] as Record<string, unknown> | undefined;
-  if (!projects || !Object.hasOwn(projects, workspaceDir)) return;
+  const projects = data['projects'];
+  if (!isRecord(projects) || !Object.hasOwn(projects, workspaceDir)) return;
   delete projects[workspaceDir];
-  writeFileSync(claudeJson, JSON.stringify(data, null, 2) + '\n', 'utf8');
+  writeJsonAtomically(claudeJson, data);
 }
 
 export function removeWorkspace(directory: string): void {
-  untrustWorkspace(directory);
+  try { untrustWorkspace(directory, workspaceClaudeConfigPath()); } catch { /* ignore */ }
   try { rmSync(directory, { recursive: true, force: true }); } catch { /* ignore */ }
   try { rmSync(`${directory}.tmp`, { recursive: true, force: true }); } catch { /* ignore */ }
 }

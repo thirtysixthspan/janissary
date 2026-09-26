@@ -92,6 +92,12 @@ describe('removeLeftoverWorkspace', () => {
     expect(hasLeftoverWorkspace('foo')).toBe(false);
   });
 
+  it('untrusts the folder in the Claude configuration given to initWorkspaceDir', () => {
+    mkdirSync(workspacePath('foo'), { recursive: true });
+    expect(removeLeftoverWorkspace('foo')).toBeUndefined();
+    expect(untrustWorkspace).toHaveBeenCalledWith(workspacePath('foo'), path.join(root, '.claude.json'));
+  });
+
   it('is a no-op when there is nothing to remove', () => {
     expect(removeLeftoverWorkspace('foo')).toBeUndefined();
   });
