@@ -49,13 +49,13 @@ Bare `theme` opens a picker overlay listing every theme, each row showing a swat
 
 `theme sync` sets the syntax-highlighting theme to the app theme's name, when a syntax theme with exactly that name exists — otherwise it reports that no matching syntax theme exists and leaves the syntax theme unchanged. The application theme and the syntax theme are independent settings; nothing keeps them in sync automatically, so `theme sync` is the only bridge between them. Today only `nord` exists in both name sets, so sync usually reports no match.
 
-Both `theme <name>` and `syntax theme <name>` have to write the choice into `.janissary/config.json` before they apply it, and a write that fails leaves the setting exactly as it was while still naming what you asked for:
+Both `theme <name>` and `syntax theme <name>` have to write the choice into `.janissary/config.json` before they apply it. A write that fails leaves the setting exactly as it was, and the reply says so:
 
 ```
-Theme set to "light" for this session (config write failed — won't persist).
+Could not save theme "light" to .janissary/config.json — theme unchanged.
 ```
 
-The line reads as though the change took effect for the session. It did not: nothing about the running app changes, so treat that message as "the theme did not change" and check that the file is writable. The wording is the app's, not a choice this page is making.
+`syntax theme <name>` and `theme sync` answer the same way for the syntax theme. Check that the file and its `.janissary` folder are writable, then run the command again.
 
 The theme applies to the whole window — there is no per-tab or per-workspace theming. Rendered Markdown documents follow the active theme too. Embedded web pages and ANSI-colored shell output are deliberately outside the theme, and so are tab dot colors, which are assigned per tab to tell tabs apart rather than drawn from the theme; status indicators such as the running-command highlight, editor saved/error notices, and search-hit highlighting are theme-driven.
 
