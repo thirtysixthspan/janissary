@@ -4,17 +4,6 @@
 
 ## development
 
-* Await the page open in a profile launch the way every other view entry's open is awaited, so a relaunched page tab is found and placed in its authored group, position, and dock.
-
-Existing Debt: The profile view-tab opener is built on the rule that every open is awaited before the resulting tab is looked up, but the web-address branch wraps its `open page …` call in a block body that discards the returned promise, and the colocated test only passes because its fake opener settles within the single microtask that `await undefined` yields. Severity: 3/10
-
-Existing Risk: 5/10 - In the real pipeline the page plugin is activated lazily through a dynamic import, so on a launch where it has not yet loaded the lookup runs before the tab exists: the launch notes report `Could not open page tab "…"`, and the tab then appears anyway, unplaced — outside its authored group, position, focus, and sidebar dock.
-
-Proposal Risk: 1/10 - The branch becomes identical in shape to the file branch beside it, and a test whose fake opener takes several ticks pins the ordering, so the only remaining exposure is a future branch written the same careless way, which that test's pattern makes easy to catch.
-
-Proposal: In `src/profile/view-tabs.ts`, `webTarget` gives its target a `run` with a block body that calls `managers.openFile.run(...)` with the `open page <authored>` command and never returns the result, dropping the `Promise<void>` that `OpenFileManager.run` in `src/open/file-manager.ts` returns (the web branch of `runOpenCommand` in `src/open/file-command.ts` resolves through `context.runPluginOpener`, which activates the plugin via the dynamic import in `src/plugins/loaders.ts`). Make it an expression-bodied arrow that returns that call, matching `fileTarget` directly above it, so `openProfileViewTabs`'s `await target.run()` waits for the tab. In `src/profile/view-tabs.test.ts`, the `open` fake in `makeManagers` settles after one `await Promise.resolve()`, which is exactly why the bug is invisible; add a case whose fake page open resolves only after several ticks (for example `await new Promise((resolve) => setTimeout(resolve, 0))` before appending the tab) and assert the page tab is returned in `opened` with its authored group and that no `Could not open page tab` note is pushed — it fails before the fix and passes after. The existing `opens each type through the manager that owns its command` and `reuses an already-open page tab on the same address, authored bare` cases must pass unchanged.
-
-
 * Parse the command-line cursor once into a named record and hand it to every tab-completion handler, instead of threading the same six to eight positional values through each handler and `completeWord`.
 
 Existing Debt: Command-line completion computes the command word, argument index, preceding words, token, text before and after the cursor, and token start once, then passes them positionally to nine handlers and on into `completeWord`, whose seven parameters include three adjacent strings (`before`, `after`, and the kept prefix) and a candidate list, so every new completion restates the same long signature and the parameter meaning is carried by position alone. Severity: 3/10
