@@ -16,9 +16,11 @@ afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
 // A hand-built unix socket server, for the two cases a real `DetachedPeer` cannot produce: a
 // reply written across two separate socket writes, and a peer that accepts the connection but
-// never answers at all.
+// never answers at all. The `jp-` prefix keeps the socket path short: darwin's `sockaddr_un`
+// holds 104 bytes, and `listen` fails with EINVAL past that, which a deep TMPDIR (a nested
+// workspace or CI checkout) can reach on its own once `mkdtemp` adds its six random characters.
 function fakePeer(onConnect: (write: (data: string) => void) => void): { session: string; close: () => void } {
-  const socketDir = mkdtempSync(path.join(tmpdir(), 'janus-fake-peer-'));
+  const socketDir = mkdtempSync(path.join(tmpdir(), 'jp-'));
   const socketPath = path.join(socketDir, 'peer.sock');
   const server: Server = createServer((socket) => onConnect((data) => socket.write(data)));
   server.listen(socketPath);

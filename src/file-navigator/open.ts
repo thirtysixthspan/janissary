@@ -44,11 +44,7 @@ function openLocal(port: OpenPort, root: string, existing?: string): void {
   const state = freshState(root, new LocalFileSystemPort());
   port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildCachedRows(state, () => {}) });
   const label = port.managers.tab.cur().label;
-  port.managers.tab.setCwd(label, root);
-  port.states.set(label, state);
-  port.watchDir(label, root, '');
-  port.refreshGit(label);
-  port.managers.tab.setDock(port.managers.tab.findIndex(label), 'left');
+  registerOpenedTab(port, label, root, state);
 }
 
 function openRemote(
@@ -71,12 +67,17 @@ function openRemote(
   const label = port.managers.tab.cur().label;
   if (!port.managers.remote.attach(label, ownerLabel)) return;
   const state = freshState(root, new RemoteFileSystemPort(channel, label, ready), remote, ownerLabel);
+  registerOpenedTab(port, label, root, state);
+  updateRemoteRoot(port, label, ready);
+}
+
+// The steps every freshly opened navigator tab shares, once its state and label exist.
+function registerOpenedTab(port: OpenPort, label: string, root: string, state: FilesTabState): void {
   port.managers.tab.setCwd(label, root);
   port.states.set(label, state);
   port.watchDir(label, root, '');
   port.refreshGit(label);
   port.managers.tab.setDock(port.managers.tab.findIndex(label), 'left');
-  updateRemoteRoot(port, label, ready);
 }
 
 function updateRemoteRoot(port: OpenPort, label: string, ready: Promise<string>): void {

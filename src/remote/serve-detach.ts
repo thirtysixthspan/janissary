@@ -46,7 +46,11 @@ export class DetachedPeer {
   async start(sink: (data: string) => void): Promise<void> {
     this.sink = sink;
     mkdirSync(path.dirname(this.record), { recursive: true, mode: 0o700 });
-    this.socketDir = mkdtempSync(path.join(tmpdir(), 'janus-peer-'));
+    // The temp prefix is deliberately terse: darwin's `sockaddr_un` holds 104 bytes, and a peer
+    // whose socket path runs past that fails to `listen` with EINVAL rather than starting at all.
+    // A deep TMPDIR (a nested workspace or CI checkout) plus this directory and `peer.sock` eats
+    // most of the budget on its own, so every character here is headroom against that ceiling.
+    this.socketDir = mkdtempSync(path.join(tmpdir(), 'jp-'));
     chmodSync(this.socketDir, 0o700);
     const socketPath = path.join(this.socketDir, 'peer.sock');
     const server = createServer((socket) => this.accept(socket));
