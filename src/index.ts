@@ -1,6 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createController } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
@@ -8,41 +6,13 @@ import type { ServerEvent } from './protocol.js';
 import { handle } from './message/handler.js';
 import { buildStateEvent } from './state-event.js';
 import { clientParamsProblem, isClientMessage } from './client-message.js';
-import { serveOpenFile } from './open/route.js';
 import { guardRequest } from './request-boundary.js';
-import { tabPluginCatalog } from './plugins/catalog.js';
-import { pluginContentTypes } from './plugins/opener-adapter.js';
-import { pluginOpeners } from './openers/index.js';
+import { staticFileServer } from './serve-static.js';
 import { errorText } from './error-text.js';
 import { messageBus } from './bus.js';
 import { ResumeWatch } from './resume-watch.js';
 
-// Applied to every HTTP response: defence-in-depth for the XSS path and token leak.
-const SECURITY_HEADERS = {
-  'Referrer-Policy': 'no-referrer',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; frame-src https: http:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
-} as const;
-
 const CLIENT_RECONNECT_GRACE_MS = 1000;
-
-const MIME: Record<string, string> = {
-  // Plugin claims come first so every core entry below overrides them. Accepted plugin claims only
-  // prove that no core *opener* owns the extension, and this map also serves the web UI's own
-  // assets — so core precedence has to hold uniformly rather than by where a line happens to sit.
-  ...pluginContentTypes(tabPluginCatalog, pluginOpeners),
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
-  '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
-  '.woff2': 'font/woff2', '.map': 'application/json',
-  // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).
-  '.mjs': 'text/javascript', '.cjs': 'text/javascript', '.xml': 'application/xml',
-  '.csv': 'text/csv; charset=utf-8',
-  // The rest of the editor opener's plain-text extensions all serve as text/plain.
-  ...Object.fromEntries([
-    '.txt', '.text', '.log', '.yaml', '.yml', '.toml', '.ini', '.conf', '.cfg', '.env',
-    '.ts', '.tsx', '.jsx', '.py', '.rb', '.go', '.rs', '.c', '.h', '.cpp', '.hpp', '.java',
-    '.sh', '.bash', '.zsh', '.sql',
-  ].map((extension) => [extension, 'text/plain; charset=utf-8'])),
-};
 
 export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean; projectDir?: string };
 export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void>; shutdown: () => void };
@@ -87,36 +57,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
   }, options.projectDir);
   if (options.relaunch) controller.rehydrate();
 
-  const serveStatic = async (request: IncomingMessage, res: ServerResponse) => {
-    if (!originAllowed(request)) { res.writeHead(403).end('forbidden'); return; }
-    const urlPath = new URL(request.url ?? '/', 'http://localhost').pathname;
-    // A file explicitly opened in the app (`open <file>`). Guarded by the session token and served
-    // only from the controller's allow-list — an arbitrary local path is never reachable.
-    if (urlPath.startsWith('/open/')) {
-      if (!tokenMatches(token, tokenFromRequest(request))) { res.writeHead(403).end('forbidden'); return; }
-      const id = decodeURIComponent(urlPath.slice('/open/'.length));
-      const filePath = controller.openFilePath(id);
-      if (!filePath) { res.writeHead(404).end('not found'); return; }
-      await serveOpenFile(request, res, filePath, {
-        ...SECURITY_HEADERS,
-        'content-type': MIME[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream',
-      });
-      return;
-    }
-    // Resolve within webDir; fall back to index.html for SPA routes / unknown assets.
-    const rel = path.normalize(urlPath).replace(/^(\.\.[/\\])+/, '').replace(/^\/+/, '');
-    let file = path.join(options.webDir, rel || 'index.html');
-    if (!file.startsWith(options.webDir)) file = path.join(options.webDir, 'index.html');
-    let body: Buffer;
-    try {
-      body = await readFile(file);
-    } catch {
-      try { body = await readFile(path.join(options.webDir, 'index.html')); file = 'index.html'; }
-      catch { res.writeHead(404).end('not found'); return; }
-    }
-    res.writeHead(200, { ...SECURITY_HEADERS, 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
-    res.end(body);
-  };
+  const serveStatic = staticFileServer({
+    webDir: options.webDir, token, openFilePath: (id) => controller.openFilePath(id),
+  });
 
   const http = createServer(guardRequest(serveStatic));
   const wss = new WebSocketServer({ noServer: true });
