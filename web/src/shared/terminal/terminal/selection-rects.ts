@@ -1,4 +1,4 @@
-import { normalizeRange, type CellRange, type ScreenMetrics, type SelectionLayer } from './terminal-selection-layer';
+import { normalizeRange, type CellRange, type ScreenMetrics, type SelectionLayer } from './selection-layer';
 
 // The highlight over a cloned screen. Nothing re-draws the frozen text, so the picked run cannot
 // be carried by a span wrapped around it the way the plain-text overlay does; it is painted as

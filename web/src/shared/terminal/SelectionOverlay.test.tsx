@@ -2,8 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SelectionOverlay } from './SelectionOverlay';
-import { selectionCellIndices, type SelectionLayer } from './terminal-selection-layer';
-import type { FrozenScreen } from './terminal-screen-clone';
+import { selectionCellIndices, type SelectionLayer } from './terminal/selection-layer';
+import type { FrozenScreen } from './terminal/screen-clone';
 
 const metrics = { cellWidth: 10, cellHeight: 20, offsetLeft: 4, offsetTop: 6 };
 

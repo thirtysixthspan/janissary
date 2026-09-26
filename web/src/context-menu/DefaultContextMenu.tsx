@@ -4,7 +4,7 @@ import { ContextMenu } from '../shared/ContextMenu';
 import { defaultMenuGroups } from './default-menu-target';
 import { pasteInto } from './clipboard-commands';
 import { copyText } from '../shared/system-clipboard';
-import { clearTerminalSelection } from '../shared/terminal/terminal-selection';
+import { clearTerminalSelection } from '../shared/terminal/terminal/selection';
 import { useDefaultContextMenu } from './useDefaultContextMenu';
 
 // The app's fallback right-click menu, mounted once by the shell. It draws Copy and Paste for any

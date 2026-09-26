@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import {
   cellFromPoint, layerHolds, layerText, normalizeRange, rangeSplitForLine, selectionCellIndices, snapshotViewport,
-} from './terminal-selection-layer';
+} from './selection-layer';
 
 // A stand-in terminal whose buffer is a simple list of lines: `translateToString(true)` renders
 // right-trimmed, matching the real API the snapshot loop drives.

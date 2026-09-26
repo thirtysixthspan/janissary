@@ -1,5 +1,5 @@
 import type { Terminal } from '@xterm/xterm';
-import type { ScreenMetrics } from './terminal-selection-layer';
+import type { ScreenMetrics } from './selection-layer';
 
 // The frozen screen's own pixels. The selection overlay does not re-draw the terminal's text — it
 // clones the screen the emulator already rendered, so the colours, the bold and dim runs, the

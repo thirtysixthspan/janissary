@@ -6,7 +6,7 @@ import type { HarnessView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../shared/drop-registry';
-import { terminalSelectionText } from '../shared/terminal/terminal-selection';
+import { terminalSelectionText } from '../shared/terminal/terminal/selection';
 
 // ---- xterm stubs -----------------------------------------------------------
 // xterm relies on canvas/WebGL which jsdom doesn't support. We mock both

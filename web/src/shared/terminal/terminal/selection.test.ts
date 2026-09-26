@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   clearTerminalSelection, registerTerminalSelection, terminalSelectionText, unregisterTerminalSelection,
-} from './terminal-selection';
+} from './selection';
 
 function container(): HTMLDivElement {
   const element = document.createElement('div');
