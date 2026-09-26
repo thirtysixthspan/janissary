@@ -1,14 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type {
   ConversationSummary,
   ConversationListPayload,
 } from '@shared/plugins/conversations/shared';
-import { ConfirmDialog, type TabPluginClientCapabilities } from '../api';
+import {
+  ConfirmDialog,
+  useListSelection,
+  type TabPluginClientCapabilities,
+} from '../api';
 import { conversationClickSelection, nextConversationSelection } from './conversation-list-keys';
-
-const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 export function ConversationList({
   payload,
@@ -17,30 +19,12 @@ export function ConversationList({
   payload: ConversationListPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const [selected, setSelected] = useState<number | null>(
-    payload.entries.length === 0 ? null : 0,
-  );
-  const [confirmed, setConfirmed] = useState<number | null>(null);
+  const { listRef, selected, rowClicked, navigate } = useListSelection(payload.entries.length);
   const [pendingDelete, setPendingDelete] = useState<ConversationSummary | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (capabilities.active) listRef.current?.focus();
-  }, [capabilities.active]);
-
-  useEffect(() => {
-    if (selected === null) return;
-    listRef.current?.querySelector(`[data-index="${CSS.escape(String(selected))}"]`)
-      ?.scrollIntoView({ block: 'nearest' });
-  }, [selected]);
-
-  useEffect(() => { setConfirmed(null); }, [payload.entries.length]);
-
-  useEffect(() => {
-    if (payload.entries.length === 0) setSelected(null);
-    else if (selected === null) setSelected(0);
-    else if (selected >= payload.entries.length) setSelected(payload.entries.length - 1);
-  }, [payload.entries.length, selected]);
+  }, [capabilities.active, listRef]);
 
   const create = () => { void capabilities.intent('create', {}); };
   const open = (id: string) => { void capabilities.intent('open', { id }); };
@@ -52,10 +36,8 @@ export function ConversationList({
       create();
       return;
     }
-    if (NAVIGATION_KEYS.has(event.key)) {
+    if (navigate(event.key, nextConversationSelection)) {
       event.preventDefault();
-      setSelected(nextConversationSelection(payload.entries.length, selected, event.key));
-      setConfirmed(null);
       return;
     }
     if (event.key === 'Enter' && selected !== null) {
@@ -88,11 +70,7 @@ export function ConversationList({
             role="button"
             tabIndex={-1}
             onClick={() => {
-              const click = conversationClickSelection(index, confirmed);
-              setSelected(click.selected);
-              setConfirmed(click.selected);
-              listRef.current?.focus();
-              if (click.opens) open(entry.id);
+              if (rowClicked(index, conversationClickSelection)) open(entry.id);
             }}
           >
             <span className="conversation-row-title">{entry.title}</span>
