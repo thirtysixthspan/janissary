@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the security gap where the pre-install supply-chain gate audits the Janissary installation's lockfile instead of the lockfile of the project about to be installed.
-
-Existing Issue: The new task tells the run to audit with the installation's own script runner before installing, and that script resolves the lockfile from its own location on disk, so in the ordinary workspace setup it inspects a copy belonging to the installation rather than the project — and where the installation is an installed package, which ships no lockfile at all, it exits with a data error and the rule that only success permits installation can never be satisfied. Severity: 7/10
-
-Existing Risk: 6/10 - A run either refuses to install anything at all, or an agent that watches the gate fail on every run learns to wave it through, and either way a dependency the blocklist would have caught reaches an unattended install.
-
-Proposal Risk: 2/10 - The gate then reports on the tree actually being installed, but the blocklist is only as current as the campaigns recorded in the repository, so a campaign disclosed after the last update still passes it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1327: audit the project under test's own lockfile before the pre-install dependency install". The install step in the new task's Step 0 sends the run through the installation's runner, and `scripts/run.mjs` dispatches by a path relative to the runner's own directory while `scripts/check-malicious-package.mjs` derives its repository root from its own `import.meta.url` and reads the lockfile joined onto that root, so `--audit` always reads the installation's copy whatever the working directory is; `src/sandbox/environment.ts` sets the `janissary` variable to the install root of the running app, which on a workspace tab is the install rather than the workspace clone, and `package.json`'s `files` list publishes no lockfile at all, so an installed Janissary has nothing for the audit to read. Teach the gate to audit a lockfile it is handed, resolving a relative path against the working directory and reporting which file it read, keeping today's no-argument behaviour and every exit code exactly as they are — 0 clean, 2 blocked, 3 quarantined, 1 unreadable — and give the new form its own coverage beside the script, since no test file for the gate exists today. Then change the task's install step to audit the project under test: its own lockfile, through the project's own runner when it has one, which is the arrangement `AGENTS.md` already describes, and through the installation's runner with the project's lockfile named explicitly when it does not. Say there what each non-zero exit means, so a 2 or 3 stops the run and a 1 is a failed check rather than permission to install, matching the rule the repository guide already states. The install itself does not change: it stays `npm install --ignore-scripts` followed by the three rebuilds, and no browser is ever fetched.
-
-
 * Give the plan's end-to-end acceptance runs an outcome before the task counts as complete, since none of the three has been run.
 
 Existing Issue: The plan states that correctness is checked by running the task end to end and lists three acceptance runs, the pull request records that all three were skipped for want of an attached browser, and the plan nevertheless sits in the completed folder with no record anywhere in the repository that its verification is outstanding. Severity: 6/10

@@ -45,7 +45,19 @@ Record whether this run created a stash, its object ID and message, the tested c
 4. If a local primary branch exists, run `git log --oneline origin/<primary>..<primary>`. Any output means local commits are not on the remote: report those commits and stop without stashing or checking out. If the local branch does not exist, create it tracking `origin/<primary>` only after stashing below.
 5. Inspect `git status --short --untracked-files=all`. When there are changes, run `git stash push --include-untracked -m 'find-bugs: pre-run working tree'` and record `git rev-parse refs/stash`. Confirm the tracked and untracked working tree is clean before continuing. Otherwise record `Stash: none` and leave all existing stashes alone.
 6. Check out the resolved primary branch and run `git pull --ff-only origin <primary>`. Compare `git rev-parse HEAD` with `git rev-parse origin/<primary>`; they must match. Record the full tested commit and its short form. Do not call `prepare-workspace.md` in full: it hardcodes `master`.
-7. Install dependencies from this project's lockfile, following its documented install command or, if absent, its lockfile manager's frozen command (`npm ci`, `pnpm install --frozen-lockfile`, `yarn install --frozen-lockfile`, or the equivalent). A project requiring dependencies without a lockfile stops here. Never add a package or run an installer that downloads a browser; use the project's supported way to skip that download, or stop if there is none. Run any package safety gate required by project instructions before installing; only success permits installation. In a Janissary checkout, audit the lockfile with `$janissary/scripts/run.mjs check-malicious-package --audit` first, then perform Steps 2–3 of [`prepare-workspace.md`](../workspace/prepare-workspace.md):
+7. Install dependencies from this project's lockfile, following its documented install command or, if absent, its lockfile manager's frozen command (`npm ci`, `pnpm install --frozen-lockfile`, `yarn install --frozen-lockfile`, or the equivalent). A project requiring dependencies without a lockfile stops here. Never add a package or run an installer that downloads a browser; use the project's supported way to skip that download, or stop if there is none. Run any package safety gate required by project instructions before installing; only success permits installation. Audit the tree this run is about to install, never the installation the task was launched from: a project that ships its own gate runs that one, and in a Janissary checkout — recognized by `bin/janus.mjs` at its root, and carrying the gate, the blocklist, and the lockfile itself — run it from the project directory:
+
+   ```bash
+   ./scripts/run.mjs check-malicious-package --audit ./package-lock.json
+   ```
+
+   A project with no runner of its own reaches for the installation's instead, and then names this project's lockfile explicitly, because the gate reads the file it is given rather than the one beside the script:
+
+   ```bash
+   $janissary/scripts/run.mjs check-malicious-package --audit <path to this project's lockfile>
+   ```
+
+   Read the exit code as the verdict. `0` is clean and permits the install. `2` (a known-malicious version) and `3` (a package or scope belonging to a compromised account) stop the run and report what was refused. `1` means the check could not read its input and is a failed check, never permission to install. Then perform Steps 2–3 of [`prepare-workspace.md`](../workspace/prepare-workspace.md):
 
    ```bash
    npm install --ignore-scripts

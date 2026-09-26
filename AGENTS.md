@@ -110,9 +110,12 @@ npm run coverage 2>&1
 **Never run `npm install` or `npm update` on a package without checking it against the supply-chain blocklist first.** The list lives in [`security/known-malicious-packages.json`](security/known-malicious-packages.json) and is enforced by:
 
 ```bash
-./scripts/run.mjs check-malicious-package <pkg>@<version> ...   # gate install targets
-./scripts/run.mjs check-malicious-package --audit               # scan package-lock.json
+./scripts/run.mjs check-malicious-package <pkg>@<version> ...          # gate install targets
+./scripts/run.mjs check-malicious-package --audit                      # scan package-lock.json
+./scripts/run.mjs check-malicious-package --audit ./some.lock.json     # scan a named lockfile
 ```
+
+The bare `--audit` scans the lockfile beside the script, which is this repository's own. A task prompt installing into some *other* project names that project's lockfile instead: the gate reads the file it is given, resolved against the working directory, and prints the file it audited.
 
 Exit codes: `0` clean, `2` BLOCKED (an exact known-malicious release), `3` QUARANTINED (a package or scope from a compromised maintainer account, at a version not yet known to be bad), `1` the check itself failed. **Only `0` permits an install** — a failed check is never permission to proceed. Treat `3` as seriously as `2`: these campaigns spread by publishing fresh version bumps, so "not yet on the list" is not the same as safe.
 
