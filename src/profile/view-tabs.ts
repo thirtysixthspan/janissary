@@ -88,7 +88,7 @@ function webTarget(
   return {
     matches: (tab) => tab.plugin?.id === id && tab.plugin.instanceKey === url,
     preClose: false, subject: authored, kind: id,
-    run: () => { managers.openFile.run(`open page ${authored}`, issuingLabel); },
+    run: () => managers.openFile.run(`open page ${authored}`, issuingLabel),
   };
 }
 

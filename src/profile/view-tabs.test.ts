@@ -192,6 +192,32 @@ describe('openProfileViewTabs', () => {
     expect(notes).not.toContain('Relaunched "site".');
   });
 
+  // The page plugin activates through a dynamic import, so its open can settle well after the call.
+  // The launch must wait for it before looking the tab up, or the tab lands unplaced.
+  it('waits for a page open that settles late, and places the tab in its authored group', async () => {
+    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
+    const other = makeTab('other', 'green', 2, [], [], undefined, 2, 'green');
+    const { managers, open } = makeManagers([janus, other]);
+    const settle = open.getMockImplementation()!;
+    open.mockImplementationOnce(async (command: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await settle(command);
+    });
+    const notes: string[] = [];
+    const colorForGroup = (group: number, fallback: string): string =>
+      managers.tab.tabs.find((t) => t.group === group)?.groupColor ?? fallback;
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'page', path: 'example.com', group: 2 }],
+      managers, 'janus', 1, colorForGroup, notes,
+    );
+
+    expect(opened.map((c) => c.label)).toEqual(['page-2']);
+    expect(managers.tab.tabs.find((t) => t.label === 'page-2')?.group).toBe(2);
+    expect(notes).not.toContain('Could not open page tab "example.com".');
+    expect(notes).toEqual(['Opened page tab.']);
+  });
+
   // A markdown preview tab is a plugin tab like any other: reopening the same file focuses the tab
   // already showing it rather than closing and reopening it.
   it('reuses an already-open markdown tab on the same path', async () => {
