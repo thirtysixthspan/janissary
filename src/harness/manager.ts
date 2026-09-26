@@ -1,38 +1,29 @@
-import { makeHarnessTab, distinctColor } from '../tab/index.js';
+import { distinctColor } from '../tab/index.js';
 import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
-import { parseHarnessCommand, HARNESS_COMMANDS, HARNESS_NAMES, buildHarnessCommand } from './index.js';
+import { parseHarnessCommand, HARNESS_NAMES } from './index.js';
 import type { HarnessLaunch } from './command-parse.js';
-import { harnessSpawnEnv } from './scratch-dir.js';
-import { reportBrowserGone } from './browser-gone.js';
 import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
-import { autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
-import { harnessRuntime, sshRuntime } from './observers.js';
-import { HarnessRuntimes } from './runtime-registry.js';
+import { supportsHarnessAutoApprove } from './auto-approve.js';
+import { sshRuntime } from './observers.js';
+import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
-import type { HarnessView, Tab } from '../tab/types.js';
+import type { Tab } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus } from '../bus.js';
-import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
-import { wireProvisioning } from '../workspace/provision-wire.js';
-import { failHarnessSpawn, startRemoteTab } from './remote-launch.js';
 import { parseRemoteAddress } from '../remote/address.js';
-import type { Managers } from '../managers.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
 // The controller owns the shared tab and PTY state; this module owns the harness-specific decisions
-// and wiring.
-export class HarnessManager {
-  private runtimes = new HarnessRuntimes();
+// and wiring, and `HarnessTabSpawn` owns the tab creation itself.
+export class HarnessManager extends HarnessTabSpawn {
   private launchDialogOpen = false;
-
-  constructor(private managers: Managers) {}
 
   dispose(): void {
     this.runtimes.dispose();
@@ -178,97 +169,4 @@ export class HarnessManager {
   // attach rather than to provision, and the PTY adopts the spawn id the far side already knows
   // the harness by. No workspace is cloned — the one this tab had is still there.
   attachRemote(options: SpawnTabOptions): void { this.spawnTab(options); }
-
-  // Shared core: create the harness tab and focus it. With no `ready` (no workspace, or a
-  // workspace already provisioned by the caller), the PTY spawns immediately, exactly as before —
-  // `spawnPty` runs synchronously. With `ready` (a `-w` launch's clone still in flight), the tab
-  // is inserted immediately as an empty, `provisioning` placeholder with no PTY, and the PTY spawn
-  // is deferred until `ready` resolves (see `finishSpawn`/`failSpawn`), so the tab never blocks on
-  // the clone. `model`/`effort`, when given, are passed to the harness binary via
-  // `buildHarnessCommand`.
-  private spawnTab(options: SpawnTabOptions): void {
-    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, remote } = options;
-    const provisioning = options.ready !== undefined || remote !== undefined;
-    const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: provisioning ? 'provisioning' : 'running' };
-    if (model !== undefined) harness.model = model;
-    if (effort !== undefined) harness.effort = effort;
-    const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
-    tab.offline = offline;
-    tab.autoApprove = autoApprove;
-    tab.browser = options.browser;
-    // Deliberately left with no `workspaceDir`: a remote tab's clone lives on the other host, and
-    // `src/tab/cleanup.ts` reads that field to schedule a recursive delete of the *local* path.
-    if (remote) tab.remote = { address: remote.address, host: remote.host };
-    this.managers.tab.insertTabInGroup(tab);
-    this.managers.tab.setCwd(label, cwd);
-    this.managers.tab.addBusy(label);
-    this.managers.tab.setActiveTab(this.managers.tab.findIndex(tab.label));
-
-    if (remote) {
-      startRemoteTab(this.managers, options, remote, (remoteCwd, notice) => this.finishSpawn({ ...options, cwd: remoteCwd }, notice));
-      return;
-    }
-    const ready = options.ready;
-    if (!ready) {
-      this.finishSpawn(options);
-      return;
-    }
-    // Broadcast the placeholder now — its PTY isn't ready yet, but the tab itself is, and the
-    // whole point is that this must not wait on the clone.
-    messageBus.emit('state', { type: 'dirty' });
-    wireProvisioning(
-      label,
-      ready,
-      (l) => this.managers.tab.tabs.some((t) => t.label === l),
-      () => this.finishSpawn(options),
-      (message, error) => { failHarnessSpawn(this.managers, options, message, error); },
-    );
-  }
-
-  // Spawn the PTY and wire up its screen reader/recorder — the part of tab creation that actually
-  // depends on `cwd` existing on disk, so it can't run until a `-w` launch's clone has finished.
-  // For a remote tab the PTY is a session on the other host and `remoteNotice` is that host's own
-  // isolation notice; everything downstream of the spawn is identical either way.
-  private finishSpawn(
-    options: SpawnTabOptions,
-    remoteNotice?: string,
-  ): void {
-    const { name, label, cwd, workspaceDir, offline, autoApprove, browser, model, effort, remote } = options;
-    const program = HARNESS_COMMANDS[name];
-    const command = buildHarnessCommand(name, model, effort);
-    const channel = remote ? this.managers.remote.get(label) : undefined;
-    // A remote tab starts nothing locally: the remote builds its own guard, child, and workspace on
-    // the far side from the `browser` flag on the spawn frame.
-    const spawnEnv = channel
-      ? { env: undefined, handle: undefined }
-      : harnessSpawnEnv({
-        name, cwd, label, browser,
-        onBrowserGone: (message, log) => reportBrowserGone(this.managers, label, message, log),
-      });
-    // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
-    // spawn or the runtime construction would otherwise strand a fully started browser.
-    try {
-      const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove }, options.resumePtyId)
-        : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
-      this.runtimes.install(id, label, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
-      this.markRunning(label, id);
-    } catch (error) {
-      spawnEnv.handle?.close();
-      throw error;
-    }
-    if (remote) this.managers.tab.setCwd(label, cwd);
-    const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove));
-    if (notice) this.managers.tab.append(label, { input: '', output: notice });
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
-  // Point the live tab at the PTY it just got. Inside `finishSpawn`'s ownership block, so a tab is
-  // never left claiming to run a PTY whose runtime construction threw.
-  private markRunning(label: string, id: string): void {
-    const liveTab = this.managers.tab.harnessTab(label);
-    if (!liveTab) return;
-    liveTab.harness.ptyId = id;
-    liveTab.harness.status = 'running';
-  }
 }
