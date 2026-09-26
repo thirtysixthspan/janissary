@@ -2,7 +2,7 @@ import path from 'node:path';
 import {
   defineIntents, type TabPluginActivation, type TabPluginResources, type TabPluginServerCapabilities,
 } from '../api.js';
-import { fileTabPayload, openFileExternally } from '../files.js';
+import { fileSize, fileTabPayload, openFileExternally } from '../files.js';
 import { saveImageEdit } from './edit.js';
 import {
   isImagePayload, isSaveEditPayload, type ImageMode, type ImagePayload, type SaveEditPayload,
@@ -48,9 +48,13 @@ export function activate(): TabPluginActivation {
     intent: defineIntents('image', isImagePayload, {
       'save-edit': {
         payload: isSaveEditPayload,
-        run: (tabPayload, payload: SaveEditPayload) => ({
-          name: saveImageEdit(tabPayload.path, payload.dataUrl),
-        }),
+        run: (tabPayload, payload: SaveEditPayload, capabilities) => {
+          const name = saveImageEdit(tabPayload.path, payload.dataUrl);
+          capabilities.updateTab(tabPayload.path, () => ({
+            payload: { ...tabPayload, size: fileSize(tabPayload.path) },
+          }));
+          return { name };
+        },
       },
     }),
   };

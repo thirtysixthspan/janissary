@@ -6,6 +6,7 @@ import http from 'node:http';
 import { WebSocket } from 'ws';
 import { startServer, type RunningServer } from './index.js';
 import { staticFileServer } from './serve-static.js';
+import { saveImageEdit } from './plugins/image/edit.js';
 import { guardRequest } from './request-boundary.js';
 import { fakeRequest, fakeResponse, loopbackBindable } from './http-test-fixture.js';
 import type { ServerEvent } from './protocol.js';
@@ -37,6 +38,7 @@ const canBindLoopback = await loopbackBindable();
 // mounts, not called bare — the wiring stays covered. The session token rides in the query string,
 // which is how a file the app opened is fetched.
 const TOKEN = 'test-token';
+const PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 type OpenFilePath = (id: string) => string | undefined;
 
 // Nothing the app opened resolves to a file unless a case registers one.
@@ -104,6 +106,26 @@ describe('the static file server', () => {
     const response = await serve('/open/1', { openFilePath: () => clip });
     expect(response.status).toBe(200);
     expect(response.headers['content-type']).toBe('video/mp4');
+  });
+
+  it('serves an SVG the image editor saved over as the PNG it now holds', async () => {
+    const vector = path.join(webDir, 'vector.svg');
+    writeFileSync(vector, '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150"/>');
+    const before = await serve('/open/1', { openFilePath: () => vector });
+    expect(before.headers['content-type']).toBe('image/svg+xml');
+
+    saveImageEdit(vector, `data:image/png;base64,${PNG_BASE64}`);
+
+    const after = await serve('/open/1', { openFilePath: () => vector });
+    expect(after.status).toBe(200);
+    expect(after.headers['content-type']).toBe('image/png');
+  });
+
+  it('keeps the extension-derived type for a file that is not an image, whatever its bytes', async () => {
+    const notes = path.join(webDir, 'notes.txt');
+    writeFileSync(notes, Buffer.from(PNG_BASE64, 'base64'));
+    const response = await serve('/open/1', { openFilePath: () => notes });
+    expect(response.headers['content-type']).toBe('text/plain; charset=utf-8');
   });
 
   // A malformed path is the boundary's work, exercised through the same wrapper the server mounts,
