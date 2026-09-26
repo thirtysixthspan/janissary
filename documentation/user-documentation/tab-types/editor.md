@@ -139,6 +139,8 @@ Unlike other tab kinds, editing an editor tab's label doesn't just set a display
 
 Either way, the buffer is never reloaded: your unsaved content, cursor position, and undo history stay exactly as they were, and focus returns to the buffer once the rename finishes. Renaming the same file from the [file navigator](/user-documentation/tab-types/file-navigator) has the same effect on an editor tab that already has it open.
 
+A rename can't replace another file or move the file into a different folder. If the name you type is already taken in that folder, the rename is refused with `The destination already exists; choose another name`. A name with a `/` in it, or `..`, is refused with `The name contains a path separator; enter a name without folders`. Both show up as a notification, and the tab and the file stay exactly as they were. Changing only the capitalization of the file's own name is fine.
+
 ## Closing with unsaved changes
 
 Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks first: "Do you want to save changes to this file?" with **Save** (the default), **Don't Save**, and **Cancel**. Press `y` to save and close, `n` to close without saving, or `Escape` to keep editing. The dialog is modal; input elsewhere is blocked until you choose.

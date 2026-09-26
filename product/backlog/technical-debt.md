@@ -4,17 +4,6 @@
 
 ## development
 
-* Refuse an editor-tab rename that would replace an existing file or move the file into another folder, the same way the file navigator's rename already does.
-
-Existing Debt: Renaming a file on disk has two implementations, and the editor tab's copy joins the typed name onto the file's directory and calls `renameSync` with no destination check and no name validation, while the file navigator's copy refuses separators and existing destinations. Severity: 6/10
-
-Existing Risk: 7/10 - Renaming an open `notes.md` tab to `README.md` in the same folder silently replaces the existing `README.md` because POSIX `rename` overwrites, and a name like `../notes.md` moves the file out of its folder, so an ordinary rename can destroy a file the user never opened.
-
-Proposal Risk: 2/10 - A clashing or folder-bearing name is refused with the navigator's own message, though a rename racing a file that appears between the existence check and `renameSync` could still replace it, which a narrow window makes unlikely.
-
-Proposal: `renameEditorTab` in `src/tab/rename-editor.ts` computes `path.join(path.dirname(editor.path), trimmed)` and runs `if (existsSync(editor.path)) renameSync(editor.path, newPath)`. It is reached from `renameTabOp` in `src/tab/rename.ts` (the tab-strip `renameTab` RPC and the `rename` command in `src/commands/rename.ts`) and from `renameEditorFile` in `src/editor/rename.ts` (the metadata-row rename). The navigator's rename in `src/file-navigator/filesystem.ts` rejects a name containing `/` or `path.sep` with `INVALID_NAME_REASON` and reports an existing destination with the `EEXIST` text from `src/file-navigator/file-operation-result.ts`. Change `renameEditorTab` to return `string | undefined` (a refusal reason): refuse a name containing a path separator or equal to `..` using `INVALID_NAME_REASON`, and refuse when `newPath` already exists and is not the same file (compare `realpathSync` of both when the source exists) using the `EEXIST` wording without the overwrite hint, leaving the tab and file untouched in both cases. The same check must apply to a new file not yet on disk, since its first save would otherwise write over the existing target. Have `renameTabOp` append the refusal to the tab's transcript and `renameEditorFile` surface it through `notify(managers, ...)` as the other editor errors do. There is no colocated `src/tab/rename-editor.test.ts`; add one covering the collision, the separator, the dot-dot name, and the unchanged happy path, and keep the "TabManager renameTab for editor tabs" cases in `src/tab/manager.test.ts` and `src/editor/rename.test.ts` passing. Update the rename paragraph in `product/specs/editor-tab.md` with the two refusals.
-
-
 * Read and write the Claude configuration through one validated, atomic path when a workspace is untrusted, as trusting one already does.
 
 Existing Debt: Trusting a workspace validates `~/.claude.json` and replaces it atomically, but untrusting one casts the parsed file with `as`, rewrites it in place with `writeFileSync`, ignores the configuration path provisioning was given, and can throw out of `removeWorkspace` before the clone is deleted. Severity: 5/10

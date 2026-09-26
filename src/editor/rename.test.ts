@@ -6,6 +6,9 @@ import { renameEditorFile } from './rename.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 
+const notify = vi.fn();
+vi.mock('../notifications/index.js', () => ({ notify: (...args: unknown[]) => notify(...args) }));
+
 function setup({ content = 'content', newFile = false } = {}) {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
@@ -63,6 +66,21 @@ describe('renameEditorFile', () => {
     renameEditorFile(managers, url, 'a'.repeat(60));
 
     expect(tab().editor?.name).toBe('a'.repeat(50));
+  });
+
+  it('refuses a rename onto an existing sibling and posts a file-operation notification', () => {
+    const { managers, dir, url, tab } = setup();
+    writeFileSync(path.join(dir, 'README.md'), 'readme');
+
+    renameEditorFile(managers, url, 'README.md');
+
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'file-operation', tab().label,
+      'Could not rename untitled.md to README.md. The destination already exists; choose another name.',
+    );
+    expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toBe('readme');
+    expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('content');
+    expect(tab().editor?.name).toBe('untitled.md');
   });
 
   it('is a no-op for an unknown file ref', () => {
