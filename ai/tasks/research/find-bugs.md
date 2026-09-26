@@ -65,8 +65,10 @@ Record whether this run created a stash, its object ID and message, the tested c
    ```bash
    npm install --ignore-scripts
    npm rebuild esbuild node-pty unrs-resolver
-   chmod +x node_modules/node-pty/prebuilds/*/spawn-helper
+   chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true
    ```
+
+   The guard on the last line is load-bearing: the glob matches nothing on a platform where node-pty has no prebuilt helper, the shell reports that as an error, and this run must not read a missing optional helper as a broken install. The other two commands have no guard because a failure in either is a real failure.
 
    Recognize a Janissary checkout by `bin/janus.mjs` at its root. Never install a browser or a driver dependency separately.
 8. Inspect `git status` and the install's diff. If installation rewrote a lockfile without a dependency change, restore that exact file with `git checkout -- <lockfile>`. Restore only incidental changes attributable to this run, never pre-existing work. Confirm the tracked tree is the primary branch again. An install failure or unexpected dependency change stops the run with stash recovery; do not fix dependencies.
