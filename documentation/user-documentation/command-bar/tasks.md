@@ -24,6 +24,8 @@ Unlike the [history picker](/user-documentation/command-bar/history), `Return` h
 
 On a shell tab, `Ctrl+A` reaches the terminal itself instead of opening the picker, since shell tabs run interactive programs that depend on receiving that keystroke. On a harness tab there is no command line to insert into, so picking a task sends the same command straight into that harness's terminal input, exactly as if it had been typed there. Wherever the window appears, it appears over the tab you opened it from, never over some other tab.
 
+A picker needs a screen, so a `tasks` that arrives without one does nothing at all. Another agent running `tasks`, or a [schedule](/user-documentation/automation/scheduling) firing it, gets silence rather than a window and no error either, which is worth knowing before you schedule one.
+
 ## What gets listed
 
 <img class="agent-float left" src="/agents/idris-south-east.png" alt="" />
@@ -31,6 +33,8 @@ On a shell tab, `Ctrl+A` reaches the terminal itself instead of opening the pick
 The picker draws from two sources, each shown as its own labeled section: a **Project** section for the current project's `ai/tasks/`, followed by a **Janissary** section for the task files that ship with the app itself. A section is omitted entirely when its source has no tasks: a project with no `ai/tasks/` shows only the Janissary section, and running inside the Janissary repository itself shows only a Project section, because there the two sources are the same directory.
 
 Within each section, only `.md` files under `ai/tasks/` are shown, recursing into subdirectories. A subdirectory is a row of its own, carrying a chevron that points right while it is collapsed and down while it is expanded, and sitting one level in from the rows around it so the nesting reads at a glance. The list is re-read from disk about once a second, so a task file you add, rename, or remove shows up within a second or so. Each row hides the `.md` extension (`work-an-issue`, not `work-an-issue.md`), though the extension stays in the command the picker inserts.
+
+An agent deleting a task file, or a `git checkout` moving one, can change the list while the picker is open. When it does, the highlight is put back onto a real task rather than left on a section header or past the end: a selection past the end of a shorter list drops to the last row, and one left on a header drops to the first task beneath it, or the nearest one above. The highlight keeps its position rather than its task, so it can end up on a different task than the one you were on. A key you press before that correction has been applied only puts the highlight back rather than acting on it, so `Return` never inserts a task that was not showing as selected. `Escape` closes the picker at any point.
 
 When a project has a task file at the same path as one of the built-in Janissary tasks, the project's copy wins and the built-in one is hidden — so a project can override a shipped task by giving its own file the same name.
 

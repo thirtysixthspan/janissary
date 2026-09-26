@@ -233,6 +233,8 @@ Recording covers named harness tabs and dedicated SSH tabs. Interactive programs
 
 Closing the harness tab or quitting the app closes the recording cleanly before the process ends.
 
+A recording covers one stretch of time the tab is attached, so a session you detach and later reattach is spread over two files. [Detach](/user-documentation/tab-types/sessions) closes the current one, and the [Attach](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) that brings the tab back starts a new `<label>-<timestamp>.cast` rather than picking up the old one. The time a session spends detached is not recorded while it is away; the new file picks up from whatever the host replays when it accepts the attach, and then carries on live. A local harness tab has no detach, so it always produces exactly one file.
+
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
 Replay a recording with [asciinema](https://asciinema.org):

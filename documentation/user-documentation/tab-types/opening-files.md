@@ -50,7 +50,7 @@ edit paper.pdf                    the PDF viewer
 edit notes.md:42                  the plain-text editor, cursor on line 42
 ```
 
-Images and PDFs are the file types with an editor of their own. Everything else, including Markdown, opens as text. That does mean `edit diagram.png` can't show you a PNG's raw bytes, and `edit paper.pdf` opens the [PDF viewer](/user-documentation/tab-types/pdf-viewer) rather than the document's text. There's no way to ask for either as text. A `:<line>` suffix is accepted anywhere and ignored where it makes no sense.
+Images and PDFs are the file types with an editor of their own. Everything else, including Markdown, opens as text. That does mean `edit diagram.png` can't show you a PNG's raw bytes, and `edit paper.pdf` opens the [PDF viewer](/user-documentation/tab-types/pdf-viewer) rather than the document's text. There's no way to ask for either as text. A `:<line>` suffix is a `edit` feature: it is ignored by the other openers where it makes no sense, and `open` rejects it outright, as [Errors](#errors) below describes.
 
 ## Create a file or directory
 
@@ -92,5 +92,6 @@ Mistakes are reported in the current tab before anything opens:
 - A malformed invocation prints the usage line: `open [external] [page] <target>`.
 - A file that doesn't exist gets a not-found message.
 - A malformed or non-`http(s)` address is reported as invalid.
+- A `:<line>` suffix is refused, because `open` looks for an opener by extension and finds none for `notes.md:42`: `No opener for ".md:42" files.` Drop the suffix and it opens, or use `edit notes.md:42` to land on the line.
 
 A file type with no viewer is the one exception. Opening it in the app reports `No opener for ".xyz" files.` in the [notifications feed](/user-documentation/tab-types/notifications) rather than in the current tab, because the same message comes from double-clicking a row in the [file navigator](/user-documentation/tab-types/file-navigator), which has no transcript to print it in. It lands in the queue and toasts if the feed isn't on screen, the same as any other notification. To open the file anyway, use `open external <file>` and let your operating system handle it.
