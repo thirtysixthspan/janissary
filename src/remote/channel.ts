@@ -3,6 +3,7 @@ import {
   type ClientFrame, type RemoteProcessState,
 } from './protocol.js';
 import { SessionRouter, type SessionListener } from './channel-sessions.js';
+import { drainFrames } from './frame-lines.js';
 import { dispatchAcp, type AcpSessionListener } from './channel-acp.js';
 import { dispatchSessionFrame } from './channel-dispatch.js';
 import { CaptureRequestTracker, type CaptureResult } from './channel-capture.js';
@@ -207,14 +208,11 @@ export class RemoteChannel {
   }
 
   private consumeFrames(): void {
-    let newline = this.buffer.indexOf('\n');
-    while (newline !== -1) {
-      const line = this.buffer.slice(0, newline).trim();
-      this.buffer = this.buffer.slice(newline + 1);
-      if (line) this.dispatch(line);
-      if (this.state !== 'attached' && this.state !== 'attaching') return;
-      newline = this.buffer.indexOf('\n');
-    }
+    this.buffer = drainFrames(
+      this.buffer,
+      (line) => this.dispatch(line),
+      () => this.state === 'attached' || this.state === 'attaching',
+    );
   }
 
   private dispatch(line: string): void {
