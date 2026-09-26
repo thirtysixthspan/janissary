@@ -164,3 +164,16 @@ No automated test. The change is a prose playbook with no application code, like
    - prints the report in the fixed shape, with an `App:` line naming `node bin/janus.mjs` and the tested commit
 2. Run it again with a deliberately unknown spec name. Confirm it stops before building, lists the real spec names, and leaves the working tree as it found it.
 3. On a small non-Janissary project that has `product/specs/` and a CLI but no web UI, run it with no spec named. Confirm that it discovers the tool's run command, reports `App: tool — …`, appends `temp/` to that project's `.gitignore` if it was missing and commits it, and tests non-interactive behavior directly and interactive behavior under a pseudo-terminal (or lists that behavior as `Not tested` when no pseudo-terminal mechanism is available).
+
+### Verification status
+
+Rehearsed on 2026-09-26 from a tab with no attached browser, against branch commit `386d123e` and the primary-branch commit `ba855edf`.
+
+**Case 2, partially.** The preparation chain was rehearsed in full inside a throwaway clone: a dirty tree of one staged edit plus one untracked file was stashed with the run's own message and its object ID recorded, the primary branch was created tracking `origin/master` and fast-forwarded, the lockfile audit returned clean, `npm install --ignore-scripts` with the two rebuild lines left the tracked tree clean, the missing browser stopped the run before any build, and `git stash pop --index` on the ref located by that object ID brought back the edit still staged and the untracked file, with no stash left behind and the clone on the primary branch. What was **not** exercised is case 2's own assertion: specification names are resolved in Step 2, after the browser gate in Step 1, so a tab without a browser reports the missing browser instead of the unknown name. Rehearsing that assertion needs a `-b` tab.
+
+**Cases 1 and 3, not run.** Both need a tab launched with the E2E browser, and the tab this was written in has neither `JANISSARY_BROWSER_WS_ENDPOINT` nor `JANISSARY_PLAYWRIGHT`. Nothing in this repository should be read as a claim that they pass.
+
+**Two things the rehearsal turned up, recorded rather than fixed.**
+
+- A run launched from this branch tests the primary branch's code, so the copy of the task and the code it exercises come from different commits by design. The audit command the branch's instructions give is therefore run by the primary branch's copy of the runner, which predates the lockfile-path form and falls back to auditing the lockfile beside it — the same file in that case, so the step still audits what it should.
+- `git symbolic-ref refs/remotes/origin/HEAD` answers with whatever branch the remote has checked out, so a run against a remote sitting on a feature branch treats that branch as primary. Correct by the design decision above, and worth knowing before pointing the task at a fork or a mirror whose `origin/HEAD` is not the default branch.
