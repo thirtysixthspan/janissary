@@ -9,6 +9,7 @@ import type {
 } from './api';
 import { claimedByCore } from './chords';
 import { editorPluginDeclarations, editorPluginLoaders, validateDeclarations } from './registry';
+import { guardPluginCall } from '@shared/plugins/guard';
 
 const HANDLER_TIMEOUT_MS = 1000;
 
@@ -33,21 +34,6 @@ function failureReason(error: unknown): string {
   const message = errorText(error);
   const firstLine = message.split(/\r?\n/, 1)[0].trim().replace(/[.!?;:]+$/u, '').trim();
   return firstLine || 'Unknown failure';
-}
-
-// Bounds a handler that returns a promise. A handler that blocks synchronously outruns this — see
-// the trust note in ./api.ts.
-async function withTimeout<Result>(
-  call: () => Result | Promise<Result>, timeoutMs: number,
-): Promise<Result> {
-  const signal = AbortSignal.timeout(timeoutMs);
-  const timeout = new Promise<never>((_resolve, reject) => {
-    signal.addEventListener('abort', () => {
-      reject(new Error(`handler timed out after ${timeoutMs} ms`));
-    }, { once: true });
-  });
-  const running = (async () => call())();
-  return Promise.race([running, timeout]);
 }
 
 // `onDisabled` fires once per plugin, the first time it is disabled. The host deliberately knows
@@ -110,7 +96,7 @@ export function createEditorPluginHost(
       }
       try {
         const handler = await load(binding.plugin);
-        const result = await withTimeout(() => handler(request), timeoutMs);
+        const result = await guardPluginCall(() => handler(request), timeoutMs);
         return { status: 'ok', result: result ?? null };
       } catch (error) {
         const reason = failureReason(error);
