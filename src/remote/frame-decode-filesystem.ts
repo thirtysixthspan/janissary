@@ -8,13 +8,9 @@ function decodeRequest(record: Record<string, unknown>): DecodeResult {
     || !isFilesystemOperation(operation) || !isRecord(record.args)) return malformed('filesystem-request');
   const descriptor = operationDescriptor(operation);
   if (!descriptor.valid(record.args)) return malformed('filesystem-request');
-  const args = descriptor.decode(record.args);
-  if (operation === 'write-file') {
-    const decoded = args as { content: string };
-    decoded.content = Buffer.from(decoded.content, 'base64').toString('utf8');
-  }
   return {
-    type: 'filesystem-request', session: record.session, request: record.request, operation, args,
+    type: 'filesystem-request', session: record.session, request: record.request, operation,
+    args: descriptor.decode(record.args),
   };
 }
 
@@ -26,10 +22,7 @@ function decodeReply(record: Record<string, unknown>): DecodeResult {
   if (hasError) {
     return { type: 'filesystem-reply', session: record.session, request: record.request, error: record.error as string };
   }
-  return {
-    type: 'filesystem-reply', session: record.session, request: record.request,
-    result: decodeContentResult(record.result),
-  };
+  return { type: 'filesystem-reply', session: record.session, request: record.request, result: record.result };
 }
 
 export function decodeFilesystemFrame(type: string, record: Record<string, unknown>): DecodeResult {
@@ -44,9 +37,4 @@ export function decodeFilesystemFrame(type: string, record: Record<string, unkno
       : malformed(type);
   }
   return { error: `Unknown remote frame type "${type}".` };
-}
-
-function decodeContentResult(value: unknown): unknown {
-  if (!isRecord(value) || typeof value.content !== 'string') return value;
-  return { ...value, content: Buffer.from(value.content, 'base64').toString('utf8') };
 }

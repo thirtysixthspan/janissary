@@ -4,17 +4,6 @@
 
 ## development
 
-* Stop encoding navigator file contents twice on the remote wire by removing the frame codec's content special cases, so the port layer's base64 is the only encoding.
-
-Existing Debt: File bytes are base64-encoded by the remote filesystem port and then re-encoded by `toWire`, which re-encodes any reply result carrying a string `content` field by sniffing its shape rather than by the operation's contract, and the decoder undoes one layer by mutating a cast argument object. Severity: 4/10
-
-Existing Risk: 4/10 - Remote file transfers carry roughly a third more bytes than they need to, any future filesystem result with a `content` string is silently re-encoded, and the protocol tests round-trip plain text that production never sends, so a regression in the real double-encoded shape would pass them.
-
-Proposal Risk: 3/10 - The frames change meaning, so the protocol version must be bumped and a peer on the old version is refused rather than misread; that refusal is the intended outcome but it is a compatibility break a mixed-version host pair will hit.
-
-Proposal: On write, `RemoteFileSystemPort.writeFile` in `src/file-navigator/remote-port.ts` sends `Buffer.from(content).toString('base64')`, `toWire` in `src/remote/protocol.ts` encodes it again for `operation === 'write-file'`, `decodeRequest` in `src/remote/frame-decode-filesystem.ts` decodes once by assigning into `args as { content: string }`, and the `write-file` operation in `src/remote/filesystem-operations.ts` decodes the port's layer. On read, `RemoteFileNavigators.readFile` in `src/remote/serve-file-navigator.ts` returns base64 and `toWire` re-encodes any `filesystem-reply` whose result passes `isContentResult`, with `decodeContentResult` undoing it. Remove the `write-file` and `filesystem-reply` branches and `isContentResult` from `toWire`, remove the `write-file` mutation and `decodeContentResult` from `frame-decode-filesystem.ts` (base64 ASCII is already JSON-safe), and bump `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts` with a comment in the file's existing per-version style. Update `src/remote/protocol.test.ts` to round-trip base64 content and its version assertion, and add one end-to-end bytes case through `encodeFrame` and `decodeFrame`. `src/file-navigator/remote-port.test.ts` (binary round-trip), `src/remote/serve-file-navigator.test.ts` and `src/remote/file-navigator-refusal-contract.test.ts` must keep passing.
-
-
 * Validate every field a profile's agent entry can carry, not only its name and remote, so a hand-written profile that would break a launch is refused by validation.
 
 Existing Debt: The profile agent entry's type is borrowed from the persisted `AgentState`, the loader spreads every key through, and `agentProblems` checks only `name` and `remote`, so each new state field silently widens what profiles accept without being checked. Severity: 5/10

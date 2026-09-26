@@ -63,7 +63,7 @@ describe('frame codec', () => {
       { type: 'filesystem-open', session: 'files1' },
       { type: 'filesystem-close', session: 'files1' },
       { type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'read-directory', args: { path: 'src' } },
-      { type: 'filesystem-request', session: 'files1', request: 'q2', operation: 'write-file', args: { path: 'notes.txt', content: 'héllo\nworld' } },
+      { type: 'filesystem-request', session: 'files1', request: 'q2', operation: 'write-file', args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk' } },
       {
         type: 'filesystem-request', session: 'files1', request: 'q3', operation: 'replay',
         args: {
@@ -109,7 +109,7 @@ describe('frame codec', () => {
       { type: 'capture-reply', id: 'r1', request: 'q1', text: 'the screen text', capturedAt: 1_700_000_000_000 },
       { type: 'capture-reply', id: 'r1', request: 'q1' },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
-      { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'héllo\nworld' } },
+      { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'aMOpbGxvCndvcmxk' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
       { type: 'acp-ready', id: 'racp1' },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
@@ -416,7 +416,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
   'filesystem-request': {
     type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file',
-    args: { path: 'notes.txt', content: 'héllo\nworld' },
+    args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk' },
   },
   'acp-open': {
     type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
@@ -447,7 +447,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'gate-event': { type: 'gate-event', id: 'r1', message: 'Auto-approved', capturedAt: 1_700_000_000_000, capture: 'screen' },
   'busy-transition': { type: 'busy-transition', id: 'r1', busy: true, unread: true },
   'capture-reply': { type: 'capture-reply', id: 'r1', request: 'q1', text: 'screen', capturedAt: 1_700_000_000_000 },
-  'filesystem-reply': { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content: 'héllo' } },
+  'filesystem-reply': { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content: 'aMOpbGxv' } },
   'filesystem-event': { type: 'filesystem-event', session: 'files1', path: 'src' },
   'acp-ready': { type: 'acp-ready', id: 'racp1' },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
@@ -529,11 +529,34 @@ describe('root settling frames', () => {
   });
 });
 
+// File contents cross the wire exactly as the filesystem port encoded them: one base64 layer, carried
+// verbatim, so arbitrary bytes survive and nothing is re-encoded by sniffing a result's shape.
+describe('file contents on the wire', () => {
+  const bytes = Buffer.from(Array.from({ length: 256 }, (_, index) => index));
+  const content = bytes.toString('base64');
+
+  it('carries a write-file request\'s bytes as the port\'s single base64 layer', () => {
+    const line = encodeFrame({
+      type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file', args: { path: 'bin', content },
+    });
+    expect((JSON.parse(line) as { args: { content: string } }).args.content).toBe(content);
+    const decoded = decodeFrame(line) as { args: { content: string } };
+    expect(Buffer.from(decoded.args.content, 'base64').equals(bytes)).toBe(true);
+  });
+
+  it('carries a read-file reply\'s bytes as the port\'s single base64 layer', () => {
+    const line = encodeFrame({ type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content } });
+    expect((JSON.parse(line) as { result: { content: string } }).result.content).toBe(content);
+    const decoded = decodeFrame(line) as { result: { content: string } };
+    expect(Buffer.from(decoded.result.content, 'base64').equals(bytes)).toBe(true);
+  });
+});
+
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 21', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(21);
+  it('is 22', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(22);
   });
 });
 
