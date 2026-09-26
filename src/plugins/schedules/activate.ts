@@ -1,5 +1,6 @@
 import {
   defineIntents,
+  parseDockArgument,
   type AggregatedScheduleView,
   type TabPluginActivation,
   type TabPluginNotification,
@@ -42,18 +43,11 @@ function isSchedulesData(
 // `schedules` opens or focuses the list; `schedules left`/`schedules right` dock it into that
 // sidebar; bare `schedules` on a docked list undocks it back to the centre and makes it active,
 // which is what `dockTab(…, null)` means.
-function parseDock(argument: string): 'left' | 'right' | null | undefined {
-  const trimmed = argument.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (trimmed === 'left' || trimmed === 'right') return trimmed;
-  return undefined;
-}
-
 export function activate(): TabPluginActivation {
   return {
     isPayload: isSchedulesPayload,
     command: (argument, capabilities) => {
-      const dock = parseDock(argument);
+      const dock = parseDockArgument(argument);
       if (dock === undefined) return capabilities.rejectRequest('Usage: schedules [left|right]');
       const data = capabilities.topicData('schedules');
       if (!isSchedulesData(data)) return capabilities.reportFailure('invalid schedules topic data');
