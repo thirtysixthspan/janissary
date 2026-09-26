@@ -178,7 +178,7 @@ Press `>` at the very start of an empty line to open a request line, right there
 
 ## Keeping a file synced with GitHub
 
-Some files stay synced with their project's `origin/master` branch automatically: saving one commits and pushes the change for you, based on the paths listed in the app's [configuration](/user-documentation/getting-started/startup#configuration). There's no switch for this in the editor itself; a file syncs if its path is on that list, and doesn't if it isn't. See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for how to configure which paths sync, why it's useful, and exactly what happens on save.
+Some files stay synced with their project's default branch on `origin` automatically: saving one commits and pushes the change for you, based on the paths listed in the app's [configuration](/user-documentation/getting-started/startup#configuration). There's no switch for this in the editor itself; a file syncs if its path is on that list, and doesn't if it isn't. See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for how to configure which paths sync, why it's useful, and exactly what happens on save.
 
 ## Lifecycle
 

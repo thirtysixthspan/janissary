@@ -5,6 +5,10 @@ type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv }
 
 let calls: Call[] = [];
 let failPatterns: string[][] = [];
+let stdoutFor: Record<string, string> = {};
+
+const ORIGIN_HEAD = 'symbolic-ref refs/remotes/origin/HEAD';
+const CURRENT_BRANCH = 'rev-parse --abbrev-ref HEAD';
 
 vi.mock('node:child_process', () => ({
   execFile: (
@@ -14,7 +18,7 @@ vi.mock('node:child_process', () => ({
     calls.push({ args, options });
     const shouldFail = failPatterns.some((pattern) => pattern.every((value, i) => args[i] === value));
     if (shouldFail) callback(new Error(`git ${args.join(' ')} failed`), { stdout: '', stderr: '' });
-    else callback(null, { stdout: '', stderr: '' });
+    else callback(null, { stdout: stdoutFor[args.join(' ')] ?? '', stderr: '' });
   },
 }));
 
@@ -32,9 +36,14 @@ function argLists(): string[][] {
   return calls.map((c) => c.args);
 }
 
+function commandLines(): string[] {
+  return argLists().map((a) => a.join(' '));
+}
+
 beforeEach(() => {
   calls = [];
   failPatterns = [];
+  stdoutFor = {};
 });
 
 describe('GitSync', () => {
@@ -149,5 +158,63 @@ describe('GitSync', () => {
     const pushCall = calls.find((c) => c.args[0] === 'push');
     expect(pullCall?.options.env?.GH_TOKEN).toBe('test-token');
     expect(pushCall?.options.env?.GH_TOKEN).toBe('test-token');
+  });
+});
+
+describe('GitSync sync branch', () => {
+  it('pulls from and pushes to the remote\'s detected default branch', async () => {
+    stdoutFor = { [ORIGIN_HEAD]: 'refs/remotes/origin/main\n' };
+    failPatterns = [['diff', '--cached', '--quiet']];
+    const sync = new GitSync(makeWorkspace());
+    expect(await sync.saveSync('bugs.md')).toEqual({ ok: true });
+    const commands = commandLines();
+    expect(commands).toContain('pull --rebase origin main');
+    expect(commands).toContain('push origin HEAD:main');
+    expect(commands.some((c) => c.includes('master'))).toBe(false);
+    const pullCall = calls.find((c) => c.args[0] === 'pull');
+    const pushCall = calls.find((c) => c.args[0] === 'push');
+    expect(pullCall?.options.env?.GH_TOKEN).toBe('test-token');
+    expect(pushCall?.options.env?.GH_TOKEN).toBe('test-token');
+  });
+
+  it('falls back to the clone\'s checked-out branch when origin/HEAD is not set', async () => {
+    stdoutFor = { [CURRENT_BRANCH]: 'trunk\n' };
+    const sync = new GitSync(makeWorkspace());
+    await sync.saveSync('bugs.md');
+    const commands = commandLines();
+    expect(commands).toContain('pull --rebase origin trunk');
+    expect(commands).toContain('push origin HEAD:trunk');
+  });
+
+  it('falls back to master for a detached clone with no origin/HEAD', async () => {
+    stdoutFor = { [CURRENT_BRANCH]: 'HEAD\n' };
+    const sync = new GitSync(makeWorkspace());
+    await sync.saveSync('bugs.md');
+    const commands = commandLines();
+    expect(commands).toContain('pull --rebase origin master');
+    expect(commands).toContain('push origin HEAD:master');
+  });
+
+  it('resolves the branch once for every later cycle on the same clone', async () => {
+    stdoutFor = { [ORIGIN_HEAD]: 'refs/remotes/origin/main\n' };
+    const sync = new GitSync(makeWorkspace());
+    await Promise.all([sync.openSync(), sync.openSync()]);
+    await sync.saveSync('bugs.md');
+    const commands = commandLines();
+    expect(commands.filter((c) => c === ORIGIN_HEAD)).toHaveLength(1);
+    expect(commands.filter((c) => c === 'pull --rebase origin main')).toHaveLength(3);
+  });
+
+  it('resolves the branch of a retried clone after a failed provision', async () => {
+    stdoutFor = { [ORIGIN_HEAD]: 'refs/remotes/origin/main\n' };
+    const dir = '/repo/.janissary/workspace/git-sync';
+    const create = vi.fn()
+      .mockReturnValueOnce({ dir, ready: Promise.reject(new Error('clone failed')) })
+      .mockReturnValue({ dir, ready: Promise.resolve() });
+    const sync = new GitSync({ create, remove: vi.fn() } as unknown as WorkspaceManager);
+    expect(await sync.openSync()).toEqual({ error: 'clone failed' });
+    expect(commandLines()).not.toContain(ORIGIN_HEAD);
+    expect(await sync.openSync()).toEqual({ dir });
+    expect(commandLines()).toEqual([ORIGIN_HEAD, 'pull --rebase origin main']);
   });
 });

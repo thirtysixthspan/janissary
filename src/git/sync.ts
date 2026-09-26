@@ -5,6 +5,7 @@ import type { WorkspaceManager } from '../workspace/manager.js';
 import { workspacePath } from '../workspace/index.js';
 import { getProjectTokens } from '../project/tokens.js';
 import { errorText } from '../error-text.js';
+import { currentBranch, defaultBranch } from './status.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -13,6 +14,9 @@ const execFileAsync = promisify(execFile);
 export const SYNC_WORKSPACE_NAME = 'git-sync';
 
 type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
+// The cached handle also carries the branch its sync cycles pull from and push to, resolved once
+// the clone is ready. Living on the handle, it is discarded with it when provisioning fails.
+type SyncWorkspace = ProvisioningWorkspace & { branch?: Promise<string> };
 type SyncResult = { ok: true } | { error: string };
 
 // Owns the single shared git-sync workspace clone end to end. Lazily provisions it once, no matter
@@ -21,7 +25,7 @@ type SyncResult = { ok: true } | { error: string };
 // triggering a second `git clone` (`WorkspaceManager.create` itself has no such dedup). Never call
 // `WorkspaceManager.remove` on its directory — it's torn down only via `removeAll()` at shutdown.
 export class GitSync {
-  private handle: ProvisioningWorkspace | undefined;
+  private handle: SyncWorkspace | undefined;
 
   constructor(private workspace: WorkspaceManager) {}
 
@@ -32,14 +36,15 @@ export class GitSync {
     return path.join(workspacePath(SYNC_WORKSPACE_NAME), relativePath);
   }
 
-  private ensureWorkspace(): ProvisioningWorkspace | { error: string } {
+  private ensureWorkspace(): SyncWorkspace | { error: string } {
     if (this.handle) return this.handle;
     const created = this.workspace.create(SYNC_WORKSPACE_NAME);
-    if (!('error' in created)) this.handle = created;
-    return created;
+    if ('error' in created) return created;
+    this.handle = { dir: created.dir, ready: created.ready };
+    return this.handle;
   }
 
-  private async waitForWorkspace(handle: ProvisioningWorkspace): Promise<void> {
+  private async waitForWorkspace(handle: SyncWorkspace): Promise<void> {
     try {
       await handle.ready;
     } catch (error) {
@@ -51,14 +56,21 @@ export class GitSync {
     }
   }
 
+  // Waits for the shared clone, then resolves (once per clone) the branch every cycle targets.
+  private async readyBranch(handle: SyncWorkspace): Promise<string> {
+    await this.waitForWorkspace(handle);
+    handle.branch ??= resolveSyncBranch(handle.dir);
+    return handle.branch;
+  }
+
   // Pull-only cycle: used when a synced tab opens (or another synced tab's save completes).
   // Nothing to commit or push — just wait for the shared workspace and pull/rebase it up to date.
   async openSync(): Promise<{ dir: string } | { error: string }> {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
-      await this.waitForWorkspace(handle);
-      await pullRebase(handle.dir);
+      const branch = await this.readyBranch(handle);
+      await pullRebase(handle.dir, branch);
       return { dir: handle.dir };
     } catch (error) {
       return { error: errorText(error) };
@@ -71,10 +83,10 @@ export class GitSync {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
-      await this.waitForWorkspace(handle);
+      const branch = await this.readyBranch(handle);
       await commitIfChanged(handle.dir, filename);
-      await pullRebase(handle.dir);
-      await push(handle.dir);
+      await pullRebase(handle.dir, branch);
+      await push(handle.dir, branch);
       return { ok: true };
     } catch (error) {
       return { error: errorText(error) };
@@ -89,6 +101,16 @@ function githubEnv(): NodeJS.ProcessEnv {
   return { ...process.env, GH_TOKEN: getProjectTokens().github };
 }
 
+// The branch the shared workspace syncs against: the remote's detected default branch, the same
+// one `isPrimaryBranch` admits a file to syncing against, falling back to the clone's own
+// checked-out branch, then `master` when neither can be read or the clone is detached.
+async function resolveSyncBranch(dir: string): Promise<string> {
+  const detected = await defaultBranch(dir);
+  if (detected) return detected;
+  const current = await currentBranch(dir);
+  return current && current !== 'HEAD' ? current : 'master';
+}
+
 async function commitIfChanged(dir: string, filename: string): Promise<void> {
   await execFileAsync('git', ['add', '-A'], { cwd: dir });
   try {
@@ -99,12 +121,12 @@ async function commitIfChanged(dir: string, filename: string): Promise<void> {
   }
 }
 
-// `git pull --rebase` against `origin/master`. If it fails after starting a rebase, restore the
+// `git pull --rebase` against `origin/<branch>`. If it fails after starting a rebase, restore the
 // branch to its pre-rebase state while preserving its local commits, then surface the pull error.
-async function pullRebase(dir: string): Promise<void> {
+async function pullRebase(dir: string, branch: string): Promise<void> {
   const env = githubEnv();
   try {
-    await execFileAsync('git', ['pull', '--rebase', 'origin', 'master'], { cwd: dir, env });
+    await execFileAsync('git', ['pull', '--rebase', 'origin', branch], { cwd: dir, env });
   } catch (error) {
     try {
       await execFileAsync('git', ['rebase', '--abort'], { cwd: dir });
@@ -113,6 +135,6 @@ async function pullRebase(dir: string): Promise<void> {
   }
 }
 
-async function push(dir: string): Promise<void> {
-  await execFileAsync('git', ['push', 'origin', 'HEAD:master'], { cwd: dir, env: githubEnv() });
+async function push(dir: string, branch: string): Promise<void> {
+  await execFileAsync('git', ['push', 'origin', `HEAD:${branch}`], { cwd: dir, env: githubEnv() });
 }

@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/bilal-south.png" alt="" />
 
-Some files can be kept automatically synced with your project's `origin/master` branch: saving one commits and pushes the change for you, with no separate git workflow to run by hand. It's useful for files meant to be hand-edited right inside the app and kept current on GitHub without a manual `add`/`commit`/`push` cycle — the two cases this ships configured for out of the box are product-management files (a backlog, a set of plans) and hand-edited documentation living in the repo.
+Some files can be kept automatically synced with your project's default branch on `origin` (usually `master` or `main`): saving one commits and pushes the change for you, with no separate git workflow to run by hand. It's useful for files meant to be hand-edited right inside the app and kept current on GitHub without a manual `add`/`commit`/`push` cycle — the two cases this ships configured for out of the box are product-management files (a backlog, a set of plans) and hand-edited documentation living in the repo.
 
 ## Why sync a file at all
 
@@ -47,18 +47,20 @@ This decision is made once, when the file is opened. A tab that's already open k
 
 ## How the sync happens on save
 
-The first time you open a synced file, its editor tab may briefly show a loading state while a workspace pulls the latest `origin/master`, then shows the file's content. Every config-listed file shares one workspace dedicated to syncing, kept separate from your main project checkout and from any agent's own workspace — it's created the first time any synced file is opened and reused after that for the life of the running app.
+The first time you open a synced file, its editor tab may briefly show a loading state while a workspace pulls the latest from the default branch, then shows the file's content. Every config-listed file shares one workspace dedicated to syncing, kept separate from your main project checkout and from any agent's own workspace — it's created the first time any synced file is opened and reused after that for the life of the running app.
+
+That workspace pulls from and pushes to the same default branch that decides whether a file syncs at all: the one `origin/HEAD` names in its own clone. If that can't be detected, it uses whatever branch the workspace has checked out, and failing that, `master`.
 
 Saving a synced file writes and confirms the save exactly like an ordinary save — the "Saved" flash isn't delayed by anything that happens next. After that:
 
 1. The change is committed with the message `sync: <filename>`.
-2. The shared workspace pulls the latest `origin/master`.
-3. The commit is pushed.
+2. The shared workspace pulls the latest from the default branch.
+3. The commit is pushed to that branch.
 
-If pulling `origin/master` fails, including because the same content changed remotely, your local save and its commit stay intact and nothing is pushed. The status icon changes to error and the notification gives the git failure; after you address the problem, clicking the icon retries the update. Janissary never silently replaces the saved content with the remote version. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from `origin/master`; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always.
+If that pull fails, including because the same content changed remotely, your local save and its commit stay intact and nothing is pushed. The status icon changes to error and the notification gives the git failure; after you address the problem, clicking the icon retries the update. Janissary never silently replaces the saved content with the remote version. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from the default branch; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always.
 
 ## Checking sync status, and resyncing manually
 
-A status icon sits next to the connections button in a synced file's header, showing whether that file's sync is being set up, syncing, synced, or has hit an error. A sync error (a network problem, an authentication failure, or a project whose default branch isn't literally named `master`) never blocks editing or shows a dialog; it only changes the icon, with details reported through the [notifications](/user-documentation/tab-types/notifications) tab.
+A status icon sits next to the connections button in a synced file's header, showing whether that file's sync is being set up, syncing, synced, or has hit an error. A sync error (a network problem, an authentication failure, or a conflicting remote change) never blocks editing or shows a dialog; it only changes the icon, with details reported through the [notifications](/user-documentation/tab-types/notifications) tab.
 
-While the icon shows synced or error, click it to manually pull the latest `origin/master` again, without waiting for another file's save to trigger it — the icon shows syncing while that's in flight. If the initial workspace clone failed, clicking retries with a fresh clone; you don't need to restart Janissary. If the pull brings in a change and you have no unsaved edits, the new content loads automatically; if you do have unsaved edits, saving afterward shows the same overwrite-confirmation prompt described above. Clicking the icon while it shows provisioning or syncing does nothing, since a pull can't start until whichever one is already in progress finishes.
+While the icon shows synced or error, click it to manually pull the latest from the default branch again, without waiting for another file's save to trigger it — the icon shows syncing while that's in flight. If the initial workspace clone failed, clicking retries with a fresh clone; you don't need to restart Janissary. If the pull brings in a change and you have no unsaved edits, the new content loads automatically; if you do have unsaved edits, saving afterward shows the same overwrite-confirmation prompt described above. Clicking the icon while it shows provisioning or syncing does nothing, since a pull can't start until whichever one is already in progress finishes.
