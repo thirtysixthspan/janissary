@@ -6,6 +6,7 @@ import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey
 import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
 import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
+import { isTabSwitchChord } from './shared/terminal/window-chords';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
 // Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
@@ -78,14 +79,14 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
 function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
   else if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: 1 } }); }
-  else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
-  else if (e.shiftKey && !e.ctrlKey && e.key === 'ArrowRight') { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
-  // Cmd+Shift+[ / Cmd+Shift+] — the macOS tab-switch convention (Safari, Xcode, iTerm2, VS Code),
-  // as an alias for the same moveTab action as Shift+←/→. Shift changes the produced `key` on a
-  // US layout ('{'/'}' rather than '['/']'), so both forms are accepted.
-  else if (e.metaKey && e.shiftKey && (e.key === '[' || e.key === '{')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: -1 } }); }
-  else if (e.metaKey && e.shiftKey && (e.key === ']' || e.key === '}')) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: 1 } }); }
+  // Shift+←/→ and Cmd+Shift+[/] — the one tab-switch definition the full-tab terminals also read to
+  // decide which keys to let bubble here.
+  else if (isTabSwitchChord(e)) { e.preventDefault(); client.send({ method: 'moveTab', params: { dir: tabSwitchDirection(e.key) } }); }
   else if (e.ctrlKey) { ctrlLetterShortcut(e, client); }
+}
+
+function tabSwitchDirection(key: string): -1 | 1 {
+  return ['ArrowLeft', '[', '{'].includes(key) ? -1 : 1;
 }
 
 // The plain Ctrl+letter sends (Ctrl+T tool-step collapse, Ctrl+O open-in-terminal), split out of

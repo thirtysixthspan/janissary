@@ -3,6 +3,7 @@ import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
+import { isPickerChord, isTabSwitchChord } from '../shared/terminal/window-chords';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
@@ -22,11 +23,7 @@ type Properties = {
 function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: boolean): boolean {
   if (e.type !== 'keydown') return true;
   if (taskPickerOpen || navOpen) return false;
-  const isTabSwitch = (e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
-    || (e.metaKey && e.shiftKey && ['[', '{', ']', '}'].includes(e.key));
-  const isTaskPicker = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'a';
-  const isTabNav = e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && e.key.toLowerCase() === 'g';
-  return !(isTabSwitch || isTaskPicker || isTabNav);
+  return !(isTabSwitchChord(e) || isPickerChord(e));
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach

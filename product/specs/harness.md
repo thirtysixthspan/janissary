@@ -482,10 +482,19 @@ tabs; no special focus for image/page tabs).
 
 All keys, clicks, and mouse events are delivered to the harness **except**:
 
-- **Shift+←/→** — the tab-switch chord, which bubbles to the window handler.
+- **Shift+←/→** and **Cmd+Shift+[/]** — the tab-switch chord, which bubbles to the window handler.
+- **Ctrl+A** and **Ctrl+G** (with no other modifier) — the task picker and tab navigator chords,
+  which bubble to the window handler so those pickers open over the harness.
+- Every key while the task picker or tab navigator is open over the tab, so the picker is driven
+  instead of the PTY.
 - Clicks on the tab strip — handled by the tab strip as usual.
 
-Ctrl-combinations (`Ctrl+C`, `Ctrl+D`, `Ctrl+R`, `Ctrl+Z`, etc.) are sent to the harness.
+The tab-switch and picker chords are defined once, in `web/src/shared/terminal/window-chords.ts`:
+the window handler switches tabs on that same tab-switch definition, and the harness and shell
+terminals ask it which keys to let bubble, so a changed chord cannot keep working in one place and
+stop in another.
+
+Other Ctrl-combinations (`Ctrl+C`, `Ctrl+D`, `Ctrl+R`, `Ctrl+E`, `Ctrl+Z`, etc.) are sent to the harness.
 Reorder/collapse chords (`Ctrl+←/→`, `Ctrl+T`) are **not** available while a harness is focused;
 switch to another tab first.
 

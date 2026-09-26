@@ -2,6 +2,7 @@ import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './shared/terminal/useXterm';
 import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
+import { isTabSwitchChord } from './shared/terminal/window-chords';
 import { AgentTabMeta } from './shared/AgentTabMeta';
 import { remoteSessionControl } from './shared/remote-session-control';
 import type { ShellTabHandle } from './shared/tab/handles';
@@ -17,9 +18,7 @@ type Properties = {
 // else — including Ctrl+C, Ctrl+D, Ctrl+Z — goes to the PTY so interactive programs receive it.
 function shellKeyFilter(e: KeyboardEvent): boolean {
   if (e.type !== 'keydown') return true;
-  const isTabSwitch = (e.shiftKey && !e.ctrlKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
-    || (e.metaKey && e.shiftKey && ['[', '{', ']', '}'].includes(e.key));
-  return !isTabSwitch;
+  return !isTabSwitchChord(e);
 }
 
 // Full-tab terminal that takes over the agent tab body while an interactive program is running.
