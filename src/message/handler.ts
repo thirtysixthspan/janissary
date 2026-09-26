@@ -2,6 +2,7 @@ import type { Controller } from '../controller.js';
 import type { ClientMessage, ServerEvent } from '../protocol.js';
 import { dispatchFileNavigatorMessage } from './file-navigator.js';
 import { dispatchPluginMessage } from './plugin.js';
+import { dispatchEditorMessage } from './editor.js';
 import { dispatchTabMessage } from './tabs.js';
 import {
   clientReplyMode, unhandledClientMethod,
@@ -91,13 +92,14 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'editorPluginFailed': {
       return dispatchPluginMessage(controller, message);
     }
-    case 'editorSync': { controller.syncEditorBuffer(message.params.url, message.params.content); break;
-    }
-    case 'resyncEditorTab': { controller.resyncEditorTab(message.params.url); break;
-    }
-    case 'renameEditorFile': { controller.renameEditorFile(message.params.url, message.params.name); break;
-    }
-    case 'commitEditorFile': { controller.commitEditorFile(message.params.url, message.params.message); break;
+    case 'editorSync':
+    case 'resyncEditorTab':
+    case 'renameEditorFile':
+    case 'commitEditorFile':
+    case 'editorPersonas':
+    case 'editorSuggest':
+    case 'closeEditorConnection': {
+      return dispatchEditorMessage(controller, message);
     }
     case 'reportLayout': { controller.reportLayout(message.params); break;
     }
@@ -129,17 +131,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'projectFiles': {
       return projectFiles(controller);
-    }
-    case 'editorPersonas': { return { names: controller.editorPersonas() };
-    }
-    case 'editorSuggest': {
-      return (resolve: (value: unknown) => void) => {
-        controller.editorSuggest(message.params, resolve);
-      };
-    }
-    case 'closeEditorConnection': {
-      controller.closeEditorConnection(message.params.url, message.params.persona);
-      break;
     }
     default: { return unhandledClientMethod(message);
     }
