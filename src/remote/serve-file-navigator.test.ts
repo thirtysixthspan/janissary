@@ -176,4 +176,156 @@ describe('RemoteFileNavigators', () => {
     holder.dispose();
     expect(stop).toHaveBeenCalledOnce();
   });
+
+  // The `request` helper above is bound to the suite's own navigator, so this one is bound to
+  // whichever navigator and session a test hands it.
+  async function replyOn(
+    holder: RemoteFileNavigators, session: string, operation: Request['operation'], args: Request['args'],
+  ): Promise<ServerFrame> {
+    const id = `r${frames.length + 1}-${operation}`;
+    holder.request({ type: 'filesystem-request', session, request: id, operation, args });
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === 'filesystem-reply' && frame.request === id)).toBe(true));
+    return frames.find((frame) => frame.type === 'filesystem-reply' && frame.request === id)!;
+  }
+
+  function overPort(port: unknown, session = 'files2'): RemoteFileNavigators {
+    const holder = new RemoteFileNavigators((frame) => { frames.push(frame); }, root, port as FileSystemPort);
+    holder.open(session);
+    return holder;
+  }
+
+  describe('the session it was asked about', () => {
+    it('refuses a request for a session it never opened, without running the operation', () => {
+      const readDirectory = vi.fn();
+      files.request({
+        type: 'filesystem-request', session: 'ghost', request: 'q1', operation: 'read-directory', args: { path: '' },
+      });
+      expect(frames).toEqual([{
+        type: 'filesystem-reply', session: 'ghost', request: 'q1',
+        error: 'The remote file navigator session is not open.',
+      }]);
+      expect(readDirectory).not.toHaveBeenCalled();
+    });
+
+    it('closes a session once, and a second close of the same session answers nothing', () => {
+      files.close('files1');
+      files.close('files1');
+      files.request({
+        type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'read-directory', args: { path: '' },
+      });
+      expect(frames).toEqual([{
+        type: 'filesystem-reply', session: 'files1', request: 'q1',
+        error: 'The remote file navigator session is not open.',
+      }]);
+    });
+  });
+
+  describe('an operation that fails', () => {
+    it('answers as an error when the operation throws before it returns', async () => {
+      const holder = overPort({
+        readDirectory: vi.fn(() => { throw new Error('the tree is on fire'); }),
+      });
+      expect(await replyOn(holder, 'files2', 'read-directory', { path: 'src' }))
+        .toEqual({ type: 'filesystem-reply', session: 'files2', request: expect.any(String), error: 'the tree is on fire' });
+      holder.dispose();
+    });
+
+    it('answers as an error when the operation rejects', async () => {
+      const holder = overPort({
+        readFile: vi.fn(() => Promise.reject(new Error('the file is gone'))),
+      });
+      const reply = await replyOn(holder, 'files2', 'read-file', { path: 'src/a.txt' });
+      expect(reply).toMatchObject({ error: 'the file is gone' });
+      expect(reply).not.toHaveProperty('result');
+      holder.dispose();
+    });
+  });
+
+  describe('watching', () => {
+    it('watches a path once, so a second watch of the same path runs nothing', async () => {
+      const fake = { watch: vi.fn((): WatchHandle => ({ stop: vi.fn() })) };
+      const holder = overPort(fake);
+      expect(await replyOn(holder, 'files2', 'watch', { path: 'src' })).toMatchObject({ result: {} });
+      expect(await replyOn(holder, 'files2', 'watch', { path: 'src' })).toMatchObject({ result: {} });
+      expect(fake.watch).toHaveBeenCalledOnce();
+      holder.dispose();
+    });
+
+    it('emits a filesystem-event naming the session and path that changed', async () => {
+      let changed: (() => void) | undefined;
+      const fake = {
+        watch: vi.fn((_root: string, _relPath: string, onChange: () => void): WatchHandle => {
+          changed = onChange;
+          return { stop: vi.fn() };
+        }),
+      };
+      const holder = overPort(fake);
+      await replyOn(holder, 'files2', 'watch', { path: 'src' });
+      changed!();
+      expect(frames).toContainEqual({ type: 'filesystem-event', session: 'files2', path: 'src' });
+      holder.dispose();
+    });
+
+    it('stores an asynchronous watch handle, and stops it on close', async () => {
+      const stop = vi.fn();
+      const fake = { watch: vi.fn(async (): Promise<WatchHandle> => ({ stop })) };
+      const holder = overPort(fake);
+      expect(await replyOn(holder, 'files2', 'watch', { path: 'src' })).toMatchObject({ result: {} });
+      holder.close('files2');
+      expect(stop).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('unwatching', () => {
+    it('stops and forgets a watched path, and tolerates one that was never watched', async () => {
+      const stop = vi.fn();
+      const fake = { watch: vi.fn((): WatchHandle => ({ stop })) };
+      const holder = overPort(fake);
+      await replyOn(holder, 'files2', 'watch', { path: 'src' });
+      expect(await replyOn(holder, 'files2', 'unwatch', { path: 'src' })).toMatchObject({ result: {} });
+      expect(stop).toHaveBeenCalledOnce();
+      expect(await replyOn(holder, 'files2', 'unwatch', { path: 'never' })).toMatchObject({ result: {} });
+      holder.dispose();
+    });
+
+    it('keeps a session\'s watchers when the same session is opened again', async () => {
+      const stop = vi.fn();
+      const fake = { watch: vi.fn((): WatchHandle => ({ stop })) };
+      const holder = overPort(fake);
+      await replyOn(holder, 'files2', 'watch', { path: 'src' });
+      holder.open('files2');
+      holder.dispose();
+      expect(fake.watch).toHaveBeenCalledOnce();
+      expect(stop).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe('the git metadata it reports', () => {
+    it('answers with what the port hands back for the root', async () => {
+      const metadata = { statuses: [['src/a.txt', 'modified']], branch: 'main', githubUrl: 'https://github.com/owner/repo' };
+      const gitMetadata = vi.fn((_root: string, onResult: (value: unknown) => void) => { onResult(metadata); });
+      const holder = overPort({ gitMetadata });
+      expect(await replyOn(holder, 'files2', 'git', {}))
+        .toMatchObject({ result: { branch: 'main', githubUrl: 'https://github.com/owner/repo' } });
+      expect(gitMetadata).toHaveBeenCalledWith(root, expect.any(Function));
+      holder.dispose();
+    });
+  });
+
+  describe('the sources a paste names', () => {
+    it('takes a relative source as it is and resolves an absolute one against the root', async () => {
+      mkdirSync(path.join(root, 'src'));
+      mkdirSync(path.join(root, 'dest'));
+      writeFileSync(path.join(root, 'src', 'a.txt'), 'a');
+      writeFileSync(path.join(root, 'src', 'b.txt'), 'b');
+
+      const reply = await request('paste', {
+        sources: ['src/a.txt', path.join(root, 'src', 'b.txt')], destination: 'dest', mode: 'copy',
+      });
+
+      expect(reply).toMatchObject({ result: { mutated: true, pairs: expect.any(Array) } });
+      expect(readFileSync(path.join(root, 'dest', 'a.txt'), 'utf8')).toBe('a');
+      expect(readFileSync(path.join(root, 'dest', 'b.txt'), 'utf8')).toBe('b');
+    });
+  });
 });
