@@ -1,84 +1,39 @@
-import type { AcpInfo, AcpSession } from '../acp/types.js';
-import type { LogEntry, MonitorTarget } from '../tab/types.js';
-import type { Subscription } from '../bus.js';
+import type { MonitorTarget } from '../tab/types.js';
 import { loadPersona, type Persona } from '../personas.js';
-import { parseSuggestion } from './parsing.js';
-import { openMonitorTab, pushSuggestion, rateSuggestion, updateMonitorMeta } from './window.js';
-import { createMonitorSession, openMonitorSession, primeMonitorSession, respawnMonitorSession } from './session.js';
+import { openMonitorTab, rateSuggestion, updateMonitorMeta } from './window.js';
+import { createMonitorSession, primeMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
 import { stopMonitor, closeIfUnfed } from './stop.js';
-import { seedFeedEntries, flushFeedEntries } from './feeds.js';
-import { generateSessionDelimiter, frameUpdatePrompt } from './framing.js';
-import { recordContext, snapshotMonitorContext, formatContext, type MonitorContextEntry } from './context.js';
+import { seedFeedEntries } from './feeds.js';
+import { generateSessionDelimiter } from './framing.js';
+import { snapshotMonitorContext, formatContext } from './context.js';
 import { listMonitors, monitorConnections, monitorNames } from './info.js';
 import { askMonitor } from './ask.js';
-import { recordReply } from './reply.js';
 import type { ConnectionView } from '../protocol.js';
 import type { Managers } from '../managers.js';
-import { notify } from '../notifications/index.js';
-import { isRateLimitError } from '../acp/rate-limit.js';
-import { buildSuggestion, formatInlineSuggestion } from './suggestion.js';
+import { LiveMonitors, type MonitorSub, type MonitorSubSetup } from './live-monitors.js';
 import { subscribeMonitor } from './subscriptions.js';
 import { errorText } from '../error-text.js';
 
 export { SUGGESTION_PREFIX } from './suggestion.js';
+export type { MonitorSub, MonitorSubSetup } from './live-monitors.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
-
-export type MonitorSub = {
-  owner: string;
-  // The monitor's runtime identity, distinct from its persona (Decision 13): the map key, the
-  // reporting-tab label, and what a relaunch-refresh matches on. Defaults to the persona name for a
-  // monitor started without one (the interactive `monitor` command), preserving one-per-persona.
-  name: string;
-  inline: boolean;
-  persona: Persona;
-  targets: MonitorTarget[];
-  buffer: { tabLabel: string; entry: LogEntry }[];
-  // Per-harness-target count of session-transcript entries already fed, so each monitor advances its
-  // own cursor through the tab's accumulated transcript (see monitor-harness-transcript-feed).
-  harnessTranscriptSeen: Map<string, number>;
-  // Per-harness-target last-fed capture time, so an unchanged screen is not re-fed (see monitor-harness-feed).
-  harnessSeen: Map<string, number>;
-  // Per-editor-target last-fed file content, so an unchanged file is not re-fed and a changed one is
-  // diffed against what this monitor last saw (see monitor-editor-feed).
-  editorSeen: Map<string, string>;
-  // Per-page-target last-fed visible-text content, so an unchanged page is not re-fed and a
-  // changed one is diffed against what this monitor last saw (see monitor-page-tab-content-feed).
-  pageSeen: Map<string, string>;
-  // Random, per-session token every buffered entry is wrapped in (see monitor/framing.ts), so the
-  // persona can tell monitored content apart from its own instructions.
-  delimiter: string;
-  session: AcpSession;
-  info?: AcpInfo;
-  inFlight: boolean;
-  delivered: number;
-  // Running total of bytes sent/received on this session (priming, flushes, asks) — reset on respawn.
-  contextBytes: number;
-  // The accumulated context text itself (priming, update prompts, asks, replies), kept in order so
-  // it can be snapshotted into a view tab. Grows and resets in lockstep with `contextBytes`.
-  contextText: MonitorContextEntry[];
-  timer: ReturnType<typeof setInterval>;
-  subs: Subscription[];
-};
-
-export type MonitorSubSetup = Omit<MonitorSub, 'session' | 'timer'>;
 
 // Owns all live monitors, keyed by `${ownerLabel}:${name}`. Each monitor is a
 // dedicated, tool-less ACP session primed with its persona; transcript entries from its
 // targets buffer up and flush as one prompt every 30s (never when the buffer is empty,
 // never while a previous prompt is still streaming). Suggestions route to the owner
 // tab's transcript (inline mode) or the persona's reporting tab (external mode).
-export class MonitorManager {
-  private monitors = new Map<string, MonitorSub>();
-  private counter = 0;
-
+export class MonitorManager extends LiveMonitors {
   constructor(
-    private managers: Managers,
-    private spawn: typeof spawnMonitorSession = spawnMonitorSession,
+    managers: Managers,
+    spawn: typeof spawnMonitorSession = spawnMonitorSession,
     private flushMs: number = MONITOR_FLUSH_MS,
-  ) {}
+  ) {
+    super(managers, spawn);
+  }
 
   // Start a monitor; returns an error message, or null on success. No targets = inline
   // mode (watch the owner tab, report into its transcript).
@@ -121,28 +76,8 @@ export class MonitorManager {
     return null;
   }
 
-  // Spawn the monitor's dedicated session and prime it with the persona body + reply
-  // format; `inFlight` holds flushes off until priming settles.
-  private openSession(reg: MonitorSub): void {
-    openMonitorSession(reg, this.managers, this.spawn);
-  }
-
-  // Whether `reg` is still registered and still running on `session`. A local session keeps
-  // delivering a pending prompt's callbacks after `kill()`, so a callback from a monitor that was
-  // stopped or whose session was replaced must not act on it.
-  private isCurrent(reg: MonitorSub, session: AcpSession): boolean {
-    return this.monitors.get(`${reg.owner}:${reg.name}`) === reg && reg.session === session;
-  }
-
-  // A prompt failed (typically the ACP subprocess died). Replace the session with a
-  // fresh, re-primed one so the monitor recovers instead of staying dead. A no-op for a
-  // stopped monitor or a session already replaced, so no untracked subprocess is spawned.
-  private respawn(reg: MonitorSub, session: AcpSession = reg.session): void {
-    if (!this.isCurrent(reg, session)) return;
-    respawnMonitorSession(reg, this.managers, this.spawn);
-    if (!reg.inline) updateMonitorMeta(this.managers, reg.name, formatTargets(reg.targets), reg.contextBytes);
-  }
-
+  // Wire the monitor's bus subscriptions: the owner tab closing, the whole monitor stopping, and
+  // one target leaving the set.
   private subscribe(key: string, reg: MonitorSub): void {
     subscribeMonitor(
       key, reg, this.managers,
@@ -150,52 +85,6 @@ export class MonitorManager {
       (owner, name) => this.stop(owner, name),
       (owner, name, label) => this.stop(owner, name, { kind: 'tab', label }),
     );
-  }
-
-  // The 30-second batch. No new transcripts → no ACP query at all; also skipped while a
-  // previous prompt (including the persona priming) is still streaming.
-  private flush(key: string): void {
-    const reg = this.monitors.get(key);
-    if (!reg || reg.inFlight) return;
-    // Harness tabs never emit `entry:appended`, so top up from their rendered screen here — the
-    // live channel for harness targets. An idle harness yields nothing, keeping the "no new
-    // content → no ACP prompt" guarantee below intact.
-    reg.buffer.push(...flushFeedEntries(this.managers, reg.targets, reg));
-    if (reg.buffer.length === 0) return;
-    const batch = reg.buffer;
-    reg.buffer = [];
-    const prompt = frameUpdatePrompt(batch, reg.delimiter);
-    recordContext(reg, prompt, 'input');
-    reg.inFlight = true;
-    let reply = '';
-    const session = reg.session;
-    // A stale callback leaves `inFlight` alone too: a replacement session's priming owns the slot.
-    session.prompt(prompt, {
-      onChunk: (text) => { reply += text; },
-      onEnd: () => {
-        if (!this.isCurrent(reg, session)) return;
-        reg.inFlight = false;
-        recordReply(reg, this.managers, reply);
-        const suggestion = parseSuggestion(reply);
-        if (suggestion) this.deliver(reg, batch.at(-1)!.tabLabel, suggestion);
-      },
-      onError: (message) => {
-        if (!this.isCurrent(reg, session)) return;
-        this.managers.tab.append(reg.owner, { input: '', output: `monitor ${reg.persona.name}: ${message} — restarting monitor session` });
-        if (isRateLimitError(message)) notify(this.managers, 'rate-limited', reg.owner);
-        this.respawn(reg, session);
-      },
-    });
-  }
-
-  private deliver(reg: MonitorSub, about: string, parsed: { text: string; command?: string }): void {
-    reg.delivered += 1;
-    const suggestion = buildSuggestion(parsed, reg.persona.name, about, `s-${++this.counter}`);
-    if (reg.inline) {
-      this.managers.tab.append(reg.owner, { input: '', output: formatInlineSuggestion(reg.persona.name, suggestion) });
-      return;
-    }
-    pushSuggestion(this.managers, reg.name, reg.persona.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);
   }
 
   // Query a running monitor's ACP session directly; the reply lands in the owner tab's
