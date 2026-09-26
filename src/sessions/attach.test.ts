@@ -42,7 +42,11 @@ function harness() {
         options.resume.onResult(true);
       }),
     },
-    remote: { liveEntries: () => [entry], close: vi.fn() },
+    remote: {
+      liveEntries: () => [entry], close: vi.fn(),
+      entryOf: (label: string) => (entry.labels.has(label) ? entry : undefined),
+      entryForSession: (session: string) => (entry.channel.sessionId === session ? entry : undefined),
+    },
     shell: { adoptRemoteShell: vi.fn(), releaseAdoptedShell: vi.fn() },
     tab: { tabs: [], cur: () => ({ label: 'janus', group: 1, groupColor: '#111' }) },
   } as unknown as Managers;

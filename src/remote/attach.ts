@@ -109,12 +109,21 @@ export function markEntryEnded(entry: RemoteEntry): RemoteLaunchHandlers[] {
   return handlers;
 }
 
+// An entry with a session id and a workspace: there is a peer on the far side holding both, so a lost
+// transport is recoverable, the session can be detached and recorded, and a resume has something to
+// come back to. One test for all of them, so they cannot disagree about which entries qualify.
+export type EstablishedEntry = RemoteEntry & { workspaceDir: string; channel: { sessionId: string } };
+
+export function isEstablished(entry: RemoteEntry): entry is EstablishedEntry {
+  return Boolean(entry.channel.sessionId) && Boolean(entry.workspaceDir);
+}
+
 // Only an entry already mid-backoff after losing its transport benefits from a resume: it has
 // something to collapse the wait on. An attached channel's transport is healthy by definition — a
 // resume signal has nothing to fix there, so forcing a replacement would only discard an
 // unbuffered PTY gap for no reason.
 export function resumeRemote(entry: RemoteEntry): void {
-  if (entry.closed || !entry.channel.sessionId || !entry.workspaceDir || !entry.attach.active) return;
+  if (entry.closed || !isEstablished(entry) || !entry.attach.active) return;
   entry.attach.retry();
 }
 
@@ -175,12 +184,11 @@ export function dropTerminatedSessionRecord(managers: Managers, session: string 
  * `acp-close`, `filesystem-close`, or `shutdown` frame is sent. The far side sees only its transport
  * go, which is the SIGHUP path that parks a peer for `REMOTE_DETACH_TIMEOUT_MS`.
  *
- * Refused for an entry with no workspace directory or no session id: there is nothing to come back
- * to yet, which is the same test the automatic recovery applies before treating a lost transport as
- * recoverable rather than as a failed launch.
+ * Refused for an entry that is not established (`isEstablished`): there is nothing to come back to
+ * yet.
  */
 export function detachRemoteEntry(entry: RemoteEntry): boolean {
-  if (entry.closed || !entry.workspaceDir || !entry.channel.sessionId) return false;
+  if (entry.closed || !isEstablished(entry)) return false;
   markEntryEnded(entry);
   entry.channel.disconnect();
   return true;

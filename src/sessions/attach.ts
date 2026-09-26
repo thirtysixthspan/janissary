@@ -26,7 +26,7 @@ export type AttachOutcome =
 async function settleAccepted(
   managers: Managers, record: RemoteSessionRecord, label: string,
 ): Promise<AttachOutcome> {
-  const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
+  const entry = managers.remote.entryOf(label);
   if (!entry) return { kind: 'failed', reason: `The connection to ${record.host} closed before it could be read.` };
   const processes = await askSessionState(entry);
   // An accepted peer that cannot say what it is holding cannot be safely restored. Terminate it through
