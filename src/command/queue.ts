@@ -24,8 +24,8 @@ export function dispatchOrRunOp(
   run(trimmed, label, index);
 }
 
-// Runs queued commands FIFO until the tab goes busy, its queue empties, or a route chooser
-// becomes pending (resumed by `CommandManager.chooseRoute`).
+// Runs queued commands FIFO until the tab goes busy, its queue empties, or `hasPendingRoute`
+// reports that this tab's route chooser is open (resumed by `CommandManager.chooseRoute`).
 export function drainQueueOp(
   managers: Managers, label: string,
   hasPendingRoute: () => boolean,

@@ -27,6 +27,8 @@ the target. You can also bypass recognition with the `db ` or `acp ` prefix.
 The chooser is modal, so the command bar is disabled until you choose or cancel. Use `↑` and `↓`,
 press `Return`, or click a row. `acp (agent prompt)` is highlighted when the chooser opens.
 
+Only one chooser is open at a time. If a scheduled or queued command needs a chooser while one is already open, it doesn't run. Its tab shows `Another command is waiting for a route choice; run this again once it is answered.` Closing the tab that opened the chooser also closes the chooser.
+
 See [Databases](/user-documentation/command-bar/database) for database routing and [ACP agents](/user-documentation/advanced-agents/acp-agent)
 for agent-prompt routing.
 

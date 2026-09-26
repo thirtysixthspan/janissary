@@ -69,6 +69,13 @@ can be aimed at a specific connection).
   cancel). `Controller.chooseRoute` clears the pending chooser and, for a valid index, runs
   `toPrefixedCommand(cmd, choice)` in the originating tab; a cancel (or out-of-range index) runs
   nothing. Either way the cleared state is broadcast so the overlay dismisses.
+- **One owner, never replaced.** The pending chooser belongs to its originating tab. While it is open,
+  a second command that would open a chooser (from another tab, or from a scheduled or queued command
+  in the originating tab itself) does not replace it, because that would silently discard the command
+  already waiting on it. The second command runs nothing, and its tab's transcript records it with the
+  output `Another command is waiting for a route choice; run this again once it is answered.` Only the
+  originating tab's queue pauses (see [[agent-command-queue]]), and `CommandManager.closeTab` drops the
+  chooser when the originating tab closes, broadcasting the cleared state so the overlay dismisses.
 
 ### Notes
 

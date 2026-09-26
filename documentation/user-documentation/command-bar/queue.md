@@ -14,7 +14,7 @@ The command appends `db vacuum` to `worker`'s queue. If `worker` is idle with no
 
 Every agent tab has its own unbounded, first-in-first-out queue. A command submitted while that agent is busy joins the queue instead of running immediately. A command sent to an idle agent that already has waiting work joins the back of that queue too.
 
-The issuing tab records `Queued: <command>` so you know the submission was accepted. The queue drains automatically from the front when the agent becomes idle, and it keeps going rather than stalling: a command that finishes without putting the agent back to work is followed straight away by the next one. Shell commands run in order on the same shell, and each one's output is only its own — none of the working-directory bookkeeping the app uses to track a shell leaks in from the command beside it. A route chooser pauses the queue until you choose or cancel it.
+The issuing tab records `Queued: <command>` so you know the submission was accepted. The queue drains automatically from the front when the agent becomes idle, and it keeps going rather than stalling: a command that finishes without putting the agent back to work is followed straight away by the next one. Shell commands run in order on the same shell, and each one's output is only its own — none of the working-directory bookkeeping the app uses to track a shell leaks in from the command beside it. A route chooser pauses its own tab's queue until you choose or cancel it. Other tabs keep draining.
 
 While the current agent is busy, its command prompt shows `queue` before the chevron and its dot blinks. Submitting text at that prompt adds it to the queue.
 

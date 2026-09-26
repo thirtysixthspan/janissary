@@ -53,6 +53,7 @@ function makeManagers(): Managers {
     conversations: { view: () => CONVERSATIONS },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     communication: { closeTab: vi.fn() },
+    command: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
   } as unknown as Managers);

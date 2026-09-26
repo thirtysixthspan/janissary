@@ -19,7 +19,8 @@ the queue drains front to back, one command at a time. If a dequeued command fin
 synchronously without making the tab busy again (for example a built-in command with no
 in-flight work), the drain continues on to the next queued entry rather than stalling. The drain
 pauses whenever a dequeued command opens the unprefixed-command route chooser, resuming once the
-chooser is resolved (a choice made, or cancelled).
+chooser is resolved (a choice made, or cancelled). The pause belongs to the tab whose command
+opened the chooser: every other tab's queue keeps draining while it is open (see [[command-routing]]).
 
 Draining runs the shell commands back to back on the same persistent shell; each command's output
 is exactly what that command produced, with no internal working-directory-tracking artifacts

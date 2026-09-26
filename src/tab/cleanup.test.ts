@@ -25,6 +25,7 @@ function makeManagers(): Managers {
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
     remote: { closeTab: vi.fn() },
     communication: { closeTab: vi.fn() },
+    command: { closeTab: vi.fn() },
   } as unknown as Managers;
 }
 
@@ -56,7 +57,7 @@ describe('closeTabResources', () => {
       const walk = managers[name].closeTab as ReturnType<typeof vi.fn>;
       walk.mockImplementation((_label: string) => { visited.push(name); });
     }
-    for (const name of ['monitor', 'command', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
+    for (const name of ['monitor', 'connection', 'profile', 'ssh', 'harness', 'openFile', 'gitSync', 'plugins', 'conversations', 'workspace']) {
       (managers as unknown as Record<string, unknown>)[name] = undefined;
     }
 

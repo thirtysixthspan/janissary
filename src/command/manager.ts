@@ -10,8 +10,12 @@ import type { Managers } from '../managers.js';
 import { dispatchOrRunOp, drainQueueOp } from './queue.js';
 import { errorText } from '../error-text.js';
 
+type PendingRoute = { label: string; cmd: string; choices: RouteChoice[] };
+
+const ROUTE_BUSY = 'Another command is waiting for a route choice; run this again once it is answered.';
+
 export class CommandManager {
-  private pendingRoute: { label: string; cmd: string; choices: RouteChoice[] } | null = null;
+  private pendingRoute: PendingRoute | null = null;
 
   constructor(private managers: Managers) {
     this.managers.tab.setOnIdle((label) => this.drainQueue(label));
@@ -31,6 +35,23 @@ export class CommandManager {
     }
     if (pending) this.drainQueue(pending.label);
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  closeTab(label: string): void {
+    if (this.pendingRoute?.label !== label) return;
+    this.pendingRoute = null;
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // The chooser slot is claimed, never overwritten: a second unknown command, from another tab or
+  // from a scheduled firing in the owning one, would otherwise silently discard the command already
+  // waiting on the open chooser, so it is refused in its own transcript instead.
+  private holdRoute(pending: PendingRoute | null): void {
+    if (pending && this.pendingRoute) {
+      this.managers.tab.append(pending.label, { input: pending.cmd, output: ROUTE_BUSY });
+      return;
+    }
+    this.pendingRoute = pending;
   }
 
   dispatch(text: string): void {
@@ -59,10 +80,11 @@ export class CommandManager {
     );
   }
 
-  // Runs queued commands FIFO until the tab goes busy, its queue empties, or a route chooser
-  // becomes pending (resumed by `chooseRoute`). Registered as `TabManager`'s onIdle hook.
+  // Runs queued commands FIFO until the tab goes busy, its queue empties, or one of its own
+  // commands opens a route chooser (resumed by `chooseRoute`); another tab's chooser never pauses
+  // it. Registered as `TabManager`'s onIdle hook.
   drainQueue(label: string): void {
-    drainQueueOp(this.managers, label, () => this.pendingRoute !== null, (i, l, idx) => this.run(i, l, idx));
+    drainQueueOp(this.managers, label, () => this.pendingRoute?.label === label, (i, l, idx) => this.run(i, l, idx));
   }
 
   private run(input: string, label: string, index: number, detect?: boolean): void {
@@ -75,7 +97,7 @@ export class CommandManager {
       case 'output': { this.managers.tab.append(label, { input, output: res.output, markdown: true }); return;
       }
       case 'unknown': {
-        resolveUnknownCommand(res.cmd, label, this.managers, (input, l, idx) => this.run(input, l, idx), (p) => { this.pendingRoute = p; });
+        resolveUnknownCommand(res.cmd, label, this.managers, (input, l, idx) => this.run(input, l, idx), (p) => this.holdRoute(p));
         return;
       }
       case 'app': { void this.executeCommand(res.name, res.cmd, label, index); return;
