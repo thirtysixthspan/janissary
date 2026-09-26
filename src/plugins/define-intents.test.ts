@@ -52,6 +52,13 @@ describe('defineIntents', () => {
     expect(reject).toHaveBeenCalledWith('unknown fixture intent "no-such-intent"');
   });
 
+  it('rejects an intent named after an inherited object property as unknown', () => {
+    const { capabilities, reject } = fakeCapabilities();
+    expect(() => intents(request('toString', {}), capabilities))
+      .toThrow('unknown fixture intent "toString"');
+    expect(reject).toHaveBeenCalledWith('unknown fixture intent "toString"');
+  });
+
   it('rejects a payload the named entry\'s guard does not accept', () => {
     const { capabilities, reject } = fakeCapabilities();
     expect(() => intents(request('save-edit', { dataUrl: 7 }), capabilities))

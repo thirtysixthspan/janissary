@@ -32,10 +32,10 @@ export function defineIntents<Payload, Intents extends Record<string, TabPluginI
     if (!isPayload(tabPayload)) {
       return capabilities.reportFailure(`invalid ${pluginId} tab payload`);
     }
-    const entry = intents[request.intent];
-    if (entry === undefined) {
+    if (!Object.hasOwn(intents, request.intent)) {
       return capabilities.rejectRequest(`unknown ${pluginId} intent "${request.intent}"`);
     }
+    const entry = intents[request.intent];
     if (!entry.payload(request.payload)) {
       return capabilities.rejectRequest(`invalid ${request.intent} payload`);
     }

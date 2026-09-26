@@ -106,6 +106,8 @@ A plugin may dock one of its own tabs into either sidebar, or move it back to th
 
 Plugin client actions use the generic `pluginIntent` RPC with a tab label, intent name, and payload. The server finds the plugin identity and authoritative tab payload from its own open-tab record. A client cannot choose another plugin, filesystem path, or served-file identity by adding fields to an intent.
 
+The image, PDF, video, and audio plugins declare their intents as one table (`defineIntents`), which checks every request the same way before any plugin code runs. The tab payload must pass the plugin's own guard, or the plugin is disabled with `invalid <id> tab payload`. The intent name must be one the table itself declares, or the request is rejected with `unknown <id> intent "<name>"`. A name that merely exists on every object, such as `toString`, is an unknown intent too, not a crash. The payload must pass that intent's guard, or the request is rejected with `invalid <intent> payload`.
+
 A plugin payload factory can register files through the host's existing `/open/<id>` allow-list, both when a tab opens and when one is updated. The host records every reference owned by that tab. Closing the tab deletes those references while leaving unrelated registrations intact.
 
 ### Reporting a line to the notifications feed
