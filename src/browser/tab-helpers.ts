@@ -1,14 +1,10 @@
-import { launchTabBrowser } from './index.js';
 import type { BrowserWindow, TabBrowser } from './types.js';
 
 export type Entry = { browser: TabBrowser; current?: string; counter: number };
 
-export async function ensureCurrentWindow(
-  browsers: Map<string, Entry>,
-  label: string,
-): Promise<BrowserWindow> {
-  let entry = browsers.get(label);
-  if (!entry) { entry = { browser: await launchTabBrowser(true), counter: 0 }; browsers.set(label, entry); }
+// The window a goto, eval, content or shot acts on: the tab's current one, opening a first window
+// when it has none. `entry` is the tab's settled browser — `BrowserManager.entryFor` launches it.
+export async function ensureCurrentWindow(entry: Entry): Promise<BrowserWindow> {
   if (!entry.current || !entry.browser.window(entry.current)) {
     const id = `w${++entry.counter}`;
     await entry.browser.openWindow(id);
@@ -17,23 +13,23 @@ export async function ensureCurrentWindow(
   return entry.browser.window(entry.current)!;
 }
 
-export async function runGoto(browsers: Map<string, Entry>, label: string, url: string): Promise<string> {
-  const page = await ensureCurrentWindow(browsers, label);
+export async function runGoto(entry: Entry, url: string): Promise<string> {
+  const page = await ensureCurrentWindow(entry);
   return await page.goto(url);
 }
 
-export async function runEval(browsers: Map<string, Entry>, label: string, js: string): Promise<string> {
-  const page = await ensureCurrentWindow(browsers, label);
+export async function runEval(entry: Entry, js: string): Promise<string> {
+  const page = await ensureCurrentWindow(entry);
   return await page.eval(js);
 }
 
-export async function runContent(browsers: Map<string, Entry>, label: string): Promise<string> {
-  const page = await ensureCurrentWindow(browsers, label);
+export async function runContent(entry: Entry): Promise<string> {
+  const page = await ensureCurrentWindow(entry);
   return await page.content();
 }
 
-export async function runShot(browsers: Map<string, Entry>, label: string): Promise<string> {
-  const page = await ensureCurrentWindow(browsers, label);
+export async function runShot(entry: Entry): Promise<string> {
+  const page = await ensureCurrentWindow(entry);
   const path = await page.shot();
   const opened = process.platform === 'darwin' ? ' (opening in Preview)' : '';
   return `Screenshot saved: ${path}${opened}`;

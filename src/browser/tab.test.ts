@@ -180,6 +180,54 @@ describe('BrowserManager', () => {
     expect(manager.has('main')).toBe(false);
   });
 
+  // The interactive command, an agent message and the ACP tool loop can all reach a fresh tab at
+  // once; each used to launch its own Chromium and leak all but the last.
+  it('shares one launch between two concurrent first uses of a tab', async () => {
+    const { promise: launched, resolve: finish } = Promise.withResolvers<TabBrowser>();
+    const browser = makeTabBrowser();
+    launchTabBrowser.mockImplementation(() => launched);
+    const manager = new BrowserManager(makeManagers());
+
+    const first = manager.run('main', 'goto https://example.com');
+    const second = manager.run('main', 'goto https://example.com');
+    finish(browser);
+
+    await expect(first).resolves.toContain('example.com');
+    await expect(second).resolves.toContain('example.com');
+    expect(launchTabBrowser).toHaveBeenCalledOnce();
+    expect(manager.has('main')).toBe(true);
+  });
+
+  it('closes a browser whose tab closed while it was launching, once the launch completes', async () => {
+    const { promise: launched, resolve: finish } = Promise.withResolvers<TabBrowser>();
+    const browser = makeTabBrowser();
+    launchTabBrowser.mockImplementation(() => launched);
+    const manager = new BrowserManager(makeManagers());
+
+    const pending = manager.run('main', 'goto https://example.com');
+    manager.closeTab('main');
+    finish(browser);
+
+    await expect(pending).resolves.toContain('Browser error');
+    expect(browser.close).toHaveBeenCalledOnce();
+    expect(manager.has('main')).toBe(false);
+  });
+
+  it('closeAll releases a launch still in flight', async () => {
+    const { promise: launched, resolve: finish } = Promise.withResolvers<TabBrowser>();
+    const browser = makeTabBrowser();
+    launchTabBrowser.mockImplementation(() => launched);
+    const manager = new BrowserManager(makeManagers());
+
+    const pending = manager.run('main', 'open');
+    manager.closeAll();
+    finish(browser);
+    await pending;
+
+    expect(browser.close).toHaveBeenCalledOnce();
+    expect(manager.has('main')).toBe(false);
+  });
+
   it('closeTab is a no-op for an unknown tab', () => {
     const manager = new BrowserManager(makeManagers());
     expect(() => manager.closeTab('missing')).not.toThrow();

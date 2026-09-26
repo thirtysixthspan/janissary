@@ -12,8 +12,13 @@ import {
 import type { Entry } from './tab-helpers.js';
 import { errorText } from '../error-text.js';
 
+type Launch = { release: { released: boolean }; entry: Promise<Entry> };
+
 export class BrowserManager {
   private browsers = new Map<string, Entry>();
+  // A launch still in flight, per label. Recorded before it is awaited, so overlapping first uses
+  // share one Chromium and teardown can see a launch it has to release.
+  private launching = new Map<string, Launch>();
 
   constructor(private managers: Managers) {}
 
@@ -27,14 +32,48 @@ export class BrowserManager {
     return entry ? { ids: entry.browser.windowIds(), mode: entry.browser.mode, current: entry.current } : null;
   }
 
+  // A launch still in flight is released rather than waited for: it closes the browser it opened as
+  // soon as that settles, instead of registering it under a label that is gone or reused.
   closeTab(label: string): void {
+    const launch = this.launching.get(label);
+    if (launch) { launch.release.released = true; this.launching.delete(label); }
     const entry = this.browsers.get(label);
     if (entry) { void entry.browser.close(); this.browsers.delete(label); }
   }
 
   closeAll(): void {
+    for (const launch of this.launching.values()) launch.release.released = true;
+    this.launching.clear();
     for (const [, entry] of this.browsers) void entry.browser.close();
     this.browsers.clear();
+  }
+
+  // The tab's browser, launching it on first use. Every caller for a label shares one launch.
+  private async entryFor(label: string, headless: boolean): Promise<Entry> {
+    const existing = this.browsers.get(label);
+    if (existing) return existing;
+    let launch = this.launching.get(label);
+    if (!launch) {
+      const release = { released: false };
+      launch = { release, entry: this.launch(label, headless, release) };
+      this.launching.set(label, launch);
+    }
+    return await launch.entry;
+  }
+
+  private async launch(label: string, headless: boolean, release: { released: boolean }): Promise<Entry> {
+    try {
+      const browser = await launchTabBrowser(headless);
+      if (release.released) {
+        void browser.close();
+        throw new Error('the tab closed while its browser was launching');
+      }
+      const entry: Entry = { browser, counter: 0 };
+      this.browsers.set(label, entry);
+      return entry;
+    } finally {
+      if (this.launching.get(label)?.release === release) this.launching.delete(label);
+    }
   }
 
   dispose(): void {
@@ -50,10 +89,10 @@ export class BrowserManager {
     try {
       switch (parsed.action) {
         case 'open': {
-          let entry = this.browsers.get(label);
-          const notice = entry && parsed.headed && entry.browser.mode === 'headless'
+          const running = this.browsers.has(label) || this.launching.has(label);
+          const entry = await this.entryFor(label, !parsed.headed);
+          const notice = running && parsed.headed && entry.browser.mode === 'headless'
             ? ' (this tab is already running headless; close all windows to relaunch headed)' : '';
-          if (!entry) { entry = { browser: await launchTabBrowser(!parsed.headed), counter: 0 }; this.browsers.set(label, entry); }
           const id = `w${++entry.counter}`;
           await entry.browser.openWindow(id);
           entry.current = id;
@@ -77,16 +116,16 @@ export class BrowserManager {
           return await closeBrowserWindow(this.browsers, label, parsed.id);
         }
         case 'goto': {
-          return await runGoto(this.browsers, label, parsed.url);
+          return await runGoto(await this.entryFor(label, true), parsed.url);
         }
         case 'eval': {
-          return await runEval(this.browsers, label, parsed.js);
+          return await runEval(await this.entryFor(label, true), parsed.js);
         }
         case 'content': {
-          return await runContent(this.browsers, label);
+          return await runContent(await this.entryFor(label, true));
         }
         case 'shot': {
-          return await runShot(this.browsers, label);
+          return await runShot(await this.entryFor(label, true));
         }
       }
     } catch (error) {
