@@ -1,5 +1,5 @@
 import { HarnessAutoApprover } from './auto-approve.js';
-import { writeCaptureFile } from './capture-file.js';
+import { writeCaptureFile } from './capture/file.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 

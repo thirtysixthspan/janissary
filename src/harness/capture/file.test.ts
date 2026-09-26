@@ -5,7 +5,7 @@ import {
   ensureCaptureDirectory,
   writeCaptureFile,
   clearCaptureDirectory,
-} from './capture-file.js';
+} from './file.js';
 
 vi.mock('node:fs');
 

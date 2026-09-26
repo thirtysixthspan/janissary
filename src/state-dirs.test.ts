@@ -25,7 +25,7 @@ vi.mock('./agent/state.js', () => ({
   initAgentStateDirectory: mocks.initAgentStateDirectory,
   clearStateDirectory: mocks.clearStateDirectory,
 }));
-vi.mock('./harness/capture-file.js', () => ({
+vi.mock('./harness/capture/file.js', () => ({
   initHarnessCaptureDirectory: mocks.initHarnessCaptureDirectory,
   clearCaptureDirectory: mocks.clearCaptureDirectory,
 }));

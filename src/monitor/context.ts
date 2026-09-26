@@ -1,6 +1,6 @@
 import type { MonitorSub } from './manager.js';
 import type { Managers } from '../managers.js';
-import { writeCaptureFile } from '../harness/capture-file.js';
+import { writeCaptureFile } from '../harness/capture/file.js';
 
 // One block of a monitor's ACP context, tagged with its direction: `input` is text fed to the
 // model (persona priming, a batched update prompt, or an ask), `response` is a model reply. The

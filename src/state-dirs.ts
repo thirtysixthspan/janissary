@@ -1,5 +1,5 @@
 import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
-import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture-file.js';
+import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture/file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
 import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from './browser/browser-log.js';
