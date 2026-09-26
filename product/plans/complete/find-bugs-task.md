@@ -173,6 +173,8 @@ Rehearsed on 2026-09-26 from a tab with no attached browser, against branch comm
 
 **Cases 1 and 3, not run.** Both need a tab launched with the E2E browser, and the tab this was written in has neither `JANISSARY_BROWSER_WS_ENDPOINT` nor `JANISSARY_PLAYWRIGHT`. Nothing in this repository should be read as a claim that they pass.
 
+**The Janissary worked example was removed after this plan was completed.** The design decision above stands as the record of what was decided then; the section it called for is no longer in the task, which now takes a Janissary checkout's build and launch commands from that checkout's own instructions like any other project's. What no project document states, and what the section carried, is the scratch repository's git identity, the `sandboxWorkspaces` override, the detached launch with its token-gated URL, and the launcher's preference for a compiled `dist/main.js` over `src/main.ts` — so a run pointed at a Janissary checkout may not find a working recipe on its own. The holder-process rule the section also carried is written down in `ai/guidelines/sandbox-e2e-browser.md`, and the stop command remains in the task's teardown step.
+
 **Two things the rehearsal turned up, recorded rather than fixed.**
 
 - A run launched from this branch tests the primary branch's code, so the copy of the task and the code it exercises come from different commits by design. The audit command the branch's instructions give is therefore run by the primary branch's copy of the runner, which predates the lockfile-path form and falls back to auditing the lockfile beside it — the same file in that case, so the step still audits what it should.

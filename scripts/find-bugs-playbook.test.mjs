@@ -3,44 +3,30 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 // `ai/tasks/research/find-bugs.md` runs unattended and decides what to do next by matching text that
-// other code prints: the launcher's timeout message, its readiness marker, the stop command's
-// message, the server's refusal to start without a bundle, the config key it writes into a scratch
-// project, the build it runs. Reword any of those and nothing fails — the playbook goes on giving
-// confident instructions for output that no longer exists, an unattended run misreads a real start
-// failure, and the bug it files describes a message the app never printed.
-// `scripts/docs-screenshots/task-playbook.test.mjs` exists for the same reason about the other
-// unattended task that reads a script's output. These assertions pin the literals an agent matches
-// on and nothing else: not prose, not structure.
+// other code prints: the stop command's message when there is nothing left to stop, and the two
+// browser variables it gates on. Reword any of those and nothing fails — the playbook goes on giving
+// confident instructions for output that no longer exists, and an unattended run misreads a real
+// failure. The same hazard, for a much larger set of literals, is what
+// `scripts/docs-screenshots/task-playbook.test.mjs` pins for the other unattended task that reads a
+// script's output. These assertions pin what the playbook still quotes and nothing else: not prose,
+// not structure.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
 
 const playbook = read('ai/tasks/research/find-bugs.md');
 const plan = read('product/plans/complete/find-bugs-task.md');
-const manifest = JSON.parse(read('package.json'));
 const browserGuideline = read('ai/guidelines/sandbox-e2e-browser.md');
 
 // [what the playbook relies on, the file that produces it, the literal both must carry]
 const APPLICATION_LITERALS = [
-  ['the launch message when no URL arrives', read('bin/janus.mjs'), 'failed to start: timed out waiting for the server'],
-  ['the marker the launcher waits for', read('bin/janus.mjs'), '__JANUS_URL__'],
-  ['the line the server prints once it is up', read('src/main.ts'), '__JANUS_URL__'],
-  ['the bundle the server will not start without', read('src/main.ts'), 'web/dist'],
   ['the stop command with nothing left running', read('src/stop-instance.ts'), 'no running janus instance for'],
-  ['the config key that disables the nested sandbox', read('src/config.ts'), 'sandboxWorkspaces'],
-  ['the same key as the decoder fills it', read('src/config-decode.ts'), 'sandboxWorkspaces'],
 ];
 
 describe('the find-bugs playbook', () => {
   it.each(APPLICATION_LITERALS)('quotes what %s prints', (_what, source, literal) => {
     expect(source).toContain(literal);
     expect(playbook).toContain(literal);
-  });
-
-  it('runs the build the manifest defines, and spells it the way the manifest does', () => {
-    expect(manifest.scripts.build).toBe('tsc && npm run build:web');
-    expect(playbook).toContain('npm run build');
-    expect(playbook).toContain('tsc && npm run build:web');
   });
 
   it.each(['JANISSARY_BROWSER_WS_ENDPOINT', 'JANISSARY_PLAYWRIGHT'])(
