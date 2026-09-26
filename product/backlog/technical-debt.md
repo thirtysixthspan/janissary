@@ -4,17 +4,6 @@
 
 ## development
 
-* Give the HTTP request handler one error boundary and stream ranged file reads through a pipeline, so a malformed request answers 400 instead of taking the whole server down.
-
-Existing Debt: The static and `/open/` handler runs as a fire-and-forget async function with no error boundary, so any throw inside it becomes an unhandled promise rejection, and its range-request streaming pipes a file stream into the response with no error listener and no teardown when the client goes away. Severity: 6/10
-
-Existing Risk: 8/10 - A single unauthenticated loopback request for the path `//` makes `new URL` throw after the Host check has passed, and a token-bearing `/open/%E0%A4%A` makes `decodeURIComponent` throw; with no rejection handler anywhere in the process either one terminates the server and every agent tab with it, while abandoned video range requests leak file handles until the process runs out.
-
-Proposal Risk: 2/10 - A request the handler cannot parse is answered with an error status rather than crashing, but a throw in a later-added code path outside the wrapped function would still escape, which a malformed-request test in the suite would expose.
-
-Proposal: In `src/index.ts`, `createServer((request, res) => { void serveStatic(request, res); })` discards the promise, and `serveStatic` calls `new URL(request.url ?? '/', 'http://localhost')` and `decodeURIComponent(...)` unguarded, while `tokenFromReq` in `src/security.ts` already wraps the same `new URL` call in try/catch. There is no `unhandledRejection` handler in `src/` or `bin/`, so Node's default kills the process. Wrap the body of `serveStatic` in a try/catch that answers `400 bad request` for a `TypeError` or `URIError` from URL parsing or decoding and `500` for anything else, and only if headers have not been sent yet (`res.headersSent`), otherwise `res.destroy()`. In `src/open/route.ts`, `serveOpenFile` does `createReadStream(filePath, { start, end }).pipe(res)`; replace it with `pipeline(createReadStream(...), res, () => {})` from `node:stream` so the file stream is destroyed when the client aborts a seek and a read error (a file removed between the `stat` and the open) is contained rather than emitted with no listener. Add cases to `src/index.test.ts` for a raw `GET //` request with a loopback Host header and for an `/open/` path with a malformed percent escape, asserting a 400 and that the server still answers the next request, and a case to `src/open/route.test.ts` that aborts a ranged response mid-stream and one where the file disappears after `stat`. The existing "rejects an /open/ request with no token" and "serves security headers" tests in `src/index.test.ts` and the range tests in `src/open/route.test.ts` pin the behavior that must not move.
-
-
 * Refuse an editor-tab rename that would replace an existing file or move the file into another folder, the same way the file navigator's rename already does.
 
 Existing Debt: Renaming a file on disk has two implementations, and the editor tab's copy joins the typed name onto the file's directory and calls `renameSync` with no destination check and no name validation, while the file navigator's copy refuses separators and existing destinations. Severity: 6/10

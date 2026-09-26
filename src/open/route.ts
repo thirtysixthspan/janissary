@@ -1,6 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { pipeline } from 'node:stream';
 
 export type ByteRange = { start: number; end: number };
 
@@ -54,7 +55,11 @@ export async function serveOpenFile(
       'content-range': `bytes ${range.start}-${range.end}/${size}`,
       'content-length': String(range.end - range.start + 1),
     });
-    createReadStream(filePath, { start: range.start, end: range.end }).pipe(res);
+    // `pipeline` destroys the file stream when the client abandons a seek, and contains a read error
+    // (a file removed after the `stat`) to this one response by destroying it.
+    pipeline(createReadStream(filePath, { start: range.start, end: range.end }), res, () => {
+      // Both streams are already torn down by the time this runs; there is nothing else to release.
+    });
     return;
   }
 

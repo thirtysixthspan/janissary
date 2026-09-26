@@ -9,6 +9,7 @@ import { handle } from './message/handler.js';
 import { buildStateEvent } from './state-event.js';
 import { clientParamsProblem, isClientMessage } from './client-message.js';
 import { serveOpenFile } from './open/route.js';
+import { guardRequest } from './request-boundary.js';
 import { tabPluginCatalog } from './plugins/catalog.js';
 import { pluginContentTypes } from './plugins/opener-adapter.js';
 import { pluginOpeners } from './openers/index.js';
@@ -117,7 +118,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     res.end(body);
   };
 
-  const http = createServer((request, res) => { void serveStatic(request, res); });
+  const http = createServer(guardRequest(serveStatic));
   const wss = new WebSocketServer({ noServer: true });
 
   http.on('upgrade', (request, socket, head) => {

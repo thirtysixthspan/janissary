@@ -183,6 +183,28 @@ describe('startServer (WS + RPC + security)', () => {
     expect(await get(`?token=${server.token}`)).toBe(404);
   });
 
+  // `http.get` sends the path verbatim with a loopback Host header, so the request clears the Origin
+  // check and reaches the URL parsing and decoding a malformed path breaks.
+  const statusOf = (port: number, requestPath: string) => new Promise<number>((res, rej) => {
+    const request = http.get({ host: '127.0.0.1', port, path: requestPath }, (r) => {
+      r.resume();
+      res(r.statusCode ?? 0);
+    });
+    request.on('error', rej);
+  });
+
+  it('answers 400 to an unparseable request path and keeps serving', async () => {
+    server = await startServer({ webDir });
+    expect(await statusOf(server.port, '//')).toBe(400);
+    expect(await statusOf(server.port, '/')).toBe(200);
+  });
+
+  it('answers 400 to an /open/ path with a malformed percent escape and keeps serving', async () => {
+    server = await startServer({ webDir });
+    expect(await statusOf(server.port, `/open/%E0%A4%A?token=${server.token}`)).toBe(400);
+    expect(await statusOf(server.port, `/open/not-registered?token=${server.token}`)).toBe(404);
+  });
+
   it('serves plugin files with declaration-derived video MIME types', async () => {
     const projectDir = mkdtempSync(path.join(tmpdir(), 'janus-video-mime-'));
     writeFileSync(path.join(projectDir, 'clip.mp4'), Buffer.alloc(16));

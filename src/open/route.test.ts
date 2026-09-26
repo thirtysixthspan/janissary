@@ -1,34 +1,73 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createServer, type Server } from 'node:http';
 import http from 'node:http';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, type ReadStream } from 'node:fs';
+import type * as NodeFs from 'node:fs';
+import type * as NodeFsPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseByteRange, serveOpenFile } from './route.js';
+
+// Every file stream the route opens is recorded so a test can check it was released.
+const opened = vi.hoisted(() => [] as ReadStream[]);
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFs>();
+  return {
+    ...actual,
+    createReadStream: (...args: Parameters<typeof actual.createReadStream>) => {
+      const stream = actual.createReadStream(...args);
+      opened.push(stream);
+      return stream;
+    },
+  };
+});
+
+// A path whose `stat` still reports a size although the file is gone: the window between the route's
+// `stat` and its open, held open deterministically.
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFsPromises>();
+  return {
+    ...actual,
+    stat: (target: string) => (target.endsWith('vanished.mp4') ? Promise.resolve({ size: 10 }) : actual.stat(target)),
+  };
+});
 
 const dir = mkdtempSync(path.join(tmpdir(), 'janus-open-route-'));
 const file = path.join(dir, 'clip.mp4');
 writeFileSync(file, 'abcdefghij');
 
 let server: Server | null = null;
-afterEach(() => { server?.close(); server = null; });
+afterEach(() => { server?.close(); server = null; opened.length = 0; });
+
+const waitFor = async (predicate: () => boolean, ms = 2000) => {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > ms) throw new Error('timeout');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+};
 
 type Fetched = { status: number; headers: http.IncomingMessage['headers']; body: string };
 
-// Serve the one fixture file through the route under test and issue a single request against it.
-async function fetchRange(range?: string, filePath = file): Promise<Fetched> {
+// Serve one file through the route under test on a fresh server, answering with its port.
+async function listen(filePath: string): Promise<number> {
   server = createServer((request, res) => {
     void serveOpenFile(request, res, filePath, { 'content-type': 'video/mp4' });
   });
-  const port = await new Promise<number>((resolve) => {
+  return new Promise<number>((resolve) => {
     server!.listen(0, '127.0.0.1', () => {
       const address = server!.address();
       resolve(typeof address === 'object' && address ? address.port : 0);
     });
   });
+}
+
+// Issue a single request against the fixture file, on a fresh server unless a port is given.
+async function fetchRange(range?: string, filePath = file, port?: number): Promise<Fetched> {
+  const target = port ?? await listen(filePath);
   return new Promise<Fetched>((resolve, reject) => {
     const request = http.get(
-      { host: '127.0.0.1', port, path: '/open/1', headers: range ? { range } : {} },
+      { host: '127.0.0.1', port: target, path: '/open/1', headers: range ? { range } : {} },
       (response) => {
         let body = '';
         response.setEncoding('utf8');
@@ -112,5 +151,39 @@ describe('serveOpenFile', () => {
     const response = await fetchRange(undefined, path.join(dir, 'missing.mp4'));
     expect(response.status).toBe(404);
     expect(response.body).toBe('');
+  });
+
+  it('releases the file stream when the client abandons a ranged response', async () => {
+    const large = path.join(dir, 'large.mp4');
+    writeFileSync(large, Buffer.alloc(16 * 1024 * 1024));
+    const port = await listen(large);
+    await new Promise<void>((resolve, reject) => {
+      const request = http.get(
+        { host: '127.0.0.1', port, path: '/open/1', headers: { range: 'bytes=0-' } },
+        (response) => { response.once('data', () => { request.destroy(); resolve(); }); },
+      );
+      request.on('error', (error: NodeJS.ErrnoException) => { if (error.code !== 'ECONNRESET') reject(error); });
+    });
+    expect(opened).toHaveLength(1);
+    await waitFor(() => opened[0].destroyed);
+  });
+
+  it('ends only that response when the file disappears after stat, and keeps serving', async () => {
+    const vanished = path.join(dir, 'vanished.mp4');
+    const port = await listen(vanished);
+    const outcome = await new Promise<string>((resolve) => {
+      const request = http.get(
+        { host: '127.0.0.1', port, path: '/open/1', headers: { range: 'bytes=0-3' } },
+        (response) => {
+          response.resume();
+          response.on('aborted', () => { resolve('aborted'); });
+          response.on('end', () => { resolve('ended'); });
+        },
+      );
+      request.on('error', () => { resolve('aborted'); });
+    });
+    expect(outcome).toBe('aborted');
+    const next = await fetchRange(undefined, vanished, port);
+    expect(next.status).toBe(500);
   });
 });
