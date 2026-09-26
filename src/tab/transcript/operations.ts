@@ -1,5 +1,5 @@
-import type { LogEntry, Tab } from './types.js';
-import { appendTab, markUnreadTab } from './transcript-events.js';
+import type { LogEntry, Tab } from '../types.js';
+import { appendTab, markUnreadTab } from './events.js';
 
 // The tab operations under the names the tab layer speaks of them: `startRunningTab` says what a
 // function does to a `Tab[]`, `startRunning` says what it means to a tab. Most of this module is
@@ -15,9 +15,9 @@ export {
   type RunningEntryFields,
   type RunningEntryMatch,
   type UpdateRunningHooks,
-} from './transcript-events.js';
-export { capLog as capToConfiguredMax } from './transcript-log.js';
-export { recordHistory as recordHistoryForTab } from './history.js';
+} from './events.js';
+export { capLog as capToConfiguredMax } from './log.js';
+export { recordHistory as recordHistoryForTab } from '../history.js';
 
 export function append(
   tabs: Tab[], label: string, entry: LogEntry, cap: (log: LogEntry[]) => LogEntry[],

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab, updateRunningEntry,
-} from './transcript-events.js';
-import { capLog } from './transcript-log.js';
-import { makeTab } from './index.js';
-import { messageBus } from '../bus.js';
-import type { AgentState } from '../agent/types.js';
-import type { Tab } from './types.js';
+} from './events.js';
+import { capLog } from './log.js';
+import { makeTab } from '../index.js';
+import { messageBus } from '../../bus.js';
+import type { AgentState } from '../../agent/types.js';
+import type { Tab } from '../types.js';
 
 const buildAgentState = (tab: Tab) => ({ name: tab.label }) as AgentState;
 

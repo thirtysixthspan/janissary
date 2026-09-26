@@ -1,9 +1,9 @@
-import type { AgentState } from '../agent/types.js';
-import { getConfig } from '../config.js';
-import { TabOpeningState } from './opening-state.js';
-import { capLog } from './transcript-log.js';
-import * as transcriptOperations from './transcript-operations.js';
-import type { LogEntry, Tab } from './types.js';
+import type { AgentState } from '../../agent/types.js';
+import { getConfig } from '../../config.js';
+import { TabOpeningState } from '../opening-state.js';
+import { capLog } from './log.js';
+import * as transcriptOperations from './operations.js';
+import type { LogEntry, Tab } from '../types.js';
 
 // A tab's transcript: the log it has written and the still-running entry at the tail of it. Every
 // method here is `TabManager`'s own wiring of `transcript-operations` to tab state — the cap the

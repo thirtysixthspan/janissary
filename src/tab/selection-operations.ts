@@ -1,6 +1,6 @@
 import type { Tab } from './types.js';
 import { recordLeavingActiveTab as recordLeavingActiveTabOp, popFocusHistory as popFocusHistoryOp, mostRecentFileNavigatorLabel as mostRecentFileNavigatorLabelOp } from './focus-history.js';
-import { markUnreadTab } from './transcript-events.js';
+import { markUnreadTab } from './transcript/events.js';
 import { repairPaneSelections } from './split-selection.js';
 import { applyOpenResult as applyOpenResultOp } from './open-result.js';
 

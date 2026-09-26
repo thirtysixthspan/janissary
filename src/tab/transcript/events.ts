@@ -1,8 +1,8 @@
-import type { Tab, LogEntry } from './types.js';
-import type { AgentState } from '../agent/types.js';
-import { messageBus } from '../bus.js';
-import { appendEntry, clearLog } from './transcript-log.js';
-import { runtimeFor } from './runtime.js';
+import type { Tab, LogEntry } from '../types.js';
+import type { AgentState } from '../../agent/types.js';
+import { messageBus } from '../../bus.js';
+import { appendEntry, clearLog } from './log.js';
+import { runtimeFor } from '../runtime.js';
 
 // Transcript/busy-tracking coordination extracted from TabManager: wraps the pure log
 // mutations in transcript-log.ts with the messageBus emits, persistence, and unread-marking
