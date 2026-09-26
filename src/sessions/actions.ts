@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { errorText } from '../error-text.js';
-import type { RemoteEntry } from '../remote/attach.js';
+import { isEstablished, type RemoteEntry } from '../remote/attach.js';
 import { terminateParkedSession } from './terminate-session.js';
 import { startSessionAttach } from './attach.js';
 import type { SessionTerminated } from './rows.js';
@@ -80,13 +80,14 @@ function park(
 // declines for, and they read differently: one is a wait, one is a fault, one is a session there
 // would be no way to describe.
 function detachRefusal(entry: RemoteEntry): string {
-  if (entry.workspaceDir === undefined) return 'cannot be detached yet — its workspace is still being prepared.';
-  if (!entry.channel.sessionId) return 'cannot be detached — the host never named the session.';
-  return 'cannot be detached — nothing is running in its workspace to come back to.';
+  if (isEstablished(entry)) return 'cannot be detached — nothing is running in its workspace to come back to.';
+  return entry.workspaceDir === undefined
+    ? 'cannot be detached yet — its workspace is still being prepared.'
+    : 'cannot be detached — the host never named the session.';
 }
 
 function detach(managers: Managers, record: RemoteSessionRecord | undefined, label: string): SessionActionResult {
-  const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
+  const entry = managers.remote.entryOf(label);
   if (!entry) return REFUSED;
   // Refused before anything is dropped. A session parked with no record left the peer holding its
   // workspace on the far side for the whole seven-day expiry with no row, no attach path, and
@@ -178,7 +179,7 @@ function terminate(
 }
 
 function terminateLive(managers: Managers, record: RemoteSessionRecord): SessionActionResult | undefined {
-  const entry = managers.remote.liveEntries().find((candidate) => candidate.channel.sessionId === record.session);
+  const entry = managers.remote.entryForSession(record.session);
   if (!entry) return;
   report(managers, line(entry.workspaceLabel, entry.address.host, 'terminated.'));
   if (!managers.remote.close(entry.workspaceLabel)) return REFUSED;
@@ -198,7 +199,7 @@ export function runSessionAction(
   apply: ApplyResult,
 ): SessionActionResult {
   if (action.kind === 'detach') {
-    const entry = managers.remote.liveEntries().find((candidate) => candidate.labels.has(action.label));
+    const entry = managers.remote.entryOf(action.label);
     const session = entry?.channel.sessionId;
     return detach(managers, session === undefined ? undefined : sessions.recordFor(session), action.label);
   }

@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
-import { dropRemoteLabels, markEntryEnded, type RemoteEntry } from './attach.js';
+import { dropRemoteLabels, isEstablished, markEntryEnded, type RemoteEntry } from './attach.js';
 
 /**
  * A channel's transport went away, or its last label let it go. Split out of `RemoteManager` to keep
@@ -18,7 +18,7 @@ export function remoteChannelClosed(
   managers: Managers, entries: Map<string, RemoteEntry>, entry: RemoteEntry, ending = false,
 ): void {
   if (entry.closed) return;
-  if (!ending && entry.channel.sessionId && entry.workspaceDir) { entry.attach.lost(); return; }
+  if (!ending && isEstablished(entry)) { entry.attach.lost(); return; }
   const handlers = markEntryEnded(entry);
   if (!entry.settled) {
     entry.settled = true;

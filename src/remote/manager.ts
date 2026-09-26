@@ -126,6 +126,15 @@ export class RemoteManager {
   // every one of them. What the sessions list is composed from (see `src/sessions/snapshot.ts`).
   liveEntries(): Entry[] { return [...new Set(this.entries.values())]; }
 
+  // The entry a tab or navigator holds. A label is added to and removed from this table and the
+  // entry's own `labels` together, so this is the same answer a scan of `liveEntries()` would give.
+  entryOf(label: string): Entry | undefined { return this.entries.get(label); }
+
+  // The live entry whose channel carries this session id, if this janissary still holds it.
+  entryForSession(session: string): Entry | undefined {
+    return this.liveEntries().find((entry) => entry.channel.sessionId === session);
+  }
+
   // Drop one tab/navigator's reference, closing the transport only when it was the final user.
   release(label: string): boolean {
     const entry = this.entries.get(label);

@@ -9,6 +9,7 @@ import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
 import { REMOTE_SHUTDOWN_DRAIN_MS } from './shutdown-drain.js';
+import { isEstablished } from './attach.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
@@ -584,6 +585,37 @@ describe('RemoteManager attach from a record', () => {
     const h = managerHarness(false);
     const sent = h.write.mock.calls.map(([data]: [string]) => JSON.parse(String(data).trim()) as { type: string });
     expect(sent.map((frame) => frame.type)).toEqual(['provision']);
+  });
+});
+
+// The sessions feature asks these instead of re-deriving them from raw entries.
+describe('RemoteManager lookups and the established predicate', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('finds an entry by any label riding it, and by its session id', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.remote.attach('joined', 'creator');
+    const entry = h.remote.liveEntries()[0];
+
+    expect(h.remote.entryOf('creator')).toBe(entry);
+    expect(h.remote.entryOf('joined')).toBe(entry);
+    expect(h.remote.entryOf('nobody')).toBeUndefined();
+    expect(h.remote.entryForSession(RECORDED_SESSION)).toBe(entry);
+    expect(h.remote.entryForSession('another-session')).toBeUndefined();
+  });
+
+  it('stops finding a label once it is released', () => {
+    const h = managerHarness(true, RECORDED_SESSION);
+    h.remote.attach('joined', 'creator');
+    h.remote.release('joined');
+    expect(h.remote.entryOf('joined')).toBeUndefined();
+    expect(h.remote.entryOf('creator')).toBeDefined();
+  });
+
+  it('counts an entry as established only with both a session id and a workspace', () => {
+    expect(isEstablished(managerHarness(true, RECORDED_SESSION).remote.entryOf('creator')!)).toBe(true);
+    expect(isEstablished(managerHarness(false, RECORDED_SESSION).remote.entryOf('creator')!)).toBe(false);
+    expect(isEstablished(managerHarness(true).remote.entryOf('creator')!)).toBe(false);
   });
 });
 

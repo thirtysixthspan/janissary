@@ -88,7 +88,11 @@ function harness(
     .map((label) => ({ label, view: 'harness', dotColor: '#111', group: 1, groupColor: '#111' }));
   if (sessionsTab) tabs.push({ label: sessionsTab.label, view: 'plugin', plugin: { id: 'sessions' } });
   const managers = {
-    remote: { liveEntries: () => entries, detach, close },
+    remote: {
+      liveEntries: () => entries, detach, close,
+      entryOf: (label: string) => entries.find((entry) => entry.labels.has(label)),
+      entryForSession: (session: string) => entries.find((entry) => entry.channel.sessionId === session),
+    },
     tab: {
       tabs,
       byLabel: (label: string) => (open.includes(label)

@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { RemoteSessionKind } from '../protocol.js';
-import type { RemoteEntry } from '../remote/attach.js';
+import { isEstablished, type RemoteEntry } from '../remote/attach.js';
 import type { Tab } from '../tab/types.js';
 import { isFilesTab, isSshTab } from '../tab/view-guards.js';
 import type { SessionChannel, SessionMember, SessionSsh } from './rows.js';
@@ -101,8 +101,8 @@ function processOf(
  * describes the far side in the same terms the far side answers a `session-state` query with.
  */
 export function recordOf(entry: RemoteEntry, now: number): RemoteSessionRecord | undefined {
+  if (!isEstablished(entry)) return;
   const session = entry.channel.sessionId;
-  if (session === undefined || entry.workspaceDir === undefined) return;
   const launchLabel = entry.workspaceLabel;
   const processes = entry.channel.spawnedProcesses()
     .map((state) => processOf(state, launchLabel))

@@ -23,7 +23,7 @@ function record(): RemoteSessionRecord {
 
 function managers(): Managers {
   return {
-    remote: { liveEntries: () => [] },
+    remote: { liveEntries: () => [], entryOf: () => {}, entryForSession: () => {} },
     tab: { tabs: [], cur: () => ({ label: 'janus' }) },
   } as unknown as Managers;
 }

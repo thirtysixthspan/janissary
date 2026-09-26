@@ -60,8 +60,7 @@ export class SessionsManager {
   // attaching it means "try now"; a parked one has no transport at all, so it means "bring it
   // back". The row's state already told the user which; the request is the same either way.
   attach(session: string): boolean {
-    const live = this.managers.remote.liveEntries()
-      .find((entry) => entry.channel.sessionId === session);
+    const live = this.managers.remote.entryForSession(session);
     if (live) return this.attachTab(live.workspaceLabel);
     return this.act({ kind: 'attach', session });
   }
@@ -69,7 +68,7 @@ export class SessionsManager {
   // The metadata row's attach, which addresses a tab rather than a record. On a live entry it
   // means "try now": it collapses the reconnect backoff exactly as the system resume signal does.
   attachTab(label: string): boolean {
-    const entry = this.managers.remote.liveEntries().find((candidate) => candidate.labels.has(label));
+    const entry = this.managers.remote.entryOf(label);
     // The only way to get here is a tab whose channel has already gone, which is exactly when the
     // user needs telling: a control that declines without a word reads as one that is broken.
     if (!entry) {
