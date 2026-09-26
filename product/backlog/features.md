@@ -2,19 +2,14 @@
 
 ## ready
 
-* integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
-
-* detect session, weekly, monthly limits messaging and auto resume once specified time has passed. Codex example message: 
-You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit
-https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 3:16 PM.
-Claude example message: 
-You've hit your session limit resets 1:20pm (America/Chicago)
-
 * Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
+
+
+## development
 
 * Bundle janissary as a mac application that can be dowloaded and installed into /Applications and launched from an icon in the toolbar.
 
-## development
+* integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
 ## deferred
 
