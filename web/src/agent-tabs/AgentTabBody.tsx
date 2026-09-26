@@ -1,9 +1,10 @@
 import React from 'react';
-import type { TabView, BufferLine, CompletionResult } from '@shared/protocol';
+import type { TabView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { Transcript } from '../shared/transcript/Transcript';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { CommandArea } from './command-input/CommandArea';
+import { requestCompletion } from './command-input/command-completion';
 import type { CommandDrafts } from './command-input/useCommandDrafts';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
@@ -102,10 +103,7 @@ export function AgentTabBody({
         ghostHistory={globalHistory}
         onSubmit={onCommandBarSubmit}
         inputRef={inputReference}
-        complete={async (text, cursor) => {
-          const result = await client.request<CompletionResult>({ method: 'complete', params: { text, cursor } });
-          return result.ok ? result.value : undefined;
-        }}
+        complete={requestCompletion(client)}
         pickerOpen={blockingOverlayOpen || quitConfirmOpen || unsavedQuitOpen}
         busy={current.busy}
         queueOpen={queueOpen}
