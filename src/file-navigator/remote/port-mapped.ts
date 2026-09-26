@@ -1,10 +1,10 @@
-import type { DeleteManyResult } from './batch.js';
-import type { ReplayResult } from './filesystem-port.js';
-import type { HistoryStep } from './moves.js';
-import type { RemoteRequest } from './remote-port-git.js';
-import { mapRemoteHistory } from './remote-port-history.js';
-import type { RemotePortPaths } from './remote-port-paths.js';
-import type { RowStat } from './stats.js';
+import type { DeleteManyResult } from '../batch.js';
+import type { ReplayResult } from '../filesystem-port.js';
+import type { HistoryStep } from '../moves.js';
+import type { RemoteRequest } from './port-git.js';
+import { mapRemoteHistory } from './port-history.js';
+import type { RemotePortPaths } from './port-paths.js';
+import type { RowStat } from '../stats.js';
 
 // `RemoteFileSystemPort`'s path-mapping operations, extracted on the same split as
 // `remote-port-git.ts` and `remote-port-moves.ts`: each takes the port's bound request sender and its

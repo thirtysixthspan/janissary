@@ -1,7 +1,7 @@
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../remote/protocol.js';
-import type { CommitResult } from '../git/commit.js';
-import type { GitMetadata } from './filesystem-port.js';
-import type { RemotePortPaths } from './remote-port-paths.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol.js';
+import type { CommitResult } from '../../git/commit.js';
+import type { GitMetadata } from '../filesystem-port.js';
+import type { RemotePortPaths } from './port-paths.js';
 
 // `RemoteFileSystemPort`'s three git operations, extracted so that file stays under the size limit —
 // the same split `remote-port-history.ts`, `-paths.ts`, `-requests.ts`, and `-watchers.ts` already

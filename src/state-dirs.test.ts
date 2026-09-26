@@ -54,7 +54,7 @@ vi.mock('./workspace/index.js', () => ({
   initWorkspaceDir: mocks.initWorkspaceDir,
   clearWorkspaceDir: mocks.clearWorkspaceDir,
 }));
-vi.mock('./file-navigator/remote-file-cache.js', () => ({
+vi.mock('./file-navigator/remote/file-cache.js', () => ({
   initRemoteFileCache: mocks.initRemoteFileCache,
   clearRemoteFileCache: mocks.clearRemoteFileCache,
 }));

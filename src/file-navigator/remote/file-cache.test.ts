@@ -2,17 +2,17 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { TabManager } from '../tab/manager.js';
-import type { Managers } from '../managers.js';
-import type { FileSystemPort } from './filesystem-port.js';
+import { TabManager } from '../../tab/manager.js';
+import type { Managers } from '../../managers.js';
+import type { FileSystemPort } from '../filesystem-port.js';
 import {
   clearRemoteFileCacheForWorkspace, initRemoteFileCache, materializeRemoteFile, remoteFileFor,
-} from './remote-file-cache.js';
-import { saveFile } from '../editor/save.js';
-import { openNavigatorFile } from './manager-files.js';
-import type { FilesTabState } from './state.js';
-import { notificationsTab, openNotificationsTab } from '../notifications/tab.js';
-import { NotificationQueue } from '../notifications/queue.js';
+} from './file-cache.js';
+import { saveFile } from '../../editor/save.js';
+import { openNavigatorFile } from '../manager-files.js';
+import type { FilesTabState } from '../state.js';
+import { notificationsTab, openNotificationsTab } from '../../notifications/tab.js';
+import { NotificationQueue } from '../../notifications/queue.js';
 
 function setup(writeFile: FileSystemPort['writeFile']) {
   const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));

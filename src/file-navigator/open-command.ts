@@ -8,7 +8,7 @@ import type { FileNavigatorDetail, RemoteTarget } from '../tab/types.js';
 import type { FilesTabState } from './state.js';
 import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
 import { buildCachedRows } from './filesystem-cache.js';
-import { RemoteFileSystemPort } from './remote-port.js';
+import { RemoteFileSystemPort } from './remote/port.js';
 import { clearFilesystemCache } from './filesystem-cache.js';
 
 type CwdTarget = { cwd: string; sourceLabel?: string; remote?: RemoteTarget };

@@ -29,7 +29,7 @@ vi.mock(import('./store.js'), async (original) => ({
 vi.mock('../pty.js', () => ({ spawnPty: vi.fn() }));
 vi.mock(import('../shell/index.js'), async (original) => ({ ...await original(), spawnShell: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
+vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 vi.mock(import('../agent/state.js'), async (original) => ({ ...await original(), deleteAgentState: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';

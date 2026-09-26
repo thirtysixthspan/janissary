@@ -1,8 +1,8 @@
-import type { BulkConflictPolicy } from '../protocol.js';
-import type { MoveManyResult } from './batch.js';
-import type { MoveOneResult } from './filesystem.js';
-import type { RemoteRequest } from './remote-port-git.js';
-import type { RemotePortPaths } from './remote-port-paths.js';
+import type { BulkConflictPolicy } from '../../protocol.js';
+import type { MoveManyResult } from '../batch.js';
+import type { MoveOneResult } from '../filesystem.js';
+import type { RemoteRequest } from './port-git.js';
+import type { RemotePortPaths } from './port-paths.js';
 
 // `RemoteFileSystemPort`'s two move operations, extracted so that file stays under the size limit —
 // the same split `remote-port-git.ts` uses. Both take the port's bound request sender and its path

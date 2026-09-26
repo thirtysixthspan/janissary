@@ -1,4 +1,4 @@
-import type { HistoryStep } from './moves.js';
+import type { HistoryStep } from '../moves.js';
 
 type PathMapper = (path: string) => Promise<string>;
 

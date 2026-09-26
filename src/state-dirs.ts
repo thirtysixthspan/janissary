@@ -7,7 +7,7 @@ import { initGlobalHistory } from './global-history.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
 import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
-import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remote-file-cache.js';
+import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remote/file-cache.js';
 import { initRemoteSessionStore } from './sessions/store.js';
 import { initNotificationRecord } from './notifications/record.js';
 import { TranscriptLogger } from './transcript/logger.js';

@@ -1,25 +1,25 @@
-import type { BulkConflictPolicy } from '../protocol.js';
-import type { RemoteChannel, NavigatorListener } from '../remote/channel/index.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../remote/protocol.js';
-import type { DeleteManyResult, MoveManyResult } from './batch.js';
-import type { FileOperationResult } from './file-operation-result.js';
-import type { MoveOneResult } from './filesystem.js';
+import type { BulkConflictPolicy } from '../../protocol.js';
+import type { RemoteChannel, NavigatorListener } from '../../remote/channel/index.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol.js';
+import type { DeleteManyResult, MoveManyResult } from '../batch.js';
+import type { FileOperationResult } from '../file-operation-result.js';
+import type { MoveOneResult } from '../filesystem.js';
 import type {
   FileSystemPort, GitMetadata, ReplayResult, WatchHandle,
-} from './filesystem-port.js';
-import type { FileNavigatorEntry } from './index.js';
-import type { PasteManyResult } from './paste.js';
-import type { RowStat } from './stats.js';
-import type { HistoryStep } from './moves.js';
-import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './remote-port-git.js';
-import { remoteMove, remoteMoveMany } from './remote-port-moves.js';
-import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './remote-port-mapped.js';
-import type { CommitResult } from '../git/commit.js';
-import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
+} from '../filesystem-port.js';
+import type { FileNavigatorEntry } from '../index.js';
+import type { PasteManyResult } from '../paste.js';
+import type { RowStat } from '../stats.js';
+import type { HistoryStep } from '../moves.js';
+import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './port-git.js';
+import { remoteMove, remoteMoveMany } from './port-moves.js';
+import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './port-mapped.js';
+import type { CommitResult } from '../../git/commit.js';
+import { RemotePortPaths, resolveRemoteWorkspace } from './port-paths.js';
 import {
   CLOSED_REASON, ENDED_REASON, RemotePortRequests, unavailableResult,
-} from './remote-port-requests.js';
-import { RemotePortWatchers } from './remote-port-watchers.js';
+} from './port-requests.js';
+import { RemotePortWatchers } from './port-watchers.js';
 
 export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   private requestNumber = 0;
