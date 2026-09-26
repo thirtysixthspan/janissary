@@ -3,8 +3,7 @@ import type React from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
-
-const MARKDOWN_EXTENSION = /\.(md|markdown)$/i;
+import { fileActivation } from './file-activation';
 
 // The right-clicked row and the pointer point the menu opens at, or null when no menu is open.
 export type PendingContextMenu = { row: FileNavigatorRow; x: number; y: number };
@@ -56,7 +55,7 @@ export function useFileNavigatorRowEvents({ rows, selection, drag, containerRef,
   const onRowDoubleClick = (row: FileNavigatorRow, shiftKey: boolean) => {
     if (row.path === '..') actions.reroot();
     else if (row.dir) actions.toggle(row.path);
-    else actions.openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey);
+    else actions.openFile(row.path, fileActivation(row.path, shiftKey));
   };
 
   // Right-click raises the menu for the clicked row and leaves the selection exactly as it was, so

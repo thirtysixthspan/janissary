@@ -4,17 +4,6 @@
 
 ## development
 
-* Make keyboard activation of a file in the navigator ask the server's opener registry exactly as double-click does, instead of sending a hardcoded edit or open.
-
-Existing Debt: What activating a file does is split between a Markdown regex in one client handler and the server's opener registry with its declared `editGesture`s, and double-click, Enter and Shift+Enter each call a different mix of the two, so the client carries knowledge of one specific plugin. Severity: 5/10
-
-Existing Risk: 4/10 - Shift+Enter on a Markdown, video or audio file opens the text editor rather than the destination Shift+double-click reaches, contradicting the navigator spec's key table, and every new plugin that declares an `editGesture` is silently wrong from the keyboard.
-
-Proposal Risk: 2/10 - Mouse and keyboard share one activation rule and one server round trip; the Markdown inversion still lives on the client until it moves into the Markdown opener's declaration, so a second special-cased format would reintroduce the split.
-
-Proposal: `onRowDoubleClick` in `web/src/file-navigator/use-file-navigator-row-events.ts` calls `actions.openFile(row.path, MARKDOWN_EXTENSION.test(row.path) !== shiftKey)`, which goes through `useFileNavigatorOpener.open` and the `fileNavigatorOpeners` request to `openersForRow` in `src/file-navigator/openers-for-row.ts`. The keyboard path in `web/src/file-navigator/useFileNavigatorKeyDown.ts` maps `open: (path) => actions.openFile(path, false)` (ignoring the Markdown inversion) and `edit: actions.editFile`, and `editFile` in `web/src/file-navigator/file-navigator-menu-actions.ts` sends `fileNavigatorOpen` with `command: 'edit'` directly, never consulting the registry. `product/specs/file-navigator-tab.md` says Shift+Enter mirrors Shift+double-click including its Markdown and video destinations. Extract a pure `fileActivation(path, shift)` beside the row events that holds the Markdown inversion, have `onRowDoubleClick` and both keyboard actions call `actions.openFile(path, fileActivation(path, shift))`, and keep `editFile` only for the context menu's explicit Edit entries. `web/src/file-navigator/FileNavigatorTab.test.tsx` pins the current wrong behavior (Shift+Enter on `README.md` sends `command: 'edit'`) and must be updated; its double-click and Open-with cases, `web/src/file-navigator/file-navigator-keys.test.ts` and `src/file-navigator/openers-for-row.test.ts` must keep passing. The double-click tests use send-only fake clients, so they exercise the opener's fallback branch rather than the registry reply; add a case that mocks a `fileNavigatorOpeners` reply with a `command`.
-
-
 * Give the detached peer's on-disk record one module that owns its path, its writer and a single validated reader, instead of three readers that each rebuild and check it differently.
 
 Existing Debt: The `.janissary/remote/<session>.json` record is an on-disk contract with no owning module, so its path is assembled three ways, its shape is re-asserted with `as typeof record` casts, and each reader validates `pid` and `socket` with a different test. Severity: 5/10

@@ -29,10 +29,10 @@ type Params = {
   setPendingNewDir: (path: string | null) => void;
 };
 
-// What the tab keeps hold of after the menu table is built: the three entry points its header,
-// keyboard chords, and navigation actions still call directly.
+// What the tab keeps hold of after the menu table is built: the entry points its header and
+// keyboard chords still call directly. The explicit edit is not among them — it belongs to the
+// context menu's Edit entries alone; every other activation asks the opener registry.
 export type FileNavigatorActions = {
-  editFile: (path: string) => void;
   createNewFile: () => void;
   createNewDirectory: () => void;
   clipboardPaths: () => string[];
@@ -101,5 +101,5 @@ export function createFileNavigatorActions({
     newDirectory: createNewDirectory,
   };
 
-  return { editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions };
+  return { createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions };
 }

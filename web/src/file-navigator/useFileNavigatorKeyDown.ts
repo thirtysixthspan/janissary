@@ -4,6 +4,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import { handleFileNavigatorKey, typeAheadMatch, type FileNavigatorKeyOutcome } from './file-navigator-keys';
 import { handleTreeChord, type ChordHandlers } from './file-navigator-chords';
 import { runFileNavigatorAction } from './file-navigator-actions';
+import { fileActivation } from './file-activation';
 import { clearClipboard, getClipboardSnapshot } from './file-navigator-clipboard';
 import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
@@ -21,7 +22,6 @@ type NavActions = {
   rerootTo: (path: string) => void;
   toggle: (path: string) => void;
   openFile: (path: string, edit: boolean) => void;
-  editFile: (path: string) => void;
 };
 
 type Params = {
@@ -105,8 +105,8 @@ export function useFileNavigatorKeyDown({
       runFileNavigatorAction(result.action, {
         reroot: (path) => { if (path === '..') actions.reroot(); else actions.rerootTo(path); },
         toggle: actions.toggle,
-        open: (path) => actions.openFile(path, false),
-        edit: actions.editFile,
+        open: (path) => actions.openFile(path, fileActivation(path, false)),
+        edit: (path) => actions.openFile(path, fileActivation(path, true)),
       });
       return;
     }

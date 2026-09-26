@@ -566,9 +566,9 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 |---|---|
 | `↑` / `↓` | Move the keyboard cursor to the previous / next visible row and collapse selection to it |
 | `Shift+↑` / `Shift+↓` | Move the cursor one visible row and select every row between the anchor and it; at the first / last row, nothing changes |
-| `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
+| `→` | Collapsed directory: expand. Expanded directory: reroot. File: open it as double-click does. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
-| `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
+| `Enter` / `Space` | File: open it as double-click does, including the plain-text editor for Markdown. Directory: toggle expand/collapse. `..`: navigate to parent directory |
 | `Shift+Enter` | File: edit it (mirrors Shift+double-click, including its image, Markdown, and video destinations) |
 | `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
 | `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |

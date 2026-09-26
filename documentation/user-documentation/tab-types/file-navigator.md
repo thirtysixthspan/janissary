@@ -286,8 +286,8 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `Shift+↑` / `Shift+↓` | Extend the selection by one row (see "Selecting more than one row" above) |
 | `→` | Expand a collapsed directory; from an expanded one, re-root the tree there; open a file |
 | `←` | Collapse an expanded directory; otherwise jump to the parent |
-| `Enter` / `Space` | Open a file, toggle a directory, or (on `..`) go up |
-| `Shift+Enter` | Open the selected file in the editor |
+| `Enter` / `Space` | Open a file exactly as double-clicking it does, toggle a directory, or (on `..`) go up |
+| `Shift+Enter` | Same as `Shift`+double-clicking the selected file |
 | `Home` / `End` | First / last visible row |
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |

@@ -85,7 +85,7 @@ export function FileNavigatorTab({
   });
   const multiOpenSelection = multiOpen?.(selection.operationPaths) ?? null;
   const {
-    editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
+    createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions,
   } = createFileNavigatorActions({
     files, client, index, label, selection, opener, paste, deletion, rename, rowEvents, commit,
     multiOpenSelection, setPendingNewDir,
@@ -125,7 +125,7 @@ export function FileNavigatorTab({
       paste: () => paste.paste(files.rows, selection.cursor),
       selectSiblings: selection.selectSiblings,
     },
-    actions: { reroot, rerootTo, toggle, openFile, editFile },
+    actions: { reroot, rerootTo, toggle, openFile },
   });
 
   return (

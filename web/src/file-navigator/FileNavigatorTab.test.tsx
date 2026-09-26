@@ -542,15 +542,45 @@ describe('FileNavigatorTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorReroot', params: { index: 0 } });
   });
 
-  it('Shift+Enter on a file sends an edit command', () => {
+  it('Shift+Enter on a file sends an edit command, as Shift+double-click does', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
     const tree = container.querySelector('[role="tree"]')!;
-    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.click(screen.getByText('index.ts'));
+    fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'edit' } });
+  });
+
+  // Markdown inverts the default for mouse and keyboard alike: its plain activation edits the text,
+  // and the shifted one reaches the rendered preview.
+  it('Enter and Shift+Enter on a Markdown file mirror double-click and Shift+double-click', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'End' });
+    fireEvent.keyDown(tree, { key: 'Enter' });
+    expect(send).toHaveBeenLastCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' } });
+    fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenLastCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'open' } });
+  });
+
+  // The registry, not the client, decides where an edit gesture goes — a video's declared
+  // `editGesture` hands it to the external player. The keyboard asks it exactly as double-click does.
+  it('Shift+Enter asks the opener registry and sends the command it answers with', async () => {
+    const send = vi.fn();
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { command: 'open external', choices: [] } });
+    const client = { send, request } as unknown as JanusClient;
+    const files = makeFiles({ rows: [{ path: 'clip.mp4', name: 'clip.mp4', depth: 0, dir: false }] });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={2} label="files" />);
+    const tree = container.querySelector('[role="tree"]')!;
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
-    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' } });
+    expect(request).toHaveBeenCalledWith({ method: 'fileNavigatorOpeners', params: { index: 2, relPath: 'clip.mp4', edit: true } });
+    await waitFor(() => expect(send).toHaveBeenCalledWith({
+      method: 'fileNavigatorOpen', params: { index: 2, relPath: 'clip.mp4', command: 'open external' },
+    }));
   });
 
   it('activating a file never injects a command into any tab: every gesture stays on the navigator RPC', () => {
