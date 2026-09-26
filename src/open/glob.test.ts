@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expandGlob } from './glob.js';
@@ -88,5 +88,21 @@ describe('expandGlob', () => {
 
     expect(existsSync(marker)).toBe(false);
     expect(existsSync(at('pwned.txt'))).toBe(false);
+  });
+
+  // A pattern too long for the matcher is a pattern nothing can match, not a crash: `open` reports
+  // no matching files, the same as any pattern that simply finds none.
+  it('reports no matching files for a pattern the matcher refuses outright', () => {
+    expect(expandGlob('*'.repeat(100_000), root)).toEqual([]);
+  });
+
+  // A dangling symlink is matched by the glob but cannot be stat'd, since stat follows the link.
+  // It is not a file `open` could hand to an opener, so it is dropped like a directory rather than
+  // taking the whole expansion down with it.
+  it('drops a dangling symlink that cannot be stat-ed', () => {
+    symlinkSync(at('nowhere.png'), at('broken.png'));
+
+    expect(expandGlob('broken.png', root)).toEqual([]);
+    expect(names(expandGlob('*.png', root))).toEqual(['a.png', 'b.png']);
   });
 });
