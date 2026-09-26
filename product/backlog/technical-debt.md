@@ -4,17 +4,6 @@
 
 ## development
 
-* Merge the global command history with what is already on disk before each write, and stop a history file that failed to load from being overwritten.
-
-Existing Debt: The global history is one file in the home directory shared by every janus process, but each process loads it once at startup, rewrites it wholesale from that in-memory snapshot on every command, and treats a file it could not parse as empty. Severity: 4/10
-
-Existing Risk: 5/10 - Two janus instances in different projects silently erase each other's recorded commands on every write, and a history file that fails to parse is replaced with a single entry by the next command typed, contradicting the spec's promise that a failed update leaves the previous valid history intact.
-
-Proposal Risk: 2/10 - Concurrent writers no longer drop each other's entries except in the few milliseconds between one process's re-read and its rename, which a second instance typing at the same instant could still hit.
-
-Proposal: `src/global-history.ts` holds a module-level `entries` array filled by `initGlobalHistory` and rewritten by `recordGlobalHistory` as `entries = [...entries, {...}].slice(-MAX_ENTRIES); writeEntries();`, and on a read or parse failure it sets `entries = []` and only warns, so the next `recordGlobalHistory` replaces the unreadable file. Change `recordGlobalHistory` to re-read the file (the same array filter `initGlobalHistory` applies), append the new entry unless it repeats the last on-disk command, cap at `MAX_ENTRIES`, write with `atomicWriteFile`, and refresh the in-memory `entries` from the result so `globalCommands` sees other instances' commands too. When the initial load failed for any reason other than the file being absent, set a module flag that suppresses writes for the rest of the process (still recording in memory), so a hand-edited or future-format file is never overwritten; keep the existing one-shot stderr warning. `src/global-history.test.ts` covers corrupt and non-array input but never checks the file afterwards; add a case asserting a corrupt file is left byte-for-byte unchanged after a `recordGlobalHistory`, and one that writes an entry to the file behind the module's back and asserts it survives the next record. Update the persistence paragraph of `product/specs/history.md` to describe the merge and the no-overwrite rule.
-
-
 * Have the ACP tool loop run the command on the reply's last command line, whichever tool owns it, instead of the first tool in table order that finds any line of its own.
 
 Existing Debt: Each tool's extractor scans the whole reply bottom-up for its own grammar only and `toolExtractor` returns the first tool in table order that finds anything, so position in the reply loses to tool order, and the same line-cleanup expression is copied into four places with two different "none" values. Severity: 4/10
