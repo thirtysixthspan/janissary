@@ -6,6 +6,7 @@ import {
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { PluginRequestPort } from './requests.js';
+import { noteInOriginTab } from './transcript-note.js';
 
 // The third host-to-plugin entry point, beside an opener/command and a tab-bound intent: the entry a
 // declaration contributes for a whole file navigator selection. It lives here rather than on the
@@ -33,14 +34,6 @@ function invokeSelectionAction(
   return activation.selectionAction(paths, capabilities);
 }
 
-// A rejection has no waiting client here — the navigator sent the request and moved on — so it goes
-// to the transcript of the tab the menu was opened from, exactly as a rejected command does.
-function note(port: PluginRequestPort, origin: PluginFailureOrigin, output: string): void {
-  if (port.managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-    port.managers.tab.append(origin.label, { input: origin.command, output });
-  }
-}
-
 export async function runPluginSelectionAction(
   port: PluginRequestPort,
   id: string,
@@ -55,5 +48,5 @@ export async function runPluginSelectionAction(
   const outcome = await port.invoke(record, activation, origin, (capabilities) =>
     invokeSelectionAction(record.declaration, activation, action, paths, capabilities));
   if (outcome.status === 'failed') port.disable(record, outcome.error, origin);
-  else if (outcome.status === 'rejected') note(port, origin, outcome.reason);
+  else if (outcome.status === 'rejected') noteInOriginTab(port.managers, origin, outcome.reason);
 }
