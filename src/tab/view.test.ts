@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildTabView } from './view.js';
+import { buildTabView, buildTabViews } from './view.js';
 import { makeTab } from './index.js';
+import type { Managers } from '../managers.js';
+import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
   it('projects right-pane membership and keeps left as the absent wire value', () => {
@@ -253,5 +255,92 @@ describe('buildTabView', () => {
     const pending = { id: 'question-1', tab: 'agent-1', kind: 'ask' as const, question: 'What port?' };
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p, pending);
     expect(view.pendingQuestion).toEqual(pending);
+  });
+});
+
+// The wrapper every state event goes through. Its two closures are the only readers of the remote
+// channel's per-tab state, and they are read at view time precisely so nothing has to be copied onto
+// the tab to outlive a reconnect.
+describe('buildTabViews', () => {
+  const noAcp = (): undefined => undefined;
+  const noQuestion = (): PendingQuestion | undefined => undefined;
+  const noWorkspace = (): string | undefined => undefined;
+
+  function remoteManagers(overrides: {
+    workspaceOf?: (label: string) => string | undefined;
+    reconnectingOf?: (label: string) => boolean;
+    pendingFor?: (label: string) => PendingQuestion | undefined;
+  } = {}) {
+    return {
+      questions: { pendingFor: overrides.pendingFor ?? noQuestion },
+      remote: {
+        workspaceOf: overrides.workspaceOf ?? noWorkspace,
+        reconnectingOf: overrides.reconnectingOf ?? (() => false),
+      },
+    } as unknown as Managers;
+  }
+
+  function remoteTab(label: string, overrides: Partial<Tab> = {}): Tab {
+    const tab = makeTab(label, '#fff');
+    tab.view = 'harness';
+    tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' };
+    tab.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    return Object.assign(tab, overrides);
+  }
+
+  const build = (tabs: Tab[], managers: Managers) => buildTabViews(
+    tabs, managers, () => [], noAcp, () => [], (path) => path,
+  );
+
+  it('maps every tab in strip order', () => {
+    const tabs = [makeTab('janus', '#fff'), makeTab('notes', '#fff')];
+    expect(build(tabs, remoteManagers()).map((view) => view.label)).toEqual(['janus', 'notes']);
+  });
+
+  it('reads each tab\'s workspace from the channel rather than the tab', () => {
+    const views = build([remoteTab('a'), remoteTab('b')], remoteManagers({
+      workspaceOf: (label) => (label === 'a' ? '/remote/a' : '/remote/b'),
+    }));
+
+    expect(views.map((view) => view.flags)).toEqual([['workspaced'], ['workspaced']]);
+    expect(views.every((view) => !('provisioning' in (view.remote ?? {})))).toBe(true);
+  });
+
+  it('marks a remote tab still waiting for its channel to name a workspace as provisioning', () => {
+    const views = build([remoteTab('a')], remoteManagers({ workspaceOf: noWorkspace }));
+
+    expect(views[0]!.remote?.provisioning).toBe(true);
+  });
+
+  it('carries the channel\'s reconnecting state onto the remote target', () => {
+    const views = build([remoteTab('a')], remoteManagers({
+      workspaceOf: () => '/remote/a',
+      reconnectingOf: () => true,
+    }));
+
+    expect(views[0]!.remote?.reconnecting).toBe(true);
+  });
+
+  it('leaves a healthy remote target with neither key set', () => {
+    const views = build([remoteTab('a')], remoteManagers({ workspaceOf: () => '/remote/a' }));
+
+    expect(views[0]!.remote).toEqual({ host: 'devbox', address: 'devbox:/srv/project' });
+  });
+
+  it('reads each tab\'s pending question from the question manager', () => {
+    const pending = { id: 'question-1', tab: 'a', kind: 'ask' as const, question: 'What port?' };
+    const views = build([makeTab('a', '#fff')], remoteManagers({ pendingFor: () => pending }));
+
+    expect(views[0]!.pendingQuestion).toEqual(pending);
+  });
+
+  it('never marks a local tab from the remote channel\'s answers', () => {
+    const views = build([makeTab('a', '#fff')], remoteManagers({
+      workspaceOf: () => '/remote/a',
+      reconnectingOf: () => true,
+    }));
+
+    expect(views[0]!.remote).toBeUndefined();
+    expect(views[0]!.flags).toEqual([]);
   });
 });
