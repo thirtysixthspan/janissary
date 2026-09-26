@@ -1,5 +1,6 @@
 import {
   defineIntents,
+  parseDockArgument,
   type RemoteSessionView,
   type TabPluginActivation,
   type TabPluginIntentEntry,
@@ -50,18 +51,11 @@ function isSessionsData(
 // `sessions` opens or focuses the list; `sessions left`/`sessions right` dock it into that sidebar;
 // bare `sessions` on a docked list undocks it back to the centre and makes it active, which is what
 // `dockTab(…, null)` means.
-function parseDock(argument: string): 'left' | 'right' | null | undefined {
-  const trimmed = argument.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (trimmed === 'left' || trimmed === 'right') return trimmed;
-  return undefined;
-}
-
 export function activate(): TabPluginActivation {
   return {
     isPayload: isSessionsPayload,
     command: (argument, capabilities) => {
-      const dock = parseDock(argument);
+      const dock = parseDockArgument(argument);
       if (dock === undefined) return capabilities.rejectRequest(USAGE);
       const data = capabilities.topicData('sessions');
       if (!isSessionsData(data)) return capabilities.reportFailure('invalid sessions topic data');
