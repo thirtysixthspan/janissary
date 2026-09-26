@@ -1,14 +1,9 @@
-import type { ScheduleEntry, TimeOfDay } from './types.js';
-export { parseEverySchedule } from './every-schedule.js';
+import type { ScheduleBodyResult, TimeOfDay } from './types.js';
+import { MONTHS, parseMonthDay, parseTimeOfDay } from './parsing.js';
+import { nextDateTime, nextOccurrenceOfTime } from './time.js';
+import { fmtTime } from './display.js';
 
-export type ScheduleBodyResult = { action: 'add'; entry: Omit<ScheduleEntry, 'id'> } | { error: string };
-
-const MONTHS = [
-  'january', 'february', 'march', 'april', 'may', 'june',
-  'july', 'august', 'september', 'october', 'november', 'december',
-];
-
-export function parseAtSchedule(tokens: string[], now: Date, parseTimeOfDay: (tok: string) => TimeOfDay | undefined, fmtTime: (t: TimeOfDay) => string, nextOccurrenceOfTime: (h: number, m: number, n: Date) => number): ScheduleBodyResult {
+export function parseAtSchedule(tokens: string[], now: Date): ScheduleBodyResult {
   const tod = parseTimeOfDay(tokens[1] ?? '');
   if (!tod) return { error: `Invalid time: "${tokens[1] ?? ''}".` };
   const command = tokens.slice(2).join(' ').trim();
@@ -19,7 +14,7 @@ export function parseAtSchedule(tokens: string[], now: Date, parseTimeOfDay: (to
   } };
 }
 
-export function parseOnSchedule(tokens: string[], now: Date, parseMonthDay: (t: string[]) => { month: number; day: number; consumed: number } | undefined, parseTimeOfDay: (tok: string) => TimeOfDay | undefined, fmtTime: (t: TimeOfDay) => string, nextDateTime: (m: number, d: number, h: number, mi: number, n: Date) => number): ScheduleBodyResult {
+export function parseOnSchedule(tokens: string[], now: Date): ScheduleBodyResult {
   const md = parseMonthDay(tokens.slice(1));
   if (!md) return { error: 'Invalid date. Try "on august 12th" or "on 8/12".' };
   let index = 1 + md.consumed;

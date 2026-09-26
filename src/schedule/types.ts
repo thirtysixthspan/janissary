@@ -19,3 +19,6 @@ export type ScheduleParseResult =
   | { action: 'cancel'; id: string; target?: string }
   | { action: 'clear'; target?: string }
   | { error: string };
+
+// A parsed schedule form before the `schedule` wrapper attaches the timer's name.
+export type ScheduleBodyResult = { action: 'add'; entry: Omit<ScheduleEntry, 'id'> } | { error: string };

@@ -1,24 +1,14 @@
 // Parsing and next-run math for the `schedule` command. Pure (no I/O) so it is fully
 // unit-testable; callers (the command + the scheduler tick) own the side effects.
 
-import type { ScheduleEntry, ScheduleParseResult } from './types.js';
-import { parseAtSchedule, parseOnSchedule, parseEverySchedule } from './helpers.js';
-import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
+import type { ScheduleBodyResult, ScheduleParseResult } from './types.js';
+import { parseAtSchedule, parseOnSchedule } from './helpers.js';
+import { parseEverySchedule } from './every-schedule.js';
+import { SCHEDULE_USAGE } from './usage.js';
+export { SCHEDULE_USAGE } from './usage.js';
 export { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
-import { nextOccurrenceOfTime, nextWeekday, nextDateTime } from './time.js';
 export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
-import { fmtTime } from './display.js';
 export { fmtNextRun, formatSchedule, formatLateDuration } from './display.js';
-
-// The body parser produces an add result without a name; the wrapper attaches the leading
-// positional name afterwards.
-type ScheduleBodyResult = { action: 'add'; entry: Omit<ScheduleEntry, 'id'> } | { error: string };
-
-export const SCHEDULE_USAGE =
-  'Usage: schedule NAME [in TAB] <at TIME | on DATE [at TIME] | every N(m|h|d|w) | every DAY at TIME> COMMAND'
-  + ' | schedule list [in TAB] | schedule cancel <name> [in TAB] | schedule clear [in TAB]';
-
-
 
 // Parse a trailing `in <tab>` clause starting at `tokens[index]`. Returns the target label,
 // an empty object when the clause is absent, or an error when it is malformed or followed
@@ -71,15 +61,15 @@ function parseScheduleBody(rest: string, now: Date): ScheduleBodyResult {
   const head = tokens[0].toLowerCase();
 
   if (head === 'at') {
-    return parseAtSchedule(tokens, now, parseTimeOfDay, fmtTime, nextOccurrenceOfTime);
+    return parseAtSchedule(tokens, now);
   }
 
   if (head === 'on') {
-    return parseOnSchedule(tokens, now, parseMonthDay, parseTimeOfDay, fmtTime, nextDateTime);
+    return parseOnSchedule(tokens, now);
   }
 
   if (head === 'every') {
-    return parseEverySchedule(tokens, now, parseInterval, parseTimeOfDay, fmtTime, nextOccurrenceOfTime, nextWeekday);
+    return parseEverySchedule(tokens, now);
   }
 
   return { error: SCHEDULE_USAGE };
