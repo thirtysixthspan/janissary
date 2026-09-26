@@ -45,3 +45,38 @@ describe('tabProblems over every declared tab kind', () => {
     ]);
   });
 });
+
+// A hand-edited or truncated profile file is what this validator exists for, and the shape guards
+// are what stop it reading a string where it expected a record. Each message names the location,
+// because the point is to tell an author which part of their JSON is wrong.
+describe('collectProfileProblems over a malformed profile', () => {
+  it('names a tabs element that is not an object', () => {
+    expect(collectProfileProblems({ tabs: ['nope'] })).toEqual(['tabs[0] must be an object']);
+    expect(collectProfileProblems({ tabs: [42] })).toEqual(['tabs[0] must be an object']);
+  });
+
+  it('names a top-level section that is not an array', () => {
+    expect(collectProfileProblems({ tabs: {} })).toEqual(['tabs must be an array']);
+    expect(collectProfileProblems({ monitors: 'none' })).toEqual(['monitors must be an array']);
+  });
+
+  it('names a monitor that is not an object', () => {
+    expect(collectProfileProblems({ monitors: ['writer'] })).toEqual(['monitors[0] must be an object']);
+  });
+
+  it('names a layout, a window, and a sidebar that are not objects', () => {
+    expect(collectProfileProblems({ layout: 'wide' })).toEqual(['layout must be an object']);
+    expect(collectProfileProblems({ layout: { window: 3 } })).toEqual(['layout.window must be an object']);
+    expect(collectProfileProblems({ layout: { sidebar: 'left' } })).toEqual(['layout.sidebar must be an object']);
+  });
+
+  it('reports every malformed section rather than stopping at the first', () => {
+    expect(collectProfileProblems({ tabs: 1, monitors: 2, layout: 3 })).toEqual([
+      'tabs must be an array', 'monitors must be an array', 'layout must be an object',
+    ]);
+  });
+
+  it('treats an absent section as fine, which is what a bare profile file is', () => {
+    expect(collectProfileProblems({})).toEqual([]);
+  });
+});
