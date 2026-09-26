@@ -4,17 +4,6 @@
 
 ## development
 
-* Give the tab lookup module one "tab by label or display alias" accessor and route every user-typed tab reference through it, so scheduling into a renamed tab resolves the same way sending, queueing, messaging, and monitoring already do.
-
-Existing Debt: Resolving a user-typed tab name case-insensitively against both label and `rename` alias is re-implemented inline in three modules, while the `schedule … in <tab>` path uses the exact, case-sensitive `byLabel`, so the rule for "which tab did the user mean" depends on which command they typed. Severity: 4/10
-
-Existing Risk: 4/10 - `send claude …` and `monitor` accept a tab's alias or a differently-cased label, but `schedule standup in Claude …` or `schedule list in <alias>` answers `No tab named "…"`, and any future command that addresses a tab will copy whichever of the two variants its author finds first.
-
-Proposal Risk: 2/10 - Every call site shares one resolver, but a tab whose alias equals another tab's label still resolves to whichever the array holds first, which the shared accessor preserves rather than fixes.
-
-Proposal: The inline predicate `t.label.toLowerCase() === key || t.title?.toLowerCase() === key` appears in `resolveTarget` in `src/commands/resolve-target.ts` (used by `src/commands/send.ts`, `src/commands/queue.ts`, and `src/file-navigator/open-command.ts`), in `sendMessage` in `src/agent/message-queue.ts`, and in `resolveTargetAliases` in `src/monitor/targets.ts`, whose comment says it "mirrors" the first. `resolveTargetTab` in `src/commands/schedule.ts` instead calls `managers.tab.byLabel(label)`, the exact-match accessor in `src/tab/lookup.ts`. Add `byLabelOrAlias(tabs, name)` to `src/tab/lookup.ts` beside `byLabel` (with a delegating `TabManager` method in `src/tab/manager.ts`), replace the three inline copies with it, and have `resolveTargetTab` in `src/commands/schedule.ts` use it — storing the entry under the resolved tab's canonical `label`, which the command already does once it has the tab. Update the `in <tab>` paragraph of `product/specs/scheduling.md` to say the target may be a label or alias, and fix its stale `src/schedule.ts` path to `src/schedule/index.ts` while there. `src/tab/lookup.test.ts` gets cases for alias and case-insensitive matches; `src/commands/send.test.ts`, `src/commands/queue.test.ts`, `src/agent/communication-manager.test.ts`, and the monitor target tests pin the existing alias behavior and must pass unchanged, and `src/commands/schedule.test.ts` needs a new case scheduling into a tab by its alias — nothing covers that today.
-
-
 * Make the shared git-sync workspace pull from and push to the repository's detected default branch, the same branch the sync-eligibility gate already resolves, instead of a hard-coded `master`.
 
 Existing Debt: Whether a file syncs is decided against the remote's detected default branch with a `master`/`main` fallback, but the sync cycle that then runs hard-codes `origin master` for its pull and `HEAD:master` for its push, so the gate and the action disagree about which branch is "primary" and the spec has had to document the disagreement as an expected error. Severity: 5/10

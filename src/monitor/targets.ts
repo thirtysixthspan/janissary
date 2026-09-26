@@ -1,3 +1,4 @@
+import { byLabelOrAlias } from '../tab/lookup.js';
 import type { LogEntry, MonitorTarget, Tab } from '../tab/types.js';
 
 // Target helpers for the monitor manager: validation, live matching, and the color a
@@ -22,14 +23,13 @@ export function seedEntries(tabs: Tab[], targets: MonitorTarget[]): { tabLabel: 
 }
 
 // Resolve a tab-kind target's typed label against a tab's canonical label or display alias
-// (see `rename`), case-insensitively — mirrors `resolveTarget` in commands/resolve-target.ts.
+// (see `rename`), case-insensitively, through the shared `byLabelOrAlias` lookup.
 // A target that matches no tab passes through unchanged, so `validateTargets` still reports
 // it as missing. Group targets pass through unchanged.
 export function resolveTargetAliases(tabs: Tab[], targets: MonitorTarget[]): MonitorTarget[] {
   return targets.map((target) => {
     if (target.kind !== 'tab') return target;
-    const key = target.label.toLowerCase();
-    const match = tabs.find((t) => t.label.toLowerCase() === key || t.title?.toLowerCase() === key);
+    const match = byLabelOrAlias(tabs, target.label);
     return match ? { kind: 'tab', label: match.label } : target;
   });
 }
