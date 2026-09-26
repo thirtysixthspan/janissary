@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import path from 'node:path';
 import { homedir } from 'node:os';
-import type { CompletionResult } from './types.js';
+import type { CompletionCursor, CompletionResult } from './types.js';
 
 export const isDir = (p: string): boolean => {
   try {
@@ -32,27 +32,27 @@ export const splitToken = (token: string, cwd: string): { dir: string; base: str
 };
 
 export const replaceToken = (
-  before: string,
-  after: string,
-  tokenStart: number,
+  cursor: CompletionCursor,
   newToken: string,
   matches: string[],
 ): CompletionResult => {
-  const newBefore = before.slice(0, tokenStart) + newToken;
-  return { newInput: newBefore + after, newCursor: newBefore.length, matches };
+  const newBefore = cursor.before.slice(0, cursor.tokenStart) + newToken;
+  return { newInput: newBefore + cursor.after, newCursor: newBefore.length, matches };
 };
 
+type CompleteWordOptions = { keepPrefix?: string; suffix?: string; partial?: string };
+
+// Completes the cursor's token (or `partial`) against `candidates`. A unique match gets `suffix`
+// appended — a space unless overridden — and `keepPrefix` stays ahead of whatever is completed.
 export const completeWord = (
-  partial: string,
-  keepPrefix: string,
+  cursor: CompletionCursor,
   candidates: string[],
-  suffix: string,
-  before: string,
-  after: string,
-  tokenStart: number,
+  { keepPrefix = '', suffix = ' ', partial = cursor.token }: CompleteWordOptions = {},
 ): CompletionResult => {
   const matches = candidates.filter((c) => c.startsWith(partial)).toSorted((a, b) => a.localeCompare(b));
-  if (matches.length === 0) return { newInput: before + after, newCursor: before.length, matches: [] };
+  if (matches.length === 0) {
+    return { newInput: cursor.before + cursor.after, newCursor: cursor.before.length, matches: [] };
+  }
   const completed = matches.length === 1 ? matches[0] + suffix : longestCommonPrefix(matches);
-  return replaceToken(before, after, tokenStart, keepPrefix + completed, matches);
+  return replaceToken(cursor, keepPrefix + completed, matches);
 };
