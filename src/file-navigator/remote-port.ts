@@ -11,9 +11,9 @@ import type { FileNavigatorEntry } from './index.js';
 import type { PasteManyResult } from './paste.js';
 import type { RowStat } from './stats.js';
 import type { HistoryStep } from './moves.js';
-import { mapRemoteHistory } from './remote-port-history.js';
 import { remoteGitCommit, remoteGitMetadata, remoteGitPull, type RemoteRequest } from './remote-port-git.js';
 import { remoteMove, remoteMoveMany } from './remote-port-moves.js';
+import { remoteDeleteMany, remoteReplay, remoteSearch, remoteStatRows } from './remote-port-mapped.js';
 import type { CommitResult } from '../git/commit.js';
 import { RemotePortPaths, resolveRemoteWorkspace } from './remote-port-paths.js';
 import {
@@ -69,9 +69,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   async statRows(root: string, paths: string[]): Promise<Record<string, RowStat | null>> {
-    const remotePaths = await Promise.all(paths.map((item) => this.paths.to(root, item)));
-    const result = await this.request<Record<string, RowStat | null>>('stat', { paths: remotePaths });
-    return Object.fromEntries(paths.map((item, index) => [item, result[remotePaths[index]] ?? null]));
+    return remoteStatRows(this.requester(), this.paths, root, paths);
   }
 
   async watch(root: string, relPath: string, onChange: () => void): Promise<WatchHandle> {
@@ -94,8 +92,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   async search(root: string): Promise<string[]> {
-    const matches = await this.request<string[]>('search', {});
-    return this.paths.filterMatches(root, matches);
+    return remoteSearch(this.requester(), this.paths, root);
   }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
@@ -121,11 +118,8 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return this.request('delete', { path: await this.paths.to(root, relPath) });
   }
 
-  async deleteMany(root: string, paths: string[]): Promise<DeleteManyResult> {
-    const result = await this.request<DeleteManyResult>(
-      'delete-many', { paths: await Promise.all(paths.map((item) => this.paths.to(root, item))) },
-    );
-    return { ...result, failedPaths: await Promise.all(result.failedPaths.map((item) => this.paths.from(root, item))) };
+  deleteMany(root: string, paths: string[]): Promise<DeleteManyResult> {
+    return remoteDeleteMany(this.requester(), this.paths, root, paths);
   }
 
   async rename(root: string, relPath: string, name: string): Promise<FileOperationResult<[string, string]>> {
@@ -146,20 +140,11 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return this.createItem(root, destination, 'create-directory');
   }
 
-  async replay(
+  replay(
     root: string, undoStack: HistoryStep[], redoStack: HistoryStep[], direction: 'undo' | 'redo',
     overwrite: boolean, skipConflicts: boolean,
   ): Promise<ReplayResult> {
-    const result = await this.request<ReplayResult>('replay', {
-      undoStack: await mapRemoteHistory(undoStack, (item) => this.paths.to(root, item)),
-      redoStack: await mapRemoteHistory(redoStack, (item) => this.paths.to(root, item)),
-      direction, overwrite, skipConflicts,
-    });
-    return {
-      ...result,
-      undoStack: await mapRemoteHistory(result.undoStack, (item) => this.paths.from(root, item)),
-      redoStack: await mapRemoteHistory(result.redoStack, (item) => this.paths.from(root, item)),
-    };
+    return remoteReplay(this.requester(), this.paths, root, undoStack, redoStack, direction, overwrite, skipConflicts);
   }
 
   private async unwatch(path: string, listener: () => void): Promise<void> {
