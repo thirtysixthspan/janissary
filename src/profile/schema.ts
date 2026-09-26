@@ -4,31 +4,10 @@
 // Pure, catalog-free, hand-written predicates — no schema library (see the plan's Decision 11).
 
 import type { ProfileTabFile } from './types.js';
-
-type FieldKind = 'string' | 'number' | 'boolean' | 'string[]';
+import { checkField, isObject } from './schema-fields.js';
 
 // The four file-navigator detail modes a `files` entry's `details` key may name.
 const DETAIL_MODES = new Set(['name', 'size', 'modified', 'permissions']);
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function describeKind(kind: FieldKind): string {
-  if (kind === 'string[]') return 'an array of strings';
-  return kind === 'boolean' ? 'a boolean' : `a ${kind}`;
-}
-
-// Validate one optional (or required) field of an object against a primitive kind, returning a
-// located message per problem. An absent optional field is fine; an absent required field is a problem.
-function checkField(obj: Record<string, unknown>, key: string, kind: FieldKind, loc: string, required = false): string[] {
-  const value = obj[key];
-  if (value === undefined) return required ? [`${loc}: ${key} is required`] : [];
-  const ok = kind === 'string[]'
-    ? Array.isArray(value) && value.every((item) => typeof item === 'string')
-    : typeof value === kind;
-  return ok ? [] : [`${loc}: ${key} must be ${describeKind(kind)}`];
-}
 
 // `dock`, when present, must be exactly "left" or "right".
 function checkDock(obj: Record<string, unknown>, loc: string): string[] {
@@ -55,10 +34,23 @@ function presentationProblems(value: Record<string, unknown>, loc: string): stri
   ];
 }
 
+// Every field the agent opener reads, so a hand-written entry that would break a launch part-way is
+// refused here instead: `cwd` goes through path expansion, and `log` and `schedule` are handed on
+// as records (an agent's `schedule` is saved entries, unlike a harness's list of specs).
 function agentProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
     ...checkField(value, 'name', 'string', loc, true),
     ...checkField(value, 'remote', 'string', loc),
+    ...checkField(value, 'cwd', 'string', loc),
+    ...checkField(value, 'workspaceDir', 'string', loc),
+    ...checkField(value, 'title', 'string', loc),
+    ...checkField(value, 'active', 'boolean', loc),
+    ...checkField(value, 'offline', 'boolean', loc),
+    ...checkField(value, 'cmdHistory', 'string[]', loc),
+    ...checkField(value, 'context', 'string[]', loc),
+    ...checkField(value, 'commandQueue', 'string[]', loc),
+    ...checkField(value, 'log', 'object[]', loc),
+    ...checkField(value, 'schedule', 'object[]', loc),
   ];
 }
 

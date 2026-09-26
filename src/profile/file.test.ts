@@ -48,6 +48,35 @@ describe('loadProfile', () => {
     expect(loadProfile('a')).toHaveProperty('error');
   });
 
+  // Every field the agent opener reads is checked before anything opens: a mistyped one used to pass
+  // validation and throw part-way through the launch, after the tab was already inserted.
+  it.each([
+    ['cwd', 5, 'must be a string'],
+    ['workspaceDir', true, 'must be a string'],
+    ['title', [], 'must be a string'],
+    ['active', 'yes', 'must be a boolean'],
+    ['offline', 1, 'must be a boolean'],
+    ['cmdHistory', ['ls', 2], 'must be an array of strings'],
+    ['context', 'note', 'must be an array of strings'],
+    ['commandQueue', [null], 'must be an array of strings'],
+    ['log', ['echo hi'], 'must be an array of objects'],
+    ['schedule', ['every 5m clear'], 'must be an array of objects'],
+  ])('errors when an agent entry carries a mistyped %s', (field, value, message) => {
+    writeJson('bad-agent', { tabs: [{ type: 'agent', name: 'bob', [field]: value }] });
+    const loaded = loadProfile('bad-agent');
+    expect(loaded).toHaveProperty('error');
+    expect((loaded as { error: string }).error).toContain(`${field} ${message}`);
+  });
+
+  it('loads an agent entry whose every field is well typed', () => {
+    writeJson('full-agent', { tabs: [{
+      type: 'agent', name: 'bob', active: false, offline: false, cwd: '~/proj', workspaceDir: '/ws/bob', title: 'Bob',
+      cmdHistory: ['ls'], context: ['note'], commandQueue: ['pwd'], log: [{ input: 'ls', output: 'a' }],
+      schedule: [{ id: 's1', command: 'clear', spec: 'every 5m', nextRun: 1, recurring: true }],
+    }] });
+    expect('error' in loadProfile('full-agent')).toBe(false);
+  });
+
   it('errors when a harness entry lacks a string tool', () => {
     writeJson('h', { tabs: [{ type: 'harness', name: 'c' }] });
     expect(loadProfile('h')).toHaveProperty('error');
