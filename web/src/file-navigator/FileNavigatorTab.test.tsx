@@ -542,7 +542,17 @@ describe('FileNavigatorTab', () => {
     expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorReroot', params: { index: 0 } });
   });
 
-  it('Shift+Enter on a file sends an edit command', () => {
+  it('Shift+Enter on a source file row edits it via the navigator-scoped RPC', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'src/index.ts', command: 'edit' } });
+  });
+
+  it('Shift+Enter on a markdown file row opens it, mirroring Shift+double-click', () => {
     const send = vi.fn();
     const client = { send } as unknown as JanusClient;
     const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
@@ -550,7 +560,36 @@ describe('FileNavigatorTab', () => {
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'ArrowDown' });
     fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'open' } });
+  });
+
+  it('Enter on a markdown file row edits it, mirroring double-click', () => {
+    const send = vi.fn();
+    const client = { send } as unknown as JanusClient;
+    const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+    const tree = container.querySelector('[role="tree"]')!;
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'ArrowDown' });
+    fireEvent.keyDown(tree, { key: 'Enter' });
     expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 0, relPath: 'README.md', command: 'edit' } });
+  });
+
+  // The gesture an opener declares rather than a name core recognizes: only a client that answers
+  // `fileNavigatorOpeners` can reach it, since a send-only client takes the fallback branch that
+  // never consults the registry.
+  it('Shift+Enter asks the opener registry, so a declared edit gesture wins over the plain command', async () => {
+    const send = vi.fn();
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { command: 'open external', choices: [] } });
+    const client = { send, request } as unknown as JanusClient;
+    const files = makeFiles({ rows: [{ path: 'clip.mp4', name: 'clip.mp4', depth: 0, dir: false }] });
+    const { container } = render(<FileNavigatorTab files={files} client={client} index={2} label="files" />);
+    const tree = container.querySelector('[role="tree"]')!;
+    await act(async () => { fireEvent.keyDown(tree, { key: 'Enter', shiftKey: true }); });
+    expect(request).toHaveBeenCalledWith({
+      method: 'fileNavigatorOpeners',
+      params: { index: 2, relPath: 'clip.mp4', edit: true },
+    });
+    expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorOpen', params: { index: 2, relPath: 'clip.mp4', command: 'open external' } });
   });
 
   it('activating a file never injects a command into any tab: every gesture stays on the navigator RPC', () => {

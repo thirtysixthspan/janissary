@@ -29,10 +29,9 @@ type Params = {
   setPendingNewDir: (path: string | null) => void;
 };
 
-// What the tab keeps hold of after the menu table is built: the three entry points its header,
-// keyboard chords, and navigation actions still call directly.
+// What the tab keeps hold of after the menu table is built: the three entry points its header and
+// keyboard chords still call directly.
 export type FileNavigatorActions = {
-  editFile: (path: string) => void;
   createNewFile: () => void;
   createNewDirectory: () => void;
   clipboardPaths: () => string[];
@@ -48,6 +47,9 @@ export function createFileNavigatorActions({
   files, client, index, label, selection, opener, paste, deletion, rename, rowEvents, commit,
   multiOpenSelection, setPendingNewDir,
 }: Params): FileNavigatorActions {
+  // The menu's own Edit entry asks for `edit` outright rather than consulting the opener registry
+  // the way the row's activations do: this entry is the plain one, so a Markdown row reaches the
+  // editor and an image the image editor, and a video is not handed to a player nobody asked for.
   const editFile = (path: string) =>
     client.send({ method: 'fileNavigatorOpen', params: { index, relPath: path, command: 'edit' } });
 
@@ -101,5 +103,5 @@ export function createFileNavigatorActions({
     newDirectory: createNewDirectory,
   };
 
-  return { editFile, createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions };
+  return { createNewFile, createNewDirectory, clipboardPaths, beginRename, menuActions };
 }

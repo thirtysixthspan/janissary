@@ -14,7 +14,7 @@ Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selectio
 work as you'd expect. The save, commit, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.
 Long sentences wrap between words when they reach the editor's edge. A single token wider than the editor can still break so it doesn't create horizontal scrolling.
 
-You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file.
+You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file. `Shift+Enter` is the tree's edit gesture, so a Markdown file opens its rendered preview and a video or audio file goes to your system's player instead.
 
 ![An editor tab: syntax-highlighted TypeScript under the metadata header, with the unsaved-changes dot next to the filename.](/screenshots/editor-tab.png)
 

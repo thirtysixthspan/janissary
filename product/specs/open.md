@@ -37,7 +37,7 @@ The chosen presentation of the selected opener is then invoked.
 
 Resolution reads the opener registry, which is built from static declarations, so asking whether a plugin owns the verb never activates it. One consequence is accepted rather than worked around: **`edit photo.png` can no longer open a PNG as raw text**, and the same now holds for `edit paper.pdf`; there is no escape hatch for either. A `:line` suffix still parses as it does for any file; neither an image nor a PDF has lines, so the suffix is discarded and the path still opens.
 
-Every existing sender of `edit <path>` reaches the same place without changing: the command line, the quick-open picker, a transcript file link, the transcript line's own open control, and Shift-activation of a row in the file navigator.
+Every existing sender of `edit <path>` reaches the same place without changing: the command line, the quick-open picker, a transcript file link, and the transcript line's own open control. A file navigator's shift-activated row is the one sender that asks the registry instead: it sends the same edit gesture double-clicking with Shift sends, so an ordinary file and an image reach the same two places, while a Markdown row reaches its rendered preview and a video or audio row reaches the external presentation. See [[file-navigator-tab]].
 
 Error handling, surfaced before any opener runs — in the active tab, except where noted:
 
@@ -144,7 +144,7 @@ Because it is a route into one opener rather than into the registry, `video` onl
 
 ### File navigator gesture
 
-In a file navigator, the gesture that normally forces the plain-text editor is inverted for a video row: because a binary video has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation opens the video in the app as usual. See [[file-navigator-tab]].
+In a file navigator, the gesture that normally forces the plain-text editor is inverted for a video row: because a binary video has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation opens the video in the app as usual. The gesture is the same one whichever way the row is activated, so Shift+double-click and Shift+Enter both reach the player. See [[file-navigator-tab]].
 
 ---
 
@@ -177,7 +177,7 @@ Because it is a route into one opener rather than into the registry, `audio` onl
 
 ### File navigator gestures
 
-In a file navigator, the gesture that normally forces the plain-text editor is inverted for an audio row: because a binary audio file has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation queues the file in the app as usual.
+In a file navigator, the gesture that normally forces the plain-text editor is inverted for an audio row: because a binary audio file has nothing to edit as text, that gesture runs the external presentation and hands the file to the configured player. Plain activation queues the file in the app as usual. Shift+double-click and Shift+Enter reach the player alike.
 
 The plugin also contributes an **Add to playlist** entry to the row context menu for a multi-row selection of audio files, which queues every selected file in order through this same opener. See [[file-navigator-tab]].
 
