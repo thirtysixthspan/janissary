@@ -96,7 +96,10 @@ The page view shows, stacked top to bottom:
 
 1. **Metadata** — the page's full address in a compact header, followed by a right-aligned action group containing back,
    forward, and reload icon buttons that move the embedded page through its own navigation history
-   or reload it, plus Split when available and the close button. Clicking the close
+   or reload it, plus Split when available and the close button. Reload fetches the page again at the
+   address it is on now. Back and forward work on any site, whatever its origin, when the app's
+   bundled browser extension is active: the app cannot touch another origin's history itself, so it
+   asks the extension, which takes the step inside the page. Without the extension they do nothing. Clicking the close
    button closes the tab directly — a second, independent close affordance alongside the tab
    strip's own close button (see "Tab strip: name and close button" below). Double-clicking the
    address opens it for editing in place; pressing Enter (or clicking away) loads the typed address
@@ -107,9 +110,12 @@ The page view shows, stacked top to bottom:
    The address and label also follow the page automatically as the user navigates **inside** the
    embedded page (clicking links, etc.) — when the app's bundled browser extension is active, the
    same content-relay path the monitor's page-text feature already depends on reports the live
-   address, and it is applied the same way a manually-typed one is. Without the extension (for
-   example when the app fell back to the system browser at startup), the address and label simply
-   stay as they were when the tab was opened.
+   address, and it is applied the same way a manually-typed one is, except that the page itself is
+   left where it is: it is already showing that address, so it is not loaded again, and its own
+   history stays intact for back and forward. A typed address, by contrast, loads into a fresh page.
+   Without the extension (for example when the app fell back to the system browser at startup), the
+   address and label simply stay as they were when the tab was opened, and back and forward do
+   nothing.
 2. **The embedded page** itself, filling the space beneath the metadata and resizing with the tab.
 
 Switching to another tab and back preserves the page view exactly as it was: whatever navigation,
