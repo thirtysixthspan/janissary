@@ -20,6 +20,8 @@ the window's upper-right corner instead: visible for about four seconds, then fa
 without opening or rearranging anything. Hovering a toast holds its clock; moving away resumes it
 with the time that was left. Clicking a toast makes the feed visible — docked into the right
 sidebar if it doesn't exist yet, brought onto screen without changing which tab you're working in.
+A toast is silent: no sound plays and no operating-system notification is raised, so a notification
+only reaches you if you happen to be looking.
 
 Three notifications inside a ten-second window escalate on their own: the feed is made visible —
 docked right if it doesn't exist, docked (not focused) if it exists hidden, left exactly where it

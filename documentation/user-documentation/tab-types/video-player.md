@@ -11,7 +11,7 @@ video clip.mp4
 
 `video <path>` is the same thing under another name, and takes the same paths and wildcards `open` does.
 
-The tab shows a compact header with the file's name, size, and location, and the player fills the space below it. The tab is named after the file in the strip and carries a × close button. If that video is already open, `open <video>` focuses the existing tab instead of creating a duplicate.
+The tab shows a compact header with the file's name, size, and location, and the player fills the space below it, fitted to that space rather than stretched, so a portrait clip keeps its shape. The header carries a **Split** control at its right edge. The tab is named after the file in the strip and carries a × close button, which closes it without selecting it first. The new tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; it is an ordinary member of that band, so you can move it within the group and the rest of the strip reads it like any other tab. If that video is already open, `open <video>` focuses the existing tab instead of creating a duplicate.
 
 ## Formats that play in a tab
 
@@ -57,7 +57,7 @@ clip.mp4  →  clip.shot-1.png
 
 Frames are captured at the video's full resolution, whatever size the tab is. Each capture takes the next free number, so pressing the button repeatedly builds up a set instead of overwriting one file. The name it used appears briefly in the header.
 
-You can't choose where it goes or what it's called — the file always lands beside the video. Open one like any other image: `open clip.shot-1.png`.
+You can't choose where it goes or what it's called — the file always lands beside the video. Open one like any other image: `open clip.shot-1.png`. A capture is written to disk and nothing else: it is not opened for you, so no image viewer appears over the tab.
 
 The button only appears while the video is playable. There's nothing to capture from a file that wouldn't decode, or from a format that opens in an external player.
 
@@ -85,9 +85,9 @@ If no player can be launched at all, the app reports the file's path so you can 
 
 <img class="agent-float" src="/agents/orhan-south.png" alt="" />
 
-Some files use a format the app recognizes but a codec it can't decode, and some files are simply damaged. When that happens the player is replaced by a short message, the file's full path, and a button offering to open it in your configured player.
+Some files use a format the app recognizes but a codec it can't decode, and some files are simply damaged. When that happens the player is replaced by the message `This video cannot be played in the app.`, the file's full path, and a button that hands the file to your player — labelled `Open in <player>` with the player's name, or `Open externally` when none is configured.
 
-Nothing launches on its own — the tab stays put and you decide.
+Nothing launches on its own — the tab stays put and you decide. A file the app can't decode is an ordinary media outcome, not a failure of the player, so the tab keeps working. A genuine plugin failure is different: it closes every video tab and reports the standard failure line — see [Bundled plugins](/user-documentation/command-bar/plugins).
 
 ## Lifecycle
 
