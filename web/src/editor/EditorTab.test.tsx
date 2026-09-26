@@ -941,6 +941,43 @@ describe('EditorTab', () => {
     expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
   });
 
+  it('escaping the conflict dialog returns keyboard focus to the buffer', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView({ mtimeMs: 1 });
+    const { container, rerender } = await renderLoaded(client, view);
+    type('x');
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel (Esc)' })).toBeInTheDocument());
+    expect(document.activeElement).not.toBe(textarea());
+
+    fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
+
+    expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(textarea());
+    fireEvent.keyDown(document.activeElement!, { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByText('This file changed on disk. Overwrite it with your changes?')).toBeInTheDocument());
+    expect(saveFile).not.toHaveBeenCalled();
+  });
+
+  it('answering y in the conflict dialog returns keyboard focus to the buffer', async () => {
+    const { client, saveFile } = makeClient();
+    const view = makeView({ mtimeMs: 1 });
+    const { container, rerender } = await renderLoaded(client, view);
+    type('x');
+    await waitFor(() => expect(hasDirtyDot(container)).toBe(true));
+    rerender(<EditorTab editor={{ ...view, mtimeMs: 2 }} tab={makeTab({ editor: view })} client={client} active />);
+    fireEvent.keyDown(textarea(), { key: 's', metaKey: true });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Overwrite (y)' })).toBeInTheDocument());
+
+    fireEvent.keyDown(document.activeElement!, { key: 'y' });
+
+    expect(saveFile).toHaveBeenCalledWith('/open/1', 'xline one\nline two', undefined);
+    expect(screen.queryByText('This file changed on disk. Overwrite it with your changes?')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(textarea());
+  });
+
   it('clicking the synced sync icon sends resyncEditorTab with the tab\'s url', async () => {
     const { client } = makeClient();
     const view = makeView({ sync: 'synced' });

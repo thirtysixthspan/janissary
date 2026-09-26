@@ -117,7 +117,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // The metadata row's rename input: Enter accepted or Escape keeps the caret at the top of the
   // editor buffer.
   const focusBuffer = () => { textareaRef.current?.focus(); };
-  const commitEditorName = (next: string) => { renameAndRefocus(client, editor.url, next, focusBuffer); };
+  // The overwrite prompt held focus while open; either answer hands it back to the buffer without
+  // scrolling it, as the autofocus effect does.
+  const refocusBuffer = () => { textareaRef.current?.focus({ preventScroll: true }); };
+  const commitEditorName =(next: string) => { renameAndRefocus(client, editor.url, next, focusBuffer); };
   const commitOrigin = () => { void commitAfterSave(client, () => saveRef.current(), editor.url, editor.name); };
 
   return (
@@ -166,7 +169,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         )}
       </div>
       {file.conflictOpen && (
-        <OverwriteConflictDialog onSave={file.overwrite} onCancel={file.dismissConflict} />
+        <OverwriteConflictDialog
+          onSave={() => { file.overwrite(); refocusBuffer(); }}
+          onCancel={() => { file.dismissConflict(); refocusBuffer(); }}
+        />
       )}
       {find.findOpen && (
         <EditorFind
