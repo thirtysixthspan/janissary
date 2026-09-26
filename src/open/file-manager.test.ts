@@ -250,6 +250,29 @@ describe('OpenFileManager.newDirectory', () => {
 });
 
 describe('OpenFileManager.run', () => {
+  // A target the parser cannot read is answered on the tab that typed it, with the usage line, and
+  // nothing is dispatched — otherwise the bare `open` would fall through to an opener with an
+  // empty path and report something unrelated to what went wrong.
+  it('answers a command with no target with the usage line and opens nothing', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-open-bare-'));
+    const notes: { input: string; output: string }[] = [];
+    const runOpener = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => dir,
+        launchDir: dir,
+        append: (_label: string, entry: { input: string; output: string }) => { notes.push(entry); },
+        registerFile: vi.fn(),
+      },
+      plugins: { runOpener },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).run('open', 'janus');
+
+    expect(notes).toEqual([{ input: 'open', output: 'Usage: open [external] [page] <target>' }]);
+    expect(runOpener).not.toHaveBeenCalled();
+  });
+
   it('routes a markdown file inline to the markdown plugin opener', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-run-'));
     writeFileSync(path.join(dir, 'readme.md'), '# Hello', 'utf8');
