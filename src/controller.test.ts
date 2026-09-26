@@ -17,6 +17,7 @@ import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
+import { initHarnessCaptureDirectory } from './harness/capture/file.js';
 import { createControllerAdapters } from './controller/create-adapters.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
@@ -1896,5 +1897,133 @@ describe('Controller direct RPC delegators', () => {
     const before = c.view().length;
     c.launchAgentFor('janus');
     expect(c.view()).toHaveLength(before + 1);
+  });
+});
+
+// The remaining thin bindings on the controller itself. Each has one job — route the call to the
+// manager that owns it — so what is worth pinning is the routing and the answer it hands back.
+describe('Controller remote-session verb', () => {
+  // One method behind two verbs. Answering whether the action ran is the point: both managers
+  // already know, and discarding it left the metadata-row control with no outcome to clear its
+  // spinner on, so a refusal read as an operation still in progress forever.
+  it('routes a detach to the sessions manager and reports its answer', () => {
+    const { c } = makeController();
+    const detach = vi.fn(() => true);
+    const attachTab = vi.fn(() => true);
+    Object.assign(c.managers, { sessions: { detach, attachTab } });
+    expect(c.remoteSession('detach', 'devbox')).toBe(true);
+    expect(detach).toHaveBeenCalledExactlyOnceWith('devbox');
+    expect(attachTab).not.toHaveBeenCalled();
+  });
+
+  it('routes an attach to attachTab, reporting a refusal as false', () => {
+    const { c } = makeController();
+    const detach = vi.fn(() => true);
+    const attachTab = vi.fn(() => false);
+    Object.assign(c.managers, { sessions: { detach, attachTab } });
+    expect(c.remoteSession('attach', 'devbox')).toBe(false);
+    expect(attachTab).toHaveBeenCalledExactlyOnceWith('devbox');
+    expect(detach).not.toHaveBeenCalled();
+  });
+});
+
+describe('Controller answerQuestion', () => {
+  // A question id nothing is waiting on is a stale click, not a question to answer. Throwing lets
+  // the request boundary answer with the reason, rather than the client waiting on a reply that
+  // will never come.
+  it('throws for a question no tab is waiting on', () => {
+    const { c } = makeController();
+    expect(() => { c.answerQuestion('janus', 'no-such-question', 'yes'); }).toThrow('question not found');
+  });
+
+  it('does not throw for a question a tab is waiting on', () => {
+    const { c } = makeController();
+    const answer = vi.fn(() => true);
+    Object.assign(c.managers, { questions: { answer } });
+    expect(() => { c.answerQuestion('janus', 'q1', 'yes'); }).not.toThrow();
+    expect(answer).toHaveBeenCalledExactlyOnceWith('janus', 'q1', 'yes');
+  });
+
+  it('accepts a null answer, which is how a question is dismissed', () => {
+    const { c } = makeController();
+    const answer = vi.fn(() => true);
+    Object.assign(c.managers, { questions: { answer } });
+    c.answerQuestion('janus', 'q1', null);
+    expect(answer).toHaveBeenCalledExactlyOnceWith('janus', 'q1', null);
+  });
+});
+
+describe('Controller transcript buttons', () => {
+  const editorTabs = (c: Controller) => c.view().filter((t) => t.view === 'editor').length;
+
+  // The capture directory is module state, and the transcript buttons write through it, so it is
+  // pointed at a scratch directory here rather than left wherever an earlier test put it.
+  const makeCapturing = () => {
+    initHarnessCaptureDirectory(mkdtempSync(path.join(tmpdir(), 'janus-captures-')));
+    return makeController();
+  };
+
+  // Each of these writes what it opened to a capture file and opens it in an editor, so the
+  // assertion is that an editor tab appeared for a tab that had something to show.
+  it('openTranscriptFor opens an editor tab for a tab that has spoken', () => {
+    const { c } = makeCapturing();
+    c.managers.tab.append('janus', { input: 'hello', output: 'world' });
+    const before = editorTabs(c);
+    c.openTranscriptFor('janus');
+    expect(editorTabs(c)).toBe(before + 1);
+  });
+
+  it('openTranscriptFor opens nothing for a tab with nothing said in it', () => {
+    const { c } = makeCapturing();
+    const before = editorTabs(c);
+    c.openTranscriptFor('janus');
+    expect(editorTabs(c)).toBe(before);
+  });
+
+  it('openTranscriptFor opens nothing for a label no open tab carries', () => {
+    const { c } = makeCapturing();
+    const before = editorTabs(c);
+    expect(() => { c.openTranscriptFor('gone'); }).not.toThrow();
+    expect(editorTabs(c)).toBe(before);
+  });
+
+  // A harness tab has no transcript of its own to print one into, so this is a silent no-op rather
+  // than an error string: there is nothing to report when there was never a question asked.
+  it('openHarnessTranscriptFor is a silent no-op for a harness with no session record', () => {
+    const { c } = makeCapturing();
+    const before = editorTabs(c);
+    expect(() => { c.openHarnessTranscriptFor('janus'); }).not.toThrow();
+    expect(editorTabs(c)).toBe(before);
+  });
+
+  // Unlike the tab transcript, an empty exchange still opens — every click gives visible feedback.
+  it('openAcpTranscript opens an editor tab even for an empty tab-scoped exchange', () => {
+    const { c } = makeCapturing();
+    const before = editorTabs(c);
+    c.openAcpTranscript({ scope: 'tab', label: 'janus' });
+    expect(editorTabs(c)).toBe(before + 1);
+  });
+
+  // Unlike the tab transcript, an empty exchange still opens, reading the literal placeholder. That
+  // is the point: a click on the transcript button always gives something visible back.
+  it.each([
+    ['tab', { scope: 'tab', label: 'janus' } as const],
+    ['monitor', { scope: 'monitor', name: 'security' } as const],
+    ['persona', { scope: 'persona', persona: 'critic' } as const],
+  ])('openAcpTranscript opens an editor tab for an empty %s-scoped exchange', (_scope, ref) => {
+    const { c } = makeCapturing();
+    const before = editorTabs(c);
+    c.openAcpTranscript(ref);
+    expect(editorTabs(c)).toBe(before + 1);
+  });
+});
+
+describe('Controller reportLayout', () => {
+  // The layout report carries no answer back; what matters is that it does not throw on a client
+  // whose sidebar is at a legal extreme, since a report that throws is a dropped frame.
+  it('accepts the extreme layouts a dragged sidebar can report', () => {
+    const { c } = makeController();
+    expect(() => { c.reportLayout({ sidebarLeft: 0, sidebarRight: 0, tabAreaPct: 0 }); }).not.toThrow();
+    expect(() => { c.reportLayout({ sidebarLeft: 100, sidebarRight: 100, tabAreaPct: 100 }); }).not.toThrow();
   });
 });
