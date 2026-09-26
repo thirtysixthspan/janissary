@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeTab } from './index.js';
-import { byLabel, editorTab, filesTab, harnessTab, monitorTab, pluginTab, editorTabByUrl, filesTabByRoot, harnessTabByPtyId, pluginTabByInstanceKey } from './lookup.js';
+import { byLabel, byLabelOrAlias, editorTab, filesTab, harnessTab, monitorTab, pluginTab, editorTabByUrl, filesTabByRoot, harnessTabByPtyId, pluginTabByInstanceKey } from './lookup.js';
 import type { Tab } from './types.js';
 
 const withView = (label: string, view: Tab['view'], payload: Partial<Tab>): Tab =>
@@ -31,6 +31,36 @@ describe('byLabel', () => {
     const first = makeTab('dup', '#111');
     const second = makeTab('dup', '#222');
     expect(byLabel([first, second], 'dup')).toBe(first);
+  });
+});
+
+describe('byLabelOrAlias', () => {
+  const renamed = { ...makeTab('agent2', '#ccc'), title: 'Reviewer' };
+  const tabs = [makeTab('plain', '#bbb'), renamed];
+
+  it('finds a tab by its exact label', () => {
+    expect(byLabelOrAlias(tabs, 'agent2')).toBe(renamed);
+  });
+
+  it('matches a label typed in a different case', () => {
+    expect(byLabelOrAlias(tabs, 'AGENT2')).toBe(renamed);
+  });
+
+  it('finds a renamed tab by its alias, ignoring case', () => {
+    expect(byLabelOrAlias(tabs, 'Reviewer')).toBe(renamed);
+    expect(byLabelOrAlias(tabs, 'reviewer')).toBe(renamed);
+  });
+
+  it('is undefined for a name that is neither a label nor an alias', () => {
+    expect(byLabelOrAlias(tabs, 'ghost')).toBeUndefined();
+  });
+
+  // The shared rule every caller had inline: the first tab matching by label or alias wins, so an
+  // alias equal to a later tab's label resolves to the aliased tab.
+  it('returns the first tab when one tab\'s alias equals a later tab\'s label', () => {
+    const aliased = { ...makeTab('agent1', '#111'), title: 'worker' };
+    const worker = makeTab('worker', '#222');
+    expect(byLabelOrAlias([aliased, worker], 'worker')).toBe(aliased);
   });
 });
 

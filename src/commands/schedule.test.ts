@@ -32,9 +32,9 @@ describe('schedule command run', () => {
     schedules = new Map();
     outputs = [];
     tab = { label: 'janus', index: 0 };
-    const tabs: { label: string; view?: string; harness?: unknown }[] = [
+    const tabs: { label: string; title?: string; view?: string; harness?: unknown }[] = [
       { label: 'janus' },
-      { label: 'claude', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
+      { label: 'claude', title: 'Reviewer', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
       { label: 'notes', view: 'markdown' },
     ];
     managers = {
@@ -148,6 +148,29 @@ describe('schedule command run', () => {
     run('schedule deploy in claude every 5m /again');
     expect(schedules.get('claude')).toHaveLength(1);
     expect(outputs.at(-1)).toContain('already exists in claude');
+  });
+
+  it('schedules into a tab named by its alias, storing the entry under the canonical label', () => {
+    run('schedule standup in reviewer every day at 9am /standup');
+    expect(schedules.get('claude')).toHaveLength(1);
+    expect(schedules.get('claude')![0]).toMatchObject({ id: 'standup', command: '/standup' });
+    expect(schedules.has('reviewer')).toBe(false);
+    expect(outputs.at(-1)).toContain('Scheduled standup in claude');
+  });
+
+  it('resolves a target label typed in a different case', () => {
+    run('schedule standup in Claude every 5m /standup');
+    expect(schedules.get('claude')).toHaveLength(1);
+    expect(outputs.at(-1)).toContain('Scheduled standup in claude');
+  });
+
+  it('lists and cancels in a tab addressed by its alias', () => {
+    run('schedule a in claude every 5m /a');
+    run('schedule list in REVIEWER');
+    expect(outputs.at(-1)).toContain('/a');
+    run('schedule cancel a in reviewer');
+    expect(schedules.get('claude')).toHaveLength(0);
+    expect(outputs.at(-1)).toBe('Cancelled a in claude.');
   });
 
   it('errors when the target tab does not exist', () => {

@@ -2,13 +2,16 @@ import type { Command, CommandManagers } from './types.js';
 import type { ScheduleEntry, ScheduleParseResult } from '../schedule/types.js';
 import type { Tab } from '../tab/types.js';
 import { parseScheduleCommand, formatSchedule } from '../schedule/index.js';
+import { byLabelOrAlias } from '../tab/lookup.js';
 
 // Resolve the tab a schedule operation applies to: the issuing tab by default, or the
-// `in <tab>` target. Agent and harness tabs can hold schedules; image/page/markdown views
-// cannot run commands, so scheduling into them is rejected.
+// `in <tab>` target, typed as a label or display alias like any other tab reference. Only a
+// typed target goes through the alias lookup; the issuing tab's own label is already canonical.
+// Agent and harness tabs can hold schedules; image/page/markdown views cannot run commands, so
+// scheduling into them is rejected.
 function resolveTargetTab(target: string | undefined, own: string, managers: CommandManagers): Tab | { error: string } {
   const label = target ?? own;
-  const tab = managers.tab.byLabel(label);
+  const tab = target === undefined ? managers.tab.byLabel(own) : byLabelOrAlias(managers.tab.tabs, target);
   if (!tab) return { error: `No tab named "${label}".` };
   if (tab.view !== undefined && tab.view !== 'agent' && tab.view !== 'harness') {
     return { error: `Tab "${label}" cannot run scheduled commands.` };
