@@ -21,7 +21,7 @@ const browserGuideline = read('ai/guidelines/sandbox-e2e-browser.md');
 
 // [what the playbook relies on, the file that produces it, the literal both must carry]
 const APPLICATION_LITERALS = [
-  ['the loopback address a web app is served on', read('ai/tasks/workspace/launch-application.md'), '127.0.0.1'],
+  ['the loopback address a web app is served on', read('ai/tasks/workspace/start-application.md'), '127.0.0.1'],
 ];
 
 describe('the find-bugs playbook', () => {
@@ -63,11 +63,11 @@ describe('the find-bugs playbook', () => {
     }
   });
 
-  // The run delegates its workspace setup and its app launch to the two workspace tasks it does not
-  // own. A prose extraction's failure mode is one side renamed and the other still pointing at it,
-  // which nothing else in the repository would catch.
+  // The run delegates its workspace setup, its app launch, and its teardown to the three workspace
+  // tasks it does not own. A prose delegation's failure mode is one side renamed and the other still
+  // pointing at it, which nothing else in the repository would catch.
   it('delegates to the workspace tasks it names, and they are all there', () => {
-    for (const task of ['prepare-workspace.md', 'launch-application.md']) {
+    for (const task of ['prepare-workspace.md', 'start-application.md', 'stop-application.md']) {
       expect(playbook).toContain(`ai/tasks/workspace/${task}`);
       expect(playbook).toContain(`$janissary/ai/tasks/workspace/${task}`);
       expect(existsSync(path.join(repoRoot, 'ai', 'tasks', 'workspace', task))).toBe(true);

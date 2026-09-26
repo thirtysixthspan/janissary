@@ -14,25 +14,25 @@ Your job: take the workspace the project's own preparation task leaves ready, bu
 
 ### Allowed
 
-Read project files and the Janissary workflow references linked here. Execute the project's workspace preparation task and take the workspace it leaves, then execute the project's launch task and take the app it starts. Create fixtures, drivers, logs, and evidence under the `./temp/find-bugs/` scratch root that task created. Drive the attached browser and run the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
+Read project files and the Janissary workflow references linked here. Execute the project's workspace preparation task and take the workspace it leaves, then execute the project's start task and take the app it starts. Create fixtures, drivers, logs, and evidence under the `./temp/find-bugs/` scratch root that task created. Drive the attached browser and run the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
 
 ### Forbidden
 
-1. Editing tracked files other than `./product/backlog/bugs.md`. The one missing `temp/` line in `.gitignore` belongs to the launch task, and this run may ship it without editing it.
+1. Editing tracked files other than `./product/backlog/bugs.md`. The one missing `temp/` line in `.gitignore` belongs to the start task, and this run may ship it without editing it.
 2. Rewording, moving, or removing an existing backlog entry. Only append evidence. Never edit an entry under `## declined`.
 3. Installing anything outside the project's lockfile, including a browser or a pseudo-terminal library. Do not let install hooks download a browser.
 4. Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL. Never drive the human's live app or the Janissary installation that launched this tab.
 5. Testing any code other than the branch the workspace preparation left checked out, or changing which branch that is. Do not reset away local commits or discard someone else's changes.
-6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the preparation and launch tasks themselves run. Exercise the product itself.
+6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the preparation and start tasks themselves run. Exercise the product itself.
 7. Starting a second app, on any address but `127.0.0.1`, or leaving one running that is bound wider. The app under test is the one Step 3 started.
 8. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
 
 ## Recovery on every stop
 
-Record the branch and tested commit this run was handed, the address, process identity, and stop command the launch task reported, any `.gitignore` edit it made, and every page and context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
+Record the branch and tested commit this run was handed, the address, process identity, stop command, and start-record path the start task reported, any `.gitignore` edit it made, and every page and context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
 
 - Leave the working tree as it is found. This run did not stash what was there, so it does not restore, switch, reset, or clean it; whatever the preparation task left is what the next run and the human inherit.
-- Once the launch task has started something, every stop — a start failure, a lost browser, anything later — hands teardown back to it before this run reports, so nothing it started outlives the run. Before that, there is nothing to tear down.
+- Once the start task has started something, every stop — a start failure, a lost browser, anything later — hands teardown to the stop task before this run reports, so nothing it started outlives the run. Before that, there is nothing to tear down.
 - After Step 4 begins, every stop finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
 - A failed push leaves the local commit in place and the tree as it stands. If a rebase cannot be resolved within the allowed files, abort that rebase and report the push failure.
 
@@ -64,15 +64,15 @@ A spec may promise behavior this environment cannot reach. Test everything it do
 
 ## Step 3 — Launch the app
 
-Get the app up by executing the launch task, with `./temp/find-bugs/` as the scratch root. Read the project's own `ai/tasks/workspace/launch-application.md` and follow it when the project has one; otherwise read `$janissary/ai/tasks/workspace/launch-application.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. It discovers how this project builds and runs, insists the app can be kept off real user state and on `127.0.0.1`, creates the scratch state, builds, starts the app, and reports the command, the address, the process identity, and the stop command.
+Get the app up by executing the start task, with `./temp/find-bugs/` as the scratch root. Read the project's own `ai/tasks/workspace/start-application.md` and follow it when the project has one; otherwise read `$janissary/ai/tasks/workspace/start-application.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. It discovers how this project builds and runs, insists the app can be kept off real user state and on `127.0.0.1`, creates the scratch state, builds, starts the app, and reports the command, the address, the process identity, the stop command, and the path of the record it wrote.
 
-Keep everything it reports: the address is what Step 4 navigates to, the stop command is what Step 8 uses, and the scratch root is where this run's fixtures, drivers, and evidence go.
+Keep everything it reports: the address is what Step 4 navigates to, and the scratch root and record are what Step 8 hands to the stop task.
 
 Do not substitute an installed release or a globally installed executable for the code in this checkout, and never look up the address or credentials of an app the human is already running.
 
 ### When the app will not start
 
-The launch task retries a failed build or start once and then reports why. What that failure *means* is this task's call, because only this task knows what the specs promise. A port held by another process, a project directory another `janus` instance holds — the error reads `another janus instance is already running in this directory`, which is this task's own collision with a run holding the same directory and not a defect in the app — a sandbox denial, a missing system binary, unavailable credentials, a project that cannot be kept on loopback, or any other plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise the app failing to start is itself a divergence from what its spec says it does: research the cause and record one finding through Steps 6–7, quoting the promise that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee where none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
+The start task retries a failed build or start once and then reports why. What that failure *means* is this task's call, because only this task knows what the specs promise. A port held by another process, a sandbox denial, a missing system binary, unavailable credentials, a project that cannot be kept on loopback, or any other plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise the app failing to start is itself a divergence from what its spec says it does: research the cause and record one finding through Steps 6–7, quoting the promise that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee where none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
 
 ## Step 4 — Connect and keep it alive
 
@@ -114,11 +114,11 @@ A match under `## ready`, `## development`, or `## deferred` receives only missi
 
 Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. Stop the holder from Step 4 first, so the app survives until nothing is still driving it.
 
-Then hand teardown back to the launch task, with the process identity and stop command it reported. It stops what it started and removes the scratch root. If it cannot finish safely, report exactly what remains and mark the run stopped; never claim successful cleanup. Keep the text needed for the report and commit before the scratch root goes, and continue to ship the permitted tracked changes.
+Then hand teardown to the stop task. Read the project's own `ai/tasks/workspace/stop-application.md` and follow it when the project has one; otherwise read `$janissary/ai/tasks/workspace/stop-application.md` and follow that, giving it the scratch root and the record path Step 3 reported. It stops the app and removes the scratch root. If it reports an incomplete teardown, carry that into this run's report verbatim and mark the run stopped; never claim a cleanup that did not happen. Keep the text needed for the report and commit before the scratch root goes, and continue to ship the permitted tracked changes.
 
 ## Step 9 — Commit and push
 
-Run `git status --short --untracked-files=all` and `git diff HEAD`. The only changes allowed to ship are the permitted backlog additions and the `temp/` line the launch step may have added to `.gitignore`. Restore any other tracked change this run can account for with `git checkout -- <exact-file>`; remove only untracked output this run can account for. Nothing here was stashed at the start, so an unfamiliar change is someone's work rather than this run's litter: do not discard it and do not stage it. Stop shipping, preserve it, and report the obstruction. Never let quick-commit stage unrelated work.
+Run `git status --short --untracked-files=all` and `git diff HEAD`. The only changes allowed to ship are the permitted backlog additions and the `temp/` line the start task may have added to `.gitignore`. Restore any other tracked change this run can account for with `git checkout -- <exact-file>`; remove only untracked output this run can account for. Nothing here was stashed at the start, so an unfamiliar change is someone's work rather than this run's litter: do not discard it and do not stage it. Stop shipping, preserve it, and report the obstruction. Never let quick-commit stage unrelated work.
 
 If either allowed file changed, execute [`quick-commit.md`](../workspace/quick-commit.md) on the prepared branch with this subject:
 
