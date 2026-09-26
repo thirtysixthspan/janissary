@@ -145,7 +145,7 @@ A rename can't replace another file or move the file into a different folder. If
 
 ## Closing with unsaved changes
 
-Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks first: "Do you want to save changes to this file?" with **Save** (the default), **Don't Save**, and **Cancel**. Press `y` to save and close, `n` to close without saving, or `Escape` to keep editing. The dialog is modal; input elsewhere is blocked until you choose.
+Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` (including `close <name>` typed in another tab) — asks first: "Do you want to save changes to this file?" with **Save** (the default), **Don't Save**, and **Cancel**. Press `y` to save and close, `n` to close without saving, or `Escape` to keep editing. The dialog is modal; input elsewhere is blocked until you choose.
 
 The dialog belongs to the tab it was raised for, not to whatever is in front of it. Tabs opening, closing, or reordering behind the dialog do not redirect a single button, so **Don't Save** always means the file you were editing. If that tab is gone before you answer, the dialog steps aside on its own and closes nothing in its place.
 

@@ -193,7 +193,7 @@ editor itself.
 
 ### Closing with unsaved changes
 
-Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line.
+Closing an editor tab that has unsaved changes triggers a confirmation dialog: "Do you want to save changes to this file?" with three buttons — Save, Don't Save, and Cancel. Save is selected by default. The dialog appears whether the close comes from the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or typing `close` / `exit` at the command line — bare, or as `close <name>` / `exit <name>` naming the editor tab from another tab. A named close of a tab with nothing unsaved closes it straight away.
 
 - **Save (y):** saves the file to disk, then closes the tab. The close happens only once the file is actually written. If the save does not succeed — the server reports an error, or the file changed on disk and the overwrite prompt goes up instead — the dialog is dismissed, the tab stays open with its changes intact, and focus returns to the editor so the error or the prompt is visible. Closing again after the save succeeds closes the tab as usual.
 - **Don't Save (n):** closes the tab without saving.

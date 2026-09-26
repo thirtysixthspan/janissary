@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { command, parseClose } from './close.js';
+import { command } from './close.js';
+import { parseClose } from './parse-close.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
