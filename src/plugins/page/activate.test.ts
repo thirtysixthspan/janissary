@@ -170,6 +170,14 @@ describe('page plugin intents', () => {
     expect(fixture.snapshots).toEqual([]);
   });
 
+  // The table matches its own entries only, so a name every object inherits is an unknown intent,
+  // not a crash that would disable the plugin.
+  it('rejects an inherited object property name as an unknown intent', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent('toString', {}, fixture))
+      .toThrow(new TabPluginRejection('unknown page intent "toString"'));
+  });
+
   it('treats an invalid tab payload as a plugin failure rather than a rejection', () => {
     const fixture = fakeCapabilities();
     let thrown: unknown;

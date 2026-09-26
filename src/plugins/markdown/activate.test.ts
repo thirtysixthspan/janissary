@@ -108,7 +108,15 @@ describe('markdown plugin intents', () => {
     expect(() => intent(
       { tab: 'markdown', intent: 'reload', payload: {}, tabPayload: payload },
       fixture.capabilities,
-    )).toThrow(TabPluginRejection);
+    )).toThrow(new TabPluginRejection('unknown markdown intent "reload"'));
+  });
+
+  it('rejects an inherited object property name as an unknown intent, not a crash', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent(
+      { tab: 'markdown', intent: 'toString', payload: {}, tabPayload: payload },
+      fixture.capabilities,
+    )).toThrow(new TabPluginRejection('unknown markdown intent "toString"'));
   });
 
   it('reports a failure when the authoritative tab payload is not its own', () => {

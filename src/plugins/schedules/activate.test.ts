@@ -118,6 +118,15 @@ describe('schedules plugin intents', () => {
     expect(fixture.actions).toEqual([]);
   });
 
+  // The table matches its own entries only, so a name every object inherits is an unknown intent,
+  // not a crash that would disable the plugin.
+  it('rejects an inherited object property name as an unknown intent', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent('toString', {}, fixture))
+      .toThrow(new TabPluginRejection('unknown schedules intent "toString"'));
+    expect(fixture.actions).toEqual([]);
+  });
+
   // The tab payload is the host's own record rather than client input, so a bad one means this
   // plugin produced something invalid.
   it('treats an invalid tab payload as a plugin failure rather than a rejection', () => {

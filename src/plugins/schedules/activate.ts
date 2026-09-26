@@ -1,14 +1,16 @@
-import type {
-  AggregatedScheduleView,
-  TabPluginActivation,
-  TabPluginNotification,
-  TabPluginServerCapabilities,
+import {
+  defineIntents,
+  type AggregatedScheduleView,
+  type TabPluginActivation,
+  type TabPluginNotification,
 } from '../api.js';
 import {
   isCancelIntent,
   isEmptyIntent,
   isFocusOwnerIntent,
   isSchedulesPayload,
+  type CancelIntent,
+  type FocusOwnerIntent,
   type ScheduleRow,
   type SchedulesPayload,
 } from './shared.js';
@@ -68,45 +70,35 @@ export function activate(): TabPluginActivation {
       if (event.topic !== 'schedules') return;
       capabilities.updateTab(INSTANCE_KEY, () => ({ payload: toPayload(event.data) }));
     },
-    intent: (request, capabilities) => {
-      if (!isSchedulesPayload(request.tabPayload)) {
-        // The tab payload is the host's own record, not client input, so a bad one means this plugin
-        // produced something invalid — a real failure rather than a request worth answering.
-        return capabilities.reportFailure('invalid schedules tab payload');
-      }
-      return runIntent(request.intent, request.payload, capabilities);
-    },
+    intent: defineIntents('schedules', isSchedulesPayload, {
+      clear: {
+        payload: isEmptyIntent,
+        run: (_tab, _payload: Record<string, never>, capabilities) => {
+          capabilities.topicAction({ topic: 'schedules', action: 'clear' });
+          return null;
+        },
+      },
+      cancel: {
+        payload: isCancelIntent,
+        run: (_tab, payload: CancelIntent, capabilities) => {
+          capabilities.topicAction({
+            topic: 'schedules', action: 'cancel', tab: payload.tab, id: payload.id,
+          });
+          return null;
+        },
+      },
+      'focus-owner': {
+        payload: isFocusOwnerIntent,
+        run: (_tab, payload: FocusOwnerIntent, capabilities) => {
+          capabilities.topicAction({ topic: 'schedules', action: 'focusOwner', tab: payload.tab });
+          return null;
+        },
+      },
+    }),
     opener: {
       // Unreachable: the manifest claims no file extensions, so the open pipeline never routes here.
       inline: (_file, capabilities) => capabilities.rejectRequest('schedules opens no files'),
       external: (_file, capabilities) => capabilities.rejectRequest('schedules opens no files'),
     },
   };
-}
-
-function runIntent(
-  intent: string, payload: unknown, capabilities: TabPluginServerCapabilities,
-): null | never {
-  switch (intent) {
-    case 'clear': {
-      if (!isEmptyIntent(payload)) return capabilities.rejectRequest('invalid clear payload');
-      capabilities.topicAction({ topic: 'schedules', action: 'clear' });
-      return null;
-    }
-    case 'cancel': {
-      if (!isCancelIntent(payload)) return capabilities.rejectRequest('invalid cancel payload');
-      capabilities.topicAction({
-        topic: 'schedules', action: 'cancel', tab: payload.tab, id: payload.id,
-      });
-      return null;
-    }
-    case 'focus-owner': {
-      if (!isFocusOwnerIntent(payload)) return capabilities.rejectRequest('invalid focus-owner payload');
-      capabilities.topicAction({ topic: 'schedules', action: 'focusOwner', tab: payload.tab });
-      return null;
-    }
-    default: {
-      return capabilities.rejectRequest(`unknown schedules intent "${intent}"`);
-    }
-  }
 }
