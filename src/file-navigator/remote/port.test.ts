@@ -212,3 +212,139 @@ describe('RemoteFileSystemPort', () => {
     expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(false);
   });
 });
+
+// The operations the suite above never reached. Same harness: a fake channel that records frames and
+// hands replies back, so each case is about the frame the port sent and the value it answered with.
+describe('RemoteFileSystemPort remaining operations', () => {
+  const lastRequest = (sent: ClientFrame[]) => sent.findLast((frame) => frame.type === 'filesystem-request');
+
+  it('sends a stat for the rows asked about', async () => {
+    const h = harness();
+    const pending = h.port.statRows('/remote/ws/src', ['a.ts', 'b.ts']);
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'stat', args: { paths: ['src/a.ts', 'src/b.ts'] },
+    });
+    h.reply({ 'src/a.ts': { size: 1, modified: 2, mode: 3 } });
+    await expect(pending).resolves.toEqual({ 'a.ts': { size: 1, modified: 2, mode: 3 }, 'b.ts': null });
+  });
+
+  // The read side of the base64 pair: content crosses the wire as base64 because the frame is JSON,
+  // and comes back as the bytes the editor writes to disk.
+  it('decodes a read file from its base64 payload', async () => {
+    const h = harness();
+    const pending = h.port.readFile('/remote/ws', 'notes.txt');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({ operation: 'read-file', args: { path: 'notes.txt' } });
+
+    h.reply({ content: Buffer.from('héllo\n').toString('base64') });
+    await expect(pending).resolves.toEqual(Buffer.from('héllo\n'));
+  });
+
+  it('sends a multi-item move with every source mapped', async () => {
+    const h = harness();
+    const pending = h.port.moveMany('/remote/ws/src', ['a.ts', 'b.ts'], 'dest', 'overwrite-all');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'move-many',
+      args: { sources: ['src/a.ts', 'src/b.ts'], destination: 'src/dest', policy: 'overwrite-all' },
+    });
+    h.reply({ total: 2, failedPaths: [], moved: [], mutated: false });
+    await expect(pending).resolves.toMatchObject({ total: 2, mutated: false });
+  });
+
+  // A paste's sources are absolute, because a clipboard source can cross roots — so only the
+  // destination is mapped, and mapping the sources would break the cross-root case entirely.
+  it('maps only the paste destination, leaving the sources as they arrived', async () => {
+    const h = harness();
+    const pending = h.port.paste('/remote/ws/src', ['/elsewhere/a.txt'], 'dest', 'cut', 'skip-conflicts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'paste',
+      args: { sources: ['/elsewhere/a.txt'], destination: 'src/dest', mode: 'cut', policy: 'skip-conflicts' },
+    });
+    h.reply({ total: 1, failedPaths: [], moved: [], mutated: false });
+    await expect(pending).resolves.toMatchObject({ total: 1 });
+  });
+
+  // The far side names what it created against its own workspace, so the answer is mapped back onto
+  // the tree before the caller sees it — otherwise the caller is handed a path it cannot open.
+  it('maps a created file\'s path back onto the tree', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws/src', 'new.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-file', args: { destination: 'src/new.ts' },
+    });
+    h.reply({ ok: true, value: { path: 'src/new.ts' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'new.ts' } });
+  });
+
+  it('maps a created directory\'s path back onto the tree', async () => {
+    const h = harness();
+    const pending = h.port.createDirectory('/remote/ws/src', 'sub');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    expect(lastRequest(h.sent)).toMatchObject({
+      operation: 'create-directory', args: { destination: 'src/sub' },
+    });
+    h.reply({ ok: true, value: { path: 'src/sub' } });
+    await expect(pending).resolves.toEqual({ ok: true, value: { path: 'sub' } });
+  });
+
+  // A refusal carries no path, so there is nothing to map: the answer is handed back exactly as the
+  // far side wrote it.
+  it('returns a create refusal as it stands, with no path to map', async () => {
+    const h = harness();
+    const pending = h.port.createFile('/remote/ws', 'a.ts');
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({ ok: false, reason: 'a file already holds that name' });
+    await expect(pending).resolves.toEqual({ ok: false, reason: 'a file already holds that name' });
+  });
+
+  // The far side keeps watching while any listener remains on the path, so stopping one of two
+  // handles must not tell it to stop — the other would go deaf with nothing to say so. Only the last
+  // handle to stop takes the watch down.
+  it('unwatches only when the last listener on a path stops', async () => {
+    const h = harness();
+    const first = h.port.watch('/remote/ws', 'src', vi.fn());
+    await vi.waitFor(() => expect(h.sent.some((f) => f.type === 'filesystem-request')).toBe(true));
+    h.reply({});
+    const firstHandle = await first;
+
+    const second = h.port.watch('/remote/ws', 'src', vi.fn());
+    await vi.waitFor(() => expect(h.sent.filter((f) => f.type === 'filesystem-request')).toHaveLength(2));
+    h.reply({});
+    const secondHandle = await second;
+
+    firstHandle.stop();
+    await Promise.resolve();
+    expect(h.sent.some((f) => f.type === 'filesystem-request' && f.operation === 'unwatch')).toBe(false);
+
+    secondHandle.stop();
+    await vi.waitFor(() => expect(h.sent.filter((f) => f.type === 'filesystem-request'
+      && f.operation === 'unwatch')).toHaveLength(1));
+  });
+
+  // A port disposed before its workspace ever resolved has nothing to open, and the operation is
+  // reported rather than queued: the caller gets the same answer as any other closed port, and the
+  // channel never sees a request it could not answer.
+  it('reports operations as closed when disposed before the workspace resolved', async () => {
+    const sent: ClientFrame[] = [];
+    let listener: NavigatorListener | undefined;
+    const channel = {
+      attachNavigator: (_id: string, value: NavigatorListener) => { listener = value; },
+      detachNavigator: vi.fn(),
+      send: (frame: ClientFrame) => { sent.push(frame); },
+    } as unknown as RemoteChannel;
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const port = new RemoteFileSystemPort(channel, 'files-1', promise);
+
+    port.dispose();
+    resolve('/remote/ws');
+
+    await expect(port.rename('/remote/ws', 'a.txt', 'b.txt'))
+      .resolves.toMatchObject({ ok: false, reason: expect.stringContaining('closed') as string });
+    expect(sent.some((frame) => frame.type === 'filesystem-open')).toBe(false);
+    expect(listener).toBeDefined();
+  });
+});
