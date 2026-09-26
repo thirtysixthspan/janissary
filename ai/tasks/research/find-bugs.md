@@ -26,13 +26,11 @@ Read project files and the Janissary workflow references linked here. Execute th
 6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the preparation and launch tasks themselves run. Exercise the product itself.
 7. Starting a second app, on any address but `127.0.0.1`, or leaving one running that is bound wider. The app under test is the one Step 3 started.
 8. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
-9. Proceeding while another run holds this project's lock, or removing a lock this run did not take.
 
 ## Recovery on every stop
 
-Record the branch and tested commit this run was handed, the address, process identity, and stop command the launch task reported, any `.gitignore` edit it made, the path of this run's lock, and every page and context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
+Record the branch and tested commit this run was handed, the address, process identity, and stop command the launch task reported, any `.gitignore` edit it made, and every page and context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
 
-- Release this run's lock on every stop, so no exit path leaves the project locked against the next run.
 - Leave the working tree as it is found. This run did not stash what was there, so it does not restore, switch, reset, or clean it; whatever the preparation task left is what the next run and the human inherit.
 - Once the launch task has started something, every stop — a start failure, a lost browser, anything later — hands teardown back to it before this run reports, so nothing it started outlives the run. Before that, there is nothing to tear down.
 - After Step 4 begins, every stop finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
@@ -41,13 +39,12 @@ Record the branch and tested commit this run was handed, the address, process id
 ## Step 0 — Take the prepared workspace
 
 1. Confirm `./product/specs/` is a directory and `./product/backlog/bugs.md` is a file. If either is missing, stop before changing anything and name what is missing. Read the project's `AGENTS.md` / `CLAUDE.md` and their required guidance before running any of its commands.
-2. Take this run's lock, so that two runs cannot share one working tree. Resolve `git rev-parse --git-common-dir` to an absolute path and create the directory `<common git dir>/find-bugs.lock`; creating a directory is the test, so there is no window in which two runs both believe they hold it. Write this run's record inside it with the file-editing tool — the run's start time, and the branch and tested commit once they are known — and add to that record as those are established. The command queue that serializes task execution belongs to a tab, not to a project, so a second tab on this project would otherwise drive the same scratch directory and the same working tree, and the run that finished first would delete the scratch state out from under the run still testing in it. If the directory already exists, stop before changing anything and report the holder from the record inside it as `Status: stopped: another find-bugs run holds <path>`. A lock that outlives its run means that run was killed: read the record, confirm no run is in flight, and delete the directory, exactly as `janus` clears its own per-directory instance lock.
-3. Prepare the workspace by executing the workspace preparation task. Read the project's own `ai/tasks/workspace/prepare-workspace.md` and follow it in full when the project has one; otherwise read `$janissary/ai/tasks/workspace/prepare-workspace.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. Execute whichever you picked end to end, and re-implement none of it. Do not second-guess the branch or the tree state it leaves behind, and do not add a preflight of your own: that workspace is what this run was given, and the run's job is to test it. If the task cannot be read, or stops partway, stop and report what it left.
-4. Record what you were handed: the branch from `git branch --show-current` and the tested commit from `git rev-parse HEAD`, with its short form. Those name the code under test in the report, and Step 4 confirms the commit has not moved since. This run changes nothing else about the tree.
+2. Prepare the workspace by executing the workspace preparation task. Read the project's own `ai/tasks/workspace/prepare-workspace.md` and follow it in full when the project has one; otherwise read `$janissary/ai/tasks/workspace/prepare-workspace.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. Execute whichever you picked end to end, and re-implement none of it. Do not second-guess the branch or the tree state it leaves behind, and do not add a preflight of your own: that workspace is what this run was given, and the run's job is to test it. If the task cannot be read, or stops partway, stop and report what it left.
+3. Record what you were handed: the branch from `git branch --show-current` and the tested commit from `git rev-parse HEAD`, with its short form. Those name the code under test in the report, and Step 4 confirms the commit has not moved since. This run changes nothing else about the tree.
 
 ## Step 1 — Require an attached browser
 
-Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists. If either is unset, release the lock and stop before building anything. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). This gate also applies to tools with no web UI. There is no static-review fallback.
+Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists. If either is unset, stop before building anything. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). This gate also applies to tools with no web UI. There is no static-review fallback.
 
 Read [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules. Use `JANISSARY_NODE` for Node drivers when set. Otherwise check `node --version` before using a current bare `node`. Import Playwright from `JANISSARY_PLAYWRIGHT`, not the project's package, and connect with `chromium.connect(process.env.JANISSARY_BROWSER_WS_ENDPOINT)`, never `connectOverCDP` or `chromium.launch()`. The CommonJS package is available through `createRequire` or a dynamic import's `.default`.
 
@@ -59,9 +56,9 @@ List the `.md` files directly under `./product/specs/`. Invocation arguments are
 execute $janissary/ai/tasks/research/find-bugs.md editor-tab file-navigator-tab
 ```
 
-With names given, match each against this directory and test those specs only. If any name is unknown, report the mismatched names and every available spec name, release the lock, and stop before building. Deduplicate repeated names.
+With names given, match each against this directory and test those specs only. If any name is unknown, report the mismatched names and every available spec name, and stop before building. Deduplicate repeated names.
 
-With no names, pick up to **five** specs by the date of the last commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, release the lock and report why nothing could be tested.
+With no names, pick up to **five** specs by the date of the last commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, report why nothing could be tested.
 
 A spec may promise behavior this environment cannot reach. Test everything it does reach, and list each behavior it could not under `Not tested` with the reason, rather than setting the spec aside.
 
@@ -117,7 +114,7 @@ A match under `## ready`, `## development`, or `## deferred` receives only missi
 
 Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. Stop the holder from Step 4 first, so the app survives until nothing is still driving it.
 
-Then hand teardown back to the launch task, with the process identity and stop command it reported. It stops what it started and removes the scratch root. If it cannot finish safely, report exactly what remains and mark the run stopped; never claim successful cleanup. Afterwards, release this run's lock. Keep the text needed for the report and commit before the scratch root goes, and continue to ship the permitted tracked changes.
+Then hand teardown back to the launch task, with the process identity and stop command it reported. It stops what it started and removes the scratch root. If it cannot finish safely, report exactly what remains and mark the run stopped; never claim successful cleanup. Keep the text needed for the report and commit before the scratch root goes, and continue to ship the permitted tracked changes.
 
 ## Step 9 — Commit and push
 
