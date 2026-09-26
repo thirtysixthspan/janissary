@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { parseCliArgs, CliUsageError } from './cli-args.js';
@@ -101,6 +101,48 @@ describe('parseCliArgs', () => {
   it('leaves stop false for a normal invocation', () => {
     expect(parseCliArgs([]).stop).toBe(false);
     expect(parseCliArgs([tmpDir]).stop).toBe(false);
+  });
+
+  // `e2e-browser` is recognized before any option parsing, because `--port` and `--dir` are its own
+  // arguments and strict mode would reject them as unknown options. They are handed on verbatim for
+  // `parseE2EBrowserArgs` to read, which is the only thing that validates them.
+  it('recognizes `e2e-browser` and hands its arguments on untouched', () => {
+    const args = parseCliArgs(['e2e-browser', '--port', '50000', '--dir', tmpDir]);
+
+    expect(args.e2eBrowser).toBe(true);
+    expect(args.e2eBrowserArgs).toEqual(['--port', '50000', '--dir', tmpDir]);
+  });
+
+  it('accepts `e2e-browser` with no arguments of its own', () => {
+    const args = parseCliArgs(['e2e-browser']);
+
+    expect(args.e2eBrowser).toBe(true);
+    expect(args.e2eBrowserArgs).toEqual([]);
+  });
+
+  it('leaves e2eBrowser false for a normal invocation', () => {
+    expect(parseCliArgs([]).e2eBrowser).toBe(false);
+    expect(parseCliArgs([tmpDir]).e2eBrowser).toBe(false);
+  });
+
+  it('does not treat a project directory named e2e-browser as the subcommand', () => {
+    // The subcommand is only the keyword in first position; anywhere else it is an ordinary path.
+    const named = path.join(tmpDir, 'e2e-browser');
+    mkdirSync(named);
+    const args = parseCliArgs([named]);
+
+    expect(args.e2eBrowser).toBe(false);
+    expect(args.projectDir).toBe(named);
+  });
+
+  it('gives an e2e-browser invocation every other default', () => {
+    const args = parseCliArgs(['e2e-browser', '--port', '1']);
+
+    expect(args.help).toBe(false);
+    expect(args.stop).toBe(false);
+    expect(args.init).toBe(false);
+    expect(args.port).toBeUndefined();
+    expect(args.projectDir).toBeUndefined();
   });
 
   it('throws CliUsageError for `stop` with more than one extra argument', () => {
