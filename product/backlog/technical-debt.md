@@ -4,17 +4,6 @@
 
 ## development
 
-* Give the detached peer's on-disk record one module that owns its path, its writer and a single validated reader, instead of three readers that each rebuild and check it differently.
-
-Existing Debt: The `.janissary/remote/<session>.json` record is an on-disk contract with no owning module, so its path is assembled three ways, its shape is re-asserted with `as typeof record` casts, and each reader validates `pid` and `socket` with a different test. Severity: 5/10
-
-Existing Risk: 5/10 - A record holding `null` throws inside `requestParkedCapture`'s Promise executor with no rejection handler on its caller, and if the workspace base or record shape changes, the launch-name check's derived path can silently stop seeing live peers and let a second provision clone over a label still in use.
-
-Proposal Risk: 2/10 - One path builder and one validated reader serve every caller; the remaining exposure is `requestParkedCapture`'s deliberate lack of a liveness check, which stays documented in its header.
-
-Proposal: The writer is `DetachedPeer` (constructor, `start`, `setLabel`) in `src/remote/serve-detach.ts`; the readers are `relayPeer` in the same file (strict `Number.isSafeInteger(record.pid) && record.pid > 0 && typeof record.socket === 'string'`), `requestParkedCapture` in `src/remote/serve-detach-query.ts` (checks only `typeof record.socket`, no null guard) and `peerRecordDir`, `readPeerRecord` and `hasLivePeer` in `src/launch-name/leftover.ts` (derives the directory as `path.dirname(path.dirname(workspacePath(label)))` plus `'remote'` and checks `typeof record.pid === 'number'`). Create `src/remote/peer-record.ts` exporting `peerRecordDir(root)`, `peerRecordPath(root, session)`, `writePeerRecord(file, { pid, socket, label? })` and `readPeerRecord(file)` returning the validated record or `undefined` (null-guarded, strict integer `pid`, string `socket`, optional string `label`), and use it from all four sites, removing the casts. Keep `requestParkedCapture`'s documented choice not to check `isPidAlive`. `src/remote/serve.test.ts` (the record-seeding cases), `src/remote/serve-detach-query.test.ts` (missing, non-JSON and non-string socket cases) and `src/launch-name/leftover.test.ts` pin the behavior; add a `null` record case to the query suite.
-
-
 * Stop encoding navigator file contents twice on the remote wire by removing the frame codec's content special cases, so the port layer's base64 is the only encoding.
 
 Existing Debt: File bytes are base64-encoded by the remote filesystem port and then re-encoded by `toWire`, which re-encodes any reply result carrying a string `content` field by sniffing its shape rather than by the operation's contract, and the decoder undoes one layer by mutating a cast argument object. Severity: 4/10

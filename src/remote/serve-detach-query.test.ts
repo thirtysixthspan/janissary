@@ -24,7 +24,7 @@ function fakePeer(onConnect: (write: (data: string) => void) => void): { session
   server.listen(socketPath);
   const session = randomUUID();
   mkdirSync(path.join(root, '.janissary', 'remote'), { recursive: true });
-  writeFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), JSON.stringify({ socket: socketPath }));
+  writeFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), JSON.stringify({ pid: process.pid, socket: socketPath }));
   return { session, close: () => { server.close(); rmSync(socketDir, { recursive: true, force: true }); } };
 }
 
@@ -65,7 +65,15 @@ describe('requestParkedCapture', () => {
   it('resolves undefined when the record\'s socket field is not a string', async () => {
     const session = randomUUID();
     mkdirSync(path.join(root, '.janissary', 'remote'), { recursive: true });
-    writeFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), JSON.stringify({ socket: 42 }));
+    writeFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), JSON.stringify({ pid: process.pid, socket: 42 }));
+    await expect(requestParkedCapture(root, session, 'r1', 'q1')).resolves.toBeUndefined();
+  });
+
+  // `null` is valid JSON, and reading `.socket` off it used to throw inside the Promise executor.
+  it('resolves undefined without throwing when the record file holds null', async () => {
+    const session = randomUUID();
+    mkdirSync(path.join(root, '.janissary', 'remote'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), 'null');
     await expect(requestParkedCapture(root, session, 'r1', 'q1')).resolves.toBeUndefined();
   });
 

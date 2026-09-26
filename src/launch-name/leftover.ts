@@ -1,34 +1,21 @@
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { isOwnInstanceAlive, isPidAlive, readLockPid } from '../instance-lock.js';
-import { untrustWorkspace, workspacePath } from '../workspace/index.js';
+import { untrustWorkspace, workspacePath, workspaceProjectDir } from '../workspace/index.js';
+import { peerRecordDir, readPeerRecord } from '../remote/peer-record.js';
 import { workspaceLabelError } from '../workspace/label.js';
 import { errorText } from '../error-text.js';
 import { sameLaunchName } from './check.js';
 
 // A workspace folder named after a launch's label, and whether anything still owns it. Shared by the
 // local launch paths and `janus remote-serve`'s provision check, which is why everything is located
-// from `workspacePath(label)` alone: both sides have already initialized it against their own root.
-
-// Where `DetachedPeer` writes its records: `.janissary/remote/`, the sibling of the workspace base.
-function peerRecordDir(label: string): string {
-  return path.join(path.dirname(path.dirname(workspacePath(label))), 'remote');
-}
-
-function readPeerRecord(file: string): { pid?: unknown; label?: unknown } | undefined {
-  try {
-    const record = JSON.parse(readFileSync(file, 'utf8')) as unknown;
-    return typeof record === 'object' && record !== null ? record : undefined;
-  } catch {
-    return undefined;
-  }
-}
+// from the workspace base alone: both sides have already initialized it against their own root.
 
 // A live `remote-serve` peer — attached or parked — that has provisioned (or is provisioning) `label`,
 // or a name differing from it only by case: on a case-insensitive filesystem both are one folder.
 // A record whose pid is dead is ignored: the attach path already treats it as terminated.
 function hasLivePeer(label: string): boolean {
-  const dir = peerRecordDir(label);
+  const dir = peerRecordDir(workspaceProjectDir());
   let files: string[];
   try {
     files = readdirSync(dir).filter((file) => file.endsWith('.json'));
@@ -37,7 +24,8 @@ function hasLivePeer(label: string): boolean {
   }
   return files.some((file) => {
     const record = readPeerRecord(path.join(dir, file));
-    return typeof record?.label === 'string' && sameLaunchName(record.label, label) && typeof record.pid === 'number' && record.pid > 0 && isPidAlive(record.pid);
+    if (typeof record === 'string' || record.label === undefined) return false;
+    return sameLaunchName(record.label, label) && isPidAlive(record.pid);
   });
 }
 

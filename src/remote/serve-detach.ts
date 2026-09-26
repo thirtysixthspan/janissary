@@ -1,10 +1,11 @@
 import { createServer, createConnection, type Server, type Socket } from 'node:net';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { isPidAlive } from '../instance-lock.js';
 import { encodeFrame, type ClientFrame, type ServerFrame } from './protocol.js';
 import { ReplayHistory } from './replay-history.js';
+import { peerRecordPath, readPeerRecord, writePeerRecord } from './peer-record.js';
 import { classifyPreAttachFrame, encodeCaptureReply, busyTransitionFrames } from './serve-detach-capture.js';
 
 export const REMOTE_DETACH_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -39,7 +40,7 @@ export class DetachedPeer {
     private getCapture: (id: string) => { text: string; capturedAt: number } | undefined = () => { /* no detection pipeline wired */ },
     private currentBusyStates: () => Iterable<{ id: string; busy: boolean; unread: boolean }> = () => [],
   ) {
-    this.record = path.join(root, '.janissary', 'remote', `${session}.json`);
+    this.record = peerRecordPath(root, session);
   }
 
   async start(sink: (data: string) => void): Promise<void> {
@@ -55,7 +56,7 @@ export class DetachedPeer {
       server.listen(socketPath, resolve);
     });
     this.socketPath = socketPath;
-    writeFileSync(this.record, JSON.stringify({ pid: process.pid, socket: socketPath }), { mode: 0o600 });
+    writePeerRecord(this.record, { pid: process.pid, socket: socketPath });
   }
 
   // Stamp the record with the label this peer is provisioning, before its clone starts, so another
@@ -63,7 +64,7 @@ export class DetachedPeer {
   // `socket` are rewritten unchanged; the readers of those two ignore the extra field.
   setLabel(label: string): void {
     if (this.stopped || this.socketPath === undefined) return;
-    writeFileSync(this.record, JSON.stringify({ pid: process.pid, socket: this.socketPath, label }), { mode: 0o600 });
+    writePeerRecord(this.record, { pid: process.pid, socket: this.socketPath, label });
   }
 
   emit(frame: ServerFrame): void {
@@ -173,14 +174,9 @@ export function relayPeer(
   root: string, session: string, output: (data: string) => void, ended: (terminated: boolean) => void,
   restore = false,
 ): Socket | undefined {
-  let record: { pid: number; socket: string };
-  try {
-    record = JSON.parse(readFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), 'utf8')) as typeof record;
-  } catch (error) {
-    ended((error as NodeJS.ErrnoException).code === 'ENOENT');
-    return;
-  }
-  if (!record || !Number.isSafeInteger(record.pid) || record.pid <= 0 || typeof record.socket !== 'string') { ended(false); return; }
+  const record = readPeerRecord(peerRecordPath(root, session));
+  if (record === 'missing') { ended(true); return; }
+  if (record === 'invalid') { ended(false); return; }
   if (!isPidAlive(record.pid)) { ended(true); return; }
   const socket = createConnection(record.socket);
   socket.setEncoding('utf8');

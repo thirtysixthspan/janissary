@@ -1,8 +1,7 @@
-import { readFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
-import path from 'node:path';
 import { decodeFrame, encodeFrame, type ServerFrame } from './protocol.js';
 import type { ScreenCapture } from '../harness/screen.js';
+import { peerRecordPath, readPeerRecord } from './peer-record.js';
 
 /**
  * A `janus remote-serve` process with no workspace of its own (a fresh ssh session relaying a query
@@ -19,14 +18,8 @@ export function requestParkedCapture(
   root: string, session: string, id: string, request: string,
 ): Promise<{ text: string; capturedAt: number } | undefined> {
   return new Promise((resolve) => {
-    let record: { socket: string };
-    try {
-      record = JSON.parse(readFileSync(path.join(root, '.janissary', 'remote', `${session}.json`), 'utf8')) as typeof record;
-    } catch {
-      resolve(undefined);
-      return;
-    }
-    if (typeof record.socket !== 'string') { resolve(undefined); return; }
+    const record = readPeerRecord(peerRecordPath(root, session));
+    if (typeof record === 'string') { resolve(undefined); return; }
     const socket = createConnection(record.socket);
     let buffer = '';
     let settled = false;
