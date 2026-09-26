@@ -1,7 +1,8 @@
 import path from 'node:path';
-import type {
-  TabPluginActivation,
-  TabPluginServerCapabilities,
+import {
+  defineIntents,
+  type TabPluginActivation,
+  type TabPluginServerCapabilities,
 } from '../api.js';
 import { fileTabPayload, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { videoManifest } from './manifest.js';
@@ -9,6 +10,7 @@ import {
   isCaptureFramePayload,
   isEmptyPayload,
   isVideoPayload,
+  type CaptureFramePayload,
 } from './shared.js';
 import { saveVideoShot } from './shot.js';
 
@@ -39,30 +41,20 @@ export function activate(): TabPluginActivation {
         }));
       },
     },
-    intent: (request, capabilities) => {
-      const tabPayload = request.tabPayload;
-      if (isVideoPayload(tabPayload)) {
-        if (request.intent === 'capture-frame') {
-          const payload = request.payload;
-          if (isCaptureFramePayload(payload)) {
-            return {
-              name: saveVideoShot(tabPayload.path, payload.dataUrl),
-            };
-          }
-          return capabilities.rejectRequest('invalid capture-frame payload');
-        }
-        if (request.intent === 'open-external') {
-          if (isEmptyPayload(request.payload)) {
-            openExternal(tabPayload.path, capabilities);
-            return null;
-          }
-          return capabilities.rejectRequest('invalid open-external payload');
-        }
-        return capabilities.rejectRequest(`unknown video intent "${request.intent}"`);
-      }
-      // The tab payload is the host's own record, not client input, so a bad one means this plugin
-      // produced something invalid — a real failure rather than a request worth answering.
-      return capabilities.reportFailure('invalid video tab payload');
-    },
+    intent: defineIntents('video', isVideoPayload, {
+      'capture-frame': {
+        payload: isCaptureFramePayload,
+        run: (tabPayload, payload: CaptureFramePayload) => ({
+          name: saveVideoShot(tabPayload.path, payload.dataUrl),
+        }),
+      },
+      'open-external': {
+        payload: isEmptyPayload,
+        run: (tabPayload, _payload: Record<string, never>, capabilities) => {
+          openExternal(tabPayload.path, capabilities);
+          return null;
+        },
+      },
+    }),
   };
 }

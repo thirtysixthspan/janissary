@@ -1,7 +1,8 @@
 import path from 'node:path';
-import type {
-  TabPluginActivation,
-  TabPluginServerCapabilities,
+import {
+  defineIntents,
+  type TabPluginActivation,
+  type TabPluginServerCapabilities,
 } from '../api.js';
 import { fileSize, openFileInConfiguredViewer, servesContentType } from '../files.js';
 import { audioManifest } from './manifest.js';
@@ -15,6 +16,8 @@ import {
   isSelectTrackPayload,
   type AudioPayload,
   type AudioTrack,
+  type RemoveTrackPayload,
+  type SelectTrackPayload,
 } from './shared.js';
 
 function openExternal(file: string, capabilities: TabPluginServerCapabilities): void {
@@ -74,37 +77,29 @@ export function activate(): TabPluginActivation {
         else openExternal(file, capabilities);
       },
     },
-    intent: (request, capabilities) => {
-      const tabPayload = request.tabPayload;
-      if (!isAudioPayload(tabPayload)) {
-        // The tab payload is the host's own record, not client input, so a bad one means this plugin
-        // produced something invalid — a real failure rather than a request worth answering.
-        return capabilities.reportFailure('invalid audio tab payload');
-      }
-      if (request.intent === 'select-track') {
-        if (!isSelectTrackPayload(request.payload)) {
-          return capabilities.rejectRequest('invalid select-track payload');
-        }
-        const index = trackIndex(tabPayload, request.payload.path);
-        if (index === -1) return capabilities.rejectRequest('select-track names no queued track');
-        return push(selectTrack(tabPayload, index, fileSize(tabPayload.tracks[index].path)), capabilities);
-      }
-      if (request.intent === 'remove-track') {
-        const payload = request.payload;
-        if (!isRemoveTrackPayload(payload)) {
-          return capabilities.rejectRequest('invalid remove-track payload');
-        }
-        const index = trackIndex(tabPayload, payload.path);
-        if (index === -1) return capabilities.rejectRequest('remove-track names no queued track');
-        // The one thing that separates a dropped track from a hand removal: the queue takes the
-        // identical path either way, and the drop additionally names itself in the notifications
-        // feed. The player stays silent, so a playlist shedding a file never interrupts playback.
-        if (payload.unplayable) {
-          capabilities.notifyUser(`Dropped ${tabPayload.tracks[index].name} — it could not be played.`);
-        }
-        return push(removeTrack(tabPayload, index, (track) => fileSize(track.path)), capabilities);
-      }
-      return capabilities.rejectRequest(`unknown audio intent "${request.intent}"`);
-    },
+    intent: defineIntents('audio', isAudioPayload, {
+      'select-track': {
+        payload: isSelectTrackPayload,
+        run: (tabPayload, payload: SelectTrackPayload, capabilities) => {
+          const index = trackIndex(tabPayload, payload.path);
+          if (index === -1) return capabilities.rejectRequest('select-track names no queued track');
+          return push(selectTrack(tabPayload, index, fileSize(tabPayload.tracks[index].path)), capabilities);
+        },
+      },
+      'remove-track': {
+        payload: isRemoveTrackPayload,
+        run: (tabPayload, payload: RemoveTrackPayload, capabilities) => {
+          const index = trackIndex(tabPayload, payload.path);
+          if (index === -1) return capabilities.rejectRequest('remove-track names no queued track');
+          // The one thing that separates a dropped track from a hand removal: the queue takes the
+          // identical path either way, and the drop additionally names itself in the notifications
+          // feed. The player stays silent, so a playlist shedding a file never interrupts playback.
+          if (payload.unplayable) {
+            capabilities.notifyUser(`Dropped ${tabPayload.tracks[index].name} — it could not be played.`);
+          }
+          return push(removeTrack(tabPayload, index, (track) => fileSize(track.path)), capabilities);
+        },
+      },
+    }),
   };
 }
