@@ -1,8 +1,8 @@
-import type { RemoteFrame } from './protocol.js';
-import { ROOT_REFUSAL_FIELDS, type RootRefusal, type RootRefusalKind } from './root-refusal.js';
+import type { RemoteFrame } from '../protocol.js';
+import { ROOT_REFUSAL_FIELDS, type RootRefusal, type RootRefusalKind } from '../root-refusal.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
-} from './frame-decode-shared.js';
+} from './decode-shared.js';
 
 // The decoders for settling a remote project root: the clone offer and its answer, the structured
 // refusal, and the two fields that ride on older frames (`provision.origin` and

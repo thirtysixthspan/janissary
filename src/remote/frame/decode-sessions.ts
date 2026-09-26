@@ -1,7 +1,7 @@
-import type { RemoteProcessState } from './protocol.js';
+import type { RemoteProcessState } from '../protocol.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
-} from './frame-decode-shared.js';
+} from './decode-shared.js';
 
 // The `session-state-result` decoder, in its own module for the same reason the filesystem frames
 // have one: `frame-decode.ts` is the dispatcher, and a frame carrying a list of records is more

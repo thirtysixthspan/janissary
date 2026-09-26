@@ -2,7 +2,7 @@ import path from 'node:path';
 import {
   history, historyPaths, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
 } from './argument-checks.js';
-import { nonEmptyString } from '../frame-decode-shared.js';
+import { nonEmptyString } from '../frame/decode-shared.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
 } from './refusal-shapes.js';

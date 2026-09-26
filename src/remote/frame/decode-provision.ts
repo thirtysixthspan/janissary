@@ -1,7 +1,7 @@
-import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
-import type { GitIdentity } from '../git/identity.js';
-import { decodeOrigin } from './frame-decode-root.js';
-import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
+import { PROJECT_TOKENS, type ProjectTokens } from '../../project/tokens.js';
+import type { GitIdentity } from '../../git/identity.js';
+import { decodeOrigin } from './decode-root.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
 // The `provision` decoder, in its own module for the same reason `frame-decode-history.ts` has one:
 // `frame-decode.ts` is the dispatcher, and a frame carrying two records of adopted settings is more

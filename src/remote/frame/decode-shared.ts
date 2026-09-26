@@ -1,4 +1,4 @@
-import type { RemoteFrame } from './protocol.js';
+import type { RemoteFrame } from '../protocol.js';
 
 // The result type and value-shape predicates every frame decoder is built from, in one place so the
 // dispatcher and each family module refuse a frame with the same text and check a field the same way.

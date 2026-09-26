@@ -1,22 +1,22 @@
-import type { RemoteFrame } from './protocol.js';
-import { malformed, type DecodeResult } from './frame-decode-shared.js';
-import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
-import { decodeSessionStateResult } from './frame-decode-sessions.js';
-import { decodeShellHistory } from './frame-decode-history.js';
+import type { RemoteFrame } from '../protocol.js';
+import { malformed, type DecodeResult } from './decode-shared.js';
+import { decodeFilesystemFrame } from './decode-filesystem.js';
+import { decodeSessionStateResult } from './decode-sessions.js';
+import { decodeShellHistory } from './decode-history.js';
 import {
   decodeCloneAnswer, decodeCloneOffer, decodeRootRefused,
-} from './frame-decode-root.js';
+} from './decode-root.js';
 import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition,
-} from './frame-decode-detect.js';
+} from './decode-detect.js';
 import {
   decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError,
-} from './frame-decode-acp.js';
-import { decodeProvision } from './frame-decode-provision.js';
+} from './decode-acp.js';
+import { decodeProvision } from './decode-provision.js';
 import {
   decodeAddressedData, decodeAttach, decodeBrowserExited, decodeExit, decodeKill, decodeNameInUse,
   decodeResize, decodeSpawn, decodeTranscript, decodeWorkspaceFailed, decodeWorkspaceReady,
-} from './frame-decode-lifecycle.js';
+} from './decode-lifecycle.js';
 
 // The `default` branch of the switch below. The `never` parameter is the point: the call only
 // typechecks while every frame type in the union has a case, so a type added to `RemoteFrame` but
