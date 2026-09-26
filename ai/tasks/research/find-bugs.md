@@ -27,11 +27,13 @@ Read project files and the Janissary workflow references linked here. Fetch, sta
 7. Exercising behavior that depends on sandbox enforcement, external networks, remote hosts, credentials, or native host windows.
 8. Starting a web app on any address but `127.0.0.1`, or leaving one running that is bound wider. Never inspect a process or a socket to find out what an address is; read it from the command and the output.
 9. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
+10. Proceeding while another run holds this project's lock, or removing a lock this run did not take.
 
 ## Recovery on every stop
 
-Record whether this run created a stash, its object ID and message, the tested commit, any `.gitignore` edit, and every process/page/context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
+Record whether this run created a stash, its object ID and message, the tested commit, any `.gitignore` edit, the path of this run's lock, and every process/page/context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
 
+- Release this run's lock on every stop, after teardown and before the stash is restored, so no exit path leaves the project locked against the next run.
 - Before a stash exists, a stop makes no working-tree changes.
 - After stashing but before Step 4, restore any incidental changes made by this run, then pop only this run's stash and report. Never pop a pre-existing stash.
 - Once Step 4 begins, every stop, including a build/start failure or a lost browser, finishes Steps 6–9 for any verified findings: research, file, tear down, commit permitted changes, and then pop the stash. A `.gitignore` edit alone is still committed. Do not restart testing after a stop.
@@ -41,7 +43,7 @@ Record whether this run created a stash, its object ID and message, the tested c
 ## Step 0 — Prepare the primary branch
 
 1. Confirm `./product/specs/` is a directory and `./product/backlog/bugs.md` is a file. If either is missing, stop before changing the tree and name what is missing. Read the project's `AGENTS.md` / `CLAUDE.md` and their required guidance before running install commands.
-2. Run `git status` and confirm this is a git repository with an `origin` remote and no unfinished merge, rebase, or conflicted index. Stop on those conditions; this task cannot safely stash them.
+2. Run `git status` and confirm this is a git repository with an `origin` remote and no unfinished merge, rebase, or conflicted index. Stop on those conditions; this task cannot safely stash them. Then take this run's lock, so that two runs cannot share one working tree. Resolve `git rev-parse --git-common-dir` to an absolute path and create the directory `<common git dir>/find-bugs.lock`; creating a directory is the test, so there is no window in which two runs both believe they hold it. Write this run's record inside it with the file-editing tool — the resolved primary branch, the tested commit once it is known, the run's start time, and the stash object ID once one exists — and add to that record as those are established. The command queue that serializes task execution belongs to a tab, not to a project, so a second tab on this project would otherwise drive the same `./temp/find-bugs/`, the same working tree, and the same checkout of the primary branch, and the run that finished first would delete the scratch directory out from under the run still testing in it. If the directory already exists, stop before changing anything — no install, no stash, no checkout — and report the holder from the record inside it as `Status: stopped: another find-bugs run holds <path>`. A lock that outlives its run means that run was killed: read the record, confirm no run is in flight, and delete the directory, exactly as `janus` clears its own per-directory instance lock.
 3. Resolve the primary branch with `git symbolic-ref refs/remotes/origin/HEAD`. Strip `refs/remotes/origin/` from the result. If the symbolic ref is unset, use `master`. Fetch with `git fetch origin`; stop if the fetch fails or `origin/<primary>` does not exist.
 4. If a local primary branch exists, run `git log --oneline origin/<primary>..<primary>`. Any output means local commits are not on the remote: report those commits and stop without stashing or checking out. If the local branch does not exist, create it tracking `origin/<primary>` only after stashing below.
 5. Inspect `git status --short --untracked-files=all`. When there are changes, run `git stash push --include-untracked -m 'find-bugs: pre-run working tree'` and record `git rev-parse refs/stash`. Confirm the tracked and untracked working tree is clean before continuing. Otherwise record `Stash: none` and leave all existing stashes alone.
@@ -119,7 +121,7 @@ For another web app, use its discovered server command and a persistent browser 
 
 ### Build or start failures
 
-Retry a failed build or start **once**, stopping this run's failed process before retrying. If it still fails, research the cause. A port held by another process, sandbox denial, missing system binary, unavailable credentials, or another plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise record one researched startup finding through Steps 6–7, quoting the spec's promised behavior that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee when none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
+Retry a failed build or start **once**, stopping this run's failed process before retrying. If it still fails, research the cause. A port held by another process, a project directory another `janus` instance holds — the error reads `another janus instance is already running in this directory`, which is this task's own collision with a run holding the same directory and not a defect in the app — sandbox denial, missing system binary, unavailable credentials, or another plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise record one researched startup finding through Steps 6–7, quoting the spec's promised behavior that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee when none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
 
 ## Step 5 — Exercise the selected behavior
 
@@ -155,7 +157,7 @@ A match under `## ready`, `## development`, or `## deferred` receives only missi
 
 Stop every server, tool, driver, and holder this run started, including children, using the recorded ownership information. Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. For Janissary, stop the holder first and run `node bin/janus.mjs stop ./temp/find-bugs/project` as a backstop. When already stopped it prints `no running janus instance for <dir>`.
 
-After processes have stopped, remove only the validated project-local `./temp/find-bugs/` directory and confirm it is gone. Keep the text needed for the report and commit before deleting captures and logs. If teardown cannot safely finish, report what remains and mark the run stopped; never claim successful cleanup or kill an unrelated process. Continue to ship permitted tracked changes and restore the stash.
+After processes have stopped, remove only the validated project-local `./temp/find-bugs/` directory and confirm it is gone, then release this run's lock. Keep the text needed for the report and commit before deleting captures and logs. If teardown cannot safely finish, report what remains and mark the run stopped; never claim successful cleanup or kill an unrelated process. Continue to ship permitted tracked changes and restore the stash.
 
 ## Step 9 — Commit, push, and restore the stash
 
