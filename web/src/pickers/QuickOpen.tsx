@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FuzzyMatchResult } from '../shared/fuzzy-match';
 import { basename, dirname } from '../shared/rel-path';
+import { useRankedOverlayKeys } from '../shared/ranked-overlay-keys';
 
 type Properties = {
   query: string;
@@ -39,18 +40,13 @@ function quickOpenBody(query: string, loading: boolean, results: FuzzyMatchResul
 // Escape never reach the window handler — since, unlike the other pickers, it holds its own text
 // input (Decision 6).
 export function QuickOpen({ query, onChangeQuery, results, selected, onChangeSelected, loading, onPick, onClose, commandInputRef }: Properties) {
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    if (e.key === 'ArrowUp') { e.preventDefault(); onChangeSelected(Math.max(0, selected - 1)); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); onChangeSelected(Math.min(results.length - 1, selected + 1)); return; }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const result = results[selected];
-      if (result) onPick(result.path);
-      return;
-    }
-    if (e.key === 'Escape') { e.preventDefault(); onClose(); commandInputRef.current?.focus(); }
-  };
+  // Escape hands the keystroke's focus back to the command bar the overlay was raised from, so
+  // closing it leaves the user where they can type the next command.
+  const onKeyDown = useRankedOverlayKeys(
+    selected, results.length, onChangeSelected,
+    () => { const result = results[selected]; if (result) onPick(result.path); },
+    () => { onClose(); commandInputRef.current?.focus(); },
+  );
 
   return (
     <div className="picker quick-open" data-doc-shot="quick-open-overlay">

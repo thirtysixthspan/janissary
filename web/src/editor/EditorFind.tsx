@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRankedOverlayKeys } from '../shared/ranked-overlay-keys';
 import type { FuzzyMatchResult } from '../shared/fuzzy-match';
 
 type Properties = {
@@ -51,14 +52,9 @@ function editorFindBody(query: string, results: FuzzyMatchResult[], selected: nu
 // belongs to `EditorTab`, which owns the buffer. Owns its own key handling so Up/Down/Enter/Escape
 // never reach the buffer behind it.
 export function EditorFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose }: Properties) {
-  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    e.stopPropagation();
-    if (e.key === 'ArrowUp') { e.preventDefault(); onChangeSelected(Math.max(0, selected - 1)); return; }
-    if (e.key === 'ArrowDown') { e.preventDefault(); onChangeSelected(Math.min(results.length - 1, selected + 1)); return; }
-    // The jump has already happened live, so Enter has nothing left to commit.
-    if (e.key === 'Enter') { e.preventDefault(); return; }
-    if (e.key === 'Escape') { e.preventDefault(); onClose(); }
-  };
+  // Enter commits nothing: the jump to the highlighted line already happened live, so there is
+  // nothing left to commit and Enter is swallowed with the rest.
+  const onKeyDown = useRankedOverlayKeys(selected, results.length, onChangeSelected, () => {}, onClose);
 
   return (
     <div className="picker editor-find">
