@@ -89,7 +89,14 @@ const nameText = (container: HTMLElement) => container.querySelector('.editor-na
 // (render.tsx); strip it before comparing textContent against plain expected text.
 const queryRowText = (container: HTMLElement) => (container.querySelector(':scope .editor-row-query .editor-content')?.textContent ?? '').replaceAll('\u{200B}', '');
 
-const hasEnabledSaveButton = (container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
+const currentGutter = (container: HTMLElement) => container.querySelector(':scope .editor-row-current .editor-gutter')?.textContent;
+
+function stubTenLines() {
+  const text = Array.from({ length: 10 }, (_, index) => `row ${index + 1}`).join('\n');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(text) } as unknown as Response));
+}
+
+const hasEnabledSaveButton =(container: HTMLElement) => !container.querySelector<HTMLButtonElement>('.editor-save-button')!.disabled;
 const hasDirtyDot = hasEnabledSaveButton;
 
 // The caret renders as an empty span sitting inline at its column (render.tsx), so where it sits in
@@ -370,6 +377,40 @@ describe('EditorTab', () => {
     const { container } = await renderLoaded(client, makeView({ line: 2 }));
     const gutter = container.querySelector('.editor-row-current')?.querySelector('.editor-gutter');
     expect(gutter?.textContent).toBe('2');
+  });
+
+  it('moves the cursor of an already-loaded tab when the file is opened again with a line', async () => {
+    const { client } = makeClient();
+    stubTenLines();
+    const view = makeView({ line: 5 });
+    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    await waitFor(() => expect(currentGutter(container)).toBe('5'));
+    fireEvent.mouseDown(container.querySelector(':scope .editor-row .editor-content')!, { clientX: 0, clientY: 0, detail: 1 });
+    expect(currentGutter(container)).toBe('1');
+
+    const scrollMock = Element.prototype.scrollIntoView as ReturnType<typeof vi.fn>;
+    scrollMock.mockClear();
+    const reopened = { ...view, line: 8, lineRequest: 1 };
+    rerender(<EditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
+
+    await waitFor(() => expect(currentGutter(container)).toBe('8'));
+    expect(container.querySelector(':scope .editor-row-current .editor-content')?.textContent).toBe('row 8');
+    expect(scrollMock).toHaveBeenCalledWith({ block: 'center' });
+  });
+
+  it('moves the cursor again when the same line is requested a second time', async () => {
+    const { client } = makeClient();
+    stubTenLines();
+    const view = makeView({ line: 8, lineRequest: 1 });
+    const { container, rerender } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    await waitFor(() => expect(currentGutter(container)).toBe('8'));
+    fireEvent.mouseDown(container.querySelector(':scope .editor-row .editor-content')!, { clientX: 0, clientY: 0, detail: 1 });
+    expect(currentGutter(container)).toBe('1');
+
+    const reopened = { ...view, lineRequest: 2 };
+    rerender(<EditorTab editor={reopened} tab={makeTab({ editor: reopened })} client={client} active />);
+
+    await waitFor(() => expect(currentGutter(container)).toBe('8'));
   });
 
   it('renders a caret span in the active editor', async () => {

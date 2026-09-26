@@ -128,7 +128,10 @@ export function openEditorTab(
   );
   if (existing) {
     releaseFileReference(target.openFiles, view.url);
-    if (view.line !== undefined) existing.editor.line = view.line;
+    if (view.line !== undefined) {
+      existing.editor.line = view.line;
+      existing.editor.lineRequest = (existing.editor.lineRequest ?? 0) + 1;
+    }
     target.setActiveTab(target.tabs.indexOf(existing));
     messageBus.emit('state', { type: 'dirty' });
     return existing.label;
