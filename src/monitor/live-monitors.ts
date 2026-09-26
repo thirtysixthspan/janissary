@@ -2,7 +2,7 @@ import type { AcpInfo, AcpSession } from '../acp/types.js';
 import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Subscription } from '../bus.js';
 import type { Persona } from '../personas.js';
-import { parseSuggestion } from './parsing.js';
+import { parseSuggestion } from './reply-format.js';
 import { openMonitorSession, respawnMonitorSession } from './session.js';
 import type { spawnMonitorSession } from './acp.js';
 import { targetColor, formatTargets } from './targets.js';

@@ -1,20 +1,11 @@
-import {
-  HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake,
-  type ClientFrame, type RemoteProcessState,
-} from '../protocol.js';
+import { HANDSHAKE_SENTINEL, decodeFrame, encodeFrame, heldBackLength, parseHandshake } from '../protocol.js';
+import type { ClientFrame, RemoteProcessState } from '../protocol-frames.js';
 import { SessionRouter, type SessionListener } from './sessions.js';
 import { drainFrames } from '../frame/lines.js';
 import { dispatchAcp, type AcpSessionListener } from './acp.js';
 import { dispatchSessionFrame } from './dispatch.js';
 import { CaptureRequestTracker, type CaptureResult } from './capture.js';
 import { ShutdownDrain } from '../shutdown-drain.js';
-
-export type { CaptureResult } from './capture.js';
-export type { SessionListener } from './sessions.js';
-export type { AcpSessionListener } from './acp.js';
-export type {
-  ChannelTransport, NavigatorListener, ChannelFrame, RemoteChannelHandlers,
-} from './types.js';
 import { isChannelFrame, type ChannelTransport, type NavigatorListener, type RemoteChannelHandlers } from './types.js';
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';

@@ -1,4 +1,4 @@
-import { appVersion } from './cli-args.js';
+import { appVersion } from './cli-info.js';
 
 export function explainStartupError(error: unknown, context: { port?: number } = {}): string | null {
   const code = (error as NodeJS.ErrnoException)?.code;

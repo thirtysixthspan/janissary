@@ -2,7 +2,7 @@ import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type
 import { stripShellSentinels } from './sentinel-strip.js';
 import { restoredTranscript } from './restored-transcript.js';
 import { createRemoteShell } from '../remote/shell-session.js';
-import type { ShellHistoryRun } from '../remote/protocol.js';
+import type { ShellHistoryRun } from '../remote/protocol-frames.js';
 import { createPtyShell, ptyShellArgs } from './pty-session.js';
 import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
 import { getConfig } from '../config.js';

@@ -1,4 +1,4 @@
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import type { Managers } from '../managers.js';
 import { formatTargets } from './targets.js';
 import { updateMonitorMeta } from './window.js';

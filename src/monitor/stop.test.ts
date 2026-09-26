@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { makeTab } from '../tab/index.js';
 import type { MonitorTarget } from '../tab/types.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import { closeIfUnfed, stopMonitor } from './stop.js';
 import { closeMonitorTab, updateMonitorMeta } from './window.js';
 

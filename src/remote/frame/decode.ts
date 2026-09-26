@@ -1,4 +1,4 @@
-import type { RemoteFrame } from '../protocol.js';
+import type { RemoteFrame } from '../protocol-frames.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
 import { decodeSessionStateResult } from './decode-sessions.js';

@@ -1,26 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  fileNavigatorToggle,
-  fileNavigatorCollapseAll,
-  fileNavigatorPull,
-  fileNavigatorCommit,
-  fileNavigatorNothingToCommit,
-  fileNavigatorReroot,
-  moveFileNavigatorItem,
-  moveFileNavigatorItems,
-  pasteFileNavigatorItems,
-  deleteFileNavigatorItem,
-  deleteFileNavigatorItems,
-  undoFileNavigatorItem,
-  redoFileNavigatorItem,
-  openFileNavigatorFor,
-  fileNavigatorSearch,
-  revealFileNavigatorItem,
-  renameFileNavigatorItem,
-  fileNavigatorOpeners,
-  fileNavigatorCreateFile,
-  fileNavigatorCreateDirectory,
+  fileNavigatorToggle, fileNavigatorCollapseAll, fileNavigatorPull, fileNavigatorReroot,
+  moveFileNavigatorItem, moveFileNavigatorItems, pasteFileNavigatorItems, deleteFileNavigatorItem,
+  deleteFileNavigatorItems, undoFileNavigatorItem, redoFileNavigatorItem, openFileNavigatorFor,
+  fileNavigatorSearch, revealFileNavigatorItem, renameFileNavigatorItem, fileNavigatorOpeners,
+  fileNavigatorCreateFile, fileNavigatorCreateDirectory,
 } from './navigator.js';
+import { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
 import { NOTIFICATIONS_LABEL } from '../../notifications/tab.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../../notifications/queue.js';
 import type { Managers } from '../../managers.js';

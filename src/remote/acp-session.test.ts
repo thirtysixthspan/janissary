@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createRemoteAcpSession } from './acp-session.js';
-import type { AcpSessionListener } from './channel/index.js';
+import type { AcpSessionListener } from './channel/acp.js';
 import type { RemoteChannel } from './channel/index.js';
-import type { ClientFrame } from './protocol.js';
+import type { ClientFrame } from './protocol-frames.js';
 
 const OPTIONS = {
   id: 'racp1',

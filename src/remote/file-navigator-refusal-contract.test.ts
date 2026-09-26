@@ -8,8 +8,9 @@ import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/file
 import { deleteOne, moveOne, renameOne } from '../file-navigator/manager/item-operations.js';
 import { deleteMany } from '../file-navigator/manager/batch.js';
 import type { FilesTabState } from '../file-navigator/state.js';
-import type { RemoteChannel, NavigatorListener } from './channel/index.js';
-import type { ClientFrame } from './protocol.js';
+import type { RemoteChannel } from './channel/index.js';
+import type { NavigatorListener } from './channel/types.js';
+import type { ClientFrame } from './protocol-frames.js';
 
 // A remote port wired straight to a remote server over an in-memory channel, so the same call can
 // be made against both implementations and their answers compared. The far side serves the same

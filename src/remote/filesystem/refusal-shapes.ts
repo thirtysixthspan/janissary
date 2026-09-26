@@ -1,5 +1,5 @@
 import { failureReasons, failureResult } from '../../file-navigator/file-operation-result.js';
-import type { RemoteFilesystemArguments } from '../protocol.js';
+import type { RemoteFilesystemArguments } from '../protocol-frames.js';
 
 // How a refusal is shaped for an operation whose result type can carry a reason. Each operation's
 // table entry names the one that matches its own result, so a refusal reaches the caller as the

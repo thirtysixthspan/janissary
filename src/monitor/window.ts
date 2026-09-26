@@ -3,7 +3,6 @@ import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { isMonitorTab, type MonitorTab } from '../tab/view-guards.js';
-export { findSuggestion, removeSuggestion, runSuggestion, rateSuggestion } from './suggestions.js';
 
 // Monitor reporting tabs: each external-mode monitor gets its own view-only tab
 // (`view: 'monitor'`) labelled with the monitor's runtime name (e.g. `security`, `quality`) and

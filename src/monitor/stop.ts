@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { MonitorTarget } from '../tab/types.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import { closeMonitorTab, updateMonitorMeta } from './window.js';
 import { formatTargets, resolveTargetAliases } from './targets.js';
 

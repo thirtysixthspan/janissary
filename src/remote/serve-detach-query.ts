@@ -1,5 +1,6 @@
 import { createConnection } from 'node:net';
-import { decodeFrame, encodeFrame, type ServerFrame } from './protocol.js';
+import { decodeFrame, encodeFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import type { ScreenCapture } from '../harness/screen.js';
 import { peerRecordPath, readPeerRecord } from './peer-record.js';
 

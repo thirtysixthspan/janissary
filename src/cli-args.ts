@@ -2,7 +2,6 @@ import { parseArgs } from 'node:util';
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { errorText } from './error-text.js';
-export { usageText, appVersion, appVersionNumber } from './cli-info.js';
 
 export class CliUsageError extends Error {}
 

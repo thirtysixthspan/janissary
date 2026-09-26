@@ -1,5 +1,5 @@
 import type { ConnectionView } from '../protocol.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import type { Persona } from '../personas.js';
 import type { AcpInfo } from '../acp/types.js';
 import { formatTargets } from './targets.js';

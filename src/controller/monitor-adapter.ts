@@ -1,4 +1,4 @@
-import { runSuggestion } from '../monitor/window.js';
+import { runSuggestion } from '../monitor/suggestions.js';
 import type { Managers } from '../managers.js';
 
 export type MonitorControllerAdapter = {

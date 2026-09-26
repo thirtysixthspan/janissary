@@ -1,4 +1,4 @@
-import type { ShellHistoryRun } from '../remote/protocol.js';
+import type { ShellHistoryRun } from '../remote/protocol-frames.js';
 import type { LogEntry } from '../tab/types.js';
 import { COMMAND_INPUT_PREFIX, COMMAND_INPUT_SUFFIX, PWD_QUERY_PREFIX } from './command-input.js';
 import { stripShellSentinels } from './sentinel-strip.js';

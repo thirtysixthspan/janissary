@@ -6,10 +6,8 @@ import {
   closeConnection,
 } from '../connections.js';
 import { parseDatabaseCommand } from './parsing.js';
-export { parseDatabaseCommand } from './parsing.js';
 import { queryDatabase } from './query.js';
 import { errorText } from '../error-text.js';
-export { DB_PRIMER, extractDatabaseCommand } from './primer.js';
 
 function createDatabase(name: string): string {
   const isExisted = databaseFileExists(name);

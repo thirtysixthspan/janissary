@@ -3,7 +3,7 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote/file-cache.js';
 import type { RemoteChannel } from './channel/index.js';
-import type { RemoteProcessState } from './protocol.js';
+import type { RemoteProcessState } from './protocol-frames.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteLaunchHandlers } from './manager.js';

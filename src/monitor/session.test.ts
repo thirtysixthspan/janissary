@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createMonitorSession, openMonitorSession, primeMonitorSession, respawnMonitorSession } from './session.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import type { Persona } from '../personas.js';
 

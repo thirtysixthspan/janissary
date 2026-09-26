@@ -3,7 +3,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { FileNavigatorRow } from '../tab/types.js';
-import { readDirSorted, buildRows, markGitStatus, isSameOrDescendantPath, hasNameConflict } from './index.js';
+import { readDirSorted, buildRows, isSameOrDescendantPath, hasNameConflict } from './index.js';
+import { markGitStatus } from './git-mark.js';
 
 describe('readDirSorted', () => {
   let root: string;

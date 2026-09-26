@@ -7,7 +7,7 @@ import { workspaceLabelError } from '../workspace/label.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { invalidNameRefusal } from '../launch-name/messages.js';
 import { errorText } from '../error-text.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import { RemoteProcesses } from './serve-processes.js';
 import { RemoteAcp } from './serve-acp.js';
 import { RemoteFileNavigators } from './serve-file-navigator.js';

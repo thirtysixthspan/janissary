@@ -1,5 +1,5 @@
 import { refusalValueFor } from '../../remote/filesystem/refusal.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
 
 // One remote session's outstanding filesystem requests, and how each one is settled when no answer
 // is coming. Split out of `RemoteFileSystemPort` to keep it under the file-size limit — see

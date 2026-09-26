@@ -1,4 +1,6 @@
 import * as fileNavigatorRpc from './navigator.js';
+import { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './navigator-selection.js';
+import { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
 import { resolveTreeSelections } from '../../file-navigator/selection-request.js';
 import type { FileNavigatorDetail } from '../../tab/types.js';
 import type { Managers } from '../../managers.js';
@@ -39,8 +41,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     fileNavigatorToggle: (index, path) => fileNavigatorRpc.fileNavigatorToggle(managers, index, path),
     fileNavigatorCollapseAll: (index) => fileNavigatorRpc.fileNavigatorCollapseAll(managers, index),
     fileNavigatorPull: (index) => fileNavigatorRpc.fileNavigatorPull(managers, index),
-    fileNavigatorCommit: (index, message, paths) => fileNavigatorRpc.fileNavigatorCommit(managers, index, message, paths),
-    fileNavigatorNothingToCommit: (index) => fileNavigatorRpc.fileNavigatorNothingToCommit(managers, index),
+    fileNavigatorCommit: (index, message, paths) => fileNavigatorCommit(managers, index, message, paths),
+    fileNavigatorNothingToCommit: (index) => fileNavigatorNothingToCommit(managers, index),
     fileNavigatorSetDetail: (index, details) => fileNavigatorRpc.fileNavigatorSetDetail(managers, index, details),
     fileNavigatorReroot: (index, relPath) => fileNavigatorRpc.fileNavigatorReroot(managers, index, relPath),
     moveFileNavigatorItem: (label, from, to, overwrite) => fileNavigatorRpc.moveFileNavigatorItem(managers, label, from, to, overwrite),
@@ -55,8 +57,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     fileNavigatorOpen: (index, relPath, command) => fileNavigatorRpc.fileNavigatorOpen(managers, index, relPath, command),
     fileNavigatorCreateFile: (label, destination) => fileNavigatorRpc.fileNavigatorCreateFile(managers, label, destination),
     fileNavigatorCreateDirectory: (label, destination) => fileNavigatorRpc.fileNavigatorCreateDirectory(managers, label, destination),
-    fileNavigatorSelectionAction: (index, paths) => fileNavigatorRpc.fileNavigatorSelectionAction(managers, index, paths),
-    runFileNavigatorSelectionAction: (index, paths, action) => fileNavigatorRpc.runFileNavigatorSelectionAction(managers, index, paths, action),
+    fileNavigatorSelectionAction: (index, paths) => fileNavigatorSelectionAction(managers, index, paths),
+    runFileNavigatorSelectionAction: (index, paths, action) => runFileNavigatorSelectionAction(managers, index, paths, action),
     reportFileNavigatorSelection: (id, navigators) => resolveTreeSelections(id, navigators),
     undoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.undoFileNavigatorItem(managers, label, overwrite, skipConflicts),
     redoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, label, overwrite, skipConflicts),

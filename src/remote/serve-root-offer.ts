@@ -3,7 +3,7 @@ import path from 'node:path';
 import { startGitClone, type GitCloneHandle } from '../git/clone.js';
 import { errorText } from '../error-text.js';
 import { withoutCredentialsIn } from '../git/repository-url.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RootOffer, RootOutcome } from './serve-root.js';
 import { acquireRootLock } from './serve-root-lock.js';

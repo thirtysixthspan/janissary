@@ -1,4 +1,4 @@
-import type { ServerFrame, ShellHistoryRun } from './protocol.js';
+import type { ServerFrame, ShellHistoryRun } from './protocol-frames.js';
 
 export const REPLAY_HISTORY_CHARS = 128 * 1024;
 const RESET = '\u{1B}c';

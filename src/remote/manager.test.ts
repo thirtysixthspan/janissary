@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { RemoteManager, remoteServeCommand, type RemoteLaunchHandlers } from './manager.js';
-import { remoteCaptureCommand } from './entry-factory.js';
+import { RemoteManager, type RemoteLaunchHandlers } from './manager.js';
+import { remoteCaptureCommand, remoteServeCommand } from './entry-factory.js';
 import { parseRemoteAddress, type RemoteAddress } from './address.js';
 import { encodeFrame, encodeHandshake } from './protocol.js';
 import { notify } from '../notifications/index.js';

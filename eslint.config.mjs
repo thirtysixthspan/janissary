@@ -161,6 +161,27 @@ export default ts.config(
       'import-x/no-cycle': 'error',
     },
   },
+  // Direct imports only (`ai/guidelines/imports-and-barrel-files.md`): a server module never
+  // re-exports another module's symbols. The exemptions are the deliberate public entry points —
+  // the wire contract the client reaches through `@shared/protocol`, the published plugin contract,
+  // and the frozen v1 compatibility fixture.
+  {
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['src/protocol.ts', 'src/plugins/api.ts', 'src/plugins/fixture-v1/activate.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ExportNamedDeclaration[source]',
+          message: 'Import the symbol from its defining module instead of re-exporting it (ai/guidelines/imports-and-barrel-files.md).',
+        },
+        {
+          selector: 'ExportAllDeclaration',
+          message: 'Import the symbol from its defining module instead of re-exporting it (ai/guidelines/imports-and-barrel-files.md).',
+        },
+      ],
+    },
+  },
   {
     files: ['web/src/**/*.ts', 'web/src/**/*.tsx'],
     plugins: { 'import-x': importX },

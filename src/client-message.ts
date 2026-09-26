@@ -2,12 +2,6 @@ import type { ClientMessage } from './protocol.js';
 import { clientParamsValid } from './client-params/index.js';
 import { isRecord } from './client-params/guards.js';
 
-// The dispatcher re-checks these three inside its own arms, so they stay exported predicates rather
-// than becoming anonymous entries in the decoder table. They live beside their domain's decoders and
-// are re-exported here so `./message-handler.js` keeps importing them from one place.
-export { isPluginIntentParams, isPluginFailedParams } from './client-params/plugin.js';
-export { isEditorPluginFailedParams } from './client-params/editor.js';
-
 export type ClientReplyMode = 'ack' | 'result' | 'deferred';
 
 export const CLIENT_METHOD_CONTRACTS = {

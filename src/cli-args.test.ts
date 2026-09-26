@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseCliArgs, usageText, appVersion, appVersionNumber, CliUsageError } from './cli-args.js';
+import { parseCliArgs, CliUsageError } from './cli-args.js';
+import { usageText, appVersion, appVersionNumber } from './cli-info.js';
 
 let tmpDir: string;
 let tmpFile: string;

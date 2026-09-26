@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { classifyBusy, busyStatusHandler, BusyTracker } from './busy-status.js';
-import { endsWithRecap } from './busy-classify.js';
+import { busyStatusHandler, BusyTracker } from './busy-status.js';
+import { endsWithRecap, classifyBusy } from './busy-classify.js';
 import type { ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';

@@ -1,5 +1,11 @@
 import type { CompletionResult } from './types.js';
-import { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose, completeBrowserCommand, completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel } from './handlers.js';
+import {
+  completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
+} from './handlers.js';
+import {
+  completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
+} from './target-handlers.js';
+import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
 

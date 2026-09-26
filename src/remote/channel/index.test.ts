@@ -1,5 +1,6 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { RemoteChannel, type ChannelTransport, type ChannelFrame } from './index.js';
+import { RemoteChannel } from './index.js';
+import type { ChannelTransport, ChannelFrame } from './types.js';
 import { REMOTE_SHUTDOWN_DRAIN_MS } from '../shutdown-drain.js';
 import { encodeFrame, encodeHandshake, HANDSHAKE_SENTINEL, REMOTE_PROTOCOL_VERSION } from '../protocol.js';
 

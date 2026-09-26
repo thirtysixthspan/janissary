@@ -29,5 +29,3 @@ export function openerForExtension(extension: string): Opener | undefined {
   const lowerExtension = extension.toLowerCase();
   return openers.find((o) => o.extensions.includes(lowerExtension));
 }
-
-export type { Opener, OpenContext } from './types.js';

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { NavigatorListener, RemoteChannel } from '../../remote/channel/index.js';
-import type { ClientFrame } from '../../remote/protocol.js';
+import type { RemoteChannel } from '../../remote/channel/index.js';
+import type { NavigatorListener } from '../../remote/channel/types.js';
+import type { ClientFrame } from '../../remote/protocol-frames.js';
 import { RemoteFileSystemPort } from './port.js';
 
 function harness() {

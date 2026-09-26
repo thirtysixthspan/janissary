@@ -1,4 +1,4 @@
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { GitMetadata } from '../filesystem-port.js';
 import type { RemotePortPaths } from './port-paths.js';

@@ -1,6 +1,7 @@
 import type { MonitorTarget } from '../tab/types.js';
 import { loadPersona, type Persona } from '../personas.js';
-import { openMonitorTab, rateSuggestion, updateMonitorMeta } from './window.js';
+import { openMonitorTab, updateMonitorMeta } from './window.js';
+import { rateSuggestion } from './suggestions.js';
 import { createMonitorSession, primeMonitorSession } from './session.js';
 import { spawnMonitorSession } from './acp.js';
 import { validateTargets, targetColor, formatTargets, resolveTargetAliases } from './targets.js';
@@ -15,9 +16,6 @@ import type { Managers } from '../managers.js';
 import { LiveMonitors, type MonitorSub, type MonitorSubSetup } from './live-monitors.js';
 import { subscribeMonitor } from './subscriptions.js';
 import { errorText } from '../error-text.js';
-
-export { SUGGESTION_PREFIX } from './suggestion.js';
-export type { MonitorSub, MonitorSubSetup } from './live-monitors.js';
 
 export const MONITOR_FLUSH_MS = 30_000;
 

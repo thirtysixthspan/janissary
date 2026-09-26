@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type * as Clone from '../git/clone.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import { resolveRemoteRoot, type RootOffer } from './serve-root.js';
 import { acquireRootLock } from './serve-root-lock.js';
 

@@ -3,7 +3,7 @@ import { loadProjectTokens } from '../project/tokens.js';
 import { loadGitIdentity } from '../git/identity.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { WorkspaceManager } from '../workspace/manager.js';
-import type { ClientFrame, ServerFrame } from './protocol.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { resolveRemoteRoot } from './serve-root.js';
 import { runRootOffer, type RootOfferRun } from './serve-root-offer.js';
 import { DetachedPeer } from './serve-detach.js';

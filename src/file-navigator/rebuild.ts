@@ -1,4 +1,4 @@
-import { markGitStatus } from './index.js';
+import { markGitStatus } from './git-mark.js';
 import { pruneCachedRows } from './filesystem-cache.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorRow } from '../tab/types.js';

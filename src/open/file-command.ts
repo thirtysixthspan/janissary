@@ -2,7 +2,7 @@ import path from 'node:path';
 import { isGlobPattern, parseOpen } from '../commands/open.js';
 import { expandUserPath } from '../paths.js';
 import { webClaimPluginId } from '../openers/index.js';
-import type { OpenContext } from '../openers/index.js';
+import type { OpenContext } from '../openers/types.js';
 import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ShellHistoryRun } from '../remote/protocol.js';
+import type { ShellHistoryRun } from '../remote/protocol-frames.js';
 import { shellCommandInput, shellPwdQueryInput } from './command-input.js';
 import { restoredTranscript } from './restored-transcript.js';
 

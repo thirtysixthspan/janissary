@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeEditorTab, makePluginTab, makeTab } from './index.js';
-import {
-  addEditorTab, addPluginTab,
-  uniqueEditorLabel, uniquePluginLabel,
-} from './creators.js';
+import { addEditorTab, addPluginTab } from './creators.js';
+import { uniqueEditorLabel, uniquePluginLabel } from './unique-labels.js';
 import type { EditorView, PluginTabRecord } from './types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };

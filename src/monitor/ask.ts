@@ -1,5 +1,5 @@
-import type { MonitorSub } from './manager.js';
-import { SUGGESTION_PREFIX } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
+import { SUGGESTION_PREFIX } from './suggestion.js';
 import type { Managers } from '../managers.js';
 import { recordReply } from './reply.js';
 import { recordContext } from './context.js';

@@ -1,4 +1,5 @@
-import type { RemoteFrame, RemoteHandshake, ServerFrame } from '../protocol.js';
+import type { RemoteHandshake } from '../protocol.js';
+import type { RemoteFrame, ServerFrame } from '../protocol-frames.js';
 
 // The pure type declarations `RemoteChannel` is built against, split out so the class file itself
 // holds only the state machine — the same reason `SessionListener` and `AcpSessionListener` already

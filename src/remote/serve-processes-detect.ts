@@ -2,7 +2,7 @@ import { HarnessScreenReader, type ScreenCapture } from '../harness/screen.js';
 import { HarnessAutoApprover } from '../harness/auto-approve.js';
 import { BusyTracker, type BusyTransition } from '../harness/busy-status.js';
 import { BUSY_TABLE } from '../harness/busy-classify.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 export type HarnessDetection = {
   latestCapture: () => ScreenCapture | undefined;

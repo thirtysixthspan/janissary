@@ -1,4 +1,4 @@
-import type { RemoteFrame } from '../protocol.js';
+import type { RemoteFrame } from '../protocol-frames.js';
 import { ROOT_REFUSAL_FIELDS, type RootRefusal, type RootRefusalKind } from '../root-refusal.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,

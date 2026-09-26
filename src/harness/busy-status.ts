@@ -4,8 +4,6 @@ import { BUSY_TABLE, classifyBusy, endsWithRecap } from './busy-classify.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
-export { classifyBusy, type BusyState } from './busy-classify.js';
-
 export type BusyTransition = { busy: boolean; unread: boolean };
 
 // The busy/ready/unread decision for one harness's capture stream, decoupled from `Managers` so it

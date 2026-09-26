@@ -1,14 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
-  completeAgentName,
-  completeSendTarget,
-  completeScheduleTarget,
-  completeMonitorCommand,
-  completeSearchCommand,
-  completeSyntaxTheme,
-  completeConnectionClose,
-  completeHarnessModel,
+  completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
 } from './handlers.js';
+import {
+  completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
+} from './target-handlers.js';
 import { modelsFor } from '../harness/models.js';
 
 describe('completeSendTarget', () => {

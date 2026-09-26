@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
 import { opener as editor, openInEditor, EDITOR_MAX_BYTES } from './editor.js';
-import type { OpenContext } from './index.js';
+import type { OpenContext } from './types.js';
 import type { EditorView } from '../tab/types.js';
 
 // Mirrors `git/status.test.ts`'s helper: the initial branch name comes from the machine's

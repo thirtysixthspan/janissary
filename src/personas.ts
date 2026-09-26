@@ -8,8 +8,6 @@ import path from 'node:path';
 
 import { parseDirective, isPersonaToolsLine, parsePersonaTools } from './persona-parsing.js';
 import type { PersonaHarness } from './persona-parsing.js';
-export type { PersonaHarness } from './persona-parsing.js';
-export { parseDirective } from './persona-parsing.js';
 
 export type PersonaKind = 'monitor' | 'editor';
 

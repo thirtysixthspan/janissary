@@ -85,5 +85,3 @@ export const commands: Command[] = [
   ...coreCommands,
   ...createPluginCommands(tabPluginCatalog, coreCommands),
 ];
-
-export type { Command } from './types.js';
