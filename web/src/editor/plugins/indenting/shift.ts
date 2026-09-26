@@ -4,6 +4,7 @@
 
 import {
   primarySelection,
+  selectionAfterLineEdits,
   type EditorPluginEdit, type EditorPluginRequest, type EditorPluginResult,
 } from '../api';
 
@@ -41,23 +42,6 @@ function editFor(line: string, lineNumber: number, direction: ShiftDirection): E
   return { start: { line: lineNumber, col: 0 }, end: { line: lineNumber, col: width }, text: next };
 }
 
-// The selection follows the shift so a second press in the other direction is its inverse: a range
-// selection keeps covering the same whole lines, while a bare caret stays on its line and moves by
-// however much that line's own indentation moved.
-function selectionFor(
-  request: EditorPluginRequest, lastLine: number, lastLineWidth: number, caretShift: number,
-): EditorPluginResult['selections'] {
-  const selection = primarySelection(request);
-  if (selection.anchor === null) {
-    const { line, col } = selection.cursor;
-    return [{ anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } }];
-  }
-  return [{
-    anchor: { line: request.range.start.line, col: 0 },
-    cursor: { line: lastLine, col: lastLineWidth },
-  }];
-}
-
 export function shiftLines(
   request: EditorPluginRequest, direction: ShiftDirection,
 ): EditorPluginResult | null {
@@ -82,5 +66,5 @@ export function shiftLines(
 
   if (edits.length === 0) return null;
 
-  return { edits, selections: selectionFor(request, lastLine, lastLineWidth, caretShift) };
+  return { edits, selections: selectionAfterLineEdits(request, lastLine, lastLineWidth, caretShift) };
 }

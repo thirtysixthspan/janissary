@@ -2,27 +2,15 @@
 // language, produce the edits and where to leave the selection. Pure — every rule commenting has
 // lives here and in the two strategy modules beside it.
 
-import { primarySelection, type EditorPluginRequest, type EditorPluginResult } from '../api';
+import {
+  primarySelection,
+  selectionAfterLineEdits,
+  type EditorPluginRequest,
+  type EditorPluginResult,
+} from '../api';
 import { toggleBlockComment } from './block-comment';
 import { toggleLineComments } from './line-comment';
 import type { CommentSyntax } from './syntax';
-
-// The selection follows the toggle so a second press is the exact inverse of the first: a range
-// selection keeps covering the same whole lines, while a bare caret stays on its line and shifts by
-// the width of what was inserted or removed on it.
-function selectionFor(
-  request: EditorPluginRequest, lastLine: number, lastLineWidth: number, caretShift: number,
-): EditorPluginResult['selections'] {
-  const selection = primarySelection(request);
-  if (selection.anchor === null) {
-    const { line, col } = selection.cursor;
-    return [{ anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } }];
-  }
-  return [{
-    anchor: { line: request.range.start.line, col: 0 },
-    cursor: { line: lastLine, col: lastLineWidth },
-  }];
-}
 
 export function toggleComments(
   request: EditorPluginRequest, syntax: CommentSyntax,
@@ -48,6 +36,6 @@ export function toggleComments(
 
   return {
     edits: toggled.edits,
-    selections: selectionFor(request, lastLine, toggled.lastLineWidth, caretShift),
+    selections: selectionAfterLineEdits(request, lastLine, toggled.lastLineWidth, caretShift),
   };
 }

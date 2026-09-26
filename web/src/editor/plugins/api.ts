@@ -68,6 +68,29 @@ export type EditorPluginRequest = {
 // terms of a single selection (commenting, indenting) acts on.
 export const primarySelection = (request: EditorPluginRequest): EditorSelection => request.selections.at(-1)!;
 
+// Where the selection lands after a transform that rewrote whole lines, so pressing the same chord
+// again is the exact inverse: a range selection keeps covering the same whole lines, while a bare
+// caret stays on its line and shifts by however much that line's own text moved — clamped to the
+// line's new width, since an edit can move a caret past the end of what it left behind.
+//
+// `caretShift` is that line's delta and `lastLineWidth` the new width of the last line the request
+// covered. Commenting and indenting both want this and both carried their own identical copy; it is
+// published here for the same reason `primarySelection` is. Additive, so `EDITOR_PLUGIN_API_VERSION`
+// does not move.
+export function selectionAfterLineEdits(
+  request: EditorPluginRequest, lastLine: number, lastLineWidth: number, caretShift: number,
+): readonly EditorSelection[] {
+  const selection = primarySelection(request);
+  if (selection.anchor === null) {
+    const { line, col } = selection.cursor;
+    return [{ anchor: null, cursor: { line, col: Math.max(0, Math.min(col + caretShift, lastLineWidth)) } }];
+  }
+  return [{
+    anchor: { line: request.range.start.line, col: 0 },
+    cursor: { line: lastLine, col: lastLineWidth },
+  }];
+}
+
 // The buffer helpers a plugin may use, published here so a plugin never reaches into the editor's
 // own model and offset modules for them.
 //
