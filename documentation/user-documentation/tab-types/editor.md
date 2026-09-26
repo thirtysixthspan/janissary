@@ -93,7 +93,7 @@ These editing shortcuts are bundled with the editor. If one fails, its attempted
 
 The blinking caret marks where text will be inserted, and is only visible while the editor tab is active — switching away hides it.
 
-Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press.
+Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press. Once there is nothing left to scroll — the view is already at the start or end of the file — that same press moves a whole line instead. `PageUp`/`PageDown` always page through buffer lines rather than screen rows, so a page through heavily wrapped text covers more than one screen.
 
 Pasting is the one edit that doesn't move the view. The clipboard text goes in at the caret and the caret stays at the start of it, so the pasted lines appear under the place you were working instead of the view chasing the caret to the end of a long paste. One `Cmd+Z` takes the whole paste back.
 
@@ -110,13 +110,15 @@ Search buffer
  179  Highlighting composes with the caret and selection…
 ```
 
-Type any fragment of the line you're after — the characters have to appear in order, but not next to each other, so `synhi` finds `### Syntax highlighting`. The ten best-matching lines are listed with their line numbers, matched characters picked out.
+Type any fragment of the line you're after — the characters have to appear in order, but not next to each other, and case doesn't matter, so `synhi` finds `### Syntax highlighting`. That's the whole of it: there is no regex, no case-sensitivity switch, and no whole-word option. The ten best-matching lines are listed with their line numbers, matched characters picked out. A line too long for the overlay is cut short with an ellipsis rather than wrapped — its number and the jump still identify it — and two identical lines show up as two rows with their own numbers, in the order they appear in the file.
 
 `↑`/`↓` move down the list and the buffer jumps to each line as you go, so you read the match in its surroundings rather than committing blind. There's nothing to confirm: `Return` does nothing because the jump already happened, and `Escape` closes the overlay leaving the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
 
 A query that matches nothing shows `No matching lines`. Clearing it brings back the `type to search` hint.
 
 The search runs over the buffer as it stands, so it finds edits you haven't saved. It only ever searches the file in front of you — not other tabs, not other files on disk — and it finds without replacing. Jumping doesn't count as an edit, so `Cmd+Z` still undoes your last real change. Switching tabs closes the overlay; `Cmd+F` opens a fresh, empty one.
+
+While a persona suggestion is waiting for your review, every keystroke goes to that review, `Cmd+F` included, so the find overlay can't open on top of it.
 
 `Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". In an agent tab, `Cmd+F` still opens that tab's own transcript search instead.
 
