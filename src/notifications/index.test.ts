@@ -286,7 +286,7 @@ describe('notify — line composition', () => {
     const append = vi.fn();
     notify(
       makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
-      undefined, undefined, new Date(2026, 0, 1, 9, 5, 0),
+      { detectedAt: new Date(2026, 0, 1, 9, 5, 0) },
     );
     const [, entry] = append.mock.calls[0];
     expect(entry.from).toBe('9:05am janus');
@@ -303,7 +303,7 @@ describe('notify — line composition', () => {
     const append = vi.fn();
     notify(
       makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
-      undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+      { detectedAt: new Date(2025, 11, 28, 9, 5, 0) },
     );
     const [, entry] = append.mock.calls[0];
     expect(entry.from).toBe('Dec 28 9:05am janus');
@@ -313,7 +313,7 @@ describe('notify — line composition', () => {
     const append = vi.fn();
     notify(
       makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
-      undefined, undefined, new Date(2025, 11, 31, 23, 0, 0),
+      { detectedAt: new Date(2025, 11, 31, 23, 0, 0) },
     );
     const [, entry] = append.mock.calls[0];
     expect(entry.from).toBe('Dec 31 11:00pm janus');
@@ -321,7 +321,7 @@ describe('notify — line composition', () => {
 
   it('threads an openFile path onto the appended entry when given', () => {
     const append = vi.fn();
-    notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt', '/captures/janus-now.txt');
+    notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt', { openFile: '/captures/janus-now.txt' });
     const [, entry] = append.mock.calls[0];
     expect(entry.openFile).toBe('/captures/janus-now.txt');
   });
@@ -335,8 +335,28 @@ describe('notify — line composition', () => {
 
   it('threads an owning-tab link onto a question notification', () => {
     const append = vi.fn();
-    notify(makeManagers(append), 'question', 'janus', undefined, undefined, 'janus');
+    notify(makeManagers(append), 'question', 'janus', undefined, { openTab: 'janus' });
     const [, entry] = append.mock.calls[0];
+    expect(entry.openTab).toBe('janus');
+  });
+
+  it('carries neither link when given only a detection time', () => {
+    const append = vi.fn();
+    notify(
+      makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt',
+      { detectedAt: new Date(2026, 0, 1, 9, 5, 0) },
+    );
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('9:05am janus');
+    expect(entry.openFile).toBeUndefined();
+    expect(entry.openTab).toBeUndefined();
+  });
+
+  it('keeps each link in its own field when both are given', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'question', 'janus', undefined, { openTab: 'janus', openFile: '/captures/janus-now.txt' });
+    const [, entry] = append.mock.calls[0];
+    expect(entry.openFile).toBe('/captures/janus-now.txt');
     expect(entry.openTab).toBe('janus');
   });
 });
@@ -422,7 +442,7 @@ describe('notify — surface routing', () => {
     try {
       notify(
         fixture.managers, 'auto-approve', 'janus', 'Auto-approved a permission prompt',
-        undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+        { detectedAt: new Date(2025, 11, 28, 9, 5, 0) },
       );
       expect(fixture.toasts).toHaveLength(0);
       expect(fixture.managers.notifications.all).toHaveLength(1);
@@ -450,7 +470,7 @@ describe('notify — surface routing', () => {
       for (const message of ['one', 'two', 'three']) {
         notify(
           fixture.managers, 'auto-approve', 'janus', message,
-          undefined, undefined, new Date(2025, 11, 28, 9, 5, 0),
+          { detectedAt: new Date(2025, 11, 28, 9, 5, 0) },
         );
       }
       expect(fixture.tabs.some((t) => t.view === 'notifications')).toBe(true);

@@ -18,7 +18,7 @@ import type { Managers } from '../managers.js';
 // limit.
 export function reportBrowserGone(managers: Managers, label: string, message: string, log?: string): void {
   const logFile = log ? writeBrowserLog(label, Date.now(), log) : undefined;
-  notify(managers, 'e2e-browser-gone', label, message, logFile);
+  notify(managers, 'e2e-browser-gone', label, message, { openFile: logFile });
   const tab = managers.tab.harnessTab(label);
   if (tab) tab.harness.browserError = message;
   messageBus.emit('state', { type: 'dirty' });

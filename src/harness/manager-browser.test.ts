@@ -82,7 +82,7 @@ describe('HarnessManager e2e browser', () => {
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
     browserMock.onGone[0]('e2e browser exited');
-    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', undefined);
+    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', { openFile: undefined });
   });
 
   // The notifications tab is opt-in, and a user who keeps it closed saw nothing at all. A harness
@@ -115,7 +115,7 @@ describe('HarnessManager e2e browser', () => {
     );
     expect(notify).toHaveBeenCalledWith(
       managers, 'e2e-browser-gone', 'claude', 'e2e browser exited (signal SIGSEGV)',
-      '/project/.janissary/browser-logs/claude-now.log',
+      { openFile: '/project/.janissary/browser-logs/claude-now.log' },
     );
   });
 
@@ -139,7 +139,7 @@ describe('HarnessManager e2e browser', () => {
 
     browserMock.onGone[0]('e2e browser exited', 'e2e browser exited\n#0 frame');
 
-    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', undefined);
+    expect(notify).toHaveBeenCalledWith(managers, 'e2e-browser-gone', 'claude', 'e2e browser exited', { openFile: undefined });
   });
 
   // The harness itself is unaffected — only its browser is gone — so the tab keeps running, unlike
