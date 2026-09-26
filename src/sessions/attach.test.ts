@@ -124,3 +124,115 @@ describe('startSessionAttach', () => {
     expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledWith('claude');
   });
 });
+
+// The ways an attach can come to nothing. Each of these is a distinct fact about the peer, and the
+// three outcomes keep them apart: `terminated` means the peer is there and says the session is over,
+// `failed` means nothing was established, and the record survives so the row keeps its button.
+describe('startSessionAttach outcomes that are not an attach', () => {
+  it('reports a failed attach for an address it cannot parse, without opening anything', async () => {
+    const h = harness();
+
+    const outcome = await startSessionAttach(h.managers, { ...record(), address: 'not an address' });
+
+    expect(outcome.kind).toBe('failed');
+    expect(h.managers.harness.attachRemote).not.toHaveBeenCalled();
+  });
+
+  // A refused attach is the peer answering: it is there, and that session is over. That is
+  // termination, not a failure — there is nothing left to retry.
+  it('ends the session when the peer refuses the attach', async () => {
+    const h = harness();
+    (h.managers.harness.attachRemote as ReturnType<typeof vi.fn>).mockImplementation(
+      (options: { resume: { onResult: (accepted: boolean) => void } }) => { options.resume.onResult(false); },
+    );
+
+    await expect(startSessionAttach(h.managers, record())).resolves.toEqual({
+      kind: 'terminated',
+      reason: 'claude on devbox is no longer running.',
+    });
+    expect(askSessionState).not.toHaveBeenCalled();
+    expect(restoreSessionTabs).not.toHaveBeenCalled();
+  });
+
+  // The connection gave out before the entry could be read, so there is no peer to ask and no peer
+  // to close. The record stays, because a peer that is merely slow is worth trying again.
+  it('reports a failed attach when the connection closed before the entry could be read', async () => {
+    const h = harness();
+    // No entry for the label: the connection went before anything could read it.
+    h.managers.remote.entryOf = vi.fn();
+    vi.mocked(askSessionState).mockResolvedValue([]);
+
+    await expect(startSessionAttach(h.managers, record())).resolves.toEqual({
+      kind: 'failed',
+      reason: 'The connection to devbox closed before it could be read.',
+    });
+    expect(h.managers.remote.close).not.toHaveBeenCalled();
+    expect(restoreSessionTabs).not.toHaveBeenCalled();
+  });
+
+  // A query that throws rather than answering is still a peer that told us nothing, so it reads as
+  // no answer — a failure, not a termination, and never an unhandled rejection.
+  it('reports a failed attach when the query throws', async () => {
+    const h = harness();
+    vi.mocked(askSessionState).mockRejectedValue(new Error('socket hang up'));
+
+    await expect(startSessionAttach(h.managers, record())).resolves.toEqual({
+      kind: 'failed',
+      reason: 'devbox did not answer.',
+    });
+  });
+
+  it('reports the transport\'s own reason when the attach never gets an answer', async () => {
+    const h = harness();
+    (h.managers.harness.attachRemote as ReturnType<typeof vi.fn>).mockImplementation(
+      (options: { resume: { onFailed: (message: string) => void } }) => {
+        options.resume.onFailed('Connection refused');
+      },
+    );
+
+    await expect(startSessionAttach(h.managers, record())).resolves.toEqual({
+      kind: 'failed',
+      reason: 'Connection refused',
+    });
+  });
+
+  // A label is only settled once. An attach whose peer both refuses and then fails is still one
+  // outcome, and a later tab granted the same label must not be told twice.
+  it('settles once, however many answers arrive', async () => {
+    const h = harness();
+    let resume: { onResult: (accepted: boolean) => void; onFailed: (message: string) => void } = null as never;
+    (h.managers.harness.attachRemote as ReturnType<typeof vi.fn>).mockImplementation(
+      (options: { resume: typeof resume }) => { resume = options.resume; },
+    );
+
+    const pending = startSessionAttach(h.managers, record());
+    resume?.onResult(false);
+    resume?.onFailed('Connection refused');
+    resume?.onResult(false);
+
+    await expect(pending).resolves.toMatchObject({ kind: 'terminated' });
+    expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledOnce();
+  });
+
+  // An agent session with no recorded spawn id adopts nothing, so there is no id to park and none to
+  // release — the tab is launched fresh and binds its own shell when one is asked for.
+  it('launches an agent session with no recorded spawn id without adopting one', async () => {
+    const h = harness();
+    vi.mocked(startRemoteAgent).mockImplementation(
+      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
+    );
+    vi.mocked(askSessionState).mockResolvedValue([
+      { id: 'other', program: 'sh', mode: 'pty' },
+    ]);
+    const agentRecord: RemoteSessionRecord = {
+      ...record(),
+      launchKind: 'agent',
+      processes: [{ id: 'rsh1', label: 'other', kind: 'agent' }],
+    };
+
+    await startSessionAttach(h.managers, agentRecord);
+
+    expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
+    expect(startRemoteAgent).toHaveBeenCalledOnce();
+  });
+});
