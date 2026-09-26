@@ -1,10 +1,10 @@
-import { RemoteChannel } from '../remote/channel/index.js';
-import { deferredChannelTransport } from '../remote/channel/types.js';
-import { provisionOrigin, remoteCaptureCommand } from '../remote/entry-factory.js';
-import { parseRemoteAddress } from '../remote/address.js';
-import type { PtySession } from '../pty.js';
-import type { Managers } from '../managers.js';
-import type { RemoteSessionRecord } from '../sessions/store.js';
+import { RemoteChannel } from '../../remote/channel/index.js';
+import { deferredChannelTransport } from '../../remote/channel/types.js';
+import { provisionOrigin, remoteCaptureCommand } from '../../remote/entry-factory.js';
+import { parseRemoteAddress } from '../../remote/address.js';
+import type { PtySession } from '../../pty.js';
+import type { Managers } from '../../managers.js';
+import type { RemoteSessionRecord } from '../../sessions/store.js';
 
 export type RemoteCaptureResult = { text: string; capturedAt: number } | { error: string } | undefined;
 

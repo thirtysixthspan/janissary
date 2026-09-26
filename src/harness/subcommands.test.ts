@@ -1,15 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
-import { writeCaptureFile } from './capture-file.js';
-import { queryParkedCapture } from './capture-remote.js';
+import { writeCaptureFile } from './capture/file.js';
+import { queryParkedCapture } from './capture/remote.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
 // `captureSubcommand`/`resolveHarnessTab` have no dedicated test file today — the remote/detached
 // resolution the auto-accept-while-detached plan adds (decisions 15-16) is covered here.
 
-vi.mock('./capture-file.js', () => ({ writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt') }));
-vi.mock('./capture-remote.js', () => ({ queryParkedCapture: vi.fn() }));
+vi.mock('./capture/file.js', () => ({ writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt') }));
+vi.mock('./capture/remote.js', () => ({ queryParkedCapture: vi.fn() }));
 
 // Stands in for "nothing captured locally" wherever a test doesn't care about the local path.
 function noCapture(): undefined { /* nothing captured */ }

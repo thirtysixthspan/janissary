@@ -1,7 +1,7 @@
 import { HARNESS_COMMANDS } from './index.js';
 import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { captureWiring } from './capture-wire.js';
+import { captureWiring } from './capture/wire.js';
 import { HarnessRuntime } from './runtime.js';
 import { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { createTranscriptSource } from './transcript/sources.js';

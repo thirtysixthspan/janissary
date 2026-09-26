@@ -1,8 +1,8 @@
-import { buildAutoApprover } from './auto-approve-wire.js';
-import { busyStatusHandler } from './busy-status.js';
-import type { HarnessAutoApprover } from './auto-approve.js';
-import type { ScreenCapture } from './screen.js';
-import type { Managers } from '../managers.js';
+import { buildAutoApprover } from '../auto-approve-wire.js';
+import { busyStatusHandler } from '../busy-status.js';
+import type { HarnessAutoApprover } from '../auto-approve.js';
+import type { ScreenCapture } from '../screen.js';
+import type { Managers } from '../../managers.js';
 
 // Which consumers a harness tab's screen reader feeds, and in what order. Split out of
 // `HarnessManager` for the same reason `auto-approve-wire.ts` was: the manager decides *that* a tab

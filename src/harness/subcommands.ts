@@ -1,8 +1,8 @@
 import type { Managers } from '../managers.js';
 import type { ScreenCapture } from './screen.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
-import { writeCaptureFile } from './capture-file.js';
-import { queryParkedCapture, type RemoteCaptureResult } from './capture-remote.js';
+import { writeCaptureFile } from './capture/file.js';
+import { queryParkedCapture, type RemoteCaptureResult } from './capture/remote.js';
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab by label rather
 // than launching a new one. Split out of `HarnessManager` so the manager keeps only the lifecycle

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { HarnessManager } from './manager.js';
 import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
-import { writeCaptureFile } from './capture-file.js';
+import { writeCaptureFile } from './capture/file.js';
 import { notify } from '../notifications/index.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
@@ -11,7 +11,7 @@ import type { Tab } from '../tab/types.js';
 import type { RemoteSessionView } from '../protocol.js';
 import { byLabel, harnessTab } from '../tab/lookup.js';
 
-vi.mock('./capture-file.js', () => ({
+vi.mock('./capture/file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt'),
 }));
 

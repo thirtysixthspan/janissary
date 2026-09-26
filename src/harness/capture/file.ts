@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
-import { harnessArtifactFilename } from './artifact-name.js';
+import { harnessArtifactFilename } from '../artifact-name.js';
 
 let captureDirectory = '';
 

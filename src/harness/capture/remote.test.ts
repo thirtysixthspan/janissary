@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { queryParkedCapture, DETACHED_CAPTURE_TIMEOUT_MS } from './capture-remote.js';
-import { encodeFrame, encodeHandshake, HANDSHAKE_SENTINEL } from '../remote/protocol.js';
-import { REMOTE_SHUTDOWN_DRAIN_MS } from '../remote/shutdown-drain.js';
-import type { Managers } from '../managers.js';
-import type { RemoteSessionRecord } from '../sessions/store.js';
+import { queryParkedCapture, DETACHED_CAPTURE_TIMEOUT_MS } from './remote.js';
+import { encodeFrame, encodeHandshake, HANDSHAKE_SENTINEL } from '../../remote/protocol.js';
+import { REMOTE_SHUTDOWN_DRAIN_MS } from '../../remote/shutdown-drain.js';
+import type { Managers } from '../../managers.js';
+import type { RemoteSessionRecord } from '../../sessions/store.js';
 
 type TransportHandlers = { onData: (data: string) => void; onExit: () => void };
 

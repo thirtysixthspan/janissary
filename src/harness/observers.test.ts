@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { harnessRuntime } from './observers.js';
 import { HarnessScreenReader } from './screen.js';
-import { captureWiring } from './capture-wire.js';
+import { captureWiring } from './capture/wire.js';
 import type { Managers } from '../managers.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 
@@ -12,7 +12,7 @@ import type { RemoteChannel } from '../remote/channel/index.js';
 // it now — while everything else (recorder, transcript tailer) stays exactly as it is for a local tab.
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('./capture-wire.js', () => ({ captureWiring: vi.fn(() => ({})) }));
+vi.mock('./capture/wire.js', () => ({ captureWiring: vi.fn(() => ({})) }));
 vi.mock('./transcript/sources.js', () => ({ createTranscriptSource: vi.fn() }));
 
 const recorderMock = vi.hoisted(() => ({ instances: [] as { dispose: ReturnType<typeof vi.fn> }[] }));

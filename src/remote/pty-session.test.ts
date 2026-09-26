@@ -7,12 +7,12 @@ import { HarnessScreenReader } from '../harness/screen.js';
 import { messageBus } from '../bus.js';
 import { makeTab } from '../tab/index.js';
 import { notify } from '../notifications/index.js';
-import { writeCaptureFile } from '../harness/capture-file.js';
+import { writeCaptureFile } from '../harness/capture/file.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('../harness/capture-file.js', () => ({ writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt') }));
+vi.mock('../harness/capture/file.js', () => ({ writeCaptureFile: vi.fn(() => '/project/.janissary/captures/claude-now.txt') }));
 
 // An attached channel over a fake ssh PTY: `sent` collects the frames the local side writes.
 function attachedChannel() {

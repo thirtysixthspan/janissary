@@ -8,7 +8,7 @@ import type { Managers } from '../managers.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { MonitorManager } from './manager.js';
-import { writeCaptureFile } from '../harness/capture-file.js';
+import { writeCaptureFile } from '../harness/capture/file.js';
 import type * as monitorAcp from './acp.js';
 
 const mocks = vi.hoisted(() => ({
@@ -19,7 +19,7 @@ vi.mock('../notifications/index.js', () => ({
   notify: mocks.notify,
 }));
 
-vi.mock('../harness/capture-file.js', () => ({
+vi.mock('../harness/capture/file.js', () => ({
   writeCaptureFile: vi.fn(() => '/project/.janissary/captures/assistant-now.txt'),
   initHarnessCaptureDirectory: vi.fn(),
   ensureCaptureDirectory: vi.fn(),
