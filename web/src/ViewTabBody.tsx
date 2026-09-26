@@ -3,9 +3,9 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
-import { tabBodyBorder } from './shared/tab-body-border';
+import { tabBodyBorder } from './shared/tab/body-border';
 import { multiOpenablePaths } from './multi-open';
-import { isFilesTabView } from './shared/tab-view-guards';
+import { isFilesTabView } from './shared/tab/view-guards';
 
 // Renders the body for file navigator and notifications view tabs. Harness, editor, page, and
 // plugin tabs are rendered separately in App (via MountedViewLayers) because they must all stay

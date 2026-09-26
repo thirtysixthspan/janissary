@@ -11,7 +11,7 @@ import { AgentTabMeta } from '../shared/AgentTabMeta';
 import type { useViewSearchState } from '../useViewSearchState';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { statusButton } from '../shared/status-windows/status-button';
-import { tabBodyBorder } from '../shared/tab-body-border';
+import { tabBodyBorder } from '../shared/tab/body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
 

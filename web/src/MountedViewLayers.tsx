@@ -1,17 +1,17 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import type { DirtyTabHandle, HarnessTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle, HarnessTabHandle } from './shared/tab/handles';
 import { EditorTab } from './editor/EditorTab';
 import { HarnessTabLayer } from './harness/HarnessTabLayer';
 import type { PickerOverlayProps } from './pickers/picker/overlay-props';
 import { TaskPicker } from './pickers/TaskPicker';
 import { TabNavPicker } from './pickers/TabNavPicker';
 import { QuestionPanel } from './QuestionPanel';
-import type { QuestionPanelHandle } from './shared/tab-handles';
-import { tabBodyBorder } from './shared/tab-body-border';
+import type { QuestionPanelHandle } from './shared/tab/handles';
+import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
-import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab-view-guards';
+import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
 
 type Properties = {
   tabs: TabView[];

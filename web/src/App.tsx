@@ -4,7 +4,7 @@ import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRo
 import { closeQuitsApp } from '@shared/tab/placement';
 import { AppMain } from './AppMain';
 import type { CommandInputDropHandle } from './shared/drop-handles';
-import type { DirtyTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { useTabHandles } from './useTabHandles';
 import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
 import { useCommandDrafts } from './agent-tabs/command-input/useCommandDrafts';

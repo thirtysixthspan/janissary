@@ -2,8 +2,8 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ShellTab } from './ShellTab';
-import type { ShellTabHandle } from './shared/tab-handles';
-import { tabBodyBorder } from './shared/tab-body-border';
+import type { ShellTabHandle } from './shared/tab/handles';
+import { tabBodyBorder } from './shared/tab/body-border';
 
 type Properties = {
   tabs: TabView[];

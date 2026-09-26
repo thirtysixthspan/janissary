@@ -1,12 +1,12 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabView } from '../shared/tab-view-guards';
+import type { HarnessTabView } from '../shared/tab/view-guards';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
-import type { HarnessTabHandle } from '../shared/tab-handles';
+import type { HarnessTabHandle } from '../shared/tab/handles';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
-import { tabBodyBorder } from '../shared/tab-body-border';
+import { tabBodyBorder } from '../shared/tab/body-border';
 import { statusButton } from '../shared/status-windows/status-button';
 
 type Properties = {

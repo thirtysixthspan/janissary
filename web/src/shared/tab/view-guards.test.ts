@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import {
   isHarnessTabView, isEditorTabView, isFilesTabView, isPluginTabView, isMonitorTabView, indexedTabs,
-} from './tab-view-guards';
+} from './view-guards';
 
 function makeTab(overrides: Partial<TabView> = {}): TabView {
   return {

@@ -8,7 +8,7 @@ import type { KeyLike } from './keys';
 import type { useEditorPlugins } from './plugins/useEditorPlugins';
 
 type EditorPluginsModule = { useEditorPlugins: typeof useEditorPlugins };
-import type { DirtyTabHandle } from '../shared/tab-handles';
+import type { DirtyTabHandle } from '../shared/tab/handles';
 import type { JanusClient, RequestResult } from '../ws';
 
 // A disabled plugin stops claiming its chords (plugins/host.ts filters them out of `bindings()`),
