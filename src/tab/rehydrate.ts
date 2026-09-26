@@ -1,6 +1,7 @@
 import type { Tab, LogEntry } from './types.js';
 import type { AgentState } from '../agent/types.js';
-import { makeTab, distinctColor } from './index.js';
+import { makeTab } from './index.js';
+import { distinctColor } from './colors.js';
 import { listAgentStates } from '../agent/state.js';
 import { applyRehydratedState } from './rehydrate-state.js';
 

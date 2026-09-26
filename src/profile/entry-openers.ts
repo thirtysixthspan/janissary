@@ -1,4 +1,5 @@
-import { makeTab, insertTabInGroup } from '../tab/index.js';
+import { makeTab } from '../tab/index.js';
+import { insertTabInGroup } from '../tab/utils.js';
 import { HARNESS_COMMANDS } from '../harness/index.js';
 import { supportsHarnessAutoApprove } from '../harness/auto-approve.js';
 import { isKnownModel } from '../harness/models.js';

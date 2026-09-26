@@ -1,7 +1,8 @@
 import type { Command, CommandManagers } from './types.js';
 import type { ScheduleEntry, ScheduleParseResult } from '../schedule/types.js';
 import type { Tab } from '../tab/types.js';
-import { parseScheduleCommand, formatSchedule } from '../schedule/index.js';
+import { parseScheduleCommand } from '../schedule/index.js';
+import { formatSchedule } from '../schedule/display.js';
 import { byLabelOrAlias } from '../tab/lookup.js';
 
 // Resolve the tab a schedule operation applies to: the issuing tab by default, or the

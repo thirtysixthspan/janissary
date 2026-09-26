@@ -1,7 +1,7 @@
 import type { ScheduleEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, ScheduleLaunchView, ScheduleView } from '../protocol.js';
-import { computeNextRun } from './index.js';
+import { computeNextRun } from './time.js';
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';

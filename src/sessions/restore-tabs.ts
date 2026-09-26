@@ -1,7 +1,7 @@
 import type { Managers } from '../managers.js';
 import { placeAgent } from '../profile/place-agent.js';
 import type { RemoteProcessState } from '../remote/protocol.js';
-import { uniqueLabel } from '../tab/index.js';
+import { uniqueLabel } from '../tab/utils.js';
 import type { RemoteSessionRecord } from './store.js';
 
 // Rebuilding the tabs of an attached session from the peer's own answer. The launching tab already

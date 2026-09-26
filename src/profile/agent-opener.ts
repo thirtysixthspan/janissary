@@ -1,4 +1,5 @@
-import { distinctColor, renumberTabs } from '../tab/index.js';
+import { distinctColor } from '../tab/colors.js';
+import { renumberTabs } from '../tab/utils.js';
 import { startProfileMonitors } from './monitors.js';
 import { openProfileFiles } from './files.js';
 import { openProfileEditors } from './editors.js';

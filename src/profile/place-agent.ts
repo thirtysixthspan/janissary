@@ -1,4 +1,5 @@
-import { makeTab, distinctColor } from '../tab/index.js';
+import { makeTab } from '../tab/index.js';
+import { distinctColor } from '../tab/colors.js';
 import type { Tab, RemoteTarget } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 

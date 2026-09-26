@@ -2,7 +2,7 @@ import type { Tab } from './types.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import path from 'node:path';
-import { flattenBuffer } from './index.js';
+import { flattenBuffer } from './formatting.js';
 
 export function buildTabViews(
   tabs: Tab[],

@@ -5,10 +5,6 @@ import type { ScheduleBodyResult, ScheduleParseResult } from './types.js';
 import { parseAtSchedule, parseOnSchedule } from './helpers.js';
 import { parseEverySchedule } from './every-schedule.js';
 import { SCHEDULE_USAGE } from './usage.js';
-export { SCHEDULE_USAGE } from './usage.js';
-export { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
-export { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
-export { fmtNextRun, formatSchedule, formatLateDuration } from './display.js';
 
 // Parse a trailing `in <tab>` clause starting at `tokens[index]`. Returns the target label,
 // an empty object when the clause is absent, or an error when it is malformed or followed

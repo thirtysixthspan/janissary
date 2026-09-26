@@ -5,10 +5,6 @@ import { NOTIFICATIONS_LABEL } from './tab.js';
 import { notificationText, provenanceTimestamp } from './format.js';
 import { deliverNotification } from './deliver.js';
 
-// How a notification reads lives in `./format.js`, which this file re-exports so the importers that
-// have always reached for these through `notifications/index.js` still resolve.
-export { formatTimestamp, provenanceTimestamp, notificationText } from './format.js';
-
 // The events that can feed the notifications tab. Five are ambient (a background tab's own
 // activity); `manual` is an explicit `notify <message>`, `auto-approve` is a workspaced harness's
 // auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's

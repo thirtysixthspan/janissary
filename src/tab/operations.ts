@@ -7,7 +7,7 @@ import { notify } from '../notifications/index.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
 import { applyDock } from './dock.js';
-import { insertTabInGroup } from './index.js';
+import { insertTabInGroup } from './utils.js';
 import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navigation-commands.js';
 import { centerPane, isCenterActionTab } from './placement.js';
 import { hasSplit } from './split.js';
