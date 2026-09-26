@@ -151,7 +151,7 @@ export type RemoteHandshake = { version: number; session?: string };
 
 // The frame shapes live in `protocol-frames.ts`; this module is the codec over them. Everything the
 // frames declare is re-exported here, so the protocol is still imported from one module.
-import { decodeKnownFrame } from './frame-decode.js';
+import { decodeKnownFrame } from './frame/decode.js';
 import {
   CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame,
 } from './protocol-frames.js';

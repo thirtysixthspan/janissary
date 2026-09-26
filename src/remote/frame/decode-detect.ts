@@ -1,5 +1,5 @@
-import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
-import { decodeOrigin } from './frame-decode-root.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import { decodeOrigin } from './decode-root.js';
 
 // The decoders for the version-18 detection family — `capture-request`/`capture-reply` and
 // `gate-event`/`busy-transition` — in their own module for the same reason `frame-decode-history.ts`

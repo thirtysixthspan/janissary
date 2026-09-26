@@ -1,7 +1,7 @@
-import { decodeCloned, decodeOrigin } from './frame-decode-root.js';
+import { decodeCloned, decodeOrigin } from './decode-root.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
-} from './frame-decode-shared.js';
+} from './decode-shared.js';
 
 // The decoders for the frames that run and end one remote session's process — attach, spawn, the
 // addressed data and resize in between, the two ways it stops, and the workspace outcome it reports.

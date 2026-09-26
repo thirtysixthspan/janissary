@@ -3,7 +3,7 @@ import {
   type ClientFrame, type RemoteProcessState,
 } from '../protocol.js';
 import { SessionRouter, type SessionListener } from './sessions.js';
-import { drainFrames } from '../frame-lines.js';
+import { drainFrames } from '../frame/lines.js';
 import { dispatchAcp, type AcpSessionListener } from './acp.js';
 import { dispatchSessionFrame } from './dispatch.js';
 import { CaptureRequestTracker, type CaptureResult } from './capture.js';

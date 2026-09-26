@@ -1,6 +1,6 @@
 import type { WorkspaceManager } from '../workspace/manager.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
-import { drainFrames } from './frame-lines.js';
+import { drainFrames } from './frame/lines.js';
 import type { RootOfferRun } from './serve-root-offer.js';
 import { rootForProvision, rootForRelay, settleRoot, startPeer, type SettledRoot } from './serve-root-settle.js';
 import type { RemoteProcesses } from './serve-processes.js';

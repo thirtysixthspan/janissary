@@ -1,4 +1,4 @@
-import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
+import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
 // The ACP family's decoders, in their own module for the same reason `frame-decode-history.ts` has
 // one: `frame-decode.ts` is the dispatcher, and six frame shapes are more validation than a
