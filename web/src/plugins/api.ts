@@ -38,6 +38,17 @@ export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../s
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
 
+// The selection *state* behind that rule, for a plugin list whose rows arrive whole: which row is
+// highlighted, which row the user confirmed, and the three rules that keep both inside a list the
+// server has since rebuilt. Published on the same terms as `nextListSelection` — the two lists that
+// drive a record selection kept an identical copy of this too, down to the scroll query. Additive, so
+// `TAB_PLUGIN_API_VERSION` does not move.
+export {
+  useListSelection,
+  type ListRowClick,
+  type ListSelection,
+} from '../shared/list-selection';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

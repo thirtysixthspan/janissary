@@ -2,11 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRotate } from '@fortawesome/free-solid-svg-icons';
 import type { SessionRow, SessionRowAction, SessionsPayload } from '@shared/plugins/sessions/shared';
-import { ConfirmDialog, PluginActionsHeader, type TabPluginClientCapabilities } from '../api';
+import {
+  ConfirmDialog,
+  PluginActionsHeader,
+  useListSelection,
+  type TabPluginClientCapabilities,
+} from '../api';
 import { NarrowSessionRow, WideSessionRow } from './SessionRowBody';
 import { openIntentFor, sessionClickSelection, nextSessionSelection } from './sessions-keys';
-
-const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 // Detach and terminate are the two that take something away — tabs in one case, a remote workspace
 // in the other — so both ask first. Forget has no dialog: it removes a record and touches nothing.
@@ -22,12 +25,8 @@ export function SessionList({
   payload: SessionsPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const [selected, setSelected] = useState<number | null>(
-    payload.entries.length === 0 ? null : 0,
-  );
-  const [confirmed, setConfirmed] = useState<number | null>(null);
+  const { listRef, selected, rowClicked, navigate } = useListSelection(payload.entries.length);
   const [pending, setPending] = useState<{ row: SessionRow; action: SessionRowAction } | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
 
   // Focus and refresh ride the same transition: becoming the active tab. The value the list first
   // renders with is what the command that opened it just read, so re-reading it on mount would be a
@@ -40,21 +39,7 @@ export function SessionList({
       if (!wasActive.current) void intent('refresh', {});
     }
     wasActive.current = active;
-  }, [active, intent]);
-
-  useEffect(() => {
-    if (selected === null) return;
-    listRef.current?.querySelector(`[data-index="${CSS.escape(String(selected))}"]`)
-      ?.scrollIntoView({ block: 'nearest' });
-  }, [selected]);
-
-  useEffect(() => { setConfirmed(null); }, [payload.entries.length]);
-
-  useEffect(() => {
-    if (payload.entries.length === 0) setSelected(null);
-    else if (selected === null) setSelected(0);
-    else if (selected >= payload.entries.length) setSelected(payload.entries.length - 1);
-  }, [payload.entries.length, selected]);
+  }, [active, intent, listRef]);
 
   const raise = (action: SessionRowAction, row: SessionRow) => {
     void capabilities.intent(action, { id: row.id });
@@ -73,10 +58,8 @@ export function SessionList({
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    if (NAVIGATION_KEYS.has(event.key)) {
+    if (navigate(event.key, nextSessionSelection)) {
       event.preventDefault();
-      setSelected(nextSessionSelection(payload.entries.length, selected, event.key));
-      setConfirmed(null);
       return;
     }
     if (event.key === 'Enter' && selected !== null) {
@@ -126,11 +109,7 @@ export function SessionList({
             tabIndex={-1}
             title={`${row.destination}\n${row.kind}${row.workspace ? `\n${row.workspace}` : ''}${row.failure ? `\n${row.failure}` : ''}`}
             onClick={() => {
-              const click = sessionClickSelection(index, confirmed);
-              setSelected(click.selected);
-              setConfirmed(click.selected);
-              listRef.current?.focus();
-              if (click.opens) open(row);
+              if (rowClicked(index, sessionClickSelection)) open(row);
             }}
           >
             <RowBody row={row} now={now} onAction={(action) => { request(action, row); }} />
