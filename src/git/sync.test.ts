@@ -116,10 +116,22 @@ describe('GitSync', () => {
   it('uses the saved file\'s name in the commit message', async () => {
     failPatterns = [['diff', '--cached', '--quiet']];
     const sync = new GitSync(makeWorkspace());
-    await sync.saveSync('notes.md');
+    await sync.saveSync('/repo/.janissary/workspace/git-sync/product/notes.md');
     const commands = argLists().map((a) => a.join(' '));
     const commitCommand = commands.find((c) => c.startsWith('commit'));
     expect(commitCommand).toContain('sync: notes.md');
+  });
+
+  it('stages, checks, and commits only the saved file, never the rest of the shared clone', async () => {
+    const file = '/repo/.janissary/workspace/git-sync/product/backlog/bugs.md';
+    failPatterns = [['diff', '--cached', '--quiet']];
+    const sync = new GitSync(makeWorkspace());
+    await sync.saveSync(file);
+    const lists = argLists();
+    expect(lists).toContainEqual(['add', '-A', '--', file]);
+    expect(lists).toContainEqual(['diff', '--cached', '--quiet', '--', file]);
+    expect(lists).toContainEqual(['commit', '-m', 'sync: bugs.md', '--', file]);
+    expect(lists.some((args) => args[0] === 'add' && !args.includes(file))).toBe(false);
   });
 
   it('skips the commit when there is nothing staged', async () => {
@@ -131,7 +143,7 @@ describe('GitSync', () => {
   });
 
   it('preserves the local commit and reports an error when a save pull fails', async () => {
-    failPatterns = [['diff', '--cached', '--quiet'], ['pull', '--rebase', 'origin', 'master']];
+    failPatterns = [['diff', '--cached', '--quiet'], ['pull', '--rebase', '--autostash', 'origin', 'master']];
     const sync = new GitSync(makeWorkspace());
     const result = await sync.saveSync('bugs.md');
     const commands = argLists().map((a) => a.join(' '));
@@ -168,7 +180,7 @@ describe('GitSync sync branch', () => {
     const sync = new GitSync(makeWorkspace());
     expect(await sync.saveSync('bugs.md')).toEqual({ ok: true });
     const commands = commandLines();
-    expect(commands).toContain('pull --rebase origin main');
+    expect(commands).toContain('pull --rebase --autostash origin main');
     expect(commands).toContain('push origin HEAD:main');
     expect(commands.some((c) => c.includes('master'))).toBe(false);
     const pullCall = calls.find((c) => c.args[0] === 'pull');
@@ -182,7 +194,7 @@ describe('GitSync sync branch', () => {
     const sync = new GitSync(makeWorkspace());
     await sync.saveSync('bugs.md');
     const commands = commandLines();
-    expect(commands).toContain('pull --rebase origin trunk');
+    expect(commands).toContain('pull --rebase --autostash origin trunk');
     expect(commands).toContain('push origin HEAD:trunk');
   });
 
@@ -191,7 +203,7 @@ describe('GitSync sync branch', () => {
     const sync = new GitSync(makeWorkspace());
     await sync.saveSync('bugs.md');
     const commands = commandLines();
-    expect(commands).toContain('pull --rebase origin master');
+    expect(commands).toContain('pull --rebase --autostash origin master');
     expect(commands).toContain('push origin HEAD:master');
   });
 
@@ -202,7 +214,7 @@ describe('GitSync sync branch', () => {
     await sync.saveSync('bugs.md');
     const commands = commandLines();
     expect(commands.filter((c) => c === ORIGIN_HEAD)).toHaveLength(1);
-    expect(commands.filter((c) => c === 'pull --rebase origin main')).toHaveLength(3);
+    expect(commands.filter((c) => c === 'pull --rebase --autostash origin main')).toHaveLength(3);
   });
 
   it('resolves the branch of a retried clone after a failed provision', async () => {
@@ -215,6 +227,6 @@ describe('GitSync sync branch', () => {
     expect(await sync.openSync()).toEqual({ error: 'clone failed' });
     expect(commandLines()).not.toContain(ORIGIN_HEAD);
     expect(await sync.openSync()).toEqual({ dir });
-    expect(commandLines()).toEqual([ORIGIN_HEAD, 'pull --rebase origin main']);
+    expect(commandLines()).toEqual([ORIGIN_HEAD, 'pull --rebase --autostash origin main']);
   });
 });

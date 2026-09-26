@@ -57,6 +57,15 @@ describe('resyncEditorTab', () => {
     expect(managers.editorWatch.refresh).toHaveBeenCalledWith(tab?.label);
   });
 
+  it('refreshes every other open synced tab too, since the pull can rewrite any of their files', async () => {
+    const { managers, url } = setup(() => Promise.resolve({ dir: '/repo' }));
+    const other = managers.tab.openEditorTab({ name: 'plans.md', path: '/repo/plans.md', size: '1 B', url: managers.tab.registerFile('/repo/plans.md'), sync: 'synced' });
+    const plain = managers.tab.openEditorTab({ name: 'plain.md', path: '/plain.md', size: '1 B', url: managers.tab.registerFile('/plain.md') });
+    await resyncEditorTab(managers, url);
+    expect(managers.editorWatch.refresh).toHaveBeenCalledWith(other);
+    expect(managers.editorWatch.refresh).not.toHaveBeenCalledWith(plain);
+  });
+
   it('does not call editorWatch.refresh when the pull errors', async () => {
     const { managers, url } = setup(() => Promise.resolve({ error: 'network down' }));
     await resyncEditorTab(managers, url);

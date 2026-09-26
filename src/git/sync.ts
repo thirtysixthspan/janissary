@@ -77,14 +77,14 @@ export class GitSync {
     }
   }
 
-  // Save-triggered cycle: commit `sync: <filename>` (if there's anything to commit), then the
-  // same pull-rebase step, then push.
-  async saveSync(filename: string): Promise<SyncResult> {
+  // Save-triggered cycle: commit the saved file alone as `sync: <filename>` (if it changed), then
+  // the same pull-rebase step, then push. `filePath` is the saved file's path inside the clone.
+  async saveSync(filePath: string): Promise<SyncResult> {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     try {
       const branch = await this.readyBranch(handle);
-      await commitIfChanged(handle.dir, filename);
+      await commitIfChanged(handle.dir, filePath);
       await pullRebase(handle.dir, branch);
       await push(handle.dir, branch);
       return { ok: true };
@@ -111,22 +111,29 @@ async function resolveSyncBranch(dir: string): Promise<string> {
   return current && current !== 'HEAD' ? current : 'master';
 }
 
-async function commitIfChanged(dir: string, filename: string): Promise<void> {
-  await execFileAsync('git', ['add', '-A'], { cwd: dir });
+// The shared clone holds every synced file, so every step is scoped to the one that was saved with a
+// `-- <path>` pathspec, the same way `commitRoot` in `commit.ts` scopes its staging: a bare `git add
+// -A` would commit whatever else happened to be changed or untracked in the clone under this file's
+// name, and `git commit` without the pathspec would take anything already staged along with it.
+async function commitIfChanged(dir: string, filePath: string): Promise<void> {
+  await execFileAsync('git', ['add', '-A', '--', filePath], { cwd: dir });
   try {
     // Exits 0 (no staged changes) when there's nothing to commit; non-zero otherwise.
-    await execFileAsync('git', ['diff', '--cached', '--quiet'], { cwd: dir });
+    await execFileAsync('git', ['diff', '--cached', '--quiet', '--', filePath], { cwd: dir });
   } catch {
-    await execFileAsync('git', ['commit', '-m', `sync: ${filename}`], { cwd: dir });
+    await execFileAsync('git', ['commit', '-m', `sync: ${path.basename(filePath)}`, '--', filePath], { cwd: dir });
   }
 }
 
 // `git pull --rebase` against `origin/<branch>`. If it fails after starting a rebase, restore the
 // branch to its pre-rebase state while preserving its local commits, then surface the pull error.
+// `--autostash` sets aside whatever the clone holds beyond its commits — another synced file whose
+// own save cycle has not committed it yet — so the pull is never refused over a change it is not
+// about, and puts it back once the rebase settles.
 async function pullRebase(dir: string, branch: string): Promise<void> {
   const env = githubEnv();
   try {
-    await execFileAsync('git', ['pull', '--rebase', 'origin', branch], { cwd: dir, env });
+    await execFileAsync('git', ['pull', '--rebase', '--autostash', 'origin', branch], { cwd: dir, env });
   } catch (error) {
     try {
       await execFileAsync('git', ['rebase', '--abort'], { cwd: dir });

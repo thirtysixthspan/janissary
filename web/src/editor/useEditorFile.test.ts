@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { EditorView } from '@shared/protocol';
+import { contentHash, SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
 import type { JanusClient } from '../ws';
 import { fromText, toText } from './model';
 import type { EditorApi } from './useEditor';
@@ -115,9 +116,49 @@ describe('useEditorFile — save', () => {
     api.stateRef.current = fromText('line one\nedited');
     await act(async () => { await result.current.save(); });
 
-    expect(client.saveFile).toHaveBeenCalledWith('/open/1', 'line one\nedited');
+    expect(client.saveFile).toHaveBeenCalledWith('/open/1', 'line one\nedited', contentHash('line one\nline two'));
     expect(result.current.saveError).toBeNull();
     expect(result.current.savedFlash).toBe(true);
+  });
+
+  it('makes the next save conditional on the text the previous save wrote', async () => {
+    const client = makeClient();
+    const api = makeApi();
+    const { result } = renderHook(() => useEditorFile(client, makeView(), api));
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+
+    api.stateRef.current = fromText('first save');
+    await act(async () => { await result.current.save(); });
+    api.stateRef.current = fromText('second save');
+    await act(async () => { await result.current.save(); });
+
+    expect(client.saveFile).toHaveBeenLastCalledWith('/open/1', 'second save', contentHash('first save'));
+  });
+
+  // The server refuses a buffer built on content no longer on disk — a git-sync pull the watcher
+  // never reported. That refusal is the overwrite question, not a failed save: the prompt goes up,
+  // no error is shown, and the save rejects so the close guard keeps the tab open.
+  it('raises the overwrite prompt when the server refuses a stale buffer, and Overwrite then writes unconditionally', async () => {
+    const saveFile = vi.fn().mockResolvedValueOnce(SAVE_CONFLICT_ERROR).mockResolvedValue(undefined);
+    const client = makeClient({ saveFile });
+    const api = makeApi();
+    const { result } = renderHook(() => useEditorFile(client, makeView(), api));
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+    act(() => { api.setState(fromText('line one\nedited')); });
+
+    await act(async () => { await expect(result.current.save()).rejects.toThrow(); });
+
+    expect(result.current.conflictOpen).toBe(true);
+    expect(result.current.saveError).toBeNull();
+    expect(result.current.savedFlash).toBe(false);
+
+    await act(async () => { await expect(result.current.save()).rejects.toThrow(); });
+    expect(saveFile).toHaveBeenCalledTimes(1);
+
+    await act(async () => { result.current.overwrite(); await Promise.resolve(); });
+
+    expect(saveFile).toHaveBeenLastCalledWith('/open/1', 'line one\nedited', undefined);
+    await waitFor(() => expect(result.current.dirty).toBe(false));
   });
 
   // The rejection is what the close guard reads: a save that resolved would let it close the tab

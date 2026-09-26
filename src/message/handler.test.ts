@@ -323,7 +323,13 @@ describe('handle', () => {
   it('routes saveFile', () => {
     const controller = makeController();
     dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x' } });
-    expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x');
+    expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x', undefined);
+  });
+
+  it('routes saveFile with the hash of the content the buffer last matched', () => {
+    const controller = makeController();
+    dispatchCall(controller, 14, { method: 'saveFile', params: { url: 'file:///a.ts', content: 'x', expectedHash: '1-abc' } });
+    expect(controller.saveFile).toHaveBeenCalledWith('file:///a.ts', 'x', '1-abc');
   });
 
   it('routes renameEditorFile', () => {

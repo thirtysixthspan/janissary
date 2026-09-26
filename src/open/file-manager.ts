@@ -17,6 +17,7 @@ import { notify } from '../notifications/index.js';
 import { isSyncedPath } from '../sync-path-match.js';
 import { isLaunchDirOnPrimaryBranch, refreshLaunchDirBranch } from './launch-dir-branch.js';
 import { currentBranchSync } from '../git/status.js';
+import { refreshSyncedTabs } from '../editor/refresh-synced.js';
 
 export type EditResult = { label: string };
 
@@ -188,6 +189,8 @@ export class OpenFileManager {
     const branch = currentBranchSync(path.dirname(target));
     tab.editor = { ...tab.editor, size, sync: 'synced', branch };
     this.managers.editorWatch.watch(tab.label, target);
+    // The pull that readied this file may have rewritten any other synced tab's file too.
+    refreshSyncedTabs(this.managers);
     messageBus.emit('state', { type: 'dirty' });
   }
 

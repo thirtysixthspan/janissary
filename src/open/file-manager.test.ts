@@ -575,6 +575,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     },
     editorWatch: {
       watch: vi.fn(),
+      refresh: vi.fn(),
     },
   } as unknown as Managers);
 
@@ -598,6 +599,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     expect(tabs[0].editor?.url).toBe(placeholderUrl);
     expect(managers.tab.registerFile).toHaveBeenCalledOnce();
     expect(managers.editorWatch.watch).toHaveBeenCalledWith('janus', path.join('/workspace', 'synced/foo.md'));
+    expect(managers.editorWatch.refresh).toHaveBeenCalledWith('janus');
   });
 
   it('marks the tab errored when the workspace pull fails', async () => {
@@ -613,6 +615,7 @@ describe('OpenFileManager.edit (synced path)', () => {
     await vi.waitFor(() => expect(tabs[0].editor?.sync).toBe('error'));
 
     expect(managers.editorWatch.watch).not.toHaveBeenCalled();
+    expect(managers.editorWatch.refresh).not.toHaveBeenCalled();
   });
 
   describe('branch gate', () => {

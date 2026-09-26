@@ -74,7 +74,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'monitorContextSnapshot': { controller.monitorContextSnapshot(message.params.name); break;
     }
-    case 'saveFile': { return controller.saveFile(message.params.url, message.params.content); }
+    case 'saveFile': { return controller.saveFile(message.params.url, message.params.content, message.params.expectedHash); }
     case 'defaultMenuSelectionAction':
     case 'runDefaultMenuSelectionAction':
     case 'pluginIntent':

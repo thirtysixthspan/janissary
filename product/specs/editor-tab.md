@@ -231,6 +231,12 @@ This protection also applies when the user starts editing while an automatic rel
 reading the file. When several external changes arrive close together, only the newest completed
 reload can update a clean buffer.
 
+A save never writes over content the buffer has not seen. Each save is checked against the file as
+it is on disk at that moment: if the file no longer holds what the buffer was last loaded, reloaded,
+or saved as, nothing is written and the same overwrite prompt appears, even when the change was
+never detected while it happened. This check does not apply to a new file's first save or to a file
+on a remote host.
+
 - **Overwrite (y):** writes the buffer to disk, replacing the external change.
 - **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save
   attempt shows the same prompt again.
@@ -499,15 +505,21 @@ the next open, save, or manual resync starts a fresh provisioning attempt withou
 application restart. Opening a synced file — or another synced file finishing a save — also pulls
 the latest sync branch from `origin` into the shared workspace; any other open, unmodified synced tab whose
 file changed as a result refreshes automatically, exactly like an ordinary external file change (see
-"Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.
+"Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always,
+and its next save shows the overwrite prompt instead of writing over the pulled content. Every pull
+into the shared workspace re-checks every open synced tab straight away rather than waiting for the
+file change to be noticed.
 
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
-flash is not delayed by anything that happens next. After that, the change is committed with the
-message `sync: <filename>` (the saved file's name), the shared workspace is brought up to date with
-the sync branch on `origin`, and the commit is pushed to that branch. If updating with it fails, including because
+flash is not delayed by anything that happens next. After that, the saved file alone is committed
+with the message `sync: <filename>` (the saved file's name); nothing else changed in the shared
+workspace goes into that commit. The shared workspace is then brought up to date with the sync
+branch on `origin`, and the commit is pushed to that branch. If updating with it fails, including because
 of a conflicting remote change, the local save and its commit remain in the shared workspace, the
 push is skipped, and the sync enters its error state. A later manual resync retries the update
-without silently replacing the saved content with the remote version.
+without silently replacing the saved content with the remote version. Any failure of this
+save-triggered sync, including a rejected push, is also posted to the notifications tab as
+`Could not sync <filename>: <reason>`.
 
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an

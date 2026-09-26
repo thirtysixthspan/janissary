@@ -53,11 +53,11 @@ That workspace pulls from and pushes to the same default branch that decides whe
 
 Saving a synced file writes and confirms the save exactly like an ordinary save — the "Saved" flash isn't delayed by anything that happens next. After that:
 
-1. The change is committed with the message `sync: <filename>`.
+1. That file alone is committed with the message `sync: <filename>`. Nothing else changed in the shared workspace goes into the commit.
 2. The shared workspace pulls the latest from the default branch.
 3. The commit is pushed to that branch.
 
-If that pull fails, including because the same content changed remotely, your local save and its commit stay intact and nothing is pushed. The status icon changes to error and the notification gives the git failure; after you address the problem, clicking the icon retries the update. Janissary never silently replaces the saved content with the remote version. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from the default branch; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always.
+If that pull fails, including because the same content changed remotely, your local save and its commit stay intact and nothing is pushed. The status icon changes to error and the notification gives the git failure; after you address the problem, clicking the icon retries the update. Janissary never silently replaces the saved content with the remote version. Opening a synced file, or another synced file finishing a save, also refreshes the shared workspace from the default branch; any other open, unmodified synced tab whose file changed as a result reloads automatically, the same as any external change to a file you have open (see [Editor](/user-documentation/tab-types/editor)). A synced tab with unsaved changes is left alone, same as always, and saving it shows the overwrite prompt rather than writing your older copy over what the pull brought in.
 
 ## Checking sync status, and resyncing manually
 

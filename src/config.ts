@@ -39,8 +39,8 @@ export type Config = {
   // Which background events feed the notifications tab (all opt-in; see `notifications/index.ts`).
   notifications?: NotificationConfig;
   // Project-relative file paths kept automatically synced with `origin/master` via a shared,
-  // lazily-created workspace clone (see `git/sync.ts`). Empty by default — syncing is entirely
-  // config-driven, with no UI toggle.
+  // lazily-created workspace clone (see `git/sync.ts`). Defaults to `DEFAULT_SYNC_PATHS` (the
+  // project's backlog and plans folders) — syncing is entirely config-driven, with no UI toggle.
   syncPaths: string[];
   // The external application each opener hands a file to, keyed by opener name (see `openers/`).
   // A macOS application name, launched via the OS `open` command's `-a` flag; an empty or missing
