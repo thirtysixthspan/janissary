@@ -1,4 +1,4 @@
-export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh';
+export type ConnectionKind = 'sqlite' | 'shell' | 'acp' | 'browser' | 'ssh' | 'terminal';
 
 export type ConnectionParsed =
   | { error: string }

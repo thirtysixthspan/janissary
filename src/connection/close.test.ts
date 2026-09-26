@@ -7,9 +7,10 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
   return {
     database: { close: vi.fn(() => false) },
     shell: { close: vi.fn(() => false) },
-    acp: { close: vi.fn(() => false) },
+    acp: { close: vi.fn(() => false), label: vi.fn(() => { /* no named session */ }) },
     editorAcp: { close: vi.fn(() => false) },
-    pty: { kill: vi.fn() },
+    monitor: { stop: vi.fn(() => false) },
+    pty: { kill: vi.fn(), killTerminal: vi.fn(() => false) },
     tab: { tabs: [] },
     ...overrides,
   } as unknown as Managers;
@@ -54,23 +55,45 @@ describe('closeConnection', () => {
     expect(out).toHaveBeenCalledWith('No open connection shell:anything.');
   });
 
-  it('closes an open acp connection', () => {
-    const managers = makeManagers({ acp: { close: vi.fn(() => true) } } as unknown as Partial<Managers>);
+  it('closes the tab\'s own acp session and names the session that closed', () => {
+    const managers = makeManagers({ acp: { close: vi.fn(() => true), label: vi.fn(() => 'anthropic/claude-sonnet') } } as unknown as Partial<Managers>);
     const out = vi.fn();
 
-    closeConnection('acp', 'anything', managers, 'main', out);
+    closeConnection('acp', 'anthropic/claude-sonnet', managers, 'main', out);
 
     expect(managers.acp.close).toHaveBeenCalledWith('main');
-    expect(out).toHaveBeenCalledWith('Closed connection acp:opencode.');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:anthropic/claude-sonnet.');
   });
 
-  it('reports when there is no open acp connection', () => {
+  it('closes a session still connecting, which has no name yet, under the id typed', () => {
+    const managers = makeManagers({ acp: { close: vi.fn(() => true), label: vi.fn(() => { /* not yet named */ }) } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'agent', managers, 'main', out);
+
+    expect(out).toHaveBeenCalledWith('Closed connection acp:agent.');
+  });
+
+  it('reports when there is no open acp connection, naming the id typed', () => {
     const managers = makeManagers();
     const out = vi.fn();
 
     closeConnection('acp', 'anything', managers, 'main', out);
 
-    expect(out).toHaveBeenCalledWith('No open connection acp:opencode.');
+    expect(out).toHaveBeenCalledWith('No open connection acp:anything.');
+  });
+
+  it('stops the tab\'s monitor named by the id and leaves the tab\'s own session alone', () => {
+    const stop = vi.fn(() => true);
+    const acpClose = vi.fn(() => true);
+    const managers = makeManagers({ monitor: { stop }, acp: { close: acpClose, label: vi.fn(() => 'opencode/x') } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('acp', 'security', managers, 'main', out);
+
+    expect(stop).toHaveBeenCalledWith('main', 'security');
+    expect(acpClose).not.toHaveBeenCalled();
+    expect(out).toHaveBeenCalledWith('Closed connection acp:security.');
   });
 
   it('closes an editor tab\'s persona connection without touching the interactive session', () => {
@@ -86,15 +109,16 @@ describe('closeConnection', () => {
     expect(out).toHaveBeenCalledWith('Closed connection acp:reviewer.');
   });
 
-  it('falls back to the interactive session close when no editor persona connection matches', () => {
-    const managers = makeManagers({ acp: { close: vi.fn(() => true) } } as unknown as Partial<Managers>);
+  it('falls back to the interactive session close when no editor persona or monitor matches', () => {
+    const managers = makeManagers({ acp: { close: vi.fn(() => true), label: vi.fn(() => 'opencode/big-pickle') } } as unknown as Partial<Managers>);
     const out = vi.fn();
 
-    closeConnection('acp', 'opencode', managers, 'main', out);
+    closeConnection('acp', 'opencode/big-pickle', managers, 'main', out);
 
-    expect(managers.editorAcp.close).toHaveBeenCalledWith('main', 'opencode');
+    expect(managers.editorAcp.close).toHaveBeenCalledWith('main', 'opencode/big-pickle');
+    expect(managers.monitor.stop).toHaveBeenCalledWith('main', 'opencode/big-pickle');
     expect(managers.acp.close).toHaveBeenCalledWith('main');
-    expect(out).toHaveBeenCalledWith('Closed connection acp:opencode.');
+    expect(out).toHaveBeenCalledWith('Closed connection acp:opencode/big-pickle.');
   });
 
   it('closes an ssh connection found by tab label', () => {
@@ -158,12 +182,23 @@ describe('closeConnection', () => {
     expect(out).toHaveBeenCalledWith('Closed connection ssh:admin@devbox:/srv/proj.');
   });
 
-  it('reports the web UI limitation for an unhandled kind', () => {
+  it('closes a tab\'s terminal by its program name', () => {
+    const killTerminal = vi.fn(() => true);
+    const managers = makeManagers({ pty: { kill: vi.fn(), killTerminal } } as unknown as Partial<Managers>);
+    const out = vi.fn();
+
+    closeConnection('terminal', 'vim', managers, 'main', out);
+
+    expect(killTerminal).toHaveBeenCalledWith('main', 'vim');
+    expect(out).toHaveBeenCalledWith('Closed connection terminal:vim.');
+  });
+
+  it('reports when the tab has no terminal running that program', () => {
     const managers = makeManagers();
     const out = vi.fn();
 
-    closeConnection('browser', 'anything', managers, 'main', out);
+    closeConnection('terminal', 'vim', managers, 'main', out);
 
-    expect(out).toHaveBeenCalledWith('Closing browser connections is not yet available in the web UI.');
+    expect(out).toHaveBeenCalledWith('No open connection terminal:vim.');
   });
 });

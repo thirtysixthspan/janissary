@@ -35,7 +35,7 @@ acp reset
 
 This ends the conversation and clears the accumulated context. The next `acp` prompt begins fresh, and the app confirms with `ACP session reset — next acp prompt will start fresh.`. When no session is active, `acp reset` replies `No active ACP session to reset.` instead of failing.
 
-An active session also appears as the connection `acp:opencode` in the tab's connections list.
+An active session also appears in the tab's connections list under its provider and model, such as `acp:opencode/big-pickle`. That same name is what `connection close` takes.
 
 ## The agent can look things up itself
 

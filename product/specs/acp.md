@@ -55,7 +55,7 @@ The tool loop always runs on the machine janissary itself is running on, regardl
 
 ### Remote agent tabs
 
-`acp <prompt>` works in a tab launched with `agent <name> on <address>` (see [[remote-server]]), and the agent runs **on that host**, inside the workspace clone the host provisioned — so it sees the files the tab is actually working on rather than anything on the local machine. Nothing about the tab reads differently: replies stream in as formatted Markdown, the busy dot blinks while awaiting the agent, and the connections panel and status popup show the same `acp:opencode` row and the same `provider/model` label a local session shows, with no host marker anywhere.
+`acp <prompt>` works in a tab launched with `agent <name> on <address>` (see [[remote-server]]), and the agent runs **on that host**, inside the workspace clone the host provisioned — so it sees the files the tab is actually working on rather than anything on the local machine. Nothing about the tab reads differently: replies stream in as formatted Markdown, the busy dot blinks while awaiting the agent, and the connections panel and status popup show the same `acp:<provider/model>` row and label a local session shows, with no host marker anywhere.
 
 The ACP client itself is hosted by the remote, so what crosses the ssh channel is prompt text and reply chunks rather than JSON-RPC. Which agent and which model run are still decided locally and sent across, so a remote session cannot silently disagree with a local one about the model. The autonomous tool loop and its `db`, `browser`, and `question` commands stay on the local machine — see Database and browser assistance above.
 

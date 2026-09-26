@@ -123,6 +123,34 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('other')).toEqual([]);
   });
 
+  it('killTerminal kills the tab\'s PTY running that program', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawn('main', 'vim', 'vim file.txt', '/repo');
+
+    expect(manager.killTerminal('main', 'vim')).toBe(true);
+    expect(kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('killTerminal leaves another tab\'s PTY and a different program alone', () => {
+    const { managers } = makeManagers([makeTab('main', 'red'), makeTab('other', 'blue')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawn('main', 'vim', 'vim file.txt', '/repo');
+
+    expect(manager.killTerminal('other', 'vim')).toBe(false);
+    expect(manager.killTerminal('main', 'top')).toBe(false);
+    expect(kill).not.toHaveBeenCalled();
+  });
+
+  it('killTerminal never matches a transport', () => {
+    const { managers } = makeManagers([makeTab('main', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawnTransport('main', 'ssh', 'ssh host', '/repo', { onData: vi.fn(), onExit: vi.fn() });
+
+    expect(manager.killTerminal('main', 'ssh')).toBe(false);
+    expect(kill).not.toHaveBeenCalled();
+  });
+
   it('openInlinePty spawns a PTY, sets activePty on the tab, and falls back to process.cwd()', () => {
     const tab = makeTab('main', 'red');
     const { managers } = makeManagers([tab]);

@@ -1,34 +1,20 @@
 import type { ConnectionView } from '../protocol.js';
 import { parseConnectionCommand } from './parsing.js';
-import { SHELL_NAME } from '../shell/manager.js';
 import { closeConnection } from './close.js';
+import { connectionCatalog } from './catalog.js';
 import type { Managers } from '../managers.js';
 import { listLines, listCompletionConnections } from './list.js';
 
 export class ConnectionManager {
   constructor(private managers: Managers) {}
 
+  // The connections panel: the catalog entries the tab itself holds. A remote tab lists its
+  // transport alongside its processes, since the ssh session it runs over is a connection in its own
+  // right and closing it closes the tab.
   connectionsFor(label: string): ConnectionView[] {
-    const rows: ConnectionView[] = [];
-    if (this.managers.shell.has(label)) {
-      rows.push({ text: `${SHELL_NAME}:${this.managers.tab.shorten(this.managers.tab.cwdOf(label) ?? process.cwd())}`, kind: 'shell' });
-    }
-    const acp = this.managers.acp.label(label);
-    if (acp) rows.push({ text: `acp:${acp}`, kind: 'acp', acpRef: { scope: 'tab', label } });
-    rows.push(...this.managers.monitor.connectionsFor(label), ...this.managers.editorAcp.connectionsFor(label));
-    const b = this.managers.browser.info(label);
-    if (b) for (const id of b.ids) rows.push({ text: `browser:${id} (${b.mode})`, kind: 'browser' });
-    const tab = this.managers.tab.byLabel(label);
-    if (tab?.harness?.name === 'ssh' && tab.harness.destination) {
-      rows.push({ text: `ssh:${tab.harness.destination}`, kind: 'ssh' });
-    } else {
-      // A remote tab lists its transport alongside its processes: the ssh session it runs over is a
-      // connection in its own right, and closing it closes the tab.
-      if (tab?.remote) rows.push({ text: `ssh:${tab.remote.address}`, kind: 'ssh' });
-      for (const program of this.managers.pty.terminalsFor(label)) rows.push({ text: `terminal:${program}`, kind: 'terminal' });
-    }
-    for (const n of this.managers.database.openDbs(label)) rows.push({ text: `sqlite:${n}`, kind: 'sqlite' });
-    return rows;
+    return connectionCatalog(this.managers, label)
+      .filter((e) => e.scope === 'tab')
+      .map((e) => (e.acpRef ? { text: e.display, kind: e.kind, acpRef: e.acpRef } : { text: e.display, kind: e.kind }));
   }
 
   run(command: string, label: string): void {
