@@ -67,6 +67,22 @@ describe('theme command run', () => {
     expect(parsed.theme).toBe('dracula');
   });
 
+  it('reports the theme unchanged when the config write fails', () => {
+    rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
+    run('theme dracula');
+    expect(appended[0].output).toBe('Could not save theme "dracula" to .janissary/config.json — theme unchanged.');
+    expect(getConfig().theme).toBe(DEFAULT_APP_THEME);
+  });
+
+  it('theme sync reports the syntax theme unchanged when the config write fails', () => {
+    run('theme nord');
+    const before = getConfig().syntaxTheme;
+    rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
+    run('theme sync');
+    expect(appended[1].output).toBe('Could not save syntax theme "nord" to .janissary/config.json — syntax theme unchanged.');
+    expect(getConfig().syntaxTheme).toBe(before);
+  });
+
   it('canonicalizes case-insensitive theme names', () => {
     run('theme DRACULA');
     expect(appended[0].output).toBe('Theme set to "dracula".');

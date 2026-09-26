@@ -69,6 +69,13 @@ describe('syntax command run', () => {
     expect(parsed.syntaxTheme).toBe('nord');
   });
 
+  it('reports the theme unchanged when the config write fails', () => {
+    rmSync(path.join(tmpDir, '.janissary'), { recursive: true, force: true });
+    run('syntax theme nord');
+    expect(appended[0].output).toBe('Could not save syntax theme "nord" to .janissary/config.json — syntax theme unchanged.');
+    expect(getConfig().syntaxTheme).toBe(DEFAULT_SYNTAX_THEME);
+  });
+
   it('canonicalizes case-insensitive theme names', () => {
     run('syntax theme NORD');
     expect(appended[0].output).toBe('Syntax theme set to "nord".');

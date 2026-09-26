@@ -17,7 +17,7 @@ function syncSyntaxTheme(): string {
   const persisted = updateConfig({ syntaxTheme: canonical });
   return persisted
     ? `Syntax theme set to "${canonical}".`
-    : `Syntax theme set to "${canonical}" for this session (config write failed — won't persist).`;
+    : `Could not save syntax theme "${canonical}" to .janissary/config.json — syntax theme unchanged.`;
 }
 
 function setTheme(name: string): string {
@@ -26,7 +26,7 @@ function setTheme(name: string): string {
   const persisted = updateConfig({ theme: canonical });
   return persisted
     ? `Theme set to "${canonical}".`
-    : `Theme set to "${canonical}" for this session (config write failed — won't persist).`;
+    : `Could not save theme "${canonical}" to .janissary/config.json — theme unchanged.`;
 }
 
 export const command: Command = {

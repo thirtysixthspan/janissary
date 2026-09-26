@@ -35,7 +35,7 @@ export const command: Command = {
     const persisted = updateConfig({ syntaxTheme: canonical });
     const output = persisted
       ? `Syntax theme set to "${canonical}".`
-      : `Syntax theme set to "${canonical}" for this session (config write failed — won't persist).`;
+      : `Could not save syntax theme "${canonical}" to .janissary/config.json — syntax theme unchanged.`;
     managers.tab.append(tab.label, { input: command_, output });
   },
 };
