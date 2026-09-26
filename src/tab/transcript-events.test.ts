@@ -52,6 +52,14 @@ describe('startRunningTab', () => {
     expect(busy.has('bob')).toBe(true);
     expect(append).toHaveBeenCalledWith('bob', { input: 'ls', output: '', running: true });
   });
+
+  it('carries extra entry fields such as the working directory into the running entry', () => {
+    const append = vi.fn();
+
+    startRunningTab(new Set<string>(), 'bob', 'ls', append, { cwd: '/repo' });
+
+    expect(append).toHaveBeenCalledWith('bob', { input: 'ls', output: '', running: true, cwd: '/repo' });
+  });
 });
 
 describe('appendTab', () => {

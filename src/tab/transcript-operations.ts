@@ -1,18 +1,19 @@
 import type { AgentState } from '../agent/types.js';
 import type { LogEntry, Tab } from './types.js';
-import type { RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
+import type { RunningEntryFields, RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
 import { recordHistory } from './history.js';
 import { capLog } from './transcript-log.js';
 import {
   appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab, updateRunningEntry,
 } from './transcript-events.js';
 
-export type { RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
+export type { RunningEntryFields, RunningEntryMatch, UpdateRunningHooks } from './transcript-events.js';
 
 export function startRunning(
   tabs: Tab[], label: string, input: string, append: (label: string, entry: LogEntry) => void,
+  fields?: RunningEntryFields,
 ): void {
-  startRunningTab(tabs, label, input, append);
+  startRunningTab(tabs, label, input, append, fields);
 }
 
 export function finishRunning(

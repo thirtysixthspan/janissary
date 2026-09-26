@@ -4,17 +4,6 @@
 
 ## development
 
-* Start and finish a shell command's transcript entry through the tab manager's shared running-entry path, instead of the shell manager hand-writing the log append, trim, bus events, and trailing output event itself.
-
-Existing Debt: Every other long-running command opens its transcript entry with `TabManager.startRunning` and closes it with the shared running-entry hooks, but `ShellManager.run` assigns `tab.log` directly, re-implements the cap-and-trim, emits `entries:trimmed` and `entry:appended` itself, and re-emits the trailing-output event by hand, so the shell path has already diverged from the shared one (it never resets `scrollOffset` and never marks the tab unread on start). Severity: 5/10
-
-Existing Risk: 4/10 - The shell is the most-used command path, and any later change to what appending a transcript entry means — a new bus subscriber, a new field reset, a change to trimming — lands in the shared helper and silently skips shell commands, as the scroll reset already does, leaving a scrolled-up transcript that does not follow a newly typed shell command.
-
-Proposal Risk: 2/10 - The shell entry then goes through the same append and finalize code as every other producer; the residual hazard is the `cwd` field and the promotion note, which the shared start does not carry today and must be threaded through without changing what the transcript logger and persistence receive.
-
-Proposal: `ShellManager.run` in `src/shell/manager.ts` builds `{ input: command, output: '', running: true, cwd }`, writes it into `tab.log`, trims to `getConfig().transcriptMaxLines`, emits `transcript` `entries:trimmed`/`entry:appended`, calls `addBusy`, and emits `state` `dirty`; its `onDone` then emits a second `entry:appended` carrying `{ input: '', output: result }`. The shared equivalents are `startRunningTab` and `updateRunningEntry` (with `hooks.trailing`) in `src/tab/transcript-events.ts`, reached through `TabManager.startRunning` and `TabManager.updateRunning` in `src/tab/manager.ts`, and `appendTab`/`appendEntry` (`src/tab/transcript-log.ts`) are where `scrollOffset` is reset. Extend `startRunning` to accept an optional partial entry (so the shell can pass `cwd`), replace the hand-written start in `ShellManager.run` with it, and replace the manual trailing emit in `onDone` with `trailing: true` in the `update` hooks, suppressed when the command was promoted (so the finished entry still reads `TERMINAL_ENTRY_NOTE` and no output event fires). `src/tab/transcript-events.test.ts` pins the shared choreography; `src/shell/manager.test.ts` has no assertions on the bus events this path emits, so add one that runs a command and asserts exactly one `entry:appended` for the start and one trailing output event, plus a promoted-command case asserting no trailing event, before making the change.
-
-
 * Promote the tab-chrome helpers that several web features import from the app root into the shared layer, and bring the plugin, toast, and context-menu directories under the lint zones that enforce feature boundaries.
 
 Existing Debt: The React organization guideline says dependencies flow shared → feature → app and that nothing imports the app shell, but multi-consumer modules such as the tab body border and the dock cycle still live at the `web/src/` root that features import from, and the `import-x/no-restricted-paths` zones list only eight feature directories, so `plugins`, `toasts`, and `context-menu` — and anything at the root — are outside the boundary the linter enforces. Severity: 4/10

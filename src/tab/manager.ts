@@ -193,8 +193,8 @@ export class TabManager extends TabOpeningState {
     );
   }
 
-  startRunning(label: string, input: string): void {
-    transcriptOperations.startRunning(this.tabs, label, input, (l, entry) => this.append(l, entry));
+  startRunning(label: string, input: string, fields?: transcriptOperations.RunningEntryFields): void {
+    transcriptOperations.startRunning(this.tabs, label, input, (l, entry) => this.append(l, entry), fields);
   }
 
   finishRunning(label: string, output: string, match?: transcriptOperations.RunningEntryMatch): void {

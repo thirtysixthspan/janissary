@@ -6,7 +6,9 @@ import { TabManager } from '../tab/manager.js';
 import { ShellManager } from './manager.js';
 import { loadConfig } from '../config.js';
 import { loadLearnedCommands, learnedCommands } from '../interactive/learned.js';
-import { messageBus, type Subscription } from '../bus.js';
+import { messageBus, type BusEvent, type Subscription } from '../bus.js';
+import { makeTab } from '../tab/index.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import type { RestoredSink } from '../remote/shell-session.js';
 
@@ -519,5 +521,95 @@ describe('ShellManager — a pty shell that exits', () => {
     expect(onComplete).not.toHaveBeenCalled();
     expect(queryShellPwdMock).not.toHaveBeenCalled();
     expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
+  });
+});
+
+// A shell command's entry is started and finished by the same transcript choreography every other
+// long-running command uses, so the bus sees one start event and one trailing output event.
+describe('ShellManager — transcript events', () => {
+  let tmpDir: string;
+  let managers: Managers;
+  let shellManager: ShellManager;
+  let subscription: Subscription;
+  const events: BusEvent[] = [];
+  const label = 'janus';
+  const ESC = String.fromCodePoint(27);
+
+  const appended = (): BusEvent[] => events.filter((event) => event.type === 'entry:appended');
+  const tab = (name = label): Tab => managers.tab.tabs.find((t) => t.label === name)!;
+
+  beforeEach(() => {
+    resetShellMocks();
+    events.length = 0;
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-events-'));
+    mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
+    loadConfig(tmpDir);
+    loadLearnedCommands(tmpDir);
+    subscription = messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (event) => { events.push(event); });
+    managers = makeManagers();
+    managers.tab.setCwd(label, '/work');
+    shellManager = new ShellManager(managers);
+  });
+
+  afterEach(() => {
+    subscription.unsubscribe();
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('emits one start event carrying the cwd and one trailing output event', async () => {
+    shellManager.run(label, 'ls');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(appended()).toEqual([
+      expect.objectContaining({ tabLabel: label, entry: { input: 'ls', output: '', running: true, cwd: '/work' } }),
+    ]);
+
+    streamOutput(['file-a\n']);
+    completeCommand('file-a');
+
+    expect(appended()).toEqual([
+      expect.objectContaining({ entry: { input: 'ls', output: '', running: true, cwd: '/work' } }),
+      expect.objectContaining({ tabLabel: label, entry: { input: '', output: 'file-a' } }),
+    ]);
+    expect(tab().log.at(-1)).toEqual({ input: 'ls', output: 'file-a', running: false, cwd: '/work' });
+    expect(managers.tab.isBusy(label)).toBe(false);
+  });
+
+  it('emits no trailing output event for a command promoted to a terminal', async () => {
+    shellManager.run(label, 'mytui');
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    streamOutput([`${ESC}[?1049h`]);
+    completeCommand('screen bytes');
+
+    expect(appended()).toHaveLength(1);
+    expect(tab().log.at(-1)).toMatchObject({ input: 'mytui', output: '(ran in terminal)', running: false });
+  });
+
+  it('returns a scrolled-up transcript to the bottom when a command starts', () => {
+    tab().scrollOffset = 12;
+
+    shellManager.run(label, 'ls');
+
+    expect(tab().scrollOffset).toBe(0);
+  });
+
+  it('marks an inactive tab unread when a command starts there', () => {
+    managers.tab.tabs.push(makeTab('bob', 'red'));
+
+    shellManager.run('bob', 'ls');
+
+    expect(tab('bob').hasUnread).toBe(true);
+  });
+
+  it('trims the log to the configured length when a command starts', () => {
+    writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 2 }));
+    loadConfig(tmpDir);
+    tab().log = [{ input: 'a', output: '' }, { input: 'b', output: '' }];
+
+    shellManager.run(label, 'ls');
+
+    expect(tab().log.map((entry) => entry.input)).toEqual(['b', 'ls']);
+    expect(events).toContainEqual({ type: 'entries:trimmed', tabLabel: label, count: 1 });
   });
 });
