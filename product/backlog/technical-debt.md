@@ -4,17 +4,6 @@
 
 ## development
 
-* Validate every field a profile's agent entry can carry, not only its name and remote, so a hand-written profile that would break a launch is refused by validation.
-
-Existing Debt: The profile agent entry's type is borrowed from the persisted `AgentState`, the loader spreads every key through, and `agentProblems` checks only `name` and `remote`, so each new state field silently widens what profiles accept without being checked. Severity: 5/10
-
-Existing Risk: 5/10 - A profile with `"cwd": 5` passes `profile validate` and then throws inside `expandUserPath` after the tab is inserted, leaving the half-finished launch `product/specs/profiles.md` promises cannot happen, and a harness-style string `schedule` on an agent is handed to the schedule manager as entry objects.
-
-Proposal Risk: 2/10 - Every field the opener reads is checked before anything opens; the remaining gap is that the agent entry type still derives from `AgentState`, so a newly added state field is unchecked until someone adds it to the schema.
-
-Proposal: `agentProblems` in `src/profile/schema.ts` checks `name` and `remote` only, while `harnessProblems` beside it checks every harness field. `ProfileAgentTabFile` in `src/profile/types.ts` is built from `AgentState`; `stripFileKeys` and `partitionTabs` in `src/profile/file.ts` copy every key with a `rest as Omit<T, 'type' | 'color'>` cast, and `openAgentEntry` in `src/profile/entry-openers.ts` reads `state.cwd` (through `expandUserPath`), `state.cmdHistory`, the log, `state.workspaceDir`, `state.context` and `state.schedule`. Extend `agentProblems` with `checkField` calls for string `cwd`, `workspaceDir` and `title`, boolean `active` and `offline`, string arrays `cmdHistory`, `context` and `commandQueue`, and object arrays `log` and `schedule` (add an `'object[]'` kind to `checkField` or a small record-array check). Add one `src/profile/file.test.ts` case per rejected field, including the harness-style string `schedule`. `src/profile/schema.test.ts`, `src/profile/file.test.ts`, `src/profile/validate.test.ts`, `src/profile/agent-opener.test.ts` and `src/profile/save.test.ts` (the `writeAgentEntry` round trip, which writes `name`, `active`, `remote` and `cwd`) must keep passing, since every profile `profile save` writes must still validate.
-
-
 * Record a tab's page-browser launch while it is still in flight, so concurrent first uses share one Chromium and a tab closed mid-launch releases the browser it asked for.
 
 Existing Debt: The per-tab page browser is registered in the manager's map only after `await launchTabBrowser` resolves, in two separate places, so an in-flight launch is invisible to every other caller and to teardown, against the rule that acquisition and release are defined together. Severity: 4/10
