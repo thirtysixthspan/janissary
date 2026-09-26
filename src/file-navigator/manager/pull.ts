@@ -1,8 +1,8 @@
-import { clearFilesystemCache } from './filesystem-cache.js';
-import { pullFailureText, pullSuccessText } from './pull-report.js';
-import { notify } from '../notifications/index.js';
-import { stillRooted, armFlash, pullFlashDescriptor } from './manager-flash.js';
-import type { MutationContext } from './manager-mutations.js';
+import { clearFilesystemCache } from '../filesystem-cache.js';
+import { pullFailureText, pullSuccessText } from '../pull-report.js';
+import { notify } from '../../notifications/index.js';
+import { stillRooted, armFlash, pullFlashDescriptor } from './flash.js';
+import type { MutationContext } from './mutations.js';
 
 // The manager internals a pull needs: the mutating operations' own context, plus the git-metadata
 // refresh a successful pull triggers, which no mutation needs.

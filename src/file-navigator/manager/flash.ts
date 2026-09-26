@@ -1,6 +1,6 @@
-import type { MutationContext } from './manager-mutations.js';
-import type { FilesTabState } from './state.js';
-import type { FileNavigatorCommitStatus, FileNavigatorPullStatus } from '../tab/types.js';
+import type { MutationContext } from './mutations.js';
+import type { FilesTabState } from '../state.js';
+import type { FileNavigatorCommitStatus, FileNavigatorPullStatus } from '../../tab/types.js';
 
 // How long a settled pull's or commit's success or failure stays on the header button before it
 // returns to rest. Longer than the editor's 1.5-second "Saved" flash because either work item runs

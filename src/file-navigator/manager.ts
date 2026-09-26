@@ -4,22 +4,22 @@ import { openFilesCommand } from './open-command.js';
 import {
   createDirectoryIn, deleteItem, deleteItems, moveItem, moveItems, pasteItems, renameItem,
   replayMutation, type MutationContext,
-} from './manager-mutations.js';
+} from './manager/mutations.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
-import { detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
-import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
+import { detailOfTab, expandedPathsOf, setTabDetail } from './manager/profile.js';
+import { makeNavigationPort, makeOpenPort } from './manager/ports.js';
 import { WatchedFilesTabs } from './watched-tabs.js';
 import type { PortClosures } from './port.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
-import { runPull } from './manager-pull.js';
-import { runCommit } from './manager-commit.js';
+import { runPull } from './manager/pull.js';
+import { runCommit } from './manager/commit.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 import type { MaybePromise } from '../maybe-promise.js';
-import { createNavigatorFile, openNavigatorFile } from './manager-files.js';
+import { createNavigatorFile, openNavigatorFile } from './manager/files.js';
 import type { FileOpenerChoice } from '../protocol.js';
-import { withFilesState } from './manager-state.js';
+import { withFilesState } from './manager/state.js';
 
 // Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and their rows.
 // The tab map and the watch/rebuild lifecycle every tab runs on live in `WatchedFilesTabs`; the

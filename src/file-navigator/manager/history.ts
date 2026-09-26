@@ -1,7 +1,7 @@
-import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep } from './moves.js';
-import type { UndoRedoResult } from '../protocol.js';
-import type { FileSystemPort } from './filesystem-port.js';
-import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
+import { applyStackMove, applyStackPaste, isPasteGroup, type HistoryStep } from '../moves.js';
+import type { UndoRedoResult } from '../../protocol.js';
+import type { FileSystemPort } from '../filesystem-port.js';
+import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 type HistoryState = {
   root: string;

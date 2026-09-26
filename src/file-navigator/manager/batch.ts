@@ -1,9 +1,9 @@
-import type { HistoryStep } from './moves.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult } from '../protocol.js';
-import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
-import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
-import type { RemoteTarget } from '../tab/types.js';
-import { failureReasons } from './file-operation-result.js';
+import type { HistoryStep } from '../moves.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult } from '../../protocol.js';
+import { LocalFileSystemPort, type FileSystemPort } from '../filesystem-port.js';
+import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
+import type { RemoteTarget } from '../../tab/types.js';
+import { failureReasons } from '../file-operation-result.js';
 
 const localFilesystem = new LocalFileSystemPort();
 

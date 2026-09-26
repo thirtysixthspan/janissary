@@ -1,7 +1,7 @@
-import { stopPolling } from './poll.js';
-import { clearFlashTimers } from './manager-flash.js';
-import type { FileNavigatorDetail } from '../tab/types.js';
-import type { FilesTabState } from './state.js';
+import { stopPolling } from '../poll.js';
+import { clearFlashTimers } from './flash.js';
+import type { FileNavigatorDetail } from '../../tab/types.js';
+import type { FilesTabState } from '../state.js';
 
 // The tree-view state `profile save` reads back off a navigator, the detail-mode switch its header
 // button drives, and one tab's teardown. Split out of `manager.ts` to keep that file under the size

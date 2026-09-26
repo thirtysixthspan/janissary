@@ -1,6 +1,6 @@
-import type { Managers } from '../managers.js';
-import { closeTabState } from './manager-profile.js';
-import type { FilesTabState } from './state.js';
+import type { Managers } from '../../managers.js';
+import { closeTabState } from './profile.js';
+import type { FilesTabState } from '../state.js';
 
 function closeNavigator(
   managers: Managers, tabs: Map<string, FilesTabState>, label: string,

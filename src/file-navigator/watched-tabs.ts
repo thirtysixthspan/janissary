@@ -2,10 +2,10 @@ import { messageBus } from '../bus.js';
 import { refreshGit } from './git-refresh.js';
 import { watchDir, unwatchDir } from './watch.js';
 import { pollForDir } from './poll.js';
-import { writeCreatedPayload, writeRebuiltPayload } from './manager-payload.js';
+import { writeCreatedPayload, writeRebuiltPayload } from './manager/payload.js';
 import { invalidateDirectory } from './filesystem-cache.js';
-import { closeFileNavigatorTabs } from './manager-close.js';
-import { findOpenFilesTab, withFilesState } from './manager-state.js';
+import { closeFileNavigatorTabs } from './manager/close.js';
+import { findOpenFilesTab, withFilesState } from './manager/state.js';
 import type { Managers } from '../managers.js';
 import type { FilesTabState } from './state.js';
 
