@@ -1,8 +1,8 @@
-import * as fileNavigatorRpc from './file-navigator.js';
-import { resolveTreeSelections } from '../file-navigator/selection-request.js';
-import type { FileNavigatorDetail } from '../tab/types.js';
-import type { Managers } from '../managers.js';
-import type { BulkConflictPolicy, FileOpenerResolution, FileSelectionAction, FileNavigatorSelectionRecord } from '../protocol.js';
+import * as fileNavigatorRpc from './navigator.js';
+import { resolveTreeSelections } from '../../file-navigator/selection-request.js';
+import type { FileNavigatorDetail } from '../../tab/types.js';
+import type { Managers } from '../../managers.js';
+import type { BulkConflictPolicy, FileOpenerResolution, FileSelectionAction, FileNavigatorSelectionRecord } from '../../protocol.js';
 
 export type FileNavigatorControllerAdapter = {
   fileNavigatorToggle(index: number, path: string): void;

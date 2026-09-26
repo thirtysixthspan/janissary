@@ -2,12 +2,12 @@
 // for the mutating requests that arrive by label, check it is still open), then delegate to
 // `FileNavigatorManager`. Extracted from `controller.ts` to keep it under the file-size
 // limit — see `ai/guidelines/code-guidelines.md`.
-import { reportOperationFailure } from '../file-navigator/operation-report.js';
-import type { Managers } from '../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
-export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './file-navigator-selection.js';
-export { fileNavigatorCommit, fileNavigatorNothingToCommit } from './file-navigator-commit.js';
-import { mapMaybe, type MaybePromise } from '../maybe-promise.js';
+import { reportOperationFailure } from '../../file-navigator/operation-report.js';
+import type { Managers } from '../../managers.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, UndoRedoResult } from '../../protocol.js';
+export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './navigator-selection.js';
+export { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
+import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
   const label = managers.tab.tabs[index]?.label;

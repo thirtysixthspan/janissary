@@ -1,6 +1,6 @@
-import { selectionActionFor } from '../file-navigator/selection-action.js';
-import type { Managers } from '../managers.js';
-import type { FileSelectionAction } from '../protocol.js';
+import { selectionActionFor } from '../../file-navigator/selection-action.js';
+import type { Managers } from '../../managers.js';
+import type { FileSelectionAction } from '../../protocol.js';
 
 function matchSelectionAction(managers: Managers, index: number, paths: string[]) {
   const label = managers.tab.tabs[index]?.label;
