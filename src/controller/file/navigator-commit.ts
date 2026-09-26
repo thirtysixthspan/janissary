@@ -1,6 +1,6 @@
-import type { Managers } from '../managers.js';
-import { notify } from '../notifications/index.js';
-import { NOTHING_TO_COMMIT_TEXT } from '../file-navigator/commit-report.js';
+import type { Managers } from '../../managers.js';
+import { notify } from '../../notifications/index.js';
+import { NOTHING_TO_COMMIT_TEXT } from '../../file-navigator/commit-report.js';
 
 // The `fileNavigatorCommit` RPC's controller entry, in a sibling module rather than in
 // `file-navigator.ts`, which re-exports it — that file is already close to the size limit, and this

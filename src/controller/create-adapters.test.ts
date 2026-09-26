@@ -4,7 +4,7 @@ import { createControllerAdapters } from './create-adapters.js';
 import { createTabControllerAdapter } from './tab-adapter.js';
 import { createMonitorControllerAdapter } from './monitor-adapter.js';
 import { createEditorControllerAdapter } from './editor-adapter.js';
-import { createFileNavigatorControllerAdapter } from './file-navigator-adapter.js';
+import { createFileNavigatorControllerAdapter } from './file/navigator-adapter.js';
 import { createPluginControllerAdapter } from './plugin-adapter.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.

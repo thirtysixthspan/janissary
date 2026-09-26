@@ -2,7 +2,7 @@ import type { Managers } from '../managers.js';
 import { createTabControllerAdapter, type TabControllerAdapter } from './tab-adapter.js';
 import { createMonitorControllerAdapter, type MonitorControllerAdapter } from './monitor-adapter.js';
 import { createEditorControllerAdapter, type EditorControllerAdapter } from './editor-adapter.js';
-import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './file-navigator-adapter.js';
+import { createFileNavigatorControllerAdapter, type FileNavigatorControllerAdapter } from './file/navigator-adapter.js';
 import { createPluginControllerAdapter, type PluginControllerAdapter } from './plugin-adapter.js';
 
 // Every member the five adapter surfaces contribute to the controller.

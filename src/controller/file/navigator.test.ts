@@ -20,10 +20,10 @@ import {
   fileNavigatorOpeners,
   fileNavigatorCreateFile,
   fileNavigatorCreateDirectory,
-} from './file-navigator.js';
-import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
-import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
-import type { Managers } from '../managers.js';
+} from './navigator.js';
+import { NOTIFICATIONS_LABEL } from '../../notifications/tab.js';
+import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../../notifications/queue.js';
+import type { Managers } from '../../managers.js';
 
 function makeManagers(label: string | undefined, fileNavigator: Record<string, (...args: unknown[]) => unknown>) {
   return {
