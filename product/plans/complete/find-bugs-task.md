@@ -124,7 +124,7 @@ The steps, in order:
 
 The report shape, verbatim:
 
-- `App:        web — <serve command> | tool — <command>, on <branch>@<short-sha>`
+- `App:        web — <serve command bound to <address>> | tool — <command>, on <branch>@<short-sha>`
 - `Specs:      <names> (named | picked: recently changed)`
 - `Not tested: none | <spec — reason>`
 - `New bugs:   <count> under ## development — <one line each>`

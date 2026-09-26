@@ -25,7 +25,8 @@ Read project files and the Janissary workflow references linked here. Fetch, sta
 5. Testing any code other than the primary branch. Do not reset away local commits or discard someone else's changes to reach it.
 6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling. Exercise the product itself. The required package safety gate before installation is the sole exception; it is not product testing.
 7. Exercising behavior that depends on sandbox enforcement, external networks, remote hosts, credentials, or native host windows.
-8. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
+8. Starting a web app on any address but `127.0.0.1`, or leaving one running that is bound wider. Never inspect a process or a socket to find out what an address is; read it from the command and the output.
+9. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
 
 ## Recovery on every stop
 
@@ -92,7 +93,7 @@ Named specs may include skipped behavior; keep them in the report. For a partly 
 
 Read the project's instructions in this order: `AGENTS.md` / `CLAUDE.md`, README, then the build tool's script list. For Node projects inspect `package.json` for `build`, `start`, `dev`, `serve`, or `preview`; use equivalent metadata for other toolchains. Determine how to build the checked-out code, which built entry to run, and how to point its state at scratch paths. An interpreted tool may need no build; record that deliberately. If no build-and-run recipe can be determined, restore the stash and stop with that reason.
 
-Decide whether the app serves a web UI or is a tool with no web UI. Serve web apps on `127.0.0.1`, using the project's own local-only option. Tools are invoked directly from the scratch working directory, by a path to this workspace's built executable. Never substitute an installed release or a globally installed executable for the code under test.
+Decide whether the app serves a web UI or is a tool with no web UI. Serve web apps on `127.0.0.1`, using the project's own local-only option. A web project under test must be startable with an explicit loopback address named in its own instructions — a host or bind flag, or a configuration key that defaults to one. If no such form can be determined, stop before starting anything and report the project as unable to be served locally: that is an environment limitation, not a start failure, so it is neither retried nor researched as a product defect. Tools are invoked directly from the scratch working directory, by a path to this workspace's built executable. Never substitute an installed release or a globally installed executable for the code under test.
 
 Work out how to stop the process before starting it. Redirect its home and every configurable data/cache directory into `./temp/find-bugs/`; fixtures and seed commands must target that scratch state. If the app cannot be isolated from real user state, stop and report that environment limitation. For Janissary use the fixed recipe in Step 4.
 
@@ -104,7 +105,7 @@ If `./temp/find-bugs/` exists from an interrupted run, inspect it before reusing
 
 Create `./temp/find-bugs/home/` and `./temp/find-bugs/project/`. Put throwaway Playwright scripts, pseudo-terminal drivers, holder scripts, process records, logs, and evidence under `./temp/find-bugs/` too. Use absolute scratch paths when passing them to child processes so a changed working directory cannot redirect state elsewhere. Apply the scratch home through the child process's environment `HOME` key only; do not change the agent shell's `HOME` or use `HOME` as a scratch variable. Repository install and commit commands retain the user's normal identity and environment.
 
-Build the primary-branch working tree using the recipe from Step 3. Check that `HEAD` still equals the tested commit and `origin/<primary>` before testing. Inspect the build's diff: restore incidental changes to tracked source or configuration before testing, but keep freshly generated runtime artifacts until teardown, restoring any tracked copies in Step 9. Start the freshly built app with scratch state, record its process identity and stop command, and confirm readiness from its output and an actual response. Set a bounded readiness timeout using the project's documented value, or 20 seconds if none is documented.
+Build the primary-branch working tree using the recipe from Step 3. Check that `HEAD` still equals the tested commit and `origin/<primary>` before testing. Inspect the build's diff: restore incidental changes to tracked source or configuration before testing, but keep freshly generated runtime artifacts until teardown, restoring any tracked copies in Step 9. Start the freshly built app with scratch state, record its process identity and stop command, and confirm readiness from its output and an actual response. For a web app, confirm the loopback address Step 3 established: it must be named in the start command itself, and read it back from the startup output wherever the server prints its address. Establish it that way and never by inspecting the process or the socket — an unattended run cannot answer an approval prompt, so a check that needs one is a check that never runs. A start command that names no address, or names one that is not loopback, is stopped through teardown and reported; do not start it and decide afterwards. Set a bounded readiness timeout using the project's documented value, or 20 seconds if none is documented.
 
 ### Janissary worked example
 
@@ -175,7 +176,7 @@ After the push, or after a failed push leaves the commit local, restore this run
 Give a short report in this exact shape. For an early stop, use `not reached` where a command or tested commit was never established; do not imply a spec ran merely because it was selected.
 
 ```text
-App:        web — <serve command> | tool — <command>, on <branch>@<short-sha>
+App:        web — <serve command bound to <address>> | tool — <command>, on <branch>@<short-sha>
 Specs:      <names> (named | picked: recently changed)
 Not tested: none | <spec — reason>
 New bugs:   <count> under ## development — <one line each>
