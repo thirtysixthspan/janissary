@@ -14,6 +14,14 @@ The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule.ts`, d
 
 Times accept `3:35pm`, `2pm`, or 24-hour `14:00`; dates accept `august 12th`, `aug 12`, or `8/12` (month names match by ≥3-character prefix). The first token after `schedule` (unless it is the reserved `list`, `cancel`, or `clear`) is the timer's name, which becomes the entry's id — so it appears in the schedule window and `schedule cancel <name>` works — and the remainder is the schedule form. A duplicate name within a tab is rejected; a name with no valid following schedule form returns the `Usage:` message.
 
+Every form that does not fit the grammar at all (no form after the name, an unknown form keyword, an incomplete `in <tab>`, or a `every day`/`every <weekday>` form missing its `at <time>`) returns the same full usage message, `SCHEDULE_USAGE` in `src/schedule/usage.ts`:
+
+```
+Usage: schedule NAME [in TAB] <at TIME | on DATE [at TIME] | every N(m|h|d|w) | every DAY at TIME> COMMAND | schedule list [in TAB] | schedule cancel <name> [in TAB] | schedule clear [in TAB]
+```
+
+A form that fits the grammar but carries a bad value answers with a specific message instead: `Invalid time: "<token>".`, `Invalid date. Try "on august 12th" or "on 8/12".`, `Invalid interval or day: "<token>".`, or `No command to schedule.` when nothing follows the schedule form. A bare `schedule cancel` answers `Usage: schedule cancel <name> [in TAB]`.
+
 ### Targeting another tab
 
 An optional `in <tab>` clause immediately after the timer name (`schedule NAME in TAB <form> COMMAND`) attaches the entry to the named tab instead of the issuing tab. The entry is stored under the target tab's label, so it appears in *that* tab's schedule window and view, persists in *that* agent's state file, and fires in *that* tab — the issuing tab only records the confirmation message (`Scheduled <name> in <tab>: …`). Valid targets are agent tabs and harness tabs; image/page/markdown views are rejected with `Tab "<label>" cannot run scheduled commands.`, and a missing tab with `No tab named "<label>".` Duplicate-name checks apply within the target tab. Tab-completion (`completeScheduleTarget` in `src/completion-handlers.ts`) completes the label after `in` against all open tab labels.
