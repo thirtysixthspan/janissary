@@ -9,6 +9,7 @@ import type {
   ConversationTurnView,
 } from '../protocol.js';
 import { trustWorkspace, untrustWorkspace } from '../workspace/index.js';
+import { isModelPair, isRecord } from '../value-guards.js';
 
 export const CONVERSATION_SCHEMA_VERSION = 1;
 
@@ -27,21 +28,11 @@ type StoreOptions = {
   write?: typeof atomicWriteFile;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isPair(value: unknown): value is ConversationModelPair {
-  return isRecord(value)
-    && (value.harness === 'claude' || value.harness === 'opencode')
-    && typeof value.model === 'string';
-}
-
 function isTurn(value: unknown): value is ConversationTurnView {
   return isRecord(value)
     && typeof value.query === 'string'
     && typeof value.response === 'string'
-    && isPair(value.pair)
+    && isModelPair(value.pair)
     && (value.error === undefined || typeof value.error === 'string')
     && value.streaming === undefined;
 }
@@ -53,7 +44,7 @@ function isConversation(value: unknown): value is Conversation {
     && typeof value.title === 'string'
     && typeof value.createdAt === 'number'
     && typeof value.updatedAt === 'number'
-    && isPair(value.pair)
+    && isModelPair(value.pair)
     && Array.isArray(value.turns)
     && value.turns.every((turn) => isTurn(turn));
 }
@@ -86,7 +77,7 @@ export class ConversationStore {
     if (this.lastUsedPair === undefined) {
       try {
         const parsed: unknown = JSON.parse(readFileSync(this.lastUsedFile(), 'utf8'));
-        this.lastUsedPair = isPair(parsed) ? parsed : undefined;
+        this.lastUsedPair = isModelPair(parsed) ? parsed : undefined;
       } catch {
         this.lastUsedPair = undefined;
       }

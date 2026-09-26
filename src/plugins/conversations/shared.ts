@@ -1,3 +1,5 @@
+import { isModelPair, isRecord } from '../api.js';
+
 export const CONVERSATIONS_PAYLOAD_SCHEMA_VERSION = 1;
 
 export type ConversationModelPair = { harness: 'claude' | 'opencode'; model: string };
@@ -35,16 +37,6 @@ export type ConversationTabPayload = {
 };
 export type ConversationsPayload = ConversationListPayload | ConversationTabPayload;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isPair(value: unknown): value is ConversationModelPair {
-  return isRecord(value)
-    && (value.harness === 'claude' || value.harness === 'opencode')
-    && typeof value.model === 'string';
-}
-
 function isSummary(value: unknown): value is ConversationSummary {
   return isRecord(value)
     && typeof value.id === 'string'
@@ -56,7 +48,7 @@ function isTurn(value: unknown): value is ConversationTurn {
   return isRecord(value)
     && typeof value.query === 'string'
     && typeof value.response === 'string'
-    && isPair(value.pair)
+    && isModelPair(value.pair)
     && (value.error === undefined || typeof value.error === 'string')
     && (value.streaming === undefined || typeof value.streaming === 'boolean');
 }
@@ -65,7 +57,7 @@ function isWindow(value: unknown): value is ConversationWindow {
   return isRecord(value)
     && typeof value.id === 'string'
     && typeof value.title === 'string'
-    && isPair(value.pair)
+    && isModelPair(value.pair)
     && Array.isArray(value.turns)
     && value.turns.every((turn) => isTurn(turn))
     && typeof value.hasOlder === 'boolean'
@@ -79,7 +71,7 @@ export function isConversationsData(value: unknown): value is ConversationsData 
     && Array.isArray(value.windows)
     && value.windows.every((window) => isWindow(window))
     && Array.isArray(value.models)
-    && value.models.every((pair) => isPair(pair));
+    && value.models.every((pair) => isModelPair(pair));
 }
 
 export function isConversationsPayload(value: unknown): value is ConversationsPayload {
@@ -91,7 +83,7 @@ export function isConversationsPayload(value: unknown): value is ConversationsPa
     && (value.draftQuery === undefined || typeof value.draftQuery === 'string')
     && isWindow(value.conversation)
     && Array.isArray(value.models)
-    && value.models.every((pair) => isPair(pair));
+    && value.models.every((pair) => isModelPair(pair));
 }
 
 export function isEmptyIntent(value: unknown): value is Record<string, never> {
@@ -107,7 +99,7 @@ export function isSendIntent(value: unknown): value is { query: string } {
 }
 
 export function isSelectModelIntent(value: unknown): value is ConversationModelPair {
-  return isPair(value);
+  return isModelPair(value);
 }
 
 export function isRenameIntent(value: unknown): value is { title: string } {

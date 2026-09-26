@@ -188,6 +188,10 @@ export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 
 export type { PluginFailedRequest, PluginIntentRequest, PluginTabView } from '../protocol.js';
+// The two guards a plugin payload decoder opens with, re-exported for the same reason the protocol
+// types above are: a plugin cannot import `../value-guards.js` across the plugin import boundary, and
+// every bundled plugin's `shared.ts` had its own copy of both.
+export { isModelPair, isRecord } from '../value-guards.js';
 // Re-exported so a plugin can type a `schedules` notification handler without importing
 // `../protocol.js`, which the plugin import boundary forbids.
 export type {
