@@ -67,6 +67,12 @@ is deleted or becomes unreadable after the tab opens, the reference answers with
 rather than a successful empty document, so the consuming view can report a load failure without
 mistaking missing bytes for real content.
 
+A request the server cannot make sense of — a path that is not a valid URL, or a reference with a
+broken percent escape — is answered `400 bad request`, and any other failure while answering one is
+answered `500 internal error`. If the failure comes after the response has started, that response is
+cut off instead. Either way the failure is contained to that one request: the server, and every tab
+it serves, keeps running and answers the next request normally.
+
 This governs views that fetch. An editor opened on a path that does not exist yet does not fetch at
 all — it has been told the file is not there, and starts on the empty buffer its first save will
 write (see [[editor-tab]]) rather than asking for content and reporting the expected refusal as a

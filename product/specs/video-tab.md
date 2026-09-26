@@ -40,6 +40,11 @@ is rejected as unsatisfiable. A request with no range still returns the whole fi
 Markdown, and the editor are served exactly as before. This is what makes scrubbing a long video
 responsive, and what keeps a multi-gigabyte file from being read into memory to serve it.
 
+Scrubbing abandons partial responses constantly, and each abandoned one releases its hold on the file
+as soon as the player stops listening, so seeking through a long video never accumulates open files.
+If the file disappears between the server sizing it and reading it, only that one partial response
+is cut off; the server keeps running and the view reports its load failure as usual.
+
 ### Layout
 
 A video tab's body has no command bar and no transcript. It shows, stacked top to bottom:
