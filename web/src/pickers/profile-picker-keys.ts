@@ -1,5 +1,5 @@
 import type { ProfileRow } from '@shared/protocol';
-import { normalizeIndex, seekSelectable } from './sectioned-rows';
+import { sectionedKeyDecision, seekSelectable } from './sectioned-rows';
 
 export type VisibleProfileRow = ProfileRow & { header?: boolean };
 
@@ -23,21 +23,18 @@ export type ProfilePickerKeyOutcome = {
   action?: { type: 'pick'; name: string } | { type: 'close' };
 };
 
-// Mirrors `handleTaskPickerKey`: Escape always closes, and a stale selection is re-seated without acting.
+// The keys a profile row means something by are its own; everything before them is `sectionedKeyDecision`.
 export function handleProfilePickerKey(
   rows: VisibleProfileRow[],
   index: number,
   key: string,
 ): ProfilePickerKeyOutcome {
-  if (key === 'Escape') return { index: normalizeIndex(rows, index), action: { type: 'close' } };
-  if (rows.length === 0) return { index: 0 };
-  const current = normalizeIndex(rows, index);
-  if (current !== index) return { index: current };
-  const row = rows[index];
-  if (row.header) return { index };
+  const decision = sectionedKeyDecision(rows, index, key);
+  if (decision?.kind === 'close') return { index: decision.index, action: { type: 'close' } };
+  if (decision) return { index: decision.index };
   if (key === 'ArrowUp') return { index: seekSelectable(rows, index, -1) };
   if (key === 'ArrowDown') return { index: seekSelectable(rows, index, 1) };
-  if (key === 'Enter') return { index, action: { type: 'pick', name: row.name } };
+  if (key === 'Enter') return { index, action: { type: 'pick', name: rows[index].name } };
   return { index };
 }
 

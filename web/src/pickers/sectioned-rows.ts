@@ -29,3 +29,26 @@ export function normalizeIndex(rows: readonly SectionedRow[], index: number): nu
   const before = seekSelectable(rows, clamped, -1);
   return before === clamped ? 0 : before;
 }
+
+// What a keypress means before a sectioned picker has to know what its rows hold: close the picker,
+// or hold the selection where it is.
+export type SectionedKeyDecision = { kind: 'close'; index: number } | { kind: 'hold'; index: number };
+
+// The opening of a sectioned picker's key handling, which is the same for every one of them because
+// it says nothing about what the rows mean: Escape always closes, an empty list has no selection,
+// and a selection the server's list left out of range or on a header is re-seated by the keystroke
+// without acting — so Enter never picks a row that was not highlighted when it was pressed.
+//
+// `null` means the key is the picker's own to read, and it is then the picker's job to look the row
+// up; a decision here is final, which is why the row is not fetched for a keystroke that never acts
+// on it.
+export function sectionedKeyDecision(
+  rows: readonly SectionedRow[], index: number, key: string,
+): SectionedKeyDecision | null {
+  if (key === 'Escape') return { kind: 'close', index: normalizeIndex(rows, index) };
+  if (rows.length === 0) return { kind: 'hold', index: 0 };
+  const current = normalizeIndex(rows, index);
+  if (current !== index) return { kind: 'hold', index: current };
+  if (rows[index].header) return { kind: 'hold', index };
+  return null;
+}
