@@ -4,6 +4,7 @@ import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { messageBus } from '../bus.js';
 import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
+import { spawnFrameState } from './process-state.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js';
 
@@ -46,14 +47,7 @@ export class RemoteProcesses {
   // One entry per process still running, in spawn order. An exited process has already been removed
   // by `finish`, so an empty list means the workspace is holding nothing.
   states(): RemoteProcessState[] {
-    return [...this.entries.values()].map(({ frame }) => ({
-      id: frame.id,
-      program: frame.program,
-      mode: frame.mode,
-      ...(frame.harness !== undefined && { harness: frame.harness }),
-      ...(frame.autoApprove !== undefined && { autoApprove: frame.autoApprove }),
-      ...(frame.agentName !== undefined && { agentName: frame.agentName }),
-    }));
+    return [...this.entries.values()].map(({ frame }) => spawnFrameState(frame));
   }
 
   input(id: string, data: string): void { this.writers.get(id)?.(data); }
