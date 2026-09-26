@@ -24,10 +24,9 @@ Read project files and the Janissary workflow references linked here. Execute th
 4. Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL. Never drive the human's live app or the Janissary installation that launched this tab.
 5. Testing any code other than the branch the workspace preparation left checked out, or changing which branch that is. Do not reset away local commits or discard someone else's changes.
 6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the preparation and launch tasks themselves run. Exercise the product itself.
-7. Exercising behavior that depends on sandbox enforcement, external networks, remote hosts, credentials, or native host windows.
-8. Starting a second app, on any address but `127.0.0.1`, or leaving one running that is bound wider. The app under test is the one Step 3 started.
-9. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
-10. Proceeding while another run holds this project's lock, or removing a lock this run did not take.
+7. Starting a second app, on any address but `127.0.0.1`, or leaving one running that is bound wider. The app under test is the one Step 3 started.
+8. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
+9. Proceeding while another run holds this project's lock, or removing a lock this run did not take.
 
 ## Recovery on every stop
 
@@ -63,9 +62,9 @@ execute $janissary/ai/tasks/research/find-bugs.md editor-tab file-navigator-tab
 
 With names given, match each against this directory and test those specs only. If any name is unknown, report the mismatched names and every available spec name, release the lock, and stop before building. Deduplicate repeated names.
 
-With no names, pick up to **five** specs by the date of the last commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Exclude specs whose behavior is entirely environment-dependent. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, release the lock and report why nothing could be tested.
+With no names, pick up to **five** specs by the date of the last commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, release the lock and report why nothing could be tested.
 
-Named specs may include skipped behavior; keep them in the report. For a partly environment-dependent spec, test its remaining behaviors and list each omitted behavior with a reason under `Not tested`.
+A spec may promise behavior this environment cannot reach. Test everything it does reach, and list each behavior it could not under `Not tested` with the reason, rather than setting the spec aside.
 
 ## Step 3 — Launch the app
 
@@ -91,7 +90,7 @@ Read each selected spec in full. Derive a bounded checklist of its user-visible 
 
 For a web app, use the attached browser to perform actual interactions and inspect visible results. For a non-web tool, run commands and flags, supply stdin, and inspect stdout, stderr, exit status, and scratch output files. Test interactive prompts, TUI behavior, and key bindings with a scratch driver that spawns the executable under a pseudo-terminal and sends keystrokes. Use an existing `node-pty` from the project or Janissary installation, or Python's standard-library `pty`; install nothing. If none is available, list the interactive behaviors under `Not tested` with that reason and continue with non-interactive behavior.
 
-Skip sandbox, network, remote-host, credential, and native-window behavior. Local loopback access to this run's app and a scratch local remote are allowed. Janissary examples to skip include sandbox isolation, SSH, remote-server sessions, releases, sleep/resume integration, and launching a real harness agent that needs a CLI and credentials absent from the scratch home. Test the local portions of mixed specs. Record every skipped behavior and its reason.
+Exercise everything the spec promises that this run can reach, including behavior that depends on the sandbox it is inside, on a network, a remote host, a credential, or a native host window. Where the environment stands in the way, that is a fact to report and not a reason to skip in advance: finish every other behavior the spec describes, and list each one you could not exercise under `Not tested` with what stopped it. Local loopback access to this run's app and a scratch local remote are available. A failure the environment could plausibly have caused is not a bug; Step 6 says what to do with one.
 
 For each divergence, keep the exact inputs or clicks, scratch fixture content, relevant output, expected result, actual result, and spec quote. Reproduce it before filing. Screenshots and terminal captures may help inspection, but remain scratch evidence: backlog entries are text only and all captures are deleted at teardown.
 
