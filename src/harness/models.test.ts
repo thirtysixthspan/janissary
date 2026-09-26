@@ -136,4 +136,26 @@ describe('loadHarnessModels', () => {
 
     expect(modelsFor('claude')).toContain('claude-sonnet-5');
   });
+
+  it.each([
+    ['a list instead of an object', ['custom-model']],
+    ['a bare string', 'custom-model'],
+    ['null', null],
+    ['a string instead of a model list', { claude: 'custom-model' }],
+    ['a list holding a non-string', { claude: ['custom-model', 7] }],
+  ])('falls back to the bundled catalog and warns when the override holds %s', (_case, contents) => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'harness-models.json'), JSON.stringify(contents));
+
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    loadHarnessModels(tmpDir);
+    expect(writeSpy).toHaveBeenCalledWith(
+      expect.stringContaining('.janissary/harness-models.json is not an object of model-id lists — using the bundled catalog'),
+    );
+    writeSpy.mockRestore();
+
+    expect(modelsFor('claude')).toContain('claude-sonnet-5');
+    expect(isKnownModel('claude', 'custom-model')).toBe(false);
+  });
 });

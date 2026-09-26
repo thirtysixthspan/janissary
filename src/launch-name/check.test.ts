@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { agentNames } from '../agent/names.js';
 import { checkLaunchName, poolCandidates, suffixCandidates, type LaunchNameRow } from './check.js';
 
@@ -97,5 +97,24 @@ describe('candidate sequences', () => {
     const drawn = [...poolCandidates()];
     const byName = (a: string, b: string) => a.localeCompare(b);
     expect(drawn.toSorted(byName)).toEqual([...agentNames].toSorted(byName));
+  });
+
+  // A pool name compared against lowercased labels in its own casing is never excluded once drawn,
+  // so the draw repeats it forever. The draw is capped so a regression fails here instead of hanging.
+  it('draws a mixed-case pool name once and then ends', async () => {
+    vi.resetModules();
+    vi.doMock('../agent/names.js', () => ({ agentNames: ['Alice', 'bob'] }));
+    try {
+      const { poolCandidates: draw } = await import('./check.js');
+      const drawn: string[] = [];
+      for (const name of draw()) {
+        drawn.push(name);
+        if (drawn.length > 5) break;
+      }
+      expect(drawn.toSorted((a, b) => a.localeCompare(b))).toEqual(['Alice', 'bob']);
+    } finally {
+      vi.doUnmock('../agent/names.js');
+      vi.resetModules();
+    }
   });
 });

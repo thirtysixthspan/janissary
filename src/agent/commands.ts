@@ -57,7 +57,7 @@ export function resolveAgentName(
   if (named) return named;
 
   const lowerExisting = new Set(existingLabels.map((l) => l.toLowerCase()));
-  const pool = agentNames.filter((n) => !lowerExisting.has(n));
+  const pool = agentNames.filter((n) => !lowerExisting.has(n.toLowerCase()));
   if (pool.length === 0) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }

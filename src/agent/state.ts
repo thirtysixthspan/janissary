@@ -18,8 +18,12 @@ export function ensureStateDirectory(): void {
 // (an IP address, e.g. `10.27.1.94`) — and the appended `.json` defeats the bare `..` shape.
 const VALID_NAME = /^[\w.-]+$/;
 
+export function isValidAgentName(name: string): boolean {
+  return VALID_NAME.test(name);
+}
+
 export function agentStatePath(name: string): string {
-  if (!VALID_NAME.test(name)) throw new Error(`Invalid agent name: "${name}"`);
+  if (!isValidAgentName(name)) throw new Error(`Invalid agent name: "${name}"`);
   return path.join(stateDirectory, `${name}.json`);
 }
 
