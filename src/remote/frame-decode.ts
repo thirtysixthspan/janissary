@@ -1,12 +1,10 @@
 import type { RemoteFrame } from './protocol.js';
-import {
-  malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
-} from './frame-decode-shared.js';
+import { malformed, type DecodeResult } from './frame-decode-shared.js';
 import { decodeFilesystemFrame } from './frame-decode-filesystem.js';
 import { decodeSessionStateResult } from './frame-decode-sessions.js';
 import { decodeShellHistory } from './frame-decode-history.js';
 import {
-  decodeCloneAnswer, decodeCloneOffer, decodeCloned, decodeOrigin, decodeRootRefused,
+  decodeCloneAnswer, decodeCloneOffer, decodeRootRefused,
 } from './frame-decode-root.js';
 import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition,
@@ -15,108 +13,10 @@ import {
   decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError,
 } from './frame-decode-acp.js';
 import { decodeProvision } from './frame-decode-provision.js';
-
-function positiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
-}
-
-function decodeAttach(record: Record<string, unknown>): DecodeResult {
-  const { session, restore } = record;
-  const origin = decodeOrigin(record.origin);
-  if (typeof session !== 'string' || !/^[a-f\d-]{36}$/.test(session)
-    || !(restore === undefined || typeof restore === 'boolean') || origin === false) return malformed('attach');
-  return {
-    type: 'attach', session,
-    ...(restore !== undefined && { restore }),
-    ...(origin !== undefined && { origin }),
-  };
-}
-
-function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove } = record;
-  if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
-    || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
-    || !positiveInteger(cols) || !positiveInteger(rows)
-    || !(offline === undefined || typeof offline === 'boolean')
-    || !(browser === undefined || typeof browser === 'boolean')
-    || !(autoApprove === undefined || typeof autoApprove === 'boolean')
-    || !optionalNonEmptyString(agentName)) return malformed('spawn');
-  return {
-    type: 'spawn', id, program, command, mode, cols, rows,
-    ...(harness !== undefined && { harness }),
-    ...(offline !== undefined && { offline }),
-    ...(browser !== undefined && { browser }),
-    ...(autoApprove !== undefined && { autoApprove }),
-    ...(agentName !== undefined && { agentName }),
-  };
-}
-
-function decodeAddressedData(type: 'input' | 'output', record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || typeof record.data !== 'string') return malformed(type);
-  return { type, id: record.id, data: Buffer.from(record.data, 'base64').toString('utf8') };
-}
-
-function decodeResize(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !positiveInteger(record.cols) || !positiveInteger(record.rows)) {
-    return malformed('resize');
-  }
-  return { type: 'resize', id: record.id, cols: record.cols, rows: record.rows };
-}
-
-function decodeKill(record: Record<string, unknown>): DecodeResult {
-  return nonEmptyString(record.id) ? { type: 'kill', id: record.id } : malformed('kill');
-}
-
-function decodeBrowserExited(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || !optionalNonEmptyString(record.message)) return malformed('browser-exited');
-  return record.message === undefined
-    ? { type: 'browser-exited', id: record.id }
-    : { type: 'browser-exited', id: record.id, message: record.message };
-}
-
-function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
-  const { dir, notice, cleaned } = record;
-  const cloned = decodeCloned(record.cloned);
-  if (!nonEmptyString(dir) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)
-    || cloned === false) return malformed('workspace-ready');
-  return {
-    type: 'workspace-ready', dir,
-    ...(notice !== undefined && { notice }),
-    ...(cleaned !== undefined && { cleaned }),
-    ...(cloned !== undefined && { cloned }),
-  };
-}
-
-function decodeWorkspaceFailed(record: Record<string, unknown>): DecodeResult {
-  return nonEmptyString(record.message)
-    ? { type: 'workspace-failed', message: record.message }
-    : malformed('workspace-failed');
-}
-
-// `path` and `reason` travel together or not at all: one without the other describes neither a
-// running label nor a failed removal.
-function decodeNameInUse(record: Record<string, unknown>): DecodeResult {
-  const { label, path, reason } = record;
-  if (!nonEmptyString(label) || !optionalNonEmptyString(path) || !optionalNonEmptyString(reason)
-    || (path === undefined) !== (reason === undefined)) return malformed('name-in-use');
-  return path === undefined || reason === undefined
-    ? { type: 'name-in-use', label }
-    : { type: 'name-in-use', label, path, reason };
-}
-
-function decodeExit(record: Record<string, unknown>): DecodeResult {
-  if (!nonEmptyString(record.id) || typeof record.exitCode !== 'number' || !Number.isSafeInteger(record.exitCode)) {
-    return malformed('exit');
-  }
-  return { type: 'exit', id: record.id, exitCode: record.exitCode };
-}
-
-function decodeTranscript(record: Record<string, unknown>): DecodeResult {
-  if (!Array.isArray(record.blocks) || record.blocks.some((block) => typeof block !== 'string')) {
-    return malformed('transcript');
-  }
-  return { type: 'transcript', blocks: record.blocks.map((block) => Buffer.from(block, 'base64').toString('utf8')) };
-}
+import {
+  decodeAddressedData, decodeAttach, decodeBrowserExited, decodeExit, decodeKill, decodeNameInUse,
+  decodeResize, decodeSpawn, decodeTranscript, decodeWorkspaceFailed, decodeWorkspaceReady,
+} from './frame-decode-lifecycle.js';
 
 // The `default` branch of the switch below. The `never` parameter is the point: the call only
 // typechecks while every frame type in the union has a case, so a type added to `RemoteFrame` but
