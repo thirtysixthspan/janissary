@@ -1,4 +1,4 @@
-import { basename } from '../shared/rel-path';
+import { basename } from '../../shared/rel-path';
 
 // Pure helpers for the commit-message field — what it opens pre-filled with, and whether what the
 // user left in it is worth sending. Kept out of the component so both are testable without a render,

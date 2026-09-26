@@ -3,7 +3,7 @@ import type React from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
-import { fileActivation } from './file-activation';
+import { fileActivation } from './file/activation';
 
 // The right-clicked row and the pointer point the menu opens at, or null when no menu is open.
 export type PendingContextMenu = { row: FileNavigatorRow; x: number; y: number };

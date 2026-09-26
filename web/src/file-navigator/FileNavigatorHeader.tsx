@@ -4,7 +4,7 @@ import type {
   FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget,
 } from '@shared/protocol';
 import { nextDock, dockTooltip } from '../shared/dock-cycle';
-import { nextDetail, detailTooltip } from './file-navigator-detail';
+import { nextDetail, detailTooltip } from './file/navigator-detail';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../shared/icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { FileNavigatorPullButton } from './FileNavigatorPullButton';

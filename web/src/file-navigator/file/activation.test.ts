@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fileActivation } from './file-activation';
+import { fileActivation } from './activation';
 
 describe('fileActivation', () => {
   it('asks for the edit gesture on a plain activation of a markdown file', () => {

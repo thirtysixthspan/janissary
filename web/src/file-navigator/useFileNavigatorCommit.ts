@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { defaultCommitMessage } from './file-navigator-commit-message';
+import { defaultCommitMessage } from './file/navigator-commit-message';
 
 // What the commit-message field is currently open over: the paths the commit will name (empty for
 // the header button's whole-tree form) and the text it opened pre-filled with. The `id` rises on

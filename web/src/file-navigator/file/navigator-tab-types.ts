@@ -1,7 +1,7 @@
 import type React from 'react';
 import type { FileNavigatorView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
-import type { CommandInputDropHandle } from '../shared/drop-handles';
+import type { JanusClient } from '../../ws';
+import type { CommandInputDropHandle } from '../../shared/drop-handles';
 
 export type FileNavigatorTabProperties = {
   files: FileNavigatorView;

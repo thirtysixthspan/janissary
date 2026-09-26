@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { computeRename, hasRenameCollision, siblingNames } from './file-navigator-rename';
+import { computeRename, hasRenameCollision, siblingNames } from './file/navigator-rename';
 
 type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { FileNavigatorDetail, FileNavigatorRow } from '@shared/protocol';
 import { expandedIcon, collapsedIcon } from '../shared/icons';
-import { rowDetail } from './file-navigator-detail';
+import { rowDetail } from './file/navigator-detail';
 import { InlineEditInput } from '../shared/InlineEditInput';
 
 type Properties = {

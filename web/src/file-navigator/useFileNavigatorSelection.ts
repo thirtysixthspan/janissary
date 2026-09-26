@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { clearNavigatorSelection, publishNavigatorSelection } from './file-navigator-selection-registry';
-import { siblingSelection } from './file-navigator-siblings';
+import { clearNavigatorSelection, publishNavigatorSelection } from './file/navigator-selection-registry';
+import { siblingSelection } from './file/navigator-siblings';
 import { dirname } from '../shared/rel-path';
 
 export type FileNavigatorSelection = {

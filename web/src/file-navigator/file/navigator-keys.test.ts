@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleFileNavigatorKey, typeAheadMatch } from './file-navigator-keys';
+import { handleFileNavigatorKey, typeAheadMatch } from './navigator-keys';
 import type { FileNavigatorRow } from '@shared/protocol';
 
 function row(path: string, overrides: Partial<FileNavigatorRow> = {}): FileNavigatorRow {

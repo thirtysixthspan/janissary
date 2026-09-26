@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { handleTreeChord } from './file-navigator-chords';
+import { handleTreeChord } from './navigator-chords';
 
 const rows: FileNavigatorRow[] = [
   { path: '..', name: '..', depth: 0, dir: true },

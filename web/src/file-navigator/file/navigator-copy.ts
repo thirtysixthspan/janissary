@@ -1,6 +1,6 @@
-import { setClipboard } from './file-navigator-clipboard';
-import { joinEditorPaths, remoteNavigatorPath } from './file-navigator-relative-path';
-import { copyText } from '../shared/system-clipboard';
+import { setClipboard } from './navigator-clipboard';
+import { joinEditorPaths, remoteNavigatorPath } from './navigator-relative-path';
+import { copyText } from '../../shared/system-clipboard';
 
 // Copying rows fills both clipboards at once. The app-wide file clipboard is what the navigator's
 // own Paste, the row marks, and the undo stack read; the system clipboard carries the same rows as
