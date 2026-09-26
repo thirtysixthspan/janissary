@@ -4,17 +4,6 @@
 
 ## development
 
-* Scope the pending route chooser to the tab that raised it, so a second unknown command elsewhere cannot overwrite it and other tabs' queues keep draining.
-
-Existing Debt: `CommandManager` holds one app-wide `pendingRoute` slot that carries a tab label, which pauses every tab's queue drain while any chooser is open, is overwritten unconditionally by the next unknown command in any tab, resumes only the owning tab, and is never cleared when that tab closes. Severity: 5/10
-
-Existing Risk: 5/10 - While tab A's chooser is open, a scheduled or queued unknown command in tab B replaces it, so A's already-dequeued command is lost with no message, A's remaining queue stalls, and B's queue never resumes after the choice.
-
-Proposal Risk: 2/10 - The slot is only ever claimed by one tab at a time and released on close, though a second tab's unknown command now has to wait or be refused, which a user may see as a new message where there was silence before.
-
-Proposal: In `src/command/manager.ts`, `pendingRoute` is set by the callback `resolveUnknownCommand` in `src/command/router.ts` invokes (`(p) => { this.pendingRoute = p; }`), `drainQueue` passes `() => this.pendingRoute !== null` to `drainQueueOp` in `src/command/queue.ts`, which returns early for every label while it is set, and `chooseRoute` drains only `pending.label`. `command` is not listed in `MANAGER_TAB_RELEASE` in `src/managers.ts`. Make three changes. First, when a route becomes pending while another is already pending for a different tab, do not overwrite it: append `Another command is waiting for a route choice; run this again once it is answered.` (or requeue the command at the head of that tab's queue) and leave the existing slot alone. Second, pass `() => this.pendingRoute?.label === label` to `drainQueueOp` so only the owning tab pauses. Third, add `closeTab(label: string): void` to `CommandManager` that clears the slot when it belongs to `label` and emits `state:dirty`, and add `'command'` to `MANAGER_TAB_RELEASE` (the compile-time `MANAGER_TAB_RELEASE_IS_TYPED` check confirms the signature). The chooser text itself stays global because `routeView` feeds one app-level overlay. `src/command/manager.test.ts` ("stops the drain while a route is pending and resumes via chooseRoute") and the route cases in `src/controller.test.ts` cover one tab; add cases for a second tab's drain proceeding while A's chooser is open, a second unknown command not replacing A's slot, and the slot clearing when A closes. Update `product/specs/agent-command-queue.md` if it describes the pause as global.
-
-
 * Keep the task and profile pickers' selection on a real, selectable row when the server's list changes under an open picker.
 
 Existing Debt: Both sectioned pickers hold a raw row index that nothing re-clamps when the server rebroadcasts the task or profile list, and both key handlers dereference `rows[index]` and bail out on a header row before they look at Escape, with the header-aware seek logic copied between the two modules. Severity: 4/10

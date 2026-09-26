@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CommandManager } from './manager.js';
 import { TabManager } from '../tab/manager.js';
+import { makeTab } from '../tab/index.js';
+import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
@@ -331,5 +333,63 @@ describe('CommandManager drain and route chooser', () => {
     expect(managers.tab.queueFor('janus')).toEqual([]);
 
     vi.doUnmock('./router.js');
+  });
+});
+
+describe('CommandManager route chooser scoped to its tab', () => {
+  const ROUTE_BUSY = 'Another command is waiting for a route choice; run this again once it is answered.';
+
+  // `select 1 as n` with no database open is ambiguous, so it opens the chooser in `janus`.
+  function withChooserInJanus(): { managers: Managers; recorder: string[] } {
+    const setup = makeManagers();
+    setup.managers.tab.insertTabInGroup(makeTab('b', 'blue', 2));
+    setup.managers.command.dispatchTo('janus', 'select 1 as n');
+    expect(setup.managers.command.routeView()?.cmd).toBe('select 1 as n');
+    return setup;
+  }
+
+  it('keeps draining another tab\'s queue while the chooser is open', async () => {
+    const { managers, recorder } = withChooserInJanus();
+    managers.tab.enqueue('b', 'shell echo b');
+    managers.tab.addBusy('b');
+    managers.tab.deleteBusy('b');
+    await Promise.resolve();
+
+    expect(recorder).toEqual(['shell:echo b']);
+    expect(managers.tab.queueFor('b')).toEqual([]);
+  });
+
+  it('refuses a second unknown command from another tab without replacing the chooser', () => {
+    const { managers, recorder } = withChooserInJanus();
+    managers.command.dispatchTo('b', 'select 2 as n');
+
+    expect(managers.command.routeView()?.cmd).toBe('select 1 as n');
+    expect(managers.tab.byLabel('b')!.log.at(-1)).toEqual({ input: 'select 2 as n', output: ROUTE_BUSY });
+
+    managers.command.chooseRoute(0);
+    expect(recorder).toEqual(['shell:select 1 as n']);
+  });
+
+  it('refuses a second unknown command in the owning tab without replacing the chooser', () => {
+    const { managers } = withChooserInJanus();
+    managers.command.dispatchTo('janus', 'select 2 as n');
+
+    expect(managers.command.routeView()?.cmd).toBe('select 1 as n');
+    expect(managers.tab.byLabel('janus')!.log.at(-1)).toEqual({ input: 'select 2 as n', output: ROUTE_BUSY });
+  });
+
+  it('drops the chooser when its own tab closes, and only then', () => {
+    const { managers } = withChooserInJanus();
+    const dirty = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', dirty);
+
+    managers.command.closeTab('b');
+    expect(managers.command.routeView()).not.toBeNull();
+    expect(dirty).not.toHaveBeenCalled();
+
+    managers.command.closeTab('janus');
+    expect(managers.command.routeView()).toBeNull();
+    expect(dirty).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
   });
 });
