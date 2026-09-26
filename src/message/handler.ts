@@ -1,5 +1,5 @@
 import type { Controller } from '../controller.js';
-import type { ClientMessage, ServerEvent } from '../protocol.js';
+import type { ClientMessage } from '../protocol.js';
 import { dispatchFileNavigatorMessage } from './file-navigator.js';
 import { dispatchPluginMessage } from './plugin.js';
 import { dispatchEditorMessage } from './editor.js';
@@ -8,17 +8,7 @@ import {
   clientReplyMode, unhandledClientMethod,
 } from '../client-message.js';
 import { errorText } from '../error-text.js';
-
-type Reply = (event: ServerEvent) => void;
-type DeferredCallback = (resolve: (value: unknown) => void) => void;
-
-function isDeferredCallback(value: unknown): value is DeferredCallback {
-  return typeof value === 'function';
-}
-
-function isPromise(value: unknown): value is Promise<unknown> {
-  return value instanceof Promise;
-}
+import { settleReply, type Reply } from './reply.js';
 
 async function projectFiles(controller: Controller): Promise<unknown> {
   try {
@@ -141,31 +131,7 @@ export function handle(controller: Controller, message: ClientMessage, reply: Re
   const mode = clientReplyMode(message.method);
   if (!mode) return;
   try {
-    const result = dispatch(controller, message, reply);
-    if (mode === 'deferred') {
-      const resolve = (value: unknown) => {
-        reply({ t: 'rpc-reply', id: message.id, result: value });
-      };
-      if (isDeferredCallback(result)) result(resolve);
-      else {
-        void Promise.resolve(result).then(resolve, (error: unknown) => {
-          reply({ t: 'rpc-reply', id: message.id, error: errorText(error) });
-        });
-      }
-      return;
-    }
-    if (isPromise(result)) {
-      void result.then(
-        (value) => reply({ t: 'rpc-reply', id: message.id, result: mode === 'ack' ? 'ok' : value }),
-        (error: unknown) => reply({ t: 'rpc-reply', id: message.id, error: errorText(error) }),
-      );
-      return;
-    }
-    reply({
-      t: 'rpc-reply',
-      id: message.id,
-      result: mode === 'ack' ? 'ok' : result,
-    });
+    settleReply(reply, message.id, mode, dispatch(controller, message, reply));
   } catch (error) {
     reply({ t: 'rpc-reply', id: message.id, error: errorText(error) });
   }
