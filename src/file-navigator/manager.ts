@@ -1,6 +1,4 @@
-import { messageBus } from '../bus.js';
 import { isPrimaryBranch } from '../git/status.js';
-import { refreshGit } from './git-refresh.js';
 import { openOrRetarget, type OpenPort } from './open.js';
 import { openFilesCommand } from './open-command.js';
 import {
@@ -8,36 +6,25 @@ import {
   replayMutation, type MutationContext,
 } from './manager-mutations.js';
 import { toggleDir, collapseAllDirs, rerootTree, revealPath, type NavPort } from './navigation.js';
-import { watchDir, unwatchDir } from './watch.js';
-import { pollForDir } from './poll.js';
-import { writeCreatedPayload, writeRebuiltPayload } from './manager-payload.js';
 import { detailOfTab, expandedPathsOf, setTabDetail } from './manager-profile.js';
 import { makeNavigationPort, makeOpenPort } from './manager-ports.js';
+import { WatchedFilesTabs } from './watched-tabs.js';
 import type { PortClosures } from './port.js';
 import { openersForRow } from './openers-for-row.js';
 import { restoreTreeView, type SavedTreeView } from './restore.js';
-import type { FilesTabState } from './state.js';
 import type { FileNavigatorDetail } from '../tab/types.js';
-import type { Managers } from '../managers.js';
-import { invalidateDirectory } from './filesystem-cache.js';
 import { runPull } from './manager-pull.js';
 import { runCommit } from './manager-commit.js';
-import { closeFileNavigatorTabs } from './manager-close.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileOpenerResolution, UndoRedoResult } from '../protocol.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { createNavigatorFile, openNavigatorFile } from './manager-files.js';
 import type { FileOpenerChoice } from '../protocol.js';
-import { findOpenFilesTab, withFilesState } from './manager-state.js';
+import { withFilesState } from './manager-state.js';
 
-const DEBOUNCE_MS = 100;
-
-// Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and one
-// non-recursive `fs.watch` per visible directory. Any watch event schedules a single per-tab
-// debounced rebuild; the server always owns the tree — the client only ever renders rows.
-export class FileNavigatorManager {
-  private tabs = new Map<string, FilesTabState>();
-
-  constructor(private managers: Managers) {}
+// Owns file navigator tabs: opening/focusing them, their `expanded` directory sets, and their rows.
+// The tab map and the watch/rebuild lifecycle every tab runs on live in `WatchedFilesTabs`; the
+// server always owns the tree — the client only ever renders rows.
+export class FileNavigatorManager extends WatchedFilesTabs {
 
   // Handle a `files [left|right] [path]` command: open a new tree tab rooted at `path` (or the
   // issuing tab's cwd), or focus/redock the existing tab if one is already open on that root.
@@ -258,63 +245,4 @@ export class FileNavigatorManager {
   restoreView(label: string, view: SavedTreeView): void {
     restoreTreeView(this.navPort(), label, view);
   }
-
-  // Tear down one tab's watchers and debounce timer (on tab close).
-  closeTab(label: string): void {
-    closeFileNavigatorTabs(this.managers, this.tabs, label);
-  }
-
-  // Tear down every tab's watchers (app shutdown).
-  dispose(): void {
-    for (const label of this.tabs.keys()) this.closeTab(label);
-  }
-
-  private watchDir(label: string, absDir: string, relPath: string): void {
-    watchDir(this.tabs, label, absDir, relPath, () => this.scheduleRebuild(label, relPath));
-  }
-
-  // Poll a not-yet-existing root until it's created, then build the tree for real and start
-  // watching it — the tail end of what `openFilesCommand` does for a root that already exists.
-  private pollForCreation(label: string, absDir: string): void {
-    pollForDir(this.tabs, label, absDir, () => this.onDirCreated(label, absDir));
-  }
-
-  private onDirCreated(label: string, absDir: string): void {
-    const found = findOpenFilesTab(this.managers, this.tabs, label);
-    if (!found) return;
-    const { state, tab } = found;
-    writeCreatedPayload(tab, state, absDir, () => this.rebuild(label));
-    this.watchDir(label, absDir, '');
-    this.refreshGit(label);
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
-  private unwatchDir(state: FilesTabState, relPath: string): void {
-    unwatchDir(state, relPath);
-  }
-
-  private scheduleRebuild(label: string, relPath = ''): void {
-    withFilesState(this.tabs, label, undefined, (state) => {
-      if (state.debounce) clearTimeout(state.debounce);
-      // The watcher fired, so every cached stat is suspect — empty the cache and let the rebuild
-      // re-read only the rows that are actually visible.
-      invalidateDirectory(state, relPath);
-      state.debounce = setTimeout(() => { this.rebuild(label); this.refreshGit(label); }, DEBOUNCE_MS);
-    });
-  }
-
-  private refreshGit(label: string): void {
-    refreshGit(this.tabs, label, (l) => this.rebuild(l));
-  }
-
-  // Rebuild the visible row list (pruning expanded directories that no longer exist) and write it
-  // onto the tab's payload.
-  private rebuild(label: string): void {
-    const found = findOpenFilesTab(this.managers, this.tabs, label);
-    if (!found) return;
-    const { state, tab } = found;
-    writeRebuiltPayload(tab, state, () => this.rebuild(label));
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
 }
