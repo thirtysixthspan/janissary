@@ -78,14 +78,14 @@ What comes back is read from one JSON file per tab under `.janissary/state/`, na
 
 ## Troubleshooting
 
-Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`.
+Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`. A launch that fails outright is the exception: the tail of that same log, the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
 
 If saving an agent's relaunch state fails, Janissary keeps the last valid state file and writes one warning for that agent to the server log. It suppresses repeated warnings while the same failure continues, then reports again if persistence recovers and later fails anew.
 
 If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The ones you're most likely to see:
 
 - **The port is already in use** — something else is listening on the port you asked for. Pick another with `--port=<n>`, or drop `--port` entirely and let the app choose a free one.
-- **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run `janus <dir>` to start a second instance against a different directory.
+- **Another instance is already running here** — a second `janus` launched against the same directory as a still-running instance is rejected with the live process's ID. Run `janus <dir>` to start a second instance against a different directory. The message also tells you how to clear a lock left behind by an instance that is no longer running: delete `.janissary/lock` in that directory. Check the ID it names first. An instance that was killed hard usually hands its lock to the next launch on its own, so this only comes up when that ID is genuinely alive.
 - **Permission denied binding to the port** — ports below 1024 need elevated privileges. Pick one above 1024 with `--port=<n>`.
 - **The web UI bundle is missing** — you're running from a source checkout whose web assets were never built. Run `npm run build:web`, or `npm start`, which builds first.
 
@@ -104,7 +104,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | Setting | Default | What it does |
 |---|---|---|
 | `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. This also limits new agent and harness names. |
+| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. This also limits new agent names. A `harness claude as <label>` is not capped, and is only shortened for display |
 | `activeTabNameMaxLength` | `50` | The longest focused tab name shown in the strip. Focusing a tab expands its name up to this limit. |
 | `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
@@ -112,5 +112,6 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | `notifications` | all events off | Which background events feed the [notifications](/user-documentation/tab-types/notifications) tab. There's no runtime command for this; edit the file directly. |
 | `syncPaths` | `["product/backlog/", "product/plans/"]` | Project-relative paths kept synced with GitHub in the [editor](/user-documentation/tab-types/editor#keeping-a-file-synced-with-github). See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for the entry syntax and how a sync happens. There's no runtime command for this; edit the file directly. |
 | `externalViewers` | `{ "video": "QuickTime Player" }` | Which application each viewer hands a file to on `open external`, keyed by the viewer's name — `video`, `audio`, and `pdf`. Give it a macOS application name; an empty or missing entry uses your operating system's own default. A map you set replaces the default outright rather than merging with it. There's no runtime command for this; edit the file directly. |
+| `interactiveShellDetection` | `true` | Whether Janissary notices a program taking over the terminal and treats it as interactive from then on. Programs it learns are listed in `.janissary/interactive-commands.json`; see [Shell](/user-documentation/command-bar/shell#interactive-programs-take-over-the-tab) |
 
 Changing `theme` or `syntaxTheme` at runtime atomically rewrites this file, preserving every other key, and applies the running change only when that write succeeds. If the file isn't valid JSON, the app warns on startup and falls back to defaults for that session — your file is left untouched so you can fix it. Within valid JSON, a setting with the wrong type falls back independently to its default, as do missing notification event toggles.

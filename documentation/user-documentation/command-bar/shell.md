@@ -27,7 +27,11 @@ the target. You can also bypass recognition with the `db ` or `acp ` prefix.
 The chooser is modal, so the command bar is disabled until you choose or cancel. Use `↑` and `↓`,
 press `Return`, or click a row. `acp (agent prompt)` is highlighted when the chooser opens.
 
-Only one chooser is open at a time. If a scheduled or queued command needs a chooser while one is already open, it doesn't run. Its tab shows `Another command is waiting for a route choice; run this again once it is answered.` Closing the tab that opened the chooser also closes the chooser.
+The chooser belongs to the tab that raised it. Answering it while you have clicked over to a different tab runs the command in the original one, not the one you are looking at. Keyboard tab-switching is blocked while a chooser is open, which hides this most of the time; the mouse is the way in.
+
+Only one chooser is open at a time, and that holds across the whole app, not just one tab. While one is open, nothing else can open one: a command in any other tab, or a scheduled or queued one, doesn't run, and its own tab shows `Another command is waiting for a route choice; run this again once it is answered.` Only the tab that raised the chooser has its command queue paused; every other tab keeps draining. Closing the tab that opened the chooser also closes the chooser.
+
+A line that no built-in command claims and that fits no route is refused instead of guessed at, with `Unknown command: "<what you typed>". Type "help" for available commands.`
 
 See [Databases](/user-documentation/command-bar/database) for database routing and [ACP agents](/user-documentation/advanced-agents/acp-agent)
 for agent-prompt routing.

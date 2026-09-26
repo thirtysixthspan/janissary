@@ -49,7 +49,17 @@ Bare `theme` opens a picker overlay listing every theme, each row showing a swat
 
 `theme sync` sets the syntax-highlighting theme to the app theme's name, when a syntax theme with exactly that name exists — otherwise it reports that no matching syntax theme exists and leaves the syntax theme unchanged. The application theme and the syntax theme are independent settings; nothing keeps them in sync automatically, so `theme sync` is the only bridge between them. Today only `nord` exists in both name sets, so sync usually reports no match.
 
+Both `theme <name>` and `syntax theme <name>` have to write the choice into `.janissary/config.json` before they apply it, and a write that fails leaves the setting exactly as it was while still naming what you asked for:
+
+```
+Theme set to "light" for this session (config write failed — won't persist).
+```
+
+The line reads as though the change took effect for the session. It did not: nothing about the running app changes, so treat that message as "the theme did not change" and check that the file is writable. The wording is the app's, not a choice this page is making.
+
 The theme applies to the whole window — there is no per-tab or per-workspace theming. Rendered Markdown documents follow the active theme too. Embedded web pages and ANSI-colored shell output are deliberately outside the theme, and so are tab dot colors, which are assigned per tab to tell tabs apart rather than drawn from the theme; status indicators such as the running-command highlight, editor saved/error notices, and search-hit highlighting are theme-driven.
+
+**Terminals are the other thing that stays outside it.** A [harness](/user-documentation/advanced-agents/harness) tab, a `shell --pty` takeover, and an [ssh](/user-documentation/advanced-agents/harness#ssh-sessions) session keep the same dark background and light text in all six themes, because a terminal's own palette is the terminal's. Pick `light` and open a harness and the pane stays dark; that is the boundary working, not the theme failing.
 
 ## `syntax theme`
 
