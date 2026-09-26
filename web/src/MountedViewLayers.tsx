@@ -9,7 +9,7 @@ import { TaskPicker } from './pickers/TaskPicker';
 import { TabNavPicker } from './pickers/TabNavPicker';
 import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './shared/tab-handles';
-import { tabBodyBorder } from './tab-body-border';
+import { tabBodyBorder } from './shared/tab-body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab-view-guards';
 

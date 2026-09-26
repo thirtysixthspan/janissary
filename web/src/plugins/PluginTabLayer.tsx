@@ -1,6 +1,6 @@
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { tabBodyBorder } from '../tab-body-border';
+import { tabBodyBorder } from '../shared/tab-body-border';
 import type { TabDirtyHandle } from './api';
 import { PluginBody } from './PluginBody';
 

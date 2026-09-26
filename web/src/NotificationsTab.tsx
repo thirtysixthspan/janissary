@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Transcript } from './shared/transcript/Transcript';
-import { DockCycleHeader } from './DockCycleHeader';
+import { DockCycleHeader } from './shared/DockCycleHeader';
 import { onNotificationsKey } from './notifications-handlers';
 
 // The keys the feed scrolls on; they are kept from reaching the window-level bindings.

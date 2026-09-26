@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ShellTab } from './ShellTab';
 import type { ShellTabHandle } from './shared/tab-handles';
-import { tabBodyBorder } from './tab-body-border';
+import { tabBodyBorder } from './shared/tab-body-border';
 
 type Properties = {
   tabs: TabView[];

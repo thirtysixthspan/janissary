@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
 import { NotificationsTab } from './NotificationsTab';
-import { tabBodyBorder } from './tab-body-border';
+import { tabBodyBorder } from './shared/tab-body-border';
 import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab-view-guards';
 

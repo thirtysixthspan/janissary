@@ -19,7 +19,7 @@ import type { FileNavigatorTabProperties as Properties } from './file-navigator-
 import { useFileNavigatorIntents } from './useFileNavigatorIntents';
 import { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import { defaultCommitMessageForCount } from './file-navigator-commit-message';
-import { nextDock } from '../dock-cycle';
+import { nextDock } from '../shared/dock-cycle';
 import { FileNavigatorRows } from './FileNavigatorRows';
 
 export function FileNavigatorTab({

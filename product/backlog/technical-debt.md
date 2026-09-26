@@ -4,17 +4,6 @@
 
 ## development
 
-* Promote the tab-chrome helpers that several web features import from the app root into the shared layer, and bring the plugin, toast, and context-menu directories under the lint zones that enforce feature boundaries.
-
-Existing Debt: The React organization guideline says dependencies flow shared → feature → app and that nothing imports the app shell, but multi-consumer modules such as the tab body border and the dock cycle still live at the `web/src/` root that features import from, and the `import-x/no-restricted-paths` zones list only eight feature directories, so `plugins`, `toasts`, and `context-menu` — and anything at the root — are outside the boundary the linter enforces. Severity: 4/10
-
-Existing Risk: 3/10 - With the root unzoned, a feature can start importing an app-shell component or a sibling feature through a root module and the lint passes, so the cross-feature coupling the guideline exists to prevent can grow unnoticed until a feature can no longer be changed or tested alone.
-
-Proposal Risk: 2/10 - The moved helpers and the newly zoned directories become lint-enforced, but the websocket client and `api` modules that features import from the root dozens of times stay where they are in this increment, so the root remains a partly unenforced dependency until a later step places them.
-
-Proposal: `web/src/tab-body-border.ts` is imported by `web/src/agent-tabs/AgentTabBody.tsx`, `web/src/agent-tabs/InactiveAgentTabBody.tsx`, `web/src/harness/HarnessTabLayer.tsx`, and `web/src/plugins/PluginTabLayer.tsx`; `web/src/dock-cycle.ts` by `web/src/file-navigator/FileNavigatorTab.tsx` and `web/src/file-navigator/FileNavigatorHeader.tsx`; and `web/src/DockCycleHeader.tsx` by `web/src/plugins/DockedPluginBody.tsx` — each has more than one feature consumer, which is the guideline's own promotion trigger (`ai/guidelines/react-code-organization.md` §2–3). Move those three files (with their colocated tests, if any) into `web/src/shared/`, update every importer including the root-level ones (`ShellTabLayer.tsx`, `NotificationsTab.tsx`, `MountedViewLayers.tsx`, `ViewTabBody.tsx`), and leave no re-export behind. Then add `plugins`, `toasts`, and `context-menu` to `clientFeatureDirectories` in `eslint.config.mjs` and resolve any cross-feature import the new zones report (none of the three imports a zoned feature today by the direct `../<feature>` path, but deeper relative paths should be checked). This is a pure move: the component and unit tests for the moved modules and their consumers (`web/src/agent-tabs/*.test.tsx`, `web/src/file-navigator/FileNavigatorTab.test.tsx`, `web/src/plugins/DockedPluginBody.test.tsx`, `web/src/plugins/PluginTabLayer.test.tsx`) must pass with only import-path edits; `web/src/ws.ts` and `web/src/api.ts` are out of scope for this step.
-
-
 * Finish moving the bundled tab plugins onto the declared intent table, starting with the PDF, video, and audio plugins, so their intent validation comes from the one audited helper rather than a hand-written if-chain each.
 
 Existing Debt: The plugin contract gained `defineIntents` to make the tab-payload guard, the unknown-intent rejection, and the per-intent payload check part of the contract rather than a convention, but only the image plugin adopted it, and eight bundled plugins still hand-roll the same three checks in nested `if` chains that each restate the rejection wording. Severity: 4/10
