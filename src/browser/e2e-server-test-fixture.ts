@@ -87,10 +87,16 @@ export type ChildStub = {
 
 function makeChild(): ChildStub {
   const handlers = new Map<string, (...args: unknown[]) => void>();
+  const stdout = new PassThrough();
   const stderr = new PassThrough();
+  // One stub stands in for every child a tab ever spawns, so a case that walks the restart budget
+  // hangs a hundred generations' worth of output readers off a single stream. Real children each get
+  // their own pipes and one reader apiece, so the listener count Node warns about never reaches them.
+  stdout.setMaxListeners(0);
+  stderr.setMaxListeners(0);
   return {
     handlers,
-    stdout: new PassThrough(),
+    stdout,
     stderr,
     say: (text: string) => { stderr.write(text); },
     kill: vi.fn(),

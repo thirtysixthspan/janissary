@@ -150,7 +150,12 @@ type LazyBrowser = {
 // a generation has to be up for its own death not to count against that. A browser that came up and
 // was used is not a failed start; a browser that dies the moment it is asked for is, and a script
 // that retries its connect would otherwise spawn one per attempt, forever.
-const RESTART_LIMIT = 3;
+//
+// The number is a bound, not a tolerance, so it is set far above anything a real tab meets: a tab
+// whose Chromium lost a hundred launches in a row is not going to be given a browser at all, and
+// everything short of that is an unlucky run on the host, which a tab should outlive. Exported
+// because the tests that walk to the threshold read it rather than restate it.
+export const RESTART_LIMIT = 100;
 const UPTIME_RESET = 30_000;
 
 function upstreamOf(lazy: LazyBrowser): string {
