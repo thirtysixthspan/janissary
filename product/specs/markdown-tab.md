@@ -123,7 +123,7 @@ highlight, and ordering — with two differences:
 
 ### Closing
 
-The close button closes a tab by position, which need not be the active tab, performing the same
+The close button closes its own tab by name, which need not be the active tab, performing the same
 teardown the `close` command does for a non-last tab: the tab is removed from the strip, its
 in-memory state is dropped, its registered file is unregistered, and, if it was the active tab,
 focus is restored to whichever tab was focused immediately before it became active (falling back

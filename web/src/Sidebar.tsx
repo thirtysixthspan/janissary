@@ -82,7 +82,7 @@ export function Sidebar({
           tabs={entries.map((e) => e.tab)}
           activeTab={activeIndex}
           onSelect={(i) => setSelectedLabel(entries[i].tab.label)}
-          onClose={(i) => client.send({ method: 'closeTab', params: { index: entries[i].index } })}
+          onClose={(i) => client.send({ method: 'closeTab', params: { label: entries[i].tab.label } })}
           onRename={(i, title) => client.renameTab(entries[i].index, title)}
           onReorder={(from, to) => client.send({
             method: 'reorderTabTo',
@@ -110,7 +110,7 @@ export function Sidebar({
             index={e.index}
             visible={e.tab.label === current.tab.label}
             client={client}
-            onClose={() => client.send({ method: 'closeTab', params: { index: e.index } })}
+            onClose={() => client.send({ method: 'closeTab', params: { label: e.tab.label } })}
           />
         ))}
       </div>

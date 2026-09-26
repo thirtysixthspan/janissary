@@ -7,7 +7,7 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['command', { text: 'help' }, [{}, { text: 7 }, { text: null }]],
   ['setActiveTab', { index: 0 }, [{}, { index: '0' }, { index: 1.5 }]],
   ['focusTab', { label: 'one' }, [{}, { label: 3 }]],
-  ['closeTab', { index: 2 }, [{ index: '2' }]],
+  ['closeTab', { label: 'one' }, [{}, { label: 2 }, { index: 2 }]],
   ['renameTab', { index: 0, title: 'one' }, [{ index: 0 }, { index: 0, title: 1 }, { title: 'one' }]],
   ['editQueuedCommand', { index: 0, text: 'ls' }, [{ index: 0 }, { index: 0, text: [] }]],
   ['deleteQueuedCommand', { index: 1 }, [{ index: true }]],

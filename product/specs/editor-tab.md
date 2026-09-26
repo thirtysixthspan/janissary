@@ -203,7 +203,7 @@ While Save is pending, repeated Save clicks and keyboard shortcuts do nothing. C
 Save remain available. Cancelling, discarding, replacing the prompt, or closing the application
 window prevents that save's later completion or failure from closing a tab, dismissing a newer
 prompt, or moving focus. A write already started may still finish. Each current save closes only
-the tab it asked about, at that tab's position when the save completes.
+the tab it asked about, named by its label, wherever that tab sits when the save completes.
 
 Like the quit dialog, the save dialog is modal — all keyboard and click input is trapped until a choice is made. A click outside the dialog does nothing.
 

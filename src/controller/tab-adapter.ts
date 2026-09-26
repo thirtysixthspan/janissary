@@ -8,7 +8,7 @@ export type TabControllerAdapter = {
   moveTab(dir: -1 | 1): void;
   reorderTab(dir: -1 | 1): void;
   reorderTabTo(from: number, to: number): void;
-  closeTab(index: number): void;
+  closeTab(label: string): void;
   renameTab(index: number, title: string): void;
   editQueuedCommand(index: number, text: string): void;
   deleteQueuedCommand(index: number): void;
@@ -29,7 +29,10 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     moveTab: (dir) => managers.tab.moveTab(dir),
     reorderTab: (dir) => managers.tab.reorderTab(dir),
     reorderTabTo: (from, to) => managers.tab.reorderTabTo(from, to),
-    closeTab: (index) => managers.tab.closeTab(index),
+    closeTab: (label) => {
+      const index = managers.tab.findIndex(label);
+      if (index !== -1) managers.tab.closeTab(index);
+    },
     renameTab: (index, title) => managers.tab.renameTab(index, title),
     editQueuedCommand: (index, text) => managers.tab.editQueued(managers.tab.cur().label, index, text),
     deleteQueuedCommand: (index) => managers.tab.deleteQueued(managers.tab.cur().label, index),

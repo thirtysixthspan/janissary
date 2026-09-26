@@ -66,7 +66,7 @@ describe('CloseSaveGuard', () => {
     expect(h.getByRole('alertdialog')).toBeInTheDocument();
     await act(async () => { fireEvent.click(h.getByText('Save (y)')); });
     expect(h.second.save).toHaveBeenCalledOnce();
-    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 1 } });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { label: 'second' } });
   });
 
   it('lets a replacement prompt save before the old save completes', async () => {
@@ -75,7 +75,7 @@ describe('CloseSaveGuard', () => {
     await act(async () => { fireEvent.click(h.getByText('Save (y)')); });
     await act(async () => { h.deferred.resolve(); });
     expect(h.second.save).toHaveBeenCalledOnce();
-    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 1 } });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { label: 'second' } });
   });
 
   it('submits only one save across repeated button and keyboard actions', async () => {
@@ -86,14 +86,14 @@ describe('CloseSaveGuard', () => {
     expect(h.first.save).toHaveBeenCalledOnce();
     expect(h.getByText('Save (y)')).toBeDisabled();
     await act(async () => { h.deferred.resolve(); });
-    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 0 } });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { label: 'first' } });
   });
 
   it('invalidates a pending save when discarded', async () => {
     const h = pendingSave();
     fireEvent.click(h.getByText("Don't Save (n)"));
     await act(async () => { h.deferred.resolve(); });
-    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { index: 0 } });
+    expect(h.client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { label: 'first' } });
   });
 
   it.each(['resolve', 'reject'])('ignores %s after unmount', async (outcome) => {
@@ -198,7 +198,7 @@ describe('CloseSaveGuard', () => {
       fireEvent.click(getByText('Save (y)'));
     });
     expect(save).toHaveBeenCalled();
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'tab1' } });
     expect(queryByText('Do you want to save changes to this file?')).toBeNull();
   });
 
@@ -252,7 +252,7 @@ describe('CloseSaveGuard', () => {
     });
     fireEvent.click(getByText("Don't Save (n)"));
     expect(save).not.toHaveBeenCalled();
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'tab1' } });
     expect(queryByText('Do you want to save changes to this file?')).toBeNull();
   });
 
@@ -316,7 +316,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
     await act(async () => { fireEvent.click(getByText('Save (y)')); });
 
     expect(save).toHaveBeenCalled();
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'image-1' } });
   });
 
   it('keeps a plugin tab whose save rejects', async () => {
@@ -341,7 +341,7 @@ describe('CloseSaveGuard over a plugin tab', () => {
     act(() => { discard.guardRef.current!(0); });
     fireEvent.click(discard.getByText("Don't Save (n)"));
     expect(save).not.toHaveBeenCalled();
-    expect(discard.client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(discard.client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'image-1' } });
 
     const cancel = renderGuard(handle);
     act(() => { cancel.guardRef.current!(0); });
@@ -397,10 +397,10 @@ describe('CloseSaveGuard while the tab list changes underneath it', () => {
     await act(async () => { fireEvent.click(getByText('Save (y)')); });
 
     expect(handle.save).toHaveBeenCalled();
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 2 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'beta' } });
   });
 
-  it('discards at the index the tab holds after one before it is removed', () => {
+  it('discards the tab it asked about by label after one before it is removed', () => {
     const handle = dirtyHandle();
     const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
     act(() => { guardRef.current!(1); });
@@ -408,11 +408,13 @@ describe('CloseSaveGuard while the tab list changes underneath it', () => {
     setTabs(['beta']);
     fireEvent.click(getByText("Don't Save (n)"));
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'beta' } });
   });
 
+  // The server resolves the label on receipt and closes nothing for one it no longer has, so the
+  // dialog never substitutes whichever tab now sits where the gone one was.
   it.each([['Save (y)'], ["Don't Save (n)"]])(
-    'sends no close from %s once the tab it asked about is gone',
+    'names only the tab it asked about from %s once that tab is gone',
     async (button) => {
       const handle = dirtyHandle();
       const { getByText, client, guardRef, setTabs } = setup(['alpha', 'beta'], { beta: handle });
@@ -421,13 +423,13 @@ describe('CloseSaveGuard while the tab list changes underneath it', () => {
       setTabs(['alpha']);
       await act(async () => { fireEvent.click(getByText(button)); });
 
-      expect(client.send).not.toHaveBeenCalled();
+      expect(client.send).toHaveBeenCalledExactlyOnceWith({ method: 'closeTab', params: { label: 'beta' } });
     },
   );
 
   // The list is most likely to have moved by the time an awaited save returns, which is why the
-  // index is computed after it rather than carried across it.
-  it('closes at the index the tab holds once a deferred save resolves', async () => {
+  // close names the tab rather than carrying a position across the await.
+  it('closes the tab it asked about by label once a deferred save resolves', async () => {
     let shift = () => {};
     const save = vi.fn(async () => { shift(); });
     const handle = { isDirty: () => true, save, focus: vi.fn() } as unknown as DirtyTabHandle;
@@ -437,7 +439,7 @@ describe('CloseSaveGuard while the tab list changes underneath it', () => {
 
     await act(async () => { fireEvent.click(getByText('Save (y)')); });
 
-    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 2 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'beta' } });
   });
 
   it('cancel focuses the tab it asked about, not whatever took its position', () => {

@@ -385,6 +385,27 @@ describe('Controller', () => {
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
 
+  // The wire names the tab by label and the server resolves it on receipt, so the close lands on
+  // the tab the user acted on wherever the list has since placed it.
+  it('closeTab closes the named tab rather than the one at any position', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob --no-workspace');
+    c.dispatch('agent carol --no-workspace');
+    const before = c.view().map((t) => t.label);
+    c.closeTab('bob');
+    expect(c.view().map((t) => t.label)).toEqual(before.filter((label) => label !== 'bob'));
+  });
+
+  it('closeTab for a label no longer open closes nothing', () => {
+    const { c } = makeController();
+    c.dispatch('agent bob --no-workspace');
+    const labels = c.view().map((t) => t.label);
+    const active = c.managers.tab.activeTab;
+    c.closeTab('nobody');
+    expect(c.view().map((t) => t.label)).toEqual(labels);
+    expect(c.managers.tab.activeTab).toBe(active);
+  });
+
   it('closing the last tab quits the app', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
@@ -704,7 +725,7 @@ describe('Controller open command', () => {
     await vi.waitFor(() => expect(c.view()).toHaveLength(2));
     const id = (c.view()[1].plugin!.payload as { url: string }).url.replace('/open/', '');
     expect(c.openFilePath(id)).toBeTruthy();
-    c.closeTab(1);
+    c.closeTab(c.view()[1].label);
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
     expect(c.openFilePath(id)).toBeUndefined();
   });
@@ -919,8 +940,7 @@ describe('Controller harness view', () => {
   it('closing a harness tab kills its PTY', () => {
     const { c } = makeController();
     c.dispatch('harness claude --no-workspace --no-auto-approve');
-    const index = c.view().findIndex((t) => t.label === 'claude');
-    c.closeTab(index);
+    c.closeTab('claude');
     expect(capturedKill).toHaveBeenCalled();
     expect(c.view().map((t) => t.label)).not.toContain('claude');
   });
@@ -935,8 +955,7 @@ describe('Controller harness view', () => {
   it('closing a harness tab clears its busy flag', () => {
     const { c } = makeController();
     c.dispatch('harness claude --no-workspace --no-auto-approve');
-    const index = c.view().findIndex((t) => t.label === 'claude');
-    c.closeTab(index);
+    c.closeTab('claude');
     expect(c.managers.tab.isBusy('claude')).toBe(false);
   });
 
@@ -1032,8 +1051,7 @@ describe('Controller ssh tab', () => {
   it('closing the ssh tab kills its PTY', () => {
     const { c } = makeController();
     c.dispatch('ssh devbox');
-    const index = c.view().findIndex((t) => t.label === 'devbox');
-    c.closeTab(index);
+    c.closeTab('devbox');
     expect(capturedKill).toHaveBeenCalled();
     expect(c.view().map((t) => t.label)).not.toContain('devbox');
   });
@@ -1217,8 +1235,7 @@ describe('Controller messageBus', () => {
     const { c } = makeController();
     c.dispatch('agent bob --no-workspace');
     const events = collect();
-    const index = c.view().findIndex((t) => t.label === 'bob');
-    c.closeTab(index);
+    c.closeTab('bob');
     expect(events.some((e) => e.type === 'tab:removed' && e.tabLabel === 'bob')).toBe(true);
   });
 
@@ -1549,8 +1566,8 @@ describe('Controller files tab', () => {
   it('closing a files tab disposes its watchers without throwing', () => {
     const { c } = makeController();
     c.dispatch(`files ${root}`);
-    const index = c.view().findIndex((t) => t.view === 'files');
-    expect(() => c.closeTab(index)).not.toThrow();
+    const { label } = c.view().find((t) => t.view === 'files')!;
+    expect(() => c.closeTab(label)).not.toThrow();
     expect(c.view().some((t) => t.view === 'files')).toBe(false);
   });
 });
@@ -1616,11 +1633,11 @@ describe('Controller sidebar docking', () => {
     expect(c.view()[c.managers.tab.activeTab].dock).toBeUndefined();
   });
 
-  it('closing a docked tab via its index works even though it is never active', () => {
+  it('closing a docked tab by its label works even though it is never active', () => {
     const { c } = makeController();
     c.dispatch(`files left ${root}`);
-    const index = c.view().findIndex((t) => t.view === 'files');
-    expect(() => c.closeTab(index)).not.toThrow();
+    const { label } = c.view().find((t) => t.view === 'files')!;
+    expect(() => c.closeTab(label)).not.toThrow();
     expect(c.view().some((t) => t.view === 'files')).toBe(false);
   });
 });

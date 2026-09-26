@@ -100,7 +100,9 @@ export function App({ client }: { client: JanusClient }) {
 
   const closeTab = useCallback((index: number) => {
     if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
-    if (guardRef.current?.(index)) return; client.send({ method: 'closeTab', params: { index } });
+    if (guardRef.current?.(index)) return;
+    const tab = tabs.at(index);
+    if (tab) client.send({ method: 'closeTab', params: { label: tab.label } });
   }, [client, tabs, guardedOpenQuitConfirm]);
 
   useServerState(client, {

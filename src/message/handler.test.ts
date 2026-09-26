@@ -155,8 +155,8 @@ describe('handle', () => {
 
   it('routes closeTab', () => {
     const controller = makeController();
-    dispatchCall(controller, 2, { method: 'closeTab', params: { index: 3 } });
-    expect(controller.closeTab).toHaveBeenCalledWith(3);
+    dispatchCall(controller, 2, { method: 'closeTab', params: { label: 'build' } });
+    expect(controller.closeTab).toHaveBeenCalledWith('build');
   });
 
   it('routes renameTab', () => {
