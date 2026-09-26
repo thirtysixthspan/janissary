@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
-import { browserSpawn, type BrowserSpawnOptions } from './browser-spawn.js';
+import { browserSpawn, type BrowserSpawnOptions } from './browser/spawn.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,

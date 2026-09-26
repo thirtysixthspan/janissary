@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './browser-profile.js';
-import { SANDBOX_PROFILE } from './profile.js';
+import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './profile.js';
+import { SANDBOX_PROFILE } from '../profile.js';
 
 // The browser profile exists to be *narrower* than the harness one. These pin that: the carve-ins
 // it needs are present, and the harness profile's credential-adjacent carve-ins are not — which is

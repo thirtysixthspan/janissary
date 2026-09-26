@@ -2,14 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { loadConfig } from '../config.js';
-import { setGitIdentity } from '../git/identity.js';
-import { BROWSER_SANDBOX_PROFILE } from './browser-profile.js';
+import { loadConfig } from '../../config.js';
+import { setGitIdentity } from '../../git/identity.js';
+import { BROWSER_SANDBOX_PROFILE } from './profile.js';
 import {
   BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST,
-} from './browser-ports.js';
-import { sandboxAvailable, sandboxSpawn } from './index.js';
-import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+} from './ports.js';
+import { sandboxAvailable, sandboxSpawn } from '../index.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from '../profile.js';
 
 const AMBIENT_SECRETS = {
   PATH: '/usr/bin',

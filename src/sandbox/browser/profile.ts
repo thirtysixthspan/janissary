@@ -19,7 +19,7 @@
 // with nothing worth having. That is the second of the two independent layers; neither is offered
 // as sufficient alone.
 
-import { dualParams, clausesFor, literalClausesFor } from './paths.js';
+import { dualParams, clausesFor, literalClausesFor } from '../paths.js';
 
 // One carve-in path in both its literal (as named) and fully realpath-resolved form. Both are
 // needed for the same reason `dualParams` in `paths.ts` explains: Seatbelt evaluates an

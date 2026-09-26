@@ -4,9 +4,9 @@ import { createServer, type Server } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadConfig } from '../config.js';
-import { BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST } from './browser-ports.js';
-import { sandboxAvailable, sandboxSpawn } from './index.js';
+import { loadConfig } from '../../config.js';
+import { BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST } from './ports.js';
+import { sandboxAvailable, sandboxSpawn } from '../index.js';
 
 // A band port has to be bound by number rather than by asking for port 0 — the whole point is which
 // port it is. A host already using one is the one case this cannot test around, so it is skipped

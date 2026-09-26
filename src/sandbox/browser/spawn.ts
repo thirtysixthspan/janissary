@@ -1,8 +1,8 @@
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './browser-profile.js';
-import { BROWSER_ENV_ALLOW } from './paths.js';
-import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
+import { BROWSER_SANDBOX_PROFILE, browserProfileParams } from './profile.js';
+import { BROWSER_ENV_ALLOW } from '../paths.js';
+import { resolvePath, dualPath, darwinUserCacheDir } from '../resolve.js';
 
 // How the e2e browser child is spawned, on both kinds of host. Split out of `index.ts` because it
 // answers every question differently from the harness spawn beside it: a different profile, a
