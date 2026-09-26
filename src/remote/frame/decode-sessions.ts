@@ -1,4 +1,4 @@
-import type { RemoteProcessState } from '../protocol.js';
+import type { RemoteProcessState } from '../protocol-frames.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
 } from './decode-shared.js';

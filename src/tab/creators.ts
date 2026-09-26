@@ -9,10 +9,6 @@ import {
   uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
 } from './unique-labels.js';
 
-export {
-  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
-} from './unique-labels.js';
-
 type TabAndActive = { tabs: Tab[]; activeTab: number };
 
 function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAndActive {

@@ -1,6 +1,6 @@
 import type { Command } from './types.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
-import type { TabPluginStatus } from '../plugins/host.js';
+import type { TabPluginStatus } from '../plugins/status.js';
 
 function statusLine(
   declaration: TabPluginDeclaration,

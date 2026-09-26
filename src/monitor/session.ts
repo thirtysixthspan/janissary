@@ -1,9 +1,9 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { AcpSession } from '../acp/types.js';
-import type { MonitorSub, MonitorSubSetup } from './manager.js';
+import type { MonitorSub, MonitorSubSetup } from './live-monitors.js';
 import { spawnMonitorSession } from './acp.js';
-import { SUGGESTION_FORMAT } from './parsing.js';
+import { SUGGESTION_FORMAT } from './reply-format.js';
 import { TRUST_FRAMING_INSTRUCTIONS } from './framing.js';
 import { formatConnection, personaSummary } from './info.js';
 import { recordContext } from './context.js';

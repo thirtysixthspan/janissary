@@ -5,9 +5,9 @@ import {
   type TabPluginPresentation, type TabPluginServerCapabilities,
 } from './api.js';
 import { disposePluginActivation } from './activate.js';
-import { tabPluginCatalog } from './catalog.js';import {
-  pluginFailureReason, reportPluginFailure, type PluginFailureOrigin,
-} from './failure.js';
+import { tabPluginCatalog } from './catalog.js';
+import { reportPluginFailure, type PluginFailureOrigin } from './failure.js';
+import { errorFirstLine } from '../error-text.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
 import { tabPluginLoaders } from './loaders.js';
@@ -20,8 +20,6 @@ import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { startPluginActivation } from './start-activation.js';
 import { closePluginTabs } from './teardown.js';
-
-export type { TabPluginStatus } from './status.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -205,7 +203,7 @@ export class TabPluginHost {
       return reportPluginFailure(this.managers, record.declaration.id, record.reason, origin);
     }
     record.state = 'disabled';
-    record.reason = pluginFailureReason(error);
+    record.reason = errorFirstLine(error);
     const message = reportPluginFailure(this.managers, record.declaration.id, error, origin);
     for (const label of closePluginTabs(this.managers, record.declaration.id)) {
       this.disabledTabPlugins.set(label, record.declaration.id);

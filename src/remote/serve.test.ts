@@ -13,7 +13,7 @@ import { wireShutdown, CHANNEL_SIGNALS } from './serve-start.js';
 import { WorkspaceManager } from '../workspace/manager.js';
 import { RemoteChannel } from './channel/index.js';
 import { encodeFrame, decodeFrame, encodeHandshake, parseHandshake, REMOTE_PROTOCOL_VERSION } from './protocol.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import { DetachedPeer, relayPeer, REMOTE_DETACH_TIMEOUT_MS } from './serve-detach.js';
 import { provisionRemoteWorkspace } from './serve-provision.js';
 import { randomUUID } from 'node:crypto';

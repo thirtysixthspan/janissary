@@ -1,5 +1,6 @@
-import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER } from './index.js';
-import { isDatabaseCommandLine } from './primer.js';
+import { runDatabaseCommand } from './index.js';
+import { parseDatabaseCommand } from './parsing.js';
+import { isDatabaseCommandLine, DB_PRIMER } from './primer.js';
 import { isConnectionOpen, closeConnection, closeAllConnections, listOpenConnections } from '../connections.js';
 
 // Owns each tab's view of the SQLite databases it has opened, and acts as the controller's facade

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { tabPluginCatalog } from '../plugins/catalog.js';
-import type { TabPluginStatus } from '../plugins/host.js';
+import type { TabPluginStatus } from '../plugins/status.js';
 import { command } from './plugins.js';
 
 function run(status: TabPluginStatus) {

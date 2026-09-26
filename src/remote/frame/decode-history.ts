@@ -1,4 +1,4 @@
-import type { ShellHistoryRun } from '../protocol.js';
+import type { ShellHistoryRun } from '../protocol-frames.js';
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
 // The `shell-history` decoder, in its own module for the same reason `frame-decode-sessions.ts` has

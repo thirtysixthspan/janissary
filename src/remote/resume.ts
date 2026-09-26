@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { terminateRemoteEntry, type RemoteEntry } from './attach.js';
-import type { RemoteProcessState, ServerFrame } from './protocol.js';
+import type { RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
 // A launch that is really an attach. The workspace already exists on the far side, so this side
 // brings the session id and the directory the record remembers rather than asking for a new clone,

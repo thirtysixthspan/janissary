@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import type { FileSystemPort, WatchHandle } from '../file-navigator/filesystem-port.js';
-import type { ClientFrame, ServerFrame } from './protocol.js';
+import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { openerForExtension, type OpenContext } from '../openers/index.js';
+import { openerForExtension } from '../openers/index.js';
+import type { OpenContext } from '../openers/types.js';
 import { didOsOpen } from '../openers/os-open.js';
 import { openInDefaultViewer } from '../openers/external-viewer.js';
 import { openInEditor } from '../openers/editor.js';

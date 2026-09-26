@@ -1,6 +1,6 @@
 import { createTranscriptSource } from '../harness/transcript/sources.js';
 import type { TranscriptSource } from '../harness/transcript/source.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 // How often the harness's own session record is re-read and pushed, matching the local tailer's
 // cadence (`src/harness/transcript/tailer.ts`).

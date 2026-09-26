@@ -1,4 +1,5 @@
-import { decodeFrame, encodeFrame, type ServerFrame } from './protocol.js';
+import { decodeFrame, encodeFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 export type PreAttachFrame =
   | { kind: 'attach'; restore?: boolean }

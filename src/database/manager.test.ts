@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseManager } from './manager.js';
 import { initDbDir, closeAllConnections, listOpenConnections } from '../connections.js';
-import { DB_PRIMER } from './index.js';
+import { DB_PRIMER } from './primer.js';
 
 describe('DatabaseManager', () => {
   let dir = '';

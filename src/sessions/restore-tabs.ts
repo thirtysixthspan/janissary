@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import { placeAgent } from '../profile/place-agent.js';
-import type { RemoteProcessState } from '../remote/protocol.js';
+import type { RemoteProcessState } from '../remote/protocol-frames.js';
 import { uniqueLabel } from '../tab/utils.js';
 import type { RemoteSessionRecord } from './store.js';
 

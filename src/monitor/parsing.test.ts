@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { parseMonitorCommand, parseUnmonitorCommand, parseSuggestion } from './parsing.js';
+import { parseMonitorCommand, parseUnmonitorCommand } from './parsing.js';
+import { parseSuggestion } from './reply-format.js';
 
 describe('parseMonitorCommand', () => {
   it('parses inline mode (persona only, no targets)', () => {

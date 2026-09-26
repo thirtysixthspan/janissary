@@ -149,19 +149,11 @@ export const HANDSHAKE_SENTINEL = '__JANUS_REMOTE__';
 
 export type RemoteHandshake = { version: number; session?: string };
 
-// The frame shapes live in `protocol-frames.ts`; this module is the codec over them. Everything the
-// frames declare is re-exported here, so the protocol is still imported from one module.
+// The frame shapes live in `protocol-frames.ts`; this module is the codec over them.
 import { decodeKnownFrame } from './frame/decode.js';
 import {
   CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame,
 } from './protocol-frames.js';
-
-export { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES } from './protocol-frames.js';
-export type {
-  ClientFrame, RemoteFilesystemArguments, RemoteFilesystemOperation, RemoteFrame,
-  RemoteProcessState, ServerFrame, ShellHistoryRun,
-} from './protocol-frames.js';
-
 
 // A predicate rather than a bare membership test, so the narrowed type reaches `decodeKnownFrame`
 // and its switch can be exhaustive over the union instead of over `string`.

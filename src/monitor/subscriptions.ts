@@ -2,7 +2,7 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { matchesTargets } from './targets.js';
 import { SUGGESTION_PREFIX } from './suggestion.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 
 export function subscribeMonitor(
   key: string,

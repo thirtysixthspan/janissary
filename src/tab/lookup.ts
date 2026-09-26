@@ -9,7 +9,7 @@ import {
 // read the returned record's view payload directly, re-deriving both the scan and the "does this tab
 // really carry that payload" question at every site.
 //
-// Shaped like `runtime-operations.ts` and `transcript-operations.ts`: plain functions over a `Tab[]`,
+// Shaped like `runtime-operations.ts` and `transcript/events.ts`: plain functions over a `Tab[]`,
 // which the manager delegates to.
 
 // The first tab with this label, exactly as `find` did — this is an accessor, not a new rule. One

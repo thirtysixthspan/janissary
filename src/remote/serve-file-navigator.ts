@@ -10,7 +10,7 @@ import type { MaybePromise } from '../maybe-promise.js';
 import { refusalFor, refusedPaths } from './filesystem/refusal.js';
 import { operationDescriptor, type OperationContext } from './filesystem/operations.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol.js';
+import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol-frames.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 

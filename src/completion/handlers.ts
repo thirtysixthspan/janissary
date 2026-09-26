@@ -1,8 +1,6 @@
 import type { CompletionResult } from './types.js';
 import { completeWord } from './helpers.js';
 import { modelsFor } from '../harness/models.js';
-export { completeBrowserCommand } from './browser.js';
-export { completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose } from './target-handlers.js';
 
 // Complete `monitor`/`unmonitor` arguments. Which catalog an argument draws from follows what the
 // argument means: `monitor <persona>` chooses a persona to start, so it offers personas, while

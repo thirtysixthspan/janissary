@@ -1,4 +1,5 @@
-import { encodeFrame, type ServerFrame } from '../protocol.js';
+import { encodeFrame } from '../protocol.js';
+import type { ServerFrame } from '../protocol-frames.js';
 import { PENDING_BUFFER_BUDGET_BYTES } from '../serve-detach.js';
 
 // Output, retained-history, and exit frames whose process id has no listener yet.

@@ -3,11 +3,8 @@ import type { Managers } from '../managers.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from '../notifications/queue.js';
-import {
-  pluginFailureMessage,
-  pluginFailureReason,
-  reportPluginFailure,
-} from './failure.js';
+import { pluginFailureMessage, reportPluginFailure } from './failure.js';
+import { errorFirstLine } from '../error-text.js';
 
 function makeManagers(options: { origin?: boolean; notifications?: boolean } = {}) {
   const origin = { label: 'janus', dotColor: '#abc', log: [] };
@@ -41,7 +38,7 @@ describe('plugin failure formatting', () => {
     [new Error('first line\n    at private-stack.ts:10'), 'first line'],
     ['...!?:', 'Unknown failure'],
   ])('reduces thrown value %# to one actionable line', (error, expected) => {
-    expect(pluginFailureReason(error)).toBe(expected);
+    expect(errorFirstLine(error)).toBe(expected);
   });
 
   it('wraps the reason with exact wording and one terminal period', () => {

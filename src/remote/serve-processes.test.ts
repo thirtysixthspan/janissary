@@ -4,7 +4,7 @@ import { spawnPty } from '../pty.js';
 import { killShellGroup, spawnShell } from '../shell/index.js';
 import { messageBus } from '../bus.js';
 import { RemoteProcesses } from './serve-processes.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 vi.mock('../pty.js');
 vi.mock('../shell/index.js');

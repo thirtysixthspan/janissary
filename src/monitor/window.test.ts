@@ -1,14 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  monitorTabs,
-  openMonitorTab,
-  pushSuggestion,
-  closeMonitorTab,
-  findSuggestion,
-  removeSuggestion,
-  runSuggestion,
-  updateMonitorMeta,
-} from './window.js';
+import { monitorTabs, openMonitorTab, pushSuggestion, closeMonitorTab, updateMonitorMeta } from './window.js';
+import { findSuggestion, removeSuggestion, runSuggestion } from './suggestions.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';

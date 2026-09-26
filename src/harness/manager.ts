@@ -1,7 +1,7 @@
 import { distinctColor } from '../tab/colors.js';
 import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
-import { parseHarnessCommand, HARNESS_NAMES } from './index.js';
-import type { HarnessLaunch } from './command-parse.js';
+import { HARNESS_NAMES } from './index.js';
+import { parseHarnessCommand, type HarnessLaunch } from './command-parse.js';
 import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';

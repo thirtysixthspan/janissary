@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import type { Managers } from '../managers.js';
 import type { MonitorContextEntry } from './context.js';
 

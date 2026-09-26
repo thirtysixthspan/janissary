@@ -3,7 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { parseHarnessCommand, HARNESS_NAMES, buildHarnessCommand } from './index.js';
+import { HARNESS_NAMES, buildHarnessCommand } from './index.js';
+import { parseHarnessCommand } from './command-parse.js';
 
 const CODEX_NO_DAEMON_PROBE = '$(codex --help 2>/dev/null | grep -q -e --no-daemon && echo --no-daemon)';
 

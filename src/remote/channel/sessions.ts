@@ -1,6 +1,6 @@
 import { PendingFrames } from './pending.js';
 import { spawnFrameState } from '../process-state.js';
-import type { ClientFrame, RemoteProcessState, ServerFrame, ShellHistoryRun } from '../protocol.js';
+import type { ClientFrame, RemoteProcessState, ServerFrame, ShellHistoryRun } from '../protocol-frames.js';
 
 // One remote process id's I/O, and every map that is keyed by one. Kept out of `RemoteChannel`
 // because the channel's own job is the transport's state machine — authenticating, framing,

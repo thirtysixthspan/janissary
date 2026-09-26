@@ -1,5 +1,5 @@
 import type { Managers } from '../managers.js';
-import { runSuggestion as runMonitorSuggestion } from '../monitor/window.js';
+import { runSuggestion as runMonitorSuggestion } from '../monitor/suggestions.js';
 
 // The monitor reporting tab's RPC surface, extracted from `controller.ts` to keep it under the
 // file-size guideline — the same shape as `controller/file-navigator.ts`: plain functions taking

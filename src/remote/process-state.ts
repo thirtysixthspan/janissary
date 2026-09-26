@@ -1,4 +1,4 @@
-import type { ClientFrame, RemoteProcessState } from './protocol.js';
+import type { ClientFrame, RemoteProcessState } from './protocol-frames.js';
 
 type SpawnFrame = Extract<ClientFrame, { type: 'spawn' }>;
 

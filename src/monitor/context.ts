@@ -1,4 +1,4 @@
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import type { Managers } from '../managers.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 

@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CLIENT_METHOD_CONTRACTS,
-  clientParamsProblem,
-  clientReplyMode,
-  isClientMessage,
-  isPluginFailedParams,
-  isPluginIntentParams,
+  CLIENT_METHOD_CONTRACTS, clientParamsProblem, clientReplyMode, isClientMessage,
 } from './client-message.js';
+import { isPluginFailedParams, isPluginIntentParams } from './client-params/plugin.js';
 import type { ClientMessage } from './protocol.js';
 
 describe('isClientMessage', () => {

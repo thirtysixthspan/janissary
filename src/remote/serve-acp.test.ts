@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpOptions, PromptHandlers } from '../acp/types.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 // `connectAcp` is faked at the module boundary: what this class owns is the frame translation, not
 // the ACP client itself (that is exercised end to end in `src/acp/index.test.ts`).

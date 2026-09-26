@@ -2,15 +2,13 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { RemoteAddress } from './address.js';
 import type { RemoteChannel } from './channel/index.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { RemoteTranscriptSource } from './transcript-source.js';
 import { detachRemoteEntry, dropTerminatedSessionRecord, dropRemoteLabels, emitSessionsChanged, markEntryEnded, terminateRemoteEntry, resumeRemote, type RemoteEntry as Entry } from './attach.js';
 import type { RemoteResume } from './resume.js';
 import { remoteChannelClosed } from './manager-closed.js';
 import { createRemoteEntry } from './entry-factory.js';
-
-export { remoteServeCommand } from './entry-factory.js';
 
 // What the tab that owns a channel needs to hear back: its workspace clone is ready (or failed),
 // and its channel has gone away.

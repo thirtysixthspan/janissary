@@ -7,7 +7,7 @@ import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote/file-cache.js';
 import type { Managers } from '../managers.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));

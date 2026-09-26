@@ -1,10 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
-  REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL,
-  CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES,
-  encodeFrame, decodeFrame, encodeHandshake, parseHandshake, heldBackLength,
-  type RemoteFrame,
+  REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL, encodeFrame, decodeFrame, encodeHandshake,
+  parseHandshake, heldBackLength,
 } from './protocol.js';
+import { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame } from './protocol-frames.js';
 
 function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
   return decodeFrame(encodeFrame(frame));

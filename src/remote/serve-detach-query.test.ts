@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { requestParkedCapture, answerCaptureRequest } from './serve-detach-query.js';
 import { DetachedPeer } from './serve-detach.js';
 import { encodeFrame } from './protocol.js';
-import type { ServerFrame } from './protocol.js';
+import type { ServerFrame } from './protocol-frames.js';
 
 let root: string;
 

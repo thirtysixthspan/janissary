@@ -6,7 +6,7 @@ import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import { spawnFrameState } from './process-state.js';
 import type { ProjectTokens } from '../project/tokens.js';
-import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol.js';
+import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
 // The remote server's process table. Every remote harness tab, every remote agent tab's persistent
 // shell, every PTY takeover, and every inline terminal card is one entry here — there is no second

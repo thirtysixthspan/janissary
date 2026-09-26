@@ -8,9 +8,6 @@ export const HARNESS_COMMANDS: Record<string, string> = {
 
 export const HARNESS_NAMES = Object.keys(HARNESS_COMMANDS);
 
-export type { HarnessParsed } from './command-parse.js';
-export { parseHarnessCommand } from './command-parse.js';
-
 // Single-quote a value for embedding in a `shell -lc '<command>'` string, escaping any embedded
 // single quotes (`'` → `'\''`).
 function shellQuote(value: string): string {

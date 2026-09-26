@@ -1,4 +1,4 @@
-import type { RemoteFrame } from '../protocol.js';
+import type { RemoteFrame } from '../protocol-frames.js';
 import type { SessionRouter } from './sessions.js';
 import type { CaptureRequestTracker } from './capture.js';
 

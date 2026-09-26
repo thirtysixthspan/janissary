@@ -5,8 +5,6 @@
 import { reportOperationFailure } from '../../file-navigator/operation-report.js';
 import type { Managers } from '../../managers.js';
 import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, UndoRedoResult } from '../../protocol.js';
-export { fileNavigatorSelectionAction, runFileNavigatorSelectionAction } from './navigator-selection.js';
-export { fileNavigatorCommit, fileNavigatorNothingToCommit } from './navigator-commit.js';
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {

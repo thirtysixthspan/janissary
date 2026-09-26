@@ -1,5 +1,5 @@
 import type { MonitorSuggestion } from '../tab/types.js';
-import type { MonitorSub } from './manager.js';
+import type { MonitorSub } from './live-monitors.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { monitorTabs } from './window.js';
