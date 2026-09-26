@@ -4,17 +4,6 @@
 
 ## development
 
-* Have the ACP tool loop run the command on the reply's last command line, whichever tool owns it, instead of the first tool in table order that finds any line of its own.
-
-Existing Debt: Each tool's extractor scans the whole reply bottom-up for its own grammar only and `toolExtractor` returns the first tool in table order that finds anything, so position in the reply loses to tool order, and the same line-cleanup expression is copied into four places with two different "none" values. Severity: 4/10
-
-Existing Risk: 5/10 - A reply that mentions `browser goto` in an early line and ends with the `db sqlite query` the agent actually meant re-runs the browser command and never runs the database one, and the display filter then removes the first matching line from the top rather than the one that was run.
-
-Proposal Risk: 2/10 - The command that runs is the one on the last command-shaped line, which is what every primer asks for, though an agent that ends a finished answer by quoting a command will still have it run, exactly as today.
-
-Proposal: `toolExtractor` in `src/acp/tool-table.ts` loops `for (const tool of tools)` and returns the first non-null `tool.extract(text)`, with browser, question, then database order. `extractBrowserCommand` in `src/browser/command.ts`, `extractQuestionCommand` in `src/question-command.ts`, and `extractDatabaseCommand` in `src/database/primer.ts` each repeat `lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim()` and test their own regex; the database one returns `undefined`, the others `null`. `filterCommandFromDisplay` in `src/acp/loop.ts` repeats the cleanup and searches top-down with `cleaned.indexOf(command)`. Add a small module `src/acp/command-line.ts` exporting `cleanCommandLine(line)` and `findLastCommandLine(text, test: (line) => boolean)` that walks lines bottom-up and returns the first cleaned line passing `test`. Change `AcpTool` so each entry exposes a pure `isCommandLine(line)` predicate built from its existing regex, make `toolExtractor` call `findLastCommandLine(text, (line) => tools.some((tool) => tool.isCommandLine(line)))`, keep the three `extract*` exports as thin wrappers over the helper (returning `null`) for their existing tests, and make `filterCommandFromDisplay` use `cleanCommandLine` and `lastIndexOf`. `src/acp/tool-table.test.ts` uses stubbed extractors and must be updated to the predicate shape; add a case with a browser line followed by a trailing db line asserting the db line wins. `src/db.test.ts`, `src/question-command.test.ts`, and `src/acp/loop.test.ts` pin the per-tool extraction and display filtering that must not move.
-
-
 * Forget an editor persona's ACP session when its agent dies, the way the tab ACP manager already does, so the next suggestion spawns a fresh one.
 
 Existing Debt: `EditorAcpManager` wires a session's connection-level error hook to whichever request created it and never removes a dead session from its map, unlike `AcpManager`, which forgets a session on that same signal so it never writes "into a corpse". Severity: 5/10

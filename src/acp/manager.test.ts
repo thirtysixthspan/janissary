@@ -24,7 +24,7 @@ vi.mock('../bus.js', () => ({
   messageBus: { emit: mocks.messageBusEmit },
 }));
 vi.mock('../browser/command.js', () => ({
-  extractBrowserCommand: vi.fn(),
+  isBrowserCommandLine: vi.fn(),
   BROWSER_PRIMER: 'browser primer text',
 }));
 
@@ -55,7 +55,7 @@ const setup = () => {
     database: {
       primer: 'db primer',
       runInTab: vi.fn(),
-      extract: vi.fn(),
+      isCommandLine: vi.fn(),
     },
     browser: { run: vi.fn() },
     questions: { register: registerQuestion },

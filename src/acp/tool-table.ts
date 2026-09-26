@@ -1,5 +1,6 @@
-import { extractBrowserCommand, BROWSER_PRIMER } from '../browser/command.js';
-import { extractQuestionCommand, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
+import { isBrowserCommandLine, BROWSER_PRIMER } from '../browser/command.js';
+import { isQuestionCommandLine, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
+import { findLastCommandLine } from './command-line.js';
 import type { Managers } from '../managers.js';
 
 // One tool on the ACP run path. The three loop options the agent sees — what it is told the tools
@@ -7,7 +8,7 @@ import type { Managers } from '../managers.js';
 // from this one shape, so a new tool is one entry rather than three lists that can disagree.
 //
 // An entry carries two predicates because they read different text: `match` tests the command
-// string the agent emitted, `extract` reads the agent's whole reply looking for a command in it.
+// string the agent emitted, `isCommandLine` tests one cleaned line of the agent's reply.
 export type AcpTool = {
   // The tool's slice of the agent primer.
   primer: string;
@@ -15,33 +16,34 @@ export type AcpTool = {
   match: (command: string) => boolean;
   // Run an emitted command in a tab and return its textual output.
   run: (label: string, command: string) => string | Promise<string>;
-  // Pull this tool's command out of an agent reply, or nothing when the reply holds none.
-  extract: (text: string) => string | null | undefined;
+  // Whether one cleaned reply line is a command in this tool's grammar.
+  isCommandLine: (line: string) => boolean;
 };
 
-// Resolution strategy: **first match over an ordered array**, the same rule `src/commands/index.ts`
-// uses. Both the runner and the extractor stop at the first entry that claims the input, so order is
-// the tie-break and the database entry stays last — its `match` accepts anything, making it the
-// fall-through for a command no other tool recognized.
+// Resolution strategy for running: **first match over an ordered array**, the same rule
+// `src/commands/index.ts` uses. The runner stops at the first entry whose `match` claims the command,
+// so order is the tie-break and the database entry stays last — its `match` accepts anything, making
+// it the fall-through for a command no other tool recognized. Extraction does not use table order:
+// the reply's last line that any tool recognizes is the command, whichever tool owns it.
 export function createAcpToolTable(managers: Managers): AcpTool[] {
   return [
     {
       primer: BROWSER_PRIMER,
       match: (command) => /^browser\b/i.test(command),
       run: (label, command) => managers.browser.run(label, command),
-      extract: (text) => extractBrowserCommand(text),
+      isCommandLine: (line) => isBrowserCommandLine(line),
     },
     {
       primer: QUESTION_PRIMER,
       match: (command) => /^question\b/i.test(command),
       run: (label, command) => runQuestionCommand(command, label, managers.questions),
-      extract: (text) => extractQuestionCommand(text),
+      isCommandLine: (line) => isQuestionCommandLine(line),
     },
     {
       primer: managers.database.primer,
       match: () => true,
       run: (label, command) => managers.database.runInTab(label, command),
-      extract: (text) => managers.database.extract(text),
+      isCommandLine: (line) => managers.database.isCommandLine(line),
     },
   ];
 }
@@ -61,13 +63,7 @@ export function toolRunner(tools: AcpTool[], label: string): (command: string) =
   };
 }
 
-// The first command any tool finds in the agent's reply, or null when none does.
+// The command on the reply's last line that any tool recognizes, or null when no line is one.
 export function toolExtractor(tools: AcpTool[]): (text: string) => string | null {
-  return (text) => {
-    for (const tool of tools) {
-      const command = tool.extract(text);
-      if (command !== null && command !== undefined) return command;
-    }
-    return null;
-  };
+  return (text) => findLastCommandLine(text, (line) => tools.some((tool) => tool.isCommandLine(line)));
 }

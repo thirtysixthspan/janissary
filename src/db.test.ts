@@ -91,9 +91,9 @@ describe('extractDbCommand', () => {
     expect(extractDatabaseCommand(reply)).toBe('db sqlite query a SELECT 1');
   });
 
-  it('returns undefined when there is no db command', () => {
-    expect(extractDatabaseCommand('I cannot help with that.')).toBeUndefined();
-    expect(extractDatabaseCommand('the database is ready')).toBeUndefined();
+  it('returns null when there is no db command', () => {
+    expect(extractDatabaseCommand('I cannot help with that.')).toBeNull();
+    expect(extractDatabaseCommand('the database is ready')).toBeNull();
   });
 });
 

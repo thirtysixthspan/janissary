@@ -1,4 +1,5 @@
-import { runDatabaseCommand, parseDatabaseCommand, extractDatabaseCommand, DB_PRIMER } from './index.js';
+import { runDatabaseCommand, parseDatabaseCommand, DB_PRIMER } from './index.js';
+import { isDatabaseCommandLine } from './primer.js';
 import { isConnectionOpen, closeConnection, closeAllConnections, listOpenConnections } from '../connections.js';
 
 // Owns each tab's view of the SQLite databases it has opened, and acts as the controller's facade
@@ -37,9 +38,9 @@ export class DatabaseManager {
     return (this.tabConns.get(label) ?? []).filter(isConnectionOpen);
   }
 
-  // A `db`-shaped command embedded in agent text (for the ACP tool loop), or undefined if none.
-  extract(text: string): string | undefined {
-    return extractDatabaseCommand(text);
+  // Whether a cleaned line of agent text is a `db` command (for the ACP tool loop).
+  isCommandLine(line: string): boolean {
+    return isDatabaseCommandLine(line);
   }
 
   // Every globally open SQLite database (for the connections panel and completion).

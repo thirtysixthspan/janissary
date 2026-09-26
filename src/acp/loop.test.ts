@@ -237,6 +237,19 @@ describe('runAcpToolLoop', () => {
     expect(events).toContainEqual(['endTurn', 'The page is about widgets.']);
   });
 
+  it('removes the command line that ran, not an earlier copy of it, from endTurn', () => {
+    const { session } = makeSession([
+      'db sqlite list\nThat was the old list; refreshing.\ndb sqlite list',
+      'Final answer.',
+    ]);
+    const { h, events } = makeHandlers();
+
+    runAcpToolLoop(session, 'q', { runCommand: () => 'r', extractCommand: extractDatabaseCommand }, h);
+
+    const firstEndTurn = events.find((event) => event[0] === 'endTurn');
+    expect(firstEndTurn).toEqual(['endTurn', 'db sqlite list\nThat was the old list; refreshing.']);
+  });
+
   it('surfaces session errors without running a command', () => {
     const session: AcpLoopSession = { prompt: (_t, h) => h.onError('boom') };
     const { h, events } = makeHandlers();
