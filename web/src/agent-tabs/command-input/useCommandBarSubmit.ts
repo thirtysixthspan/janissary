@@ -1,22 +1,16 @@
 import { useCallback } from 'react';
 import type { BufferLine, TabView } from '@shared/protocol';
+import type { PickerCommands } from '../../shared/command-bar/picker-commands';
 import { closeQuitsApp } from '@shared/tab/placement';
 import { resolveSearchInterception } from './command-interceptions';
 import type { useTranscriptSearch } from '../../shared/search-bar/useTranscriptSearch';
 
-type Params = {
+// The nine intercepted openers are the shared `PickerCommands` shape rather than a restatement of it:
+// this feature and `pickers` both name them, and neither may import the other.
+type Params = PickerCommands & {
   canSearch: boolean;
   lines: BufferLine[];
   search: ReturnType<typeof useTranscriptSearch>;
-  openPicker: () => void;
-  openThemePicker: () => void;
-  openAppThemePicker: () => void;
-  openQueue: () => void;
-  openTaskPicker: () => void;
-  openProfilePicker: () => void;
-  navOpen: boolean;
-  setNavOpen: (open: boolean) => void;
-  openTabNavWithQuery: (query: string) => void;
   tabs: TabView[];
   openQuitConfirm: () => void;
   guardRef: React.RefObject<((index: number) => boolean) | null>;
