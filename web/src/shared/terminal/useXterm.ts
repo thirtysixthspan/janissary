@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import type { JanusClient } from '../../ws';
-import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal-keys';
-import { osc52ClipboardText } from './terminal-osc52';
+import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal/keys';
+import { osc52ClipboardText } from './terminal/osc52';
 import { copyText } from '../system-clipboard';
-import { registerTerminalSelection, unregisterTerminalSelection } from './terminal-selection';
+import { registerTerminalSelection, unregisterTerminalSelection } from './terminal/selection';
 import { useSelectionLayer } from './useSelectionLayer';
 
 type UseXtermOptions = {

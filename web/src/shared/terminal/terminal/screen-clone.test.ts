@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
-import { freezeTerminalScreen } from './terminal-screen-clone';
+import { freezeTerminalScreen } from './screen-clone';
 
 function boxed(node: HTMLElement, box: Partial<DOMRect>): HTMLElement {
   vi.spyOn(node, 'getBoundingClientRect').mockReturnValue(box as DOMRect);

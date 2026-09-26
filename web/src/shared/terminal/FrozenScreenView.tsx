@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import type { FrozenScreen } from './terminal-screen-clone';
-import { highlightRects } from './terminal-selection-rects';
-import type { SelectionLayer } from './terminal-selection-layer';
+import type { FrozenScreen } from './terminal/screen-clone';
+import { highlightRects } from './terminal/selection-rects';
+import type { SelectionLayer } from './terminal/selection-layer';
 
 type Properties = { state: SelectionLayer; screen: FrozenScreen };
 

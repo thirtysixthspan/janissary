@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { altArrowSequence, copySelectionChord, shiftEnterSequence } from './terminal-keys';
+import { altArrowSequence, copySelectionChord, shiftEnterSequence } from './keys';
 
 function keyEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
   return { type: 'keydown', key: 'a', shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, ...overrides } as KeyboardEvent;

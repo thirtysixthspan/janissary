@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { highlightRects } from './terminal-selection-rects';
-import { selectionCellIndices, type Cell, type SelectionLayer } from './terminal-selection-layer';
+import { highlightRects } from './selection-rects';
+import { selectionCellIndices, type Cell, type SelectionLayer } from './selection-layer';
 
 const cell = (col: number, row: number): Cell => ({ col, row });
 // 10px-by-20px cells on a screen that starts 4px in and 6px down from the container's corner.

@@ -16,11 +16,11 @@
 import type React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Terminal } from '@xterm/xterm';
-import { freezeTerminalScreen, type FrozenScreen } from './terminal-screen-clone';
+import { freezeTerminalScreen, type FrozenScreen } from './terminal/screen-clone';
 import {
   cellFromPoint, layerHolds, layerText, snapshotViewport,
   type Cell, type ScreenMetrics, type SelectionLayer,
-} from './terminal-selection-layer';
+} from './terminal/selection-layer';
 
 type Options = {
   containerRef: React.RefObject<HTMLDivElement | null>;

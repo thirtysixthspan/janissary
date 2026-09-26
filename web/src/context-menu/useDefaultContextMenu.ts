@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
-import { clearTerminalSelection, terminalSelectionText } from '../shared/terminal/terminal-selection';
+import { clearTerminalSelection, terminalSelectionText } from '../shared/terminal/terminal/selection';
 import type { DefaultMenuEntry } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 

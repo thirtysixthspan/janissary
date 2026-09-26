@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultContextMenu } from './DefaultContextMenu';
 import type { RequestResult } from '../ws';
-import { registerTerminalSelection, unregisterTerminalSelection } from '../shared/terminal/terminal-selection';
+import { registerTerminalSelection, unregisterTerminalSelection } from '../shared/terminal/terminal/selection';
 
 function stubSelection(text: string) {
   vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => text } as Selection);

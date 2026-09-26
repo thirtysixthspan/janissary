@@ -1,6 +1,6 @@
 import React from 'react';
-import { normalizeRange, rangeSplitForLine, type SelectionLayer } from './terminal-selection-layer';
-import type { FrozenScreen } from './terminal-screen-clone';
+import { normalizeRange, rangeSplitForLine, type SelectionLayer } from './terminal/selection-layer';
+import type { FrozenScreen } from './terminal/screen-clone';
 import { FrozenScreenView } from './FrozenScreenView';
 
 type Properties = { state: SelectionLayer | null; screen: FrozenScreen | null };
