@@ -10,6 +10,10 @@
 
 ## resolved
 
+* acp — not a gap: 2 of 25 facts missing and none wrong; the two candidates are an empty first reply being retried internally, which changes nothing the user sees, and `acp` in a remote harness tab, which product/specs/acp.md calls unsupported but for which no code path refuses it, so neither is documentable (removed 2026-09-26)
+* monitoring — not a gap: 1 of 28 facts missing and none wrong; the reporting tab's metadata line, reset and context-snapshot buttons, area resizing, and strip reordering are all documented, and the one remaining fact is the reporting area taking keyboard focus through the section navigation documentation/user-documentation/getting-started/keyboard.md already covers (removed 2026-09-26)
+* scheduling — not a gap: 1 of 22 facts missing and none wrong; the bare-schedule web dialog is documented down to its field list, its web-only scope, and what it assembles on submit (removed 2026-09-26)
+* ssh-tab — not a gap: 2 of 20 facts missing and none wrong; the session is documented inside documentation/user-documentation/advanced-agents/harness.md under SSH sessions, which carries the label rules, the recording, the connection row, and the inline-terminal distinction (removed 2026-09-26)
 * tab-navigator — documented in documentation/user-documentation/command-bar/tab-navigator.md; product/specs/tab-navigator.md is stale in claiming the navigator lists every open tab (removed 2026-09-26)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-09-26)
 * conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-09-26)
