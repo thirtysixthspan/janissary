@@ -136,9 +136,15 @@ See [Sessions](/user-documentation/tab-types/sessions) for the full list of remo
 
 Attaching a harness redraws its retained terminal output and restores its recent transcript history without waiting for new output. Each surviving agent, including an agent joined to another tab's remote workspace, opens in a new tab with its retained shell history already in its transcript: each command you ran appears with the output it produced, in the order they ran, the same way the live tab showed them. You can scroll back to review the whole exchange from before and during detachment without running a command first. If another tab has taken the original name, the restored tab gets a unique name. Older history may be trimmed; a notice appears when terminal history was trimmed, and the oldest surviving output may appear without the command that produced it. Sessions started before display-history retention was available cannot recover output they did not retain.
 
-The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching an agent returns to its existing shell and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated.
+The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching an agent returns to its existing shell and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
 
-`janus --relaunch` doesn't bring a remote agent tab or remote file navigator back, and profiles do not restore remote navigators.
+## Coming back after a restart
+
+`janus --relaunch` reconnects every session you had parked, without asking. It goes through them one at a time and opens each one's tabs as that host answers, so a slow machine holds up only its own row. What a restart cannot get back is a remote file navigator: it's a view onto a workspace that is already coming back, so it stays closed and you open it again yourself.
+
+Each parked session settles one of three ways. If the host still has it, the tabs reopen and the row goes back to active. If the host says the session is gone, or comes back with nothing running in it, the row is marked terminated and dropped, the way it would be if you pressed **Terminate** yourself. If the host never answers, the row stays parked with **Attach** still on it and the reason shown beside it, so you can try again when the machine is awake. The restore finishes either way, and a host that is down never stops the others from coming back.
+
+An ordinary `janus` launch leaves all of this alone. Parked sessions are listed as detached and wait for you to press **Attach**, because a fresh launch otherwise knows nothing about the machines you were working on. See [Sessions](/user-documentation/tab-types/sessions) for the row and its buttons.
 
 ## What stays local
 

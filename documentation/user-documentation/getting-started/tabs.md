@@ -101,7 +101,7 @@ close bilal       close the tab named "bilal" (case-insensitive)
 close page-2      close the second embedded web page by its name
 ```
 
-`exit` is an alias of `close`. Closing a tab tears down everything used only by that tab — its shell, agent session, and scheduled commands — and focus moves to an adjacent tab. A shared workspace clone and remote connection stay alive while another joined tab still uses them, then close when their last user does.
+`exit` is an alias of `close`. Closing a tab tears down everything used only by that tab — its shell, agent session, and scheduled commands — and focus goes back to whichever tab you were on before the one you just closed, which is often but not always a neighbour. If that tab is gone too, focus lands on the nearest tab that still exists. A shared workspace clone and remote connection stay alive while another joined tab still uses them, then close when their last user does.
 
 Closing the **last** remaining tab quits the app, so it always asks first. `close`, `exit`, the tab strip's × button, `Cmd+W`/`Ctrl+W`, and a view tab's own × all bring up the quit confirmation dialog there, exactly as if you'd typed `quit`. A docked sidebar tab doesn't count as one of your remaining tabs. The only thing that quits without asking is the tab's own process exiting on its own. If no tab matches the name you gave, an error is reported.
 

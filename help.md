@@ -91,7 +91,7 @@
 
 | Key | Action |
 | --- | ------ |
-| `↑` / `↓` | Scroll up / down by a line |
+| `↑` / `↓` | Scroll up / down a short step |
 | `Page Up` / `Page Down` | Scroll up / down by a page |
 | Mouse wheel | Scroll up / down |
 

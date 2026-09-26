@@ -18,6 +18,8 @@ profile validate writing-code
 
 Bare `profile launch`, with no name, opens a picker with a **Project** section followed by a **Janissary** section for the profiles bundled with the app. `↑`/`↓` move the selection and skip the section labels. `Enter` or a click fills the command line with `profile launch <name>` without submitting it, so you can review or edit it first. `Escape` closes the picker without picking anything.
 
+The list is read from disk about once a second, so a profile you have just saved with `profile save` can take a second to appear. If the list changes while the picker is already open, whether because another tab added a profile or a `git checkout` moved one, the highlight is put back onto a real profile rather than left on a section label or past the end of a shorter list. It keeps its position rather than the profile it was on, so it can end up somewhere else in the list. A key you press before that correction has been applied only puts the highlight back rather than launching anything, so `Enter` never launches a profile that was not showing as selected. `Escape` closes the picker at any point.
+
 The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `product-review`. Launch any of them by name without setting anything up, and read one as a worked example of the format below. `profile list` shows them alongside your own.
 
 ## Writing a profile

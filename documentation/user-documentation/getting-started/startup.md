@@ -68,7 +68,11 @@ janus --relaunch
 ```
 
 
-`--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs, and workspace clones — those are live views and processes, not saved state — and any tab you closed, which stays closed. Quitting closes nothing, so everything still open at the time is restored.
+`--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs you launched on this machine, and workspace clones — those are live views and processes, not saved state — and any tab you closed, which stays closed. Quitting closes nothing, so everything still open at the time is restored.
+
+A harness or agent you parked on another machine is the exception to that. `--relaunch` reconnects every remote session you had detached, opening its tabs as each host answers, and one unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
+
+What comes back is read from one JSON file per tab under `.janissary/state/`, named after the tab. Run `state` in a tab to see the fields it holds and what `--relaunch` would restore; see [`state`](/user-documentation/command-bar/commands#state).
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 

@@ -47,7 +47,7 @@ The **State** column shows a plug icon ahead of the state's name, colored the sa
 Every row shows only the actions it can actually do.
 
 - **Attach** brings a parked session back, opening a tab for every process still running on it. On a reconnecting row it skips the retry wait and tries now.
-- **Detach** gives up the local tabs for a live session while leaving it running on its host. It asks you to confirm, naming the host; closing the local tabs never stops the remote processes, and attaching later restores the same running process rather than starting a new one.
+- **Detach** gives up the local tabs for a live session while leaving it running on its host. It asks you to confirm, naming the host; closing the local tabs never stops the remote processes, and attaching later restores the same running process rather than starting a new one. A harness's screen recording is per attachment, so detaching closes the current file and the later Attach starts a fresh one — see [Recordings](/user-documentation/advanced-agents/harness#recordings).
 - **Terminate** stops a parked session for good: Janissary reconnects long enough to tell the peer to stop its processes and remove its remote workspace, then asks you to confirm. Terminating a live session's launching row stops the peer and closes every tab sharing it.
 - **Forget** removes Janissary's own record without touching anything on the far side. It only appears once an attach or a terminate has already failed to reach that host, or on a row that's already terminated.
 - **Close** appears on an `ssh` row, a navigator row, or any row joined onto another row's connection. It closes that tab without touching the connection's launching row.
