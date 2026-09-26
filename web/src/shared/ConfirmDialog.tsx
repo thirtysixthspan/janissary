@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { openModal } from './modal-open';
+import React from 'react';
+import { ConfirmDialogShell } from './ConfirmDialogShell';
 
 /**
  * The application's terse confirmation: a title, a confirm button, a cancel button, and one keyboard
@@ -15,6 +15,10 @@ import { openModal } from './modal-open';
  * line-for-line copies, one per plugin list, and modal keyboard behavior that drifts by surface is
  * the kind of divergence nothing in the tree would show. Published to plugins through
  * `web/src/plugins/api.ts` on the same terms as the host's command bar and inline-edit field.
+ *
+ * The markup and the key wiring belong to `ConfirmDialogShell`, which the host's own quit and delete
+ * dialogs already render; this only fixes the one label a plugin caller has no opinion about, so a
+ * plugin question and a host question cannot drift apart.
  */
 export function ConfirmDialog({
   title,
@@ -27,57 +31,13 @@ export function ConfirmDialog({
   onConfirm(): void;
   onCancel(): void;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const [selected, setSelected] = useState<'confirm' | 'cancel'>('cancel');
-  const actionsRef = useRef<Record<string, () => void>>({});
-  const toggle = () => { setSelected((value) => value === 'confirm' ? 'cancel' : 'confirm'); };
-
-  // Through a ref rather than a dependency of the effect below: the listener is bound once for the
-  // life of the dialog, and re-binding it on every `selected` change would be a listener churn for
-  // a table that is cheap to replace.
-  actionsRef.current = {
-    y: onConfirm,
-    n: onCancel,
-    enter: () => { if (selected === 'confirm') onConfirm(); else onCancel(); },
-    escape: onCancel,
-    arrowleft: toggle,
-    arrowright: toggle,
-  };
-
-  useEffect(() => {
-    dialogRef.current?.focus();
-    const releaseModal = openModal();
-    const onKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      actionsRef.current[event.key.toLowerCase()]?.();
-    };
-    globalThis.addEventListener('keydown', onKeyDown, { capture: true });
-    return () => {
-      globalThis.removeEventListener('keydown', onKeyDown, { capture: true });
-      releaseModal();
-    };
-  }, []);
-
   return (
-    <div className="modal-backdrop">
-      <div ref={dialogRef} className="modal" role="alertdialog" aria-modal="true" tabIndex={-1}>
-        <div className="modal-title">{title}</div>
-        <div className="modal-actions">
-          <button
-            className={`modal-button${selected === 'confirm' ? ' selected' : ''}`}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </button>
-          <button
-            className={`modal-button${selected === 'cancel' ? ' selected' : ''}`}
-            onClick={onCancel}
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmDialogShell
+      title={title}
+      confirmLabel={confirmLabel}
+      cancelLabel="Cancel"
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   );
 }
