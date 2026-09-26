@@ -15,6 +15,17 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// `recordingDirectory` is module state with no reset, so this has to run before anything
+// initializes it. Vitest runs a file's blocks in declaration order, which is what makes that true.
+describe('harness-recording-file before a directory is initialized', () => {
+  // Without the guard the sweep would resolve `rmSync` against the process's working directory and
+  // delete a `recordings` directory out of whatever directory the app happened to start in.
+  it('clearHarnessRecordingDirectory removes nothing', () => {
+    clearHarnessRecordingDirectory();
+    expect(mockFs.rmSync).not.toHaveBeenCalled();
+  });
+});
+
 describe('harness-recording-file', () => {
   it('ensureRecordingDirectory creates the recordings directory recursively', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
