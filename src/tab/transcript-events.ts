@@ -56,15 +56,20 @@ export function markUnreadTab(
   tab.hasUnread = true;
 }
 
+// The fields a producer may add to the running entry it starts, beyond its command text: the
+// shell records the working directory the command ran in.
+export type RunningEntryFields = Partial<Omit<LogEntry, 'input' | 'output' | 'running'>>;
+
 export function startRunningTab(
   tabsOrBusy: Tab[] | Set<string>, label: string, input: string, append: (label: string, entry: LogEntry) => void,
+  fields: RunningEntryFields = {},
 ): void {
   if (tabsOrBusy instanceof Set) tabsOrBusy.add(label);
   else {
     const runtime = runtimeFor(tabsOrBusy, label);
     if (runtime) runtime.busy = true;
   }
-  append(label, { input, output: '', running: true });
+  append(label, { input, output: '', running: true, ...fields });
 }
 
 export function finishRunningTab(

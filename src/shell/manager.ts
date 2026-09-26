@@ -184,26 +184,18 @@ export class ShellManager {
   run(label: string, command: string, options?: { onComplete?: (out: string) => void; detect?: boolean }): void {
     const index = Math.max(0, this.managers.tab.findIndex(label));
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const tab = this.managers.tab.byLabel(label);
-    if (!tab) { options?.onComplete?.(''); return; }
+    if (!this.managers.tab.byLabel(label)) { options?.onComplete?.(''); return; }
 
-    const before = tab.log.length;
-    const max = getConfig().transcriptMaxLines;
-    tab.log = [...tab.log, { input: command, output: '', running: true, cwd }];
-    if (tab.log.length > max) tab.log = tab.log.slice(tab.log.length - max);
-    const trimmed = before + 1 - tab.log.length;
-    if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
-    messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: tab.log.at(-1)!, tab });
+    this.managers.tab.startRunning(label, command, { cwd });
 
-    this.managers.tab.addBusy(label);
-    messageBus.emit('state', { type: 'dirty' });
-
-    const update = (output: string, running: boolean) => {
+    const update = (output: string, running: boolean, trailing = false) => {
       this.managers.tab.updateRunning(label, { command }, output, running, {
+        trailing,
         finalize: (t) => {
           this.managers.tab.deleteBusy(label);
           this.managers.tab.persist(this.managers.tab.buildAgentState(t));
         },
+        markUnread: (l) => this.managers.tab.markUnread(l),
       });
     };
 
@@ -224,9 +216,9 @@ export class ShellManager {
         const promoted = promotion.isPromoted();
         promotion.finish();
         this.promotions.delete(label);
-        update(promoted ? TERMINAL_ENTRY_NOTE : result, false);
-        this.managers.tab.markUnread(label);
-        if (result && !promoted && tab) messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry: { input: '', output: result }, tab });
+        // A promoted command's output went to the terminal; its entry reads as a note, and no
+        // trailing output event reports bytes the transcript never showed.
+        update(promoted ? TERMINAL_ENTRY_NOTE : result, false, !promoted);
         options?.onComplete?.(promoted ? '' : result);
       },
       onPwd: (pwd) => { this.managers.tab.setCwd(label, pwd); messageBus.emit('state', { type: 'dirty' }); },

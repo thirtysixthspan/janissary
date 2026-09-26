@@ -79,7 +79,7 @@ While a tab's agent is busy — running a shell command, an ACP turn, or any oth
 
 When an **inactive** tab receives new transcript content — a message from another agent (`msg`/`broadcast`), ACP/agent output, a shell command finishing, or a browser/connection command completing — an **unread badge** (a flag icon) appears on that tab in the tab strip, rendered as a sibling of the tab name so it does not inherit the busy-dot blink. The badge stays until the tab is focused, then clears. The active tab never shows the badge.
 
-**Marking.** Content delivery marks a tab unread only when the target tab is neither the focused tab nor the visible selection in the other split pane, and is not docked into a sidebar. In-progress shell output does not mark — the busy dot already conveys that state; the badge signals completed new output.
+**Marking.** Content delivery marks a tab unread only when the target tab is neither the focused tab nor the visible selection in the other split pane, and is not docked into a sidebar. In-progress shell output does not mark — the busy dot already conveys that state; the badge signals completed new output. A command's new entry is content, though: a command that starts in an inactive tab — a scheduled command, or one delivered by another agent's `msg` — marks it when its entry appears, the same for a shell command as for a browser or connection command, and marks it again when it finishes.
 
 **Docked tabs never badge.** A tab docked into a sidebar (see `sidebars.md`) is permanently visible chrome and can never become the active tab, so it is never eligible for the unread badge either — new content delivered to a docked tab (for example the notifications tab) never sets `hasUnread`.
 
