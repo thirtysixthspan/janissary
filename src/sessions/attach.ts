@@ -1,4 +1,5 @@
-import { distinctColor, uniqueLabel } from '../tab/index.js';
+import { distinctColor } from '../tab/colors.js';
+import { uniqueLabel } from '../tab/utils.js';
 import type { Managers } from '../managers.js';
 import { startRemoteAgent } from '../profile/remote-agent.js';
 import { parseRemoteAddress } from '../remote/address.js';

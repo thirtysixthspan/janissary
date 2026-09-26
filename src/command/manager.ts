@@ -2,7 +2,7 @@ import type { RouteChoice } from '../recognizers/types.js';
 import { resolveCommand, type Resolution } from '../resolve.js';
 import { isInteractive } from '../interactive/index.js';
 import { commands } from '../commands/index.js';
-import { toPrefixedCommand } from '../recognizers/index.js';
+import { toPrefixedCommand } from '../recognizers/route-choices.js';
 import { messageBus } from '../bus.js';
 import { resolveUnknownCommand } from './router.js';
 import { recordGlobalHistory } from '../global-history.js';

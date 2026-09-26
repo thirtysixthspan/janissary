@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeCommand, routeChoices, toPrefixedCommand, HIGH_RELIABILITY } from './analyze.js';
+import { analyzeCommand, HIGH_RELIABILITY } from './analyze.js';
+import { routeChoices, toPrefixedCommand } from './route-choices.js';
 
 const noDatabase = { openDbs: [] as string[] };
 const oneDatabase = { openDbs: ['movies'] };

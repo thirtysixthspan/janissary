@@ -1,5 +1,5 @@
 import type { Tab } from './types.js';
-import { stripComments } from './index.js';
+import { stripComments } from './utils.js';
 
 // Appends `text` (after stripping shell comments) to `tab`'s command history, deduping an
 // immediate repeat and capping at 100 entries, and resets the history-scroll cursor. Returns the

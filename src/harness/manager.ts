@@ -1,4 +1,4 @@
-import { distinctColor } from '../tab/index.js';
+import { distinctColor } from '../tab/colors.js';
 import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
 import { parseHarnessCommand, HARNESS_NAMES } from './index.js';
 import type { HarnessLaunch } from './command-parse.js';

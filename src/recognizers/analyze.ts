@@ -2,7 +2,6 @@ import { bashRecognizer } from './bash.js';
 import { dbRecognizer as databaseRecognizer } from './db.js';
 import { acpRecognizer } from './acp.js';
 import type { CommandRecognizer, CommandRoute, RecognizerContext } from './types.js';
-export { routeChoices, toPrefixedCommand } from './route-choices.js';
 
 export const recognizers: CommandRecognizer[] = [bashRecognizer, databaseRecognizer, acpRecognizer];
 

@@ -1,15 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { formatLateDuration } from './display.js';
-import {
-  parseTimeOfDay,
-  parseInterval,
-  parseMonthDay,
-  nextOccurrenceOfTime,
-  nextWeekday,
-  computeNextRun,
-  parseScheduleCommand,
-  formatSchedule,
-} from './index.js';
+import { formatLateDuration, formatSchedule } from './display.js';
+import { parseTimeOfDay, parseInterval, parseMonthDay } from './parsing.js';
+import { nextOccurrenceOfTime, nextWeekday, computeNextRun } from './time.js';
+import { parseScheduleCommand } from './index.js';
 import type { ScheduleEntry } from './types.js';
 
 // Tuesday, June 23 2026, 2:00pm local.

@@ -1,4 +1,5 @@
-import { analyzeCommand, toPrefixedCommand } from './recognizers/index.js';
+import { analyzeCommand } from './recognizers/analyze.js';
+import { toPrefixedCommand } from './recognizers/route-choices.js';
 import type { RouteChoice } from './recognizers/types.js';
 import type { Managers } from './managers.js';
 

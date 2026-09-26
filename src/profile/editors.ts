@@ -1,4 +1,4 @@
-import { insertTabInGroup } from '../tab/index.js';
+import { insertTabInGroup } from '../tab/utils.js';
 import type { Managers } from '../managers.js';
 import type { ProfileEditorsEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { makeTab, dotColors, distinctColor, canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, expandTabs, flattenBuffer, wordWrap, stripComments } from './index.js';
+import { makeTab } from './index.js';
+import { dotColors, distinctColor } from './colors.js';
+import { canMoveTab, insertTabInGroup, swapTabsLeft, swapTabsRight, renumberTabs, stripComments } from './utils.js';
+import { expandTabs } from './expand-tabs.js';
+import { flattenBuffer } from './formatting.js';
+import { wordWrap } from '../word-wrapping.js';
 
 describe('group', () => {
   it('defaults a tab to group 1', () => {

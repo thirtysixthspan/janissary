@@ -1,6 +1,5 @@
 import type { LogEntry, BufferLine } from './types.js';
 import { formatMessageContent, tryCollapseToolSteps } from '../buffer.js';
-export { expandTabs } from './expand-tabs.js';
 import { expandTabs } from './expand-tabs.js';
 
 export function handleCollapsedToolSteps(
