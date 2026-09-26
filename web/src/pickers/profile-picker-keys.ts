@@ -1,4 +1,5 @@
 import type { ProfileRow } from '@shared/protocol';
+import { normalizeIndex, seekSelectable } from './sectioned-rows';
 
 export type VisibleProfileRow = ProfileRow & { header?: boolean };
 
@@ -17,35 +18,26 @@ export function profilePickerRows(profiles: ProfileRow[]): VisibleProfileRow[] {
   return rows;
 }
 
-export function firstProfileIndex(rows: VisibleProfileRow[]): number {
-  const index = rows.findIndex((row) => !row.header);
-  return index === -1 ? 0 : index;
-}
-
-function seek(rows: VisibleProfileRow[], index: number, step: number): number {
-  for (let next = index + step; next >= 0 && next < rows.length; next += step) {
-    if (!rows[next].header) return next;
-  }
-  return index;
-}
-
 export type ProfilePickerKeyOutcome = {
   index: number;
   action?: { type: 'pick'; name: string } | { type: 'close' };
 };
 
+// Mirrors `handleTaskPickerKey`: Escape always closes, and a stale selection is re-seated without acting.
 export function handleProfilePickerKey(
   rows: VisibleProfileRow[],
   index: number,
   key: string,
 ): ProfilePickerKeyOutcome {
+  if (key === 'Escape') return { index: normalizeIndex(rows, index), action: { type: 'close' } };
   if (rows.length === 0) return { index: 0 };
+  const current = normalizeIndex(rows, index);
+  if (current !== index) return { index: current };
   const row = rows[index];
   if (row.header) return { index };
-  if (key === 'ArrowUp') return { index: seek(rows, index, -1) };
-  if (key === 'ArrowDown') return { index: seek(rows, index, 1) };
+  if (key === 'ArrowUp') return { index: seekSelectable(rows, index, -1) };
+  if (key === 'ArrowDown') return { index: seekSelectable(rows, index, 1) };
   if (key === 'Enter') return { index, action: { type: 'pick', name: row.name } };
-  if (key === 'Escape') return { index, action: { type: 'close' } };
   return { index };
 }
 

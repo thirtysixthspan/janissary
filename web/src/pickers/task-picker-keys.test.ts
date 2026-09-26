@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { flattenVisibleTaskRows, firstSelectableIndex, handleTaskPickerKey, dispatchTaskPickerKey } from './task-picker-keys';
+import { flattenVisibleTaskRows, handleTaskPickerKey, dispatchTaskPickerKey } from './task-picker-keys';
 import type { TaskRow } from '@shared/protocol';
 import type { VisibleTaskRow } from './task-picker-keys';
 
@@ -61,16 +61,6 @@ describe('flattenVisibleTaskRows', () => {
   });
 });
 
-describe('firstSelectableIndex', () => {
-  it('skips a leading section header', () => {
-    expect(firstSelectableIndex(flattenVisibleTaskRows(rows, new Set()))).toBe(1);
-  });
-
-  it('returns 0 for an empty list', () => {
-    expect(firstSelectableIndex([])).toBe(0);
-  });
-});
-
 describe('handleTaskPickerKey — selection movement', () => {
   const visible = flattenVisibleTaskRows(rows, new Set(['sub'])); // [#Project, top.md, sub, sub/nested, sub/inner]
 
@@ -90,12 +80,32 @@ describe('handleTaskPickerKey — selection movement', () => {
     expect(handleTaskPickerKey(visible, 1, 'ArrowUp').index).toBe(1);
   });
 
-  it('is a no-op when the selection is on a header row', () => {
-    expect(handleTaskPickerKey(visible, 0, 'ArrowDown')).toEqual({ index: 0 });
+  it('re-seats a selection on a header row onto the first task without moving past it', () => {
+    expect(handleTaskPickerKey(visible, 0, 'ArrowDown')).toEqual({ index: 1 });
+  });
+
+  it('re-seats a selection past the end onto the last row without throwing', () => {
+    expect(handleTaskPickerKey(visible, visible.length + 3, 'ArrowUp')).toEqual({ index: visible.length - 1 });
   });
 
   it('returns index 0 for an empty row list', () => {
     expect(handleTaskPickerKey([], 0, 'ArrowDown').index).toBe(0);
+  });
+});
+
+describe('handleTaskPickerKey — Escape', () => {
+  it('closes from a header row', () => {
+    const visible = flattenVisibleTaskRows(rows, new Set());
+    expect(handleTaskPickerKey(visible, 0, 'Escape')).toEqual({ index: 1, action: { type: 'close' } });
+  });
+
+  it('closes from an index past the end', () => {
+    const visible = flattenVisibleTaskRows(rows, new Set());
+    expect(handleTaskPickerKey(visible, 9, 'Escape').action).toEqual({ type: 'close' });
+  });
+
+  it('closes an empty list', () => {
+    expect(handleTaskPickerKey([], 4, 'Escape')).toEqual({ index: 0, action: { type: 'close' } });
   });
 });
 
@@ -166,8 +176,12 @@ describe('handleTaskPickerKey — activation', () => {
     expect(handleTaskPickerKey(visible, 1, 'Enter').action).toEqual({ type: 'pick', path: 'top.md' });
   });
 
-  it('Enter on a header row is a no-op', () => {
-    expect(handleTaskPickerKey(visible, 0, 'Enter')).toEqual({ index: 0 });
+  it('Enter on a header row re-seats the selection without picking', () => {
+    expect(handleTaskPickerKey(visible, 0, 'Enter')).toEqual({ index: 1 });
+  });
+
+  it('Enter on an index past the end re-seats the selection without picking', () => {
+    expect(handleTaskPickerKey(visible, 7, 'Enter')).toEqual({ index: 2 });
   });
 
   it('Escape closes', () => {

@@ -103,6 +103,31 @@ describe('useTaskPicker', () => {
     });
   });
 
+  it('re-seats the index onto a selectable row when a re-render leaves it past the end', () => {
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    const onHook = (h: ReturnType<typeof useTaskPicker>) => { hook = h; };
+    const tasks = [fileRow('a.md'), fileRow('b.md'), fileRow('c.md')];
+    const { rerender } = render(React.createElement(TestComponent, { tasks, onHook }));
+    act(() => { hook!.openTaskPicker(); hook!.setTaskPickerIndex(3); });
+    expect(hook!.taskPickerIndex).toBe(3);
+
+    rerender(React.createElement(TestComponent, { tasks: [fileRow('a.md')], onHook }));
+    expect(hook!.taskPickerIndex).toBe(1);
+    expect(hook!.visibleTasks[hook!.taskPickerIndex].header).toBeUndefined();
+  });
+
+  it('re-seats the index off a section header when the list shifts under it', () => {
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    const onHook = (h: ReturnType<typeof useTaskPicker>) => { hook = h; };
+    const tasks = [fileRow('a.md'), fileRow('b.md'), fileRow('c.md', 0, 'janissary')];
+    const { rerender } = render(React.createElement(TestComponent, { tasks, onHook }));
+    act(() => { hook!.openTaskPicker(); hook!.setTaskPickerIndex(2); });
+
+    rerender(React.createElement(TestComponent, { tasks: [fileRow('a.md'), fileRow('c.md', 0, 'janissary')], onHook }));
+    expect(hook!.visibleTasks[2].header).toBe(true);
+    expect(hook!.taskPickerIndex).toBe(3);
+  });
+
   it('visibleTasks hides a directory\'s children until toggleTaskDir expands it', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     const tasks = [dirRow('sub'), fileRow('sub/nested.md', 1), fileRow('top.md')];

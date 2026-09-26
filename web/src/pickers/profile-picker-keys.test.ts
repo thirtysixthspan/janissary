@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  dispatchProfilePickerKey, firstProfileIndex, handleProfilePickerKey, profilePickerRows,
+  dispatchProfilePickerKey, handleProfilePickerKey, profilePickerRows,
 } from './profile-picker-keys';
 
 const profiles = [
@@ -20,11 +20,6 @@ describe('profile picker keys', () => {
     ]);
   });
 
-  it('starts on the first profile after the leading header', () => {
-    expect(firstProfileIndex(profilePickerRows(profiles))).toBe(1);
-    expect(firstProfileIndex([])).toBe(0);
-  });
-
   it('moves between profiles while skipping headers', () => {
     const rows = profilePickerRows(profiles);
     expect(handleProfilePickerKey(rows, 2, 'ArrowDown').index).toBe(4);
@@ -35,6 +30,22 @@ describe('profile picker keys', () => {
     const rows = profilePickerRows(profiles);
     expect(handleProfilePickerKey(rows, 1, 'Enter').action).toEqual({ type: 'pick', name: 'coding' });
     expect(handleProfilePickerKey(rows, 1, 'Escape').action).toEqual({ type: 'close' });
+  });
+
+  it('re-seats a selection past the end onto the last profile without picking', () => {
+    const rows = profilePickerRows(profiles);
+    expect(handleProfilePickerKey(rows, 8, 'Enter')).toEqual({ index: 4 });
+  });
+
+  it('re-seats a selection on a header onto the profile below it without picking', () => {
+    const rows = profilePickerRows(profiles);
+    expect(handleProfilePickerKey(rows, 3, 'Enter')).toEqual({ index: 4 });
+  });
+
+  it('closes on Escape from a header row or an empty list', () => {
+    const rows = profilePickerRows(profiles);
+    expect(handleProfilePickerKey(rows, 0, 'Escape')).toEqual({ index: 1, action: { type: 'close' } });
+    expect(handleProfilePickerKey([], 2, 'Escape')).toEqual({ index: 0, action: { type: 'close' } });
   });
 
   it('dispatches a selected profile name', () => {

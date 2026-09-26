@@ -24,6 +24,24 @@ describe('useProfilePicker', () => {
     expect(hook!.profilePickerIndex).toBe(1);
   });
 
+  it('re-seats the index onto a selectable row when a re-render leaves it past the end', () => {
+    let hook: ReturnType<typeof useProfilePicker> | undefined;
+    function C({ list }: { list: typeof profiles }) {
+      const recallRef = useRef<((text: string) => void) | null>(null);
+      const inputRef = useRef<HTMLTextAreaElement>(null);
+      hook = useProfilePicker(list, recallRef, inputRef, mockClient, undefined);
+      return null;
+    }
+    const three = [...profiles, { name: 'coding', source: 'project' as const }, { name: 'review', source: 'project' as const }];
+    const { rerender } = render(React.createElement(C, { list: three }));
+    act(() => { hook!.openProfilePicker(); hook!.setProfilePickerIndex(3); });
+    expect(hook!.profilePickerIndex).toBe(3);
+
+    rerender(React.createElement(C, { list: profiles }));
+    expect(hook!.profilePickerIndex).toBe(1);
+    expect(hook!.visibleProfiles[hook!.profilePickerIndex].header).toBeUndefined();
+  });
+
   it('pickProfile populates the command line with profile launch <name> and closes without submitting', () => {
     const recall = vi.fn();
     let hook: ReturnType<typeof useProfilePicker> | undefined;
