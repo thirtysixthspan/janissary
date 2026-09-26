@@ -74,6 +74,8 @@ hand.
 
 When neither source has any task files, the picker shows `(no tasks)`.
 
+The list can change while the picker is open — a task file added, renamed, or deleted on disk (by an agent, or a git checkout) reaches the open picker with the next state update. The selection is then kept on a real task row: an index left past the end of the shorter list moves to the last row, and one left on a section header moves to the first task beneath that header (or the nearest one above it when nothing follows). The selection is kept by position, not by task, so it can land on a neighbouring task. A key pressed before that correction has rendered only re-seats the selection onto the row it now shows; it does not move further, expand, or insert a task the user never saw highlighted. Escape always closes the picker, whatever the selection and even when the list has emptied.
+
 Hovering the mouse over the row the keyboard cursor is already on keeps that row's selected
 appearance — the keyboard and mouse highlighting never conflict or combine into a mismatched look.
 

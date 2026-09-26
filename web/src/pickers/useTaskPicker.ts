@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
-import { flattenVisibleTaskRows, firstSelectableIndex } from './task-picker-keys';
+import { flattenVisibleTaskRows } from './task-picker-keys';
+import { firstSelectable, normalizeIndex } from './sectioned-rows';
 import { insertIntoCommandLine } from './populate-command-line';
 
 // State and handlers for the Ctrl+A / `tasks` picker. Selecting a task inserts an `execute …`
@@ -27,8 +28,14 @@ export function useTaskPicker(
 
   const visibleTasks = useMemo(() => flattenVisibleTaskRows(tasks, expandedTaskDirs), [tasks, expandedTaskDirs]);
 
+  // The server rebuilds the task list on every broadcast; keep the selection on a real row when
+  // the list shrinks or shifts under an open picker.
+  useEffect(() => {
+    setTaskPickerIndex((previous) => normalizeIndex(visibleTasks, previous));
+  }, [visibleTasks]);
+
   const openTaskPicker = useCallback(() => {
-    setTaskPickerIndex(firstSelectableIndex(visibleTasks));
+    setTaskPickerIndex(firstSelectable(visibleTasks));
     setTaskPickerOpen(true);
   }, [visibleTasks]);
 

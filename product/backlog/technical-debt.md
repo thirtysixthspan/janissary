@@ -4,17 +4,6 @@
 
 ## development
 
-* Keep the task and profile pickers' selection on a real, selectable row when the server's list changes under an open picker.
-
-Existing Debt: Both sectioned pickers hold a raw row index that nothing re-clamps when the server rebroadcasts the task or profile list, and both key handlers dereference `rows[index]` and bail out on a header row before they look at Escape, with the header-aware seek logic copied between the two modules. Severity: 4/10
-
-Existing Risk: 5/10 - If a task file or profile is deleted while its picker is open (an agent or a git checkout in the project does this routinely), the next keystroke throws inside the window key handler, and if the list merely shifts the selection can land on a section header where arrows, Enter, and even Escape do nothing, leaving a picker the keyboard cannot close.
-
-Proposal Risk: 2/10 - The index is always valid and Escape always closes, though a selection that re-clamps may jump to a different task than the one the user was looking at, which is visible but harmless.
-
-Proposal: `handleTaskPickerKey` in `web/src/pickers/task-picker-keys.ts` and `handleProfilePickerKey` in `web/src/pickers/profile-picker-keys.ts` both open with `const row = rows[index]; if (row.header) return { index };`, and each file has its own private `seek` and first-selectable helper (`firstSelectableIndex` and `firstProfileIndex`). `useTaskPicker` and `useProfilePicker` in the same directory store the index in `useState` and set it only on open and on key outcomes, while the rows come from `tasks` and `profiles` that `buildStateEvent` in `src/state-event.ts` recomputes on every broadcast. `useQueuePicker.ts` already clamps its index in an effect keyed on the list length. Extract a shared pure module `web/src/pickers/sectioned-rows.ts` exporting `firstSelectable(rows)`, `seekSelectable(rows, index, step)`, and `normalizeIndex(rows, index)` (an out-of-range or header index becomes the nearest selectable row, or the first one), have both key modules import it, handle `Escape` before any row lookup, and run `normalizeIndex` at the top of each handler. In both hooks add an effect keyed on the visible rows that re-normalizes the stored index. `web/src/pickers/task-picker-keys.test.ts` (including "is a no-op when the selection is on a header row"), `web/src/pickers/profile-picker-keys.test.ts`, `web/src/pickers/useTaskPicker.test.ts`, and `web/src/pickers/useProfilePicker.test.ts` pin the navigation that must not move; add cases for an index past the end, Escape on a header, and a hook re-render with fewer rows.
-
-
 * Release a harness tab's recorder and transcript tailer when the tab closes, not only when its PTY reports an exit, so detaching a remote harness stops leaking them.
 
 Existing Debt: `HarnessManager` disposes a harness runtime only on a `pty exit` bus event, has no `closeTab`, and is absent from the tab-release list, but detaching a remote session deliberately never produces that exit, and a reattach under the same PTY id overwrites the old runtime in the map without disposing it. Severity: 5/10

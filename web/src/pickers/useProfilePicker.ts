@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ProfileRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { populateCommandLine } from './populate-command-line';
-import { firstProfileIndex, profilePickerRows } from './profile-picker-keys';
+import { profilePickerRows } from './profile-picker-keys';
+import { firstSelectable, normalizeIndex } from './sectioned-rows';
 
 // State and handlers for the `profile launch` picker (mirrors the `hist` picker's shape) — unlike
 // `hist`, selecting a profile populates the command line without submitting it, the same way the
@@ -19,8 +20,14 @@ export function useProfilePicker(
   const [profilePickerIndex, setProfilePickerIndex] = useState(0);
   const visibleProfiles = useMemo(() => profilePickerRows(profiles), [profiles]);
 
+  // The server rebuilds the profile list on every broadcast; keep the selection on a real row when
+  // the list shrinks or shifts under an open picker.
+  useEffect(() => {
+    setProfilePickerIndex((previous) => normalizeIndex(visibleProfiles, previous));
+  }, [visibleProfiles]);
+
   const openProfilePicker = () => {
-    setProfilePickerIndex(firstProfileIndex(visibleProfiles));
+    setProfilePickerIndex(firstSelectable(visibleProfiles));
     setProfilePickerOpen(true);
   };
 
