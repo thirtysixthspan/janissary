@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EDITOR_PARAMS, isEditorPluginFailedParams } from './editor.js';
+import { clientParamsValid } from './index.js';
 import { MONITOR_PARAMS } from './monitor.js';
 import { PLUGIN_PARAMS } from './plugin.js';
 
@@ -37,6 +38,36 @@ describe('editor RPC params decoders', () => {
   it('exposes the editor-plugin guard the dispatcher re-checks with', () => {
     expect(isEditorPluginFailedParams({ url: 'u', plugin: 'p', reason: 'r' })).toBe(true);
     expect(isEditorPluginFailedParams(null)).toBe(false);
+  });
+});
+
+// The two verbs that carry a second string, addressed the same way as the ones above. They are
+// absent from `EDITOR_CASES` above, so their decoders were never called by anything.
+describe('editor file-mutating params decoders', () => {
+  const MUTATING_CASES: Array<[keyof typeof EDITOR_PARAMS, Record<string, unknown>, Array<Record<string, unknown>>]> = [
+    ['renameEditorFile', { url: '/open/1', name: 'b.ts' }, [{ url: '/open/1' }, { url: '/open/1', name: 7 }]],
+    ['commitEditorFile', { url: '/open/1', message: 'commit: b.ts' }, [
+      { url: '/open/1' },
+      { url: '/open/1', message: {} },
+    ]],
+  ];
+
+  it.each(MUTATING_CASES)('accepts the %s params the client sends', (method, valid) => {
+    expect(EDITOR_PARAMS[method](valid)).toBe(true);
+  });
+
+  it.each(MUTATING_CASES)('rejects malformed %s params', (method, _valid, invalid) => {
+    for (const params of invalid) expect(EDITOR_PARAMS[method](params)).toBe(false);
+  });
+
+  // These two decoders read their fields off the argument directly, without an `isRecord` guard of
+  // their own — so the record check belongs to the boundary, and that is where a non-object is
+  // refused. Asserting the decoders themselves survive one would be asserting a promise the code
+  // does not make and the dispatcher never asks for.
+  it('refuses params that are not an object at the boundary that guards them', () => {
+    expect(clientParamsValid('renameEditorFile', null)).toBe(false);
+    expect(clientParamsValid('commitEditorFile', 'b.ts')).toBe(false);
+    expect(clientParamsValid('renameEditorFile', ['b.ts'])).toBe(false);
   });
 });
 
