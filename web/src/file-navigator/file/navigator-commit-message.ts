@@ -2,7 +2,7 @@ import { basename } from '../../shared/rel-path';
 
 // Pure helpers for the commit-message field — what it opens pre-filled with, and whether what the
 // user left in it is worth sending. Kept out of the component so both are testable without a render,
-// the way `file-navigator-rename.ts` holds the rename field's own rules.
+// the way `navigator-rename.ts` holds the rename field's own rules.
 
 // The text the field opens with. A single file is named outright, since that is the common case and
 // the one where a generated message is actually informative; anything else is counted. Uses

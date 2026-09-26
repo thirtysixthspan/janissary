@@ -2,8 +2,8 @@ import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js
 import { decodeOrigin } from './decode-root.js';
 
 // The decoders for the version-18 detection family — `capture-request`/`capture-reply` and
-// `gate-event`/`busy-transition` — in their own module for the same reason `frame-decode-history.ts`
-// has one: `frame-decode.ts` is the dispatcher, and four frame shapes are more validation than a
+// `gate-event`/`busy-transition` — in their own module for the same reason `decode-history.ts`
+// has one: `decode.ts` is the dispatcher, and four frame shapes are more validation than a
 // dispatcher arm should hold.
 
 // `new Date(timestamp).toISOString()`, which `harnessArtifactFilename` calls on every capturedAt

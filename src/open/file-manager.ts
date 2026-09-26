@@ -123,7 +123,7 @@ export class OpenFileManager {
   }
 
   // Whether `file` is a candidate for GitHub syncing at all — the sole gate for the entire feature
-  // (see `git-sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
+  // (see `src/git/sync.ts`); there is no UI toggle. Two conditions: `file`'s project-relative path is
   // config-listed, and the governing checkout is confirmably on its primary branch. The governing
   // checkout is the activating tab's own navigator root when that tree governs at all (see
   // `governingNavigator`) and has already loaded its git metadata — falling back to the launch dir's

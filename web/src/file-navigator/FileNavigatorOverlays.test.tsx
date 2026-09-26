@@ -285,7 +285,7 @@ describe('FileNavigatorOverlays', () => {
     }
   });
 
-  // `file-navigator-menu-actions.ts` has no unit test file of its own — the entries it builds are
+  // `file/navigator-menu-actions.ts` has no unit test file of its own — the entries it builds are
   // exercised through the rendered menu, here.
   const commitRows: FileNavigatorRow[] = [
     { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },

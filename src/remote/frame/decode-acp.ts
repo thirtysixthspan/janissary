@@ -1,10 +1,10 @@
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
-// The ACP family's decoders, in their own module for the same reason `frame-decode-history.ts` has
-// one: `frame-decode.ts` is the dispatcher, and six frame shapes are more validation than a
+// The ACP family's decoders, in their own module for the same reason `decode-history.ts` has
+// one: `decode.ts` is the dispatcher, and six frame shapes are more validation than a
 // dispatcher arm should hold.
 
-// Reject an array and `null` the way `decodeTokens` in `frame-decode.ts` does, and every non-string
+// Reject an array and `null` the way `decodeTokens` in `decode-provision.ts` does, and every non-string
 // value with them: an environment override map is spread straight over the ACP subprocess's
 // environment.
 function decodeEnv(value: unknown): Record<string, string> | undefined | 'invalid' {

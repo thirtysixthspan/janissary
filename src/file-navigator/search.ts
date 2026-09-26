@@ -37,7 +37,7 @@ async function walkFiles(absDir: string, relDir: string): Promise<string[]> {
 // Given an absolute directory root, resolves to a sorted array of root-relative file paths,
 // gitignore-aware: tracked files plus untracked-but-not-ignored files, via `git ls-files
 // --cached --others --exclude-standard -z` (async, off the event loop — the exact `execFileAsync`
-// pattern `changedPaths` uses in `git-status.ts`). Falls back to an async recursive walk (also
+// pattern `changedPaths` uses in `src/git/status.ts`). Falls back to an async recursive walk (also
 // off the event loop) applying the file navigator's own default excludes when `root` is not inside a
 // git repository or the git invocation fails for any other reason. Directories are never
 // included; every path is relative to `root`.

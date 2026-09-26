@@ -5,7 +5,7 @@ import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 import { configRecord, decodeConfig } from './config-decode.js';
 
-// Per-event opt-in toggles for the notifications tab (see `notifications.ts`). Each defaults to
+// Per-event opt-in toggles for the notifications tab (see `notifications/index.ts`). Each defaults to
 // false; the user enables an event by editing `.janissary/config.json` directly. There is
 // deliberately no toggle for the `manual` event (an agent-triggered `notify`), which always fires.
 export type NotificationConfig = {
@@ -26,8 +26,9 @@ export type Config = {
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
-  // the screen, promoting them to a full-tab terminal mid-command (see `interactive-signals.ts`).
-  // Default true; with it off, shells are piped and only the name list (`interactive.ts`) applies.
+  // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).
+  // Default true; with it off, shells are piped and only the name list (`interactive/index.ts`)
+  // applies.
   interactiveShellDetection: boolean;
   // The active syntax-highlighting theme name for editor tabs (see `syntax-themes.ts`), applied
   // globally across every open editor tab.
@@ -35,10 +36,10 @@ export type Config = {
   // The active application color theme name (see `app-themes.ts`), applied to the whole window
   // chrome. Independent of `syntaxTheme`.
   theme: string;
-  // Which background events feed the notifications tab (all opt-in; see `notifications.ts`).
+  // Which background events feed the notifications tab (all opt-in; see `notifications/index.ts`).
   notifications?: NotificationConfig;
   // Project-relative file paths kept automatically synced with `origin/master` via a shared,
-  // lazily-created workspace clone (see `git-sync.ts`). Empty by default — syncing is entirely
+  // lazily-created workspace clone (see `git/sync.ts`). Empty by default — syncing is entirely
   // config-driven, with no UI toggle.
   syncPaths: string[];
   // The external application each opener hands a file to, keyed by opener name (see `openers/`).

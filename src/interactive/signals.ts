@@ -1,4 +1,4 @@
-// Recognizing an interactive program from what it *does*, for the programs `interactive.ts`'s name
+// Recognizing an interactive program from what it *does*, for the programs `index.ts`'s name
 // list doesn't know about. Only two sequences count as evidence:
 //
 //   - entering the alternate screen, which is what a program sends when it wants the whole display
@@ -10,7 +10,7 @@
 // and counting it would drag a routine `npm install` into a full-tab terminal.
 //
 // The patterns are built rather than written as literals so the escape byte is unambiguous in
-// source, matching how `web/src/transcript/ansi.ts` spells its CSI pattern.
+// source, matching how `web/src/shared/transcript/ansi.ts` spells its CSI pattern.
 const ESC = String.fromCodePoint(27);
 const ALTERNATE_SCREEN = new RegExp(String.raw`${ESC}\[\?(?:1049|47)h`);
 const ABSOLUTE_CURSOR = new RegExp(String.raw`${ESC}\[\d{1,4};\d{1,4}H`, 'g');

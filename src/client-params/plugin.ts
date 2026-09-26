@@ -2,9 +2,9 @@ import type { PluginRpcCall } from '../protocol/plugin.js';
 import { isRecord, isString, type ParamsDecoder } from './guards.js';
 
 // These two were the only params guards this codebase had before the table around them existed, and
-// `src/message-handler.ts` re-checks both inside its own dispatch arms. They stay exported
-// predicates for that reason; `client-message.ts` re-exports them from here so that import keeps
-// resolving to one definition.
+// `src/message/plugin.ts` re-checks both inside its own dispatch arms. They stay exported
+// predicates for that reason, and that module imports them from here so both checks share one
+// definition.
 
 // `payload` is `unknown` by design — a plugin's intent body is the plugin's own contract — so the
 // check is that the key is present rather than what it holds.

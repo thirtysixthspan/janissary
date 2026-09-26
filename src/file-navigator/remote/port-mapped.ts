@@ -7,7 +7,7 @@ import type { RemotePortPaths } from './port-paths.js';
 import type { RowStat } from '../stats.js';
 
 // `RemoteFileSystemPort`'s path-mapping operations, extracted on the same split as
-// `remote-port-git.ts` and `remote-port-moves.ts`: each takes the port's bound request sender and its
+// `port-git.ts` and `port-moves.ts`: each takes the port's bound request sender and its
 // path mapper as parameters rather than reaching for them, so nothing here knows about the port's
 // session bookkeeping. What the four share is that the far side speaks workspace-relative paths, so
 // every path an operation names — in its arguments and in its answer — crosses the mapper here.

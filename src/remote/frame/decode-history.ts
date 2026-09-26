@@ -1,8 +1,8 @@
 import type { ShellHistoryRun } from '../protocol-frames.js';
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
-// The `shell-history` decoder, in its own module for the same reason `frame-decode-sessions.ts` has
-// one: `frame-decode.ts` is the dispatcher, and a frame carrying a list of records is more validation
+// The `shell-history` decoder, in its own module for the same reason `decode-sessions.ts` has
+// one: `decode.ts` is the dispatcher, and a frame carrying a list of records is more validation
 // than a dispatcher arm should hold.
 
 function decodeRun(value: unknown): ShellHistoryRun | undefined {

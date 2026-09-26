@@ -5,7 +5,7 @@ import {
 
 // The decoders for the frames that run and end one remote session's process — attach, spawn, the
 // addressed data and resize in between, the two ways it stops, and the workspace outcome it reports.
-// In their own module the way the other `frame-decode-*.ts` families are, so `frame-decode.ts` is
+// In their own module the way the other `decode-*.ts` families are, so `decode.ts` is
 // left holding only the dispatcher and the frames that have no family of their own.
 
 function positiveInteger(value: unknown): value is number {

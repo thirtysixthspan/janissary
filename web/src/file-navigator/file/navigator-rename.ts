@@ -1,5 +1,5 @@
 // Pure, DOM-free helpers for the file navigator's in-place rename field — kept out of `FileNavigatorTab.tsx`
-// so the component stays under the file-size limit, mirroring `file-navigator-new-file.ts`.
+// so the component stays under the file-size limit, mirroring `navigator-new-file.ts`.
 import { basename, dirname } from '../../shared/rel-path';
 
 export type RenameOutcome = { type: 'noop' } | { type: 'rename'; newRelPath: string };

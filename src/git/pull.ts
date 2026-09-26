@@ -14,7 +14,7 @@ export function pullSummary(stdout: string): string {
 }
 
 // Pull the latest from `origin` into the repository containing `root` — the file navigator header's
-// pull button (see the plan). Unlike the status queries in `git-status.ts`, which quietly degrade to
+// pull button (see the plan). Unlike the status queries in `status.ts`, which quietly degrade to
 // empty answers outside a repository, a pull the user explicitly asked for must be able to fail
 // loudly: the promise rejects with git's own error so the caller can report it. The button only
 // renders where the tree already shows a branch, and the branch's configured upstream (or git's

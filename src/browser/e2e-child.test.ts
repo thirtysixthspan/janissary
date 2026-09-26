@@ -4,7 +4,8 @@ import { E2E_LOOPBACK_HOST } from './e2e-loopback.js';
 import { parseE2EBrowserArgs, runE2EBrowser, WS_PATH_ENV } from './e2e-child.js';
 
 // `playwright` is stubbed: no Chromium starts in this suite, for the same reason none starts in
-// `e2e-server.test.ts`. What a real browser proves is in the plan's manual checks.
+// the `e2e-server-launch.test.ts` and `e2e-server-lazy.test.ts` suites. What a real browser proves
+// is in the plan's manual checks.
 
 const mocks = vi.hoisted(() => ({
   launchServer: vi.fn(),

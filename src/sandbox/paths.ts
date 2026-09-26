@@ -46,7 +46,7 @@ export const HOME_WRITE_CARVEOUTS = [
 // in the former points to; every git invocation reads both), `.config/gh/config.yml` (`gh`'s
 // general settings — git_protocol, editor, prompt — as opposed to `hosts.yml`, which can hold a
 // plaintext OAuth token and stays denied via `SECRET_DENY_PATHS`; a workspaced `gh` authenticates
-// via the injected `GH_TOKEN` env var instead, see `github-token.ts`), `Library/Keychains` (see
+// via the injected `GH_TOKEN` env var instead, see `src/project/tokens.ts`), `Library/Keychains` (see
 // the comment on `SECRET_DENY_PATHS` — read access is needed for any Keychain lookup to work at all
 // on this OS, including harness login), `.nvm` (nvm's own `nvm.sh`/`bash_completion` loader
 // scripts plus every installed Node version's binaries and libs under `versions/` — broader than
@@ -156,7 +156,7 @@ export const SECRET_DENY_PATHS = [
   // carve-out above, and therefore a read carve-in too — so this deny is what actually does the
   // work rather than backing up a denial the tables already imply. Denying it only became possible
   // once a workspaced opencode harness had another way in: `.janissary/opencode-token`, injected as
-  // `OPENCODE_API_KEY` (see `opencode-token.ts`). That variable is what the OpenCode Zen and
+  // `OPENCODE_API_KEY` (see `src/project/tokens.ts`). That variable is what the OpenCode Zen and
   // OpenCode Go providers read; opencode's other providers each read their own key from the
   // environment, which the scrub deliberately exempts.
   '.local/share/opencode/auth.json',

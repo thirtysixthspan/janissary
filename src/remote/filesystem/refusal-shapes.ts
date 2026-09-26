@@ -9,7 +9,7 @@ import type { RemoteFilesystemArguments } from '../protocol-frames.js';
 // a connection that ended or a far-side error. The shape is the same either way, which is the point
 // — a caller branches on one report whatever went wrong.
 //
-// Kept apart from `filesystem-refusal.ts`, which reads the operation table: the table names these,
+// Kept apart from `refusal.ts`, which reads the operation table: the table names these,
 // so having them here is what keeps the two modules from importing each other.
 
 // A refusal reports every path the request named as failed, not only the offending ones: a refused

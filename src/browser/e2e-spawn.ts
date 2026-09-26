@@ -14,7 +14,7 @@ import { chromiumBundleDir, playwrightPackagePaths } from './playwright-paths.js
 
 /**
  * Spawn `janus e2e-browser` through `sandboxSpawn`, which wraps it in the minimal browser profile
- * (see `src/sandbox/browser-profile.ts`) on a host that can confine it and hands the command back
+ * (see `src/sandbox/browser/profile.ts`) on a host that can confine it and hands the command back
  * unchanged on one that cannot. `TMPDIR` and `MAC_CHROMIUM_TMPDIR` are set either way, so
  * Playwright's own profile directory and Chromium's own temp directories both land inside the
  * browser's temp sibling rather than in shared `/tmp` even unconfined.

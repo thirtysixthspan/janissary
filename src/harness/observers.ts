@@ -11,7 +11,7 @@ import type { E2EBrowserHandle } from '../browser/e2e-server.js';
 import type { Managers } from '../managers.js';
 
 // Which observers hang off one PTY, and how they are wired together. Split out of `HarnessManager`
-// for the same reason `capture-wire.ts` was: the manager decides *that* a PTY gets observers, not
+// for the same reason `capture/wire.ts` was: the manager decides *that* a PTY gets observers, not
 // what they are. The two factories are the two spawn paths — a named harness, and an ssh session
 // whose PTY `SshManager` spawns itself.
 

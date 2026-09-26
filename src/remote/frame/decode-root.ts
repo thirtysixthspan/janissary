@@ -6,8 +6,8 @@ import {
 
 // The decoders for settling a remote project root: the clone offer and its answer, the structured
 // refusal, and the two fields that ride on older frames (`provision.origin` and
-// `workspace-ready.cloned`). In their own module the way the other `frame-decode-*.ts` families are,
-// so `frame-decode.ts` stays the dispatcher.
+// `workspace-ready.cloned`). In their own module the way the other `decode-*.ts` families are,
+// so `decode.ts` stays the dispatcher.
 
 type Cloned = NonNullable<Extract<RemoteFrame, { type: 'workspace-ready' }>['cloned']>;
 

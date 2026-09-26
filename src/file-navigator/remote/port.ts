@@ -153,8 +153,8 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     try { await this.request('unwatch', { path }); } catch { /* teardown is best effort */ }
   }
 
-  // `request` as a plain value, for the git and move operations that live in `remote-port-git.ts`
-  // and `remote-port-moves.ts`: they need to send frames without learning anything about this
+  // `request` as a plain value, for the git and move operations that live in `port-git.ts`
+  // and `port-moves.ts`: they need to send frames without learning anything about this
   // port's session bookkeeping.
   private requester(): RemoteRequest {
     return (operation, args) => this.request(operation, args);

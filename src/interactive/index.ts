@@ -18,7 +18,7 @@ const INTERACTIVE_PROGRAMS = new Set([
  * Inspects each pipeline/sequence segment so things like `git log | less` are caught.
  *
  * Matches the built-in list above plus anything learned by watching a program take over a terminal
- * (`interactive-learned.ts`). A learned key is either a bare program name or a `program subcommand`
+ * (`learned.ts`). A learned key is either a bare program name or a `program subcommand`
  * pair, so `git log` can be known without making every `git` command interactive.
  */
 export function isInteractive(command: string): boolean {

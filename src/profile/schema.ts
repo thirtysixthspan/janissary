@@ -1,5 +1,5 @@
 // Structural schema for a single-file profile (`profiles/<name>.json`), shared by the loader
-// (`profile-file.ts`, all-or-nothing) and the `profile validate` command (`profile/validate.ts`,
+// (`profile/file.ts`, all-or-nothing) and the `profile validate` command (`profile/validate.ts`,
 // collect-every-problem). Both run the exact same checks; only what they do with a failure differs.
 // Pure, catalog-free, hand-written predicates — no schema library (see the plan's Decision 11).
 

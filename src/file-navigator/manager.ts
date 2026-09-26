@@ -77,7 +77,7 @@ export class FileNavigatorManager extends WatchedFilesTabs {
     };
   }
 
-  // The manager internals `manager-mutations.ts` operates through, passed the same way the
+  // The manager internals `manager/mutations.ts` operates through, passed the same way the
   // navigation and open ports are — as one value carrying a bound `rebuild`, so the tab-state map
   // and the redraw stay private to this class.
   private mutationContext(): MutationContext {
@@ -227,14 +227,14 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   }
 
   // Pull the tree root's repository up to date from `origin` (the header's pull button), reporting
-  // the outcome on the button itself and in the notifications feed — see `manager-pull.ts`.
+  // the outcome on the button itself and in the notifications feed — see `manager/pull.ts`.
   pull(label: string): void {
     runPull({ ...this.mutationContext(), refreshGit: (l) => this.refreshGit(l) }, label);
   }
 
   // Commit the named tree-relative paths — or the whole tree, for an empty list — and push them to
   // `origin`, reporting the outcome on the header button and in the notifications feed. See
-  // `manager-commit.ts`.
+  // `manager/commit.ts`.
   commit(label: string, message: string, paths: string[]): void {
     runCommit({ ...this.mutationContext(), refreshGit: (l) => this.refreshGit(l) }, label, message, paths);
   }

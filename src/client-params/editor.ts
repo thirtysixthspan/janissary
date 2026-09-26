@@ -1,9 +1,9 @@
 import type { EditorRpcCall } from '../protocol/editor.js';
 import { isRecord, isString, noParams, type ParamsDecoder } from './guards.js';
 
-// Kept as an exported predicate rather than an inline decoder because `src/message-handler.ts`
-// re-checks it inside its own dispatch arm; `client-message.ts` re-exports it from here so that
-// import keeps resolving to one definition.
+// Kept as an exported predicate rather than an inline decoder because `src/message/plugin.ts`
+// re-checks it inside its own dispatch arm, importing it from here so both checks share one
+// definition.
 export function isEditorPluginFailedParams(
   value: unknown,
 ): value is { url: string; plugin: string; reason: string } {
