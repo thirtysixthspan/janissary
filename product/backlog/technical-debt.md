@@ -4,17 +4,6 @@
 
 ## development
 
-* Forget an editor persona's ACP session when its agent dies, the way the tab ACP manager already does, so the next suggestion spawns a fresh one.
-
-Existing Debt: `EditorAcpManager` wires a session's connection-level error hook to whichever request created it and never removes a dead session from its map, unlike `AcpManager`, which forgets a session on that same signal so it never writes "into a corpse". Severity: 5/10
-
-Existing Risk: 5/10 - Once a persona's agent process exits between suggestions, every later `>persona` request in that tab reuses the dead session, which `connectAcp` documents as a prompt that never returns, leaving the editor's pill stuck on "running..." and the connections panel listing a connection that is gone until the user closes it by hand.
-
-Proposal Risk: 2/10 - A dead session is dropped and reported, but a death that lands mid-request now both fails that request and forgets the session, and only a test that kills the fake session between two requests would show if the order of those two steps were wrong.
-
-Proposal: `EditorAcpManager.session` in `src/editor/acp-manager.ts` calls `spawnMonitorSession(persona, cwd, { onError: hooks.onError })` once per `${label}:${persona}` key and ignores the `hooks` passed by every later call, so the connection-level `onError` (fired by `connectAcp` in `src/acp/index.ts` on spawn failure and on `ACP agent exited.`) reaches only the first request's `finish` in `editorSuggest` (`src/editor-suggest/handler.ts`), which has already settled. Compare `AcpManager.run` in `src/acp/manager.ts`, whose `onError` appends the message and calls `this.close(label)`. Make the manager own the connection-level handler: keep the latest per-key request hook in a small map updated on every `session()` call, and in the handler delete the session, persona, and context entries for that key (without calling `kill`, since the process is already gone), emit `messageBus.emit('state', { type: 'dirty' })` so the connection row disappears, and then call the latest hook, which `finish` in `editorSuggest` already makes idempotent. When no request is pending, have `editorSuggest`'s hook still reach `notify(managers, 'editor-suggest', label, ...)` so a death between requests is reported once. `hasSession` then returns false for the next request, which correctly re-primes the new session. `src/editor/acp-manager.test.ts` covers spawn, reuse, close, and transcript but not a session dying; add a case that fires the spawn hook's `onError` and asserts `hasSession` is false and a second `session()` spawns again. `src/editor-suggest/handler.test.ts` pins the prompt and notification shapes that must not move.
-
-
 * Scope the pending route chooser to the tab that raised it, so a second unknown command elsewhere cannot overwrite it and other tabs' queues keep draining.
 
 Existing Debt: `CommandManager` holds one app-wide `pendingRoute` slot that carries a tab label, which pauses every tab's queue drain while any chooser is open, is overwritten unconditionally by the next unknown command in any tab, resumes only the owning tab, and is never cleared when that tab closes. Severity: 5/10

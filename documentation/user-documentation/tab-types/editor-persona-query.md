@@ -58,6 +58,8 @@ If the named persona doesn't exist, the request fails, or the reply proposes no 
 
 The first request to a given persona in an editor tab opens a connection to it, visible in the tab's [connections window](/user-documentation/command-bar/connections), that stays open for the rest of the tab's life. Later requests to that same persona in the same tab reuse the connection, so the persona can draw on what it said earlier — the same as a multi-turn conversation. A request to a different persona opens its own separate connection alongside it. Closing a connection and firing a new request to that persona starts over from scratch.
 
+If the persona's agent stops running on its own, its connection leaves the connections window and a notification names the persona, for example `reviewer: ACP agent exited.` Your next request to that persona starts a fresh connection from scratch, the same as after closing it yourself.
+
 ## Nothing here is persisted
 
 Like the rest of an editor tab's live state, an in-editor persona request exists only in memory for as long as the tab stays open — it's never saved to disk and never restored across a relaunch.

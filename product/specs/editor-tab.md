@@ -599,6 +599,16 @@ own separate connection alongside it. These connections appear in the tab's conn
 the connections window at any point — closing a connection and firing a new request to that persona
 starts over with a fresh connection, primed again from the top.
 
+A persona connection whose agent fails to start or exits on its own is dropped at once, the same as
+a manual close: it disappears from the connections window, its recorded exchange is discarded, and
+the next request to that persona in the tab opens a fresh connection, primed again from the top,
+rather than waiting forever on the dead one. The loss is reported through the same notification as a
+failed request (`<persona>: <message>`, for example `reviewer: ACP agent exited.`). A request in
+flight when the agent dies fails with that message. A loss between requests, after the last one
+succeeded, posts that notification once on its own. A loss during a request that has already failed
+for another reason is not reported a second time. A request that merely fails, without its agent
+dying, leaves the connection open (`EditorAcpManager` in `src/editor/acp-manager.ts`).
+
 The persona may propose one or more edits anywhere in the file, not only at the request line's own
 location. Every proposed change previews inline at once, directly in the buffer at the position it
 would apply: the lines it would remove are struck through in the diff "remove" color, immediately

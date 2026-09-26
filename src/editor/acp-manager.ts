@@ -4,6 +4,7 @@ import type { ConnectionView } from '../protocol.js';
 import { spawnMonitorSession } from '../monitor/acp.js';
 import { formatContext, type MonitorContextEntry } from '../monitor/context.js';
 import type { Managers } from '../managers.js';
+import { messageBus } from '../bus.js';
 
 type SessionHooks = { onError: (message: string) => void };
 
@@ -11,12 +12,16 @@ const key = (label: string, persona: string): string => `${label}:${persona}`;
 
 // Owns the persistent, multi-turn ACP sessions an editor tab's in-editor persona suggestions open,
 // keyed by `${label}:${persona}`. A session connects lazily on the first suggestion request for a
-// persona in a tab and is reused (never respawned) for every later request to that same persona in
-// that tab — see product/plans/complete/editor-tab-persona-connections.md.
+// persona in a tab and is reused for every later request to that same persona in that tab until it
+// is closed or its agent dies — see product/plans/complete/editor-tab-persona-connections.md and
+// product/plans/complete/editor-acp-forget-dead-session.md.
 export class EditorAcpManager {
   private sessions = new Map<string, AcpSession>();
   private personas = new Map<string, string>();
   private contexts = new Map<string, MonitorContextEntry[]>();
+  // The hooks from the newest `session()` call per key, so a connection-level error reaches the
+  // request that is current when the agent dies rather than the one that happened to spawn it.
+  private hooks = new Map<string, SessionHooks>();
 
   constructor(private managers: Managers) {}
 
@@ -30,14 +35,36 @@ export class EditorAcpManager {
 
   session(label: string, persona: Persona, cwd: string, hooks: SessionHooks): AcpSession {
     const k = key(label, persona.name);
+    this.hooks.set(k, hooks);
     let session = this.sessions.get(k);
     if (!session) {
-      session = spawnMonitorSession(persona, cwd, { onError: hooks.onError });
+      const spawned = spawnMonitorSession(persona, cwd, { onError: (message) => this.died(k, spawned, message) });
+      session = spawned;
       this.sessions.set(k, session);
       this.personas.set(k, persona.name);
       this.contexts.set(k, []);
     }
     return session;
+  }
+
+  // A connection-level error means the agent is gone (it failed to start or exited), so the session
+  // is forgotten the way `AcpManager` forgets one: the next request spawns and re-primes a fresh
+  // session instead of prompting a corpse that never answers. No `kill`, since there is no process
+  // left, and nothing at all when `session` is no longer the one stored under `k` — a late report
+  // from a closed or replaced session must not drop its successor.
+  private died(k: string, session: AcpSession, message: string): void {
+    if (this.sessions.get(k) !== session) return;
+    const hooks = this.hooks.get(k);
+    this.forget(k);
+    messageBus.emit('state', { type: 'dirty' });
+    hooks?.onError(message);
+  }
+
+  private forget(k: string): void {
+    this.sessions.delete(k);
+    this.personas.delete(k);
+    this.contexts.delete(k);
+    this.hooks.delete(k);
   }
 
   // Append a block to `label`/`persona`'s recorded exchange (see acp-connection-row-transcript-
@@ -69,9 +96,7 @@ export class EditorAcpManager {
     const session = this.sessions.get(k);
     if (!session) return false;
     session.kill();
-    this.sessions.delete(k);
-    this.personas.delete(k);
-    this.contexts.delete(k);
+    this.forget(k);
     return true;
   }
 
@@ -79,9 +104,7 @@ export class EditorAcpManager {
     for (const k of this.sessions.keys()) {
       if (!k.startsWith(`${label}:`)) continue;
       this.sessions.get(k)!.kill();
-      this.sessions.delete(k);
-      this.personas.delete(k);
-      this.contexts.delete(k);
+      this.forget(k);
     }
   }
 
@@ -90,5 +113,6 @@ export class EditorAcpManager {
     this.sessions.clear();
     this.personas.clear();
     this.contexts.clear();
+    this.hooks.clear();
   }
 }

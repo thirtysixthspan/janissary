@@ -177,6 +177,66 @@ describe('editorSuggest', () => {
     expect(callback).toHaveBeenCalledWith({ hunks: [] });
   });
 
+  describe('a connection lost after the request settled', () => {
+    function captureConnectionHook(): { sessionFn: ReturnType<typeof vi.fn>; prompt: ReturnType<typeof vi.fn>; lost: () => (message: string) => void } {
+      mocks.listPersonas.mockReturnValue(['reviewer']);
+      mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+      const { session, prompt } = makeSession();
+      let captured: ((message: string) => void) | undefined;
+      const sessionFn = vi.fn((_label, _persona, _cwd, hooks: { onError: (message: string) => void }) => {
+        captured = hooks.onError;
+        return session;
+      });
+      return { sessionFn, prompt, lost: () => captured! };
+    }
+
+    it('is reported once after a successful reply, without calling back again', () => {
+      const { sessionFn, prompt, lost } = captureConnectionHook();
+      const managers = makeManagers(sessionFn);
+      const callback = vi.fn();
+
+      editorSuggest(managers, baseParams, callback);
+      (prompt.mock.calls[0][1] as PromptHandlers).onChunk('[HUNK]\n[ANCHOR]: hello\n[REPLACEMENT]: goodbye\n[/HUNK]');
+      (prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
+      lost()('ACP agent exited.');
+
+      expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: ACP agent exited.');
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not reported a second time after the request already failed', () => {
+      const { sessionFn, prompt, lost } = captureConnectionHook();
+      const managers = makeManagers(sessionFn);
+      const callback = vi.fn();
+
+      editorSuggest(managers, baseParams, callback);
+      (prompt.mock.calls[0][1] as PromptHandlers).onError('connection closed');
+      lost()('ACP agent exited.');
+
+      expect(mocks.notify).toHaveBeenCalledExactlyOnceWith(managers, 'editor-suggest', 'notes', 'reviewer: connection closed');
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('a request after the persona\'s agent died spawns a fresh session and primes it again', () => {
+    mocks.listPersonas.mockReturnValue(['reviewer']);
+    mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
+    const dead = makeSession();
+    const fresh = makeSession();
+    mocks.spawnMonitorSession.mockReturnValueOnce(dead.session).mockReturnValueOnce(fresh.session);
+    const editorAcp = new EditorAcpManager({} as unknown as Managers);
+    const managers = { ...makeManagers(vi.fn()), editorAcp } as unknown as Managers;
+
+    editorSuggest(managers, baseParams, vi.fn());
+    (dead.prompt.mock.calls[0][1] as PromptHandlers).onEnd('end_turn');
+    (mocks.spawnMonitorSession.mock.calls[0][2] as { onError: (message: string) => void }).onError('ACP agent exited.');
+    editorSuggest(managers, baseParams, vi.fn());
+
+    expect(mocks.spawnMonitorSession).toHaveBeenCalledTimes(2);
+    expect(dead.prompt).toHaveBeenCalledTimes(1);
+    expect(fresh.prompt.mock.calls[0][0]).toContain('Watch for bugs.');
+  });
+
   it('notifies and returns no hunks on a prompt error, without killing the session', () => {
     mocks.listPersonas.mockReturnValue(['reviewer']);
     mocks.loadPersona.mockReturnValue({ name: 'reviewer', harness: { harness: 'claude', model: 'sonnet', variant: 'default' }, body: 'Watch for bugs.', tools: [] });
