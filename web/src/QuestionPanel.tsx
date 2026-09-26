@@ -3,7 +3,7 @@ import type { PendingQuestionView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { ModalDialog } from './shared/ModalDialog';
 import { useAnswerButtons } from './useAnswerButtons';
-import type { QuestionPanelHandle } from './shared/tab-handles';
+import type { QuestionPanelHandle } from './shared/tab/handles';
 
 export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   question: PendingQuestionView;

@@ -4,7 +4,7 @@ import { useXterm } from './shared/terminal/useXterm';
 import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
 import { AgentTabMeta } from './shared/AgentTabMeta';
 import { remoteSessionControl } from './shared/remote-session-control';
-import type { ShellTabHandle } from './shared/tab-handles';
+import type { ShellTabHandle } from './shared/tab/handles';
 import type { RemoteTargetView } from '@shared/protocol';
 
 type Properties = {

@@ -23,7 +23,7 @@ import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
 import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
 import { useEditorDrop } from './useEditorDrop';
-import type { DirtyTabHandle } from '../shared/tab-handles';
+import type { DirtyTabHandle } from '../shared/tab/handles';
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
 // stacks, cursor, and scroll position survive tab switches; `active` gates focus and the caret.

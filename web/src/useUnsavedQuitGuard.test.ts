@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 
 function makeTab(label: string): TabView {

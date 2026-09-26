@@ -10,7 +10,7 @@ import { beginResizeDrag } from './drag-resize';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import { useSidebarSelection } from './useSidebarSelection';
 import { multiOpenablePaths } from './multi-open';
-import { isFilesTabView } from './shared/tab-view-guards';
+import { isFilesTabView } from './shared/tab/view-guards';
 
 const MIN_WIDTH_PX = 180;
 const MAX_WIDTH_PCT = 50;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { anyDirtyTab } from './dirtyTabs';
 
 // `quit` and closing the last tab both go straight to the quit dialog, bypassing CloseSaveGuard's

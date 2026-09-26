@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './tab-handles';
+import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './handles';
 
 // The focus handles are type-only, so these cases pin the shape the focus hooks are allowed to
 // call: a member dropped from either contract fails to compile here before it reaches a tab

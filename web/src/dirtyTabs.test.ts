@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { DirtyTabHandle } from './shared/tab-handles';
+import type { DirtyTabHandle } from './shared/tab/handles';
 import { anyDirtyTab } from './dirtyTabs';
 
 function makeTab(label: string, hasEditor: boolean): TabView {

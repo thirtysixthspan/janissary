@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tabBodyBorder } from './tab-body-border';
+import { tabBodyBorder } from './body-border';
 
 describe('tabBodyBorder', () => {
   it('uses the tab color while focused', () => {
