@@ -235,6 +235,11 @@ group as the tree tab. The activation is the navigator's own request, not a type
 records no entry in any tab's transcript or command history, and a busy agent never queues or
 interrupts it.
 
+Every activation of a file row asks the opener registry what that file's open and edit should be,
+whether it came from the mouse or the keyboard, so the two agree on every file type and a plugin
+that claims a file type reaches its own presentation from either. The registry's answer is also
+what a file type with no registered opener turns into a chooser.
+
 If a file has no registered opener, double-clicking it presents a chooser with **Edit as text** and
 **Open externally**. Selecting an option runs that action for the file; Escape closes the chooser.
 
@@ -260,9 +265,10 @@ clicked row alone.
 The menu holds up to twelve entries in four groups, separated in this order: **Open**, **Edit**, and
 **Open with**; **Copy**, **Paste**, **Duplicate**, and **Copy file path**; **Rename**, **Delete**,
 and **Commit to origin**; **New file** and **New folder**.
-Open does what double-clicking the row does. Edit is offered only for a file and edits the
-right-clicked row like Shift+double-click does: ordinary files reach the plain-text editor and
-images reach the image editor because editing dispatches by file type (see [[open]]).
+Open does what double-clicking the row does. Edit is offered only for a file and asks for that
+file's edit outright, without the row's own gesture: ordinary files reach the plain-text editor
+and images reach the image editor because editing dispatches by file type (see [[open]]). It is
+the plain entry, so a Markdown row still reaches the editor and a video is not handed to a player.
 When the clicked row is part of a multi-row selection containing only images, **Open** and **Edit**
 each apply to every selected image in selection order instead; mixed selections keep the normal
 right-clicked-row behavior.
@@ -566,9 +572,9 @@ A focused file navigator tab captures its own keys, following the ARIA treeview 
 |---|---|
 | `↑` / `↓` | Move the keyboard cursor to the previous / next visible row and collapse selection to it |
 | `Shift+↑` / `Shift+↓` | Move the cursor one visible row and select every row between the anchor and it; at the first / last row, nothing changes |
-| `→` | Collapsed directory: expand. Expanded directory: reroot. File: open. `..`: no-op |
+| `→` | Collapsed directory: expand. Expanded directory: reroot. File: open, as `Enter` does. `..`: no-op |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
-| `Enter` / `Space` | File: open. Directory: toggle expand/collapse. `..`: navigate to parent directory |
+| `Enter` / `Space` | File: open (mirrors double-click, including its Markdown destination). Directory: toggle expand/collapse. `..`: navigate to parent directory |
 | `Shift+Enter` | File: edit it (mirrors Shift+double-click, including its image, Markdown, and video destinations) |
 | `Home` / `End` | Move the cursor to the first / last visible row and collapse selection to it |
 | `Page Up` / `Page Down` | Move the cursor by one viewport of rows and collapse selection to it |
