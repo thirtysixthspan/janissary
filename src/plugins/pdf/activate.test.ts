@@ -90,6 +90,30 @@ describe('pdf plugin opener', () => {
   });
 });
 
+// The host routes by extension, so both presentations normally only ever see a `.pdf`. The guard is
+// what stops a path this plugin does not serve being shown as a PDF anyway: a tab titled after a text
+// file that renders as a broken viewer is worse than handing the file to the application that owns it.
+describe('pdf plugin handed a file it does not serve', () => {
+  it.each(['inline', 'edit'] as const)('hands a non-pdf to the external viewer through %s', (presentation) => {
+    const fixture = fakeCapabilities({ viewer: 'Preview' });
+
+    activate().opener[presentation]?.('/docs/notes.txt', fixture.capabilities);
+
+    expect(fixture.external).toHaveBeenCalledWith('/docs/notes.txt', 'Preview');
+    expect(fixture.keys).toEqual([]);
+    expect(fixture.opened).toEqual([]);
+  });
+
+  it('still claims the extension case-insensitively, so a .PDF is a PDF', () => {
+    const fixture = fakeCapabilities();
+
+    activate().opener.inline('/docs/PAPER.PDF', fixture.capabilities);
+
+    expect(fixture.external).not.toHaveBeenCalled();
+    expect(fixture.keys).toEqual(['/docs/PAPER.PDF']);
+  });
+});
+
 describe('pdf plugin external opening', () => {
   it('launches the configured application and confirms it by name', () => {
     const fixture = fakeCapabilities({ viewer: 'Preview' });
