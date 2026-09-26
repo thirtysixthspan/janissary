@@ -285,7 +285,7 @@ describe('App closing the last tab', () => {
     const { container } = render(<App client={client} />);
     act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
     fireEvent.click(container.querySelector('.tab-close')!);
-    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
   }, 15_000);
 });
@@ -325,7 +325,7 @@ describe('App close-tab chord under an overlay', () => {
     act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
     sendMock.mockClear();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
-    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
   }, 15_000);
 });
 
@@ -454,7 +454,7 @@ describe('App sidebar docking', () => {
     expect(container.querySelector('.sidebar-left')).not.toBeNull();
   }, 15_000);
 
-  it('closing a docked tab via its sidebar header × sends closeTab with its server index', async () => {
+  it('closing a docked tab via its sidebar header × sends closeTab with its label', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
     act(() => {
@@ -470,7 +470,7 @@ describe('App sidebar docking', () => {
       );
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
-    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'files' } });
   }, 15_000);
 });
 

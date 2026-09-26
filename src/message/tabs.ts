@@ -22,7 +22,7 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'focusTab': { controller.focusTab(message.params.label); break;
     }
-    case 'closeTab': { controller.closeTab(message.params.index); break;
+    case 'closeTab': { controller.closeTab(message.params.label); break;
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
     }

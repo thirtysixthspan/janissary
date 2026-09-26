@@ -86,7 +86,7 @@ describe('Sidebar', () => {
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     const btn = container.querySelector('.tab-close')!;
     fireEvent.click(btn);
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'files' } });
   });
 
   it('renders a docked notifications feed with its transcript body and a close button', () => {
@@ -99,7 +99,7 @@ describe('Sidebar', () => {
     const { container, getByText } = render(<Sidebar side="right" tabs={tabs} client={client} />);
     expect(getByText('a notification')).toBeTruthy();
     fireEvent.click(container.querySelector('.tab-close')!);
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'notifications' } });
   });
 
   it('renders one tab-strip entry per docked tab when both are docked to the same side', () => {
@@ -196,9 +196,9 @@ describe('Sidebar', () => {
     const { container } = render(<Sidebar side="left" tabs={tabs} client={client} />);
     const closes = container.querySelectorAll('.tab-close');
     fireEvent.click(closes[1]);
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 1 } });
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'notifications' } });
     fireEvent.click(closes[0]);
-    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { index: 0 } });
+    expect(send).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'files' } });
   });
 
   it('double-clicking the active sidebar tab opens a rename input and commits via renameTab', () => {

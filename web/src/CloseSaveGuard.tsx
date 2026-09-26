@@ -38,12 +38,10 @@ export function CloseSaveGuard({ tabs, tabHandles, client, guardRef }: Propertie
   // monitor's reporting tab — shifts every position after it.
   const targetHandle = () => tabHandles.current.get(labelRef.current);
 
-  // `closeTab` still takes an index on the wire, so the index is computed here, immediately before
-  // the send. A tab that is gone by now closes nothing rather than closing whatever took its place.
+  // `closeTab` names the tab by label and the server resolves it on receipt, so a tab that is gone
+  // by then closes nothing rather than closing whatever took its place.
   const closeTarget = (label: string) => {
-    const index = tabsRef.current.findIndex((tab) => tab.label === label);
-    if (index === -1) return;
-    client.send({ method: 'closeTab', params: { index } });
+    client.send({ method: 'closeTab', params: { label } });
   };
 
   return (
