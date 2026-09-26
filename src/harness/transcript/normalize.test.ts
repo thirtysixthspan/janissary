@@ -64,6 +64,23 @@ describe('normalizeClaudeRecord', () => {
     const record = { type: 'assistant', message: { role: 'assistant', content: [{ type: 'image', source: {} }] } };
     expect(normalizeClaudeRecord(record, names())).toBeUndefined();
   });
+
+  // Claude writes a compaction summary as a top-level record with no `message` at all, so it has to
+  // be recognised before the message lookup rather than after it.
+  it('renders a compaction summary under its own actor', () => {
+    expect(normalizeClaudeRecord({ type: 'summary', summary: 'Earlier: we agreed on the shape' }, names()))
+      .toBe('summary: Earlier: we agreed on the shape');
+  });
+
+  it('drops a summary with nothing in it', () => {
+    expect(normalizeClaudeRecord({ type: 'summary' }, names())).toBeUndefined();
+    expect(normalizeClaudeRecord({ type: 'summary', summary: ' '.repeat(3) }, names())).toBeUndefined();
+  });
+
+  it('drops a record carrying no message', () => {
+    expect(normalizeClaudeRecord({ type: 'assistant' }, names())).toBeUndefined();
+    expect(normalizeClaudeRecord({ type: 'assistant', message: 'not a record' }, names())).toBeUndefined();
+  });
 });
 
 describe('normalizeCodexRecord', () => {
@@ -90,6 +107,26 @@ describe('normalizeCodexRecord', () => {
     expect(normalizeCodexRecord({ type: 'session_meta', payload: { cwd: '/project' } }, names())).toBeUndefined();
     expect(normalizeCodexRecord({ type: 'turn_context', payload: { cwd: '/project' } }, names())).toBeUndefined();
   });
+
+  // A rollout line that is not bookkeeping still has to carry a payload record; one that does not is
+  // a shape this version does not recognise, and renders to nothing rather than to a guess.
+  it('drops a line carrying no payload record', () => {
+    expect(normalizeCodexRecord({ type: 'response_item' }, names())).toBeUndefined();
+    expect(normalizeCodexRecord({ type: 'response_item', payload: 'not a record' }, names())).toBeUndefined();
+  });
+
+  it('renders a reasoning payload as the assistant thinking', () => {
+    const record = {
+      type: 'response_item',
+      payload: { type: 'reasoning', summary: [{ type: 'summary_text', text: 'weighing two options' }] },
+    };
+    expect(normalizeCodexRecord(record, names())).toContain('weighing two options');
+  });
+
+  it('drops a payload kind it does not render', () => {
+    const record = { type: 'response_item', payload: { type: 'web_search_call', query: 'x' } };
+    expect(normalizeCodexRecord(record, names())).toBeUndefined();
+  });
 });
 
 describe('normalizeOpencodePart', () => {
@@ -109,5 +146,10 @@ describe('normalizeOpencodePart', () => {
 
   it('drops a part kind it does not render', () => {
     expect(normalizeOpencodePart({ type: 'step-start' }, 'assistant')).toBeUndefined();
+  });
+
+  it('renders a reasoning part under the role that owns it, marked as thinking', () => {
+    expect(normalizeOpencodePart({ type: 'reasoning', text: 'considering the tradeoff' }, 'assistant'))
+      .toContain('considering the tradeoff');
   });
 });
