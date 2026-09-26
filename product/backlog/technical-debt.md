@@ -4,17 +4,6 @@
 
 ## development
 
-* Make the shared git-sync workspace pull from and push to the repository's detected default branch, the same branch the sync-eligibility gate already resolves, instead of a hard-coded `master`.
-
-Existing Debt: Whether a file syncs is decided against the remote's detected default branch with a `master`/`main` fallback, but the sync cycle that then runs hard-codes `origin master` for its pull and `HEAD:master` for its push, so the gate and the action disagree about which branch is "primary" and the spec has had to document the disagreement as an expected error. Severity: 5/10
-
-Existing Risk: 5/10 - On any project whose default branch is `main`, every config-listed file passes the gate, opens in the shared sync workspace, and then fails every pull and save sync permanently, leaving committed-but-unpushed saves piling up in a workspace the user never sees.
-
-Proposal Risk: 2/10 - Pull and push follow the branch the gate approved, leaving only a repository with no detectable `origin/HEAD` on the `master` fallback, where a `main`-only remote would still fail loudly into the error state rather than push somewhere unexpected.
-
-Proposal: `GitSync` in `src/git/sync.ts` runs `pullRebase(dir)` as `git pull --rebase origin master` and `push(dir)` as `git push origin HEAD:master`, while `defaultBranch(root)` in `src/git/status.ts` already resolves `origin/HEAD` locally and `isPrimaryBranch` there — whose comment calls the default "the branch a GitHub-synced file's git-sync workspace tracks" — is what `FileNavigatorManager.onPrimaryBranch` in `src/file-navigator/manager.ts` uses to admit a file to syncing. After `waitForWorkspace` resolves, have `GitSync` resolve the workspace clone's branch once with `defaultBranch(handle.dir)` (falling back to `currentBranch` from the same module, then `master`), cache it beside `handle`, and clear it wherever `handle` is cleared on a failed provision; pass it to `pullRebase` and `push`. Update the "GitHub syncing" section of `product/specs/editor-tab.md`, which names `origin/master` throughout and lists "a project whose default branch is not literally named `master`" as an error cause. `src/git/sync.test.ts` mocks `node:child_process` and asserts the current `master` arguments; extend its mock to answer `symbolic-ref refs/remotes/origin/HEAD` and add a case where it reports `main` and the pull and push target `main`, keeping the existing `GH_TOKEN` environment assertions.
-
-
 * Start and finish a shell command's transcript entry through the tab manager's shared running-entry path, instead of the shell manager hand-writing the log append, trim, bus events, and trailing output event itself.
 
 Existing Debt: Every other long-running command opens its transcript entry with `TabManager.startRunning` and closes it with the shared running-entry hooks, but `ShellManager.run` assigns `tab.log` directly, re-implements the cap-and-trim, emits `entries:trimmed` and `entry:appended` itself, and re-emits the trailing-output event by hand, so the shell path has already diverged from the shared one (it never resets `scrollOffset` and never marks the tab unread on start). Severity: 5/10

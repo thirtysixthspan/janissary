@@ -443,7 +443,7 @@ suggestions), Cmd+F is suppressed along with every other keystroke.
 
 ### GitHub syncing
 
-A file is kept automatically synced with its `origin/master` branch when two conditions hold: its
+A file is kept automatically synced with its repository's default branch on `origin` when two conditions hold: its
 project-relative path is covered by the application config's sync-paths setting (see Application
 Config), and the governing checkout is on its default branch (described in the next paragraph). Both
 conditions are decided automatically — there is no button or toggle anywhere in the editor to turn
@@ -484,31 +484,38 @@ any file is opened through syncing, and is reused for every other synced file op
 opening a second synced file never creates a second copy of the shared workspace. It persists for the life of the application, not just for as long as any one synced tab
 stays open.
 
+The shared workspace pulls from and pushes to the same default branch the second condition checks
+against: the branch its own clone records as the remote's default. When that cannot be determined,
+it falls back to the branch the shared workspace has checked out, and then to `master`. The branch
+is worked out once, when the shared workspace is ready, and used for every sync that follows; a
+workspace discarded after a failed provisioning attempt works it out again once the fresh one is
+ready. Below, "the sync branch" means this branch.
+
 If the shared workspace does not exist yet when a synced file is opened, its editor tab opens
 immediately showing a loading state instead of content, and only loads the file's real content once
 the workspace is ready. While the tab shows this loading state, its sync status icon spins to
 communicate that syncing is in progress. If provisioning fails, the failed workspace is discarded;
 the next open, save, or manual resync starts a fresh provisioning attempt without requiring an
 application restart. Opening a synced file — or another synced file finishing a save — also pulls
-the latest `origin/master` into the shared workspace; any other open, unmodified synced tab whose
+the latest sync branch from `origin` into the shared workspace; any other open, unmodified synced tab whose
 file changed as a result refreshes automatically, exactly like an ordinary external file change (see
 "Live reload of external changes"). A synced tab with unsaved changes is left alone, same as always.
 
 Saving a synced file writes and confirms the save exactly as an ordinary save does — the "Saved"
 flash is not delayed by anything that happens next. After that, the change is committed with the
 message `sync: <filename>` (the saved file's name), the shared workspace is brought up to date with
-`origin/master`, and the commit is pushed. If updating with `origin/master` fails, including because
+the sync branch on `origin`, and the commit is pushed to that branch. If updating with it fails, including because
 of a conflicting remote change, the local save and its commit remain in the shared workspace, the
 push is skipped, and the sync enters its error state. A later manual resync retries the update
 without silently replacing the saved content with the remote version.
 
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an
-error. A sync error (for example a network problem, an authentication failure, or a project whose
-default branch is not literally named `master`) never blocks editing or shows a dialog; it only
+error. A sync error (for example a network problem, an authentication failure, or a conflicting
+remote change) never blocks editing or shows a dialog; it only
 changes the status icon and is otherwise reported through the notifications tab.
 
-While the icon shows synced or error, clicking it manually pulls the latest `origin/master` into
+While the icon shows synced or error, clicking it manually pulls the latest sync branch from `origin` into
 the shared workspace again, or reprovisions the workspace if its initial clone failed. This is the
 same sync an open or a save-triggered cycle already runs, showing
 syncing while that's in flight. If the pull brings in a change and the tab has no unsaved edits, the
