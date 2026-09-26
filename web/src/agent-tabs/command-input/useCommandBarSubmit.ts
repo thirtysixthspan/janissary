@@ -3,6 +3,7 @@ import type { BufferLine, TabView } from '@shared/protocol';
 import type { PickerCommands } from '../../shared/command-bar/picker-commands';
 import { closeQuitsApp } from '@shared/tab/placement';
 import { resolveSearchInterception } from './command-interceptions';
+import { typedCloseIndex } from './close-interception';
 import type { useTranscriptSearch } from '../../shared/search-bar/useTranscriptSearch';
 
 // The nine intercepted openers are the shared `PickerCommands` shape rather than a restatement of it:
@@ -20,7 +21,8 @@ type Params = PickerCommands & {
 
 // The command bar's `onSubmit` interception chain: several client-side commands (`hist`,
 // `syntax theme`, `queue`, `nav`, `quit`/`close`/`exit`) are handled locally instead of reaching
-// the server — split out of App.tsx to keep it under the file-size limit.
+// the server — split out of App.tsx to keep it under the file-size limit. A `close <name>` still
+// goes to the server unless the named tab holds unsaved work, which only the client can see.
 export function useCommandBarSubmit(params: Params): (text: string) => void {
   const {
     canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
@@ -46,7 +48,8 @@ export function useCommandBarSubmit(params: Params): (text: string) => void {
       openQuitConfirm();
       return;
     }
-    if ((trimmed === 'close' || trimmed === 'exit') && guardRef.current?.(activeTab)) return;
+    const closing = typedCloseIndex(text, tabs, activeTab);
+    if (closing >= 0 && guardRef.current?.(closing)) return;
     runCommand(text);
   }, [
     canSearch, lines, search, openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,

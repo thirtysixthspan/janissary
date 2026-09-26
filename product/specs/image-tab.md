@@ -181,7 +181,8 @@ image tab that holds them raises the same save-changes dialog an editor tab rais
 **Don't Save**, and **Cancel** (see [[editor-tab]]). **Save** there means what Save means everywhere
 in this feature: replace the original file, then close. The close follows the write, not the attempt
 — if the file is not written the tab stays open with its edits intact, still marked unsaved. This
-covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit` — and unsaved
+covers every close path — the tab's × button, `Cmd+W`, and typing `close` or `exit`, including
+`close <name>` / `exit <name>` typed at another tab's command line — and unsaved
 image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
 (see [[quit-confirmation]]).
 

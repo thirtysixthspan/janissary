@@ -1,4 +1,5 @@
 import type { Tab } from './types.js';
+import { matchesLabelOrAlias } from './name-match.js';
 import {
   isEditorTab, isFilesTab, isHarnessTab, isMonitorTab, isPluginTab,
   type EditorTab, type FilesTab, type HarnessTab, type MonitorTab, type PluginTab,
@@ -22,8 +23,7 @@ export function byLabel(tabs: Tab[], label: string): Tab | undefined {
 // Every command that addresses a tab by typed name resolves it here, so `send`, `queue`, `msg`,
 // `close`, monitor targets, and `schedule … in <tab>` agree. The first match wins, as with `byLabel`.
 export function byLabelOrAlias(tabs: Tab[], name: string): Tab | undefined {
-  const key = name.toLowerCase();
-  return tabs.find((tab) => tab.label.toLowerCase() === key || tab.title?.toLowerCase() === key);
+  return tabs.find((tab) => matchesLabelOrAlias(tab, name));
 }
 
 // The guard-typed accessors below hand back a narrowed tab or nothing, so a caller gets a
