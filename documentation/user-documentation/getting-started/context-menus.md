@@ -6,7 +6,7 @@ Right-click almost anywhere in Janissary to copy or paste text. A few views draw
 
 <img class="agent-float" src="/agents/malik-south.png" alt="" />
 
-Right-click an editor tab, a terminal, the command line, or a transcript to open a small menu at the pointer, offering **Copy** and **Paste**. Use `↑`/`↓` and `Enter` to pick an entry, or `Escape` or a click away to dismiss the menu without picking one. Dismissing it returns the keyboard to whatever held it before.
+Right-click an editor tab, a terminal, the command line, or a transcript to open a small menu at the pointer, offering **Copy** and **Paste**. Use `↑`/`↓` and `Enter` to pick an entry, or `Escape` or a click away to dismiss the menu without picking one. Dismissing it returns the keyboard to whatever held it before. Right-clicking the open menu does nothing at all, and your browser's own menu does not appear either.
 
 The menu only ever shows what it can actually do:
 
@@ -21,7 +21,15 @@ Finishing a Shift+drag selection in a terminal (see [Copying text out of a harne
 
 ## Chat about this
 
-Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers **Chat about this**, which starts an AI conversation about the selected text. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly, without opening the menu first. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for the shortcut and [Conversations](/user-documentation/tab-types/conversations) for what it opens.
+<img class="agent-float left" src="/agents/orhan-south-west.png" alt="" />
+
+Right-click a text selection — on the page, in an editor, or in a terminal — and the menu also offers **Chat about this**, which starts an AI conversation about the selected text. It sits in its own group below Copy and Paste, behind a divider, rather than among them. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly, without opening the menu first. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for the shortcut and [Conversations](/user-documentation/tab-types/conversations) for what it opens.
+
+## What the menu does not replace
+
+The menu sits alongside the copy and paste shortcuts rather than in place of them. `Cmd+C` and `Cmd+V` in an editor tab, and a terminal's own copy chords, work exactly as they always did, on the same selection the menu's **Copy** would take.
+
+If a bundled plugin offers a **Chat about this** entry that never becomes usable, choosing it reports `Tab plugin "<id>" contributes no default-menu action "<label>"` in the transcript rather than silently doing nothing.
 
 ## Menus a view defines itself
 

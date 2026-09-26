@@ -10,7 +10,7 @@ open diagram.png
 
 If that image is already open, `open <image>` focuses the existing image tab instead of creating a duplicate.
 
-The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. The tab is labeled `image` in the strip (the filename is in the header) and carries a × close button.
+The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. In the strip the tab is named after the file, with a × close button right after the name; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
 
 ![An image tab: the metadata header above the image, with the zoom percentage indicator visible in the corner.](/screenshots/image-tab.png)
 
@@ -30,7 +30,7 @@ The tab shows a compact header with the file's name, size, and location, and the
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-Click the pen button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator).
+Click the pen button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator). If that image is already open, either of those focuses the existing tab and flips it to the editor rather than opening a second one.
 
 Editing is geometry only, with five controls in the toolbar:
 
@@ -53,6 +53,8 @@ Your edits are a list of steps replayed from the original, so nothing is baked i
 <img class="agent-float" src="/agents/malik-south-east.png" alt="" />
 
 **Save**, or `Cmd+S` / `Ctrl+S`, writes the edited image over the original file. There's no Save As: the destination is always the file you opened. The button stays dim until you have something to save, and the header confirms with `Saved <name>` for a few seconds afterwards. Your edits stay live, so you can keep working and save again.
+
+Whether the tab counts as saved is a question about your edits, not about how many steps you have taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does too. A different edit applied on top of an undone one lands at the same step but is not what was written, so the tab still reads as unsaved. Two routes to the same picture are never recognised as equal, so the tab leans toward calling the work unsaved. While a dot beside the tab name marks the tab unsaved, it clears the moment the save lands. An edit you make while a save is still in flight is not covered by that save, so the dot stays until you save again.
 
 Every save is a **PNG**, whatever the file started as. Two consequences are worth knowing before you save: an animated GIF flattens to the single frame you're looking at, and an SVG is rasterized at the size it was rendered, losing its vector nature. Both replace the original file.
 

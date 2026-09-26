@@ -46,10 +46,11 @@ A few formats can only be opened this way — `open clip.mkv` and `open track.wm
 edit src/index.ts                 the plain-text editor
 edit Makefile                     the plain-text editor, extension or not
 edit diagram.png                  the image editor
+edit paper.pdf                    the PDF viewer
 edit notes.md:42                  the plain-text editor, cursor on line 42
 ```
 
-Images are the one file type with an editor of their own — everything else, including Markdown, opens as text. That does mean `edit diagram.png` can't show you a PNG's raw bytes; there's no way to ask for that. A `:<line>` suffix is accepted anywhere and ignored where it makes no sense.
+Images and PDFs are the file types with an editor of their own. Everything else, including Markdown, opens as text. That does mean `edit diagram.png` can't show you a PNG's raw bytes, and `edit paper.pdf` opens the [PDF viewer](/user-documentation/tab-types/pdf-viewer) rather than the document's text. There's no way to ask for either as text. A `:<line>` suffix is accepted anywhere and ignored where it makes no sense.
 
 ## Create a file or directory
 

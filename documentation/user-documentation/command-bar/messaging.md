@@ -52,4 +52,4 @@ Closing a tab drops the messages still queued for it, and a command running in i
 
 ## Completing recipient names
 
-Press `Tab` at the recipient position of `msg` or `broadcast` to complete an active agent's name; for `broadcast`, `all` is offered too, and each entry of a comma-separated list completes independently. See [Tab completion](/user-documentation/command-bar/tab-completion) for the full picture of what completes where.
+Press `Tab` at the recipient position of `msg` or `broadcast` to complete any open tab's label, not just an agent's name; for `broadcast`, `all` is offered too, and each entry of a comma-separated list completes independently. See [Tab completion](/user-documentation/command-bar/tab-completion) for the full picture of what completes where.
