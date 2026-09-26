@@ -88,6 +88,17 @@ describe('conversations plugin command', () => {
   });
 });
 
+describe('conversations plugin opener', () => {
+  it('rejects both presentations, since this plugin opens on a command and not a file', () => {
+    const value = fixture();
+    const opener = activate().opener;
+    expect(() => opener.inline('/tmp/a.txt', value.capabilities))
+      .toThrow(new TabPluginRejection('conversations opens no files'));
+    expect(() => opener.external('/tmp/a.txt', value.capabilities))
+      .toThrow(new TabPluginRejection('conversations opens no files'));
+  });
+});
+
 describe('conversations plugin default-menu entry', () => {
   it('creates one fresh conversation and opens its tab with the selection pasted unsent', () => {
     const value = fixture();

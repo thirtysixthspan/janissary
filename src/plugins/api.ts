@@ -120,17 +120,6 @@ export type TabPluginServerCapabilities = {
   reportFailure(reason: unknown): never;
 };
 
-// The dock side a plugin's own command argument names, as the counterpart to `dockTab`: bare opens
-// the list in the centre, `left` and `right` dock it into that sidebar, and anything else is
-// `undefined` so the caller rejects the request rather than guessing a side the user did not name.
-// Published here so every dockable list plugin reads one grammar instead of keeping a copy.
-export function parseDockArgument(argument: string): 'left' | 'right' | null | undefined {
-  const trimmed = argument.trim().toLowerCase();
-  if (!trimmed) return null;
-  if (trimmed === 'left' || trimmed === 'right') return trimmed;
-  return undefined;
-}
-
 export type TabPluginOpener = {
   inline(file: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   external(file: string, capabilities: TabPluginServerCapabilities): void | Promise<void>;
@@ -187,6 +176,12 @@ export { defineIntents, type TabPluginIntentEntry } from './define-intents.js';
 // The dockable-list command and notify pair, for the same reason and on the same terms as the intent
 // table beside it: a plugin whose whole tab is one dockable list of records wrote both by hand.
 export { defineDockableList, type DockableListOptions } from './define-list-tab.js';
+
+// The `<command> [left|right]` grammar every dockable list plugin reads its argument with, and the
+// opener pair a plugin that claims no files answers a stray file with — each published once so the
+// wording a user sees has one owner rather than a copy per plugin.
+export { parseDockArgument } from './dock-argument.js';
+export { noFileOpener } from './no-file-opener.js';
 
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;

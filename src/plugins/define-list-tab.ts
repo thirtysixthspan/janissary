@@ -1,9 +1,9 @@
-import {
-  parseDockArgument,
-  type TabPluginNotification,
-  type TabPluginNotificationTopic,
-  type TabPluginServerCapabilities,
+import type {
+  TabPluginNotification,
+  TabPluginNotificationTopic,
+  TabPluginServerCapabilities,
 } from './api.js';
+import { parseDockArgument } from './dock-argument.js';
 
 // What a dockable list plugin has to say about itself: which host topic feeds it, the instance key
 // its singleton tab is addressed by, the title it opens under, and how a slice of that topic becomes

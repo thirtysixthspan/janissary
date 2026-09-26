@@ -102,6 +102,10 @@ A plugin may report the text currently visible in one of its own tabs, so a moni
 
 A plugin may dock one of its own tabs into either sidebar, or move it back to the centre strip, which is how a command like `schedules left` puts a view where it was asked to go. It addresses the tab the same way it does when changing what a tab shows, so it can never move another plugin's tab, and naming a tab that is no longer open does nothing. Docking a tab that is not the one on screen leaves the current tab alone; moving a tab back to the centre makes it active, exactly as the application's own dock control does.
 
+The bundled list plugins — schedules, sessions, and conversations — read their command's dock argument with one shared grammar (`parseDockArgument`, published through the plugin API): `left` or `right` in any case, with surrounding whitespace ignored, docks into that sidebar; an empty argument means the centre; anything else is not a side. Schedules and sessions refuse that with `Usage: <command> [left|right]`, while conversations treats it as a conversation title. Because the grammar has one owner, the three commands cannot drift apart.
+
+A plugin reached only through its own command claims no files, yet the contract still requires it to supply an opener. Those plugins share one (`noFileOpener`), which refuses both the inline and the external presentation with `<id> opens no files` rather than pretending to have opened something.
+
 ### Intents and resources
 
 Plugin client actions use the generic `pluginIntent` RPC with a tab label, intent name, and payload. The server finds the plugin identity and authoritative tab payload from its own open-tab record. A client cannot choose another plugin, filesystem path, or served-file identity by adding fields to an intent.
