@@ -3,6 +3,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { isDir, longestCommonPrefix, splitToken, replaceToken, completeWord } from './helpers.js';
+import { readCompletionCursor } from './cursor.js';
+
+const at = (line: string, offset = line.length) => readCompletionCursor(line, offset);
 
 describe('isDir', () => {
   it('returns true for a real directory', () => {
@@ -67,31 +70,40 @@ describe('splitToken', () => {
 
 describe('replaceToken', () => {
   it('splices the new token in at tokenStart and reports the resulting cursor', () => {
-    const result = replaceToken('open fi', 'le.txt', 5, 'notes.txt', ['notes.txt']);
+    const result = replaceToken(at('open file.txt', 7), 'notes.txt', ['notes.txt']);
     expect(result).toEqual({ newInput: 'open notes.txtle.txt', newCursor: 'open notes.txt'.length, matches: ['notes.txt'] });
   });
 });
 
 describe('completeWord', () => {
   it('returns no matches unchanged when nothing starts with the partial', () => {
-    const result = completeWord('zz', '', ['alpha', 'beta'], ' ', 'cmd zz', '', 4);
+    const result = completeWord(at('cmd zz'), ['alpha', 'beta']);
     expect(result).toEqual({ newInput: 'cmd zz', newCursor: 'cmd zz'.length, matches: [] });
   });
 
-  it('completes a single match and appends the suffix', () => {
-    const result = completeWord('al', '', ['alpha', 'beta'], ' ', 'cmd al', '', 4);
+  it('completes a single match and appends a space by default', () => {
+    const result = completeWord(at('cmd al'), ['alpha', 'beta']);
     expect(result.matches).toEqual(['alpha']);
     expect(result.newInput).toBe('cmd alpha ');
   });
 
+  it('appends the given suffix instead of a space', () => {
+    expect(completeWord(at('cmd al'), ['alpha'], { suffix: '' }).newInput).toBe('cmd alpha');
+  });
+
   it('completes to the longest common prefix across multiple matches, without the suffix', () => {
-    const result = completeWord('al', '', ['alpha', 'album'], ' ', 'cmd al', '', 4);
+    const result = completeWord(at('cmd al'), ['alpha', 'album']);
     expect(result.matches.toSorted((a, b) => a.localeCompare(b))).toEqual(['album', 'alpha']);
     expect(result.newInput).toBe('cmd al');
   });
 
-  it('keeps a prefix (e.g. a directory path) ahead of the completed token', () => {
-    const result = completeWord('fo', 'src/', ['foo.ts'], '', 'open src/fo', '', 5);
+  it('keeps a prefix (e.g. a directory path) ahead of a completed partial', () => {
+    const result = completeWord(at('open src/fo'), ['foo.ts'], { partial: 'fo', keepPrefix: 'src/', suffix: '' });
     expect(result.newInput).toBe('open src/foo.ts');
+  });
+
+  it('keeps the text after the cursor', () => {
+    const result = completeWord(at('cmd al rest', 6), ['alpha']);
+    expect(result).toEqual({ newInput: 'cmd alpha  rest', newCursor: 'cmd alpha '.length, matches: ['alpha'] });
   });
 });

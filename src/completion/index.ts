@@ -1,18 +1,20 @@
 import type { CompletionResult } from './types.js';
 import {
   completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
+  type MonitorCompletions,
 } from './handlers.js';
 import {
   completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
 } from './target-handlers.js';
 import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
+import { readCompletionCursor } from './cursor.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
 
 /**
  * Tab-complete the token ending at the cursor.
  *
- * - For the recipient argument of `msg`/`broadcast`, completes against active agent names
+ * - For the recipient argument of `msg`/`broadcast`, completes against open tab labels
  *   (`broadcast` also offers `all` and supports a comma-separated list).
  * - For the target argument of `send`, `queue`, `close`/`exit`, and the `in <tab>` clause of
  *   `schedule`, completes against all open tab labels.
@@ -27,35 +29,21 @@ import { SYNTAX_THEMES } from '../syntax-themes.js';
  */
 export function completeCommandLine(
   input: string,
-  cursor: number,
+  cursorOffset: number,
   cwd: string,
-  agents: string[] = [],
+  labels: string[] = [],
   connections: string[] = [],
-  monitor?: { personas: string[]; names: string[]; targets: string[] },
+  monitor?: MonitorCompletions,
 ): CompletionResult {
-  const before = input.slice(0, cursor);
-  const after = input.slice(cursor);
-  const tokenStart = Math.max(before.lastIndexOf(' '), before.lastIndexOf('\t')) + 1;
-  const token = before.slice(tokenStart);
-
-  // Determine the command word and which argument position the cursor is in.
-  const preceding = before.slice(0, tokenStart).trim().split(/\s+/).filter(Boolean);
-  const command = preceding[0]?.replace(/^\//, '').toLowerCase();
-  const argumentIndex = preceding.length;
-
-  // Try command-specific handlers.
-  const result = completeAgentName(command, argumentIndex, token, agents, before, after, tokenStart) ??
-    completeSendTarget(command, argumentIndex, token, agents, before, after, tokenStart) ??
-    completeScheduleTarget(command, argumentIndex, preceding, token, agents, before, after, tokenStart) ??
-    completeConnectionClose(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
-    completeBrowserCommand(command, argumentIndex, preceding, token, connections, before, after, tokenStart) ??
-    completeMonitorCommand(command, argumentIndex, preceding, token, monitor, before, after, tokenStart) ??
-    completeSearchCommand(command, argumentIndex, token, before, after, tokenStart) ??
-    completeSyntaxTheme(command, argumentIndex, preceding, token, SYNTAX_THEMES, before, after, tokenStart) ??
-    completeHarnessModel(command, preceding, token, before, after, tokenStart);
-  if (result !== null) {
-    return result;
-  }
-
-  return completeFilePath(token, cwd, before, after, tokenStart, input, cursor);
+  const cursor = readCompletionCursor(input, cursorOffset);
+  const result = completeAgentName(cursor, labels) ??
+    completeSendTarget(cursor, labels) ??
+    completeScheduleTarget(cursor, labels) ??
+    completeConnectionClose(cursor, connections) ??
+    completeBrowserCommand(cursor, connections) ??
+    completeMonitorCommand(cursor, monitor) ??
+    completeSearchCommand(cursor) ??
+    completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
+    completeHarnessModel(cursor);
+  return result ?? completeFilePath(cursor, cwd);
 }

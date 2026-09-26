@@ -1,29 +1,23 @@
 import path from 'node:path';
 import { readdirSync } from 'node:fs';
-import type { CompletionResult } from './types.js';
+import type { CompletionCursor, CompletionResult } from './types.js';
 import { isDir, longestCommonPrefix, splitToken, replaceToken } from './helpers.js';
 
-export function completeFilePath(
-  token: string,
-  cwd: string,
-  before: string,
-  after: string,
-  tokenStart: number,
-  input: string,
-  cursor: number,
-): CompletionResult {
+export function completeFilePath(cursor: CompletionCursor, cwd: string): CompletionResult {
+  const { token, before, after } = cursor;
+  const unchanged: CompletionResult = { newInput: before + after, newCursor: before.length, matches: [] };
   const { dir, base } = splitToken(token, cwd);
   let entries: string[];
   try {
     entries = readdirSync(dir);
   } catch {
-    return { newInput: input, newCursor: cursor, matches: [] };
+    return unchanged;
   }
 
   const matches = entries
     .filter((entry) => entry.startsWith(base) && (base.startsWith('.') || !entry.startsWith('.')))
     .toSorted((a, b) => a.localeCompare(b));
-  if (matches.length === 0) return { newInput: input, newCursor: cursor, matches: [] };
+  if (matches.length === 0) return unchanged;
 
   let completedName = longestCommonPrefix(matches);
   let suffix = '';
@@ -33,5 +27,5 @@ export function completeFilePath(
   }
 
   const typedDirPrefix = token.slice(0, token.length - base.length);
-  return replaceToken(before, after, tokenStart, typedDirPrefix + completedName + suffix, matches);
+  return replaceToken(cursor, typedDirPrefix + completedName + suffix, matches);
 }
