@@ -15,6 +15,7 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
 const read = (relative) => readFileSync(path.join(repoRoot, relative), 'utf8');
 
 const playbook = read('ai/tasks/research/find-bugs.md');
+const preparation = read('ai/tasks/workspace/prepare-workspace.md');
 const plan = read('product/plans/complete/find-bugs-task.md');
 const browserGuideline = read('ai/guidelines/sandbox-e2e-browser.md');
 
@@ -37,30 +38,34 @@ describe('the find-bugs playbook', () => {
     },
   );
 
-  // The ten report lines are written twice, in the plan and in the playbook, and only the
+  // The nine report lines are written twice, in the plan and in the playbook, and only the
   // playbook's copy is what a run prints. Both sides are pinned: the plan keeps its list, and the
   // playbook must carry every line of it.
   it('prints the report shape the plan fixes', () => {
-    const fixed = [...plan.matchAll(/^- `((?:App|Specs|Not tested|New bugs|Appended|Not filed|Noted|Commit|Stash|Status):.*)`$/gm)]
+    const fixed = [...plan.matchAll(/^- `((?:App|Specs|Not tested|New bugs|Appended|Not filed|Noted|Commit|Status):.*)`$/gm)]
       .map((match) => match[1]);
-    expect(fixed).toHaveLength(10);
+    expect(fixed).toHaveLength(9);
     for (const line of fixed) expect(playbook).toContain(line);
   });
 
-  // Both spellings are correct here and mean different things: the project's own runner audits the
-  // project's own lockfile, the installation's covers a project that ships no runner. What is
-  // never right is a bare `scripts/run.mjs`, which resolves into whatever project the tab is open
-  // on and finds no runner there.
-  it('anchors every script-runner path to the project or the installation', () => {
-    expect(playbook).toContain('./scripts/run.mjs check-malicious-package --audit');
-    expect(playbook).toContain('$janissary/scripts/run.mjs check-malicious-package --audit');
-    const anchored = playbook
-      .replaceAll('$janissary/scripts/run.mjs', '')
-      .replaceAll('./scripts/run.mjs', '');
-    expect(anchored).not.toContain('scripts/run.mjs');
+  // The install, and the gate that guards it, belong to the workspace preparation task the run
+  // executes. Both runner spellings are correct and mean different things there: the project's own
+  // runner audits the project's own lockfile, the installation's covers a project that ships no
+  // runner. What is never right is a bare `scripts/run.mjs`, which resolves into whatever project
+  // the tab is open on and finds no runner there.
+  it('audits a named lockfile through an anchored runner, in the preparation task', () => {
+    expect(preparation).toContain('./scripts/run.mjs check-malicious-package --audit ./package-lock.json');
+    expect(preparation).toContain('$janissary/scripts/run.mjs check-malicious-package --audit');
+    for (const file of [playbook, preparation]) {
+      const anchored = file
+        .replaceAll('$janissary/scripts/run.mjs', '')
+        .replaceAll('./scripts/run.mjs', '');
+      expect(anchored).not.toContain('scripts/run.mjs');
+    }
   });
 
-  it('audits a named lockfile rather than the one beside the runner', () => {
-    expect(playbook).toContain('--audit ./package-lock.json');
+  it('delegates the workspace setup to the preparation task', () => {
+    expect(playbook).toContain('ai/tasks/workspace/prepare-workspace.md');
+    expect(playbook).toContain('$janissary/ai/tasks/workspace/prepare-workspace.md');
   });
 });

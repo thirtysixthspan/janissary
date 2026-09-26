@@ -1,6 +1,6 @@
 # Find Bugs
 
-Your job: build and run the project's app from its primary branch, exercise selected functional specs end to end, research every observed divergence, and record bugs under `## development` in `./product/backlog/bugs.md`. Web apps are driven through the browser Janissary attached to this tab; tools without a web UI are run directly, using a pseudo-terminal for interactive behavior. This task finds and records bugs. It never fixes them. A human reviews and promotes findings to `## ready` before [`fix-a-bug.md`](../fix-a-bug.md) takes them on.
+Your job: take the workspace the project's own preparation task leaves ready, build and run the project's app from it, exercise selected functional specs end to end, research every observed divergence, and record bugs under `## development` in `./product/backlog/bugs.md`. Web apps are driven through the browser Janissary attached to this tab; tools without a web UI are run directly, using a pseudo-terminal for interactive behavior. This task finds and records bugs. It never fixes them. A human reviews and promotes findings to `## ready` before [`fix-a-bug.md`](../fix-a-bug.md) takes them on.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory, never to the Janissary installation's own `product/`, even when this task was launched as `execute $janissary/ai/tasks/research/find-bugs.md`. Project commands run in this project; Janissary's workflow scripts are reached through `$janissary/scripts/run.mjs`.
 
@@ -14,16 +14,16 @@ Your job: build and run the project's app from its primary branch, exercise sele
 
 ### Allowed
 
-Read project files and the Janissary workflow references linked here. Fetch, stash and restore the working tree, check out and pull the primary branch. Run the project's locked dependency install, build, launch, and seed commands. Add one missing `temp/` line to `.gitignore`. Create fixtures, drivers, logs, and evidence under `./temp/find-bugs/`; remove this run's scratch files at teardown. Drive the attached browser and spawn the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
+Read project files and the Janissary workflow references linked here. Execute the project's workspace preparation task, and take the workspace it leaves. Run the project's build, launch, and seed commands. Create fixtures, drivers, logs, and evidence under `./temp/find-bugs/`; remove this run's scratch files at teardown. Drive the attached browser and spawn the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
 
 ### Forbidden
 
-1. Editing tracked files other than `./product/backlog/bugs.md` and the one missing `temp/` line in `.gitignore`. Restoring this run's incidental install or build changes is allowed; changing source, tests, specs, documentation, or configuration is not.
+1. Editing tracked files other than `./product/backlog/bugs.md`. Restoring this run's incidental build changes is allowed; changing source, tests, specs, documentation, or configuration is not. The one missing `temp/` line in `.gitignore` belongs to the launch step, and this run may ship it without editing it.
 2. Rewording, moving, or removing an existing backlog entry. Only append evidence. Never edit an entry under `## declined`.
 3. Installing anything outside the project's lockfile, including a browser or a pseudo-terminal library. Do not let install hooks download a browser.
 4. Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL. Never drive the human's live app or the Janissary installation that launched this tab.
-5. Testing any code other than the primary branch. Do not reset away local commits or discard someone else's changes to reach it.
-6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling. Exercise the product itself. The required package safety gate before installation is the sole exception; it is not product testing.
+5. Testing any code other than the branch the workspace preparation left checked out, or changing which branch that is. Do not reset away local commits or discard someone else's changes.
+6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the workspace preparation task itself runs. Exercise the product itself.
 7. Exercising behavior that depends on sandbox enforcement, external networks, remote hosts, credentials, or native host windows.
 8. Starting a web app on any address but `127.0.0.1`, or leaving one running that is bound wider. Never inspect a process or a socket to find out what an address is; read it from the command and the output.
 9. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
@@ -31,51 +31,24 @@ Read project files and the Janissary workflow references linked here. Fetch, sta
 
 ## Recovery on every stop
 
-Record whether this run created a stash, its object ID and message, the tested commit, any `.gitignore` edit, the path of this run's lock, and every process/page/context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
+Record the branch and tested commit this run was handed, any `.gitignore` edit the launch step made, the path of this run's lock, and every process/page/context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
 
-- Release this run's lock on every stop, after teardown and before the stash is restored, so no exit path leaves the project locked against the next run.
-- Before a stash exists, a stop makes no working-tree changes.
-- After stashing but before Step 4, restore any incidental changes made by this run, then pop only this run's stash and report. Never pop a pre-existing stash.
-- Once Step 4 begins, every stop, including a build/start failure or a lost browser, finishes Steps 6–9 for any verified findings: research, file, tear down, commit permitted changes, and then pop the stash. A `.gitignore` edit alone is still committed. Do not restart testing after a stop.
-- A failed push still restores the stash after teardown and leaves the local commit in place. If a rebase cannot be resolved within the allowed files, abort that rebase before restoring the stash and report the push failure.
-- Restore on the primary branch; do not return to the starting branch. Locate the saved stash by its recorded object ID in `git stash list --format='%gd %H %s'`, then use `git stash pop --index <matching-stash-ref>` to recover its staged state too. If restoration conflicts, leave the stash and conflict state in place and report it. Do not drop the stash, reset, or overwrite files to force restoration. If checkout of the primary branch itself failed, restore on the unchanged starting branch and report that exception.
+- Release this run's lock on every stop, so no exit path leaves the project locked against the next run.
+- Leave the working tree as it is found. This run did not stash what was there, so it does not restore, switch, reset, or clean it; whatever the preparation task left is what the next run and the human inherit.
+- Before Step 4, a stop makes no tracked-file change of its own. After Step 4 begins, every stop, including a build/start failure or a lost browser, finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
+- A failed push leaves the local commit in place and the tree as it stands. If a rebase cannot be resolved within the allowed files, abort that rebase and report the push failure.
+- Uncommitted work that was already in the tree is not this run's to remove, and Step 9 is where that is enforced. When a change cannot be attributed to this run, preserve it and report the obstruction; never resolve the uncertainty by discarding.
 
-## Step 0 — Prepare the primary branch
+## Step 0 — Take the prepared workspace
 
-1. Confirm `./product/specs/` is a directory and `./product/backlog/bugs.md` is a file. If either is missing, stop before changing the tree and name what is missing. Read the project's `AGENTS.md` / `CLAUDE.md` and their required guidance before running install commands.
-2. Run `git status` and confirm this is a git repository with an `origin` remote and no unfinished merge, rebase, or conflicted index. Stop on those conditions; this task cannot safely stash them. Then take this run's lock, so that two runs cannot share one working tree. Resolve `git rev-parse --git-common-dir` to an absolute path and create the directory `<common git dir>/find-bugs.lock`; creating a directory is the test, so there is no window in which two runs both believe they hold it. Write this run's record inside it with the file-editing tool — the resolved primary branch, the tested commit once it is known, the run's start time, and the stash object ID once one exists — and add to that record as those are established. The command queue that serializes task execution belongs to a tab, not to a project, so a second tab on this project would otherwise drive the same `./temp/find-bugs/`, the same working tree, and the same checkout of the primary branch, and the run that finished first would delete the scratch directory out from under the run still testing in it. If the directory already exists, stop before changing anything — no install, no stash, no checkout — and report the holder from the record inside it as `Status: stopped: another find-bugs run holds <path>`. A lock that outlives its run means that run was killed: read the record, confirm no run is in flight, and delete the directory, exactly as `janus` clears its own per-directory instance lock.
-3. Resolve the primary branch with `git symbolic-ref refs/remotes/origin/HEAD`. Strip `refs/remotes/origin/` from the result. If the symbolic ref is unset, use `master`. Fetch with `git fetch origin`; stop if the fetch fails or `origin/<primary>` does not exist.
-4. If a local primary branch exists, run `git log --oneline origin/<primary>..<primary>`. Any output means local commits are not on the remote: report those commits and stop without stashing or checking out. If the local branch does not exist, create it tracking `origin/<primary>` only after stashing below.
-5. Inspect `git status --short --untracked-files=all`. When there are changes, run `git stash push --include-untracked -m 'find-bugs: pre-run working tree'` and record `git rev-parse refs/stash`. Confirm the tracked and untracked working tree is clean before continuing. Otherwise record `Stash: none` and leave all existing stashes alone.
-6. Check out the resolved primary branch and run `git pull --ff-only origin <primary>`. Compare `git rev-parse HEAD` with `git rev-parse origin/<primary>`; they must match. Record the full tested commit and its short form. Do not call `prepare-workspace.md` in full: it hardcodes `master`.
-7. Install dependencies from this project's lockfile, following its documented install command or, if absent, its lockfile manager's frozen command (`npm ci`, `pnpm install --frozen-lockfile`, `yarn install --frozen-lockfile`, or the equivalent). A project requiring dependencies without a lockfile stops here. Never add a package or run an installer that downloads a browser; use the project's supported way to skip that download, or stop if there is none. Run any package safety gate required by project instructions before installing; only success permits installation. Audit the tree this run is about to install, never the installation the task was launched from: a project that ships its own gate runs that one, and in a Janissary checkout — recognized by `bin/janus.mjs` at its root, and carrying the gate, the blocklist, and the lockfile itself — run it from the project directory:
-
-   ```bash
-   ./scripts/run.mjs check-malicious-package --audit ./package-lock.json
-   ```
-
-   A project with no runner of its own reaches for the installation's instead, and then names this project's lockfile explicitly, because the gate reads the file it is given rather than the one beside the script:
-
-   ```bash
-   $janissary/scripts/run.mjs check-malicious-package --audit <path to this project's lockfile>
-   ```
-
-   Read the exit code as the verdict. `0` is clean and permits the install. `2` (a known-malicious version) and `3` (a package or scope belonging to a compromised account) stop the run and report what was refused. `1` means the check could not read its input and is a failed check, never permission to install. Then perform Steps 2–3 of [`prepare-workspace.md`](../workspace/prepare-workspace.md):
-
-   ```bash
-   npm install --ignore-scripts
-   npm rebuild esbuild node-pty unrs-resolver
-   chmod +x node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null || true
-   ```
-
-   The guard on the last line is load-bearing: the glob matches nothing on a platform where node-pty has no prebuilt helper, the shell reports that as an error, and this run must not read a missing optional helper as a broken install. The other two commands have no guard because a failure in either is a real failure.
-
-   Recognize a Janissary checkout by `bin/janus.mjs` at its root. Never install a browser or a driver dependency separately.
-8. Inspect `git status` and the install's diff. If installation rewrote a lockfile without a dependency change, restore that exact file with `git checkout -- <lockfile>`. Restore only incidental changes attributable to this run, never pre-existing work. Confirm the tracked tree is the primary branch again. An install failure or unexpected dependency change stops the run with stash recovery; do not fix dependencies.
+1. Confirm `./product/specs/` is a directory and `./product/backlog/bugs.md` is a file. If either is missing, stop before changing anything and name what is missing. Read the project's `AGENTS.md` / `CLAUDE.md` and their required guidance before running any of its commands.
+2. Take this run's lock, so that two runs cannot share one working tree. Resolve `git rev-parse --git-common-dir` to an absolute path and create the directory `<common git dir>/find-bugs.lock`; creating a directory is the test, so there is no window in which two runs both believe they hold it. Write this run's record inside it with the file-editing tool — the run's start time, and the branch and tested commit once they are known — and add to that record as those are established. The command queue that serializes task execution belongs to a tab, not to a project, so a second tab on this project would otherwise drive the same scratch directory and the same working tree, and the run that finished first would delete the scratch state out from under the run still testing in it. If the directory already exists, stop before changing anything and report the holder from the record inside it as `Status: stopped: another find-bugs run holds <path>`. A lock that outlives its run means that run was killed: read the record, confirm no run is in flight, and delete the directory, exactly as `janus` clears its own per-directory instance lock.
+3. Prepare the workspace by executing the workspace preparation task. Read the project's own `ai/tasks/workspace/prepare-workspace.md` and follow it in full when the project has one; otherwise read `$janissary/ai/tasks/workspace/prepare-workspace.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. Execute whichever you picked end to end, and re-implement none of it. Do not second-guess the branch or the tree state it leaves behind, and do not add a preflight of your own: that workspace is what this run was given, and the run's job is to test it. If the task cannot be read, or stops partway, stop and report what it left.
+4. Record what you were handed: the branch from `git branch --show-current` and the tested commit from `git rev-parse HEAD`, with its short form. Those name the code under test in the report, and Step 4 confirms the commit has not moved since. This run changes nothing else about the tree.
 
 ## Step 1 — Require an attached browser
 
-Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists. If either is unset, restore the stash and stop before building anything. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). This gate also applies to tools with no web UI. There is no static-review fallback.
+Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists. If either is unset, release the lock and stop before building anything. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). This gate also applies to tools with no web UI. There is no static-review fallback.
 
 Read [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules. Use `JANISSARY_NODE` for Node drivers when set. Otherwise check `node --version` before using a current bare `node`. Import Playwright from `JANISSARY_PLAYWRIGHT`, not the project's package, and connect with `chromium.connect(process.env.JANISSARY_BROWSER_WS_ENDPOINT)`, never `connectOverCDP` or `chromium.launch()`. The CommonJS package is available through `createRequire` or a dynamic import's `.default`.
 
@@ -87,15 +60,15 @@ List the `.md` files directly under `./product/specs/`. Invocation arguments are
 execute $janissary/ai/tasks/research/find-bugs.md editor-tab file-navigator-tab
 ```
 
-With names given, match each against this directory and test those specs only. If any name is unknown, report the mismatched names and every available spec name, restore the stash, and stop before building. Deduplicate repeated names.
+With names given, match each against this directory and test those specs only. If any name is unknown, report the mismatched names and every available spec name, release the lock, and stop before building. Deduplicate repeated names.
 
-With no names, pick up to **five** specs by the date of the last primary-branch commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Exclude specs whose behavior is entirely environment-dependent. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, restore the stash and report why nothing could be tested.
+With no names, pick up to **five** specs by the date of the last commit touching each file, newest first. Read `git log -1 --format=%cs -- product/specs/<name>.md` for each candidate. Break ties in favor of the areas users spend the most time in. Exclude specs whose behavior is entirely environment-dependent. Do not exercise every spec or expand the selection as the run proceeds. If there are no eligible specs, release the lock and report why nothing could be tested.
 
 Named specs may include skipped behavior; keep them in the report. For a partly environment-dependent spec, test its remaining behaviors and list each omitted behavior with a reason under `Not tested`.
 
 ## Step 3 — Discover how this project runs
 
-Read the project's instructions in this order: `AGENTS.md` / `CLAUDE.md`, README, then the build tool's script list. For Node projects inspect `package.json` for `build`, `start`, `dev`, `serve`, or `preview`; use equivalent metadata for other toolchains. Determine how to build the checked-out code, which built entry to run, and how to point its state at scratch paths. An interpreted tool may need no build; record that deliberately. If no build-and-run recipe can be determined, restore the stash and stop with that reason.
+Read the project's instructions in this order: `AGENTS.md` / `CLAUDE.md`, README, then the build tool's script list. For Node projects inspect `package.json` for `build`, `start`, `dev`, `serve`, or `preview`; use equivalent metadata for other toolchains. Determine how to build the checked-out code, which built entry to run, and how to point its state at scratch paths. An interpreted tool may need no build; record that deliberately. If no build-and-run recipe can be determined, release the lock and stop with that reason.
 
 Decide whether the app serves a web UI or is a tool with no web UI. Serve web apps on `127.0.0.1`, using the project's own local-only option. A web project under test must be startable with an explicit loopback address named in its own instructions — a host or bind flag, or a configuration key that defaults to one. If no such form can be determined, stop before starting anything and report the project as unable to be served locally: that is an environment limitation, not a start failure, so it is neither retried nor researched as a product defect. Tools are invoked directly from the scratch working directory, by a path to this workspace's built executable. Never substitute an installed release or a globally installed executable for the code under test.
 
@@ -109,7 +82,7 @@ If `./temp/find-bugs/` exists from an interrupted run, inspect it before reusing
 
 Create `./temp/find-bugs/home/` and `./temp/find-bugs/project/`. Put throwaway Playwright scripts, pseudo-terminal drivers, holder scripts, process records, logs, and evidence under `./temp/find-bugs/` too. Use absolute scratch paths when passing them to child processes so a changed working directory cannot redirect state elsewhere. Apply the scratch home through the child process's environment `HOME` key only; do not change the agent shell's `HOME` or use `HOME` as a scratch variable. Repository install and commit commands retain the user's normal identity and environment.
 
-Build the primary-branch working tree using the recipe from Step 3. Check that `HEAD` still equals the tested commit and `origin/<primary>` before testing. Inspect the build's diff: restore incidental changes to tracked source or configuration before testing, but keep freshly generated runtime artifacts until teardown, restoring any tracked copies in Step 9. Start the freshly built app with scratch state, record its process identity and stop command, and confirm readiness from its output and an actual response. For a web app, confirm the loopback address Step 3 established: it must be named in the start command itself, and read it back from the startup output wherever the server prints its address. Establish it that way and never by inspecting the process or the socket — an unattended run cannot answer an approval prompt, so a check that needs one is a check that never runs. A start command that names no address, or names one that is not loopback, is stopped through teardown and reported; do not start it and decide afterwards. Set a bounded readiness timeout using the project's documented value, or 20 seconds if none is documented.
+Build the prepared working tree using the recipe from Step 3. Check that `HEAD` still equals the tested commit before testing. Inspect the build's diff: restore incidental changes to tracked source or configuration before testing, but keep freshly generated runtime artifacts until teardown, restoring any tracked copies in Step 9. Start the freshly built app with scratch state, record its process identity and stop command, and confirm readiness from its output and an actual response. For a web app, confirm the loopback address Step 3 established: it must be named in the start command itself, and read it back from the startup output wherever the server prints its address. Establish it that way and never by inspecting the process or the socket — an unattended run cannot answer an approval prompt, so a check that needs one is a check that never runs. A start command that names no address, or names one that is not loopback, is stopped through teardown and reported; do not start it and decide afterwards. Set a bounded readiness timeout using the project's documented value, or 20 seconds if none is documented.
 
 For a web app, connect through the attached browser, create only this run's context/page, and navigate to the URL from this run's launch. Keep that connection and page alive throughout testing and root-cause research. A server that shuts down with its last client — as Janissary's does, about a second after the page disconnects — needs a persistent holder process, run and recorded the way the browser guideline describes. Start the app with the discovered serve command, or run a tool's fresh executable from the scratch project; do not connect to the browser just because Step 1 required its availability.
 
@@ -151,13 +124,13 @@ A match under `## ready`, `## development`, or `## deferred` receives only missi
 
 Stop every server, tool, driver, and holder this run started, including children, using the recorded ownership information. Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. For Janissary, stop the holder first and run `node bin/janus.mjs stop ./temp/find-bugs/project` as a backstop. When already stopped it prints `no running janus instance for <dir>`.
 
-After processes have stopped, remove only the validated project-local `./temp/find-bugs/` directory and confirm it is gone, then release this run's lock. Keep the text needed for the report and commit before deleting captures and logs. If teardown cannot safely finish, report what remains and mark the run stopped; never claim successful cleanup or kill an unrelated process. Continue to ship permitted tracked changes and restore the stash.
+After processes have stopped, remove only the validated project-local `./temp/find-bugs/` directory and confirm it is gone, then release this run's lock. Keep the text needed for the report and commit before deleting captures and logs. If teardown cannot safely finish, report what remains and mark the run stopped; never claim successful cleanup or kill an unrelated process. Continue to ship the permitted tracked changes.
 
-## Step 9 — Commit, push, and restore the stash
+## Step 9 — Commit and push
 
-Run `git status --short --untracked-files=all` and `git diff HEAD`. The only changes allowed to ship are the permitted backlog additions and the optional `temp/` line in `.gitignore`. Restore any other tracked changes provably made by this run with `git checkout -- <exact-file>`; remove only untracked output provably created by this run. If unexpected work cannot be attributed, do not discard or stage it. Stop shipping and preserve it and the stash, reporting the obstruction. Never let quick-commit stage unrelated work.
+Run `git status --short --untracked-files=all` and `git diff HEAD`. The only changes allowed to ship are the permitted backlog additions and the `temp/` line the launch step may have added to `.gitignore`. Restore any other tracked change this run can account for with `git checkout -- <exact-file>`; remove only untracked output this run can account for. Nothing here was stashed at the start, so an unfamiliar change is someone's work rather than this run's litter: do not discard it and do not stage it. Stop shipping, preserve it, and report the obstruction. Never let quick-commit stage unrelated work.
 
-If either allowed file changed, execute [`quick-commit.md`](../workspace/quick-commit.md) on the primary branch with this subject:
+If either allowed file changed, execute [`quick-commit.md`](../workspace/quick-commit.md) on the prepared branch with this subject:
 
 ```text
 chore(backlog): log bugs found by spec testing
@@ -165,7 +138,7 @@ chore(backlog): log bugs found by spec testing
 
 The body lists the tested commit, each spec tested, each entry added or appended to, and the `temp/` line if added. Commit an ignore-only change even when no bug was filed. Use the workflow's commit/push and bounded rebase steps; do not open a PR, run check tooling, or force-push. If no allowed file changed, skip the commit.
 
-After the push, or after a failed push leaves the commit local, restore this run's stash by the recovery rules. Keep the primary branch checked out. Report a conflicting pop with the stash left in place; never describe that as restored.
+After the push, or after a failed push leaves the commit local, stop. Keep the branch the workspace preparation left checked out — switching back is not this run's to do — and leave the working tree as it stands.
 
 ## Step 10 — Report
 
@@ -180,6 +153,5 @@ Appended:   <count> — <entry each was added to>
 Not filed:  none | <finding — environment | over cap | matches ## declined>
 Noted:      none | <spec problems and unreproduced code defects>
 Commit:     <short-sha> pushed to <branch> | none — nothing filed | push failed
-Stash:      none | restored | left in place: find-bugs: pre-run working tree — <reason>
 Status:     complete | stopped: <reason>
 ```

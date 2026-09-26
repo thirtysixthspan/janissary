@@ -132,7 +132,6 @@ The report shape, verbatim:
 - `Not filed:  none | <finding — environment | over cap | matches ## declined>`
 - `Noted:      none | <spec problems and unreproduced code defects>`
 - `Commit:     <short-sha> pushed to <branch> | none — nothing filed | push failed`
-- `Stash:      none | restored | left in place: find-bugs: pre-run working tree — <reason>`
 - `Status:     complete | stopped: <reason>`
 
 ## Tests
@@ -173,7 +172,11 @@ Rehearsed on 2026-09-26 from a tab with no attached browser, against branch comm
 
 **Cases 1 and 3, not run.** Both need a tab launched with the E2E browser, and the tab this was written in has neither `JANISSARY_BROWSER_WS_ENDPOINT` nor `JANISSARY_PLAYWRIGHT`. Nothing in this repository should be read as a claim that they pass.
 
-**The Janissary worked example was removed after this plan was completed.** The design decision above stands as the record of what was decided then; the section it called for is no longer in the task, which now takes a Janissary checkout's build and launch commands from that checkout's own instructions like any other project's. What no project document states, and what the section carried, is the scratch repository's git identity, the `sandboxWorkspaces` override, the detached launch with its token-gated URL, and the launcher's preference for a compiled `dist/main.js` over `src/main.ts` — so a run pointed at a Janissary checkout may not find a working recipe on its own. The holder-process rule the section also carried is written down in `ai/guidelines/sandbox-e2e-browser.md`, and the stop command remains in the task's teardown step.
+**The Janissary worked example was removed after this plan was completed.** The design decision above stands as the record of what was decided then; the section it called for is no longer in the task, which now takes a Janissary checkout's build and launch commands from that checkout's own instructions like any other project's. What no project document states, and what the section carried, is the scratch repository's git identity, the `sandboxWorkspaces` override, the detached launch with its token-gated URL, and the launcher's preference for a compiled `dist/main.js` over `src/main.ts` — so a run pointed at a Janissary checkout may not find a working recipe on its own. The holder-process rule the section also carried is written down in `ai/guidelines/sandbox-e2e-browser.md`.
+
+**The workspace setup is delegated, which reverses two decisions above.** The task now executes the workspace preparation task — the project's own copy when it has one, the installation's otherwise — and takes the workspace it leaves, instead of resolving the primary branch, stopping on unpushed local commits, stashing the working tree, and installing for itself. So the decision that the task "does not call `prepare-workspace.md`, which hardcodes `master`" no longer holds: the run now takes `master` because that is the branch the preparation task checks out, and every rule built on owning the tree — locating a stash by object ID, restoring it onto the primary branch, the `Stash:` report line — is gone. The install moved with it, and so did the supply-chain gate that guarded the install, which now lives in `ai/tasks/workspace/prepare-workspace.md` where every task that prepares a workspace gets it.
+
+What the run gives up is the baseline. With nothing stashed, a change already in the tree cannot be told apart from a change the run made, so Step 9 no longer reverts what it cannot attribute: it stops shipping and reports, leaving the work in place. A run that finds an unfamiliar change therefore produces findings it cannot commit, and the branch it tested is whatever the preparation task left checked out rather than the remote's default branch resolved by the run itself.
 
 **Two things the rehearsal turned up, recorded rather than fixed.**
 
