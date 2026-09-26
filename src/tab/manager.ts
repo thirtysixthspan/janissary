@@ -247,7 +247,9 @@ export class TabManager extends TabOpeningState {
   }
 
   rehydrate(loadTranscript: (name: string) => LogEntry[] | undefined, onState: (state: AgentState) => void): void {
-    this.tabs = viewOperations.rehydrateTabViews(this.tabs, loadTranscript, onState, (log) => this.capToConfiguredMax(log));
+    this.tabs = viewOperations.rehydrateTabViews(this.tabs, {
+      loadTranscript, onState, cap: (log) => this.capToConfiguredMax(log),
+    });
     this.activeTab = 0;
     this.secondaryTabLabel = undefined;
   }

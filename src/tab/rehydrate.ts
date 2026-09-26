@@ -24,17 +24,22 @@ export function rehydrateTabs(
   });
 }
 
+// The three collaborators a rehydrate needs, which always travel together: the transcript to seed a
+// restored tab's log from, where to hand each restored tab's agent state, and the cap that log is
+// trimmed to. Named so the two rehydrate entry points below pass one argument between them instead
+// of each restating the same three.
+export type RehydrateSource = {
+  loadTranscript: (name: string) => LogEntry[] | undefined;
+  onState: (state: AgentState) => void;
+  cap: (log: LogEntry[]) => LogEntry[];
+};
+
 // Rebuilds the whole tab list from persisted agent state, restoring the per-label cwd, context,
 // and queue maps alongside it. Returns `tabs` unchanged when nothing was persisted.
-export function rehydrateTabState(
-  tabs: Tab[],
-  loadTranscript: (name: string) => LogEntry[] | undefined,
-  onState: (state: AgentState) => void,
-  cap: (log: LogEntry[]) => LogEntry[],
-): Tab[] {
+export function rehydrateTabState(tabs: Tab[], source: RehydrateSource): Tab[] {
   const states = listAgentStates().toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   if (states.length === 0) return tabs;
-  const rehydrated = rehydrateTabs(states, loadTranscript, cap);
-  applyRehydratedState(states, rehydrated, onState);
+  const rehydrated = rehydrateTabs(states, source.loadTranscript, source.cap);
+  applyRehydratedState(states, rehydrated, source.onState);
   return rehydrated;
 }

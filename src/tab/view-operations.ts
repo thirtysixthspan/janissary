@@ -1,9 +1,8 @@
 import type { Managers } from '../managers.js';
-import type { AgentState } from '../agent/types.js';
-import type { Tab, LogEntry } from './types.js';
+import type { Tab } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import { buildTabViews } from './view.js';
-import { rehydrateTabState } from './rehydrate.js';
+import { rehydrateTabState, type RehydrateSource } from './rehydrate.js';
 
 type Viewport = {
   tabs: Tab[];
@@ -26,11 +25,8 @@ export function managerView(
   );
 }
 
-export function rehydrateTabViews(
-  tabs: Tab[], loadTranscript: (name: string) => LogEntry[] | undefined,
-  onState: (state: AgentState) => void, cap: (log: LogEntry[]) => LogEntry[],
-): Tab[] {
-  const rehydrated = rehydrateTabState(tabs, loadTranscript, onState, cap);
+export function rehydrateTabViews(tabs: Tab[], source: RehydrateSource): Tab[] {
+  const rehydrated = rehydrateTabState(tabs, source);
   for (const tab of rehydrated) tab.pane = undefined;
   return rehydrated;
 }
