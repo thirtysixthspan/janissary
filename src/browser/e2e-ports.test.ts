@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { randomInt } from 'node:crypto';
 import {
   BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST, BROWSER_PORT_BAND_LAST, isBrowserBandPort,
-} from '../sandbox/browser-ports.js';
+} from '../sandbox/browser/ports.js';
 import { allocateBrowserPorts, type BrowserPorts } from './e2e-ports.js';
 
 // Every case here stubs the draw to a constant. That is deliberate: what this module promises is

@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST } from '../sandbox/browser-ports.js';
+import { BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST } from '../sandbox/browser/ports.js';
 
 // The two ports one e2e browser launch needs: the guard's, which the agent's endpoint names, and the
 // browser server's own, which never leaves this process.

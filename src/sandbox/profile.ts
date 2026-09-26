@@ -8,7 +8,7 @@
 // read/write allow → `$HOME` read-deny → carve-in allows → secret denies last (so a secret path
 // stays denied even inside a carve-in).
 
-import { BROWSER_PORT_BAND_DENY } from './browser-ports.js';
+import { BROWSER_PORT_BAND_DENY } from './browser/ports.js';
 import { INSTALL_READ_RULE } from './install-reads.js';
 import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
