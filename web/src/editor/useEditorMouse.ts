@@ -75,12 +75,7 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
     // Suppress native text selection when a text line was hit.
     e.preventDefault();
     api.sealUndo();
-    if (hit.inGutter) {
-      api.setState(linesSelection(s, hit.line, hit.line));
-      beginDrag({ anchor: { line: hit.line, col: 0 }, lineMode: true, anchorLine: hit.line });
-      return;
-    }
-    if (e.detail >= 3) {
+    if (hit.inGutter || e.detail >= 3) {
       api.setState(linesSelection(s, hit.line, hit.line));
       beginDrag({ anchor: { line: hit.line, col: 0 }, lineMode: true, anchorLine: hit.line });
       return;
