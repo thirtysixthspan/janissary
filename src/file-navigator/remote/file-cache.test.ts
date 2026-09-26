@@ -6,7 +6,8 @@ import { TabManager } from '../../tab/manager.js';
 import type { Managers } from '../../managers.js';
 import type { FileSystemPort } from '../filesystem-port.js';
 import {
-  clearRemoteFileCacheForWorkspace, initRemoteFileCache, materializeRemoteFile, remoteFileFor,
+  clearRemoteFileCache, clearRemoteFileCacheForWorkspace, initRemoteFileCache,
+  materializeRemoteFile, remoteFileFor,
 } from './file-cache.js';
 import { saveFile } from '../../editor/save.js';
 import { openNavigatorFile } from '../manager/files.js';
@@ -99,5 +100,66 @@ describe('remote file cache', () => {
     clearRemoteFileCacheForWorkspace('devbox', 'claude');
     expect(remoteFileFor(file)).toBeUndefined();
     expect(existsSync(file)).toBe(false);
+  });
+});
+
+// The cache root and the record table are module state, so each of these needs a fresh import to
+// stand where a process that has not yet run its boot sequence stands.
+async function uninitialized() {
+  vi.resetModules();
+  return import('./file-cache.js');
+}
+
+const record = { filesystem: {} as FileSystemPort, root: '/ws', relPath: 'a.txt', label: 'files' };
+
+describe('materializeRemoteFile before the cache is initialized', () => {
+  it('refuses rather than writing outside any cache root', async () => {
+    const fresh = await uninitialized();
+    expect(() => { fresh.materializeRemoteFile('devbox', 'claude', 'a.txt', Buffer.from('x'), record); })
+      .toThrow('Remote file cache is not initialized.');
+  });
+});
+
+describe('materializeRemoteFile outside the cache', () => {
+  // The relPath comes from a remote's own answer, so a `..` in it has to be refused here rather
+  // than trusted: the cache is a real directory on this machine, and `records` is what the editor
+  // later reads a file's owner out of.
+  it('refuses a relPath that climbs out of the workspace', () => {
+    initRemoteFileCache(mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-')));
+    expect(() => { materializeRemoteFile('devbox', 'claude', '../escaped.txt', Buffer.from('x'), record); })
+      .toThrow('The path is outside the remote file cache.');
+  });
+
+  it('sanitizes a host or workspace label that holds path separators', () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
+    initRemoteFileCache(project);
+    const file = materializeRemoteFile('../devbox', 'a/b', 'a.txt', Buffer.from('x'), record);
+    expect(file).toContain(path.join('remote-files', '.._devbox', 'a_b', 'a.txt'));
+    expect(existsSync(file)).toBe(true);
+  });
+});
+
+describe('clearRemoteFileCacheForWorkspace before the cache is initialized', () => {
+  it('removes nothing and throws nothing', async () => {
+    const fresh = await uninitialized();
+    expect(() => { fresh.clearRemoteFileCacheForWorkspace('devbox', 'claude'); }).not.toThrow();
+  });
+});
+
+describe('clearRemoteFileCache', () => {
+  it('removes every workspace and forgets every record', () => {
+    const first = setup(vi.fn(() => ({ ok: true })));
+    const kept = remoteFileFor(first.file);
+    expect(kept).toBeDefined();
+
+    clearRemoteFileCache();
+
+    expect(remoteFileFor(first.file)).toBeUndefined();
+    expect(existsSync(first.file)).toBe(false);
+  });
+
+  it('removes nothing and throws nothing before the cache is initialized', async () => {
+    const fresh = await uninitialized();
+    expect(() => { fresh.clearRemoteFileCache(); }).not.toThrow();
   });
 });
