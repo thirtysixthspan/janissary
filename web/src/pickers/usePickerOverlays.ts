@@ -1,6 +1,7 @@
 import type React from 'react';
 import { useMemo } from 'react';
 import type { ProfileRow, RouteChooserView, TabView, TaskRow } from '@shared/protocol';
+import type { PickerCommands } from '../shared/command-bar/picker-commands';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { getRecentHistory } from '../history';
@@ -30,19 +31,9 @@ type Input = {
   dropRef: React.RefObject<CommandInputDropHandle | null>;
 };
 
-// The openers the command bar intercepts: typing `hist`, `theme`, `queue`, `tasks`, `nav …` opens
-// the matching overlay instead of reaching the server.
-export type PickerCommands = {
-  openPicker: () => void;
-  openThemePicker: () => void;
-  openAppThemePicker: () => void;
-  openQueue: () => void;
-  openTaskPicker: () => void;
-  openProfilePicker: () => void;
-  navOpen: boolean;
-  setNavOpen: (open: boolean) => void;
-  openTabNavWithQuery: (query: string) => void;
-};
+// The `commands` bag this hook builds, re-exported from the shared module both features name so a
+// consumer can still reach the type through here.
+export type { PickerCommands } from '../shared/command-bar/picker-commands';
 
 // The route chooser's two setters and its seeding ref, plus the app theme's — what the server state
 // stream writes into the overlays it drives.
