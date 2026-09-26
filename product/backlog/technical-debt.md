@@ -4,17 +4,6 @@
 
 ## development
 
-* Record a tab's page-browser launch while it is still in flight, so concurrent first uses share one Chromium and a tab closed mid-launch releases the browser it asked for.
-
-Existing Debt: The per-tab page browser is registered in the manager's map only after `await launchTabBrowser` resolves, in two separate places, so an in-flight launch is invisible to every other caller and to teardown, against the rule that acquisition and release are defined together. Severity: 4/10
-
-Existing Risk: 4/10 - Two overlapping first uses (the interactive command, an agent message, the ACP tool loop) each launch a Chromium and the first is overwritten in the map and never closed, and a tab closed during a launch leaves a headless browser registered under a dead label that a reused label then inherits.
-
-Proposal Risk: 2/10 - One launch per label is shared and teardown waits for a pending launch to settle before closing it; the remaining exposure is a launch that never settles, which holds its label until the process exits.
-
-Proposal: `BrowserManager.run`'s `'open'` case in `src/browser/tab.ts` and `ensureCurrentWindow` in `src/browser/tab-helpers.ts` both do `if (!entry) { entry = { browser: await launchTabBrowser(...), counter: 0 }; browsers.set(label, entry); }`, and `closeTab` and `closeAll` in `src/browser/tab.ts` only see entries that have finished launching. The map is reached from the interactive `browser` command, the agent-message `capture` hook in `src/commands/browser.ts`, the ACP tool table in `src/acp/tool-table.ts` and `connection close` in `src/connection/manager.ts`. Add one private `entryFor(label, headless)` to `BrowserManager` that stores the launch promise per label before awaiting it and is used by both the `'open'` case and `ensureCurrentWindow` (pass it in, since the helper takes the map today), and have `closeTab` and `closeAll` drop a pending launch and close its browser once it settles. Add two `src/browser/tab.test.ts` cases: two concurrent `goto` calls on a fresh label launch once, and `closeTab` during a launch closes the browser when the launch completes. The existing open, goto, closeTab and closeAll cases in `src/browser/tab.test.ts` must keep passing.
-
-
 * Give the remote manager label and session lookups and one shared "established" predicate, so the sessions feature stops re-deriving them from raw entries.
 
 Existing Debt: `RemoteManager.liveEntries()` hands out raw mutable entries and the manager offers no lookup or state predicate, so the sessions code linearly re-implements the manager's own label lookup four times and the session lookup twice, and the "has a session id and a workspace" test exists in five differently written forms. Severity: 5/10

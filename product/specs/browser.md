@@ -6,6 +6,8 @@ The `browser` command drives a real [Playwright](https://playwright.dev) Chromiu
 
 Each tab launches its **own** browser process the first time it is used (`launchTabBrowser`), held in `browserRef` keyed by tab index — the same per-tab model as `shellsRef`/`acpRef`, not the global model used by SQLite. Because processes are independent, one tab can run headless while another runs headed at the same time. Playwright primitives map as: **Browser** (one process per tab) → **BrowserContext** (one isolated "window") → **Page** (the viewport).
 
+A tab never launches more than one browser. Uses that arrive together before the first launch has finished — a typed command, an agent message and an agent's own browsing — share that one launch. Closing the tab while its browser is still starting stops that browser as soon as it is up, and the uses still waiting on it report a browser error instead of running.
+
 ### Windows
 
 A *window* is a `BrowserContext` plus a single `Page`, with its own cookies/sorage (isolation between windows). Windows are addressed by a per-tab counter id (`w1`, `w2`, …); each tab tracks a *current* window. `browser open` opens a new window and makes it current; `browser use <id>` switches; `browser list` lists them with the current one marked `*`. Page actions (`goto`, `eval`, `shot`, `content`) auto-launch the tab's browser (headless) and auto-open a window if the tab has none, so an agent can navigate without managing windows.
