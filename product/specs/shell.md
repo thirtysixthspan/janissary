@@ -40,7 +40,7 @@ Full-screen and interactive programs — `htop`, `vim`, `less`, `top`, `man`, `p
 
 - The transcript and command bar are hidden.
 - A full-tab xterm.js terminal takes over the tab body, exactly like a harness tab.
-- All keyboard input — including `Ctrl+C`, `Ctrl+D`, `Ctrl+Z` — is forwarded to the PTY. Only the tab-switch chord (`Shift+←/→`) bubbles out to the window handler.
+- All keyboard input — including `Ctrl+C`, `Ctrl+D`, `Ctrl+Z` — is forwarded to the PTY. Only the tab-switch chord (`Shift+←/→` and `Cmd+Shift+[/]`, the same definition the window handler switches tabs on) bubbles out to the window handler.
 - `Shift+Enter` is translated to `ESC` + `CR` (the Alt/Option+Enter sequence) before it reaches the PTY, so programs that treat it as a line continuation (e.g. AI harnesses) accept multi-line input — see the input model in `harness.md`.
 - Shift+drag selects text with the terminal selection layer exactly as it does in a harness tab — see Selecting and copying terminal text in `harness.md`.
 - The xterm terminal is focused automatically on launch and whenever the tab is switched back to.
