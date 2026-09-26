@@ -1,6 +1,7 @@
 import {
   defineDockableList,
   defineIntents,
+  noFileOpener,
   type AggregatedScheduleView,
   type TabPluginActivation,
   type TabPluginNotification,
@@ -79,10 +80,6 @@ export function activate(): TabPluginActivation {
         },
       },
     }),
-    opener: {
-      // Unreachable: the manifest claims no file extensions, so the open pipeline never routes here.
-      inline: (_file, capabilities) => capabilities.rejectRequest('schedules opens no files'),
-      external: (_file, capabilities) => capabilities.rejectRequest('schedules opens no files'),
-    },
+    opener: noFileOpener('schedules'),
   };
 }

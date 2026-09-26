@@ -1,4 +1,5 @@
 import {
+  noFileOpener,
   parseDockArgument,
   type ConversationsView,
   type TabPluginActivation,
@@ -62,10 +63,7 @@ export function activate(): TabPluginActivation {
       return runIntent(request.intent, request.payload, request.tabPayload, capabilities, tabs);
     },
     dispose: () => { tabs.dispose(); },
-    opener: {
-      inline: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
-      external: (_file, capabilities) => capabilities.rejectRequest('conversations opens no files'),
-    },
+    opener: noFileOpener('conversations'),
   };
 }
 

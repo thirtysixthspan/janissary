@@ -4,17 +4,6 @@
 
 ## development
 
-* Give the singleton list plugins one shared parser for their `[left|right]` dock argument and one shared "opens no files" opener, instead of three private copies of each.
-
-Existing Debt: The schedules, sessions, and conversations tab plugins each define a byte-identical private `parseDock` for the same `<command> [left|right]` grammar and each spell out the same pair of unreachable `opener.inline`/`opener.external` rejections, so the docking grammar the user types for three commands has no single owner. Severity: 2/10
-
-Existing Risk: 3/10 - A change to the dock grammar — accepting `center`, a trailing target, or a different undock spelling — lands in whichever plugin prompted it and leaves the other two answering the old grammar, so three list commands that the user guide presents as one pattern quietly drift apart.
-
-Proposal Risk: 1/10 - The three plugins keep their own usage strings and data guards, so the only shared surface is a pure four-line parser and a constant opener pair, and each plugin's existing docking test still pins the result per command.
-
-Proposal: `parseDock` is duplicated verbatim in `src/plugins/schedules/activate.ts`, `src/plugins/sessions/activate.ts`, and `src/plugins/conversations/activate.ts` (returning `'left' | 'right'` for that word, `null` for an empty argument meaning undock, and `undefined` for anything else), and all three declare `opener: { inline: … rejectRequest('<id> opens no files'), external: … }` for a manifest that claims no extensions. Add `src/plugins/dock-argument.ts` exporting `parseDockArgument(argument)` with that exact contract and a `noFileOpener(pluginId)` returning the rejecting opener pair, with a colocated `dock-argument.test.ts` covering `left`, `RIGHT`, surrounding whitespace, empty, and an unrelated word; replace the three private copies with imports (plugin `activate.ts` files already import host helpers such as `../files.js`, so this stays within `ai/guidelines/plugins-tabs.md`, which only forbids imports in `shared.ts`). Do not merge the schedules and sessions `command` bodies in this increment — they differ in topic name, data guard, and usage wording. `src/plugins/schedules/activate.test.ts`, `src/plugins/sessions/activate.test.ts`, and `src/plugins/conversations/activate.test.ts` pin the dock and usage behavior and must pass unchanged.
-
-
 * Retire the compatibility re-exports that past file-size extractions left in their old homes across the server, starting with the tab, schedule, notifications, and recognizer modules, so every import names the file that defines the symbol.
 
 Existing Debt: Each time a module was split to stay under the line limit, the moved symbols were re-exported from the original file "so any importer keeps working" (the completed schedule-parser plan says so explicitly), and nothing enforces the direct-import rule in `ai/guidelines/imports-and-barrel-files.md`, so about nineteen server modules now carry `export { … } from` lines, `src/tab/index.ts` has become a de facto barrel, and some symbols travel through two hops before reaching their definition. Severity: 4/10

@@ -1,6 +1,7 @@
 import {
   defineDockableList,
   defineIntents,
+  noFileOpener,
   type RemoteSessionView,
   type TabPluginActivation,
   type TabPluginIntentEntry,
@@ -72,11 +73,7 @@ export function activate(): TabPluginActivation {
       },
       ...Object.fromEntries(ROW_VERBS.map((verb) => [verb, rowEntry(verb)])),
     }),
-    opener: {
-      // Unreachable: the manifest claims no file extensions, so the open pipeline never routes here.
-      inline: (_file, capabilities) => capabilities.rejectRequest('sessions opens no files'),
-      external: (_file, capabilities) => capabilities.rejectRequest('sessions opens no files'),
-    },
+    opener: noFileOpener('sessions'),
   };
 }
 
