@@ -1,10 +1,10 @@
 import type React from 'react';
 import type { RouteChooserView, TabView } from '@shared/protocol';
-import type { OverlayOpenState } from './overlay-registry';
-import type { PickerOverlaysState } from './picker-overlays-state';
-import type { VisibleTaskRow } from './task-picker-keys';
-import type { VisibleProfileRow } from './profile-picker-keys';
-import type { FuzzyMatchResult } from '../shared/fuzzy-match';
+import type { OverlayOpenState } from '../overlay-registry';
+import type { PickerOverlaysState } from './overlays-state';
+import type { VisibleTaskRow } from '../task-picker-keys';
+import type { VisibleProfileRow } from '../profile-picker-keys';
+import type { FuzzyMatchResult } from '../../shared/fuzzy-match';
 
 // The complete prop list of `PickerOverlays`, declared here rather than in that component so the
 // hook that owns the state can build the whole bag in one place and the app shell can pass it as a

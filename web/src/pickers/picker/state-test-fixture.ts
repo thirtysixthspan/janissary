@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 import { createRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import { buildOverlayOpenState } from './overlay-registry';
-import type { PickerOverlaysState } from './picker-overlays-state';
+import { buildOverlayOpenState } from '../overlay-registry';
+import type { PickerOverlaysState } from './overlays-state';
 
 // A `PickerOverlaysState` in which every field holds a value distinct from every other field of the
 // same type, so the two projections built from it (`buildPickerOverlayView`, `buildPickerKeyBindings`)
