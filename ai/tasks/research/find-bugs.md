@@ -46,7 +46,7 @@ Record the branch and tested commit this run was handed, the address, process id
 
 Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists. If either is unset, stop before building anything. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). This gate also applies to tools with no web UI. There is no static-review fallback.
 
-Read [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules. Use `JANISSARY_NODE` for Node drivers when set. Otherwise check `node --version` before using a current bare `node`. Import Playwright from `JANISSARY_PLAYWRIGHT`, not the project's package, and connect with `chromium.connect(process.env.JANISSARY_BROWSER_WS_ENDPOINT)`, never `connectOverCDP` or `chromium.launch()`. The CommonJS package is available through `createRequire` or a dynamic import's `.default`.
+Read [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules, and follow it for every driver this run writes.
 
 ## Step 2 — Select the specs
 
