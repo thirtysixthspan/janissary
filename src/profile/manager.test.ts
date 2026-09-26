@@ -16,6 +16,7 @@ const leftover = vi.hoisted(() => ({
 vi.mock('../launch-name/leftover.js', () => leftover);
 
 import { ProfileManager } from './manager.js';
+import { PROFILE_USAGE } from './command.js';
 import { initProfileDir } from '../profiles.js';
 import { makeTab } from '../tab/index.js';
 import { agentNames } from '../agent/names.js';
@@ -62,6 +63,11 @@ function makeManagers(creator: Tab, tabs: Tab[] = [creator]): { managers: Manage
   return { managers, appended };
 }
 
+// Awaits a promise that may reject, so a test can let a scheduled failure land.
+async function settled(promise: Promise<unknown>): Promise<void> {
+  try { await promise; } catch { /* the rejection is the point */ }
+}
+
 describe('ProfileManager.run', () => {
   let root: string;
 
@@ -88,6 +94,36 @@ describe('ProfileManager.run', () => {
     manager.run('profile launch ghost', 'janus');
 
     expect(appended).toEqual([{ input: 'profile launch ghost', output: 'No profile named "ghost".' }]);
+  });
+
+  // A command the parser cannot read is answered with the usage line on the tab that typed it, and
+  // nothing else runs — there is no action to take, so there is nothing to report twice.
+  it('answers an unreadable command with the usage line and runs nothing', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const manager = new ProfileManager(managers);
+
+    manager.run('profile', 'janus');
+    manager.run('profile frobnicate', 'janus');
+
+    expect(appended).toEqual([
+      { input: 'profile', output: PROFILE_USAGE },
+      { input: 'profile frobnicate', output: PROFILE_USAGE },
+    ]);
+  });
+
+  it('answers a launch or save with no name with that action\'s own usage', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const manager = new ProfileManager(managers);
+
+    manager.run('profile launch', 'janus');
+    manager.run('profile save', 'janus');
+
+    expect(appended).toEqual([
+      { input: 'profile launch', output: 'Usage: profile launch <name>' },
+      { input: 'profile save', output: 'Usage: profile save <name>' },
+    ]);
   });
 
   it('reports an existing profile that has no tabs', () => {
@@ -626,6 +662,101 @@ describe('ProfileManager.newAgentAt', () => {
     await new Promise((done) => setTimeout(done, 0));
     expect(managers.tab.setCwd).toHaveBeenLastCalledWith(expect.any(String), '/remote/ws');
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith(expect.any(String));
+  });
+
+  // The creator's channel can be gone by the time the button is pressed — a detach that has since
+  // dropped it. Placing the agent anyway would leave a tab on a workspace that no longer exists, so
+  // the refusal is reported on the creator instead.
+  it('notifies and creates nothing when the creator\'s channel is gone', () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/ws' });
+    vi.mocked(managers.remote.attach).mockReturnValue(false);
+
+    new ProfileManager(managers).newAgentAt('claude');
+
+    expect(mocks.notify).toHaveBeenCalledWith(
+      managers, 'manual', 'claude', 'The remote workspace is no longer available.',
+    );
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+  });
+
+  it('waits for nothing when the creator channel has no ready promise to offer', () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/ws' });
+    vi.mocked(managers.remote.workspaceOf).mockReturnValue(undefined);
+    vi.mocked(managers.remote.readyOf).mockReturnValue(undefined as never);
+
+    new ProfileManager(managers).newAgentAt('claude');
+
+    expect(managers.tab.addBusy).toHaveBeenCalledWith(expect.any(String));
+    // Only the placement's own call; nothing waited on a workspace that never arrives.
+    expect(managers.tab.setCwd).toHaveBeenCalledTimes(1);
+    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
+  });
+
+  it('leaves a joined agent alone when its tab closed before the workspace landed', async () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/project' });
+    const { promise, resolve } = Promise.withResolvers<string>();
+    vi.mocked(managers.remote.workspaceOf).mockReturnValue(undefined);
+    vi.mocked(managers.remote.readyOf).mockReturnValue(promise);
+
+    new ProfileManager(managers).newAgentAt('claude');
+    vi.mocked(managers.tab.findIndex).mockReturnValue(-1);
+    resolve('/remote/ws');
+    await promise;
+    await new Promise((done) => setTimeout(done, 0));
+
+    expect(managers.tab.setCwd).toHaveBeenCalledTimes(1);
+    expect(managers.tab.deleteBusy).not.toHaveBeenCalled();
+  });
+
+  // A channel that dies before naming its workspace leaves the joined agent rooted nowhere, so it is
+  // closed rather than left showing an empty tree that can never fill.
+  it('closes a joined agent when the creator channel dies before naming a workspace', async () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/project' });
+    const { promise, reject } = Promise.withResolvers<string>();
+    vi.mocked(managers.remote.workspaceOf).mockReturnValue(undefined);
+    vi.mocked(managers.remote.readyOf).mockReturnValue(promise);
+
+    new ProfileManager(managers).newAgentAt('claude');
+    vi.mocked(managers.tab.findIndex).mockReturnValue(0);
+    reject(new Error('connection reset'));
+    await settled(promise);
+    await new Promise((done) => setTimeout(done, 0));
+
+    expect(managers.tab.closeTab).toHaveBeenCalledWith(0);
+  });
+
+  it('closes nothing when the joined agent was already gone before the channel died', async () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const managers = makeAtManagers([source], { claude: '/remote/project' });
+    const { promise, reject } = Promise.withResolvers<string>();
+    vi.mocked(managers.remote.workspaceOf).mockReturnValue(undefined);
+    vi.mocked(managers.remote.readyOf).mockReturnValue(promise);
+
+    new ProfileManager(managers).newAgentAt('claude');
+    vi.mocked(managers.tab.findIndex).mockReturnValue(-1);
+    reject(new Error('connection reset'));
+    await settled(promise);
+    await new Promise((done) => setTimeout(done, 0));
+
+    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+  });
+
+  it('places nothing for an unknown label in a supplied workspace', () => {
+    const managers = makeAtManagers([makeTab('claude', 'red')], {});
+
+    new ProfileManager(managers).newAgentInWorkspace('nope', '/conversations/first/workspace');
+
+    expect(managers.tab.insertTabInGroup).not.toHaveBeenCalled();
+    expect(managers.tab.setCwd).not.toHaveBeenCalled();
   });
 
 });
