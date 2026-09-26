@@ -31,3 +31,26 @@ describe('conversation draft payload validation', () => {
     expect(isConversationsPayload({ kind: 'list', entries: [{ id: 'first' }] })).toBe(false);
   });
 });
+
+// Both of these arrive from whatever the client sent, so a payload that is not a record at all — or
+// a turn inside one that is not — has to be refused before anything reads a field off it.
+describe('conversation payload validation against a malformed shape', () => {
+  it.each([undefined, null, 'conversation', 42, [], true])('rejects %j, which is not a record', (value) => {
+    expect(isConversationsPayload(value)).toBe(false);
+  });
+
+  it.each([undefined, 'a turn', 7, [], null])('rejects a %j turn inside a valid conversation', (turn) => {
+    const withTurn = {
+      ...conversation,
+      conversation: {
+        ...conversation.conversation,
+        turns: [{ query: 'q', response: 'r', pair: { harness: 'claude', model: 'claude-sonnet' } }, turn],
+      },
+    };
+    expect(isConversationsPayload(withTurn)).toBe(false);
+  });
+
+  it('rejects a conversation whose window is not a record', () => {
+    expect(isConversationsPayload({ ...conversation, conversation: 'first' })).toBe(false);
+  });
+});
