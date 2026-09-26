@@ -10,7 +10,7 @@ harness opencode as quality        custom tab label
 harness claude --no-workspace      opt out of the default workspace
 ```
 
-The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The binary must be installed and on your `PATH`; if it isn't, the tab closes as soon as it opens (the launch is still recorded in the tab you ran the command from).
+The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The launch command is written to the tab you ran it from before the new tab appears, so the launch stays on the record even if the binary turns out to be missing, in which case the harness tab closes as soon as it opens.
 
 It's looked up through your own shell, started interactively, so your startup files run first — `.zshrc` included. A harness installed by a version manager such as nvm is found here the same way it is when you type its name in your terminal.
 
@@ -109,7 +109,7 @@ harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--model <name>
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens. The bundled catalog covers claude, codex, and opencode; the opencode entries carry a provider prefix (`opencode/…`, `opencode-go/…`, `google/…`) because that harness reaches three providers, and the model you name has to match the one whose key you've configured.
 
-The catalog is kept up to date by hand and lists only models you can actually hold a conversation with — embedding, speech, and image models are left out even where the same key would reach them. If a model you want is missing, or you've been given access to one that isn't public yet, the override file below is the way in.
+The catalog is kept up to date by hand and lists only models you can actually hold a conversation with — embedding, speech, transcription, image, and video models are left out even where the same key would reach them, because every entry is a row in the [conversation model picker](/user-documentation/tab-types/conversations) and a row that cannot answer a query is a defect rather than an option. A model offered under both a dated id and a shorter alias is listed under both, so a profile pinning either one is accepted. The opencode list carries OpenCode Zen's free tier rather than its paid catalog, since those are mostly other providers' models reachable more directly through the entries already listed. If a model you want is missing, or you've been given access to one that isn't public yet, the override file below is the way in.
 
 A project can drop its own `.janissary/harness-models.json` (a JSON object mapping harness name to a list of model ids) into its `.janissary/` directory to replace the bundled catalog entirely for that project — useful for pinning a project-specific set of models or covering a harness the bundled catalog doesn't populate. Likewise, a project can drop `.janissary/agent-names.json` (a JSON array of names) to replace the bundled agent name pool. If either file is missing, the bundled default is used; if it exists but isn't valid JSON, a warning is printed and the bundled default is used instead.
 
@@ -127,6 +127,8 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 ## Workspaces
 
 Harnesses start inside a disposable clone by default — the same isolation agents get. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` opts out. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
+
+A harness tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you launched it from, with its own dot color, and takes part in reordering and grouping like any other tab. One a [profile](/user-documentation/automation/profiles) opens joins that profile's own group instead.
 
 A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
 
@@ -197,7 +199,7 @@ When a harness that isn't on screen finishes and goes idle, its tab picks up the
 
 A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched without `-y`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings. Opencode is the exception again: its prompts aren't recognized as prompts, so a stuck opencode tab is still flagged, just on the ordinary timing.
 
-See [Tabs](/user-documentation/getting-started/tabs) for what the dot and the flag mean everywhere else.
+See [Tabs](/user-documentation/getting-started/tabs) for what the dot and the flag mean everywhere else. A harness type added later with no way to recognize its state gets the older, coarser rule: the dot blinks for as long as its process is alive, and nothing settles it early. All three launchable harnesses have a signal today, so that only applies to a harness added after them.
 
 ## Starting with a prompt
 
@@ -218,6 +220,8 @@ Wrapping the whole launch in a [`schedule`](/user-documentation/automation/sched
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
 The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file and a normalized session transcript, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
+
+A [schedule](/user-documentation/automation/scheduling) attached to a harness tab lives no longer than the tab does. When the harness exits, its scheduled commands go with it rather than firing later — and because `janus --relaunch` restores no harness tabs, there is no tab left to carry them.
 
 Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model, an effort level, and startup commands, the same as typing the command directly.
 

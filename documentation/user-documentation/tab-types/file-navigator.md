@@ -11,7 +11,7 @@ files left       rooted at the working directory, docked in the left sidebar
 files right src  rooted at src, docked in the right sidebar
 ```
 
-Directories sort before files, both alphabetically. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is labeled `files` in the strip and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below).
+Directories sort before files, both alphabetically. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is named `navigator` in the strip, and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below). `navigator` is also the name `close` goes by, with `navigator-2`, `navigator-3`, and so on for later trees; `files` is the command that opens one, not the name it answers to.
 
 If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. A target that isn't a directory prints `files: <path>: not a directory`. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
@@ -71,6 +71,12 @@ A row with nothing to show for the current mode — a directory in `size` mode, 
 The header's detail button cycles a tree through the four modes, one click at a time, with a tooltip naming what the next click shows (`Show size`, `Show modified`, `Show permissions`, `Show name only`). Re-running `files with <mode>` on an already-open tree is a second way to switch it, and `in`/`on`/`with` clauses can combine in any order (`files in claude on left with size`).
 
 A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
+
+## Move a tree between the three places
+
+The header carries a **location** button that moves a tree where it lives, one click at a time: left sidebar, then the center tab strip, then the right sidebar, then back to the left. Its tooltip names the place the next click will take it, so you can see where a tree is going before you send it. That is the same three places `files left`, bare `files <path>`, and `files right` reach, and it works the same whether the tree is currently docked or in the strip — moving a tree out of a sidebar puts it back in its group, at the front where a navigator always sits.
+
+The header has no close button of its own. A tree in the center strip is closed from the strip, and a docked one from its sidebar's tab strip, where the × sits beside the tab's name. `close navigator` works from any tab either way.
 
 ## Opening the repository on GitHub
 
@@ -318,6 +324,10 @@ its successful moves in reverse order, and redo reapplies them in forward order.
 the redo stack. Grouped undo and redo use **Overwrite all**, **Skip conflicts**, and **Cancel** if
 destinations now contain conflicts. Failed and skipped items stay available for a later retry.
 
-Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`.
+Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`. Closing a tree also stops every directory watch it had open, so a folder that keeps changing stops costing anything the moment you close it.
+
+One thing a tree will not do is reach outside itself. Every path you supply to a file action or to a directory expansion has to land inside that tree's current root; one that points above it is ignored, so a move, rename, delete, or watch can never be aimed at something the tree isn't showing. Walking up to the parent is still available, and lands you in a tree rooted there.
+
+Every change a tree makes is aimed at the tree you made it in. If that tree has closed by the time the request arrives, the change simply doesn't happen and nothing is reported — including when another navigator has since taken its place in the tab list, which never inherits what you asked the old one to do.
 
 A [profile](/user-documentation/automation/profiles) brings a **local** tree back the way you left it. `profile save` records which directories you had expanded, where the cursor was, and every row you had selected; `profile launch` puts them back, silently skipping anything that has since been deleted. Remote trees are omitted because their workspace and signed-in SSH session no longer exist. The undo/redo history is not part of a profile — it stays in memory and dies with the tab.
