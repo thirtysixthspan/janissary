@@ -9,6 +9,7 @@ import { startGitClone } from '../git/clone.js';
 
 const execFileAsync = promisify(execFile);
 
+let workspaceProjectRoot = '';
 let workspaceBaseDir = '';
 let workspaceClaudeConfig = '';
 
@@ -16,8 +17,16 @@ export function initWorkspaceDir(
   projectDir: string,
   claudeJson: string = path.join(homedir(), '.claude.json'),
 ): void {
+  workspaceProjectRoot = projectDir;
   workspaceBaseDir = path.join(projectDir, '.janissary', 'workspace');
   workspaceClaudeConfig = claudeJson;
+}
+
+// The project root the workspace base was initialized against, for the siblings of that base under
+// `.janissary/` (a detached peer's records live in `.janissary/remote/`).
+export function workspaceProjectDir(): string {
+  if (!workspaceProjectRoot) throw new Error('Workspace dir not initialized. Call initWorkspaceDir first.');
+  return workspaceProjectRoot;
 }
 
 export function ensureWorkspaceDir(): void {
