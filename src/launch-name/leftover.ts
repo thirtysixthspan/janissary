@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { isOwnInstanceAlive, isPidAlive, readLockPid } from '../instance-lock.js';
-import { untrustWorkspace, workspacePath, workspaceProjectDir } from '../workspace/index.js';
+import { untrustWorkspace, workspaceClaudeConfigPath, workspacePath, workspaceProjectDir } from '../workspace/index.js';
 import { peerRecordDir, readPeerRecord } from '../remote/peer-record.js';
 import { workspaceLabelError } from '../workspace/label.js';
 import { errorText } from '../error-text.js';
@@ -58,7 +58,7 @@ export function removeLeftoverWorkspace(label: string): string | undefined {
   const dir = workspacePath(label);
   const scratch = `${dir}.tmp`;
   try {
-    untrustWorkspace(dir);
+    untrustWorkspace(dir, workspaceClaudeConfigPath());
     if (existsSync(dir)) rmSync(dir, { recursive: true });
     if (existsSync(scratch)) rmSync(scratch, { recursive: true });
   } catch (error) {

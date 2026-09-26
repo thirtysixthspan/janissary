@@ -20,6 +20,16 @@ cannot be read, contains malformed JSON, or has an invalid root, projects, or ma
 shape, provisioning fails without changing the file. Successful updates replace the configuration
 atomically so an interrupted write cannot leave a partial document.
 
+Removing a workspace drops its trust entry from that same configuration file: the one
+`initWorkspaceDir` was given, which is also the file provisioning trusted the clone in. This applies
+when its last tab closes, at shutdown, and when a launch clears a leftover folder. A configuration
+that is missing, unreadable, malformed, has a non-object root or `projects` value, or has no entry
+for the clone is left untouched. Otherwise the entry is removed and the file is replaced atomically,
+the same way provisioning writes it. On tab close and shutdown (`removeWorkspace`), a failure to
+rewrite the configuration is ignored, so it never stops the clone and its scratch sibling from being
+deleted or stops later workspaces from being removed. Leftover cleanup reports that failure instead,
+as described below.
+
 The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is workspaced, the new agent joins that exact workspace instead of cloning another one. Its `cwd` and workspace directory are the source tab's existing clone, it is immediately ready, and both tabs hold a reference to the clone. On a remote source it also joins the source's existing ssh channel and runs in the same remote workspace without another authentication prompt. The `agent` and `harness` command forms remain fresh-clone operations; the metadata button is the only route that joins an existing workspace.
 
 ### Workspace harness tab
