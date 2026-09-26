@@ -8,12 +8,11 @@ import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
   HOME_WRITE_CARVEOUTS, HOME_READ_CARVEINS, SECRET_DENY_PATHS, HOME_READ_LISTING_DIRS, HOME_WRITE_PREFIX_CARVEOUTS,
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
-  ENV_SCRUB_PATTERNS,
 } from './paths.js';
 import { getConfig } from '../config.js';
 import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
-import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
-import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
+import { scrubEnv, withJanissaryHome, withWorkspaceCredentials, workspaceEnv } from './environment.js';
+import type { ProjectTokens } from '../project/tokens.js';
 
 export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
@@ -149,16 +148,6 @@ function parentGitObjectsDir(workspaceDir: string): string {
   }
 }
 
-// Drop credential-shaped vars and agent-socket escape vectors (see `ENV_SCRUB_PATTERNS` in paths.ts).
-function scrubEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  const scrubbed: NodeJS.ProcessEnv = {};
-  for (const [key, value] of Object.entries(env)) {
-    if (ENV_SCRUB_PATTERNS.some((pattern) => pattern.test(key))) continue;
-    scrubbed[key] = value;
-  }
-  return scrubbed;
-}
-
 // `-D <param>=<path>` for each home-relative table entry, in both its literal (`~/…`, as named —
 // covers an `lstat`/`readlink` of a symlinked dotfile) and fully realpath-resolved (covers a
 // `read`/`open` that follows the symlink) forms. See the comment on `dualParams` in
@@ -170,73 +159,6 @@ function homeDParams(home: string, relPaths: string[], params: { literal: string
     args.push('-D', `${params.literal[i]}=${literalPath}`, '-D', `${params.real[i]}=${resolvePath(literalPath)}`);
   }
   return args;
-}
-
-// Every credential this spawn is deliberately handed: each configured token under every variable its
-// row in `PROJECT_TOKENS` names. Most rows name one; the gemini row names two, because opencode
-// detects its Google provider from one variable and loads the key from another. `GH_TOKEN` is the
-// one deliberate exception to "a scrubbed env var never comes back" — it isn't the ambient value
-// `scrubEnv` just stripped, it's a fresh one chosen for this spawn. The provider keys are not on
-// `ENV_SCRUB_PATTERNS` at all (the scrub deliberately exempts LLM provider credentials, see
-// paths.ts), so an ambient value survives and a configured token simply takes precedence over it
-// here.
-//
-// `GH_CONFIG_DIR` stays a guarded line rather than a fifth entry in the GitHub row's list, because
-// the list is the same credential under other names and this carries a path instead. It points at an
-// empty, workspace-private directory because `gh` reads `~/.config/gh/hosts.yml` on every invocation
-// regardless of `GH_TOKEN`, and its config loader treats the sandbox's EPERM deny on that file (see
-// SECRET_DENY_PATHS) as fatal, refusing to run at all; a genuinely absent hosts.yml (real ENOENT) it
-// handles by falling through to `GH_TOKEN` normally. Where the sandbox is inactive there is no deny
-// to work around, but the redirect still keeps that machine's own ambient `gh` login out of the
-// workspace, which is the same guarantee an isolated tab gets.
-function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
-  const credentials: NodeJS.ProcessEnv = {};
-  for (const { name, env } of PROJECT_TOKENS) {
-    const value = tokens[name];
-    if (!value) continue;
-    for (const variable of env) credentials[variable] = value;
-  }
-  if (tokens.github) credentials.GH_CONFIG_DIR = path.join(tmpDir, 'gh-config');
-  return credentials;
-}
-
-// Everything a workspaced spawn's environment gains regardless of whether this machine can confine
-// it: the project's credentials, plus the four variables carrying the git identity of the user who
-// opened janissary (see `git/identity.ts`). The identity is read from the module cache rather than
-// threaded through `SandboxOptions` the way the tokens are, because unlike a token — which the
-// remote side merges per provision — it is a single process-wide fact on either machine.
-function workspaceEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
-  return { ...gitIdentityEnv(getGitIdentity()), ...workspaceCredentialEnv(tmpDir, tokens) };
-}
-
-// Handing a workspaced tab its scoped credentials is a provisioning concern, not an isolation one:
-// the clone's `origin` is HTTPS and its `credential.helper` is `!gh auth git-credential` on every
-// host (see src/workspace/index.ts), so `git push` and `gh` need `GH_TOKEN` whether or not Seatbelt
-// is confining the process, and a harness needs its own token on exactly the same terms. This is the
-// unconfined path's share of that — a non-darwin remote, or a host with `sandboxWorkspaces` off,
-// would otherwise get a workspace it cannot push from, authenticate a harness in, or attribute a
-// commit from. Without a token and without an identity, or outside a workspace, the caller's own
-// environment object is returned untouched.
-function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: SandboxOptions): NodeJS.ProcessEnv {
-  if (!options.workspaceDir) return env;
-  const tmpDir = resolvePath(`${options.workspaceDir}.tmp`);
-  const added = workspaceEnv(tmpDir, options.tokens ?? {});
-  return Object.keys(added).length === 0 ? env : { ...env, ...added };
-}
-
-// The install root of the running janissary, under the one name a command line can spell: the task
-// picker inserts `execute $janissary/ai/tasks/<task>.md` for a built-in task, and the agent that
-// receives it has no other way to find the installation — a globally installed npm package sits
-// nowhere near the project, and on a remote tab the install that matters is the one on the machine
-// the process actually runs on, not the one the browser is talking to.
-//
-// Added for every spawn, workspaced or not, unlike the credentials above: the picker inserts the same
-// command shape on any tab and cannot know which kind it is populating, so a plain agent tab that got
-// `$janissary` with nothing to expand would be worse off than one given the old absolute path. The
-// value is a filesystem path to janissary's own code, not a credential, so there is nothing for the
-// unconfined path to be careful about.
-function withJanissaryHome(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
-  return { ...env, [JANISSARY_HOME_ENV]: janissaryRoot() };
 }
 
 // Wrap a spawn invocation (`command` + `args` — the same shape `child_process.spawn`/node-pty's
