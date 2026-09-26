@@ -135,7 +135,13 @@
 // and `workspace-ready` gains `cloned`, reporting a clone made on the way. A version-20 remote
 // resolves its root before the handshake and never offers, so it is refused here like every other
 // mismatch rather than failing a launch with no reason at all.
-export const REMOTE_PROTOCOL_VERSION = 21;
+//
+// Version 22 stops the frame codec re-encoding file contents. A `write-file` request's `content`
+// and a `read-file` reply's `content` are base64 already — the filesystem port encodes the bytes —
+// and the codec used to wrap them in a second layer, sniffing any reply result with a string
+// `content` field to decide. A version-21 peer would read the single layer as double-encoded and
+// hand the navigator base64 text as file contents, so it is refused here instead.
+export const REMOTE_PROTOCOL_VERSION = 22;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -381,21 +387,10 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
   if (frame.type === 'shell-history') {
     return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
   }
-  if (frame.type === 'filesystem-request' && frame.operation === 'write-file') {
-    return { ...frame, args: { ...frame.args, content: encodeText(frame.args.content ?? '') } };
-  }
-  if (frame.type === 'filesystem-reply' && isContentResult(frame.result)) {
-    return { ...frame, result: { ...frame.result, content: encodeText(frame.result.content) } };
-  }
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
   if (frame.type === 'capture-reply' && frame.text !== undefined) return { ...frame, text: encodeText(frame.text) };
   return { ...frame };
-}
-
-function isContentResult(value: unknown): value is { content: string } & Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    && typeof (value as Record<string, unknown>).content === 'string';
 }
 
 export function encodeFrame(frame: RemoteFrame): string {

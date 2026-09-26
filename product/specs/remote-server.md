@@ -206,6 +206,12 @@ answer can now say that the project root was cloned first. A version-20 remote s
 before the handshake and never offers a clone, so a launch against one would fail with no reason
 at all. It is refused at the handshake like any other mismatch.
 
+Sending a remote tree's file contents once encoded, instead of twice, moves the protocol to 22. A
+file read from or written to a remote navigator crosses the channel as a single encoded copy of its
+bytes, about a quarter smaller than before. A version-21 remote still expects the second layer and
+would hand the navigator encoded text in place of the file's contents, so it is refused at the
+handshake like any other mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
