@@ -2065,4 +2065,85 @@ describe('FileNavigatorManager', () => {
       expect(tabs.find((t) => t.label === label)!.files!.githubUrl).toBeUndefined();
     });
   });
+
+  // The four bindings below are one-liners over `withFilesState`, and the operations they reach are
+  // covered against their own modules. What is untested is that each reaches the right one for the
+  // tab the label names, and that a label naming none answers the way the interface promises.
+  describe('row-level delegations', () => {
+    // The navigator's label is generated when the tab opens, so it is found rather than named.
+    const navLabel = () => tabs.find((t) => t.label.startsWith('navigator'))!.label;
+
+    it('rootOf answers the root the server holds, never a path the client named', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      expect(manager.rootOf(navLabel())).toBe(root);
+    });
+
+    it('rootOf answers nothing for a label that is not a navigator', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      expect(manager.rootOf('janus')).toBeUndefined();
+      expect(manager.rootOf('ghost')).toBeUndefined();
+    });
+
+    it('openers answers the row\'s own opener, naming its edit gesture', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      // A row whose extension an opener claims is answered with that opener and no choice list: the
+      // choice list is the question "what else could open this?", and there is nothing to ask.
+      expect(manager.openers(navLabel(), 'notes.txt', true, false))
+        .toEqual({ command: 'edit', choices: [] });
+    });
+
+    it('openers answers the fallback choices for a row no opener claims', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      expect(manager.openers(navLabel(), 'notes.unknown', true, false).choices.length)
+        .toBeGreaterThan(0);
+    });
+
+    it('openers answers an empty list for a label that is not a navigator', () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      expect(manager.openers('janus', 'notes.txt', true, false)).toEqual({ choices: [] });
+    });
+
+    it('openFile opens a row in an editor rather than an external app', async () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      const edit = vi.fn();
+      (managers as { openFile?: unknown }).openFile = { edit, run: vi.fn() };
+
+      await manager.openFile(navLabel(), 'notes.txt', 'edit');
+
+      expect(edit).toHaveBeenCalledOnce();
+      expect(edit.mock.calls[0][0]).toContain('notes.txt');
+    });
+
+    it('openFile does nothing for a label that is not a navigator', async () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      const edit = vi.fn();
+      (managers as { openFile?: unknown }).openFile = { edit, run: vi.fn() };
+
+      await manager.openFile('janus', 'notes.txt', 'edit');
+
+      expect(edit).not.toHaveBeenCalled();
+    });
+
+    it('createFile refuses a destination outside this tab\'s tree', async () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      await manager.createFile(navLabel(), '../escaped.ts');
+      expect(existsSync(path.join(root, '..', 'escaped.ts'))).toBe(false);
+    });
+
+    it('createFile does nothing for a label that is not a navigator', async () => {
+      const manager = run();
+      manager.open('files', 'janus');
+      const before = tabs.length;
+      await manager.createFile('janus', 'new.ts');
+      expect(tabs).toHaveLength(before);
+    });
+  });
 });
