@@ -14,7 +14,7 @@ The command appends `db vacuum` to `worker`'s queue. If `worker` is idle with no
 
 Every agent tab has its own unbounded, first-in-first-out queue. A command submitted while that agent is busy joins the queue instead of running immediately. A command sent to an idle agent that already has waiting work joins the back of that queue too.
 
-The issuing tab records `Queued: <command>` so you know the submission was accepted. The queue drains automatically from the front when the agent becomes idle. Shell commands run in order on the same shell, and a route chooser pauses the queue until you choose or cancel it.
+The issuing tab records `Queued: <command>` so you know the submission was accepted. The queue drains automatically from the front when the agent becomes idle, and it keeps going rather than stalling: a command that finishes without putting the agent back to work is followed straight away by the next one. Shell commands run in order on the same shell, and each one's output is only its own — none of the working-directory bookkeeping the app uses to track a shell leaks in from the command beside it. A route chooser pauses the queue until you choose or cancel it.
 
 While the current agent is busy, its command prompt shows `queue` before the chevron and its dot blinks. Submitting text at that prompt adds it to the queue.
 
@@ -35,11 +35,13 @@ Opening the popup selects the front command and copies its text into the command
 | `↑` / `↓` or click | Select a row and copy its text into the command line |
 | Typing | Patch the selected row immediately |
 | `Backspace` / `Delete` with text | Edit the selected row normally |
-| `Backspace` / `Delete` on an empty line | Remove the selected row and keep the popup open |
+| `Backspace` / `Delete` on an empty line | Remove the selected row, keep the popup open on an empty command line, and hold the selection inside the list, so repeated presses delete row after row |
 | `Enter` / `Return` | Do nothing |
 | `Escape` | Close the popup and clear the command line |
 
 An empty row is allowed until it reaches the front of the queue. It then runs as a no-op.
+
+The popup and the drain can reach the same row at once. If the queue runs a command off while you are typing into that row, your edit is dropped rather than landing on whichever row took its place.
 
 ## Handle queue errors
 

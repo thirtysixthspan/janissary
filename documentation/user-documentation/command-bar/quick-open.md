@@ -16,7 +16,7 @@ The searchable set is every file under the directory the app was launched from. 
 
 Typing narrows the list with a case-insensitive fuzzy match against each file's project-relative path. The characters you type must appear in the path in order, but not next to each other: typing `wsprof` can surface `web/src/ProfilePicker.tsx`.
 
-A match on the filename itself ranks above a match found only in the directory part of the path, and tightly clustered matches rank above scattered ones. The list shows the top 10 results, best first. Each row shows the filename plainly with its containing directory dimmed beside it.
+A match on the filename itself ranks above a match found only in the directory part of the path, and tightly clustered matches rank above scattered ones: characters that sit next to each other, or that land right after a `/`, `-`, `_`, `.`, or the start of a new word inside the name, count for more than the same characters spread thinly across the path. When two paths score exactly the same, the shorter one comes first. The list shows the top 10 results, best first. Each row shows the filename plainly with its containing directory dimmed beside it.
 
 If nothing matches, the window shows `No matching files`, and `Return` does nothing.
 
@@ -28,4 +28,4 @@ If nothing matches, the window shows `No matching files`, and `Return` does noth
 
 ## Results stay fresh
 
-Each time you open the window it re-reads the project's file list, so files created or deleted since your last search show up correctly. While the window is open, typing re-filters the already-loaded list instantly, with no further requests.
+Each time you open the window it re-reads the project's file list, so files created or deleted since your last search show up correctly. While the window is open, typing re-filters the already-loaded list instantly, with no further requests. If you close the window before that read comes back, the answer is thrown away — reopening starts a fresh read rather than filling in the list you had walked away from.

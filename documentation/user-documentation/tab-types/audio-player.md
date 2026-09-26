@@ -6,7 +6,9 @@
 audio track.mp3
 ```
 
-`open track.mp3` does the same thing. The tab shows the playing track's name, size, and location in a header, your platform's own audio controls below that, and the playlist filling the rest of the tab.
+`open track.mp3` does the same thing. The tab shows the playing track's name, size, and location in a header, your platform's own audio controls below that, and the playlist filling the rest of the tab. The header carries a **Split** control at its right edge, so you can put the player in the other pane while you work.
+
+There is no command line and no command history here, and nothing the tab does runs through a shell. The tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; in the strip it reads like any other member of that band, so you can move it within the group, and the × after its label closes it without selecting it first.
 
 ## One tab, one playlist
 
@@ -99,8 +101,10 @@ A file can use a codec the app can't decode, or simply be damaged. When that hap
 
 The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` Like every notification, it opens that feed in the right sidebar if you don't already have it open.
 
+A track that won't decode is an ordinary media outcome, not a failure of the player itself, so the tab keeps working and nothing is disabled. A genuine plugin failure is different: it closes the audio tab and reports the standard failure line — see [Bundled plugins](/user-documentation/command-bar/plugins).
+
 ## Lifecycle
 
-An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`.
+An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`, and a [profile](/user-documentation/automation/profiles) neither records one nor reopens it, so a profile launched later will not bring your playlist back.
 
 Closing the tab stops playback and releases every file it was serving. Only files you've explicitly opened are ever served to the player.
