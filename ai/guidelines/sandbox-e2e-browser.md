@@ -61,6 +61,8 @@ The symptom is a server that answered requests one moment and refuses connection
 
 Hold a connection open for as long as the session should live. If your script must return while the session stays up, spawn a holder: a script that connects, opens the page, navigates, and then idles indefinitely, run the way background processes survive in your runtime (under a persistent shell, `nohup … & disown`). Killing the holder is also the clean way to end the session — the page closes, the websocket drops, and the server quits itself.
 
+**A holder keeps one session alive, not the address.** The guard dials a browser per client connection, so a later `connect()` is a different browser and a different set of pages: measured in a find-bugs run, a holder's page was a healthy websocket client on its own, a second script's connect left it holding nothing, and the server — having lost its last client — exited about a second later, so the next script met `ERR_CONNECTION_REFUSED` at a perfectly healthy address. A holder therefore cannot be a bridge between two scripts. What works is one connection per batch of work, held open from the first interaction to the last, with a second batch started as a second instance. `scripts/e2e/session.mjs` is that shape, and `./scripts/run.mjs e2e-driver <driver.mjs>` runs one batch of it.
+
 ## What will end your session
 
 The endpoint you hold belongs to a guard that filters the protocol, not directly to the browser. It will close your connection outright — not fail one call — when:
