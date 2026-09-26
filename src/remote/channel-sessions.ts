@@ -1,4 +1,5 @@
 import { PendingFrames } from './channel-pending.js';
+import { spawnFrameState } from './process-state.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame, ShellHistoryRun } from './protocol.js';
 
 // One remote process id's I/O, and every map that is keyed by one. Kept out of `RemoteChannel`
@@ -82,18 +83,8 @@ export class SessionRouter {
 
   spawnedIds(): string[] { return [...this.spawned.keys()]; }
 
-  // What this channel started, in the shape the far side describes its own live processes with. The
-  // session record is built from this, so what is written down and what an attached peer answers
-  // with are the same description of the same thing.
   spawnedProcesses(): RemoteProcessState[] {
-    return [...this.spawned.values()].map((frame) => ({
-      id: frame.id,
-      program: frame.program,
-      mode: frame.mode,
-      ...(frame.harness !== undefined && { harness: frame.harness }),
-      ...(frame.autoApprove !== undefined && { autoApprove: frame.autoApprove }),
-      ...(frame.agentName !== undefined && { agentName: frame.agentName }),
-    }));
+    return [...this.spawned.values()].map((frame) => spawnFrameState(frame));
   }
 
   output(frame: OutputFrame): void {
