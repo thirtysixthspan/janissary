@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import { buildCachedRows, clearFilesystemCache } from './filesystem-cache.js';
 import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
-import { RemoteFileSystemPort } from './remote-port.js';
+import { RemoteFileSystemPort } from './remote/port.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget } from '../tab/types.js';
 import { dropExpandedWatchers } from './navigation.js';

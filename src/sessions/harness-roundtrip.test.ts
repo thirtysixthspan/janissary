@@ -34,7 +34,7 @@ vi.mock('../harness/observers.js', () => ({
   },
 }));
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: () => ({}) }));
-vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
+vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 vi.mock(import('../agent/state.js'), async (importOriginal) => ({
   ...await importOriginal(), deleteAgentState: vi.fn(),
 }));

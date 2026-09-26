@@ -5,12 +5,12 @@ import { encodeFrame, encodeHandshake } from './protocol.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
-import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote-file-cache.js';
+import { clearRemoteFileCacheForWorkspace } from '../file-navigator/remote/file-cache.js';
 import type { Managers } from '../managers.js';
 import type { ServerFrame } from './protocol.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
+vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 const sessionId = '12345678-1234-1234-1234-123456789abc';
 

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
-import { RemoteFileSystemPort } from '../file-navigator/remote-port.js';
+import { RemoteFileSystemPort } from '../file-navigator/remote/port.js';
 import { LocalFileSystemPort, type FileSystemPort } from '../file-navigator/filesystem-port.js';
 import { deleteOne, moveOne, renameOne } from '../file-navigator/manager-item-operations.js';
 import { deleteMany } from '../file-navigator/manager-batch.js';

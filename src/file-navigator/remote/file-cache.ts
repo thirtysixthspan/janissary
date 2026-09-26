@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { containedPath } from './batch-paths.js';
-import type { FileSystemPort } from './filesystem-port.js';
+import { containedPath } from '../batch-paths.js';
+import type { FileSystemPort } from '../filesystem-port.js';
 
 export type RemoteFileRecord = {
   filesystem: FileSystemPort;

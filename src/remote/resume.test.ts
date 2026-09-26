@@ -6,7 +6,7 @@ import { answerSessionState, askSessionState, handleAttachResult, SESSION_STATE_
 import { RemoteManager } from './manager.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
+vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 
 // The query's three exits: the answer, the deadline, and the entry losing the ability to answer. The
 // last two both resolve `undefined`, which is what tells an attach that nothing was established —
