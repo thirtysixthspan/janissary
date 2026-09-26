@@ -79,10 +79,10 @@ describe('DatabaseManager', () => {
     expect(manager.openDbs('main')).toEqual([]);
   });
 
-  it('extract delegates to extractDatabaseCommand', () => {
+  it('isCommandLine recognizes a db command line', () => {
     const manager = new DatabaseManager();
-    expect(manager.extract('db sqlite list')).toBe('db sqlite list');
-    expect(manager.extract('no command here')).toBeUndefined();
+    expect(manager.isCommandLine('db sqlite list')).toBe(true);
+    expect(manager.isCommandLine('no command here')).toBe(false);
   });
 
   it('listOpen reflects every globally open database', () => {

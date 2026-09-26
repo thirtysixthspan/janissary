@@ -1,8 +1,9 @@
-// Parser for the `browser` command plus the two helpers the ACP tool loop needs
-// (`extractBrowserCommand` / `BROWSER_PRIMER`), mirroring `parseConnectionCommand`
+// Parser for the `browser` command plus the helpers the ACP tool loop needs
+// (`isBrowserCommandLine` / `BROWSER_PRIMER`), mirroring `parseConnectionCommand`
 // (src/connection/parsing.ts) and `parseDatabaseCommand` in src/database/parsing.ts. Pure — no I/O.
 // The host (src/browser/index.ts) performs the actual Playwright actions against the tab's browser.
 
+import { findLastCommandLine } from '../acp/command-line.js';
 import type { BrowserParsed } from './types.js';
 
 const USAGE =
@@ -84,12 +85,12 @@ export function parseBrowserCommand(input: string): BrowserParsed {
  * `extractDbCommand`.
  */
 export function extractBrowserCommand(text: string): string | null {
-  const lines = text.split('\n');
-  for (let index = lines.length - 1; index >= 0; index--) {
-    const line = lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
-    if (/^browser\s+(open|list|use|goto|eval|shot|content|close|window)\b/i.test(line)) return line;
-  }
-  return null;
+  return findLastCommandLine(text, isBrowserCommandLine);
+}
+
+// Whether a cleaned reply line is a `browser` command the ACP tool loop can run.
+export function isBrowserCommandLine(line: string): boolean {
+  return /^browser\s+(open|list|use|goto|eval|shot|content|close|window)\b/i.test(line);
 }
 
 // Primer injected into an ACP agent so it can drive a real browser through the autonomous

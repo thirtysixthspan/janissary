@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('../browser/command.js', () => ({
-  extractBrowserCommand: vi.fn((text: string) => (text.includes('browser goto') ? 'browser goto x' : null)),
+  isBrowserCommandLine: vi.fn((line: string) => line.startsWith('browser goto')),
   BROWSER_PRIMER: 'browser primer text',
 }));
 vi.mock('../question-command.js', () => ({
-  extractQuestionCommand: vi.fn((text: string) => (text.includes('question ask') ? 'question ask x' : null)),
+  isQuestionCommandLine: vi.fn((line: string) => line.startsWith('question ask')),
   QUESTION_PRIMER: 'question primer text',
   runQuestionCommand: vi.fn(() => 'question ran'),
 }));
@@ -15,13 +15,13 @@ import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './too
 const setup = () => {
   const browserRun = vi.fn(async () => 'browser ran');
   const runInTab = vi.fn(() => 'db ran');
-  const extract = vi.fn((text: string) => (text.includes('select 1') ? 'select 1' : undefined));
+  const isCommandLine = vi.fn((line: string) => line.startsWith('db '));
   const managers = {
     browser: { run: browserRun },
     questions: { register: vi.fn() },
-    database: { primer: 'db primer text', runInTab, extract },
+    database: { primer: 'db primer text', runInTab, isCommandLine },
   } as never;
-  return { tools: createAcpToolTable(managers), browserRun, runInTab, extract };
+  return { tools: createAcpToolTable(managers), browserRun, runInTab, isCommandLine };
 };
 
 describe('createAcpToolTable', () => {
@@ -59,19 +59,30 @@ describe('toolRunner', () => {
 });
 
 describe('toolExtractor', () => {
-  it('returns the command the first claiming entry finds', () => {
+  it('returns the command line a tool recognizes', () => {
     const { tools } = setup();
-    expect(toolExtractor(tools)('run browser goto x please')).toBe('browser goto x');
-    expect(toolExtractor(tools)('try question ask x')).toBe('question ask x');
+    expect(toolExtractor(tools)('Let me look.\nbrowser goto x')).toBe('browser goto x');
+    expect(toolExtractor(tools)('I need to ask.\nquestion ask x')).toBe('question ask x');
   });
 
-  it('reaches the database entry, whose extractor reports absence as undefined', () => {
-    const { tools, extract } = setup();
-    expect(toolExtractor(tools)('please run select 1')).toBe('select 1');
-    expect(extract).toHaveBeenCalledWith('please run select 1');
+  it('reaches the database entry through its manager predicate', () => {
+    const { tools, isCommandLine } = setup();
+    expect(toolExtractor(tools)('Checking.\ndb sqlite list')).toBe('db sqlite list');
+    expect(isCommandLine).toHaveBeenCalledWith('db sqlite list');
   });
 
-  it('returns null when no entry claims the reply', () => {
+  it('picks the last command line even when an earlier line belongs to a tool listed first', () => {
+    const { tools } = setup();
+    const reply = 'Earlier I ran:\nbrowser goto x\nNow the data:\ndb sqlite query shop SELECT 1';
+    expect(toolExtractor(tools)(reply)).toBe('db sqlite query shop SELECT 1');
+  });
+
+  it('picks a trailing browser line over an earlier database line', () => {
+    const { tools } = setup();
+    expect(toolExtractor(tools)('db sqlite list\nthen\nbrowser goto x')).toBe('browser goto x');
+  });
+
+  it('returns null when no line is a command', () => {
     const { tools } = setup();
     expect(toolExtractor(tools)('here is the final answer')).toBeNull();
   });

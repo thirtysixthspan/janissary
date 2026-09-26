@@ -4,6 +4,7 @@
 // side effects (rendering the transcript, executing the command) are injected,
 // which keeps it testable independently of the live agent.
 
+import { cleanCommandLine } from './command-line.js';
 import type { AcpLoopSession, AcpLoopDeps as AcpLoopDependencies, AcpLoopHandlers } from './types.js';
 
 /**
@@ -70,8 +71,8 @@ export function runAcpToolLoop(
 function filterCommandFromDisplay(display: string, command: string | null | undefined): string {
   if (!command) return display;
   const lines = display.split('\n');
-  const cleaned = lines.map((l) => l.replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim());
-  const index = cleaned.indexOf(command);
+  const cleaned = lines.map((line) => cleanCommandLine(line));
+  const index = cleaned.lastIndexOf(command);
   if (index === -1) return display;
   lines.splice(index, 1);
   // Remove adjacent code fence markers left behind by the removed command.

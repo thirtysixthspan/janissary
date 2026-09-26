@@ -1,3 +1,4 @@
+import { findLastCommandLine } from './acp/command-line.js';
 import type { QuestionKind } from './protocol.js';
 import type { Questions } from './questions.js';
 
@@ -36,13 +37,12 @@ export function parseQuestionCommand(input: string): ParsedQuestion | { error: s
   return { error: QUESTION_USAGE };
 }
 
+export function isQuestionCommandLine(line: string): boolean {
+  return /^question\s+(ask|approve)\b/i.test(line);
+}
+
 export function extractQuestionCommand(text: string): string | null {
-  const lines = text.split('\n');
-  for (let index = lines.length - 1; index >= 0; index--) {
-    const line = lines[index].replace(/^[\s`$>]+/, '').replace(/`+\s*$/, '').trim();
-    if (/^question\s+(ask|approve)\b/i.test(line)) return line;
-  }
-  return null;
+  return findLastCommandLine(text, isQuestionCommandLine);
 }
 
 export function runQuestionCommand(input: string, tab: string, questions: Questions): string | Promise<string> {
