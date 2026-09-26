@@ -1,5 +1,5 @@
-import type { RemoteFilesystemArguments } from './protocol.js';
-import type { HistoryStep } from '../file-navigator/moves.js';
+import type { RemoteFilesystemArguments } from '../protocol.js';
+import type { HistoryStep } from '../../file-navigator/moves.js';
 
 // The value-shape predicates every filesystem operation's argument validator is built from, and the
 // one decode helper two of them share. Kept apart from both the operation table and the frame

@@ -1,4 +1,4 @@
-import { refusalValueFor } from '../remote/filesystem-refusal.js';
+import { refusalValueFor } from '../remote/filesystem/refusal.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../remote/protocol.js';
 
 // One remote session's outstanding filesystem requests, and how each one is settled when no answer

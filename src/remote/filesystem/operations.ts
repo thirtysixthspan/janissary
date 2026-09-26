@@ -1,15 +1,15 @@
 import path from 'node:path';
 import {
   history, historyPaths, optionalPolicy, optionalRoot, stringArray, stringValue, policy,
-} from './filesystem-argument-checks.js';
-import { nonEmptyString } from './frame-decode-shared.js';
+} from './argument-checks.js';
+import { nonEmptyString } from '../frame-decode-shared.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
-} from './filesystem-refusal-shapes.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from './protocol.js';
-import type { FileSystemPort } from '../file-navigator/filesystem-port.js';
-import type { MaybePromise } from '../maybe-promise.js';
-import type { HistoryStep } from '../file-navigator/moves.js';
+} from './refusal-shapes.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../protocol.js';
+import type { FileSystemPort } from '../../file-navigator/filesystem-port.js';
+import type { MaybePromise } from '../../maybe-promise.js';
+import type { HistoryStep } from '../../file-navigator/moves.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the

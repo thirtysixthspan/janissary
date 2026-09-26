@@ -1,8 +1,8 @@
 import path from 'node:path';
-import { containedPath } from '../file-navigator/batch-paths.js';
-import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import { operationDescriptor } from './filesystem-operations.js';
-import type { ClientFrame } from './protocol.js';
+import { containedPath } from '../../file-navigator/batch-paths.js';
+import { OUTSIDE_ROOT_REASON } from '../../file-navigator/file-operation-result.js';
+import { operationDescriptor } from './operations.js';
+import type { ClientFrame } from '../protocol.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
