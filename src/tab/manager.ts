@@ -3,9 +3,8 @@ import type { AgentState } from '../agent/types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import { abbreviatePath } from '../paths.js';
-import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
-import { TabOpeningState } from './opening-state.js';
+import { TabTranscriptState } from './transcript-state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
@@ -14,15 +13,13 @@ import { tabRuntime } from './runtime.js';
 import * as lookup from './lookup.js';
 import * as runtimeOperations from './runtime-operations.js';
 import * as selectionOperations from './selection-operations.js';
-import * as transcriptOperations from './transcript-operations.js';
 import * as viewOperations from './view-operations.js';
 import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { AgentStatePersistence } from './persistence.js';
 import { persistAgentState } from './manager-persistence.js';
-import { capLog } from './transcript-log.js';
 
-export class TabManager extends TabOpeningState {
+export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
   activeTab = 0;
   secondaryTabLabel?: string;
@@ -191,39 +188,6 @@ export class TabManager extends TabOpeningState {
       (state) => this.persist(state), (tab) => this.buildAgentState(tab),
       (label, filePath) => this.managers.editorWatch.watch(label, filePath),
     );
-  }
-
-  startRunning(label: string, input: string, fields?: transcriptOperations.RunningEntryFields): void {
-    transcriptOperations.startRunning(this.tabs, label, input, (l, entry) => this.append(l, entry), fields);
-  }
-
-  finishRunning(label: string, output: string, match?: transcriptOperations.RunningEntryMatch): void {
-    transcriptOperations.finishRunning(this.tabs, label, output, (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l), match);
-  }
-
-  updateRunning(label: string, match: transcriptOperations.RunningEntryMatch | undefined, output: string, running: boolean, hooks: transcriptOperations.UpdateRunningHooks = {}): void {
-    transcriptOperations.updateRunning(this.tabs, label, match, output, running, hooks);
-  }
-
-  private capToConfiguredMax(log: LogEntry[]): LogEntry[] {
-    return transcriptOperations.capToConfiguredMax(log, getConfig().transcriptMaxLines);
-  }
-
-  append(label: string, entry: LogEntry, maxLines?: number): void {
-    transcriptOperations.append(
-      this.tabs, label, entry, (log) => maxLines === undefined ? this.capToConfiguredMax(log) : capLog(log, maxLines),
-      this.tabs[this.activeTab]?.label, this.secondaryTabLabel,
-    );
-  }
-
-  clearTranscript(label: string): void {
-    transcriptOperations.clearTranscript(
-      this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t),
-    );
-  }
-
-  recordHistory(index: number, text: string): string {
-    return transcriptOperations.recordHistoryForTab(this.tabs[index], text);
   }
 
   shorten(p: string): string {
