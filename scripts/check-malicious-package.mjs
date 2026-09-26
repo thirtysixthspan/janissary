@@ -2,7 +2,12 @@
 // Gate that stands between a package-update playbook and `npm install`/`npm update`.
 //
 //   ./scripts/run.mjs check-malicious-package <pkg>[@version] ...   check install targets
-//   ./scripts/run.mjs check-malicious-package --audit               scan package-lock.json
+//   ./scripts/run.mjs check-malicious-package --audit [lockfile]    scan a lockfile
+//
+// `--audit` with no path scans the installation's own package-lock.json, which is the right
+// answer when the runner and the project are the same checkout. A task prompt that installs
+// into some other project names that project's lockfile instead, because this script reads
+// the file relative to its own location rather than to the working directory.
 //
 // Exit codes:
 //   0  clean      — safe to install
@@ -118,12 +123,13 @@ function checkSpecs(specs, campaigns) {
   return worst;
 }
 
-function auditLockfile(campaigns) {
+function auditLockfile(campaigns, lockfile) {
+  console.log(`Auditing ${lockfile}`);
   let lock;
   try {
-    lock = JSON.parse(readFileSync(path.join(repoRoot, 'package-lock.json'), 'utf8'));
+    lock = JSON.parse(readFileSync(lockfile, 'utf8'));
   } catch (error) {
-    console.error(`check-malicious-package: cannot read package-lock.json: ${error.message}`);
+    console.error(`check-malicious-package: cannot read ${lockfile}: ${error.message}`);
     return EXIT.ERROR;
   }
 
@@ -162,11 +168,16 @@ function auditLockfile(campaigns) {
 
 const args = process.argv.slice(2);
 
-if (args.length === 0) {
+if (args.length === 0 || (args[0] === '--audit' && args.length > 2)) {
   console.error('usage: check-malicious-package <pkg>[@version] ...');
-  console.error('       check-malicious-package --audit');
+  console.error('       check-malicious-package --audit [lockfile]');
   process.exit(EXIT.ERROR);
 }
 
 const campaigns = loadCampaigns();
-process.exit(args[0] === '--audit' ? auditLockfile(campaigns) : checkSpecs(args, campaigns));
+if (args[0] !== '--audit') process.exit(checkSpecs(args, campaigns));
+const named = args[1];
+const lockfile = named === undefined
+  ? path.join(repoRoot, 'package-lock.json')
+  : path.resolve(process.cwd(), named);
+process.exit(auditLockfile(campaigns, lockfile));

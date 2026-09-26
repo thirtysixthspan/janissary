@@ -124,7 +124,7 @@ The steps, in order:
 
 The report shape, verbatim:
 
-- `App:        web — <serve command> | tool — <command>, on <branch>@<short-sha>`
+- `App:        web — <serve command bound to <address>> | tool — <command>, on <branch>@<short-sha>`
 - `Specs:      <names> (named | picked: recently changed)`
 - `Not tested: none | <spec — reason>`
 - `New bugs:   <count> under ## development — <one line each>`
@@ -132,7 +132,6 @@ The report shape, verbatim:
 - `Not filed:  none | <finding — environment | over cap | matches ## declined>`
 - `Noted:      none | <spec problems and unreproduced code defects>`
 - `Commit:     <short-sha> pushed to <branch> | none — nothing filed | push failed`
-- `Stash:      none | restored | left in place: find-bugs: pre-run working tree — <reason>`
 - `Status:     complete | stopped: <reason>`
 
 ## Tests
@@ -164,3 +163,26 @@ No automated test. The change is a prose playbook with no application code, like
    - prints the report in the fixed shape, with an `App:` line naming `node bin/janus.mjs` and the tested commit
 2. Run it again with a deliberately unknown spec name. Confirm it stops before building, lists the real spec names, and leaves the working tree as it found it.
 3. On a small non-Janissary project that has `product/specs/` and a CLI but no web UI, run it with no spec named. Confirm that it discovers the tool's run command, reports `App: tool — …`, appends `temp/` to that project's `.gitignore` if it was missing and commits it, and tests non-interactive behavior directly and interactive behavior under a pseudo-terminal (or lists that behavior as `Not tested` when no pseudo-terminal mechanism is available).
+
+### Verification status
+
+Rehearsed on 2026-09-26 from a tab with no attached browser, against branch commit `386d123e` and the primary-branch commit `ba855edf`.
+
+**Case 2, partially.** The preparation chain was rehearsed in full inside a throwaway clone: a dirty tree of one staged edit plus one untracked file was stashed with the run's own message and its object ID recorded, the primary branch was created tracking `origin/master` and fast-forwarded, the lockfile audit returned clean, `npm install --ignore-scripts` with the two rebuild lines left the tracked tree clean, the missing browser stopped the run before any build, and `git stash pop --index` on the ref located by that object ID brought back the edit still staged and the untracked file, with no stash left behind and the clone on the primary branch. What was **not** exercised is case 2's own assertion: specification names are resolved in Step 2, after the browser gate in Step 1, so a tab without a browser reports the missing browser instead of the unknown name. Rehearsing that assertion needs a `-b` tab.
+
+**Cases 1 and 3, not run.** Both need a tab launched with the E2E browser, and the tab this was written in has neither `JANISSARY_BROWSER_WS_ENDPOINT` nor `JANISSARY_PLAYWRIGHT`. Nothing in this repository should be read as a claim that they pass.
+
+**The Janissary worked example was removed after this plan was completed.** The design decision above stands as the record of what was decided then; the section it called for is no longer in the task, which now takes a Janissary checkout's build and launch commands from that checkout's own instructions like any other project's. What no project document states, and what the section carried, is the scratch repository's git identity, the `sandboxWorkspaces` override, the detached launch with its token-gated URL, and the launcher's preference for a compiled `dist/main.js` over `src/main.ts` — so a run pointed at a Janissary checkout may not find a working recipe on its own. The holder-process rule the section also carried is written down in `ai/guidelines/sandbox-e2e-browser.md`.
+
+**The workspace setup is delegated, which reverses two decisions above.** The task now executes the workspace preparation task — the project's own copy when it has one, the installation's otherwise — and takes the workspace it leaves, instead of resolving the primary branch, stopping on unpushed local commits, stashing the working tree, and installing for itself. So the decision that the task "does not call `prepare-workspace.md`, which hardcodes `master`" no longer holds: the run now takes `master` because that is the branch the preparation task checks out, and every rule built on owning the tree — locating a stash by object ID, restoring it onto the primary branch, the `Stash:` report line — is gone. The install moved with it, and so did the supply-chain gate that guarded the install, which now lives in `ai/tasks/workspace/prepare-workspace.md` where every task that prepares a workspace gets it.
+
+What the run gives up is the baseline. With nothing stashed, a change already in the tree cannot be told apart from a change the run made, so Step 9 no longer reverts what it cannot attribute: it stops shipping and reports, leaving the work in place. A run that finds an unfamiliar change therefore produces findings it cannot commit, and the branch it tested is whatever the preparation task left checked out rather than the remote's default branch resolved by the run itself.
+
+**Building, starting, and stopping the app moved to `ai/tasks/workspace/`**, which the run executes the same way it executes the preparation task: `start-application.md` gets the app up and reports the address, the process identity, the stop command, and a start record it writes into the scratch root; `stop-application.md` reads that record, ends the app, and clears the scratch root. The task keeps what only it can decide — that a project unable to start is an environment limitation, while a project whose spec promises it starts and does not is a finding — and keeps the browser, the holder, and the driving. The two workspace tasks own the rest: discovery, the stop command, the loopback requirement, the scratch root, the build, the readiness check, and the teardown. What the two design decisions above gave the run in particular — the `janus` stop command and the working scratch recipe — left with it, which is consistent with the worked example's removal; the holder rule remains in `ai/guidelines/sandbox-e2e-browser.md`. Neither new task names a product: the stop task refuses to end an app whose scratch root is not the one it was given, and the start-failure list in the research task now names no project's error message.
+
+**The environment is no longer a reason to skip, only a reason not to file.** The run used to be forbidden from exercising behavior that depends on sandbox enforcement, an external network, a remote host, a credential, or a native host window, and used to exclude a spec whose behavior is entirely environment-dependent from its automatic selection. It now exercises everything a spec promises and reports what the environment prevented, under `Not tested` rather than in advance. The other half of that decision is unchanged and load-bearing: a divergence the environment could plausibly explain is still not filed as a bug. A run whose app needs a credential the scratch home does not carry now tries, fails, and says so, where it used to decline without looking.
+
+**Two things the rehearsal turned up, recorded rather than fixed.**
+
+- A run launched from this branch tests the primary branch's code, so the copy of the task and the code it exercises come from different commits by design. The audit command the branch's instructions give is therefore run by the primary branch's copy of the runner, which predates the lockfile-path form and falls back to auditing the lockfile beside it — the same file in that case, so the step still audits what it should.
+- `git symbolic-ref refs/remotes/origin/HEAD` answers with whatever branch the remote has checked out, so a run against a remote sitting on a feature branch treats that branch as primary. Correct by the design decision above, and worth knowing before pointing the task at a fork or a mirror whose `origin/HEAD` is not the default branch.
