@@ -3,7 +3,7 @@ import type { FileNavigatorSelection } from '../useFileNavigatorSelection';
 
 // Cmd/Ctrl+A's selection: every visible row sharing the cursor row's parent directory. Rows are a
 // depth-first, pre-flattened list, so a sibling is any row at the cursor's own depth reachable
-// without crossing a shallower row — the same depth walk `parentOf` uses in `file-navigator-keys.ts`
+// without crossing a shallower row — the same depth walk `parentOf` uses in `navigator-keys.ts`
 // rather than string-splitting paths. Deriving it that way is what keeps an expanded subtree
 // beneath a sibling out of the result: those rows are deeper.
 //

@@ -37,7 +37,7 @@ function currentContent(managers: Managers, draft: { content: string } | undefin
 }
 
 // Resolve an editor tab's `/open/<id>` ref to its on-disk path through the same allow-list
-// `editor-save.ts` uses. Returns undefined for an id that no longer resolves (skip that tab).
+// `src/editor/save.ts` uses. Returns undefined for an id that no longer resolves (skip that tab).
 function resolveOpenFilePath(managers: Managers, url: string): string | undefined {
   const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
   return id ? managers.tab.openFilePath(id) : undefined;

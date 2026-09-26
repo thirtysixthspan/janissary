@@ -18,7 +18,7 @@ import { BROWSER_PORT_BAND_COUNT, BROWSER_PORT_BAND_FIRST } from '../sandbox/bro
 //
 // The two ports come from disjoint ranges, which is a containment boundary and not just tidiness.
 // Every browser port is drawn from the reserved band at the tail of the dynamic range, and the
-// Seatbelt harness profile denies that whole band statically (see `src/sandbox/browser-ports.ts`),
+// Seatbelt harness profile denies that whole band statically (see `src/sandbox/browser/ports.ts`),
 // so no confined harness can reach any browser. Guard ports come from everything below the band and
 // stay reachable, because the guard is the route the harness is supposed to take.
 

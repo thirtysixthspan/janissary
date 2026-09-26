@@ -13,7 +13,7 @@ export type CommitContext = MutationContext & { refreshGit: (label: string) => v
 // Commit the named tree-relative paths — or everything under the tree's root, for an empty list —
 // and push them to `origin`. Every outcome is exactly one notifications-feed line and one flash of
 // the header button, which spins while the work runs (the machine behind that is
-// `manager-flash.ts`, shared with the pull). The notification is posted whether or not the tab
+// `flash.ts`, shared with the pull). The notification is posted whether or not the tab
 // survived the commit: the user typed a message and armed the action, so they are owed its outcome
 // even if they re-rooted or closed the tree while it ran. Coalesced: a click while one commit is
 // still in flight is ignored, since overlapping commits collide on git's index and `HEAD`, and it

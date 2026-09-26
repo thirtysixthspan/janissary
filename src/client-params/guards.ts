@@ -1,8 +1,8 @@
 // Field checks for the websocket ingress boundary, the counterpart to `nonEmptyString`/
-// `positiveInteger`/`decodeEnv` in `../remote/frame-decode.ts`. A decoder answers one question —
-// "is every field the dispatcher will read of its declared type" — so an extra key the client
-// happens to send is accepted: the dispatcher never reads a key it does not know, and refusing one
-// would only stop a client a version ahead from talking at all.
+// `positiveInteger`/`decodeEnv` in the `../remote/frame/decode-*.ts` decoders. A decoder answers
+// one question — "is every field the dispatcher will read of its declared type" — so an extra key
+// the client happens to send is accepted: the dispatcher never reads a key it does not know, and
+// refusing one would only stop a client a version ahead from talking at all.
 
 export type ParamsDecoder = (params: Record<string, unknown>) => boolean;
 

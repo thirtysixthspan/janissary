@@ -4,7 +4,8 @@ import type { GitMetadata } from '../filesystem-port.js';
 import type { RemotePortPaths } from './port-paths.js';
 
 // `RemoteFileSystemPort`'s three git operations, extracted so that file stays under the size limit —
-// the same split `remote-port-history.ts`, `-paths.ts`, `-requests.ts`, and `-watchers.ts` already
+// the same split `port-history.ts`, `port-paths.ts`, `port-requests.ts`, and
+// `port-watchers.ts` already
 // use. Each takes the port's bound request sender and its path mapper as parameters rather than
 // reaching for them, so nothing here knows about the port's session bookkeeping.
 export type RemoteRequest = <T>(

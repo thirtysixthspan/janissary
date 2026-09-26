@@ -2,7 +2,7 @@ import type { Managers } from '../managers.js';
 import { runSuggestion as runMonitorSuggestion } from '../monitor/suggestions.js';
 
 // The monitor reporting tab's RPC surface, extracted from `controller.ts` to keep it under the
-// file-size guideline — the same shape as `controller/file-navigator.ts`: plain functions taking
+// file-size guideline — the same shape as `controller/file/navigator.ts`: plain functions taking
 // `Managers`, with the controller reduced to one-line delegation.
 
 // Run a monitor suggestion's command in the tab the suggestion is about; it stays in the feed.

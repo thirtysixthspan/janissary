@@ -34,17 +34,17 @@ export type FilesTabState = {
   pollTimer?: ReturnType<typeof setInterval>;
   undoStack: HistoryStep[];
   redoStack: HistoryStep[];
-  // Last-computed map of git-changed, root-relative paths to their status (see `git-status.ts`).
+  // Last-computed map of git-changed, root-relative paths to their status (see `src/git/status.ts`).
   // Applied synchronously to every rebuild so interactive redraws are instant; recomputed
   // asynchronously by `refreshGit`. `gitRefreshing`/`gitRefreshStale` coalesce overlapping refresh
   // requests into at most one in-flight git call plus one queued follow-up.
   gitStatuses?: Map<string, GitFileStatus>;
-  // Last-computed current git branch name (see `git-status.ts`), refreshed alongside `changed`.
+  // Last-computed current git branch name (see `src/git/status.ts`), refreshed alongside `changed`.
   branch?: string;
   // Last-computed GitHub commits-page URL for the current origin/branch (see `github-url.ts`),
   // refreshed alongside `branch`. Undefined when there's no github.com origin remote.
   githubUrl?: string;
-  // Last-computed detected default branch (`origin/HEAD`'s name, see `git-status.ts`), refreshed
+  // Last-computed detected default branch (`origin/HEAD`'s name, see `src/git/status.ts`), refreshed
   // alongside `branch`. Undefined when `origin/HEAD` is unset (or the root is not a repository).
   defaultBranch?: string;
   // Whether a `gitMetadata` result has landed for the tab's *current* root. Set by `refreshGit`
@@ -58,12 +58,12 @@ export type FilesTabState = {
   // What this tab's header pull button is signalling. `pulling` is also the coalescing check: a
   // second click while it is set is ignored rather than spawning an overlapping `git pull` that
   // would collide on git's own lockfiles. `pullFlash` is the timer returning a settled `pulled` or
-  // `error` to the resting state (see `manager-flash.ts`).
+  // `error` to the resting state (see `manager/flash.ts`).
   pull?: FileNavigatorPullStatus;
   pullFlash?: ReturnType<typeof setTimeout>;
   // The same pair for the header's commit button. `committing` is likewise the coalescing check — a
   // commit holds git's index and `HEAD` at least as hard as a pull does — and `commitFlash` returns
-  // a settled `committed` or `error` to rest (see `manager-flash.ts`).
+  // a settled `committed` or `error` to rest (see `manager/flash.ts`).
   commit?: FileNavigatorCommitStatus;
   commitFlash?: ReturnType<typeof setTimeout>;
   // The most recent selection hint applied by `restoreView`, copied onto every payload the tab

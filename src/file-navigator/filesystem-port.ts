@@ -32,7 +32,7 @@ export type GitMetadata = {
   // because `isPrimaryBranch` reads an absent default as its cue to fall back to exact membership in
   // `master`/`main`, so an absent default with `master` checked out classifies as primary. What
   // actually keeps a remote tree out of the GitHub-sync gate is path shape, not this field: a remote
-  // file is materialized under `<projectDir>/.janissary/remote-files/` by `remote-file-cache.ts` and
+  // file is materialized under `<projectDir>/.janissary/remote-files/` by `remote/file-cache.ts` and
   // so never matches a launch-dir-relative sync path.
   defaultBranch?: string;
 };

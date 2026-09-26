@@ -25,7 +25,7 @@ export type SandboxOptions = {
   // `command` when omitted (already the real program — e.g. the ACP agent spawn, which runs the
   // binary directly with no shell wrapper).
   selfBinaryHint?: string;
-  // The project's configured credentials (see `project-tokens.ts`), each becoming the environment
+  // The project's configured credentials (see `src/project/tokens.ts`), each becoming the environment
   // variable its table row names. Applied for any workspaced spawn — not just a harness tab, since
   // an agent tab's plain shell can invoke the same CLIs — and whether or not this machine can
   // actually confine the process, because a host that cannot confine anything still needs its
@@ -36,7 +36,7 @@ export type SandboxOptions = {
   // `.claude`, `.codex`, opencode's state directory — are close to an inventory of what an escape
   // would want, and a browser needs none of them.
   //
-  // See `browser-spawn.ts` for what each path is and why the installation root is not among them.
+  // See `browser/spawn.ts` for what each path is and why the installation root is not among them.
   browser?: BrowserSpawnOptions;
 };
 

@@ -4,11 +4,11 @@ import { atomicWriteFile } from '../atomic-write.js';
 import { commandSegments, SEGMENT_SEPARATORS } from '../command/tokens.js';
 
 // Programs whose need for a terminal was learned by watching them take one over, rather than by
-// being on `interactive.ts`'s built-in list. Kept in `.janissary/interactive-commands.json` — beside
+// being on `index.ts`'s built-in list. Kept in `.janissary/interactive-commands.json` — beside
 // `config.json` and deliberately *not* under `.janissary/state/`, which a normal launch deletes.
 //
 // The point is that detection costs at most one run per command: the first `mytui` is promoted
-// mid-command by `interactive-signals.ts`, and every later one is recognized before it starts.
+// mid-command by `signals.ts`, and every later one is recognized before it starts.
 const FILE_NAME = 'interactive-commands.json';
 
 // Far above any real project's TUI count; the oldest entries drop first.

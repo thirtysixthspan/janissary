@@ -114,7 +114,7 @@ export type EditorView = {
   // and rename-sets-filename behavior (see the new-text-file-button plan).
   newFile?: boolean;
   // Set only for a file whose project-relative path is config-listed for GitHub syncing (see
-  // `git-sync.ts`); absent entirely for an ordinary editor tab, so the sync status icon simply
+  // `src/git/sync.ts`); absent entirely for an ordinary editor tab, so the sync status icon simply
   // doesn't render. `provisioning` covers the shared sync workspace's first-open clone/pull;
   // `syncing` covers an in-flight save-triggered commit/pull-rebase/push cycle.
   sync?: 'provisioning' | 'syncing' | 'synced' | 'error';
@@ -183,11 +183,13 @@ export type FileNavigatorView = {
   waitingFor?: string;
   // What the header's pull button is currently signalling: a pull in flight, or the outcome of one
   // that just settled. Absent is the button's resting state — no pull has run recently — which is
-  // also where a settled pull returns after its brief flash (see `manager-flash.ts`).
+  // also where a settled pull returns after its brief flash (see
+  // `src/file-navigator/manager/flash.ts`).
   pull?: FileNavigatorPullStatus;
   // What the header's commit button is currently signalling, on the same terms as `pull`: absent is
   // its resting state, which is also where a settled commit returns after its flash, and where a
-  // commit that found nothing to commit settles straight away (see `manager-flash.ts`).
+  // commit that found nothing to commit settles straight away (see
+  // `src/file-navigator/manager/flash.ts`).
   commit?: FileNavigatorCommitStatus;
   // Every file git considers changed under the tree's root, regardless of what is currently expanded
   // or visible — what the header commit button's whole-tree default message counts, since the commit

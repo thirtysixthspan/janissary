@@ -42,7 +42,7 @@ export function resolveCommand(raw: string): Resolution {
 
   // Shell commands are launched with the `shell` keyword, which is stripped before the
   // command reaches the shell. A leading `--pty` flag forces the command into an interactive
-  // PTY session (see `interactive.ts` for the auto-detected path this bypasses); with no
+  // PTY session (see `interactive/index.ts` for the auto-detected path this bypasses); with no
   // command after it, it opens a bare interactive shell.
   if (/^shell\b/i.test(trimmed)) {
     const rest = trimmed.replace(/^shell\b\s*/i, '');

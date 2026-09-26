@@ -5,7 +5,7 @@ import type { RemoteRequest } from './port-git.js';
 import type { RemotePortPaths } from './port-paths.js';
 
 // `RemoteFileSystemPort`'s two move operations, extracted so that file stays under the size limit —
-// the same split `remote-port-git.ts` uses. Both take the port's bound request sender and its path
+// the same split `port-git.ts` uses. Both take the port's bound request sender and its path
 // mapper as parameters, so nothing here knows about the port's session bookkeeping. The far side
 // answers with workspace-relative paths, including in a conflict report, so every path it names is
 // mapped back onto the tree's root before the answer leaves here.

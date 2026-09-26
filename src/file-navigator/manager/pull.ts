@@ -14,7 +14,7 @@ export type PullContext = MutationContext & { refreshGit: (label: string) => voi
 // git-driven replace may not deliver. Either outcome is one notifications-feed line — git's own
 // summary of what came down, or its error, in which case the tree is left exactly as it was — and
 // one flash of the header button, which spins while the pull runs (the machine behind that is
-// `manager-flash.ts`, shared with the commit). The notification is posted whether or not the tab
+// `flash.ts`, shared with the commit). The notification is posted whether or not the tab
 // survived the pull: the user armed it and is owed its outcome even if they re-rooted or closed the
 // tree while it ran. Coalesced: a click while one pull is still in flight is ignored, since
 // overlapping `git pull`s collide on git's lockfiles, and it reports nothing because nothing

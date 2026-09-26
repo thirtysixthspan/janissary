@@ -11,7 +11,7 @@
 // contract before any token, then one per token as `githubToken`, `claudeToken`, `opencodeToken`,
 // and `geminiToken` arrived as their own fields.
 //
-// Version 6 replaces those four fields with a single `tokens` map (see `project-tokens.ts`), so
+// Version 6 replaces those four fields with a single `tokens` map (see `src/project/tokens.ts`), so
 // adding a credential no longer touches this file at all. It is also the one bump so far that
 // changes a frame's shape rather than adding to it: a version-5 remote finds none of the fields it
 // reads and provisions a workspace with no credentials whatsoever, which the same refusal covers.

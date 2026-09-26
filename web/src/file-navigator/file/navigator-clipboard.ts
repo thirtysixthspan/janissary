@@ -1,5 +1,5 @@
 // The app-wide file-navigator clipboard: a module-level store (outside React, like
-// `file-navigator-selection-registry.ts`) so a copy made in one navigator pastes into any other,
+// `navigator-selection-registry.ts`) so a copy made in one navigator pastes into any other,
 // even one rooted at an unrelated path. Holds a mode and an ordered list of absolute paths.
 
 export type ClipboardMode = 'copy' | 'cut';

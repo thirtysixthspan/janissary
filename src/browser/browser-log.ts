@@ -3,7 +3,7 @@ import path from 'node:path';
 import { harnessArtifactFilename } from '../harness/artifact-name.js';
 
 // The post-mortem of one dead browser, kept as a file so the whole of it survives the bound the
-// notification's own message is held to. Modelled on `src/harness/capture-file.ts`, which does the
+// notification's own message is held to. Modelled on `src/harness/capture/file.ts`, which does the
 // same for the screen behind an auto-approved permission prompt, and named through the same shared
 // artifact filename builder.
 

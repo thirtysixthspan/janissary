@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SessionRouter, type SessionListener } from './sessions.js';
 
 // `SessionRouter` is `RemoteChannel`'s routing table for everything keyed by a process id — no
-// dedicated test file exists today (it is exercised indirectly through `channel.test.ts`); this one
+// dedicated test file exists today (it is exercised indirectly through `index.test.ts`); this one
 // covers the gate-event/busy-transition routing the auto-accept-while-detached plan adds, following
 // the same hold-until-listener contract `output`/`shell-history`/`exit` already have.
 

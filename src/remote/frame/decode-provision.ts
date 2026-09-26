@@ -3,8 +3,8 @@ import type { GitIdentity } from '../../git/identity.js';
 import { decodeOrigin } from './decode-root.js';
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
-// The `provision` decoder, in its own module for the same reason `frame-decode-history.ts` has one:
-// `frame-decode.ts` is the dispatcher, and a frame carrying two records of adopted settings is more
+// The `provision` decoder, in its own module for the same reason `decode-history.ts` has one:
+// `decode.ts` is the dispatcher, and a frame carrying two records of adopted settings is more
 // validation than a dispatcher arm should hold.
 
 const TOKEN_NAMES = new Set<string>(PROJECT_TOKENS.map(({ name }) => name));

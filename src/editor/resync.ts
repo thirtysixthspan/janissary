@@ -2,10 +2,10 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
 // Manually re-run a synced editor tab's pull-only sync cycle (the `resyncEditorTab` RPC) — the
-// same `openSync` `openFileManager.ts` already runs when a synced tab opens. `editorWatch.refresh`
-// checks for and reports any resulting on-disk change immediately and re-arms the watcher, rather
-// than waiting on an `fs.watch` event a git-driven replace may not deliver — its conflict-vs-clean-
-// reload handling (`useEditorWatchReload` on the client) then runs exactly like an external edit.
+// same `openSync` `src/open/file-manager.ts` already runs when a synced tab opens.
+// `editorWatch.refresh` checks for and reports any resulting on-disk change immediately and re-arms
+// the watcher, rather than waiting on an `fs.watch` event a git-driven replace may not deliver — its
+// conflict-vs-clean-reload handling (`useEditorWatchReload` on the client) then runs exactly like an external edit.
 export async function resyncEditorTab(managers: Managers, url: string): Promise<void> {
   const tab = managers.tab.editorTabByUrl(url);
   const sync = tab?.editor?.sync;

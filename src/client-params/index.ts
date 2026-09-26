@@ -2,7 +2,7 @@
 // domains `../protocol.ts` composes `RpcCall` from. Before this existed, `isClientMessage` asserted
 // a fully-typed discriminated union after checking only that the method name was known and `params`
 // was an object, and the dispatcher then read each field at its declared type — the opposite posture
-// from `decodeKnownFrame` in `../remote/frame-decode.ts`, which validates every field of every arm.
+// from `decodeKnownFrame` in `../remote/frame/decode.ts`, which validates every field of every arm.
 import type { ClientMessage } from '../protocol.js';
 import { isRecord, type ParamsDecoder } from './guards.js';
 import { CORE_PARAMS } from './core.js';
