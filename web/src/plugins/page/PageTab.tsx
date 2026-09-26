@@ -4,17 +4,22 @@ import { faArrowLeft, faArrowRight, faRotateRight } from '@fortawesome/free-soli
 import type { PagePayload } from '@shared/plugins/page/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { usePageContentSync } from './usePageContentSync';
+import { usePageFrame } from './usePageFrame';
 import { PageAddressInput } from './PageAddressInput';
+
+// The marker the bundled extension's content script obeys a back or forward request under — must
+// match `chrome-extension/content-script.js`'s `HISTORY_SOURCE` constant.
+const HISTORY_SOURCE = 'janissary-page-history';
 
 // The embedded web page tab body: a compact metadata header (address, navigation, split, close)
 // above an iframe filling the rest of the tab. The app neither scripts nor reads the embedded page;
-// everything below either drives the iframe's own history or relays what the bundled extension's
-// content script volunteers.
+// everything below either asks the bundled extension's content script to step the page's history or
+// relays what that script volunteers.
 export function PageTab({
   payload: page, capabilities,
 }: { payload: PagePayload; capabilities: TabPluginClientCapabilities }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [reloadNonce, setReloadNonce] = useState(0);
+  const frame = usePageFrame(page.url);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const cancelledRef = useRef(false);
@@ -26,7 +31,11 @@ export function PageTab({
   const send = useCallback((intent: string, payload: unknown) => {
     void capabilities.intent(intent, payload).catch(() => {});
   }, [capabilities]);
-  const sync = useCallback((url: string, text: string) => { send('sync', { url, text }); }, [send]);
+  const { followFrame } = frame;
+  const sync = useCallback((url: string, text: string) => {
+    followFrame(url);
+    send('sync', { url, text });
+  }, [followFrame, send]);
   const navigate = useCallback((url: string) => { send('navigate', { url }); }, [send]);
   usePageContentSync(iframeRef, page.url, sync);
 
@@ -46,9 +55,12 @@ export function PageTab({
     return () => globalThis.removeEventListener('beforeunload', onBeforeUnload);
   }, [active, close]);
 
-  const goBack = () => iframeRef.current?.contentWindow?.history.back();
-  const goForward = () => iframeRef.current?.contentWindow?.history.forward();
-  const reload = () => setReloadNonce((n) => n + 1);
+  // A real site is cross-origin, so reading its frame's `history` throws; a posted message crosses.
+  const step = (direction: 'back' | 'forward') => {
+    iframeRef.current?.contentWindow?.postMessage({ source: HISTORY_SOURCE, step: direction }, '*');
+  };
+  const goBack = () => step('back');
+  const goForward = () => step('forward');
 
   const startEdit = () => { cancelledRef.current = false; setDraft(page.url); setEditing(true); };
   const commit = () => {
@@ -77,7 +89,7 @@ export function PageTab({
             <button type="button" className="page-forward" title="Forward" aria-label="Forward" onClick={goForward}>
               <FontAwesomeIcon icon={faArrowRight} />
             </button>
-            <button type="button" className="page-reload" title="Reload" aria-label="Reload" onClick={reload}>
+            <button type="button" className="page-reload" title="Reload" aria-label="Reload" onClick={frame.reload}>
               <FontAwesomeIcon icon={faRotateRight} />
             </button>
           </div>
@@ -93,13 +105,13 @@ export function PageTab({
           </button>
         </div>
       </div>
-      {/* Keyed on the address as well as the reload nonce, so navigating loads the new address into
-          a fresh frame rather than leaving the old document's history behind it. */}
+      {/* Replaced for a typed address or a reload, but kept when the page reported the address
+          itself, so the page's own history survives the address following it. */}
       <iframe
-        key={`${page.url}:${reloadNonce}`}
+        key={frame.key}
         ref={iframeRef}
         className="page-frame"
-        src={page.url}
+        src={frame.src}
         title={page.domain}
       />
       {!active && <div className="page-focus-catcher" aria-label={`Focus ${page.domain}`} />}

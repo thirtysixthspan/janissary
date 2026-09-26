@@ -59,4 +59,17 @@
     childList: true, subtree: true, characterData: true, attributes: true,
   });
   window.addEventListener('scroll', scheduleCapture, { passive: true, capture: true });
+
+  // The page tab header's back and forward buttons. The app cannot touch a cross-origin frame's
+  // history, so it posts a request instead, and the step is taken here on the page's side. Only a
+  // page tab's own frame, a direct child of the app, obeys, and only when the app window asked.
+  var HISTORY_SOURCE = 'janissary-page-history';
+  if (window.parent !== window.top) return;
+  window.addEventListener('message', function (event) {
+    if (event.source !== window.top) return;
+    var data = event.data;
+    if (!data || data.source !== HISTORY_SOURCE) return;
+    if (data.step === 'back') window.history.back();
+    else if (data.step === 'forward') window.history.forward();
+  });
 })();

@@ -34,7 +34,26 @@ function renderTab(
   options: { active?: boolean; onSplit?: () => void; close?: () => void } = {},
 ) {
   const { capabilities, intent, close } = makeCapabilities(options);
-  return { ...render(<PageTab payload={page} capabilities={capabilities} />), intent, close };
+  return { ...render(<PageTab payload={page} capabilities={capabilities} />), intent, close, capabilities };
+}
+
+// A real embedded site is on another origin, so the app may post to its frame but reading the frame's
+// `history` throws, exactly as it does in a browser.
+function crossOriginFrame(iframe: HTMLIFrameElement) {
+  const frameWindow = iframe.contentWindow!;
+  Object.defineProperty(frameWindow, 'history', {
+    get() { throw new DOMException('Blocked a frame from accessing a cross-origin frame.', 'SecurityError'); },
+  });
+  return vi.spyOn(frameWindow, 'postMessage').mockImplementation(() => {});
+}
+
+function relayFromFrame(iframe: HTMLIFrameElement, url: string) {
+  act(() => {
+    globalThis.dispatchEvent(new MessageEvent('message', {
+      data: { source: 'janissary-page-content', url, text: 'visible text' },
+      source: iframe.contentWindow,
+    }));
+  });
 }
 
 describe('PageTab', () => {
@@ -86,26 +105,53 @@ describe('PageTab', () => {
     expect(url.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('clicking back calls history.back on the embedded frame', () => {
+  it('clicking back asks a cross-origin embedded page to step back through its own history', () => {
     const { container } = renderTab();
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const back = vi.spyOn(iframe.contentWindow!.history, 'back').mockImplementation(() => {});
+    const post = crossOriginFrame(container.querySelector('iframe') as HTMLIFrameElement);
     fireEvent.click(container.querySelector('.page-back') as Element);
-    expect(back).toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith({ source: 'janissary-page-history', step: 'back' }, '*');
   });
 
-  it('clicking forward calls history.forward on the embedded frame', () => {
+  it('clicking forward asks a cross-origin embedded page to step forward through its own history', () => {
     const { container } = renderTab();
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const forward = vi.spyOn(iframe.contentWindow!.history, 'forward').mockImplementation(() => {});
+    const post = crossOriginFrame(container.querySelector('iframe') as HTMLIFrameElement);
     fireEvent.click(container.querySelector('.page-forward') as Element);
-    expect(forward).toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith({ source: 'janissary-page-history', step: 'forward' }, '*');
+  });
+
+  it('keeps the same frame when the address change came from the embedded page itself', () => {
+    const { container, rerender, capabilities } = renderTab(makePage({ url: 'https://slashdot.org/' }));
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    relayFromFrame(iframe, 'https://slashdot.org/story/1');
+    rerender(<PageTab payload={makePage({ url: 'https://slashdot.org/story/1' })} capabilities={capabilities} />);
+    expect(container.querySelector('iframe')).toBe(iframe);
+    expect(container.querySelector('.page-url')?.textContent).toBe('https://slashdot.org/story/1');
+  });
+
+  it('loads a typed address into a fresh frame', () => {
+    const { container, rerender, capabilities } = renderTab(makePage({ url: 'https://slashdot.org/' }));
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    rerender(<PageTab payload={makePage({ url: 'https://example.com/' })} capabilities={capabilities} />);
+    const fresh = container.querySelector('iframe') as HTMLIFrameElement;
+    expect(fresh).not.toBe(iframe);
+    expect(fresh.src).toBe('https://example.com/');
   });
 
   it('clicking reload keeps the iframe pointed at the same URL', () => {
     const { container } = renderTab(makePage({ url: 'https://slashdot.org/' }));
     fireEvent.click(container.querySelector('.page-reload') as Element);
     expect(container.querySelector('iframe')?.src).toBe('https://slashdot.org/');
+  });
+
+  it('clicking reload re-fetches the address the embedded page has navigated to', () => {
+    const { container, rerender, capabilities } = renderTab(makePage({ url: 'https://slashdot.org/' }));
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    relayFromFrame(iframe, 'https://slashdot.org/story/1');
+    rerender(<PageTab payload={makePage({ url: 'https://slashdot.org/story/1' })} capabilities={capabilities} />);
+    fireEvent.click(container.querySelector('.page-reload') as Element);
+    const fresh = container.querySelector('iframe') as HTMLIFrameElement;
+    expect(fresh).not.toBe(iframe);
+    expect(fresh.src).toBe('https://slashdot.org/story/1');
   });
 
   it('double-clicking the URL enters edit mode with the current address prefilled', () => {
