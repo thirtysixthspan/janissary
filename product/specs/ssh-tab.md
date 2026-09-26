@@ -59,7 +59,7 @@ panel is shown even while the ssh tab is active (harness tabs otherwise suppress
 list over themselves, since the terminal *is* the connection) because listing the destination is
 the point.
 
-`connection list` includes a global `ssh:<destination>` row for every open ssh tab, since ssh tabs
+`connection list` includes a global `ssh:<label> (<destination>)` row for every open ssh tab, since ssh tabs
 have no command bar of their own to run `connection list` from. `connection close ssh:<id>` closes
 one: `<id>` is matched against an ssh tab's (unique) **label** first, then against its
 **destination** (two `ssh devbox` tabs share destination `devbox` but have labels `devbox` /

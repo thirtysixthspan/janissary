@@ -1,38 +1,17 @@
-import { SHELL_NAME } from '../shell/manager.js';
+import { connectionCatalog } from './catalog.js';
 import type { Managers } from '../managers.js';
 
-// Read-only connection-string aggregation across managers, split out of manager.ts: a distinct
-// concern from `connectionsFor` (richer ConnectionView rows) and `run` (command dispatch, which
-// closes connections) that remain there.
+// The `connection list` lines and the `connection close` completion candidates, both read off the
+// one catalog the connections panel is also built from, so every name either surface offers is one
+// `connection close` accepts.
 
-// The global `connection list` lines: shell/acp are per-issuing-tab, the rest (terminals, ssh
-// tabs, sqlite) span every tab, since they have no command bar of their own to list from.
+// One `<kind>:<id>` line per catalog entry — the issuing tab's own connections, then every other
+// tab's ssh connection and every other open SQLite database — with any detail (an ssh destination)
+// in parentheses after it.
 export function listLines(managers: Managers, label: string): string[] {
-  const lines: string[] = [];
-  if (managers.shell.has(label)) lines.push(`shell:${SHELL_NAME}`);
-  if (managers.acp.has(label)) lines.push('acp:opencode');
-  const b = managers.browser.info(label);
-  if (b) for (const id of b.ids) lines.push(`browser:${id}`);
-  for (const program of managers.pty.terminalsFor(label)) lines.push(`terminal:${program}`);
-  // A remote tab contributes both rows: `ssh:` for the transport it runs over, and `terminal:` for
-  // the process on the far side — each visible and separately closable.
-  for (const t of managers.tab.tabs) {
-    if (t.harness?.name === 'ssh' && t.harness.destination) lines.push(`ssh:${t.harness.destination}`);
-    else if (t.remote) lines.push(`ssh:${t.remote.address}`);
-  }
-  for (const n of managers.database.listOpen()) lines.push(`sqlite:${n}`);
-  return lines;
+  return connectionCatalog(managers, label).map((e) => (e.detail ? `${e.kind}:${e.id} (${e.detail})` : `${e.kind}:${e.id}`));
 }
 
 export function listCompletionConnections(managers: Managers, label: string): string[] {
-  const out: string[] = [];
-  if (managers.shell.has(label)) out.push(`shell:${SHELL_NAME}`);
-  if (managers.acp.has(label)) out.push('acp:opencode');
-  const b = managers.browser.info(label);
-  if (b) for (const id of b.ids) out.push(`browser:${id}`);
-  for (const n of managers.database.listOpen()) out.push(`sqlite:${n}`);
-  for (const t of managers.tab.tabs) {
-    if (t.harness?.name === 'ssh' || t.remote) out.push(`ssh:${t.label}`);
-  }
-  return out;
+  return connectionCatalog(managers, label).map((e) => `${e.kind}:${e.id}`);
 }

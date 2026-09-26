@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import { SHELL_NAME } from '../shell/manager.js';
 import type { Managers } from '../managers.js';
+import type { ConnectionKind } from './types.js';
 
 // Match `<id>` against a remote tab's label first, then against the address it was launched with —
 // the same label-before-identity order `ssh:` rows on real ssh tabs use.
@@ -10,8 +11,34 @@ function closeRemoteChannel(managers: Managers, id: string): boolean {
   return tab !== undefined && managers.remote.close(tab.label);
 }
 
+// `acp:<id>` names, in order, one of an editor tab's personas, one of the tab's monitors, or the
+// tab's own session. The session fallback accepts any id, so a session still connecting (and so not
+// yet named) can be closed; its reply names the session that actually closed.
+function closeAcp(managers: Managers, label: string, id: string, out: (text: string) => void): void {
+  if (managers.editorAcp.close(label, id) || managers.monitor.stop(label, id)) {
+    messageBus.emit('state', { type: 'dirty' });
+    out(`Closed connection acp:${id}.`);
+    return;
+  }
+  const name = managers.acp.label(label) ?? id;
+  if (managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out(`Closed connection acp:${name}.`); }
+  else out(`No open connection acp:${id}.`);
+}
+
+function closeSsh(managers: Managers, id: string, out: (text: string) => void): void {
+  const tabs = managers.tab.tabs;
+  const tab = tabs.find((t) => t.harness?.name === 'ssh' && t.label === id)
+    ?? tabs.find((t) => t.harness?.name === 'ssh' && t.harness.destination === id);
+  if (tab?.harness) { managers.pty.kill(tab.harness.ptyId); out(`Closed connection ssh:${id}.`); }
+  // A remote tab's `ssh:` row names the channel it runs over, not an ssh tab. Killing that channel
+  // closes the tab, which is the whole point of the row being separately closable.
+  else if (closeRemoteChannel(managers, id)) out(`Closed connection ssh:${id}.`);
+  else out(`No open connection ssh:${id}.`);
+}
+
+// Every kind but `browser`, whose window close is asynchronous and runs from `ConnectionManager.run`.
 export function closeConnection(
-  kind: string,
+  kind: Exclude<ConnectionKind, 'browser'>,
   id: string,
   managers: Managers,
   label: string,
@@ -28,24 +55,17 @@ export function closeConnection(
     break;
   }
   case 'acp': {
-    if (managers.editorAcp.close(label, id)) { messageBus.emit('state', { type: 'dirty' }); out(`Closed connection acp:${id}.`); }
-    else if (managers.acp.close(label)) { messageBus.emit('state', { type: 'dirty' }); out('Closed connection acp:opencode.'); }
-    else out('No open connection acp:opencode.');
+    closeAcp(managers, label, id, out);
     break;
   }
   case 'ssh': {
-    const tabs = managers.tab.tabs;
-    const tab = tabs.find((t) => t.harness?.name === 'ssh' && t.label === id)
-      ?? tabs.find((t) => t.harness?.name === 'ssh' && t.harness.destination === id);
-    if (tab?.harness) { managers.pty.kill(tab.harness.ptyId); out(`Closed connection ssh:${id}.`); }
-    // A remote tab's `ssh:` row names the channel it runs over, not an ssh tab. Killing that channel
-    // closes the tab, which is the whole point of the row being separately closable.
-    else if (closeRemoteChannel(managers, id)) out(`Closed connection ssh:${id}.`);
-    else out(`No open connection ssh:${id}.`);
+    closeSsh(managers, id, out);
     break;
   }
-  default: {
-    out(`Closing ${kind} connections is not yet available in the web UI.`);
+  case 'terminal': {
+    // The PTY's exit then runs the normal exit path, which ends an inline card or closes a harness tab.
+    out(managers.pty.killTerminal(label, id) ? `Closed connection terminal:${id}.` : `No open connection terminal:${id}.`);
+    break;
   }
   }
 }

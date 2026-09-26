@@ -27,7 +27,7 @@ The shell uses the following rules, in order of precedence:
 ### 2. Connection Management (`connection close`)
 
 - **Context:** The target argument of `connection close`.
-- **Candidates:** All currently open connection strings (e.g., `sqlite:my-db`, `shell:bash`, `acp:opencode`, `browser:w1`).
+- **Candidates:** The same `<kind>:<id>` strings `connection list` prints for the tab (e.g., `sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:devbox`, `terminal:vim`).
 
 ### 3. Browser Command (`browser`)
 

@@ -11,7 +11,7 @@ function makeManagers(overrides: Partial<Managers> = {}): Managers {
     editorAcp: { connectionsFor: vi.fn(() => []) },
     browser: { info: vi.fn(() => { /* no browser connection */ }), run: vi.fn(() => Promise.resolve('closed')) },
     pty: { terminalsFor: vi.fn(() => []) },
-    database: { openDbs: vi.fn(() => []) },
+    database: { openDbs: vi.fn(() => []), listOpen: vi.fn(() => []) },
     tab: { tabs: [], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo'), startRunning: vi.fn(), finishRunning: vi.fn() },
     ...overrides,
   } as unknown as Managers;
@@ -48,13 +48,24 @@ describe('ConnectionManager', () => {
 
     it('includes an editor tab\'s persona connection rows', () => {
       const managers = makeManagers({
-        editorAcp: { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp' }]) },
+        editorAcp: { connectionsFor: vi.fn(() => [{ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } }]) },
       } as unknown as Partial<Managers>);
       const manager = new ConnectionManager(managers);
 
       const rows = manager.connectionsFor('notes');
 
-      expect(rows).toContainEqual({ text: 'reviewer (acp)', kind: 'acp' });
+      expect(rows).toContainEqual({ text: 'reviewer (acp)', kind: 'acp', acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } });
+    });
+
+    it('leaves out connections only the app-wide list reaches', () => {
+      const other = { label: 'bastion', harness: { name: 'ssh', ptyId: 'pty-1', destination: 'host' } };
+      const managers = makeManagers({
+        database: { openDbs: vi.fn(() => ['mine']), listOpen: vi.fn(() => ['mine', 'shared']) },
+        tab: { tabs: [other], byLabel: vi.fn(), shorten: vi.fn((p: string) => p), cwdOf: vi.fn(() => '/repo') },
+      } as unknown as Partial<Managers>);
+      const manager = new ConnectionManager(managers);
+
+      expect(manager.connectionsFor('main')).toEqual([{ text: 'sqlite:mine', kind: 'sqlite' }]);
     });
   });
 

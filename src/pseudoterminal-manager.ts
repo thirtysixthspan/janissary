@@ -124,6 +124,19 @@ export class PseudoterminalManager {
     return programs;
   }
 
+  // Kill a tab's first live PTY running `program` (`connection close terminal:<program>`); its exit
+  // then flows through `handleExit`. A transport never matches, for the same reason `terminalsFor`
+  // never lists one. Returns false when the tab has no such PTY.
+  killTerminal(label: string, program: string): boolean {
+    for (const [, entry] of this.ptys) {
+      if (entry.tabLabel === label && !entry.transport && entry.session.program === program) {
+        entry.session.kill();
+        return true;
+      }
+    }
+    return false;
+  }
+
   // A shared remote channel's ssh transport is not owned by its launching tab anymore. Before
   // that tab closes, move only the transport record to another label using the channel so ordinary
   // per-tab PTY cleanup can still reap the tab's remote processes without killing the connection.
