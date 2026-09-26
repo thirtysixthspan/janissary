@@ -10,20 +10,23 @@ plugins
 
 ```
 audio 1.0.0 api=1 state=declared
+conversations 2.0.0 api=1 state=declared
 image 1.0.0 api=1 state=active activation=6ms
 markdown 1.0.0 api=1 state=declared
 page 1.0.0 api=1 state=declared
+pdf 1.0.0 api=1 state=declared
 schedules 1.0.0 api=1 state=declared
+sessions 1.0.0 api=1 state=declared
 video 1.0.0 api=1 state=declared
 ```
 
-Each line names the plugin, its own version, the plugin API version it was built against, and its state. There is nothing to install, enable, or configure. These six are part of the app, and no plugin comes from anywhere else.
+Each line names the plugin, its own version, the plugin API version it was built against, and its state. A plugin's own version moves independently of the app's, which is why `conversations` is on a later version than the rest. There is nothing to install, enable, or configure. These nine are part of the app, and no plugin comes from anywhere else.
 
 ## What a plugin gives you
 
 <img class="agent-float left" src="/agents/yusuf-south-east.png" alt="" />
 
-A plugin owns a kind of tab and the ways you reach it. The [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), and the [schedules](/user-documentation/automation/scheduling) list are all plugin tabs. You reach them the way you always have: `open` on a file the plugin claims, `open <url>`, or the plugin's own command such as `video`, `audio`, or `pdf`. Nothing about typing a command changes because a plugin is behind it.
+A plugin owns a kind of tab and the ways you reach it. The [image viewer](/user-documentation/tab-types/image-viewer), [markdown preview](/user-documentation/tab-types/markdown-preview), [PDF viewer](/user-documentation/tab-types/pdf-viewer), [embedded web pages](/user-documentation/tab-types/web-pages), [video player](/user-documentation/tab-types/video-player), [audio player](/user-documentation/tab-types/audio-player), the [schedules](/user-documentation/automation/scheduling) list, the [conversation list](/user-documentation/tab-types/conversations), and the [sessions](/user-documentation/tab-types/sessions) list are all plugin tabs. You reach them the way you always have: `open` on a file the plugin claims, `open <url>`, or the plugin's own command such as `video`, `audio`, `pdf`, `conversations`, or `sessions`. Nothing about typing a command changes because a plugin is behind it.
 
 Plugin tabs are live views. They aren't restored by `janus --relaunch`, though `profile save` records most of them and reopens them by reissuing the same command you would type.
 

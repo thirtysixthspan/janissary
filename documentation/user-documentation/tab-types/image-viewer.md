@@ -10,7 +10,7 @@ open diagram.png
 
 If that image is already open, `open <image>` focuses the existing image tab instead of creating a duplicate.
 
-The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. In the strip the tab is named after the file, with a × close button right after the name; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
+The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. In the strip the tab is named after the file, with a × close button right after the name that closes that tab without selecting it first; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
 
 ![An image tab: the metadata header above the image, with the zoom percentage indicator visible in the corner.](/screenshots/image-tab.png)
 
@@ -30,7 +30,7 @@ The tab shows a compact header with the file's name, size, and location, and the
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-Click the pen button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator). If that image is already open, either of those focuses the existing tab and flips it to the editor rather than opening a second one.
+Click the pen button in the header to swap the viewer for an editing canvas. `edit <image>` opens a tab straight into it, as does `Shift`+double-clicking an image in the [file navigator](/user-documentation/tab-types/file-navigator). Picking the image from [Quick Open](/user-documentation/command-bar/quick-open) with `Cmd+P` does the same, because Quick Open issues the same `edit` command. If that image is already open, any of these focuses the existing tab and flips it to the editor rather than opening a second one.
 
 Editing is geometry only, with five controls in the toolbar:
 

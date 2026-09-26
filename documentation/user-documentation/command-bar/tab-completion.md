@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
-Press `Tab` to complete the token just before the cursor. One match replaces the token outright — with a trailing `/` for a directory or a space for a file. Several matches fill in their longest common prefix and list the candidates above the command bar; no match does nothing.
+Press `Tab` to complete the token just before the cursor. One match replaces the token outright — with a trailing `/` for a directory or a space for a file. Several matches fill in their longest common prefix and list the candidates above the command bar; no match does nothing. That list of candidates is there to be read, not chosen from: there is no key that moves through it and no way to accept one, so keep typing to narrow the token down and press `Tab` again when the answer is what you have.
 
 What gets completed depends on where in the command you are:
 
