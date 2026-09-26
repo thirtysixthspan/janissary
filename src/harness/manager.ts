@@ -10,13 +10,13 @@ import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
 import { autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
 import { harnessRuntime, sshRuntime } from './observers.js';
-import type { HarnessRuntime } from './runtime.js';
+import { HarnessRuntimes } from './runtime-registry.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { HarnessView, Tab } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
-import { messageBus, type Subscription } from '../bus.js';
+import { messageBus } from '../bus.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
@@ -29,22 +29,20 @@ import type { Managers } from '../managers.js';
 // The controller owns the shared tab and PTY state; this module owns the harness-specific decisions
 // and wiring.
 export class HarnessManager {
-  private runtimes = new Map<string, HarnessRuntime>();
+  private runtimes = new HarnessRuntimes();
   private launchDialogOpen = false;
-  private subscription: Subscription;
 
-  constructor(private managers: Managers) {
-    this.subscription = messageBus.on('pty', 'exit', (event) => {
-      if (event.type !== 'exit') return;
-      this.runtimes.get(event.id)?.dispose();
-      this.runtimes.delete(event.id);
-    });
-  }
+  constructor(private managers: Managers) {}
 
   dispose(): void {
-    this.subscription.unsubscribe();
-    for (const runtime of this.runtimes.values()) runtime.dispose();
-    this.runtimes.clear();
+    this.runtimes.dispose();
+  }
+
+  // Release the closing tab's runtimes: its screen reader, recorder, transcript tailer, and e2e
+  // browser. Part of the tab-close walk, so a remote harness whose PTY never reports an exit (a
+  // detach) still stops recording and polling when its tab goes.
+  closeTab(label: string): void {
+    this.runtimes.closeTab(label);
   }
 
   // The named harness tab's most recent rendered-screen capture, or undefined when the tab is
@@ -71,7 +69,7 @@ export class HarnessManager {
   // reader, so the tab is monitorable, and a recorder, so the session is replayable after the tab
   // closes. `command` is the verbatim `ssh …` invocation, which the recording's header carries.
   registerSshObservers(id: string, label: string, command: string): void {
-    this.runtimes.set(id, sshRuntime(this.managers, id, label, command));
+    this.runtimes.install(id, label, sshRuntime(this.managers, id, label, command));
   }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
@@ -253,7 +251,7 @@ export class HarnessManager {
       const id = channel
         ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
-      this.runtimes.set(id, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
+      this.runtimes.install(id, label, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
       this.markRunning(label, id);
     } catch (error) {
       spawnEnv.handle?.close();

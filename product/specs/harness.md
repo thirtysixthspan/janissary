@@ -650,7 +650,9 @@ applies only to harnesses added later.
   to inspect — the harness's own scrollback is gone once its tab closes, but the full timed session
   is preserved in its recording file, and its normalized history (including any subagent activity)
   in its transcript file (see [[harness-recording]]). Screen capture, recording, and transcript
-  observers stop with the PTY and are not retained after the tab closes.
+  observers stop when the tab closes or the PTY exits, whichever comes first, and are not retained
+  after the tab closes. Detaching a remote harness closes its tab this way, so its observers stop
+  even though its process keeps running on the host.
 
 ## Screen capture
 

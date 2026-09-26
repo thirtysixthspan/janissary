@@ -25,7 +25,14 @@ vi.mock(import('./store.js'), async (importOriginal) => ({
 }));
 vi.mock('../pty.js', () => ({ spawnPty: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
-vi.mock('../harness/observers.js', () => ({ harnessRuntime: () => ({ dispose: vi.fn() }) }));
+const built = vi.hoisted(() => ({ runtimes: [] as { dispose: ReturnType<typeof vi.fn> }[] }));
+vi.mock('../harness/observers.js', () => ({
+  harnessRuntime: () => {
+    const runtime = { dispose: vi.fn() };
+    built.runtimes.push(runtime);
+    return runtime;
+  },
+}));
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: () => ({}) }));
 vi.mock('../file-navigator/remote-file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
 vi.mock(import('../agent/state.js'), async (importOriginal) => ({
@@ -101,6 +108,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   saved.records = [];
+  built.runtimes = [];
   vi.spyOn(TranscriptStore, 'remove').mockImplementation(() => {});
 });
 
@@ -153,6 +161,8 @@ describe('harness sessions round trip', () => {
     expect(h.processes.states()).toHaveLength(1);
     expect(h.remoteKills).not.toHaveBeenCalled();
     expect(h.frames).toEqual([]);
+    expect(built.runtimes).toHaveLength(1);
+    expect(built.runtimes[0].dispose).toHaveBeenCalledOnce();
   });
 
   it('restores the same harness through two cycles without closing the tab or losing its row', async () => {
@@ -170,6 +180,10 @@ describe('harness sessions round trip', () => {
     }
     expect(h.remoteSpawns).toHaveBeenCalledOnce();
     expect(h.remoteKills).not.toHaveBeenCalled();
+    expect(built.runtimes).toHaveLength(3);
+    expect(built.runtimes[0].dispose).toHaveBeenCalledOnce();
+    expect(built.runtimes[1].dispose).toHaveBeenCalledOnce();
+    expect(built.runtimes[2].dispose).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalledWith(expect.anything(), 'remote-session-terminated', expect.anything(), expect.anything());
   });
 

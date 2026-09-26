@@ -334,6 +334,88 @@ describe('HarnessManager disposal', () => {
   });
 });
 
+describe('HarnessManager tab release', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+    tailerMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('disposes a harness tab\'s runtime when the tab closes, even with no PTY exit', () => {
+    const { managers } = makeManagers();
+    const readerDispose = vi.spyOn(HarnessScreenReader.prototype, 'dispose');
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+
+    manager.closeTab('claude');
+
+    expect(readerDispose).toHaveBeenCalledOnce();
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(tailerMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(manager.latestScreenText('claude')).toBeUndefined();
+    expect(manager.transcriptTailer('claude')).toBeUndefined();
+    manager.dispose();
+  });
+
+  it('disposes nothing twice when the closed tab\'s PTY exits afterwards', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    manager.closeTab('claude');
+
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(tailerMock.instances[0].dispose).toHaveBeenCalledOnce();
+    manager.dispose();
+  });
+
+  it('leaves another tab\'s runtime running', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+
+    manager.closeTab('janus');
+
+    expect(recorderMock.instances[0].dispose).not.toHaveBeenCalled();
+    expect(manager.transcriptTailer('claude')).toBe(tailerMock.instances[0]);
+    manager.dispose();
+  });
+
+  it('releases an ssh tab\'s observers when its tab closes', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push({ label: 'devbox', harness: { name: 'ssh', program: 'ssh', ptyId: 'pty-9', status: 'running' } } as unknown as Tab);
+    manager.registerSshObservers('pty-9', 'devbox', 'ssh devbox');
+
+    manager.closeTab('devbox');
+
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    manager.dispose();
+  });
+
+  it('disposes the runtime already held under a PTY id before a new spawn takes that id', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.run('harness claude');
+    manager.run('harness codex');
+
+    expect(recorderMock.instances).toHaveLength(2);
+    expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
+    expect(recorderMock.instances[1].dispose).not.toHaveBeenCalled();
+
+    manager.closeTab('claude');
+
+    expect(recorderMock.instances[1].dispose).not.toHaveBeenCalled();
+    manager.dispose();
+  });
+});
+
 describe('HarnessManager.latestScreenText', () => {
   beforeEach(() => {
     vi.useFakeTimers();
