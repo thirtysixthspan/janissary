@@ -4,16 +4,6 @@
 
 ## development
 
-* Replace the notification entry point's trailing positional options with one named options record, so the feed's open-file link, open-tab link, and detection time can no longer be passed in the wrong slot.
-
-Existing Debt: `notify` has grown a new trailing positional parameter each time a notification gained a capability — `message`, then `openFile`, then `openTab`, then `detectedAt` — so a caller that needs only the last one spells out every `undefined` before it, and the two link targets are adjacent optional strings distinguished by position alone. Severity: 2/10
-
-Existing Risk: 3/10 - A caller that transposes `openFile` and `openTab` typechecks and ships a notification whose click opens a file named after a tab (or focuses a tab named after a path), and the next capability added the same way pushes the 50-plus call sites one more `undefined` further from readable.
-
-Proposal Risk: 1/10 - Options are matched by name so a transposition or rename is a compile error, and the only behavior to keep is that a supplied `detectedAt` still suppresses the toast, which `src/remote/pty-session.test.ts` and `src/notifications/index.test.ts` already pin.
-
-Proposal: `notify(managers, event, tabLabel, message?, openFile?, openTab?, detectedAt?)` lives in `src/notifications/index.ts`. Keep the first four parameters (the common shape at nearly every call site) and fold the rest into a fifth `options?: { openFile?: string; openTab?: string; detectedAt?: Date }`, then update the few callers that pass them: `src/controller/create-managers.ts` (the `question` notification passes `undefined, undefined, label` for `openTab`), `src/remote/pty-session.ts` (`openFile` plus a `detectedAt` for a replayed auto-approve), `src/harness/auto-approve-wire.ts` and `src/harness/browser-gone.ts` (`openFile`). Grep `notify(` across `src/` for any other caller with more than four arguments, and update the matching expectations in the tests that spy on `notify` (`src/remote/pty-session.test.ts`, `src/editor/commit.test.ts`, `src/editor/rename.test.ts`, `src/tab/rename-editor.test.ts`, `src/plugins/conversations/activate.test.ts`, `src/notifications/index.test.ts`) only where they assert the trailing arguments. No behavior changes.
-
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.

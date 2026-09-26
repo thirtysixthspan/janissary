@@ -544,7 +544,7 @@ describe('HarnessManager auto-approve', () => {
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
     expect(notify).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt',
+      { openFile: '/project/.janissary/captures/claude-now.txt' },
     );
   });
 
@@ -557,7 +557,7 @@ describe('HarnessManager auto-approve', () => {
     expect(managers.pty.input).toHaveBeenCalledWith('pty-1', '\r');
     expect(notify).toHaveBeenCalledWith(
       managers, 'auto-approve', 'codex', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt',
+      { openFile: '/project/.janissary/captures/claude-now.txt' },
     );
   });
 
@@ -571,7 +571,7 @@ describe('HarnessManager auto-approve', () => {
     expect(writeCaptureFile).toHaveBeenCalledWith('claude', expect.any(Number), expect.any(String));
     expect(notify).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt',
+      { openFile: '/project/.janissary/captures/claude-now.txt' },
     );
   });
 

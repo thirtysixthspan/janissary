@@ -157,7 +157,7 @@ describe('createRemotePtySession', () => {
     expect(vi.mocked(writeCaptureFile)).toHaveBeenCalledWith('claude', 1_700_000_000_000, 'the screen text');
     expect(vi.mocked(notify)).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt', undefined, undefined,
+      { openFile: '/project/.janissary/captures/claude-now.txt', detectedAt: undefined },
     );
   });
 
@@ -175,7 +175,7 @@ describe('createRemotePtySession', () => {
     expect(vi.mocked(writeCaptureFile)).not.toHaveBeenCalled();
     expect(vi.mocked(notify)).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approve could not clear the permission prompt; standing down',
-      undefined, undefined, undefined,
+      { openFile: undefined, detectedAt: undefined },
     );
   });
 
@@ -212,7 +212,7 @@ describe('createRemotePtySession', () => {
 
     expect(vi.mocked(notify)).toHaveBeenCalledWith(
       managers, 'auto-approve', 'claude', 'Auto-approved a permission prompt',
-      '/project/.janissary/captures/claude-now.txt', undefined, new Date(1_700_000_000_000),
+      { openFile: '/project/.janissary/captures/claude-now.txt', detectedAt: new Date(1_700_000_000_000) },
     );
   });
 

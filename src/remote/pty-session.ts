@@ -60,7 +60,10 @@ export function createRemotePtySession(
     onGateEvent: (message, capturedAt, replayed, capture) => deliver(() => {
       const label = agentName ?? '';
       const openFile = capture === undefined ? undefined : writeCaptureFile(label, capturedAt, capture);
-      notify(managers, 'auto-approve', label, message, openFile, undefined, replayed ? new Date(capturedAt) : undefined);
+      notify(managers, 'auto-approve', label, message, {
+        openFile,
+        detectedAt: replayed ? new Date(capturedAt) : undefined,
+      });
     }),
     onBusyTransition: (busy, unread) => deliver(() => {
       const label = agentName ?? '';

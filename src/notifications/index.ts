@@ -136,25 +136,34 @@ export function shouldNotify(
   return config.events[AMBIENT_EVENTS[event]];
 }
 
+// The optional parts of a notification beyond its message, named so no caller spells out a run of
+// `undefined`s to reach the one it needs.
+export interface NotifyOptions {
+  // A file the feed line opens when clicked.
+  openFile?: string;
+  // A tab the feed line focuses when clicked.
+  openTab?: string;
+  // When this event was actually detected. Genuinely optional rather than defaulting to now: a
+  // caller that supplies one is reporting something it detected earlier — a remote harness's
+  // auto-approve report, queued while detached and replayed on reattach — and such a notification
+  // is dated in the feed and deliberately never toasted, since a toast carries no time.
+  detectedAt?: Date;
+}
+
 // Record a notification for an event on `tabLabel`. The config + focus rules run first, via
 // `shouldNotify`: an event they reject costs nothing, records nothing, and shows nothing, which is
 // what keeps the ambient toggles a volume control rather than a way to fill the screen. An event
 // they accept always reaches the queue and the record file; which surface shows it — the feed, a
 // toast, or an escalation to the feed — is `deliverNotification`'s decision. `shouldNotify` has to
 // be asked before any of that because it reads the active tab's label, which opening a tab changes.
-// `message` is the event-specific detail (see `notificationText`).
+// `message` is the event-specific detail (see `notificationText`); everything rarer arrives by name
+// in `options`, so the two link targets cannot be transposed.
 export function notify(
   managers: Managers,
   event: NotificationEventType,
   tabLabel: string,
   message?: string,
-  openFile?: string,
-  openTab?: string,
-  // When this event was actually detected. Genuinely optional rather than defaulting to now: a
-  // caller that supplies one is reporting something it detected earlier — a remote harness's
-  // auto-approve report, queued while detached and replayed on reattach — and such a notification
-  // is dated in the feed and deliberately never toasted, since a toast carries no time.
-  detectedAt?: Date,
+  { openFile, openTab, detectedAt }: NotifyOptions = {},
 ): void {
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;

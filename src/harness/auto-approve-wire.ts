@@ -16,7 +16,7 @@ export function buildAutoApprover(managers: Managers, name: string, label: strin
     approve: (keystroke) => managers.pty.input(id, keystroke),
     notify: (message, capture) => {
       const openFile = capture ? writeCaptureFile(label, capture.capturedAt, capture.text) : undefined;
-      notify(managers, 'auto-approve', label, message, openFile);
+      notify(managers, 'auto-approve', label, message, { openFile });
     },
   });
 }
