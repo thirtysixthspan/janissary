@@ -1,6 +1,4 @@
 import type { WorkspaceManager } from '../workspace/manager.js';
-import { createTranscriptSource } from '../harness/transcript/sources.js';
-import type { TranscriptSource } from '../harness/transcript/source.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
 import { drainFrames } from './frame-lines.js';
 import type { RootOfferRun } from './serve-root-offer.js';
@@ -13,16 +11,13 @@ import { randomUUID } from 'node:crypto';
 import type { Socket } from 'node:net';
 import { relayPeer, type DetachedPeer } from './serve-detach.js';
 import { answerCaptureRequest } from './serve-detach-query.js';
+import { RemoteTranscriptFollow } from './serve-transcript.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
 // and writes nothing to `.janissary/log/`. Its capability surface is deliberately closed — it will
 // not open tabs, serve files, run anything outside the workspace it provisions, or accept a frame
 // outside the union.
-
-// How often the harness's own session record is re-read and pushed, matching the local tailer's
-// cadence (`src/harness/transcript/tailer.ts`).
-const TRANSCRIPT_POLL_MS = 2000;
 
 type ProvisionFrame = Extract<ClientFrame, { type: 'provision' }>;
 
@@ -45,8 +40,7 @@ export class RemoteServer {
   private files: RemoteFileNavigators | undefined;
   private acp: RemoteAcp | undefined;
   private workspaceDir: string | undefined;
-  private transcript: TranscriptSource | undefined;
-  private transcriptTimer: NodeJS.Timeout | undefined;
+  private transcripts = new RemoteTranscriptFollow((frame) => this.emit(frame));
   private buffer = '';
   private stopping = false;
   private listening = false;
@@ -91,7 +85,7 @@ export class RemoteServer {
     this.offer?.cancel();
     this.peer?.dispose();
     this.relay?.destroy();
-    if (this.transcriptTimer) clearInterval(this.transcriptTimer);
+    this.transcripts.dispose();
     this.files?.dispose();
     this.processes?.killAll();
     // Before the clone goes, so it is never removed out from under a live agent.
@@ -215,7 +209,7 @@ export class RemoteServer {
       this.emit({ type: 'exit', id: frame.id, exitCode: 1 });
       return;
     }
-    if (frame.harness !== undefined) this.followTranscript(frame.harness);
+    if (frame.harness !== undefined) this.transcripts.follow(frame.harness, this.workspaceDir);
   }
 
   // Give up the transport while leaving the session running: the peer holds its workspace and its
@@ -237,20 +231,5 @@ export class RemoteServer {
     if (this.processes) return true;
     this.refuse('No remote workspace has been provisioned.');
     return false;
-  }
-
-  // The harness's session record lives in this machine's dot directory, so the ordinary source
-  // builder runs here and each poll's blocks are pushed to the local tailer.
-  private followTranscript(harness: string): void {
-    const dir = this.workspaceDir;
-    if (this.transcript || dir === undefined) return;
-    const source = createTranscriptSource(harness, dir, Date.now());
-    if (!source) return;
-    this.transcript = source;
-    this.transcriptTimer = setInterval(() => {
-      const blocks = source.poll();
-      if (blocks.length > 0) this.emit({ type: 'transcript', blocks });
-    }, TRANSCRIPT_POLL_MS);
-    this.transcriptTimer.unref();
   }
 }
