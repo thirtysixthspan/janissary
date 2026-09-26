@@ -161,9 +161,21 @@ describe('sessions plugin intents', () => {
       .toThrow(new TabPluginRejection('unknown sessions intent "explode"'));
   });
 
+  it('rejects an inherited object property name as an unknown intent, not a crash', () => {
+    expect(() => run('toString', { id: 'claude' }))
+      .toThrow(new TabPluginRejection('unknown sessions intent "toString"'));
+  });
+
   it.each([null, [], {}, { id: '' }, { id: 7 }])('rejects a malformed row payload: %s', (payload) => {
     expect(() => run('focus', payload)).toThrow(TabPluginRejection);
   });
+
+  it.each(['detach', 'focus', 'close', 'attach', 'terminate', 'forget'])(
+    'names the verb when rejecting a malformed %s payload',
+    (intent) => {
+      expect(() => run(intent, {})).toThrow(new TabPluginRejection(`invalid ${intent} payload`));
+    },
+  );
 
   it('rejects a refresh carrying a payload it should not have', () => {
     expect(() => run('refresh', { id: 'claude' }))

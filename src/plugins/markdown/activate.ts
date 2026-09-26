@@ -1,7 +1,8 @@
 import path from 'node:path';
-import type {
-  TabPluginActivation,
-  TabPluginServerCapabilities,
+import {
+  defineIntents,
+  type TabPluginActivation,
+  type TabPluginServerCapabilities,
 } from '../api.js';
 import { fileTabPayload, openFileExternally } from '../files.js';
 import { isMarkdownPayload } from './shared.js';
@@ -26,11 +27,6 @@ export function activate(): TabPluginActivation {
     // position is client-local. The contract still requires a handler, so every request is refused —
     // a bad request rather than a broken plugin, except for a tab payload this plugin cannot have
     // produced.
-    intent: (request, capabilities) => {
-      if (isMarkdownPayload(request.tabPayload)) {
-        return capabilities.rejectRequest(`unknown markdown intent "${request.intent}"`);
-      }
-      return capabilities.reportFailure('invalid markdown tab payload');
-    },
+    intent: defineIntents('markdown', isMarkdownPayload, {}),
   };
 }

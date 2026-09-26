@@ -1,13 +1,16 @@
-import type {
-  RemoteSessionView,
-  TabPluginActivation,
-  TabPluginNotification,
-  TabPluginServerCapabilities,
+import {
+  defineIntents,
+  type RemoteSessionView,
+  type TabPluginActivation,
+  type TabPluginIntentEntry,
+  type TabPluginNotification,
+  type TabPluginServerCapabilities,
 } from '../api.js';
 import {
   isEmptyIntent,
   isSessionIntent,
   isSessionsPayload,
+  type SessionIntent,
   type SessionRow,
   type SessionsPayload,
 } from './shared.js';
@@ -75,14 +78,16 @@ export function activate(): TabPluginActivation {
       if (event.topic !== 'sessions') return;
       capabilities.updateTab(INSTANCE_KEY, () => ({ payload: toPayload(event.data) }));
     },
-    intent: (request, capabilities) => {
-      if (!isSessionsPayload(request.tabPayload)) {
-        // The tab payload is the host's own record, not client input, so a bad one means this plugin
-        // produced something invalid — a real failure rather than a request worth answering.
-        return capabilities.reportFailure('invalid sessions tab payload');
-      }
-      return runIntent(request.intent, request.payload, request.tabPayload, capabilities);
-    },
+    intent: defineIntents('sessions', isSessionsPayload, {
+      refresh: {
+        payload: isEmptyIntent,
+        run: (_tab, _payload: Record<string, never>, capabilities) => {
+          capabilities.topicAction({ topic: 'sessions', action: 'refresh' });
+          return null;
+        },
+      },
+      ...Object.fromEntries(ROW_VERBS.map((verb) => [verb, rowEntry(verb)])),
+    }),
     opener: {
       // Unreachable: the manifest claims no file extensions, so the open pipeline never routes here.
       inline: (_file, capabilities) => capabilities.rejectRequest('sessions opens no files'),
@@ -94,12 +99,9 @@ export function activate(): TabPluginActivation {
 // Each verb names a row by the id the list is already showing, and the row itself says whether it
 // offers that verb — so a client cannot detach a row that carries no detach, or attach one that is
 // already live, even before the host's own narrowing runs.
-const ROW_INTENTS = {
-  detach: 'detach', focus: 'focus', close: 'close',
-  attach: 'attach', terminate: 'terminate', forget: 'forget',
-} as const;
+const ROW_VERBS = ['detach', 'focus', 'close', 'attach', 'terminate', 'forget'] as const;
 
-type RowIntent = keyof typeof ROW_INTENTS;
+type RowIntent = typeof ROW_VERBS[number];
 
 // The three that act on a tab this janissary holds. The rest act on a session that may have no tab
 // at all, which is why they are addressed by session id instead.
@@ -109,10 +111,6 @@ const TAB_INTENTS = new Set<string>(['detach', 'focus', 'close']);
 
 function isTabIntent(intent: RowIntent): intent is TabIntent {
   return TAB_INTENTS.has(intent);
-}
-
-function isRowIntent(intent: string): intent is RowIntent {
-  return Object.hasOwn(ROW_INTENTS, intent);
 }
 
 function actOnRow(
@@ -128,20 +126,13 @@ function actOnRow(
   return null;
 }
 
-function runIntent(
-  intent: string,
-  value: unknown,
-  tab: SessionsPayload,
-  capabilities: TabPluginServerCapabilities,
-): null | never {
-  if (intent === 'refresh') {
-    if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid refresh payload');
-    capabilities.topicAction({ topic: 'sessions', action: 'refresh' });
-    return null;
-  }
-  if (!isRowIntent(intent)) return capabilities.rejectRequest(`unknown sessions intent "${intent}"`);
-  if (!isSessionIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
-  const row = tab.entries.find((entry) => entry.id === value.id);
-  if (!row) return capabilities.rejectRequest(`no session row "${value.id}"`);
-  return actOnRow(intent, row, capabilities);
+function rowEntry(intent: RowIntent): TabPluginIntentEntry<SessionsPayload, SessionIntent> {
+  return {
+    payload: isSessionIntent,
+    run: (tab, payload, capabilities) => {
+      const row = tab.entries.find((entry) => entry.id === payload.id);
+      if (!row) return capabilities.rejectRequest(`no session row "${payload.id}"`);
+      return actOnRow(intent, row, capabilities);
+    },
+  };
 }
