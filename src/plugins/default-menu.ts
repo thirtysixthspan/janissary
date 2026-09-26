@@ -5,8 +5,8 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import { runClientlessPluginEntry } from './clientless-entry.js';
 import type { PluginRequestPort } from './requests.js';
-import { noteInOriginTab } from './transcript-note.js';
 
 // The default context menu's own entry point, beside an opener/command, a tab-bound intent, and the
 // file navigator's selection action. Shaped on `selection.ts`: the host owns activation, guarding,
@@ -52,12 +52,6 @@ export async function runPluginDefaultMenuAction(
   selection: string,
   origin: PluginFailureOrigin,
 ): Promise<void> {
-  const record = port.record(id);
-  if (!record) return;
-  const activation = await port.ensureActive(record, origin);
-  if (!activation) return;
-  const outcome = await port.invoke(record, activation, origin, (capabilities) =>
+  await runClientlessPluginEntry(port, id, origin, (record, activation, capabilities) =>
     invokeDefaultMenuAction(record.declaration, activation, action, selection, capabilities));
-  if (outcome.status === 'failed') port.disable(record, outcome.error, origin);
-  else if (outcome.status === 'rejected') noteInOriginTab(port.managers, origin, outcome.reason);
 }
