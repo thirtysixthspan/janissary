@@ -38,7 +38,7 @@
 | `search` | `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex (Cmd+F opens it empty); `↑`/`↓` step older/newer, Escape closes |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
-| `notify` | `notify <message>` pushes a custom line into the notifications feed (dropped if the tab is closed) |
+| `notify` | `notify <message>` pushes a custom line into the notifications feed |
 | `send` | Deliver a line of input to any tab — types into a harness, or runs a command in an agent tab |
 | `queue` | Queue a command for another agent tab (`queue <agent> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
@@ -129,7 +129,7 @@
 | Key | Action |
 | --- | ------ |
 | `↑` / `↓` | Move selection to the previous / next visible row |
-| `→` | Collapsed directory: expand. Expanded directory: move to its first child. File: no-op |
+| `→` | Collapsed directory: expand. Expanded directory: re-root the tree there. File: open |
 | `←` | Expanded directory: collapse. Otherwise: move selection to the parent directory |
 | `Enter` / `Space` | File: open. Directory: toggle expand/collapse |
 | `Shift+Enter` | File: edit it (mirrors Shift+double-click) |

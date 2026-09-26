@@ -10,6 +10,8 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `state` | Show the current agent's saved state fields (long values truncated) |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
+| `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
+| `edit <file>[:line]` | Open a file for editing, picking the editor by file type; see [Opening a file to change it](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |

@@ -66,6 +66,8 @@ A failed query stays in the history with its error in place of the reply. Rate-l
 
 Each conversation has a private workspace. The header's **Open file navigator in this workspace** folder button opens a left-docked navigator there, or retargets the most recently focused navigator, while keeping focus on the conversation. **New agent in this workspace** opens an agent in the same group, with that workspace as its working directory and sandbox boundary.
 
+The conversation's own ACP agent is confined to that workspace in the same way, so it cannot read or write outside it either. The workspace belongs to the conversation rather than to the tab: closing the tab or quitting the app leaves it in place, and it goes only when you delete the conversation.
+
 The first query or either workspace button creates the workspace. Using a workspace button before asking anything also saves the empty conversation, so you can reopen it after restarting.
 
 Saved conversations live under `~/.janissary/conversations/`, shared across projects on this machine. Their history and workspaces survive restarts and project workspace cleanup. [Profiles](/user-documentation/automation/profiles) restore the conversation list, rather than individual conversation tabs; reopen those from the list.

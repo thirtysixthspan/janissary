@@ -13,6 +13,14 @@ The clone is made from your repository's `origin` remote and lands at `$root/wor
 
 Running the command from a directory that isn't in a git repository, or in a repo without an `origin` remote, shows an error and creates no tab.
 
+Because the name becomes a folder, a workspaced launch has to be a name and nothing else. Empty, `.`, `..`, and anything containing a `/` or a `\` are refused before anything is cloned or removed, with the line spelled out in full:
+
+```
+Cannot launch "feature/x": a workspace name must be a single folder name — not empty, "." or "..", and without "/" or "\".
+```
+
+This is the one name rule that only applies with `-w`; without a workspace the name is free to be an IP address or anything else you like. A harness workspace folder follows the tab's label, so a second `harness claude` gets the folder `claude-2`.
+
 The tab appears right away, marked busy, while the clone runs in the background — anything you type into it joins its [command queue](/user-documentation/command-bar/queue) and runs once the clone finishes. A ready confirmation (and the isolation notice, if isolation isn't actually active) posts to the tab once the clone completes; if the clone fails instead, the tab reports the failure and closes on its own shortly after.
 
 Once a workspace exists, the ➕ button in that tab's metadata row creates another agent **inside the same clone**. It does not make a sibling clone. Both tabs see each other's files immediately, and closing the tab that created the workspace does not interrupt the joined agent. The command forms `agent` and `harness` still create fresh workspaces; sharing is the metadata button's job.
@@ -32,6 +40,8 @@ If the file can't be read, isn't valid JSON, or holds something other than what 
 <img class="agent-float" src="/agents/cavus-south.png" alt="" />
 
 Inside the workspace, day-to-day git works without any setup: commit, fetch, pull, branch. Pushing is different. The sandbox blocks SSH keys, so the workspace's `origin` is rewritten to HTTPS — and HTTPS pushes need a credential the sandbox will allow.
+
+The **first** clone is the exception, because Janissary itself makes it rather than the sandboxed tab. It uses whatever transport your `origin` already uses, SSH included, so a private repository you already clone over a key clones into the workspace without a token being configured yet. That is worth knowing because it means a first clone can succeed where the first push then fails.
 
 That credential is a scoped GitHub token placed in `.janissary/github-token` in your project. With it, `git push` and `gh` (creating and merging PRs) work from inside the workspace. Without it they fail; local development is unaffected either way.
 
@@ -61,7 +71,9 @@ A workspace lasts exactly as long as the tabs sharing it:
 - **Cancelled** if you close the tab, or quit the app, while the clone is still running — it stops right away instead of finishing in the background.
 - **Shared** when you use a workspaced tab's ➕ button; every joined tab works in the same directory.
 - **Kept** when one sharing tab closes and another still uses it.
-- **Removed** when the last sharing tab closes, along with everything in it that wasn't pushed.
+- **Removed** when the last sharing tab closes, along with everything in it that wasn't pushed. Removal happens in the background, so deleting a large clone never freezes the app; quitting before it finishes still cleans up.
 - **Not restored**: `janus --relaunch` brings the agent tab back, but not its workspace — the restored tab starts in its last known working directory. Fresh app launches also clear any workspace directories left behind.
+
+The Claude trust entry Janissary writes for a workspace is removed again along with it, on the last tab close, at shutdown, and when a leftover folder is cleared. Entries appear in and disappear from your `~/.claude.json` as workspaces come and go.
 
 Treat a workspace as scratch space: anything worth keeping should leave through git.

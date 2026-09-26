@@ -16,7 +16,7 @@ sessions
 
 A row appears for every remote harness, remote agent, `ssh` tab, and remote file navigator this project has open, plus one row per process still running on a host you've detached from. There's no row for a connection by itself — tabs sharing one connection are grouped under the row that launched it, indented beneath it, so one glance shows what a single detach would take with it. Rows sort by most recent activity, newest first.
 
-An empty list reads `No remote sessions`.
+An empty list reads `No remote sessions`, and the column headings go with the rows — an empty list is just that line, with no header row above it.
 
 ## Row columns
 
@@ -50,6 +50,8 @@ Every row shows only the actions it can actually do.
 - **Detach** gives up the local tabs for a live session while leaving it running on its host. It asks you to confirm, naming the host; closing the local tabs never stops the remote processes, and attaching later restores the same running process rather than starting a new one. A harness's screen recording is per attachment, so detaching closes the current file and the later Attach starts a fresh one — see [Recordings](/user-documentation/advanced-agents/harness#recordings).
 - **Terminate** stops a parked session for good: Janissary reconnects long enough to tell the peer to stop its processes and remove its remote workspace, then asks you to confirm. Terminating a live session's launching row stops the peer and closes every tab sharing it.
 - **Forget** removes Janissary's own record without touching anything on the far side. It only appears once an attach or a terminate has already failed to reach that host, or on a row that's already terminated.
+
+Detach and Terminate both ask first, and the dialog behaves like every other confirmation in the app: `y` confirms, `n` and `Escape` cancel, `←`/`→` move between the two buttons, and `Enter` takes whichever is selected — with Cancel selected to begin with, so a reflexive `Enter` is safe. While a confirmation is open the list's own `↑`/`↓` don't move the row selection, so a stray arrow can't change what you're about to agree to.
 - **Close** appears on an `ssh` row, a navigator row, or any row joined onto another row's connection. It closes that tab without touching the connection's launching row.
 
 ## Open a row
@@ -66,8 +68,8 @@ The list updates itself as sessions launch, join, detach, or lose their connecti
 
 Not every failed attach means the same thing, and the row tells you which kind you got.
 
-- **The session is over.** A host that refuses the attach, or a peer process that turns out to be gone, settles the question for good: the row becomes `terminated`, and a notification names what ended and why. A **Forget** button appears once the host could not be reached, so you can clear the record.
-- **Nothing was learned.** A timeout or a failed connection settles nothing. The row stays parked, **Attach** is still there to try again, and the trash button appears beside it. The host may be asleep or merely slow, so the session is exactly where you left it.
+- **The session is over.** A host that refuses the attach, or a peer process that turns out to be gone, settles the question for good: the row becomes `terminated`, and a notification names what ended. A **Forget** button appears once the host could not be reached, so you can clear the record.
+- **Nothing was learned.** A timeout or a failed connection settles nothing. The row stays parked, **Attach** is still there to try again, and the trash button appears beside it. The host may be asleep or merely slow, so the session is exactly where you left it. This is the case that carries the reason, on the row itself.
 
 Either way a notification names the session, the host, and the reason, and it stays in the feed after the temporary connection tab it was raised in has closed.
 
@@ -77,9 +79,13 @@ A host that accepts the attach but then reports no processes, or never answers a
 
 Each action posts one line to [Notifications](/user-documentation/tab-types/notifications): `<what> on <host> detached.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, and `<what> on <host> forgotten — its record was removed.` A refused action — one that can't run, such as detaching a row that's still provisioning — posts its own line explaining why, so it's never silent. The line is attributed to this tab when the list is open, and to whichever tab is active otherwise, so the feed's header names the surface the change belongs to even when you raised it from a remote tab's metadata row.
 
+**Forget** is the exception, and only on a row that has already ended. Pressing it on a `terminated` row clears the row without a line, because the record it would have named was already dropped when the session ended. The row goes and the feed says nothing.
+
 ## The control on a remote tab
 
-Every remote tab's metadata row carries the same plug icon and the same **Detach**/**Attach** control the sessions list uses, so you don't have to switch tabs to park or restore a session. It's disabled while the tab is provisioning and shows a spinner while an action is in flight.
+Every remote tab's metadata row carries the same plug icon and the same **Detach**/**Attach** control the sessions list uses, so you don't have to switch tabs to park or restore a session. It's disabled while the tab is provisioning and shows a spinner while an action is in flight; the spinner stops as soon as the host answers, and it stops just as surely when the answer is a refusal, or when nothing answers at all.
+
+Two things about that control are worth knowing. **Detach** acts on the whole shared connection, not on the one tab you pressed it from: after one confirmation naming the host, every tab and navigator riding that connection goes, exactly as it does from a list row. And a remote [file navigator](/user-documentation/tab-types/file-navigator) deliberately has no such control — it keeps its host chip in the header instead — so detach a navigator's session from the agent or harness tab that launched it.
 
 ## Scope
 

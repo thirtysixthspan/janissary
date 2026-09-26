@@ -16,7 +16,7 @@ Long sentences wrap between words when they reach the editor's edge. A single to
 
 You can also land in an editor by clicking a `file.ts:42`-style link in any transcript — the file opens with the cursor already on that line, centered in view — or from the [file navigator](/user-documentation/tab-types/file-navigator) with `Shift+Enter` on a file. `Shift+Enter` is the tree's edit gesture, so a Markdown file opens its rendered preview and a video or audio file goes to your system's player instead.
 
-![An editor tab: syntax-highlighted TypeScript under the metadata header, with the unsaved-changes dot next to the filename.](/screenshots/editor-tab.png)
+![An editor tab: syntax-highlighted TypeScript under the metadata header, with the Save control lit to show the buffer has unsaved changes.](/screenshots/editor-tab.png)
 
 ## Focus stays in the buffer
 
@@ -133,7 +133,7 @@ write leaves the previous on-disk file and your unsaved editor state intact.
 
 If the path didn't exist when you ran `edit`, the file shows a size of "unknown" and isn't created until your first save. Opening that same not-yet-existing path again doesn't focus the first tab the way opening an existing file would; each open gets its own independent, unsaved tab, since none of them has a real file to converge on yet. If you save one of those tabs without renaming it, and another tab already saved a file under that name in the meantime, your save doesn't overwrite it: it picks the next free name in the same folder instead, such as `untitled.md` becoming `untitled-2.md`, and updates the tab to match.
 
-Beside the save button, the **Commit to origin** icon saves the file and then commits exactly that one file and pushes it to your current branch — the same commit-and-push cycle the [file navigator's](/user-documentation/tab-types/file-navigator) commit uses, with a generated `sync: <filename>` message. The icon spins while the commit runs, turns green on success and red on failure, and each outcome also lands as one line in the [notifications](/user-documentation/tab-types/notifications) tab. Hovering names the branch the push will go to (`Commit to origin (branch <name>)`) plus its current state, the same as the file navigator's own commit button — or just `Commit to origin` when the branch can't be determined. Files on a remote host commit from their navigator instead.
+Beside the save button, the **Commit to origin** icon saves the file and then commits exactly that one file and pushes it to your current branch — the same commit-and-push cycle the [file navigator's](/user-documentation/tab-types/file-navigator) commit uses, with a generated `sync: <filename>` message. The icon spins while the commit runs, turns green on success and red on failure, and each outcome also lands as one line in the [notifications](/user-documentation/tab-types/notifications) tab. Hovering names the branch the push will go to (`Commit to origin (branch <name>)`) plus its current state, the same as the file navigator's own commit button — or just `Commit to origin` when the branch can't be determined. Files on a remote host commit from their navigator instead. Clicking it while a commit is already running does nothing, so a second click can't collide with the first.
 
 ## Renaming a tab renames the file
 
@@ -146,6 +146,8 @@ A rename can't replace another file or move the file into a different folder. If
 ## Closing with unsaved changes
 
 Closing a dirty editor tab — × button, `Cmd+W`/`Ctrl+W`, or `close` — asks first: "Do you want to save changes to this file?" with **Save** (the default), **Don't Save**, and **Cancel**. Press `y` to save and close, `n` to close without saving, or `Escape` to keep editing. The dialog is modal; input elsewhere is blocked until you choose.
+
+The dialog belongs to the tab it was raised for, not to whatever is in front of it. Tabs opening, closing, or reordering behind the dialog do not redirect a single button, so **Don't Save** always means the file you were editing. If that tab is gone before you answer, the dialog steps aside on its own and closes nothing in its place.
 
 **Save** closes the tab only once the file is written. If the save doesn't succeed — the server reports an error, or the file changed on disk and you get the overwrite prompt instead — the dialog steps aside, the tab stays open with your changes intact, and focus returns to the buffer so you can see what happened. Close it again once the save goes through.
 

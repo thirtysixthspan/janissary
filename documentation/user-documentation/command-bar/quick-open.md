@@ -22,7 +22,7 @@ If nothing matches, the window shows `No matching files`, and `Return` does noth
 
 ## Open a file
 
-`↑`/`↓` move the highlighted selection, or click a row directly. `Return` opens the highlighted file in an [editor tab](/user-documentation/tab-types/editor) and closes the window. It doesn't matter which tab was active when you pressed `Cmd+P`; the file always opens from the project root, with the same open and de-dupe behavior as any other way of opening a file.
+`↑`/`↓` move the highlighted selection, or click a row directly. `Return` opens the highlighted file in a [tab of the right kind for it](/user-documentation/tab-types/opening-files) and closes the window: the text editor for source, the image editor for an image, the [PDF viewer](/user-documentation/tab-types/pdf-viewer) for a PDF, the [markdown preview](/user-documentation/tab-types/markdown-preview) for Markdown, the video or audio player for media. It doesn't matter which tab was active when you pressed `Cmd+P`; the file always opens from the project root, with the same open and de-dupe behavior as any other way of opening a file.
 
 `Escape` closes the window without opening anything and returns focus to the command bar.
 

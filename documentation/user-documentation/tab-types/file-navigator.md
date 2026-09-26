@@ -11,17 +11,17 @@ files left       rooted at the working directory, docked in the left sidebar
 files right src  rooted at src, docked in the right sidebar
 ```
 
-Directories sort before files, both alphabetically. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is named `navigator` in the strip, and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below). `navigator` is also the name `close` goes by, with `navigator-2`, `navigator-3`, and so on for later trees; `files` is the command that opens one, not the name it answers to.
+Directories sort before files, both alphabetically and ignoring case. A few VS Code default excludes (`.svn`, `.hg`, `.DS_Store`, `Thumbs.db`) are hidden; `.git` and every other dotfile show like any other entry. A directory's contents are only read when you expand it, so a huge `node_modules` costs nothing until opened. The tab is named `navigator` in the strip, and placed at the *start* of its group, so the tree sits left of the tabs it opens — except while docked to a sidebar, when it leaves the strip entirely (see below). It joins whichever group was active when you opened it, taking that group's bar colour and a dot colour of its own. `navigator` is also the name `close` goes by, with `navigator-2`, `navigator-3`, and so on for later trees; `files` is the command that opens one, not the name it answers to.
 
-If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. A target that isn't a directory prints `files: <path>: not a directory`. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
+If a tree is already open on the same root, `files` focuses it rather than opening a duplicate — or, with `left`/`right`, moves it into that sidebar. You can spell the side out as `files on left` or `files on right`; it means the same as the bare form. A target that isn't a directory prints `files: <path>: not a directory`. A `files in <label>` naming a tab that isn't there prints `No tab named "<label>".` and opens nothing. A target that doesn't exist *yet* still opens a tab, showing "Looking for `<path>`…" until the directory shows up — handy for pointing a navigator at a directory a build or clone is about to create.
 
 ![A file navigator tab: a directory tree with one directory expanded and a row selected.](/screenshots/file-navigator.png)
 
 ## Opening from a tab's metadata row
 
-Every agent tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory — a one-click alternative to typing `files in <label>`. Shell tabs don't have this button.
+Every agent tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory, which is the same root `files in <label>` would use, but the two routes differ in where focus ends up: the button leaves focus where it is. Shell tabs don't have this button.
 
-Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus moves to the navigator.
+Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus stays on the tab whose button you clicked, so you keep typing to the agent that owns the workspace. `files in <label>` does the same retargeting but does hand you the tree, which is the one to reach for when you want to go straight in.
 
 ## Remote workspaces
 
@@ -72,9 +72,9 @@ The header's detail button cycles a tree through the four modes, one click at a 
 
 A [profile](/user-documentation/automation/profiles) that saves this tree restores its detail mode along with its expanded directories and selection.
 
-## Move a tree between the three places
+## Move a tree between the two sidebars
 
-The header carries a **location** button that moves a tree where it lives, one click at a time: left sidebar, then the center tab strip, then the right sidebar, then back to the left. Its tooltip names the place the next click will take it, so you can see where a tree is going before you send it. That is the same three places `files left`, bare `files <path>`, and `files right` reach, and it works the same whether the tree is currently docked or in the strip — moving a tree out of a sidebar puts it back in its group, at the front where a navigator always sits.
+A tree in a sidebar has a **location** button in its header that swaps it to the other sidebar. Its tooltip names the side the next click will take it to, so you can see where a tree is going before you send it. That is the same two places `files left` and `files right` reach. A tree in the center tab strip has no such button, and that is also the only way back to the center: `files` on its own, or `files <path>`, puts the tree back in the strip, at the front of its group where a navigator always sits.
 
 The header has no close button of its own. A tree in the center strip is closed from the strip, and a docked one from its sidebar's tab strip, where the × sits beside the tab's name. `close navigator` works from any tab either way.
 
@@ -94,7 +94,7 @@ The button tells you how the pull is going. Its icon spins while the pull runs, 
 
 Clicking again while a pull is still running does nothing, so overlapping pulls can't collide — and neither can a pull collide with a commit that is still running, so pulling is also a no-op while a commit is in flight.
 
-Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear.
+Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear. When a pull fails, the button's own hover text points you at that notifications line rather than repeating git's error.
 
 ## Committing your changes to origin
 
@@ -116,7 +116,7 @@ For a tree rooted on a remote host, the commit runs there, in that host's worksp
 
 ## Finding a file by name
 
-Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list.
+Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list. The pop-up reads the whole tree when it opens, so it says `Searching…` for a moment on a large repository, and it searches every file under the root that git is not ignoring — a `node_modules` or a build directory your `.gitignore` covers is not in there.
 
 Press `Tab` to accept the ghost completion into the input without closing the pop-up. Press `Enter` to jump to the top match: it expands every ancestor directory, selects the file's row, and scrolls it into view. Press `Escape`, or click outside the pop-up, to close it without changing the tree. An empty query shows nothing below the input; a query with no matches shows `(no matching files)` instead of a path.
 
@@ -124,7 +124,11 @@ Press `Tab` to accept the ghost completion into the input without closing the po
 
 ## The tree stays current
 
-Every visible directory is watched: files that appear, disappear, or get renamed show up in the tree within about a second, even during a burst of changes like a `git checkout`. If watching stops working for a directory (permissions, exotic filesystems), the tree keeps working — collapse and re-expand to refresh by hand.
+Every visible directory is watched: files that appear, disappear, or get renamed show up in the tree within about a second, even during a burst of changes like a `git checkout`. If watching stops working for a directory (permissions, exotic filesystems), the tree keeps working — collapse and re-expand to refresh by hand. Delete an expanded directory out from under the tree and it collapses itself, its watcher stops, and you get it back the same way as any other closed directory.
+
+Two rows behave differently from what their name suggests. A **symlink** is shown as a plain file with no chevron and cannot be expanded, even when it points at a directory; open it like a file instead. The **`..`** row is the way back up, and it re-roots the tree one directory higher.
+
+The header names the **branch** you have checked out, and on a detached HEAD it reads `HEAD` rather than a branch name. Outside a git repository there is no branch text at all, and the header just shows the path. Anywhere else on this page that a branch name appears — the git buttons, the pull and commit sections — it is this same readout.
 
 Inside a git repository, a file's name is colored by its git status: **green** for a staged change, **red** for an unresolved merge conflict, and **yellow** for anything else changed — an unstaged modification or an untracked file — the same way an editor's Explorer highlights dirty files. A directory takes the color of the most urgent status found beneath it (a conflict beats a staged change, which beats a plain change), even deep inside a collapsed folder, so you can spot changes without expanding everything. Coloring always reflects the git repository the navigator's own root sits in, so it stays accurate when you have more than one navigator open on different folders or repositories. This coloring refreshes along with the tree. A directory that isn't in a git repository simply shows no coloring — nothing is colored and no error appears.
 
@@ -139,14 +143,19 @@ Inside a git repository, a file's name is colored by its git status: **green** f
 | Double-click the `..` row | Re-root the tree one directory up |
 | Right-click a row | Open its context menu without changing the selection |
 | Header ⊟ button | Collapse everything back to the root |
-| Header ⇄ button | Cycle location: left sidebar → center tab strip → right sidebar → left sidebar |
-| Header × button | Shown while docked; closes the tree (a docked tree has no strip × of its own) |
+| Header ⇄ button | Swap sidebars: left → right, or right → left. Only on a docked tree |
+| Header Split button | Open the tree in the other pane, so a file and the tree sit side by side |
 | Press a row, drag, and release over a directory (or any file inside it) | Moves the dragged file or directory into that directory on disk |
 
 Click a row to replace the selection, and see [Selecting more than one row](#selecting-more-than-one-row)
 below for building a bigger one. This row menu is the tree's own; see
 [Right-click menus](/user-documentation/getting-started/context-menus) for the default Copy/Paste menu
-that answers a right-click everywhere else in the app.
+that answers a right-click everywhere else in the app. The tree's own menu takes the keyboard too:
+`↑`/`↓` move through its entries, `Enter` chooses one, and `Escape`, a click elsewhere, or a choice all
+put your cursor back in the tree.
+
+A navigator is a quiet tab. Opening or using one writes nothing to any transcript, and it never queues
+behind a busy agent or interrupts one: it does its own filesystem work and leaves your agent to its turn.
 
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
@@ -253,6 +262,8 @@ Click the adjacent **New directory** button to create a folder using the same se
 
 Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling already in that directory, the same Overwrite/Cancel dialog used for drag-and-drop moves appears. A rename doesn't join the undo/redo history described below.
 
+A rename only ever renames. Typing a path separator into the field does not move the item: `docs/notes.md` creates a file called `docs/notes.md`, with the slash part of the name, sitting next to the original. Moving something into another directory is a [drag-and-drop](#moving-files-by-drag-and-drop) or a cut-and-paste, never a rename.
+
 If the filesystem refuses the rename, the item stays in place. The notifications feed names the item, explains the cause, and suggests what to try next.
 
 If the renamed file is already open in an editor tab, that tab's name and path update automatically, with unsaved content and cursor position preserved.
@@ -269,7 +280,7 @@ Rows on the clipboard are marked in every open navigator that shows them, until 
 
 Pasting a copy back into its own directory duplicates it, using the same `-2` naming as elsewhere in the app (`report.md` → `report-2.md`). Pasting a cut back into its own directory does nothing. Any other name collision opens the same Overwrite/Cancel, or Overwrite all/Skip conflicts/Cancel, dialog a drag-and-drop move uses. A paste whose source is gone, or whose destination is inside what you're copying, is reported through the notifications feed like any other failed operation.
 
-A paste is one step on the tab's undo/redo stack: `Cmd+Z` reverses it and `Cmd+Shift+Z` re-applies it. Undoing a copy-paste deletes what it created; undoing a cut-paste moves the items back to where they came from.
+A paste is one step on the tab's undo/redo stack: `Cmd+Z` reverses it and `Cmd+Shift+Z` re-applies it. Undoing a copy-paste deletes what it created; undoing a cut-paste moves the items back to where they came from. Undoing or redoing several steps at once has its own conflict check, and its dialog is worded differently from a move's: where a move names the folder it is colliding in, a grouped undo or redo reads `Some items already exist in their destinations.`
 
 Copy and Paste are also available from a row's context menu, along with **Duplicate**, which makes
 that in-place copy in one step: right-click a file or directory, choose Duplicate, and the copy
@@ -317,6 +328,10 @@ failures, reported as one line in the notifications feed instead of a dialog:
 `Could not delete <failed> of <total> items: <names>`, naming up to three failed items and
 truncating the rest with `… and N more`. The line also gives the cause and what to try next.
 Deletion is recursive for directories and cannot be undone.
+
+Confirming a delete moves the selection to the nearest row that survived, and the parent directory
+becomes the active row, so your cursor is somewhere you can keep working from. Cancelling leaves the
+rows exactly as they were, with the one you right-clicked still selected.
 
 Undo and redo only apply to moves. Each tree keeps its own undo/redo history in memory for as long
 as it stays open; closing it clears that history. One bulk move is one history step. Undo reverses
