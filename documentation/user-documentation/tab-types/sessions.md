@@ -62,9 +62,20 @@ Click a row once to select it, click again — or press `Enter` — to open it. 
 
 The list updates itself as sessions launch, join, detach, or lose their connection, whether or not this tab is open. Opening an `ssh` tab from another tab adds its row straight away, and closing that tab removes the row — which is what a docked list relies on, since it never leaves and returns to focus. The header's refresh button re-reads the list rather than waiting for something to change, and so does returning to this tab from another one. When docked, Refresh shares one metadata bar with the control that moves the list to the other sidebar. Refreshing never opens a connection on its own — reachability is only learned by pressing **Attach** or **Terminate**, so a parked row can go stale: a peer that expired while Janissary was closed still reads `detached` until something tries it.
 
+## What a failed attach leaves behind
+
+Not every failed attach means the same thing, and the row tells you which kind you got.
+
+- **The session is over.** A host that refuses the attach, or a peer process that turns out to be gone, settles the question for good: the row becomes `terminated`, and a notification names what ended and why. A **Forget** button appears once the host could not be reached, so you can clear the record.
+- **Nothing was learned.** A timeout or a failed connection settles nothing. The row stays parked, **Attach** is still there to try again, and the trash button appears beside it. The host may be asleep or merely slow, so the session is exactly where you left it.
+
+Either way a notification names the session, the host, and the reason, and it stays in the feed after the temporary connection tab it was raised in has closed.
+
+A host that accepts the attach but then reports no processes, or never answers at all once it has, is shut down and its record dropped rather than left holding a remote workspace with nothing in it. When an attempt ends, anything it prepared for its tabs is released too, so an agent tab you later open under the same name starts its own shell rather than binding to a process left over from a different session.
+
 ## Reporting
 
-Each action posts one line to [Notifications](/user-documentation/tab-types/notifications): `<what> on <host> detached.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, and `<what> on <host> forgotten — its record was removed.` A refused action — one that can't run, such as detaching a row that's still provisioning — posts its own line explaining why, so it's never silent.
+Each action posts one line to [Notifications](/user-documentation/tab-types/notifications): `<what> on <host> detached.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, and `<what> on <host> forgotten — its record was removed.` A refused action — one that can't run, such as detaching a row that's still provisioning — posts its own line explaining why, so it's never silent. The line is attributed to this tab when the list is open, and to whichever tab is active otherwise, so the feed's header names the surface the change belongs to even when you raised it from a remote tab's metadata row.
 
 ## The control on a remote tab
 
