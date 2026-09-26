@@ -3,6 +3,7 @@ import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useEditor } from './useEditor';
 import { useEditorFile } from './useEditorFile';
+import { useEditorLineJump } from './useEditorLineJump';
 import { useEditorMouse } from './useEditorMouse';
 import { useSyntaxHighlight } from './useSyntaxHighlight';
 import { useEditorSync } from './useEditorSync';
@@ -61,6 +62,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const connections = useEditorConnections(client, tab);
   const file = useEditorFile(client, editor, api);
   saveRef.current = file.save;
+  useEditorLineJump(editor, api, caretRef);
   const find = useEditorFind(state?.lines ?? null, active);
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey });

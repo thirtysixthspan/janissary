@@ -269,6 +269,14 @@ describe('TabManager queue', () => {
     tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/2', line: 42 });
     expect(tm.tabs.length).toBe(count);
     expect(tm.cur().editor!.line).toBe(42);
+    expect(tm.cur().editor!.lineRequest).toBe(1);
+
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/3', line: 42 });
+    expect(tm.cur().editor!.lineRequest).toBe(2);
+
+    tm.openEditorTab({ name: 'file.ts', path, size: '1 KB', url: '/open/4' });
+    expect(tm.cur().editor!.line).toBe(42);
+    expect(tm.cur().editor!.lineRequest).toBe(2);
   });
 
   it('openEditorTab creates a new tab when the path differs', () => {

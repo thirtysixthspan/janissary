@@ -105,6 +105,9 @@ export type EditorView = {
   // 1-based target line to jump to on open (from a `file:line` transcript link); undefined
   // when opened without a specific line.
   line?: number;
+  // Bumped each time a later open request names a line for this already-open tab. Asking for the
+  // same line twice leaves `line` unchanged, so this is what tells the client to move the cursor.
+  lineRequest?: number;
   // On-disk mtime, bumped only when the file changes on disk outside the app (own saves move
   // the watcher's baseline forward first, so they never show up here). The client diffs this
   // against its previous value to detect an external change.
