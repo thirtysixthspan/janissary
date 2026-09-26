@@ -42,21 +42,25 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
 - **A blinking dot means busy.** While a tab's agent is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. Selecting it clears the flag.
+- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. Selecting it clears the flag. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` or a `janus --relaunch` brings no flags with it.
 
-The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted.
+The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted. The band along the top of a group dims uniformly while the app window itself is behind something else, and comes back when you return to it.
 
 ## Working in two panes
 
 Action tabs have a **Split** button at the right edge of their metadata header. Click it to move that tab into a second pane
-beside the first one. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
+beside the first one. The first Split sends the tab you clicked into the **right** pane and leaves the most recently
+focused eligible tab on the left. Each pane gets its own tab strip and keeps one tab visible; click anywhere in
 a pane to make it the focused one. The focused pane keeps its tab-colored left border; the other pane's border turns muted gray. New tabs opened from an action tab join that tab's pane.
+
+The button is only there when it would do something: with a single eligible tab there is nothing to split it from, so it renders inert, and the notifications tab has no Split at all. A reporting tab cannot be moved into a pane either.
 
 When both panes show agent tabs, both keep their command lines and the same metadata buttons. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers, transcript search, and dialogs stay with the focused pane.
 
 Drag the divider between the panes to resize them. The divider starts in the middle and stops at
-15% or 85% of the center area, so neither pane can disappear accidentally. Moving, closing, or
-docking the last tab from one side collapses the split back to a single strip.
+15% or 85% of the center area, so neither pane can disappear accidentally. The width is yours for
+the session rather than for the tab: reloading the page puts it back in the middle. Moving,
+closing, or docking the last tab from one side collapses the split back to a single strip.
 
 Dragging within a tab strip and `Ctrl+←` / `Ctrl+→` reorder tabs only inside the focused pane.
 To move a tab between panes, drag its label onto the other pane's tab strip. The tab keeps its
@@ -81,13 +85,15 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 ## Switching and reordering
 
-`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
+`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in an agent tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
+
+A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 
 ## Renaming a tab
 
 <img class="agent-float left" src="/agents/orhan-south.png" alt="" />
 
-`rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels.
+`rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels. Either way the new name is capped at 50 characters, which is its own limit and not the shorter one the strip uses to truncate a label it has to fit.
 
 An alias changes what you see, not what you can type: commands that target a tab by name take either one. `msg`, `broadcast`, [`send`](/user-documentation/command-bar/send), `queue`, `close`/`exit`, `schedule … in <tab>`, and monitor targets all match the alias or the original label, ignoring case. The rename confirmation says routing still uses the label, and internally it does — that's the name a message is delivered under, the one a transcript records, and the one `state` shows — but you don't have to remember it to address the tab.
 
@@ -103,7 +109,7 @@ close page-2      close the second embedded web page by its name
 
 `exit` is an alias of `close`. Closing a tab tears down everything used only by that tab — its shell, agent session, and scheduled commands — and focus goes back to whichever tab you were on before the one you just closed, which is often but not always a neighbour. If that tab is gone too, focus lands on the nearest tab that still exists. A shared workspace clone and remote connection stay alive while another joined tab still uses them, then close when their last user does.
 
-Closing the **last** remaining tab quits the app, so it always asks first. `close`, `exit`, the tab strip's × button, `Cmd+W`/`Ctrl+W`, and a view tab's own × all bring up the quit confirmation dialog there, exactly as if you'd typed `quit`. A docked sidebar tab doesn't count as one of your remaining tabs. The only thing that quits without asking is the tab's own process exiting on its own. If no tab matches the name you gave, an error is reported.
+Closing the **last** remaining tab quits the app, so it asks first. Bare `close`, bare `exit`, the tab strip's × button, `Cmd+W`/`Ctrl+W`, and a view tab's own × all bring up the quit confirmation dialog there, exactly as if you'd typed `quit`. A docked sidebar tab doesn't count as one of your remaining tabs. The only things that quit without asking are the tab's own process exiting on its own, and `close`/`exit` **with a tab name**. `close janus` on your last tab quits straight away, with no dialog and no unsaved-changes prompt, so close an agent you care about from its own tab or by its × rather than by name. If no tab matches the name you gave, an error is reported.
 
 ## How paths are shown: `$root`
 
@@ -124,13 +130,16 @@ A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metad
 one step further: the clone reads as `$workspace/<name>` (its own directory name, e.g.
 `$workspace/salih`), and anything inside it as `$workspace/<name>/<rest>` — on remote hosts too,
 where the raw clone path has no meaning to the local root shortcut. This symbol appears only in
-the metadata row; transcript lines and paths you type keep the forms above.
+the metadata row; transcript lines and paths you type keep the forms above. Where the app does not
+know the clone's directory — a tab whose shell lives on another host — the metadata row falls back
+to the ordinary `$root` form instead of showing `$workspace` at all.
 
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
-editor tab's metadata header, and app status messages that name a path. It is display-only. The
+editor tab's metadata header, and the transcript line a [profile](/user-documentation/automation/profiles)
+launch writes. It is **not** used for the launch and refusal lines the notifications feed posts, which name the workspace by its full absolute path; see [Agents](/user-documentation/getting-started/agents#names) for how those read. It is display-only. The
 underlying absolute paths do not change, and the raw output of your shell commands is never rewritten.
 
-You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, or `files`:
+You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, `newdir`, or `files`:
 
 ```
 open $root/src/cli.ts
@@ -150,9 +159,10 @@ A path and line number in output, like `src/foo.ts:42`, is a clickable link. Cli
 Double-click a previous command's prompt line — the chevron and the command text — to run it again. Clicking the leading working-directory text on that line does nothing; only the command text after it re-runs. A single click does nothing either, so click-and-drag text selection still works. If the double-click lands on text that is still selected from an earlier selection, it is suppressed and does not run the command.
 
 When an interactive program such as `vim` or `less` takes over the tab, the transcript and command
-bar disappear while the full-tab terminal is active. They return exactly as they were when the
-program exits, with no new transcript entries. New output normally returns the transcript to the
-bottom automatically.
+bar disappear while the full-tab terminal is active. Anything you had typed but not run comes back
+exactly as it was when the program exits, and no new transcript entries appear. A **reload** is not
+so forgiving: the page is rebuilt from scratch, so half-typed command-bar text is discarded, and so
+is the tab that held it. New output normally returns the transcript to the bottom automatically.
 
 Shell output keeps its color, whether you ran the command yourself or an agent did: a test suite's colored pass/fail summary, for example, renders with the same colors it would in a real terminal.
 

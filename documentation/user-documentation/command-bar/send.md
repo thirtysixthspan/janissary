@@ -6,7 +6,7 @@
 
 ```
 send claude /standup
-send worker db vacuum
+send worker db sqlite list
 ```
 
 Name the tab by its label, the way it appears in the strip. A tab you renamed answers to its display name too. `Tab` completes the name against every open tab, so you rarely have to type it in full. Tab numbers don't work here — `send 2 …` looks for a tab actually named `2`.
@@ -31,7 +31,7 @@ Your own transcript records what you sent:
 → claude: /standup
 ```
 
-That's the whole acknowledgement. `send` is fire-and-forget: the target's output stays in the target's tab, and nothing is read back to you. To watch what a tab does with what you sent, switch to it, or point a [monitor](/user-documentation/automation/monitoring) at it.
+That's the whole acknowledgement. `send` is fire-and-forget: the target's output stays in the target's tab, and nothing is read back to you. To watch what a tab does with what you sent, switch to it, or point a [monitor](/user-documentation/automation/monitoring) at it. One case is worth knowing about: when the target is busy, the command waits in its [queue](/user-documentation/command-bar/queue) instead of running, and the `Queued: <text>` line for that lands in the **target's** transcript rather than yours, so your own tab shows the `→ <label>: <text>` acknowledgement and nothing more.
 
 Errors land in *your* transcript rather than the target's, so a send that went nowhere is always visible — including one fired by a schedule while you were elsewhere:
 
@@ -49,7 +49,7 @@ Errors land in *your* transcript rather than the target's, so a send that went n
 
 ```
 schedule standup every day at 9am send claude /standup
-schedule sweep every 1h send worker db vacuum
+schedule sweep every 1h send worker db sqlite list
 ```
 
 The timer lives in the tab you ran `schedule` in, and each firing sends to the target from there. To put the timer in the target tab instead, use the `in <tab>` form of `schedule`.
