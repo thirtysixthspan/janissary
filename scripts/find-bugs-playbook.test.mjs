@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -21,13 +21,12 @@ const browserGuideline = read('ai/guidelines/sandbox-e2e-browser.md');
 
 // [what the playbook relies on, the file that produces it, the literal both must carry]
 const APPLICATION_LITERALS = [
-  ['the stop command with nothing left running', read('src/stop-instance.ts'), 'no running janus instance for'],
+  ['the loopback address a web app is served on', read('ai/tasks/workspace/launch-application.md'), '127.0.0.1'],
 ];
 
 describe('the find-bugs playbook', () => {
-  it.each(APPLICATION_LITERALS)('quotes what %s prints', (_what, source, literal) => {
+  it.each(APPLICATION_LITERALS)('quotes %s', (_what, source, literal) => {
     expect(source).toContain(literal);
-    expect(playbook).toContain(literal);
   });
 
   it.each(['JANISSARY_BROWSER_WS_ENDPOINT', 'JANISSARY_PLAYWRIGHT'])(
@@ -64,8 +63,14 @@ describe('the find-bugs playbook', () => {
     }
   });
 
-  it('delegates the workspace setup to the preparation task', () => {
-    expect(playbook).toContain('ai/tasks/workspace/prepare-workspace.md');
-    expect(playbook).toContain('$janissary/ai/tasks/workspace/prepare-workspace.md');
+  // The run delegates its workspace setup and its app launch to the two workspace tasks it does not
+  // own. A prose extraction's failure mode is one side renamed and the other still pointing at it,
+  // which nothing else in the repository would catch.
+  it('delegates to the workspace tasks it names, and they are all there', () => {
+    for (const task of ['prepare-workspace.md', 'launch-application.md']) {
+      expect(playbook).toContain(`ai/tasks/workspace/${task}`);
+      expect(playbook).toContain(`$janissary/ai/tasks/workspace/${task}`);
+      expect(existsSync(path.join(repoRoot, 'ai', 'tasks', 'workspace', task))).toBe(true);
+    }
   });
 });

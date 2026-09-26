@@ -14,28 +14,29 @@ Your job: take the workspace the project's own preparation task leaves ready, bu
 
 ### Allowed
 
-Read project files and the Janissary workflow references linked here. Execute the project's workspace preparation task, and take the workspace it leaves. Run the project's build, launch, and seed commands. Create fixtures, drivers, logs, and evidence under `./temp/find-bugs/`; remove this run's scratch files at teardown. Drive the attached browser and spawn the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
+Read project files and the Janissary workflow references linked here. Execute the project's workspace preparation task and take the workspace it leaves, then execute the project's launch task and take the app it starts. Create fixtures, drivers, logs, and evidence under the `./temp/find-bugs/` scratch root that task created. Drive the attached browser and run the tool under test, including under a pseudo-terminal. Append findings and evidence to the bugs backlog as Step 7 permits. Execute [`quick-commit.md`](../workspace/quick-commit.md) to commit and push the result.
 
 ### Forbidden
 
-1. Editing tracked files other than `./product/backlog/bugs.md`. Restoring this run's incidental build changes is allowed; changing source, tests, specs, documentation, or configuration is not. The one missing `temp/` line in `.gitignore` belongs to the launch step, and this run may ship it without editing it.
+1. Editing tracked files other than `./product/backlog/bugs.md`. The one missing `temp/` line in `.gitignore` belongs to the launch task, and this run may ship it without editing it.
 2. Rewording, moving, or removing an existing backlog entry. Only append evidence. Never edit an entry under `## declined`.
 3. Installing anything outside the project's lockfile, including a browser or a pseudo-terminal library. Do not let install hooks download a browser.
 4. Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL. Never drive the human's live app or the Janissary installation that launched this tab.
 5. Testing any code other than the branch the workspace preparation left checked out, or changing which branch that is. Do not reset away local commits or discard someone else's changes.
-6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the workspace preparation task itself runs. Exercise the product itself.
+6. Running `npm run check`, the test suite, lint, `check-diff`, or other quality/analysis tooling, other than what the preparation and launch tasks themselves run. Exercise the product itself.
 7. Exercising behavior that depends on sandbox enforcement, external networks, remote hosts, credentials, or native host windows.
-8. Starting a web app on any address but `127.0.0.1`, or leaving one running that is bound wider. Never inspect a process or a socket to find out what an address is; read it from the command and the output.
+8. Starting a second app, on any address but `127.0.0.1`, or leaving one running that is bound wider. The app under test is the one Step 3 started.
 9. Filing a finding never observed at runtime, making more than 10 backlog changes, or fixing a bug.
 10. Proceeding while another run holds this project's lock, or removing a lock this run did not take.
 
 ## Recovery on every stop
 
-Record the branch and tested commit this run was handed, any `.gitignore` edit the launch step made, the path of this run's lock, and every process/page/context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
+Record the branch and tested commit this run was handed, the address, process identity, and stop command the launch task reported, any `.gitignore` edit it made, the path of this run's lock, and every page and context this run owns. Keep this information available until the final report; never print bearer browser endpoints or session tokens into the backlog or commit.
 
 - Release this run's lock on every stop, so no exit path leaves the project locked against the next run.
 - Leave the working tree as it is found. This run did not stash what was there, so it does not restore, switch, reset, or clean it; whatever the preparation task left is what the next run and the human inherit.
-- Before Step 4, a stop makes no tracked-file change of its own. After Step 4 begins, every stop, including a build/start failure or a lost browser, finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
+- Once the launch task has started something, every stop — a start failure, a lost browser, anything later — hands teardown back to it before this run reports, so nothing it started outlives the run. Before that, there is nothing to tear down.
+- After Step 4 begins, every stop finishes Steps 6–9 for any verified findings: research, file, tear down, and commit the permitted changes. Do not restart testing after a stop.
 - A failed push leaves the local commit in place and the tree as it stands. If a rebase cannot be resolved within the allowed files, abort that rebase and report the push failure.
 - Uncommitted work that was already in the tree is not this run's to remove, and Step 9 is where that is enforced. When a change cannot be attributed to this run, preserve it and report the obstruction; never resolve the uncertainty by discarding.
 
@@ -66,29 +67,23 @@ With no names, pick up to **five** specs by the date of the last commit touching
 
 Named specs may include skipped behavior; keep them in the report. For a partly environment-dependent spec, test its remaining behaviors and list each omitted behavior with a reason under `Not tested`.
 
-## Step 3 — Discover how this project runs
+## Step 3 — Launch the app
 
-Read the project's instructions in this order: `AGENTS.md` / `CLAUDE.md`, README, then the build tool's script list. For Node projects inspect `package.json` for `build`, `start`, `dev`, `serve`, or `preview`; use equivalent metadata for other toolchains. Determine how to build the checked-out code, which built entry to run, and how to point its state at scratch paths. An interpreted tool may need no build; record that deliberately. If no build-and-run recipe can be determined, release the lock and stop with that reason.
+Get the app up by executing the launch task, with `./temp/find-bugs/` as the scratch root. Read the project's own `ai/tasks/workspace/launch-application.md` and follow it when the project has one; otherwise read `$janissary/ai/tasks/workspace/launch-application.md` and follow that. The project's copy wins for the same reason the task picker offers it in preference to the built-in task at the same path. It discovers how this project builds and runs, insists the app can be kept off real user state and on `127.0.0.1`, creates the scratch state, builds, starts the app, and reports the command, the address, the process identity, and the stop command.
 
-Decide whether the app serves a web UI or is a tool with no web UI. Serve web apps on `127.0.0.1`, using the project's own local-only option. A web project under test must be startable with an explicit loopback address named in its own instructions — a host or bind flag, or a configuration key that defaults to one. If no such form can be determined, stop before starting anything and report the project as unable to be served locally: that is an environment limitation, not a start failure, so it is neither retried nor researched as a product defect. Tools are invoked directly from the scratch working directory, by a path to this workspace's built executable. Never substitute an installed release or a globally installed executable for the code under test.
+Keep everything it reports: the address is what Step 4 navigates to, the stop command is what Step 8 uses, and the scratch root is where this run's fixtures, drivers, and evidence go.
 
-Work out how to stop the process before starting it. Redirect its home and every configurable data/cache directory into `./temp/find-bugs/`; fixtures and seed commands must target that scratch state. If the app cannot be isolated from real user state, stop and report that environment limitation.
+Do not substitute an installed release or a globally installed executable for the code in this checkout, and never look up the address or credentials of an app the human is already running.
 
-## Step 4 — Create scratch state, build, and start
+### When the app will not start
 
-Run `git check-ignore -q temp/find-bugs`. Exit 0 means it is already ignored. If it is not ignored, append exactly one `temp/` line to the project's root `.gitignore`, creating the file if needed, and confirm the scratch path is now ignored. Change no other line. If an existing exception still exposes scratch files, stop through teardown and commit; do not rewrite ignore rules. This check keeps scratch output out of quick-commit's `git add -A`.
+The launch task retries a failed build or start once and then reports why. What that failure *means* is this task's call, because only this task knows what the specs promise. A port held by another process, a project directory another `janus` instance holds — the error reads `another janus instance is already running in this directory`, which is this task's own collision with a run holding the same directory and not a defect in the app — a sandbox denial, a missing system binary, unavailable credentials, a project that cannot be kept on loopback, or any other plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise the app failing to start is itself a divergence from what its spec says it does: research the cause and record one finding through Steps 6–7, quoting the promise that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee where none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
 
-If `./temp/find-bugs/` exists from an interrupted run, inspect it before reusing it. Stop only the processes that run started, using its recorded launch details and process identities; never kill by a broad process-name match or trust a recycled PID. For Janissary use `node bin/janus.mjs stop ./temp/find-bugs/project` before removing the old directory. If ownership cannot be established, stop and report rather than killing an unrelated process. Remove only the resolved project-local `./temp/find-bugs/` directory, never `temp/` or the workspace itself, and never follow a symlink outside the project.
+## Step 4 — Connect and keep it alive
 
-Create `./temp/find-bugs/home/` and `./temp/find-bugs/project/`. Put throwaway Playwright scripts, pseudo-terminal drivers, holder scripts, process records, logs, and evidence under `./temp/find-bugs/` too. Use absolute scratch paths when passing them to child processes so a changed working directory cannot redirect state elsewhere. Apply the scratch home through the child process's environment `HOME` key only; do not change the agent shell's `HOME` or use `HOME` as a scratch variable. Repository install and commit commands retain the user's normal identity and environment.
+For a web app, connect through the attached browser, create only this run's context and page, and navigate to the address Step 3 reported. Keep that connection and page alive throughout testing and root-cause research. A server that shuts down when its last client disconnects needs a persistent holder process, spawned and recorded the way [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) describes, so the app is still there when the next behavior is exercised.
 
-Build the prepared working tree using the recipe from Step 3. Check that `HEAD` still equals the tested commit before testing. Inspect the build's diff: restore incidental changes to tracked source or configuration before testing, but keep freshly generated runtime artifacts until teardown, restoring any tracked copies in Step 9. Start the freshly built app with scratch state, record its process identity and stop command, and confirm readiness from its output and an actual response. For a web app, confirm the loopback address Step 3 established: it must be named in the start command itself, and read it back from the startup output wherever the server prints its address. Establish it that way and never by inspecting the process or the socket — an unattended run cannot answer an approval prompt, so a check that needs one is a check that never runs. A start command that names no address, or names one that is not loopback, is stopped through teardown and reported; do not start it and decide afterwards. Set a bounded readiness timeout using the project's documented value, or 20 seconds if none is documented.
-
-For a web app, connect through the attached browser, create only this run's context/page, and navigate to the URL from this run's launch. Keep that connection and page alive throughout testing and root-cause research. A server that shuts down with its last client — as Janissary's does, about a second after the page disconnects — needs a persistent holder process, run and recorded the way the browser guideline describes. Start the app with the discovered serve command, or run a tool's fresh executable from the scratch project; do not connect to the browser just because Step 1 required its availability.
-
-### Build or start failures
-
-Retry a failed build or start **once**, stopping this run's failed process before retrying. If it still fails, research the cause. A port held by another process, a project directory another `janus` instance holds — the error reads `another janus instance is already running in this directory`, which is this task's own collision with a run holding the same directory and not a defect in the app — sandbox denial, missing system binary, unavailable credentials, or another plausible environment cause is not a backlog bug: report it under `Not filed` and stop testing. Otherwise record one researched startup finding through Steps 6–7, quoting the spec's promised behavior that cannot be reached, then finish Steps 8–10. Do not invent a spec guarantee when none is clear; record that ambiguity under `Noted` instead. An inability to start means the remaining behaviors are `Not tested`.
+For a tool, there is nothing to connect: Step 5 runs its commands from the scratch working directory. Do not connect to the browser just because Step 1 required its availability.
 
 ## Step 5 — Exercise the selected behavior
 
@@ -122,9 +117,9 @@ A match under `## ready`, `## development`, or `## deferred` receives only missi
 
 ## Step 8 — Tear down
 
-Stop every server, tool, driver, and holder this run started, including children, using the recorded ownership information. Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. For Janissary, stop the holder first and run `node bin/janus.mjs stop ./temp/find-bugs/project` as a backstop. When already stopped it prints `no running janus instance for <dir>`.
+Close only the pages and contexts this run opened, then disconnect; never close or kill the attached browser. Stop the holder from Step 4 first, so the app survives until nothing is still driving it.
 
-After processes have stopped, remove only the validated project-local `./temp/find-bugs/` directory and confirm it is gone, then release this run's lock. Keep the text needed for the report and commit before deleting captures and logs. If teardown cannot safely finish, report what remains and mark the run stopped; never claim successful cleanup or kill an unrelated process. Continue to ship the permitted tracked changes.
+Then hand teardown back to the launch task, with the process identity and stop command it reported. It stops what it started and removes the scratch root. If it cannot finish safely, report exactly what remains and mark the run stopped; never claim successful cleanup. Afterwards, release this run's lock. Keep the text needed for the report and commit before the scratch root goes, and continue to ship the permitted tracked changes.
 
 ## Step 9 — Commit and push
 
