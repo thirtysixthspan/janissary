@@ -6,7 +6,7 @@
 | `state` | Show agent state fields (truncated) |
 | `clear` | Clear the output log |
 | `quit` | Exit the application (asks for confirmation) |
-| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …). `exit` is an alias |
+| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `exit` is an alias |
 | `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `next` | Switch to the next tab |
 | `hist` | Open command history picker |
