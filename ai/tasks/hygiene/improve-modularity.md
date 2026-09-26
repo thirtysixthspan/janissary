@@ -35,14 +35,12 @@ Safe work is exactly this: **extract one cohesive group of code from a high-comp
 If doing the extraction would require any of the following, **go back to Step 3** and pick the next-best file instead. Never ask the user — just skip and move on.
 
 1. Changing the **public API** of a file other files depend on — i.e. you cannot keep every existing `import` working. (If you move an `export`ed symbol but **re-export it from the original file** so no other file changes, that is still safe.)
-2. Editing **more than 1 existing source file**, or changing import paths in more than 3 files (the new module file(s) you create do not count).
-3. Touching **`src/controller.ts`** (the biggest, riskiest file) — even though it has the highest score.
-4. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
-5. Touching **security, password/crypto, shell-execution, PTY/terminal, or network** code.
+2. Editing **more than 1 existing source file**.
+3. Editing **any test file** (`*.test.ts`, `*.test.tsx`).
 
 If every remaining candidate is blocked, report which files you considered and why each was blocked, and stop without changing any code.
 
-> You may edit **only** the one existing source file you picked, plus the **new module file(s)** you create to receive the extracted code. Never edit `fta.json`, `eslint.config.mjs`, `package.json`, `tsconfig.json`, or any other config or test file. Leave the `score_cap` in `fta.json` alone.
+> You may edit **only** the one existing source file you picked, plus the **new module file(s)** you create to receive the extracted code. 
 
 ---
 
@@ -98,13 +96,9 @@ It tells you the **file** (and, for complexity, the **function line**) that is c
 
 **A named or handed-over file skips this step's selection** — it is already chosen. Check it against the exclusions in 2 below, then go straight to Step 4.
 
-1. From the FTA table, list the worst `src/` files together with any that carry a `max-lines` or `cognitive-complexity` warning.
+1. From the FTA table, list the worst `src/` or `web/src/` files together with any that carry a `max-lines` or `cognitive-complexity` warning.
 2. **Cross out** any file that is:
    - a `*.test.ts` / `*.test.tsx` file,
-   - `src/main.ts`,
-   - `src/controller.ts` (needs-permission — only with the user's go-ahead),
-   - `src/pty.ts`, `src/shell.ts`, or any file whose main job is spawning processes, running a terminal, doing network
-   - under `web/src/` (only consider these if no `src/` candidate is left),
    - already small and simple (low score, comfortably under 200 lines).
 3. From what remains, pick the **one** file with the **highest FTA score** — that is the one most worth splitting. Prefer a file that is over (or near) the 200-line limit, since extraction there also clears a `max-lines` error.
 
@@ -124,20 +118,14 @@ Jot a one- or two-line plan: **which** group of code you will move, the **name o
 
 Check the plan against **What you may and may not do**:
 
-- If any of points 1–5 applies → go back to Step 3 and pick a different file.
+- If any of points 1-3 applies → go back to Step 3 and pick a different file.
 - Otherwise (all safe work) → go straight to Step 5 and make the change **now, on your own, without asking.**
 
 ---
 
 ## Step 5 — Make the change
 
-**First, back up the existing file you are about to edit**, so you can restore it exactly if anything goes wrong:
-
-```bash
-cp src/foo.ts src/foo.ts.bak
-```
-
-Then perform the extraction. Keep the diff focused — move the chosen group of code, and do not reformat or "tidy" unrelated lines.
+Perform the extraction. Keep the diff focused — move the chosen group of code, and do not reformat or "tidy" unrelated lines.
 
 ### Recipe — extract a cohesive group into a new module file
 
@@ -147,7 +135,7 @@ Then perform the extraction. Keep the diff focused — move the chosen group of 
 4. **In the original file**, delete the moved code and add an `import { … } from './foo-parsing.js';` for the symbols you now call.
 5. **Preserve the public API.** If any moved symbol was `export`ed and is imported by *other* files, **re-export it from the original file** (`export { thing } from './foo-parsing.js';`) so no other file has to change. If you cannot keep every existing import working without editing other files → STOP and ask (rule 1).
 6. Do **not** change behavior, call signatures, or what anything returns. Do **not** move code in a way that breaks ordering of side effects or shared module state.
-7. If you cannot find a clean, self-contained group to move like this, do **not** force it — restore your backup, go back to Step 3, and pick a different file (or report that no safe extraction was available).
+7. If you cannot find a clean, self-contained group to move like this, do **not** force it — restore the original code, go back to Step 3, and pick a different file (or report that no safe extraction was available).
 
 ### Style
 
@@ -172,8 +160,6 @@ Check each, in order:
 2. **Tests pass.** If a test now fails: try a quick, obvious fix in your source files (do **not** edit the test). If it does not pass quickly, **restore your backup** (`cp src/foo.ts.bak src/foo.ts`, and delete the new module file(s) you added) and report what blocked you. Never edit a test to make it pass.
 3. **Lint is no worse.** Look at the `✖ … problems (… errors, … warnings)` line again. **Errors must be 0** (if you were clearing a `max-lines` error, it should now be gone). **Warnings must be the same or fewer** than Step 1, never higher. If a new warning or error appeared — often a missing `.js` import extension, a now-unused import, or complexity that rode along into the new file — fix it in your source files. Never silence a warning with an `eslint-disable` comment.
 4. **Quality improved.** The original file's FTA score and line count should be **lower** than Step 1. The new module file should land at a reasonable score and stay under 200 lines. If the original's score did not drop, the extraction was too small to matter — restore the backup and pick a more substantial group (or a different file).
-
-When all three pass, **delete the backup file**: `rm src/foo.ts.bak`.
 
 ---
 
