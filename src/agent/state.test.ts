@@ -4,6 +4,7 @@ import {
   initAgentStateDirectory,
   ensureStateDirectory,
   agentStatePath,
+  isValidAgentName,
   loadAgentState,
   saveAgentState,
   clearStateDirectory,
@@ -37,6 +38,12 @@ describe('agent-state', () => {
     expect(() => agentStatePath('../../etc/passwd')).toThrow();
     expect(() => agentStatePath('../sibling')).toThrow();
     expect(() => agentStatePath('agent/sub')).toThrow();
+  });
+
+  it('isValidAgentName accepts a dotted label and rejects a separator-bearing one', () => {
+    expect(isValidAgentName('10.27.1.94')).toBe(true);
+    expect(isValidAgentName('agent/sub')).toBe(false);
+    expect(isValidAgentName('')).toBe(false);
   });
 
   it('agentStatePath accepts names with dots', () => {

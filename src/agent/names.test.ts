@@ -44,4 +44,41 @@ describe('loadAgentNames', () => {
 
     expect(agentNames).toEqual(defaultNames);
   });
+
+  // Loads `contents` as the override file and returns what the load wrote to stderr.
+  function loadOverride(contents: unknown): string {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'agent-names.json'), JSON.stringify(contents));
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    loadAgentNames(tmpDir);
+    const written = writeSpy.mock.calls.map(([chunk]) => String(chunk)).join('');
+    writeSpy.mockRestore();
+    return written;
+  }
+
+  it('lowercases a capitalized override so drawn names match lowercased labels', () => {
+    expect(loadOverride(['Alice', 'BOB'])).toBe('');
+    expect(agentNames).toEqual(['alice', 'bob']);
+  });
+
+  it('drops duplicate names, including ones that differ only in case', () => {
+    loadOverride(['zeynep', 'Zeynep', 'baris', 'zeynep']);
+    expect(agentNames).toEqual(['zeynep', 'baris']);
+  });
+
+  it.each([
+    ['a name containing "/"', ['zeynep', '../outside']],
+    ['a name of ".."', ['zeynep', '..']],
+    ['a name containing a space', ['zeynep', 'two words']],
+    ['a non-string entry', ['zeynep', 7]],
+    ['an empty list', []],
+    ['an object instead of a list', { names: ['zeynep'] }],
+    ['a bare string', 'zeynep'],
+  ])('falls back to the bundled list and warns when the override holds %s', (_case, contents) => {
+    expect(loadOverride(contents)).toContain(
+      '.janissary/agent-names.json is not a non-empty list of valid agent names — using the bundled name list',
+    );
+    expect(agentNames).toEqual(defaultNames);
+  });
 });

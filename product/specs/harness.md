@@ -785,7 +785,9 @@ against that harness's known model catalog; an unknown model is rejected with `U
 A project can supply its own `.janissary/harness-models.json` (a JSON object mapping harness name to
 a list of model ids) to replace the bundled catalog entirely for that project. If the file is
 missing, the bundled catalog is used; if it exists but isn't valid JSON, a warning is printed and
-the bundled catalog is used.
+the bundled catalog is used. A file that parses but isn't an object whose every value is a list of
+strings is treated the same way, with the warning `.janissary/harness-models.json is not an object of
+model-id lists — using the bundled catalog`.
 
 ### What the bundled catalog holds
 
