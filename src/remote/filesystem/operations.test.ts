@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor } from './filesystem-operations.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from './protocol.js';
+import { FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor } from './operations.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../protocol.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.

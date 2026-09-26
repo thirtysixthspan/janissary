@@ -1,5 +1,5 @@
-import { isRecord, stringValue } from './filesystem-argument-checks.js';
-import { isFilesystemOperation, operationDescriptor } from './filesystem-operations.js';
+import { isRecord, stringValue } from './filesystem/argument-checks.js';
+import { isFilesystemOperation, operationDescriptor } from './filesystem/operations.js';
 import { malformed, nonEmptyString, type DecodeResult } from './frame-decode-shared.js';
 
 function decodeRequest(record: Record<string, unknown>): DecodeResult {
