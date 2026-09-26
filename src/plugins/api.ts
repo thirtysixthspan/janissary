@@ -184,6 +184,10 @@ export type TabPluginActivationModule = {
 // imports it from the same module as everything else in the contract.
 export { defineIntents, type TabPluginIntentEntry } from './define-intents.js';
 
+// The dockable-list command and notify pair, for the same reason and on the same terms as the intent
+// table beside it: a plugin whose whole tab is one dockable list of records wrote both by hand.
+export { defineDockableList, type DockableListOptions } from './define-list-tab.js';
+
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 

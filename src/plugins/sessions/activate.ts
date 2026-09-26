@@ -1,6 +1,6 @@
 import {
+  defineDockableList,
   defineIntents,
-  parseDockArgument,
   type RemoteSessionView,
   type TabPluginActivation,
   type TabPluginIntentEntry,
@@ -21,7 +21,6 @@ import {
 // `sessions` focuses what is already there instead of opening a second list.
 const INSTANCE_KEY = 'sessions';
 const TAB_TITLE = 'sessions';
-const USAGE = 'Usage: sessions [left|right]';
 
 function toPayload(rows: readonly RemoteSessionView[]): SessionsPayload {
   const entries: SessionRow[] = rows.map((row) => ({
@@ -50,28 +49,19 @@ function isSessionsData(
 
 // `sessions` opens or focuses the list; `sessions left`/`sessions right` dock it into that sidebar;
 // bare `sessions` on a docked list undocks it back to the centre and makes it active, which is what
-// `dockTab(…, null)` means.
+// `dockTab(…, null)` means. See `defineDockableList` for what that pair of handlers does with the
+// argument and the topic.
 export function activate(): TabPluginActivation {
   return {
     isPayload: isSessionsPayload,
-    command: (argument, capabilities) => {
-      const dock = parseDockArgument(argument);
-      if (dock === undefined) return capabilities.rejectRequest(USAGE);
-      const data = capabilities.topicData('sessions');
-      if (!isSessionsData(data)) return capabilities.reportFailure('invalid sessions topic data');
-      capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
-        title: TAB_TITLE,
-        payload: toPayload(data),
-      }));
-      capabilities.dockTab(INSTANCE_KEY, dock);
-    },
     // The rows change with nothing in flight — a session is detached elsewhere, a peer's attach
     // finally answers — so the host speaks first and the list redraws from the slice the topic hands
-    // it. No title is returned: the name in the tab strip has nothing to do with what the list holds.
-    notify: (event, capabilities) => {
-      if (event.topic !== 'sessions') return;
-      capabilities.updateTab(INSTANCE_KEY, () => ({ payload: toPayload(event.data) }));
-    },
+    // it. No title is sent with the update: the name in the tab strip has nothing to do with what the
+    // list holds.
+    ...defineDockableList({
+      topic: 'sessions', instanceKey: INSTANCE_KEY, title: TAB_TITLE,
+      isData: isSessionsData, toPayload,
+    }),
     intent: defineIntents('sessions', isSessionsPayload, {
       refresh: {
         payload: isEmptyIntent,
