@@ -103,6 +103,15 @@ undo history remain in the live editor buffer, and the next save writes that con
 path. Once the rename commits, keyboard focus returns to the editor buffer so the user can keep
 typing immediately, without needing to click back into it.
 
+A rename never moves the file out of its folder and never replaces another file, matching the file
+navigator's rename. A name containing a path separator, or a name of `.` or `..`, is refused with
+`Could not rename <old> to <new>. The name contains a path separator; enter a name without folders.`
+A name already taken in the same folder is refused with `Could not rename <old> to <new>. The
+destination already exists; choose another name.`, and this applies to a not-yet-saved new-file
+tab too, since its first save would otherwise write over the existing file. A case-only change of
+the file's own name is not a clash. Either refusal is posted as a file-operation notification, and
+the tab label, the file name, the path, and the file on disk all stay as they were.
+
 A new-file tab starts its own rename session the moment it opens: the file's name — `untitled.md`,
 or the next free name on a collision — is highlighted with keyboard focus directly in the metadata
 row's file-name display, so the default can be typed over without touching the tab label. The edit

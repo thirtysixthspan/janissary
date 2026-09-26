@@ -20,6 +20,7 @@ export const SOURCE_UNAVAILABLE_REASON = 'The source is unavailable; refresh the
 export const DUPLICATE_NAME_REASON = 'Another selected item has the same name; move it separately or rename one item first';
 export const DESCENDANT_DESTINATION_REASON = 'A folder cannot be moved inside itself; choose another destination';
 export const INVALID_NAME_REASON = 'The name contains a path separator; enter a name without folders';
+export const NAME_TAKEN_REASON = 'The destination already exists; choose another name';
 
 export function fileOperationReason(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {

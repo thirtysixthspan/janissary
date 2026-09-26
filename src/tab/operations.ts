@@ -3,6 +3,7 @@ import type { AgentState } from '../agent/types.js';
 import type { Managers } from '../managers.js';
 import { TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
+import { notify } from '../notifications/index.js';
 import { closeTabOp } from './close.js';
 import { renameTabOp } from './rename.js';
 import { applyDock } from './dock.js';
@@ -113,7 +114,9 @@ export function closeTab(port: TabOperationsPort, index: number): void {
 }
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): void {
-  renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  const label = port.tabs[index]?.label;
+  if (refusal && label) notify(port.managerServices, 'file-operation', label, refusal);
 }
 
 export function toggleCollapse(port: TabOperationsPort): void {

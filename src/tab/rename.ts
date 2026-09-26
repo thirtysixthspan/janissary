@@ -5,7 +5,8 @@ import { renameEditorTab } from './rename-editor.js';
 
 // Resolves TabManager.renameTab: editor tabs delegate to renameEditorTab (which also renames
 // the file on disk); plain tabs just trim/assign (or clear, if the trimmed value matches the
-// tab's label) a display title. Both branches persist and emit `state:dirty`.
+// tab's label) a display title. Both branches persist and emit `state:dirty`. A refused editor
+// rename persists nothing, still emits `state:dirty`, and returns the refusal text.
 export function renameTabOp(
   tabs: Tab[],
   index: number,
@@ -15,18 +16,19 @@ export function renameTabOp(
   watchEditor: (label: string, filePath: string) => void,
   persist: (state: AgentState) => void,
   buildAgentState: (tab: Tab) => AgentState,
-): void {
+): string | undefined {
   const tab = tabs[index];
-  if (!tab) return;
+  if (!tab) return undefined;
   if (tab.editor) {
-    renameEditorTab(tab, title, maxLength, replaceFile, watchEditor);
-    persist(buildAgentState(tab));
+    const refusal = renameEditorTab(tab, title, maxLength, replaceFile, watchEditor);
+    if (!refusal) persist(buildAgentState(tab));
     messageBus.emit('state', { type: 'dirty' });
-    return;
+    return refusal;
   }
   const trimmed = title.trim().slice(0, maxLength);
   if (trimmed && trimmed !== tab.label) tab.title = trimmed;
   else delete tab.title;
   persist(buildAgentState(tab));
   messageBus.emit('state', { type: 'dirty' });
+  return undefined;
 }
