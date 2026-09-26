@@ -3,6 +3,7 @@ import {
   browserIsListening, child, e2eServerMocks, guardCall, guardClose, holdBrowserPort, internalPort,
   resetE2EServerFixture, startLazy,
 } from './e2e-server-test-fixture.js';
+import { RESTART_LIMIT } from './e2e-server.js';
 import { E2EClientRefusal } from './e2e-refusal.js';
 
 // The connect-triggered browser. What this suite pins is that a `-b` tab costs nothing until the
@@ -149,31 +150,48 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
   it('refuses a further connect once the same failure has happened enough times', async () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
     const { onGone } = startLazy();
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
       await expect(connect()).rejects.toThrow('spawn refused');
     }
-    expect(mocks.spawn).toHaveBeenCalledTimes(3);
+    expect(mocks.spawn).toHaveBeenCalledTimes(RESTART_LIMIT);
 
     await expect(connect()).rejects.toThrow(REFUSED);
     // The refusal spends nothing: no scratch allocated, no child forked, and the endpoint the user
     // still holds is still being served.
-    expect(mocks.spawn).toHaveBeenCalledTimes(3);
-    expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(3);
+    expect(mocks.spawn).toHaveBeenCalledTimes(RESTART_LIMIT);
+    expect(mocks.allocateBrowserScratch).toHaveBeenCalledTimes(RESTART_LIMIT);
     expect(guardClose).not.toHaveBeenCalled();
-    expect(onGone).toHaveBeenCalledTimes(4);
+    expect(onGone).toHaveBeenCalledTimes(RESTART_LIMIT + 1);
+    expect(onGone).toHaveBeenLastCalledWith(REFUSED, undefined);
+  });
+
+  // The one place the budget is written out rather than read, because the rest of this block is about
+  // what happens at the threshold and would pass at any of them. A hundred failed launches in a row is
+  // what a tab is given, and the hundred-and-first is the refusal: an unlucky run of launches on the
+  // host costs a tab its browser only once the browser is never going to start.
+  it('gives this tab a hundred browsers before the budget runs out', async () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    const { onGone } = startLazy();
+    for (let browser = 1; browser <= 100; browser += 1) {
+      await expect(connect()).rejects.toThrow('spawn refused');
+      expect(mocks.spawn).toHaveBeenCalledTimes(browser);
+    }
+
+    await expect(connect()).rejects.toThrow(REFUSED);
+    expect(mocks.spawn).toHaveBeenCalledTimes(100);
     expect(onGone).toHaveBeenLastCalledWith(REFUSED, undefined);
   });
 
   it('counts a browser that dies the moment it is asked for', async () => {
     const { onGone } = startLazy();
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
       await connect();
       child.handlers.get('exit')?.(1, null);
     }
     await expect(connect()).rejects.toThrow(REFUSED);
-    expect(mocks.spawn).toHaveBeenCalledTimes(3);
-    // Each of those was reported as its own death, and the refusal is the fourth and last thing said.
-    expect(onGone).toHaveBeenCalledTimes(4);
+    expect(mocks.spawn).toHaveBeenCalledTimes(RESTART_LIMIT);
+    // Each of those was reported as its own death, and the refusal is the last thing said.
+    expect(onGone).toHaveBeenCalledTimes(RESTART_LIMIT + 1);
   });
 
   // The one that keeps a browser which crashed once after a long session from looking like one that
@@ -186,11 +204,11 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
       vi.advanceTimersByTime(30_000);
       child.handlers.get('exit')?.(1, null);
 
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
         await connect();
         child.handlers.get('exit')?.(1, null);
       }
-      expect(mocks.spawn).toHaveBeenCalledTimes(4);
+      expect(mocks.spawn).toHaveBeenCalledTimes(RESTART_LIMIT + 1);
       await expect(connect()).rejects.toThrow(REFUSED);
     } finally {
       vi.useRealTimers();
@@ -204,16 +222,16 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
     try {
       mocks.probeTimesOut = true;
       startLazy();
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
         const timedOut = expect(connect()).rejects.toThrow('did not start listening in time');
         await vi.advanceTimersByTimeAsync(30_000);
         await timedOut;
       }
-      // Advanced once more so a fourth launch, had one been started, ends as a mismatch, not a hang.
+      // Advanced once more so a further launch, had one been started, ends as a mismatch, not a hang.
       const refused = expect(connect()).rejects.toThrow(REFUSED);
       await vi.advanceTimersByTimeAsync(30_000);
       await refused;
-      expect(mocks.spawn).toHaveBeenCalledTimes(3);
+      expect(mocks.spawn).toHaveBeenCalledTimes(RESTART_LIMIT);
     } finally {
       vi.useRealTimers();
     }
@@ -224,7 +242,7 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
   it('refuses as a client refusal, so the guard hands the agent the phrase itself', async () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
     startLazy();
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
       await expect(connect()).rejects.not.toBeInstanceOf(E2EClientRefusal);
     }
     const refusal = connect();
@@ -235,12 +253,12 @@ describe('startLazyE2EBrowserServer when a browser will not stay up', () => {
   it('says the budget is spent once, however many connects arrive after it', async () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
     const { onGone } = startLazy();
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < RESTART_LIMIT; attempt += 1) {
       try { await connect(); } catch { /* the failure being counted */ }
     }
     await expect(connect()).rejects.toThrow(REFUSED);
     await expect(connect()).rejects.toThrow(REFUSED);
-    expect(onGone).toHaveBeenCalledTimes(4);
+    expect(onGone).toHaveBeenCalledTimes(RESTART_LIMIT + 1);
   });
 });
 

@@ -275,10 +275,13 @@ That restart is bounded, because a browser that will not start is a loop otherwi
 in a failure — a spawn that is refused, a child that dies before it is listening, a launch that never
 starts listening in time — counts against the tab, as does a browser that dies within thirty seconds
 of coming up; a browser that was up for longer than that is treated as one that ran, and the count
-starts again. After three such starts the tab is
+starts again. After a hundred such starts the tab is
 given no further browser: the next connect is closed with a reason saying the browser will not be
 restarted, one last report says so on the notifications line and the band, and the guard keeps
-listening, so the tab keeps running and keeps its endpoint. One failure is never the end of it.
+listening, so the tab keeps running and keeps its endpoint. The bound sits well above what a bad run of
+launches on a busy host produces, so ordinary flakiness costs a tab nothing: a tab that has failed a
+hundred times in a row is not one that would have been given a browser at the hundred-and-first
+either. One failure is never the end of it.
 
 Handing an agent a browser endpoint would be a way out of the sandbox unless something stopped it,
 so the browser is contained twice. The endpoint the agent receives belongs to a guard that inspects
