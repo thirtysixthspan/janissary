@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { mountedPickerOverlayProps } from './picker-overlay-props';
-import { buildPickerOverlayView } from './picker-overlay-view';
-import { pickerStateFixture } from './picker-state-test-fixture';
+import { mountedPickerOverlayProps } from './overlay-props';
+import { buildPickerOverlayView } from './overlay-view';
+import { pickerStateFixture } from './state-test-fixture';
 
 const state = pickerStateFixture();
 const view = buildPickerOverlayView(state);

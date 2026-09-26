@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildPickerKeyBindings } from './picker-key-bindings';
-import { buildOverlayOpenState, OVERLAYS } from './overlay-registry';
-import { pickerStateFixture } from './picker-state-test-fixture';
+import { buildPickerKeyBindings } from './key-bindings';
+import { buildOverlayOpenState, OVERLAYS } from '../overlay-registry';
+import { pickerStateFixture } from './state-test-fixture';
 
 const state = pickerStateFixture();
 const keys = buildPickerKeyBindings(state);

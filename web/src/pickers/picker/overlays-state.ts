@@ -1,14 +1,14 @@
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { OverlayOpenState } from './overlay-registry';
-import type { useRouteChooser } from './useRouteChooser';
-import type { useThemePicker } from './useThemePicker';
-import type { useAppThemePicker } from './useAppThemePicker';
-import type { useHistPicker } from './useHistPicker';
-import type { useTabNav } from './useTabNav';
-import type { useQuickOpen } from './useQuickOpen';
-import type { useQueuePicker } from './useQueuePicker';
-import type { usePopulatePickers } from './usePopulatePickers';
+import type { OverlayOpenState } from '../overlay-registry';
+import type { useRouteChooser } from '../useRouteChooser';
+import type { useThemePicker } from '../useThemePicker';
+import type { useAppThemePicker } from '../useAppThemePicker';
+import type { useHistPicker } from '../useHistPicker';
+import type { useTabNav } from '../useTabNav';
+import type { useQuickOpen } from '../useQuickOpen';
+import type { useQueuePicker } from '../useQueuePicker';
+import type { usePopulatePickers } from '../usePopulatePickers';
 
 // Everything `usePickerOverlays` owns, in one type — the union of what the nine overlay hooks return
 // plus the few values the hook derives for them. It is written as an intersection of `ReturnType`s

@@ -11,7 +11,7 @@ import { APP_THEMES } from '@shared/app-themes';
 import { AppThemePicker } from './AppThemePicker';
 import { QuickOpen } from './QuickOpen';
 import { firstOpenOverlay } from './overlay-registry';
-import type { PickerOverlayView } from './picker-overlay-view';
+import type { PickerOverlayView } from './picker/overlay-view';
 
 // The mutually-exclusive stack of modal overlays that can float above the command bar. Which one
 // wins is not decided here: `firstOpenOverlay` answers that from the one ordered registry the

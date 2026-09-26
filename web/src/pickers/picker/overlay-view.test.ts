@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildPickerOverlayView } from './picker-overlay-view';
-import { pickerStateFixture } from './picker-state-test-fixture';
+import { buildPickerOverlayView } from './overlay-view';
+import { pickerStateFixture } from './state-test-fixture';
 
 const state = pickerStateFixture();
 const view = buildPickerOverlayView(state);

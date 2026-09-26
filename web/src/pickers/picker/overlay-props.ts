@@ -1,5 +1,5 @@
-import type { VisibleTaskRow } from './task-picker-keys';
-import type { PickerOverlayView } from './picker-overlay-view';
+import type { VisibleTaskRow } from '../task-picker-keys';
+import type { PickerOverlayView } from './overlay-view';
 
 // Ctrl+A/Ctrl+G task-picker and tab-navigator overlay props, shared by every component that
 // renders those two overlays on top of a mounted tab body.

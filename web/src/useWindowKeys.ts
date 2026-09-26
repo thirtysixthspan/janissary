@@ -6,7 +6,7 @@ import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey
 import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
 import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
-import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker-key-bindings';
+import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
 // Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
 // picker state builds it, rather than being restated here and again at the call site. What is left
