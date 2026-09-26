@@ -2,6 +2,7 @@ import type { WorkspaceManager } from '../workspace/manager.js';
 import { createTranscriptSource } from '../harness/transcript/sources.js';
 import type { TranscriptSource } from '../harness/transcript/source.js';
 import { decodeFrame, encodeFrame, encodeHandshake, type ClientFrame, type ServerFrame } from './protocol.js';
+import { drainFrames } from './frame-lines.js';
 import type { RootOfferRun } from './serve-root-offer.js';
 import { rootForProvision, rootForRelay, settleRoot, startPeer, type SettledRoot } from './serve-root-settle.js';
 import type { RemoteProcesses } from './serve-processes.js';
@@ -78,14 +79,7 @@ export class RemoteServer {
   // two reads is buffered until it is complete.
   receive(chunk: string): void {
     if (this.relay) { this.relay.write(chunk); return; }
-    this.buffer += chunk;
-    let newline = this.buffer.indexOf('\n');
-    while (newline !== -1) {
-      const line = this.buffer.slice(0, newline).trim();
-      this.buffer = this.buffer.slice(newline + 1);
-      if (line) this.dispatch(line);
-      newline = this.buffer.indexOf('\n');
-    }
+    this.buffer = drainFrames(this.buffer + chunk, (line) => this.dispatch(line));
   }
 
   // Kill every process this server started and remove its workspace clone, then exit. A pending
