@@ -4,17 +4,6 @@
 
 ## development
 
-* Resolve the tab named by `close <name>` and `exit <name>` through the shared label-or-alias lookup, so the one remaining user-typed tab reference agrees with every other command.
-
-Existing Debt: `byLabelOrAlias` was introduced so every user-typed tab name resolves one way, but the `close` command still carries its own inline predicate that compares the typed name against labels only, so it is the one tab-addressing command that ignores a `rename` alias. Severity: 3/10
-
-Existing Risk: 4/10 - The user guide's tabs page explicitly lists `close`/`exit` among the commands that accept an alias, so a user who renamed a tab and types `close <alias>` gets `No tab named "…"` from the very command the documentation promises will work, and the next lookup rule change (alias collision handling, say) will again miss this copy.
-
-Proposal Risk: 1/10 - `close` inherits the shared first-match rule, so a tab whose alias equals an earlier tab's label closes whichever the strip holds first, exactly as `send` and `queue` already behave; a new colocated test would show it if that ordering surprised anyone.
-
-Proposal: In `src/commands/close.ts`, replace the inline `managers.tab.tabs.findIndex((t) => t.label.toLowerCase() === parsed.name.toLowerCase())` with `byLabelOrAlias(managers.tab.tabs, parsed.name)` from `src/tab/lookup.ts`, then close it with `managers.tab.closeTab(managers.tab.findIndex(target.label))`, keeping the current `No tab named "<name>".` message (it already matches the wording `resolveTarget` in `src/commands/resolve-target.ts` uses, so calling `resolveTarget` with an `append` closure is an equally valid and shorter shape). Update the comment above `byLabelOrAlias` in `src/tab/lookup.ts`, which lists the commands that agree, to include `close`. `src/commands/close.test.ts` today covers only `match` and `parseClose`; add `run` cases with a stub `managers.tab` (the same shape `src/commands/send.test.ts` and `src/commands/queue.test.ts` use) proving that `close <alias>` and a differently-cased label close the right index, and that an unknown name appends the not-found line without closing anything. `documentation/user-documentation/getting-started/tabs.md` already describes the fixed behavior and needs no edit; add one sentence to the matching tab-closing paragraph in `product/specs/` (search for `close <label>`, e.g. `product/specs/sidebars.md`) only if it states the lookup rule.
-
-
 * Define the window-level tab-switch and picker chords once and have the harness and shell terminal key filters ask that definition, instead of each terminal restating which keystrokes belong to the window.
 
 Existing Debt: The window key handler owns the tab-switch chords (Shift+←/→, Cmd+Shift+[/] and their shifted `{`/`}` forms) and the Ctrl+A/Ctrl+G picker openers, but the full-tab harness and shell terminals decide which keys to let bubble by re-describing those same chords in their own hand-written predicates, so the set of "keys the window owns" exists in three copies with nothing tying them together. Severity: 3/10
