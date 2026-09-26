@@ -1,9 +1,10 @@
 import React, { useRef } from 'react';
-import type { CompletionResult, TabView } from '@shared/protocol';
+import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { Transcript } from '../shared/transcript/Transcript';
 import { CommandInput } from './command-input/CommandInput';
+import { requestCompletion } from './command-input/command-completion';
 import type { CommandDrafts } from './command-input/useCommandDrafts';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
@@ -72,10 +73,7 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
         ghostHistory={[]}
         onSubmit={(text) => client.send({ method: 'command', params: { text } })}
         inputRef={inputReference}
-        complete={async (text, cursor) => {
-          const result = await client.request<CompletionResult>({ method: 'complete', params: { text, cursor } });
-          return result.ok ? result.value : undefined;
-        }}
+        complete={requestCompletion(client)}
         pickerOpen={false}
         busy={tab.busy}
         autoFocus={false}

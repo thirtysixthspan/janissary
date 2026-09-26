@@ -1,5 +1,19 @@
 import type { RefObject } from 'react';
 import type { CompletionResult } from '@shared/protocol';
+import type { JanusClient } from '../../ws';
+
+// The request side of Tab completion, for a command bar that asks the server rather than completing
+// locally — the same completer for the focused pane and for an unfocused tab body. A socket that is
+// not open, or a reply carrying an error, comes back as no answer; `handleTabCompletion` then leaves
+// the line exactly as the user typed it.
+export function requestCompletion(
+  client: JanusClient,
+): (text: string, cursor: number) => Promise<CompletionResult | undefined> {
+  return async (text, cursor) => {
+    const result = await client.request<CompletionResult>({ method: 'complete', params: { text, cursor } });
+    return result.ok ? result.value : undefined;
+  };
+}
 
 export function handleTabCompletion(
   value: string,
