@@ -8,6 +8,7 @@ import { getProjectTokens } from '../project/tokens.js';
 import type { RemoteAddress } from './address.js';
 import { Attach, terminateRemoteProcess, type RemoteEntry } from './attach.js';
 import { RemoteChannel } from './channel.js';
+import { deferredChannelTransport } from './channel-types.js';
 import {
   cloneAnswerEcho, cloneKeyAnswer, clonePromptText, cloningLine, type CloneOfferText,
 } from './clone-prompt.js';
@@ -81,11 +82,7 @@ export function createRemoteEntry({
   };
 
   const channel = new RemoteChannel(
-    {
-      get id() { return deferred.session?.id ?? ''; },
-      write: (data) => deferred.session?.write(data),
-      kill: () => deferred.session?.kill(),
-    },
+    deferredChannelTransport(deferred),
     {
       onTerminalData: terminal,
       onAttached: () => {

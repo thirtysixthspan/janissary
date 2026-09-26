@@ -18,6 +18,20 @@ export type ChannelTransport = {
   kill: () => void;
 };
 
+// The transport a `RemoteChannel` is built over before its PTY exists. `spawnTransport` hands the
+// session back synchronously, but the channel has to be constructed *first* — the spawn's `onData`
+// and `onExit` callbacks need something to call — so the channel is built over this holder and the
+// spawn fills it in on the next line. What a caller sees in that window is an empty id and dropped
+// writes, which is all the channel can do with a transport that is not there: it reads `id` only
+// after the handshake, and a write before then is a keystroke for a ssh prompt that has no PTY yet.
+export function deferredChannelTransport(session: { session?: ChannelTransport }): ChannelTransport {
+  return {
+    get id() { return session.session?.id ?? ''; },
+    write: (data) => session.session?.write(data),
+    kill: () => session.session?.kill(),
+  };
+}
+
 export type NavigatorListener = {
   onReply: (frame: Extract<ServerFrame, { type: 'filesystem-reply' }>) => void;
   onEvent: (path: string) => void;
