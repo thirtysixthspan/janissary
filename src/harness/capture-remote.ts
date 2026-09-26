@@ -1,4 +1,5 @@
 import { RemoteChannel } from '../remote/channel.js';
+import { deferredChannelTransport } from '../remote/channel-types.js';
 import { provisionOrigin, remoteCaptureCommand } from '../remote/entry-factory.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { PtySession } from '../pty.js';
@@ -39,11 +40,7 @@ export function queryParkedCapture(
       } else if (terminate) deferred.session?.kill();
       resolve(value);
     };
-    const channel: RemoteChannel = new RemoteChannel({
-      get id() { return deferred.session?.id ?? ''; },
-      write: (data) => deferred.session?.write(data),
-      kill: () => deferred.session?.kill(),
-    }, {
+    const channel: RemoteChannel = new RemoteChannel(deferredChannelTransport(deferred), {
       onTerminalData: (data) => { terminal += data; },
       onAttached: () => {
         void channel.requestCapture(processId, record.session, provisionOrigin(managers).origin).then(finish);
