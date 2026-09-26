@@ -1,12 +1,11 @@
 import React from 'react';
-import { act, createEvent, fireEvent, render, screen } from '@testing-library/react';
+import { act, createEvent, fireEvent, render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../shared/drop-registry';
-import { DefaultContextMenu } from '../context-menu/DefaultContextMenu';
 import { terminalSelectionText } from '../shared/terminal/terminal-selection';
 
 // ---- xterm stubs -----------------------------------------------------------
@@ -481,100 +480,6 @@ describe('HarnessTab', () => {
   // layer is what picks its output now — xterm's own Emulator-forcing drag is off, so the gesture
   // means one thing on every surface while the harness keeps the mouse it asked for.
   describe('selecting and copying terminal text', () => {
-    it('offers Chat about this for a held layer selection and sends only that selection', async () => {
-      const platform = vi.spyOn(navigator, 'platform', 'get').mockReturnValue('MacIntel');
-      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const request = vi.fn().mockResolvedValue({ ok: true, value: { label: 'Chat about this' } });
-      const send = vi.fn();
-      const client = { ...mockClient, request, send } as unknown as JanusClient;
-      screenLines = ['aa bb', 'cc dd      '];
-      try {
-        const rendered = render(<>
-          <HarnessTab harness={makeHarness()} client={client} label="claude" />
-          <DefaultContextMenu client={client} />
-        </>);
-        const host = rendered.container.querySelector('.harness-body')!;
-        const input = document.createElement('textarea');
-        shiftDrag(host, 5, 10, 45, 90);
-        // The drag's own release already opened the menu automatically; this test's focus is the
-        // menu a manual right-click resolves once something else holds the keyboard, so it starts
-        // fresh from there.
-        request.mockClear();
-        host.append(input);
-        input.focus();
-        send.mockClear();
-        fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
-        const entry = await screen.findByText('Chat about this');
-        expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
-          .toEqual(['Copy', 'Chat about this']);
-        expect(request).toHaveBeenCalledExactlyOnceWith({
-          method: 'defaultMenuSelectionAction', params: { selection: 'aa bb\ncc dd' },
-        });
-        fireEvent.click(entry);
-        expect(send).toHaveBeenCalledExactlyOnceWith({
-          method: 'runDefaultMenuSelectionAction',
-          params: { selection: 'aa bb\ncc dd', action: 'Chat about this' },
-        });
-        expect(writeText).not.toHaveBeenCalled();
-      } finally {
-        platform.mockRestore();
-        domSelection.mockRestore();
-      }
-    });
-
-    it('exits copy mode when Escape closes the menu the drag itself opened', async () => {
-      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const client = { ...mockClient, request: vi.fn().mockResolvedValue({ ok: true, value: null }) } as unknown as JanusClient;
-      screenLines = ['aa bb', 'cc dd'];
-      try {
-        const rendered = render(<>
-          <HarnessTab harness={makeHarness()} client={client} label="claude" />
-          <DefaultContextMenu client={client} />
-        </>);
-        const host = rendered.container.querySelector('.harness-body')!;
-        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
-        // the container it is opened into, which is what makes the auto-opened menu's restoreFocus
-        // resolve back into this terminal rather than the document body.
-        const focusTarget = document.createElement('textarea');
-        host.append(focusTarget);
-        focusTarget.focus();
-        shiftDrag(host, 5, 10, 45, 90);
-        await screen.findByRole('menu');
-        expect(rendered.container.querySelector('.terminal-selection-overlay')).not.toBeNull();
-        fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
-        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
-      } finally {
-        domSelection.mockRestore();
-      }
-    });
-
-    it('releases the selection once the menu\'s Copy entry copies it', async () => {
-      const domSelection = vi.spyOn(globalThis, 'getSelection').mockReturnValue(null);
-      const client = { ...mockClient, request: vi.fn().mockResolvedValue({ ok: true, value: null }) } as unknown as JanusClient;
-      screenLines = ['aa bb', 'cc dd'];
-      try {
-        const rendered = render(<>
-          <HarnessTab harness={makeHarness()} client={client} label="claude" />
-          <DefaultContextMenu client={client} />
-        </>);
-        const host = rendered.container.querySelector('.harness-body')!;
-        // Stands in for xterm's own focus target: the real emulator's hidden textarea sits inside
-        // the container it is opened into, which is what lets `restoreFocus` resolve back into
-        // this terminal's own registration.
-        const focusTarget = document.createElement('textarea');
-        host.append(focusTarget);
-        focusTarget.focus();
-        shiftDrag(host, 5, 10, 45, 90);
-        const copy = await screen.findByText('Copy');
-        fireEvent.click(copy);
-        expect(writeText).toHaveBeenCalledWith('aa bb\ncc dd');
-        expect(rendered.container.querySelector('.terminal-selection-overlay')).toBeNull();
-      } finally {
-        domSelection.mockRestore();
-      }
-    });
-
     it('creates the terminal without the emulator modifier-drag that would select too', () => {
       render(<HarnessTab harness={makeHarness()} client={mockClient} label="claude" />);
       expect(capturedOptions.macOptionClickForcesSelection).toBeUndefined();

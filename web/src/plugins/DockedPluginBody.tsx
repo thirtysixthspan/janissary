@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { DockCycleHeader } from '../DockCycleHeader';
+import { DockCycleHeader } from '../shared/DockCycleHeader';
 import { PluginBody } from './PluginBody';
 import { DockedActionsContext } from './PluginActionsHeader';
 

@@ -48,6 +48,33 @@ describe('client feature boundaries', () => {
     expect(messages[0]?.message).toContain('not import a sibling feature');
   });
 
+  it('includes the plugin host in feature isolation', async () => {
+    const messages = await boundaryMessages(
+      "import { HarnessTab } from '../harness/HarnessTab'; void HarnessTab;",
+      'web/src/plugins/PluginTabLayer.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('not import a sibling feature');
+  });
+
+  it('rejects a feature importing the default context menu', async () => {
+    const messages = await boundaryMessages(
+      "import { DefaultContextMenu } from '../context-menu/DefaultContextMenu'; void DefaultContextMenu;",
+      'web/src/harness/HarnessTab.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('not import a sibling feature');
+  });
+
+  it('rejects a shared module importing the toast stack', async () => {
+    const messages = await boundaryMessages(
+      "import { ToastStack } from '../toasts/ToastStack'; void ToastStack;",
+      'web/src/shared/DockCycleHeader.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('Shared modules must not import a feature');
+  });
+
   it('allows an import within the same feature', async () => {
     const messages = await boundaryMessages(
       "import { harnessLaunchCommand } from './harness-launch-command'; void harnessLaunchCommand;",

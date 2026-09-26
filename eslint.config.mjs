@@ -12,13 +12,16 @@ import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
 
 const clientFeatureDirectories = [
   'agent-tabs',
+  'context-menu',
   'editor',
   'file-navigator',
   'harness',
   'pickers',
+  'plugins',
   'QuitDialog',
   'SaveChangesDialog',
   'ScheduleLaunchDialog',
+  'toasts',
 ];
 const clientFeatureZones = [
   ...clientFeatureDirectories.flatMap((target) => clientFeatureDirectories
