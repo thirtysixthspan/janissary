@@ -15,6 +15,24 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// `logDirectory` is module state with no reset, so these have to run before anything initializes
+// it. Vitest runs a file's blocks in declaration order, which is what makes that true here.
+describe('browser-log before a directory is initialized', () => {
+  // Without this guard both calls would resolve against the process's working directory, so a
+  // browser's post-mortem would land somewhere nobody ever looks and the sweep would delete a
+  // `browser-logs` directory out of whatever directory the app happened to start in.
+  it('writeBrowserLog answers no file and writes nothing', () => {
+    expect(writeBrowserLog('claude', Date.UTC(2026, 0, 1), 'text')).toBeUndefined();
+    expect(mockFs.writeFileSync).not.toHaveBeenCalled();
+    expect(mockFs.mkdirSync).not.toHaveBeenCalled();
+  });
+
+  it('clearBrowserLogDirectory removes nothing', () => {
+    clearBrowserLogDirectory();
+    expect(mockFs.rmSync).not.toHaveBeenCalled();
+  });
+});
+
 describe('browser-log', () => {
   it('ensureBrowserLogDirectory creates the browser-logs directory recursively', () => {
     mockFs.mkdirSync.mockImplementation(() => {});
