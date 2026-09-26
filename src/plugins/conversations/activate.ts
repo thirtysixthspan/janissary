@@ -113,6 +113,12 @@ function runIntent(
   return runConversationIntent(intent, value, tab.conversation.id, capabilities, tabs);
 }
 
+// The intents that carry no payload, and the one topic action each forwards once its payload is
+// confirmed empty.
+const EMPTY_INTENT_ACTIONS = new Map<string, 'loadOlder' | 'cancel' | 'openFiles' | 'launchAgent'>([
+  ['load-older', 'loadOlder'], ['cancel', 'cancel'], ['open-files', 'openFiles'], ['launch-agent', 'launchAgent'],
+]);
+
 function runConversationIntent(
   intent: string,
   value: unknown,
@@ -120,30 +126,19 @@ function runConversationIntent(
   capabilities: TabPluginServerCapabilities,
   tabs: ConversationTabs,
 ): null | never {
+  const emptyAction = EMPTY_INTENT_ACTIONS.get(intent);
+  if (emptyAction) {
+    if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
+    capabilities.topicAction({ topic: 'conversations', action: emptyAction, id });
+    return null;
+  }
   switch (intent) {
-    case 'load-older': {
-      if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid load-older payload');
-      capabilities.topicAction({ topic: 'conversations', action: 'loadOlder', id });
-      return null;
-    }
     case 'send': {
       if (!isSendIntent(value)) return capabilities.rejectRequest('invalid send payload');
       const context = tabs.contextFor(id);
       capabilities.topicAction({
         topic: 'conversations', action: 'send', id, query: value.query, ...(context && { context }),
       });
-      return null;
-    }
-    case 'cancel': {
-      if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid cancel payload');
-      capabilities.topicAction({ topic: 'conversations', action: 'cancel', id });
-      return null;
-    }
-    case 'open-files':
-    case 'launch-agent': {
-      if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
-      const action = intent === 'open-files' ? 'openFiles' : 'launchAgent';
-      capabilities.topicAction({ topic: 'conversations', action, id });
       return null;
     }
     case 'rename': {

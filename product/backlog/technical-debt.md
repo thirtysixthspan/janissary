@@ -4,9 +4,6 @@
 
 ## development
 
-* Reduce the cognitive complexity of `runConversationIntent()` in `src/plugins/conversations/activate.ts` (line 116), reported at 16 against the allowed 15 in a file scoring 54.11 FTA across 153 lines. The function is a flat `switch` over the conversation tab's intents in which every arm repeats the same two-step shape — reject the request with `invalid <intent> payload` when that intent's payload guard fails, then emit one `capabilities.topicAction` call — so each intent writes its guard and its dispatch separately and a new intent means writing both halves again. The shared rejection and the arm that `open-files` and `launch-agent` already share are self-contained enough to lift into a local helper and a single arm without touching the file's exports. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `runConversationIntent()` in `src/plugins/conversations/activate.ts`. Severity: **low**.
-
-
 ## deferred
 
 * Move the command bar's server-completion request out of the agent tab body into the command-input feature where the rest of the completion rules live. — deferred: blocked by `ai/tasks/hygiene/improve-modularity.md`, whose Step 6 quality gate requires the target file's FTA score to drop, but extracting the completion request raises `AgentTabBody.tsx` from 52.67 to 53.03 (the new import outweighs the lines removed), so the playbook restores the file.
