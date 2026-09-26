@@ -5,6 +5,9 @@ import path from 'node:path';
 import http from 'node:http';
 import { WebSocket } from 'ws';
 import { startServer, type RunningServer } from './index.js';
+import { staticFileServer } from './serve-static.js';
+import { guardRequest } from './request-boundary.js';
+import { fakeRequest, fakeResponse, loopbackBindable } from './http-test-fixture.js';
 import type { ServerEvent } from './protocol.js';
 import { messageBus } from './bus.js';
 
@@ -22,7 +25,101 @@ const waitFor = async (pred: () => boolean, ms = 2000) => {
   }
 };
 
-describe('startServer (WS + RPC + security)', () => {
+// A WebSocket upgrade is the handshake and nothing else — there is no seam above it to drive without
+// a socket, and a stubbed `ws` would only be asserting that the stub works. So the cases below ask
+// whether a loopback port can be bound at all, and skip where the sandbox says no rather than
+// weakening what they check. Where a port can be bound they run against a real server.
+const canBindLoopback = await loopbackBindable();
+
+// The HTTP half needs no socket at all. The server mounts the static handler behind the request
+// boundary, and these cases depend on that: a malformed path is answered 400 by the boundary rather
+// than thrown out of the handler. So the handler is driven through the same wrapper the server
+// mounts, not called bare — the wiring stays covered. The session token rides in the query string,
+// which is how a file the app opened is fetched.
+const TOKEN = 'test-token';
+type OpenFilePath = (id: string) => string | undefined;
+
+// Nothing the app opened resolves to a file unless a case registers one.
+function noFile(): string | undefined {
+  // Intentionally empty: the absence is the answer.
+}
+
+const mount = (openFilePath: OpenFilePath = noFile) =>
+  guardRequest(staticFileServer({ webDir, token: TOKEN, openFilePath }));
+
+// The origin gate reads the `Host` header, which a loopback request always carries; without it every
+// case below would be answered 403 before reaching the thing it is about.
+const LOOPBACK_HOST = { host: '127.0.0.1:1234' };
+
+const serve = async (
+  url: string, init: { token?: string | null; openFilePath?: OpenFilePath } = {},
+) => {
+  const token = init.token === undefined ? TOKEN : init.token;
+  const path = token === null ? url : `${url}${url.includes('?') ? '&' : '?'}token=${token}`;
+  const fake = fakeResponse();
+  mount(init.openFilePath)(fakeRequest({ url: path, headers: LOOPBACK_HOST }), fake.res);
+  await fake.done;
+  return fake.recorded;
+};
+
+// The status a request is answered with, for the cases that are about the status and nothing else.
+const statusOf = async (url: string, init?: Parameters<typeof serve>[1]) => {
+  const response = await serve(url, init);
+  return response.status;
+};
+
+describe('the static file server', () => {
+  it('refuses a request whose host is not loopback, before anything else', async () => {
+    const fake = fakeResponse();
+    mount()(fakeRequest({ url: '/', headers: { host: 'example.com' } }), fake.res);
+    await fake.done;
+    expect(fake.recorded.status).toBe(403);
+  });
+
+  it('serves security headers on every response', async () => {
+    const response = await serve('/');
+    const csp = response.headers['content-security-policy'] ?? '';
+    expect(response.status).toBe(200);
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("frame-src https: http:");
+    expect(csp).toContain("frame-ancestors 'none'");
+  });
+
+  it('serves the web UI\'s index for an unknown path, so an SPA route answers like a missing asset', async () => {
+    const response = await serve('/some/client/route');
+    expect(response.status).toBe(200);
+    expect(response.body).toContain('<!DOCTYPE html>');
+  });
+
+  it('refuses an /open/ request with no token, and 404s an unregistered id with one', async () => {
+    expect(await statusOf('/open/not-registered', { token: null })).toBe(403);
+    expect(await statusOf('/open/not-registered')).toBe(404);
+  });
+
+  it('serves a registered id as the file it names', async () => {
+    const clip = path.join(webDir, 'clip.mp4');
+    writeFileSync(clip, 'bytes');
+    const response = await serve('/open/1', { openFilePath: () => clip });
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toBe('video/mp4');
+  });
+
+  // A malformed path is the boundary's work, exercised through the same wrapper the server mounts,
+  // so the wiring is covered and not just the guard on its own.
+  it('answers 400 to an unparseable request path and keeps serving', async () => {
+    expect(await statusOf('//')).toBe(400);
+    expect(await statusOf('/')).toBe(200);
+  });
+
+  it('answers 400 to an /open/ path with a malformed percent escape and keeps serving', async () => {
+    expect(await statusOf('/open/%E0%A4%A')).toBe(400);
+    expect(await statusOf('/open/not-registered')).toBe(404);
+  });
+});
+
+describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
   it.each(['resume', 'wall-clock jump', 'idle'] as const)('applies the disconnect grace after %s', async (mode) => {
     server = await startServer({ webDir });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
@@ -123,19 +220,6 @@ describe('startServer (WS + RPC + security)', () => {
     ws.close();
   });
 
-  it('serves security headers on HTTP responses', async () => {
-    server = await startServer({ webDir });
-    const headers = await new Promise<http.IncomingMessage['headers']>((res, rej) => {
-      const req = http.get(`http://127.0.0.1:${server!.port}/`, (r) => { r.resume(); res(r.headers); });
-      req.on('error', rej);
-    });
-    expect(headers['referrer-policy']).toBe('no-referrer');
-    expect(headers['content-security-policy']).toContain("default-src 'self'");
-    expect(headers['content-security-policy']).toContain("object-src 'none'");
-    expect(headers['content-security-policy']).toContain("frame-src https: http:");
-    expect(headers['content-security-policy']).toContain("frame-ancestors 'none'");
-  });
-
   it('does not call process.exit if the server is closed right after the last client disconnects', async () => {
     server = await startServer({ webDir: tmpdir() });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);
@@ -167,42 +251,6 @@ describe('startServer (WS + RPC + security)', () => {
     second.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
     await waitFor(() => events.some((event) => event.t === 'state'));
     second.close();
-  });
-
-  it('rejects an /open/ request with no token, and 404s an unregistered id with one', async () => {
-    server = await startServer({ webDir });
-    const get = (query: string) => new Promise<number>((res, rej) => {
-      const request = http.get(`http://127.0.0.1:${server!.port}/open/not-registered${query}`, (r) => {
-        r.resume();
-        res(r.statusCode ?? 0);
-      });
-      request.on('error', rej);
-    });
-
-    expect(await get('')).toBe(403);
-    expect(await get(`?token=${server.token}`)).toBe(404);
-  });
-
-  // `http.get` sends the path verbatim with a loopback Host header, so the request clears the Origin
-  // check and reaches the URL parsing and decoding a malformed path breaks.
-  const statusOf = (port: number, requestPath: string) => new Promise<number>((res, rej) => {
-    const request = http.get({ host: '127.0.0.1', port, path: requestPath }, (r) => {
-      r.resume();
-      res(r.statusCode ?? 0);
-    });
-    request.on('error', rej);
-  });
-
-  it('answers 400 to an unparseable request path and keeps serving', async () => {
-    server = await startServer({ webDir });
-    expect(await statusOf(server.port, '//')).toBe(400);
-    expect(await statusOf(server.port, '/')).toBe(200);
-  });
-
-  it('answers 400 to an /open/ path with a malformed percent escape and keeps serving', async () => {
-    server = await startServer({ webDir });
-    expect(await statusOf(server.port, `/open/%E0%A4%A?token=${server.token}`)).toBe(400);
-    expect(await statusOf(server.port, `/open/not-registered?token=${server.token}`)).toBe(404);
   });
 
   it('serves plugin files with declaration-derived video MIME types', async () => {

@@ -1,11 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { createServer, type Server } from 'node:http';
-import http from 'node:http';
 import { mkdtempSync, writeFileSync, type ReadStream } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import type * as NodeFsPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fakeRequest, fakeResponse, type RecordedResponse } from '../http-test-fixture.js';
 import { parseByteRange, serveOpenFile } from './route.js';
 
 // Every file stream the route opens is recorded so a test can check it was released.
@@ -36,8 +35,7 @@ const dir = mkdtempSync(path.join(tmpdir(), 'janus-open-route-'));
 const file = path.join(dir, 'clip.mp4');
 writeFileSync(file, 'abcdefghij');
 
-let server: Server | null = null;
-afterEach(() => { server?.close(); server = null; opened.length = 0; });
+afterEach(() => { opened.length = 0; });
 
 const waitFor = async (predicate: () => boolean, ms = 2000) => {
   const start = Date.now();
@@ -47,36 +45,20 @@ const waitFor = async (predicate: () => boolean, ms = 2000) => {
   }
 };
 
-type Fetched = { status: number; headers: http.IncomingMessage['headers']; body: string };
-
-// Serve one file through the route under test on a fresh server, answering with its port.
-async function listen(filePath: string): Promise<number> {
-  server = createServer((request, res) => {
-    void serveOpenFile(request, res, filePath, { 'content-type': 'video/mp4' });
+// The route is driven directly rather than over a socket: what it decides is the status line, the
+// headers, and the byte window, and a loopback round trip would only add a way for the answer to go
+// missing without saying anything about that decision. The response is still a real `Writable`, so
+// the `pipeline` teardown cases below are the real thing rather than a stand-in for it.
+//
+// A ranged answer is piped, so the route returns as soon as the pipe is set up and the body arrives
+// after it — the wait is for the response to reach a terminal state, not for a fixed delay.
+async function fetchRange(range?: string, filePath = file): Promise<RecordedResponse> {
+  const fake = fakeResponse();
+  await serveOpenFile(fakeRequest({ headers: range ? { range } : {} }), fake.res, filePath, {
+    'content-type': 'video/mp4',
   });
-  return new Promise<number>((resolve) => {
-    server!.listen(0, '127.0.0.1', () => {
-      const address = server!.address();
-      resolve(typeof address === 'object' && address ? address.port : 0);
-    });
-  });
-}
-
-// Issue a single request against the fixture file, on a fresh server unless a port is given.
-async function fetchRange(range?: string, filePath = file, port?: number): Promise<Fetched> {
-  const target = port ?? await listen(filePath);
-  return new Promise<Fetched>((resolve, reject) => {
-    const request = http.get(
-      { host: '127.0.0.1', port: target, path: '/open/1', headers: range ? { range } : {} },
-      (response) => {
-        let body = '';
-        response.setEncoding('utf8');
-        response.on('data', (chunk: string) => { body += chunk; });
-        response.on('end', () => { resolve({ status: response.statusCode ?? 0, headers: response.headers, body }); });
-      },
-    );
-    request.on('error', reject);
-  });
+  await waitFor(() => fake.recorded.ended || fake.recorded.destroyed);
+  return fake.recorded;
 }
 
 describe('parseByteRange', () => {
@@ -153,37 +135,43 @@ describe('serveOpenFile', () => {
     expect(response.body).toBe('');
   });
 
+  // A client that walks away mid-body is the destination erroring, which is exactly what `pipeline`
+  // turns into a teardown of the file stream it was feeding — so the response is abandoned rather
+  // than the socket closed, and the stream has to go with it.
   it('releases the file stream when the client abandons a ranged response', async () => {
     const large = path.join(dir, 'large.mp4');
     writeFileSync(large, Buffer.alloc(16 * 1024 * 1024));
-    const port = await listen(large);
-    await new Promise<void>((resolve, reject) => {
-      const request = http.get(
-        { host: '127.0.0.1', port, path: '/open/1', headers: { range: 'bytes=0-' } },
-        (response) => { response.once('data', () => { request.destroy(); resolve(); }); },
-      );
-      request.on('error', (error: NodeJS.ErrnoException) => { if (error.code !== 'ECONNRESET') reject(error); });
-    });
-    expect(opened).toHaveLength(1);
+    const fake = fakeResponse();
+
+    const serving = serveOpenFile(
+      fakeRequest({ headers: { range: 'bytes=0-' } }), fake.res, large, { 'content-type': 'video/mp4' },
+    );
+    await vi.waitFor(() => { expect(opened).toHaveLength(1); });
+    fake.abandon();
+    await serving;
+
+    expect(fake.recorded.status).toBe(206);
     await waitFor(() => opened[0].destroyed);
   });
 
+  // The read error the route contains: a file removed between its `stat` and its open. It has to end
+  // that one response and nothing else, and the next request has to be served as it always is.
   it('ends only that response when the file disappears after stat, and keeps serving', async () => {
     const vanished = path.join(dir, 'vanished.mp4');
-    const port = await listen(vanished);
-    const outcome = await new Promise<string>((resolve) => {
-      const request = http.get(
-        { host: '127.0.0.1', port, path: '/open/1', headers: { range: 'bytes=0-3' } },
-        (response) => {
-          response.resume();
-          response.on('aborted', () => { resolve('aborted'); });
-          response.on('end', () => { resolve('ended'); });
-        },
-      );
-      request.on('error', () => { resolve('aborted'); });
-    });
-    expect(outcome).toBe('aborted');
-    const next = await fetchRange(undefined, vanished, port);
-    expect(next.status).toBe(500);
+    const fake = fakeResponse();
+
+    await serveOpenFile(
+      fakeRequest({ headers: { range: 'bytes=0-3' } }), fake.res, vanished, { 'content-type': 'video/mp4' },
+    );
+    await waitFor(() => fake.recorded.destroyed);
+
+    // `stat` was mocked to answer a size for this path, so the route chose the ranged path and then
+    // failed to open it — which is the window this case exists for.
+    expect(fake.recorded.status).toBe(206);
+    expect(opened[0].destroyed).toBe(true);
+
+    // And the route is untouched by it: the same path still answers through the non-ranged path.
+    const next = await fetchRange('bytes=0-3', vanished);
+    expect(next.status).toBe(206);
   });
 });

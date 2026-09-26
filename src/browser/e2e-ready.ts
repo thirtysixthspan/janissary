@@ -28,6 +28,9 @@ function accepting(port: number): Promise<boolean> {
   });
 }
 
+/** Whether something is listening on `port`. Swappable so the wait can be driven without a socket. */
+export type PortProbe = (port: number) => Promise<boolean>;
+
 /**
  * Resolve once the browser is listening on `port`, and reject if it never is.
  *
@@ -38,18 +41,28 @@ function accepting(port: number): Promise<boolean> {
  *
  * `boundMs` is the wait's own bound, defaulted to a cold launch's worth of patience; it is a
  * parameter only so the expiry can be tested without waiting half a minute for it.
+ *
+ * `probe` is the real question — is anything accepting on this port — behind a parameter, so the
+ * sequence of answers a launch produces (nothing yet, nothing yet, then the browser) can be handed to
+ * the wait directly instead of raced against real listeners. The default is the socket probe, so the
+ * production path still asks the operating system.
  */
-export function waitForListening(session: E2ESession, port: number, boundMs = PROBE_BOUND): Promise<void> {
+export function waitForListening(
+  session: E2ESession,
+  port: number,
+  boundMs = PROBE_BOUND,
+  probe: PortProbe = accepting,
+): Promise<void> {
   const startedAt = Date.now();
   return new Promise<void>((resolve, reject) => {
     // Nothing below throws: every ending is this promise's, so the timer that schedules the next
     // probe can discard this call without leaving a rejection unowned.
-    const probe = async (): Promise<void> => {
+    const attempt = async (): Promise<void> => {
       if (session.closed) return reject(new Error('e2e browser exited before it was listening'));
-      if (await accepting(port)) return resolve();
+      if (await probe(port)) return resolve();
       if (Date.now() - startedAt >= boundMs) return reject(new Error('e2e browser did not start listening in time'));
-      setTimeout(() => { void probe(); }, PROBE_INTERVAL);
+      setTimeout(() => { void attempt(); }, PROBE_INTERVAL);
     };
-    void probe();
+    void attempt();
   });
 }

@@ -31,6 +31,9 @@ export type E2EGuardOptions = {
   // Called once if the guard cannot listen at all (the port was taken between being picked and
   // being bound). Never called for an ordinary per-session error.
   onError?: (message: string) => void;
+  // Opens the browser connection. Defaults to a real `ws` socket; a parameter so a session can be
+  // driven end to end without one, which is the only way to pin the relay without a listener.
+  dial?: (url: string) => WebSocket;
 };
 
 export type E2EGuardHandle = { close: () => void };
@@ -71,12 +74,15 @@ function endSession(client: WebSocket, upstream: WebSocket | undefined, reason: 
   upstream?.terminate();
 }
 
+/** Opens one browser connection. Exported so a session can be driven without a real socket. */
+export type UpstreamDial = (url: string) => WebSocket;
+
 // The browser side of one session, once it has been named. What the client said in the meantime goes
 // out in order, and after that the two directions are the plain relay they have always been.
 // Closing either side closes the other, so a session never outlives half of itself. Frames are
 // forwarded verbatim, binary flag included — the guard never re-encodes what it did not author.
-function dialUpstream(client: WebSocket, upstreamUrl: string, pending: Pending, judge: Judge): WebSocket {
-  const upstream = new WebSocket(upstreamUrl);
+function dialUpstream(client: WebSocket, upstreamUrl: string, pending: Pending, judge: Judge, dial: UpstreamDial): WebSocket {
+  const upstream = dial(upstreamUrl);
   upstream.on('open', () => {
     for (const frame of pending) upstream.send(frame.data, { binary: frame.isBinary });
     pending.length = 0;
@@ -91,11 +97,21 @@ function dialUpstream(client: WebSocket, upstreamUrl: string, pending: Pending, 
   return upstream;
 }
 
-// One client connection: ask where the browser is, hold anything the client says until it answers,
-// and relay both directions through the filter afterwards. Frames are judged on arrival either way,
-// so a `file:` URL is refused just as promptly while the browser is still starting as it is once it
-// is up — the buffering is for the legal frames, not as a way to defer the judgement.
-function bridge(client: WebSocket, ensureUpstream: () => Promise<string>): void {
+/**
+ * One client connection: ask where the browser is, hold anything the client says until it answers,
+ * and relay both directions through the filter afterwards. Frames are judged on arrival either way,
+ * so a `file:` URL is refused just as promptly while the browser is still starting as it is once it
+ * is up — the buffering is for the legal frames, not as a way to defer the judgement.
+ *
+ * This is the whole of a session, and it is separated from the listener on purpose: the accept and
+ * the handshake are `ws`'s, but the judgement, the ordering, the buffering and the close reasons are
+ * all here, and none of them need a socket. `startE2EGuard` is this plus a server.
+ */
+export function bridgeSession(
+  client: WebSocket,
+  ensureUpstream: () => Promise<string>,
+  dial: UpstreamDial = (url) => new WebSocket(url),
+): void {
   const pending: Pending = [];
   let upstream: WebSocket | undefined;
   let refused = false;
@@ -120,7 +136,7 @@ function bridge(client: WebSocket, ensureUpstream: () => Promise<string>): void 
   void (async (): Promise<void> => {
     try {
       const upstreamUrl = await ensureUpstream();
-      if (client.readyState === WebSocket.OPEN) upstream = dialUpstream(client, upstreamUrl, pending, judge);
+      if (client.readyState === WebSocket.OPEN) upstream = dialUpstream(client, upstreamUrl, pending, judge, dial);
     } catch (error) {
       refused = true;
       endSession(client, upstream, error instanceof E2EClientRefusal ? error.message : BROWSER_DID_NOT_START);
@@ -139,7 +155,7 @@ export function startE2EGuard(options: E2EGuardOptions): E2EGuardHandle {
   const server = new WebSocketServer({ host: E2E_LOOPBACK_HOST, port: options.port, path: options.wsPath });
   let closed = false;
 
-  server.on('connection', (client: WebSocket) => { bridge(client, options.ensureUpstream); });
+  server.on('connection', (client: WebSocket) => { bridgeSession(client, options.ensureUpstream, options.dial); });
   server.on('error', (error: Error) => {
     if (closed) return;
     options.onError?.(`e2e browser guard failed to listen: ${error.message}`);
