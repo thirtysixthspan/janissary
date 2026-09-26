@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
@@ -17,6 +17,25 @@ const appendedEvent = (label = 'janus', entry: LogEntry = defaultEntry) => ({
   tabLabel: label,
   entry,
   tab: makeTab(label, [entry]),
+});
+
+// `logDir` is module state with no reset, so the guard below can only be observed before anything
+// configures it. Vitest runs a file's blocks in declaration order, which is what makes that true.
+describe('TranscriptLogger before a directory is configured', () => {
+  it('writes nothing, rather than resolving the path against the working directory', () => {
+    const empty = mkdtempSync(path.join(tmpdir(), 'logger-unset-'));
+    const previous = process.cwd();
+    process.chdir(empty);
+    try {
+      expect(TranscriptLogger.logDir).toBe('');
+      expect(() => TranscriptLogger.append({ timestamp: '00:00:00.000', agent: 'janus', text: 'hello' }))
+        .not.toThrow();
+    } finally {
+      process.chdir(previous);
+    }
+    expect(readdirSync(empty)).toEqual([]);
+    rmSync(empty, { recursive: true, force: true });
+  });
 });
 
 describe('logger I/O', () => {
