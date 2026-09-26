@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { resolveDropTarget } from './file-navigator-drag';
+import { resolveDropTarget } from './navigator-drag';
 
 function makeRows(): FileNavigatorRow[] {
   return [

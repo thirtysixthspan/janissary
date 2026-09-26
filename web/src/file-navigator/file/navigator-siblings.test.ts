@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { siblingSelection } from './file-navigator-siblings';
-import type { FileNavigatorSelection } from './useFileNavigatorSelection';
+import { siblingSelection } from './navigator-siblings';
+import type { FileNavigatorSelection } from '../useFileNavigatorSelection';
 
 // A tree:
 // ..

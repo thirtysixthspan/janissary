@@ -1,5 +1,5 @@
 import React from 'react';
-import { bestFileMatch, ghostSuffix } from './file-search-match';
+import { bestFileMatch, ghostSuffix } from './file/search-match';
 
 type Properties = {
   query: string;

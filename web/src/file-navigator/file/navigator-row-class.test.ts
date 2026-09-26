@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { fileNavigatorRowClass } from './file-navigator-row-class';
+import { fileNavigatorRowClass } from './navigator-row-class';
 
 const row = (overrides: Partial<FileNavigatorRow> = {}): FileNavigatorRow => ({
   path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false, ...overrides,

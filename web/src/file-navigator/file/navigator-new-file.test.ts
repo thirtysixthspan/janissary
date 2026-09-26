@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { newFileTargetDir, newDirectoryTargetPath, findPendingNewDir } from './file-navigator-new-file';
+import { newFileTargetDir, newDirectoryTargetPath, findPendingNewDir } from './navigator-new-file';
 
 const rows: FileNavigatorRow[] = [
   { path: 'src', name: 'src', depth: 0, dir: true, expanded: true },

@@ -9,10 +9,10 @@ import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorSearch } from './useFileNavigatorSearch';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
-import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
+import type { FileNavigatorMenuActions } from './file/navigator-menu-items';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { createFileNavigatorActions } from './file-navigator-menu-actions';
+import { createFileNavigatorActions } from './file/navigator-menu-actions';
 import { normalizeOperationPaths } from './useFileNavigatorSelection';
 
 type Drag = ReturnType<typeof useFileNavigatorDrag>;

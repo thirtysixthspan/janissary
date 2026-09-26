@@ -5,7 +5,7 @@ import {
   pendingClipboardMode,
   setClipboard,
   subscribeClipboard,
-} from './file-navigator-clipboard';
+} from './navigator-clipboard';
 
 afterEach(() => {
   clearClipboard();

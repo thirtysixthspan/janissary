@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { committableMessage } from './file-navigator-commit-message';
+import { committableMessage } from './file/navigator-commit-message';
 
 type Properties = {
   defaultMessage: string;

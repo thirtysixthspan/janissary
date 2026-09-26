@@ -1,11 +1,11 @@
 import { useRef, type RefObject } from 'react';
 import type React from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { handleFileNavigatorKey, typeAheadMatch, type FileNavigatorKeyOutcome } from './file-navigator-keys';
-import { handleTreeChord, type ChordHandlers } from './file-navigator-chords';
-import { runFileNavigatorAction } from './file-navigator-actions';
-import { clearClipboard, getClipboardSnapshot } from './file-navigator-clipboard';
-import { fileActivation } from './file-activation';
+import { handleFileNavigatorKey, typeAheadMatch, type FileNavigatorKeyOutcome } from './file/navigator-keys';
+import { handleTreeChord, type ChordHandlers } from './file/navigator-chords';
+import { runFileNavigatorAction } from './file/navigator-actions';
+import { clearClipboard, getClipboardSnapshot } from './file/navigator-clipboard';
+import { fileActivation } from './file/activation';
 import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';

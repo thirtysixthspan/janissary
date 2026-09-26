@@ -12,7 +12,7 @@ import {
   toggleSelection,
   useFileNavigatorSelection,
 } from './useFileNavigatorSelection';
-import { collectNavigatorSelections } from './file-navigator-selection-registry';
+import { collectNavigatorSelections } from './file/navigator-selection-registry';
 
 const rows = (paths: string[]): FileNavigatorRow[] =>
   paths.map((path) => ({ path, name: path.split('/').at(-1)!, depth: path.split('/').length - 1, dir: !path.includes('.') }));

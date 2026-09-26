@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   joinCommandPaths, joinDropFileNames, joinEditorPaths, relativeNavigatorPath, remoteNavigatorPath,
-} from './file-navigator-relative-path';
+} from './navigator-relative-path';
 
 describe('relativeNavigatorPath', () => {
   it.each([

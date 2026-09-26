@@ -1,4 +1,4 @@
-import { basename } from '../shared/rel-path';
+import { basename } from '../../shared/rel-path';
 
 function splitPath(path: string): string[] {
   return path.replaceAll('\\', '/').split('/').filter(Boolean);

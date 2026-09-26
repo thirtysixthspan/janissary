@@ -8,7 +8,7 @@ import { FileNavigatorTab } from './FileNavigatorTab';
 import { Sidebar } from '../Sidebar';
 import { multiOpenablePaths } from '../multi-open';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
-import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
+import { clearClipboard, getClipboardSnapshot, setClipboard } from './file/navigator-clipboard';
 
 beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn();

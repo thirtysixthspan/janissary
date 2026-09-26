@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { FileNavigatorSelection } from './useFileNavigatorSelection';
+import type { FileNavigatorSelection } from '../useFileNavigatorSelection';
 
 // Cmd/Ctrl+A's selection: every visible row sharing the cursor row's parent directory. Rows are a
 // depth-first, pre-flattened list, so a sibling is any row at the cursor's own depth reachable

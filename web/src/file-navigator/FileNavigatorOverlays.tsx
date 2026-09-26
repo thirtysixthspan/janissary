@@ -13,8 +13,8 @@ import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
 import type { PendingContextMenu } from './use-file-navigator-row-events';
 import { ContextMenu } from '../shared/ContextMenu';
-import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
-import { getClipboardSnapshot } from './file-navigator-clipboard';
+import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file/navigator-menu-items';
+import { getClipboardSnapshot } from './file/navigator-clipboard';
 import { basename } from '../shared/rel-path';
 
 type Properties = {

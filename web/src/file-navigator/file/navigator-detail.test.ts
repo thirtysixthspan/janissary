@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   detailTooltip, formatModified, formatPermissions, formatSize, nextDetail, rowDetail,
-} from './file-navigator-detail';
+} from './navigator-detail';
 import type { FileNavigatorRow } from '@shared/protocol';
 
 const row = (extra: Partial<FileNavigatorRow> = {}): FileNavigatorRow => ({

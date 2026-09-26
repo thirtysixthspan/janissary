@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FileNavigatorCommitPopup } from './FileNavigatorCommitPopup';
-import { defaultCommitMessage, defaultCommitMessageForCount } from './file-navigator-commit-message';
+import { defaultCommitMessage, defaultCommitMessageForCount } from './file/navigator-commit-message';
 
 function renderPopup(defaultMessage = 'sync: notes.md', fileCount = 1) {
   const onCommit = vi.fn();

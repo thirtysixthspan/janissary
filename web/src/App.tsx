@@ -23,7 +23,7 @@ import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
-import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
+import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 
 export function App({ client }: { client: JanusClient }) {
   const [tabs, setTabs] = useState<TabView[]>([]);

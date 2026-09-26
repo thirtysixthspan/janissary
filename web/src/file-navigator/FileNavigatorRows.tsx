@@ -1,7 +1,7 @@
 import React from 'react';
 import type { FileNavigatorView } from '@shared/protocol';
 import { FileNavigatorRowView } from './FileNavigatorRowView';
-import { fileNavigatorRowClass } from './file-navigator-row-class';
+import { fileNavigatorRowClass } from './file/navigator-row-class';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
 import type { useFileNavigatorRename } from './useFileNavigatorRename';

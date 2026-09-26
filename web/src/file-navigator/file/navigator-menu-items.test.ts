@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './file-navigator-menu-items';
+import { fileNavigatorMenuItems, type FileNavigatorMenuActions } from './navigator-menu-items';
 
 const fileRow: FileNavigatorRow = { path: 'src/index.ts', name: 'index.ts', depth: 1, dir: false };
 const directoryRow: FileNavigatorRow = { path: 'src', name: 'src', depth: 0, dir: true };

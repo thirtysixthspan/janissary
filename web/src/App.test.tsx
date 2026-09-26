@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { RouteChooserView, TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './ws';
-import { collectNavigatorSelections } from './file-navigator/file-navigator-selection-registry';
+import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { AppShell } from './AppShell';
 import { StatusPanels } from './shared/status-windows/StatusPanels';
 import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';

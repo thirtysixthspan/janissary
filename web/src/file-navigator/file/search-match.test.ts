@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bestFileMatch, ghostSuffix } from './file-search-match';
+import { bestFileMatch, ghostSuffix } from './search-match';
 
 describe('bestFileMatch', () => {
   it('matches the basename case-insensitively', () => {

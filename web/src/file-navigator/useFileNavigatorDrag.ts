@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
-import { parentPath, resolveDropTarget, type DropTarget } from './file-navigator-drag';
+import { parentPath, resolveDropTarget, type DropTarget } from './file/navigator-drag';
 import { hoveredEditor, hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
-import { joinCommandPaths, joinDropFileNames } from './file-navigator-relative-path';
+import { joinCommandPaths, joinDropFileNames } from './file/navigator-relative-path';
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { editorDropHandle, harnessDropHandle } from '../shared/drop-registry';

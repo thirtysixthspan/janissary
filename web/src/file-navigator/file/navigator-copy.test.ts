@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { copyAbsolutePaths, copySelectionToClipboards } from './file-navigator-copy';
-import { clearClipboard, getClipboardSnapshot, setClipboard } from './file-navigator-clipboard';
+import { copyAbsolutePaths, copySelectionToClipboards } from './navigator-copy';
+import { clearClipboard, getClipboardSnapshot, setClipboard } from './navigator-clipboard';
 
 // jsdom implements no async clipboard, so `navigator` is stood up with just the one method
 // `copyText` reaches for.

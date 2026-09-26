@@ -1,5 +1,5 @@
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { ClipboardMode } from './file-navigator-clipboard';
+import type { ClipboardMode } from './navigator-clipboard';
 
 const STATUS_CLASS: Record<NonNullable<FileNavigatorRow['gitStatus']>, string> = {
   changed: 'files-name--changed',

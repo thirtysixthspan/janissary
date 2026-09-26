@@ -1,15 +1,15 @@
 import type { FileNavigatorRow, FileNavigatorView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
-import { copyAbsolutePaths, copySelectionToClipboards } from './file-navigator-copy';
-import { newFileTargetDir, newDirectoryTargetPath } from './file-navigator-new-file';
-import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
-import type { FileNavigatorMenuActions } from './file-navigator-menu-items';
-import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
-import type { useFileNavigatorPaste } from './useFileNavigatorPaste';
-import type { useFileNavigatorDelete } from './useFileNavigatorDelete';
-import type { useFileNavigatorRename } from './useFileNavigatorRename';
-import type { useFileNavigatorRowEvents } from './use-file-navigator-row-events';
-import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
+import type { JanusClient } from '../../ws';
+import { copyAbsolutePaths, copySelectionToClipboards } from './navigator-copy';
+import { newFileTargetDir, newDirectoryTargetPath } from './navigator-new-file';
+import { normalizeOperationPaths, type useFileNavigatorSelection } from '../useFileNavigatorSelection';
+import type { FileNavigatorMenuActions } from './navigator-menu-items';
+import type { useFileNavigatorOpener } from '../useFileNavigatorOpener';
+import type { useFileNavigatorPaste } from '../useFileNavigatorPaste';
+import type { useFileNavigatorDelete } from '../useFileNavigatorDelete';
+import type { useFileNavigatorRename } from '../useFileNavigatorRename';
+import type { useFileNavigatorRowEvents } from '../use-file-navigator-row-events';
+import type { useFileNavigatorCommit } from '../useFileNavigatorCommit';
 
 type Params = {
   files: FileNavigatorView;
