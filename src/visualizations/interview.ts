@@ -1,5 +1,6 @@
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { ConversationModelPair, VisualizationTurnView } from '../protocol.js';
+import type { VisualizationChartView } from '../protocol/visualizations.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { validateChart } from './chart-spec.js';
 import { chartPrompt, openingPrompt, parseChart, parseQuestions, revisionPrompt } from './prompts.js';
@@ -14,7 +15,9 @@ import { interviewComplete, isUntitled, usablePair, visualizationTitle } from '.
 // nothing else, which is the one place this feature is simpler than a conversation.
 type Call = 'open' | 'close' | 'revise';
 
-type InFlight = { call: Call; accumulated: string };
+// The turn the reply lands on, carried with the in-flight call rather than looked up when it ends, so
+// a reply always has somewhere to go. It is absent for the opening call, whose reply is questions.
+type InFlight = { call: Call; accumulated: string; turn?: VisualizationTurnView };
 
 type InterviewerOptions = {
   pool: AcpSessionPool;
@@ -50,11 +53,25 @@ export class VisualizationInterviewer {
     return this.prompt(record, 'open', openingPrompt(record.source, tableOf(record)));
   }
 
-  // The call that produces the chart, once every question has an answer.
+  // The call that produces the chart, once every question has an answer. The answers the user gave are
+  // the query, so the turn carrying the chart is created here as well: without one the chart appears
+  // and the tab says nothing about it, which is the same gap a modification had when the model
+  // changed the chart without explaining.
   close(record: VisualizationRecord): boolean {
     if (this.busy(record.id) || record.chart !== undefined || !record.table) return false;
     if (!interviewComplete(record)) return false;
-    return this.prompt(record, 'close', chartPrompt(tableOf(record), record.questions));
+    const pair: ConversationModelPair = usablePair(record.pair);
+    record.pair = pair;
+    const turn: VisualizationTurnView = {
+      query: record.questions.map((entry) => entry.answer ?? '').filter((answer) => answer !== '').join('; '),
+      response: '',
+      pair,
+      streaming: true,
+    };
+    record.turns.push(turn);
+    record.updatedAt = this.options.now();
+    this.options.changed();
+    return this.prompt(record, 'close', chartPrompt(tableOf(record), record.questions), turn);
   }
 
   // A modification against the chart on screen. The turn is created before the call so the tab can
@@ -68,7 +85,7 @@ export class VisualizationInterviewer {
     record.turns.push(turn);
     record.updatedAt = this.options.now();
     this.options.changed();
-    return this.prompt(record, 'revise', revisionPrompt(tableOf(record), record.chart, query));
+    return this.prompt(record, 'revise', revisionPrompt(tableOf(record), record.chart, query), turn);
   }
 
   // Cancelling ends the session rather than the turn alone: `AcpSession` has no per-prompt abort, so
@@ -88,8 +105,13 @@ export class VisualizationInterviewer {
     this.options.pool.dispose();
   }
 
-  private prompt(record: VisualizationRecord, call: Call, text: string): boolean {
-    const pending: InFlight = { call, accumulated: '' };
+  private prompt(
+    record: VisualizationRecord,
+    call: Call,
+    text: string,
+    turn?: VisualizationTurnView,
+  ): boolean {
+    const pending: InFlight = { call, accumulated: '', ...(turn && { turn }) };
     this.inFlight.set(record.id, pending);
     this.options.changed();
     const session = this.options.pool.session(
@@ -115,7 +137,7 @@ export class VisualizationInterviewer {
     if (this.inFlight.get(record.id) !== pending) return;
     this.inFlight.delete(record.id);
     if (pending.call === 'open') return this.applyQuestions(record, pending.accumulated);
-    const turn = pending.call === 'revise' ? record.turns.find((entry) => entry.streaming) : undefined;
+    const turn = pending.turn;
     if (turn) delete turn.streaming;
     if (!this.applyChart(record, pending.accumulated, turn) && turn) {
       // The refusal reason is already on the record from `applyChart`; this only gives the turn
@@ -163,7 +185,7 @@ export class VisualizationInterviewer {
       || previous.series !== parsed.chart.series;
     record.chart = parsed.chart;
     if (isUntitled(record) && redrawn) record.title = visualizationTitle(parsed.chart.title);
-    if (turn) turn.response = parsed.note;
+    if (turn) turn.response = parsed.note || chartSummary(parsed.chart);
     this.options.commit(record);
     return true;
   }
@@ -179,4 +201,13 @@ export class VisualizationInterviewer {
 
 function tableOf(record: VisualizationRecord): Table {
   return { columns: record.table?.columns ?? [], rows: record.table?.rows ?? [] };
+}
+
+// What a chart is now, in one sentence, for the case where the model changed it and said nothing.
+// Composed from the specification rather than invented: a sentence built from what the chart
+// demonstrably is is worth reading, where an invented explanation would be worse than the empty reply
+// it replaces. The model's own words always win — this is only reached when there are none.
+export function chartSummary(chart: VisualizationChartView): string {
+  const split = chart.series === undefined ? '' : `, split by ${chart.series}`;
+  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${split}.`;
 }

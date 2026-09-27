@@ -44,7 +44,9 @@ The chart's own title names the visualization and its tab, once, and only while 
 
 Once a chart exists the tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query, Shift+Enter starts a new line, Escape clears an unsent one, and Escape during a reply cancels it. A second query is refused while a reply is in flight, and a refused Enter leaves the typed text in place.
 
-The model is asked for the updated chart and may answer with prose instead, in which case what it said is shown as the reply and the chart is left as it was. The exchange stays in the tab, oldest first, and follows new output to the bottom until the user scrolls away.
+The model is asked for the updated chart and may answer with prose instead, in which case what it said is shown as the reply and the chart is left as it was. When it changes the chart and explains nothing, the tab says what the chart now is instead — the kind, the measure against the category, and the column it is split by — so a change never lands silently. The exchange stays in the tab, oldest first, and follows new output to the bottom until the user scrolls away.
+
+The answers given to the interview are recorded as the first turn, and the chart the interview produced is its reply, so the reasoning behind a chart is readable after the fact rather than only at the moment it was given.
 
 The reply is rendered as sanitized Markdown, the same as any other model reply in the application. Only the reply text is shown; whatever reasoning the model did is not.
 

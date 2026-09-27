@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give a modification turn something to read when the model returns a chart with no note.
-
-Existing Issue: A revision whose reply parses stores the model's `note` on the turn, and the note is optional, so a model that answers with a bare chart object leaves the turn with an empty response, which renders as an empty bubble under the user's query. Severity: 3/10
-
-Existing Risk: 4/10 - The common case of "just change it, do not explain" leaves a visible dead space in the tab every time, and reads as the model having failed to answer rather than as a chart that did change.
-
-Proposal Risk: 1/10 - A derived summary names what changed, which is derived from data already in hand rather than invented.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: give a modification turn something to read when the model returns no note". In `src/visualizations/interview.ts`, where `applyChart` assigns the parsed note to the streaming turn, fall back to a sentence composed from the specification already in hand when the note is empty: name the kind, the x and y columns, and the series column when one is set — for example `Now a line chart of revenue by month, split by region.` Build that string in a small pure helper in the same module and keep it a helper rather than a template inside the branch, so it is testable without a session. Apply the same fallback to the closing call's chart, which currently records nothing at all, by storing it as the last turn's response there too, or by leaving the closing call alone if the chart title already names the tab — decide which and say why in the module comment. Add cases to `src/visualizations/interview.test.ts` for a revision whose reply carries a chart and no note, asserting the derived sentence, and for one whose reply carries a chart and a note, asserting the model's own words still win.
-
-
 * Bound the local files a data source may name, and say in the spec what reading one exposes.
 
 Existing Issue: A source line beginning with `/`, `~`, or `.` is read with `readFileSync` after a size check and nothing else, so any path the process can read is reachable from a plugin intent, and what it returns is parsed and then put into the tab payload and persisted in the record — unlike the served files, which go through the `/open/` allow-list, and unlike a source that is merely opened for viewing. Severity: 6/10

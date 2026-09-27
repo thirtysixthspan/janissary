@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
-import { VisualizationInterviewer } from './interview.js';
+import { chartSummary, VisualizationInterviewer } from './interview.js';
 import { VISUALIZATION_SCHEMA_VERSION, type VisualizationRecord } from './store.js';
 
 const TABLE = {
@@ -95,7 +95,7 @@ describe('the opening call', () => {
 });
 
 describe('the closing call', () => {
-  it('stores a valid chart and takes its title for an untitled record', () => {
+  it('stores a valid chart, takes its title for an untitled record, and says what the chart is', () => {
     const { interviewer, commits, chunk, end } = fixture();
     const subject = record({ questions: [{ id: 'q1', question: 'Which measure?', suggestions: [], answer: 'revenue' }] });
 
@@ -105,7 +105,26 @@ describe('the closing call', () => {
 
     expect(subject.chart).toEqual({ kind: 'bar', x: 'region', y: 'revenue', title: 'Revenue by region' });
     expect(subject.title).toBe('Revenue by region');
+    // The answers are the query, so the turn exists without the user having typed anything.
+    expect(subject.turns[0]?.query).toBe('revenue');
+    expect(subject.turns[0]?.response).toBe('Now a bar chart of revenue by region.');
     expect(commits).toEqual([{}]);
+  });
+
+  it('keeps the model own words on the turn when it gave any', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ questions: [{ id: 'q1', question: 'Q?', suggestions: [], answer: 'a' }] });
+
+    interviewer.close(subject);
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T","note":"revenue is the clearest measure"}');
+    end();
+
+    expect(subject.turns[0]?.response).toBe('revenue is the clearest measure');
+  });
+
+  it('names the series column in the summary when the chart is split', () => {
+    expect(chartSummary({ kind: 'line', x: 'day', y: 'revenue', series: 'region', title: 'T' }))
+      .toBe('Now a line chart of revenue by day, split by region.');
   });
 
   it('leaves a name the user chose alone', () => {
@@ -196,6 +215,18 @@ describe('a revision', () => {
 
     expect(subject.chart?.kind).toBe('bar');
     expect(subject.turns[0]?.response).toContain('not with one I could use');
+  });
+
+  it('falls back to what the chart is when the model changed it and said nothing', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ chart: { kind: 'bar', x: 'region', y: 'revenue', title: 'T' } });
+
+    interviewer.revise(subject, 'make it a line');
+    chunk('{"kind":"line","x":"region","y":"revenue","title":"T"}');
+    end();
+
+    expect(subject.chart?.kind).toBe('line');
+    expect(subject.turns[0]?.response).toBe('Now a line chart of revenue by region.');
   });
 
   it('accumulates every chunk before the call completes', () => {
