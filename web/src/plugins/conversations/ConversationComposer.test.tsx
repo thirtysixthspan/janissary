@@ -111,4 +111,26 @@ describe('ConversationComposer', () => {
     );
     expect(input).toHaveValue('edited draft');
   });
+
+  it('clears a drafted query on Escape and sends nothing', () => {
+    const { onSend, input } = renderComposer();
+    fireEvent.change(input, { target: { value: 'half a thought' } });
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(input).toHaveValue('');
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  // The escape that abandons a draft must not reach the bar underneath, or a conversation would
+  // close and the typed text would stay.
+  it('leaves Escape to the reply in flight rather than clearing under it', () => {
+    const { onSend, input } = renderComposer({ streaming: true });
+    fireEvent.change(input, { target: { value: 'half a thought' } });
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+
+    expect(input).toHaveValue('half a thought');
+    expect(onSend).not.toHaveBeenCalled();
+  });
 });
