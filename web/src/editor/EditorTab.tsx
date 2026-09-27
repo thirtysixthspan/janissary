@@ -151,6 +151,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
           ref={textareaRef}
           className="editor-textarea"
           aria-label={`Edit ${editor.name}`}
+          data-claims-shift-tab
           onKeyDown={interactions.onKeyDown}
           onPaste={interactions.onPaste}
           onInput={interactions.flushTextarea}

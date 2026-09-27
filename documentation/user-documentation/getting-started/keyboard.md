@@ -55,6 +55,8 @@ The focused section changes without sending a command to the application.
 
 `Shift+Tab` works while a file navigator or harness tab has focus. It is handled before those views receive the key, so you can always leave them. A file navigator still captures its own arrow keys, `Home`, `End`, `PageUp`, `PageDown`, `Enter`, `Space`, and printable characters for tree navigation. A harness receives its other keystrokes, including `Ctrl+C`.
 
+An editor tab is different. While you're typing in its text, `Shift+Tab` outdents the current lines instead of moving focus (see [Editor](/user-documentation/tab-types/editor)). To leave an editor tab, click another section.
+
 Bare `Tab` keeps its command-completion behavior in the command bar.
 
 ## While an overlay is open

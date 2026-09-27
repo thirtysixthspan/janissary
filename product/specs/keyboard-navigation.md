@@ -31,7 +31,7 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
-| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. |
+| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]). |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds
@@ -42,7 +42,9 @@ monitor in the reporting section.
 A focused file navigator tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
 characters (type-ahead) for its own tree navigation instead of the bindings above — see File Navigator Tab.
 Shift+Tab is intercepted ahead of that file-navigator capture and ahead of a focused harness terminal, so
-section navigation still escapes them.
+section navigation still escapes them. An editor tab's text buffer is the exception: it binds Shift+Tab to
+outdent, so the chord reaches the editor there instead of moving focus. Anywhere else in an editor tab,
+such as its metadata row, Shift+Tab still moves to the next section.
 
 A focused terminal surface (harness tab, ssh tab, interactive PTY takeover, terminal card) gives every
 key to its PTY, with two conditional exceptions: while a Shift+drag selection is held, **Escape**
