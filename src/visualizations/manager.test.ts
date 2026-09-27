@@ -436,6 +436,36 @@ describe('what it refuses', () => {
     expect(manager.cancel('nope')).toBe(false);
   });
 
+  // The user's own message is written the moment it is accepted, so closing the tab while the model is
+  // still thinking cannot delete what they typed. Before, the turn first reached the disk through the
+  // source read's commit or the reply's, and `releaseClosed` dropped the record without writing.
+  it('keeps a message whose reply never arrived when the tab is closed and reopened', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk('{"say":"What would you like to see?"}');
+    built.end();
+    await settle();
+    built.manager.send('v1', 'only 2024 please');
+    await settle();
+    expect(built.prompts).toHaveLength(2);
+
+    tabs.length = 0;
+    messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'visualizations-v1' });
+    await settle();
+
+    const reopened = build({ read: reading(CSV) });
+    openTab('v1');
+    expect(reopened.manager.load('v1')).toBe(true);
+    const turns = reopened.manager.view().windows[0]?.turns ?? [];
+    expect(turns.map((turn) => turn.query)).toContain('only 2024 please');
+    // A turn that still claimed to be streaming would render as a reply that never stopped arriving, and
+    // nothing is left to finish it.
+    expect(turns.every((turn) => turn.streaming === undefined)).toBe(true);
+  });
+
   it('disposes without removing anything from disk', async () => {
     const { manager } = build({ read: reading(CSV) });
     openTab('v1');

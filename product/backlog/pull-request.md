@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Persist the turn when a message is accepted, so closing the tab mid-reply does not delete what the user typed. Severity: 6/10
-
-Existing Issue: `agent.start` in `src/visualizations/agent.ts` pushes the turn onto the record and calls only `changed()`, never `commit`, so the turn first reaches disk through the source read's commit or the reply's; `releaseClosed` in `src/visualizations/manager.ts` then clears the streaming flag in memory, commits nothing and calls `index.release(id)`, dropping the record. Severity: 6/10
-
-Existing Risk: 6/10 - Closing a tab while a reply is in flight removes the user's own message from the exchange permanently, and the plan states the opposite — "the record and its turns survive, so reopening resumes" — so this is a plan promise the code does not keep.
-
-Proposal Risk: 2/10 - One extra write per message, which is the same write the read already makes; the streaming flag on the persisted turn is what the record guard already accepts.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: persist a message as soon as it is accepted". In `src/visualizations/agent.ts`, have `start` commit the record once the turn has been pushed, before the call goes out, and have `VisualizationsManager.cancel` commit after clearing the streaming flag so the cleared state reaches disk too. Confirm against `src/visualizations/store.ts`'s `isTurn`, which already accepts a persisted streaming turn, and against the payload finding in this same backlog, which is what makes that acceptance load-bearing. Add a case to `src/visualizations/manager.test.ts` that sends a message, closes the tab without a reply, reopens it, and asserts the query is still in the exchange; the existing `'disposes without removing anything from disk'` case is the pattern to follow.
-
 * Clear the suggestion row when one of its suggestions is used, rather than when the reply that replaces it lands. Severity: 5/10
 
 Existing Issue: `agent.apply` in `src/visualizations/agent.ts` replaces `record.followUps` only when a reply arrives, and `agent.fail` leaves them in place, so the row the specification says is "gone the moment one is used" survives both a use and a failure. Severity: 5/10

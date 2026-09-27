@@ -38,6 +38,8 @@ A chart naming such a file says so in the line under it, naming the file it came
 
 The exchange is the interface. The agent asks what it needs to know — which measure, compared against what, grouped how, called what — and you answer in the same box, in your own words. It also draws without asking if the data makes the answer obvious, and it says plainly when it could not get the data rather than inventing a chart.
 
+Your message is saved the moment it is sent, so stopping a reply with Escape — or closing the tab while the agent is still working — keeps the question in the exchange along with whatever answer had arrived. An answer that never came is shown as an answer that never came; the question is not quietly dropped, because what you typed is the one part of this the agent cannot recover.
+
 Every reply may carry two to four requests you could have made next, shown as one-click buttons above the composer. Clicking one sends it as your own words, the row is replaced by the next reply's, and it is gone the moment one is used so the same request cannot be asked twice. A reply that offers none shows no row at all.
 
 ### What you can say

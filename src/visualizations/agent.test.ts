@@ -154,6 +154,8 @@ describe('a message', () => {
     expect(allowed).toEqual([true]);
   });
 
+  // The turn is committed the moment it is accepted, so there is one write here and no second: the
+  // record was gone before the call went out, and the point of the case is that nothing followed it.
   it('abandons the call when the record went away while the source was being read', async () => {
     const { agent, prompts, commits } = fixture();
     const subject = record();
@@ -161,7 +163,7 @@ describe('a message', () => {
     await settled();
     await settled();
     expect(prompts).toHaveLength(0);
-    expect(commits).toHaveLength(0);
+    expect(commits).toHaveLength(1);
   });
 
   it('accumulates a reply arriving in several chunks before it reads any of it', async () => {
@@ -183,7 +185,7 @@ describe('a message', () => {
     chunk('I would rather not answer in JSON.');
     end();
     expect(subject.turns[0]?.response).toContain('could not read');
-    expect(commits[0]?.error).toBe('The model did not reply with anything I could read.');
+    expect(commits.at(-1)?.error).toBe('The model did not reply with anything I could read.');
   });
 });
 
@@ -395,7 +397,7 @@ describe('failing and cancelling', () => {
     agent.ask(subject, 'go', ready);
     await settled();
     fail('rate limit exceeded, try again later');
-    expect(commits[0]?.error).toMatch(/^Rate limited: /u);
+    expect(commits.at(-1)?.error).toMatch(/^Rate limited: /u);
   });
 
   it('closes the session and clears the streaming flag on a failure', async () => {

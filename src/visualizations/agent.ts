@@ -132,6 +132,11 @@ export class VisualizationAgent {
     this.inFlight.set(record.id, pending);
     record.updatedAt = this.options.now();
     this.options.changed();
+    // The turn reaches disk here, before the call goes out, because the user can close the tab while the
+    // model is still thinking and the plan promises the exchange survives that. Committing only on the
+    // reply meant the one thing the user typed reached the disk through a call that might never finish.
+    // The store's guard accepts a turn that is still streaming, which is what makes this safe.
+    if (turn) this.options.commit(record);
     void this.run(record, pending, prepare, chart);
     return true;
   }

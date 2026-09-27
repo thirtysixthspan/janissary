@@ -142,10 +142,18 @@ export class VisualizationsManager {
     return undefined;
   }
 
+  // A cancelled reply leaves the question in the exchange with whatever answer had arrived — the user
+  // stopping a reply is not the same as never having asked it, and dropping the turn here is how closing
+  // a tab mid-reply used to delete what someone had typed. The empty response is honest: the model
+  // stopped, and nothing pretends otherwise. The cleared state reaches the disk too, or the turn would
+  // reopen claiming to still be streaming with nothing left to finish it.
   cancel(id: string): boolean {
     const record = this.index.find(id);
     const stopped = this.agent.cancel(id);
-    if (record) record.turns = record.turns.filter((turn) => turn.streaming === undefined);
+    if (record) {
+      for (const turn of record.turns) delete turn.streaming;
+      this.commit(record);
+    }
     return stopped;
   }
 
