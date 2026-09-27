@@ -12,7 +12,7 @@ Running `agent` creates a new tab with a random unused name chosen from a 52-nam
 
 ### Named agent tab
 
-`agent <name>` creates a tab with the given name (always lowercased). The new tab is focused immediately.
+`agent <name>` creates a tab with the given name (always lowercased). The whole name is kept, however long: the display limits below shorten it only in the strip, so routing, `close`, and launch refusals all use the name as typed. The new tab is focused immediately.
 
 
 ### Duplicate name rejection

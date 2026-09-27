@@ -1,6 +1,5 @@
 import type { AgentCommand } from './types.js';
 import { agentNames } from './names.js';
-import { getConfig } from '../config.js';
 import { parseRemoteAddress } from '../remote/address.js';
 
 const FLAGS = new Set(['-w', '--workspace', '--no-workspace', '--offline']);
@@ -46,7 +45,7 @@ function splitAgentClauses(input: string): AgentClauses {
 // The tab name carried by "everything after `agent`", or '' when the input names none.
 function nameFrom(words: string[]): string {
   if (words.length < 2 || words[0].toLowerCase() !== 'agent') return '';
-  return words.slice(1).join(' ').toLowerCase().slice(0, getConfig().tabNameMaxLength);
+  return words.slice(1).join(' ').toLowerCase();
 }
 
 export function resolveAgentName(
