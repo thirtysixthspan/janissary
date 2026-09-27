@@ -59,3 +59,5 @@ The timer lives in the tab you ran `schedule` in, and each firing sends to the t
 <img class="agent-float" src="/agents/tahir-south-west.png" alt="" />
 
 From any agent tab. A harness tab has no command bar of its own — everything you type there goes to the harness — so you can't send *from* one, only *to* one.
+
+A terminal card sitting in a transcript isn't a tab either, so there's nothing to address: the card you get from [`shell ssh <host>`](/user-documentation/advanced-agents/harness#ssh-sessions), and the one you get by taking a waiting command into a terminal, are both off limits. `Tab` never offers one, and naming it answers `No tab named "<card>".`.
