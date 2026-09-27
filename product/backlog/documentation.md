@@ -4,8 +4,6 @@
 
 ## development
 
-* task-picker (1/10) — 0 of 18 facts missing and none wrong: the page carries the two sections with the omitted-source rule, files-before-subdirectories ordering, the full key table including the section headers being unselectable, insert-at-the-cursor rather than run, the shell-tab and harness-tab exceptions, the headless no-op, the `.md`-only recursion with the hidden extension, the one-second re-read, the highlight correction after a live change, a project file overriding a shipped one at the same path, both inserted command forms, and the no-quoting rule. Ground truth is `product/specs/task-picker.md` and `web/src/pickers/useTaskPicker.ts`. No user-documentation change.
-
 ## deferred
 
 ## declined
@@ -184,3 +182,4 @@
 * profiles — documented in documentation/user-documentation/automation/profiles.md, documentation/user-documentation/tab-types/audio-player.md; it promised a report line for the one tab it drops, contradicted tab-types/pdf-viewer.md on which plugin tabs carry a path, and never named the `browser` key that `profile save` writes (removed 2026-09-27)
 * relaunch — documented in documentation/user-documentation/getting-started/startup.md, documentation/user-documentation/advanced-agents/workspaced-agent.md, documentation/user-documentation/automation/monitoring.md, documentation/user-documentation/command-bar/commands.md; it said the transcript comes back with the state file, that a restored workspaced tab lands in its old clone, and said nothing about a split collapsing or a monitor tab being lost, and carried a dead anchor (removed 2026-09-27)
 * state-directory — documented in documentation/user-documentation/command-bar/commands.md, documentation/user-documentation/command-bar/shell.md, documentation/user-documentation/getting-started/startup.md; the `state` field list named three keys the file never holds and put the transcript in one of them, the page that invites hand-editing a project file never said a broken edit loads silently, and the lock's own limit was unstated (removed 2026-09-27)
+* task-picker — documented in documentation/user-documentation/command-bar/tasks.md; the picker is otherwise complete, and the three fixes are that `→` on an expanded directory lands on the first entry whatever it is, that expanded directories stay expanded for the session rather than resetting each time, and that a space in a task file's own name survives insertion too (removed 2026-09-27)

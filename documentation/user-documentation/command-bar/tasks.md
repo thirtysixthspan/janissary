@@ -15,7 +15,7 @@ Your repository's `ai/tasks/` directory holds executable task files — self-con
 | Key | What it does |
 |---|---|
 | `↑` / `↓` | Move the selection one row, skipping the section headers: they label where a source starts rather than being something you can land on |
-| `→` | Collapsed directory: expand it and stay put. Already-expanded directory: move to its first task file. A file: nothing |
+| `→` | Collapsed directory: expand it and stay put. Already-expanded directory: move to its first entry, which may be a task file or another directory. A file: nothing |
 | `←` | Expanded directory: collapse it. Anything else: move to the directory that one sits in. At the top level: nothing |
 | `Return` | Directory: expand or collapse it. File: insert the task's command into the command line at the cursor |
 | `Escape` | Close, leaving the command line untouched |
@@ -32,13 +32,13 @@ A picker needs a screen, so a `tasks` that arrives without one does nothing at a
 
 The picker draws from two sources, each shown as its own labeled section: a **Project** section for the current project's `ai/tasks/`, followed by a **Janissary** section for the task files that ship with the app itself. A section is omitted entirely when its source has no tasks: a project with no `ai/tasks/` shows only the Janissary section, and running inside the Janissary repository itself shows only a Project section, because there the two sources are the same directory.
 
-Within each section, only `.md` files under `ai/tasks/` are shown, recursing into subdirectories. A subdirectory is a row of its own, carrying a chevron that points right while it is collapsed and down while it is expanded, and sitting one level in from the rows around it so the nesting reads at a glance. The list is re-read from disk about once a second, so a task file you add, rename, or remove shows up within a second or so. Each row hides the `.md` extension (`work-an-issue`, not `work-an-issue.md`), though the extension stays in the command the picker inserts.
+Within each section, only `.md` files under `ai/tasks/` are shown, recursing into subdirectories. A subdirectory is a row of its own, carrying a chevron that points right while it is collapsed and down while it is expanded, and sitting one level in from the rows around it so the nesting reads at a glance. Which directories you have expanded is remembered for the rest of your time with the app: a subdirectory starts collapsed, but once you have opened one, it is still open the next time you bring the picker up. The list is re-read from disk about once a second, so a task file you add, rename, or remove shows up within a second or so. Each row hides the `.md` extension (`work-an-issue`, not `work-an-issue.md`), though the extension stays in the command the picker inserts.
 
 An agent deleting a task file, or a `git checkout` moving one, can change the list while the picker is open. When it does, the highlight is put back onto a real task rather than left on a section header or past the end: a selection past the end of a shorter list drops to the last row, and one left on a header drops to the first task beneath it, or the nearest one above. The highlight keeps its position rather than its task, so it can end up on a different task than the one you were on. A key you press before that correction has been applied only puts the highlight back rather than acting on it, so `Return` never inserts a task that was not showing as selected. `Escape` closes the picker at any point.
 
 When a project has a task file at the same path as one of the built-in Janissary tasks, the project's copy wins and the built-in one is hidden — so a project can override a shipped task by giving its own file the same name.
 
-Picking a **Project** task inserts `execute ./ai/tasks/<path>`. Picking a **Janissary** task inserts `execute $janissary/ai/tasks/<path>` instead, since a built-in task isn't at a fixed location relative to the project. The path goes in exactly as the picker read it, with nothing quoted or escaped: a task inside a directory whose name contains a space arrives at the command line with that space intact, which is what you'd get typing it by hand.
+Picking a **Project** task inserts `execute ./ai/tasks/<path>`. Picking a **Janissary** task inserts `execute $janissary/ai/tasks/<path>` instead, since a built-in task isn't at a fixed location relative to the project. The path goes in exactly as the picker read it, with nothing quoted or escaped: a task whose own name contains a space, or that sits inside a directory whose name does, arrives at the command line with that space intact, which is what you'd get typing it by hand.
 
 ## `$janissary`
 
