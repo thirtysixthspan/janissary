@@ -291,10 +291,14 @@ open/close pair instead.
 The toggle uncomments only when every non-blank line in the range already carries the marker; blank
 lines do not count against that test, so a commented block with a blank line in it still uncomments.
 Otherwise it comments, including lines that were already commented, which end up with two markers.
-Pressing Cmd+/ twice therefore always returns the text to exactly what it was.
+Pressing Cmd+/ twice therefore returns the text to exactly what it was, blank lines included; the one
+exception is described below.
 
 Uncommenting removes one marker and one following space if there is one, and finds the marker
-wherever it sits on the line, so a hand-edited block still uncomments cleanly. The selection follows
+wherever it sits on the line, so a hand-edited block still uncomments cleanly. A line that holds
+nothing but the marker comes back empty, so a blank line that commenting lined up with the rest of
+an indented block is blank again afterwards. A line of only spaces, no longer than that indent,
+comes back empty too, since commenting lines it up the same way. The selection follows
 the toggle — a selected range keeps covering the same whole lines and a bare caret keeps its
 position relative to the text — so a second press is the exact inverse of the first. However many
 lines a press changed, one undo restores all of them at once.

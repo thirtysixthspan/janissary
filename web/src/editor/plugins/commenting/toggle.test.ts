@@ -87,6 +87,13 @@ describe('toggleComments — line languages', () => {
       .toBe('    // a();\n    // \n    // b();');
   });
 
+  it('round-trips an indented range with a blank line exactly through two presses', () => {
+    const text = '  const a = 1;\n\n  const b = 2;';
+    const once = applied(text, toggleComments(request(text, 0, 2), SLASHES));
+    expect(once).toBe('  // const a = 1;\n  // \n  // const b = 2;');
+    expect(applied(once, toggleComments(request(once, 0, 2), SLASHES))).toBe(text);
+  });
+
   it('uncomments a marker written without a following space', () => {
     const text = '//const a = 1;';
     expect(applied(text, toggleComments(request(text, 0, 0), SLASHES))).toBe('const a = 1;');
