@@ -67,7 +67,7 @@ export class VisualizationsManager {
     });
     this.refresh = new VisualizationRefresh(
       this.now,
-      () => this.openIds(),
+      () => this.index.openIds(this.managers.tab.tabs),
       this.readOnce,
       (id) => this.index.find(id),
     );
@@ -81,7 +81,7 @@ export class VisualizationsManager {
   view(): VisualizationsView {
     return {
       summaries: this.index.summaries(),
-      windows: this.index.windows(this.openIds(), (id) => this.interviewer.busy(id)),
+      windows: this.index.windows(this.index.openIds(this.managers.tab.tabs), (id) => this.interviewer.busy(id)),
       models: availableVisualizationModels(),
     };
   }
@@ -93,12 +93,15 @@ export class VisualizationsManager {
     if (!pair) throw new Error('No ACP conversation models configured.');
     const record = freshVisualization(id, source, pair, this.now());
     this.index.remember(record);
+    this.index.expectTab(id);
     this.readOnce(id);
     return true;
   }
 
   load(id: string): boolean {
-    return this.index.find(id) !== undefined;
+    if (!this.index.find(id)) return false;
+    this.index.expectTab(id);
+    return true;
   }
 
   // A source may be replaced only while there is no chart. Past that point every answer the user gave
@@ -211,10 +214,6 @@ export class VisualizationsManager {
     this.interviewer.dispose();
   }
 
-  private openIds(): string[] {
-    return this.index.openIds(this.managers.tab.tabs);
-  }
-
   private commit(record: VisualizationRecord, error?: string): void {
     record.updatedAt = this.now();
     if (error === undefined) delete record.error;
@@ -230,12 +229,13 @@ export class VisualizationsManager {
   // rather than abandoned because the session is a subprocess nothing else is listening to, and a
   // deleted record is released here because that is the point at which nothing can render it.
   private releaseClosed(): void {
-    const open = this.openIds();
+    const open = this.index.openIds(this.managers.tab.tabs);
     for (const id of this.interviewer.ids()) {
       if (!open.includes(id)) this.cancel(id);
     }
     for (const id of this.index.ids()) {
-      if (!open.includes(id)) this.index.release(id);
+      if (!open.includes(id)) continue;
+      this.index.release(id);
     }
     this.refresh.reschedule();
   }

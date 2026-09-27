@@ -116,6 +116,39 @@ describe('VisualizationsManager', () => {
     expect(windowOfId(unchartable, 'two')?.error).toBe('the source has no numeric column to measure');
   });
 
+  it('projects a created record before its tab exists, for the read that opens it', () => {
+    const manager = build({ read: reading(CSV) });
+    manager.create('one', 'https://example.com/d.csv');
+
+    // The plugin asks for a tab and then reads the topic to build its payload, and the tab does not exist
+    // yet at either of those points. Without this the plugin found no window, read that as a lost record,
+    // and disabled itself — which is the reported bug.
+    expect(manager.view().windows.map((window) => window.id)).toEqual(['one']);
+  });
+
+  // The projection rides on the topic's broadcast, which fires on every mutation, so the extra window has
+  // to be gone before any later read. A record nobody ever opens must not put its table on the wire.
+  it('stops projecting it once the read that wanted it has happened', async () => {
+    const manager = build({ read: reading(CSV) });
+    manager.create('one', 'https://example.com/d.csv');
+    await settle();
+
+    expect(manager.view().windows).toEqual([]);
+  });
+
+  it('projects a loaded record the same way, and keeps a tab-less one off every broadcast', async () => {
+    const manager = build({ read: reading(CSV) });
+    manager.create('two', 'https://example.com/d.csv');
+    await settle();
+
+    // Loading one whose tab is closed is the other half of the same bug: the window was absent there too,
+    // so opening a saved visualization from the index quietly did nothing.
+    expect(manager.load('two')).toBe(true);
+    expect(manager.view().windows.map((window) => window.id)).toEqual(['two']);
+    await settle();
+    expect(manager.view().windows).toEqual([]);
+  });
+
   it('builds a window only for a visualization that has an open tab', async () => {
     const manager = build({ read: reading(CSV) });
     manager.create('one', 'https://example.com/d.csv');
