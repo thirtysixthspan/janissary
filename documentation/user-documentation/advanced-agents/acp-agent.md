@@ -41,9 +41,9 @@ An active session also appears in the tab's connections list under its provider 
 
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
-When answering needs data, the agent can run the app's own `db` and `browser` commands on its own: query a SQLite database, fetch a web page, read its content. Each command it runs, and the result, is fed back to it so it can continue, up to a limit of 8 steps per prompt. If it hits the limit, the transcript shows `(stopped after 8 tool steps)`.
+When answering needs data, the agent can run the app's own `db`, `browser`, and `question` commands on its own: query a SQLite database, fetch a web page, read its content, ask you a question. Each command it runs, and the result, is fed back to it so it can continue, up to a limit of 8 steps per prompt. If it hits the limit, the transcript shows `(stopped after 8 tool steps)`.
 
-These automatic steps appear collapsed in the transcript as a tool-step entry. Click it, or press `Ctrl+T`, to expand and see exactly what the agent ran. Only `db` and `browser` are available to it; the agent cannot run shell commands or anything else.
+These automatic steps appear collapsed in the transcript as a tool-step entry. Click it, or press `Ctrl+T`, to expand and see exactly what the agent ran. Only `db`, `browser`, and `question` are available to it; the agent cannot run shell commands or anything else.
 
 ## Usage errors
 
