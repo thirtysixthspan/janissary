@@ -20,6 +20,7 @@ type InteractionApis = {
   find: EditorFindApi;
   suggest: EditorSuggestApi;
   pluginKey: (event: KeyLike) => boolean;
+  overlayOpen: boolean;
 };
 
 type EditorInteractions = {
@@ -55,7 +56,7 @@ function verticalResolver(body: HTMLDivElement | null, caret: HTMLSpanElement | 
 }
 
 export function useEditorInteractions({
-  bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey,
+  bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen,
 }: InteractionRefs & InteractionApis): EditorInteractions {
   const composingRef = useRef(false);
   const measuredPageLines = () => pageLines(bodyRef.current);
@@ -69,23 +70,22 @@ export function useEditorInteractions({
     api.setState({ ...current, cursor: { line: result.index, col: 0 }, anchor: null });
   };
 
-  const onKeyDown = (event: React.KeyboardEvent) => {
-    if (event.nativeEvent.isComposing) return;
-    event.stopPropagation();
-    if (handleSuggestKeyDown(event, api, suggest, measuredPageLines())) return;
-    if (find.findOpen && isPlainEscape(event)) { event.preventDefault(); find.close(); return; }
+  const claimKey = (event: React.KeyboardEvent): boolean => {
+    if (handleSuggestKeyDown(event, api, suggest, measuredPageLines())) return true;
+    if (find.findOpen && isPlainEscape(event)) { event.preventDefault(); find.close(); return true; }
 
     const state = api.state;
     const context = {
       selectionSpansLines: state !== null && state.anchor !== null && state.anchor.line !== state.cursor.line,
       multipleSelections: state !== null && hasMultipleSelections(state),
     };
-    if (yieldsToPlugins(event, context) && pluginKey(event)) { event.preventDefault(); return; }
+    if (yieldsToPlugins(event, context) && pluginKey(event)) { event.preventDefault(); return true; }
 
     const action = actionForKey(event);
     if (!action) {
-      if (pluginKey(event)) event.preventDefault();
-      return;
+      if (!pluginKey(event)) return false;
+      event.preventDefault();
+      return true;
     }
     event.preventDefault();
     if (action.kind === 'find') {
@@ -94,9 +94,20 @@ export function useEditorInteractions({
         api.setState(collapseSelection(state));
       }
       find.open();
-      return;
+      return true;
     }
     api.apply(action, measuredPageLines(), verticalResolver(bodyRef.current, caretRef.current));
+    return true;
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.nativeEvent.isComposing) return;
+    if (overlayOpen) {
+      if (actionForKey(event)) event.preventDefault();
+      return;
+    }
+    // Only the keys the buffer claims stop here; every other chord bubbles to the window key handler.
+    if (claimKey(event)) event.stopPropagation();
   };
 
   // The clipboard is taken straight off the event and the default is always cancelled, so a paste
@@ -106,7 +117,7 @@ export function useEditorInteractions({
   const onPaste = (event: React.ClipboardEvent) => {
     const text = event.clipboardData?.getData('text/plain') ?? '';
     event.preventDefault();
-    if (!text) return;
+    if (!text || overlayOpen) return;
     if (suggest.queryLine && suggest.focusTarget === 'query') {
       suggest.setQueryLineState(insertText(suggest.queryLine.state, text));
       return;

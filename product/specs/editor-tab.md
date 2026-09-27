@@ -147,6 +147,16 @@ repeat event. Shift+←/→ extends the selection horizontally, exactly like Shi
 vertically; switching tabs while the editor has focus uses Cmd+Shift+[ / Cmd+Shift+] instead (see
 Tabs), so the horizontal and vertical arrow pairs behave consistently.
 
+The buffer keeps only the keys it binds. Every other window shortcut works while the buffer has
+focus, exactly as it does from any other tab: Cmd+Shift+[ / Cmd+Shift+] switch tabs, Ctrl+← / Ctrl+→
+move the tab, Ctrl+G opens the tab navigator, Ctrl+R the command history picker, Cmd+P Quick Open,
+and Cmd+T a new agent tab (see Keyboard Navigation). Where the buffer binds a chord that also has a
+window meaning, the buffer wins: Ctrl+A and Ctrl+E move to the line's start and end, Ctrl+P and
+Ctrl+N move the cursor, and Escape collapses the selection. An overlay opened from the editor
+appears over the editor tab and takes every keystroke until it is dismissed. The buffer is not
+edited underneath it, a paste does nothing, and the caret is hidden. Once the overlay closes,
+keyboard focus is back in the buffer.
+
 A line too long to fit the editor's width soft-wraps across several visual rows. Pressing ↑/↓ (or
 Ctrl+P/Ctrl+N) moves the cursor one visual row at a time. Normal text wraps at whitespace so a word
 is never split merely because it reaches the edge; a single unbroken token wider than the available

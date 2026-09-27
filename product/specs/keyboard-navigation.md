@@ -46,6 +46,12 @@ section navigation still escapes them. An editor tab's text buffer is the except
 outdent, so the chord reaches the editor there instead of moving focus. Anywhere else in an editor tab,
 such as its metadata row, Shift+Tab still moves to the next section.
 
+A focused editor tab's text buffer captures only the keys it binds itself: printable characters, the
+arrows and their Shift/Cmd forms, Home/End, PageUp/PageDown, Enter, Tab, Backspace/Delete, Escape,
+its Emacs-style Ctrl subset (including Ctrl+A, Ctrl+E, Ctrl+P, and Ctrl+N), and its Cmd editing
+chords — see [[editor-tab]]. Every other binding above reaches the window from the buffer as it
+would from any tab, and an overlay opened there appears over the editor tab.
+
 A focused terminal surface (harness tab, ssh tab, interactive PTY takeover, terminal card) gives every
 key to its PTY, with two conditional exceptions: while a Shift+drag selection is held, **Escape**
 pressed in that terminal is consumed by the selection layer — it clears the selection and does not

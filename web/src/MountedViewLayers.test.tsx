@@ -25,10 +25,10 @@ let editorMountCount = 0;
 vi.mock('./editor/EditorTab', () => {
   const { forwardRef, useImperativeHandle, useEffect, createElement } = React;
   return {
-    EditorTab: forwardRef(({ visible }: { visible?: boolean }, ref) => {
+    EditorTab: forwardRef(({ visible, overlayOpen }: { visible?: boolean; overlayOpen?: boolean }, ref) => {
       useImperativeHandle(ref, () => ({ isDirty: () => false, save: async () => {}, focus: () => {} }), []);
       useEffect(() => { editorMountCount += 1; }, []);
-      return createElement('div', { 'data-testid': 'editor', 'data-visible': String(visible) });
+      return createElement('div', { 'data-testid': 'editor', 'data-visible': String(visible), 'data-overlay-open': String(overlayOpen) });
     }),
   };
 });
@@ -365,6 +365,24 @@ describe('MountedViewLayers', () => {
       }),
     );
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
+  });
+
+  // A key the editor buffer does not bind reaches the window handler, so any overlay can open while
+  // an editor tab is current; it has to be drawn there, and only over the tab on screen.
+  it('renders the overlay stack inside the current editor tab and tells every editor it is open', () => {
+    const tabs = [makeEditorTab('etab', '/test.ts'), makeEditorTab('other', '/other.ts')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        pickerOverlays: React.createElement('div', { className: 'picker' }), overlayOpen: true,
+      }),
+    );
+    const bodies = [...container.querySelectorAll<HTMLElement>('.tab-body')];
+    expect(bodies.map((body) => body.querySelectorAll('.picker').length)).toEqual([1, 0]);
+    expect(bodies[0].style.position).toBe('relative');
+    const editors = [...container.querySelectorAll<HTMLElement>('[data-testid="editor"]')];
+    expect(editors.map((editor) => editor.dataset.overlayOpen)).toEqual(['true', 'true']);
   });
 
   it('does not load a plugin chunk when no plugin tab exists', () => {

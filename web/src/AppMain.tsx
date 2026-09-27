@@ -11,7 +11,7 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
-import { commandBarSuppressed } from './pickers/overlay-registry';
+import { commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';
 import { mountedPickerOverlayProps } from './pickers/picker/overlay-props';
 import type { TabEntry } from './tab-entries';
@@ -111,6 +111,8 @@ export function AppMain({
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
           onPluginDirty,
+          pickerOverlays,
+          overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,
           ...mountedPickerOverlayProps(pickers),
         }}
       />
