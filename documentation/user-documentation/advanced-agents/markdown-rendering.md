@@ -8,7 +8,7 @@ ACP replies and the `help` output appear as formatted GitHub-flavored Markdown i
 
 When you use `acp <prompt>`, the reply renders while the agent writes it. The app keeps each Markdown reply together, so multi-line lists, tables, and fenced code blocks keep their structure. A partial table or code fence can look unfinished during the turn and settle as more text arrives.
 
-Replies come back structured because the app asks for that before your prompt reaches the agent. Every `acp` prompt is prefixed with an instruction to answer in GitHub-flavored Markdown, naming headings, lists, tables, and fenced code blocks. The agent's prose is rendered as Markdown because of that instruction; nothing else in the transcript goes through the same rendering. Automatic `db` and `browser` tool steps remain plain text and appear as collapsed command/result entries. Expand one with `Ctrl+T` to inspect it. Shell output, database results, browser results, and inter-agent messages also remain plain text.
+Replies come back structured because the app asks for that before your prompt reaches the agent. Every `acp` prompt is prefixed with an instruction to answer in GitHub-flavored Markdown, naming headings, lists, tables, and fenced code blocks. The agent's prose is rendered as Markdown because of that instruction; nothing else in the transcript goes through the same rendering. Automatic `db`, `browser`, and `question` tool steps remain plain text and appear as collapsed command/result entries. Expand one with `Ctrl+T` to inspect it. Shell output, database results, browser results, and inter-agent messages also remain plain text.
 
 <img class="agent-float left" src="/agents/yusuf-south-west.png" alt="" />
 

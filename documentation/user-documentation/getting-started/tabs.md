@@ -181,4 +181,4 @@ Besides the keys in [Keyboard shortcuts](/user-documentation/getting-started/key
 ## Agent tool steps fold up
 
 
-When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — `▸ N tool steps  (ctrl+t to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Click the summary line, or press `Ctrl+T`, to expand or collapse the steps for the current tab.
+When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — a caret, `N tool steps`, and `(click to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Click the summary line, or press `Ctrl+T`, to expand or collapse the steps for the current tab.
