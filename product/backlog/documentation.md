@@ -2,8 +2,6 @@
 
 ## ready
 
-* quick-open (1/10) — 0 of 13 facts missing and none wrong: the page covers opening, the gitignore-aware set, the `Searching…` state, the fuzzy match with its ranking rules and the top-10 cap, both empty states, selection, and the fetch-once-per-open behavior including discarding a late answer. `product/specs/quick-open.md` is stale where it says `Return` opens the highlighted file in an editor tab, since the app opens the tab kind the file wants and the page already says so. Ground truth is `product/specs/quick-open.md`, `web/src/pickers/useQuickOpen.ts` and `web/src/pickers/QuickOpen.tsx`. No user-documentation change.
-
 ## development
 
 ## deferred
@@ -163,3 +161,4 @@
 * send — documented in documentation/user-documentation/command-bar/send.md (removed 2026-09-27)
 * agent-command-queue — already documented: documentation/user-documentation/command-bar/queue.md carries the whole surface and its never-queues list matches the client interception chain in web/src/agent-tabs/command-input/useCommandBarSubmit.ts exactly, so product/specs/agent-command-queue.md, not a user-documentation page, is the document that needs updating (removed 2026-09-27)
 * history — already documented: documentation/user-documentation/command-bar/history.md covers recall, the draft, ghost text, the picker, both caps, and the global buffer, and carries the `##` comment stripping that product/specs/history.md leaves to product/specs/comments.md, so no user-documentation change was needed (removed 2026-09-27)
+* quick-open — already documented: documentation/user-documentation/command-bar/quick-open.md covers opening, the gitignore-aware set, the fuzzy ranking and top-10 cap, both empty states, selection, and the fetch-once-per-open behavior, and it correctly says Return opens the tab kind the file wants, which product/specs/quick-open.md gets wrong when it claims an editor tab (removed 2026-09-27)
