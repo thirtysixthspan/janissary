@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs';
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
 import { stripShellSentinels } from './sentinel-strip.js';
 import { restoredTranscript } from './restored-transcript.js';
@@ -15,6 +16,13 @@ import type { Managers } from '../managers.js';
 // label the `shell:<name>` connection in the panel/completion.
 export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
 const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
+
+// A local shell started in a recorded cwd that is not a directory — deleted since, or never a path —
+// exits at once, and so would every respawn after it; it starts in the project directory instead.
+function existingDirectory(dir: string | undefined): string | undefined {
+  if (!dir) return undefined;
+  try { return statSync(dir).isDirectory() ? dir : undefined; } catch { return undefined; }
+}
 
 // Callbacks for a single `execute`: `onChunk` streams partial output as it arrives, `onDone` receives
 // the final captured output, and `onPwd` the shell's working directory after the command (so the
@@ -128,9 +136,10 @@ export class ShellManager {
       offline: tab?.offline,
       tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
     };
-    if (getConfig().interactiveShellDetection) return this.spawnPtyShellFor(label, cwd, sandbox);
+    const localCwd = cwd ? existingDirectory(cwd) ?? existingDirectory(this.managers.tab.launchDir) : undefined;
+    if (getConfig().interactiveShellDetection) return this.spawnPtyShellFor(label, localCwd, sandbox);
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
-    if (cwd) shell.stdin?.write(`cd "${cwd}"\n`);
+    if (localCwd) shell.stdin?.write(`cd "${localCwd}"\n`);
     return shell;
   }
 

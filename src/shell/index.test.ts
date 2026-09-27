@@ -276,6 +276,35 @@ describe('queryShellPwd', () => {
     expect(onResult).toHaveBeenCalledWith('/home/user');
   });
 
+  // What a zsh pty shell sent back before the marker: the previous command's tail and sentinel, the
+  // partial-line `%` marker, line-editor redraws, the echoed `pwd`, the answer, and the next line.
+  it('keeps only the path when the answer arrives among terminal debris', () => {
+    const shell = mockChildProcess();
+    const onResult = vi.fn();
+
+    vi.spyOn(Date, 'now').mockReturnValue(3000);
+    queryShellPwd(shell, 4, onResult);
+
+    shell.stdout.emit('data', [
+      '\u{1B}[?2004l\r\r\ntwo\r\n__JS_END_4_2999__\r\n',
+      '\u{1B}[1m\u{1B}[7m%\u{1B}[27m\u{1B}[1m\u{1B}[0m          \r \r\r\u{1B}[0m\u{1B}[27m\u{1B}[24m\u{1B}[J\u{1B}[K\u{1B}[?2004h\u{1B}[Kp\rpwd',
+      '\u{1B}[?2004l\r\r\n/home/user/my project\r\n',
+      '\u{1B}[1m\u{1B}[7m%\u{1B}[27m\u{1B}[1m\u{1B}[0m          \r \r\u{1B}[?2004h\u{1B}[Ke\recho "__PWD_4_3000__',
+    ].join(''));
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('/home/user/my project');
+  });
+
+  it('reports nothing when no path precedes the marker', () => {
+    const shell = mockChildProcess();
+    const onResult = vi.fn();
+
+    vi.spyOn(Date, 'now').mockReturnValue(3000);
+    queryShellPwd(shell, 4, onResult);
+
+    shell.stdout.emit('data', 'one\r\n__JS_END_4_2999__\r\n\u{1B}[1m\u{1B}[7m%\u{1B}[0m \r \rpwd\r\necho "__PWD_4_3000__');
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('');
+  });
+
   it('writes pwd command to stdin', () => {
     const shell = mockChildProcess();
     const onResult = vi.fn();

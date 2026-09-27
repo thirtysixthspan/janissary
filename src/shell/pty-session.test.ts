@@ -47,6 +47,16 @@ describe('createPtyShell', () => {
     expect(written[0]).toContain("PS2=''");
   });
 
+  // zsh prompts from `PROMPT`, prints a partial-line marker before each prompt, and its line editor
+  // redraws every line it reads — sentinel included — whatever `stty -echo` says.
+  it('quiets zsh\'s own prompts and line editor too', () => {
+    const { written } = fakePty();
+    const zshBranch = /\[ -n "\$ZSH_VERSION" \] && \{([^}]*)\}/.exec(written[0])?.[1] ?? '';
+    expect(zshBranch).toContain("PROMPT=''");
+    expect(zshBranch).toContain("RPROMPT=''");
+    expect(zshBranch).toMatch(/unsetopt zle prompt_cr prompt_sp/);
+  });
+
   it('swallows the seed echo so it never reaches a command buffer', async () => {
     const pty = fakePty();
     const chunks: string[] = [];
