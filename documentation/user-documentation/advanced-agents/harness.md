@@ -40,7 +40,8 @@ needed because a harness like claude asks for every click and drag to be reporte
 drag talks to the harness rather than selecting anything; holding `Shift` keeps that one drag for
 yourself. The still image is the screen exactly as it looked — the harness's colours, its bold and
 dim text, and the cursor are all there, in the same places — so apart from the highlight you cannot
-tell the frozen screen from the live one.
+tell the frozen screen from the live one. The highlight over the picked text is the one thing on it
+that follows the application theme, so it stays visible whichever theme you are on.
 
 `Cmd+C` — or `Ctrl+Shift+C` on any platform — copies the selection, and copying it releases it,
 unfreezing the screen the same as dismissing it does; make a new Shift+drag to copy again. Press
