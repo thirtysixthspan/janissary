@@ -47,6 +47,16 @@ The chart fills the tab, with its title above it and the row count below. When t
 
 You can rename the chart by double-clicking its name in the header.
 
+## Look closer without asking
+
+Three controls sit under the chart, and none of them asks the model anything:
+
+- **Order** — as read, by category, or by value largest first.
+- **Show** — all of them, or the largest five, ten, or twenty.
+- **Only** — narrow the chart to one category.
+
+**Reset** puts all three back, and only appears once you have changed one. The line under the chart says what was narrowed, and the **Data table** follows the same narrowing as the picture. A re-read of the source drops the narrowing, because the new data is not the data you were looking at. None of this is saved: the chart is the model's, and the order and the filter are yours.
+
 ## Change the chart
 
 Type into the bar at the bottom the way you would in a terminal. Press `Enter` to send, `Shift+Enter` for a newline, and `Escape` to clear what you have typed.

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the gap that a chart is a picture with no way to look closer, where filtering and sorting are table stakes on every dashboard surface.
-
-Existing Issue: `product/specs/visualizations.md` has the model choose the columns and the tab draws them, and nothing in the chart is interactive — no filter, no sort, no top-N, no selection — so the only way to narrow a chart is to ask the model again and wait for it. Severity: 5/10
-
-Existing Risk: 5/10 - Every answer to a follow-up question about a chart costs a model call and a visible wait where a sort or a filter is instant and free, so the feature is slow at exactly the moment it is being used to explore.
-
-Proposal Risk: 3/10 - A filter or a sort changes what the chart says without changing the specification, and an interactive layer can obscure the fact that a re-read replaced the data underneath it, so a narrowed chart must be visibly marked as narrowed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: let a chart be sorted and narrowed without asking again". Add a client-side view over the marks rather than a new server round trip: a sort control choosing source order, by the x column, or by the y column descending, and a top-N control capping the bands drawn, both in `web/src/plugins/visualizations/chart/points.ts` beside the marks they order, so the specification stays the user's and the view is plainly the tab's. Add a cross-filter on a mark — clicking a bar or a point restricts the other series to that category — which is what both Grafana panels and Power BI reports do and what the static chart cannot express at all. Mark every narrowed chart in the caption in `web/src/plugins/visualizations/VisualizationBody.tsx` so a filtered chart is never mistaken for the whole table, and clear the narrowing on a re-read. Reuse the existing payload rather than adding a wire field, since none of this changes what the host holds and the host must not learn about it. Add cases to `web/src/plugins/visualizations/chart/points.test.ts` for the orders and the cap, and to `web/src/plugins/visualizations/VisualizationTab.test.tsx` for a narrowed chart differing from an unnarrowed one. Sources: https://grafana.com/docs/grafana/latest/dashboards/share-dashboards-panels/ , https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-ask-data-question
-
-
 * Close the gap that the interview is the only place a suggested question is offered, where the moment a user most wants one is after they can see the chart.
 
 Existing Issue: `web/src/plugins/visualizations/VisualizationQuestion.tsx` renders a model's suggested answers one question at a time before the chart exists, and once a chart is drawn `web/src/plugins/visualizations/VisualizationChat.tsx` is a bare command bar, so the suggestions stop at the moment the user has something to react to. Severity: 4/10

@@ -5,6 +5,8 @@ import type {
   VisualizationWindow,
 } from '@shared/plugins/visualizations/shared';
 import { ConfirmDialog } from '../api';
+import { bandsOf, DEFAULT_VIEW, viewedMarksFor, type ChartView } from './chart/view';
+import { ChartControls } from './ChartControls';
 import { ChartSvg } from './chart/ChartSvg';
 import { VisualizationChat } from './VisualizationChat';
 import { VisualizationData } from './VisualizationData';
@@ -138,29 +140,49 @@ function SourceButton({ busy, onSetSource }: { busy: boolean; onSetSource(source
   );
 }
 
-// The line under the chart says how much of the source it is showing, and how the measure was reduced —
-// because a bar whose height is a sum reads as a raw value to anyone who is not told otherwise, and the
-// tab is the only place they will be.
-function caption(table: VisualizationTable, chart: VisualizationChart, readAt: number | undefined): string {
+// The line under the chart says how much of the source it is showing, how the measure was reduced, and —
+// when the chart is not the whole story — exactly what has been left out. A bar whose height is a sum
+// reads as a raw value to anyone not told otherwise, and a chart showing five of twelve regions with
+// nothing saying so is a chart lying by omission.
+function caption(
+  table: VisualizationTable,
+  chart: VisualizationChart,
+  readAt: number | undefined,
+  shown: ChartView,
+  bands: number,
+): string {
   const rows = table.truncated ? `showing ${table.rows.length} of ${table.total} rows` : `${table.rows.length} rows`;
   const how = chart.aggregate === undefined ? '' : ` · ${chart.aggregate} of ${chart.y}`;
+  const capped = shown.limit > 0 && shown.limit < bands ? ` · top ${shown.limit} of ${bands}` : '';
+  const only = shown.focus === undefined ? '' : ` · only ${shown.focus}`;
   const when = readAt === undefined ? '' : ` · read ${new Date(readAt).toLocaleTimeString()}`;
-  return `${rows}${how}${when}`;
+  return `${rows}${how}${capped}${only}${when}`;
 }
 
 function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement {
   const { view, busy, active, chartRef, onRevise, onCancel, reason } = props;
   const table = view.table;
   const chart = view.chart;
+  // The window is `view`; how the marks are being looked at is `shown`, because the two are unrelated
+  // and one shadowing the other is how a caption ends up describing the wrong thing.
+  const [shown, setShown] = React.useState<ChartView>(DEFAULT_VIEW);
+  // A re-read replaces the table a view was narrowing, so the view goes with it rather than silently
+  // carrying over onto data the user never saw. `readAt` is the one field that moves when new data
+  // arrives, and it is absent until a read has succeeded.
+  React.useEffect(() => { setShown(DEFAULT_VIEW); }, [view.readAt]);
   if (!table || !chart) return <p className="visualization-pending">Reading the source…</p>;
+  // Every category, not the narrowed ones: a filter that could only offer what it had already kept
+  // would be a filter nobody could widen again.
+  const labels = bandsOf(viewedMarksFor(table, chart, DEFAULT_VIEW).points);
   return (
     <>
       {reason === undefined ? null : <p className="visualization-reason-note">{reason}</p>}
       <figure className="visualization-figure">
-        <ChartSvg ref={chartRef} chart={chart} table={table} />
-        <figcaption>{caption(table, chart, view.readAt)}</figcaption>
+        <ChartSvg ref={chartRef} chart={chart} table={table} view={shown} />
+        <figcaption>{caption(table, chart, view.readAt, shown, labels.length)}</figcaption>
       </figure>
-      <VisualizationData chart={chart} table={table} />
+      <ChartControls view={shown} labels={labels} onChange={setShown} />
+      <VisualizationData chart={chart} table={table} view={shown} />
       <VisualizationChat
         turns={view.turns}
         busy={busy}

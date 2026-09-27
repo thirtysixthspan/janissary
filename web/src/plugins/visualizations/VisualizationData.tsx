@@ -1,6 +1,7 @@
 import React from 'react';
 import { dataTableFor, describeChart, type DataTable } from './chart/describe';
 import type { ChartShape, Table } from './chart/points';
+import type { ChartView } from './chart/view';
 
 // The chart's text alternative: one sentence naming what is plotted, and the marks themselves as a table.
 // A chart is a picture of a table, so the table is the alternative that cannot misdescribe it — it is
@@ -10,14 +11,15 @@ import type { ChartShape, Table } from './chart/points';
 export type DataProperties = {
   chart: ChartShape;
   table: Table;
+  view: ChartView;
 };
 
-export function VisualizationData({ chart, table }: DataProperties): React.ReactElement {
-  const data = dataTableFor(table, chart);
+export function VisualizationData({ chart, table, view }: DataProperties): React.ReactElement {
+  const data = dataTableFor(table, chart, view);
   return (
     <details className="visualization-data">
       <summary>Data table</summary>
-      <p className="visualization-data-summary">{describeChart(table, chart)}</p>
+      <p className="visualization-data-summary">{describeChart(table, chart, view)}</p>
       <ChartTable data={data} />
     </details>
   );

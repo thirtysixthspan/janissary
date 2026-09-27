@@ -304,4 +304,87 @@ describe('VisualizationTab', () => {
     tab({ table: TABLE, chart: CHART, error: 'https://example.com/d.csv returned 500' });
     expect(screen.getByText('Data table')).toBeInTheDocument();
   });
+
+  // Every answer to a follow-up about a chart costs a model call, so the tab can narrow one itself. The
+  // property that matters is that the picture, the table beside it, and the caption all narrow together.
+  describe('narrowing a chart', () => {
+    // Six regions, so the smallest cap the control offers can actually narrow something: a cap of five
+    // over three rows is a no-op, which is the right behaviour and a useless fixture.
+    const WIDE: VisualizationTable = {
+      columns: [
+        { name: 'region', type: 'string' },
+        { name: 'revenue', type: 'number' },
+      ],
+      rows: [
+        ['north', 10], ['south', 4], ['east', 7], ['west', 6], ['pole', 3], ['isles', 9],
+      ],
+      total: 6,
+      truncated: false,
+    };
+
+    function cells(): string[] {
+      return screen.getAllByRole('cell').map((cell) => cell.textContent ?? '');
+    }
+
+    function narrow(over: Partial<VisualizationWindow> = {}) {
+      return tab({ table: WIDE, chart: CHART, ...over });
+    }
+
+    it('offers the three ways of looking closer only once there is a chart', () => {
+      const { unmount } = tab({ table: TABLE });
+      expect(screen.queryByLabelText('Order')).toBeNull();
+      unmount();
+      narrow();
+      expect(screen.getByLabelText('Order')).toBeInTheDocument();
+      expect(screen.getByLabelText('Show')).toBeInTheDocument();
+      expect(screen.getByLabelText('Only')).toBeInTheDocument();
+    });
+
+    it('offers every category as a filter, not only the ones it has kept', () => {
+      narrow();
+      const options = [...(screen.getByLabelText('Only') as HTMLSelectElement).querySelectorAll('option')]
+        .map((option) => option.textContent);
+      expect(options).toEqual(['Every category', 'north', 'south', 'east', 'west', 'pole', 'isles']);
+    });
+
+    it('reorders the table when the order changes, without asking anyone', () => {
+      narrow();
+      expect(cells().slice(0, 2)).toEqual(['north', '10']);
+      fireEvent.change(screen.getByLabelText('Order'), { target: { value: 'value' } });
+      // Largest first: north 10, isles 9, east 7, west 6, south 4, pole 3.
+      expect(cells()).toEqual([
+        'north', '10', 'isles', '9', 'east', '7', 'west', '6', 'south', '4', 'pole', '3',
+      ]);
+    });
+
+    it('narrows the table to the categories it keeps, and says which it dropped', () => {
+      narrow();
+      fireEvent.change(screen.getByLabelText('Order'), { target: { value: 'value' } });
+      fireEvent.change(screen.getByLabelText('Show'), { target: { value: '5' } });
+      expect(screen.getByText('6 rows · top 5 of 6')).toBeInTheDocument();
+      expect(cells()).toEqual(['north', '10', 'isles', '9', 'east', '7', 'west', '6', 'south', '4']);
+    });
+
+    it('narrows the table to one category, and says which', () => {
+      narrow();
+      fireEvent.change(screen.getByLabelText('Only'), { target: { value: 'east' } });
+      expect(screen.getByText('6 rows · only east')).toBeInTheDocument();
+      expect(cells()).toEqual(['east', '7']);
+    });
+
+    it('puts the order, the cap, and the filter back the way they were', () => {
+      narrow();
+      fireEvent.change(screen.getByLabelText('Only'), { target: { value: 'east' } });
+      expect(screen.getByText('6 rows · only east')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+      expect(screen.getByText('6 rows')).toBeInTheDocument();
+      expect(cells()).toHaveLength(12);
+      expect(cells().slice(0, 2)).toEqual(['north', '10']);
+    });
+
+    it('says nothing about narrowing until something is narrowed', () => {
+      narrow();
+      expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull();
+    });
+  });
 });

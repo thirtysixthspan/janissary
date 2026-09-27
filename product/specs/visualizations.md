@@ -58,6 +58,14 @@ A chart is a picture, so the tab carries what the picture says. The chart names 
 
 Beneath the chart, a disclosure labelled **Data table** holds one row per mark the chart draws — the category, the measure, and the series when the chart is split by one, for a pie the summed categories, and for a scatter its two numeric columns. It is closed by default, so the tab opens on a chart rather than on a table, and it is generated from the same marks the chart is drawn from, so it cannot disagree with the chart. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
 
+### Looking closer
+
+A drawn chart carries three controls: an **Order** choosing as read, by category, or by value largest first; a **Show** choosing all of them or the largest five, ten, or twenty; and an **Only** filter narrowing the chart to one category. They are the tab's own view of the data it already holds, so none of them asks the model anything, and none of them is stored: the chart specification stays the model's and the view stays the reader's.
+
+A cap is counted in categories rather than in marks, so a chart split by a second column loses a whole category rather than one of its series, which would leave a bar a different height from its neighbour with nothing to explain it. A narrowed chart renumbers its categories so the axis has no gap where a category was dropped.
+
+The line under a narrowed chart says so, naming the cap and the filter, and the data table and the chart's description follow the same narrowing as the picture. A re-read replaces the table the view was narrowing, so the view is dropped with it rather than carrying over onto data the user never saw.
+
 ### Changing the chart
 
 Once a chart exists the tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query, Shift+Enter starts a new line, Escape clears an unsent one, and Escape during a reply cancels it. A second query is refused while a reply is in flight, and a refused Enter leaves the typed text in place.
