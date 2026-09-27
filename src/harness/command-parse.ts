@@ -1,5 +1,5 @@
 import { HARNESS_COMMANDS, HARNESS_NAMES } from './index.js';
-import { supportsHarnessAutoApprove } from './auto-approve.js';
+import { describeAutoApproveHarnesses, supportsHarnessAutoApprove } from './auto-approve.js';
 import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
@@ -77,7 +77,7 @@ function parseHarnessFlags(
   // The supported-harness check comes first: adding -w would not make `harness opencode -y` valid,
   // so pointing at -w would misdirect — the harness choice is the real blocker.
   if (requestedAutoApprove && !noAutoApprove && !supportsHarnessAutoApprove(name)) {
-    return { error: '-y/--yes is only supported for the claude and codex harnesses.' };
+    return { error: `-y/--yes is only supported for the ${describeAutoApproveHarnesses()} harnesses.` };
   }
   const model = findFlagValue(tokens, '--model');
   if (model !== undefined && typeof model !== 'string') return model;

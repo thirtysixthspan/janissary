@@ -111,7 +111,7 @@ describe('JanusClient', () => {
       tabNameMaxLength: 23, activeTabNameMaxLength: 71, globalHistory: ['history'],
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
-      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
+      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'] },
       scheduleLaunch: { targets: ['agent'], active: 'agent' },
     };
     messageHandler!({ data: JSON.stringify(snapshot) });

@@ -6,7 +6,7 @@ import { resolveLaunchDir } from './launch-dir.js';
 import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
-import { supportsHarnessAutoApprove } from './auto-approve.js';
+import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-approve.js';
 import { sshRuntime } from './observers.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
@@ -96,7 +96,7 @@ export class HarnessManager extends HarnessTabSpawn {
   harnessLaunchView(): HarnessLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));
-    return { names: HARNESS_NAMES, models };
+    return { names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames() };
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).

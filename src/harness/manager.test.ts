@@ -656,6 +656,13 @@ describe('HarnessManager launch dialog view', () => {
     for (const name of view!.names) expect(Array.isArray(view!.models[name])).toBe(true);
   });
 
+  it('delivers the harnesses that accept auto-approve while open', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.autoApprove).toEqual(['claude', 'codex']);
+  });
+
   it('returns null again after the dialog is closed', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
