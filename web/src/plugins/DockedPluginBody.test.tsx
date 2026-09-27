@@ -6,6 +6,7 @@ import type { JanusClient } from '../ws';
 import { Sidebar } from '../Sidebar';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { clientPlugin, type ClientPluginRegistration } from './registry';
+import { DockedPluginBody } from './DockedPluginBody';
 
 // Each case owns its registry and its failure ledger, so a fixture plugin never has to be written
 // into the production map and a disabled plugin cannot leak into the next case.
@@ -146,5 +147,22 @@ describe('a plugin tab docked into a sidebar', () => {
     fireEvent.click(screen.getByRole('button', { name: /move to right sidebar/i }));
 
     expect(send).toHaveBeenCalledWith({ method: 'setDock', params: { index: 0, dock: 'right' } });
+  });
+
+  // A tab can name a view whose payload has not arrived yet, or whose activation failed and left the
+  // envelope out. Rendering a frame with no plugin in it would show an empty sidebar slot with a
+  // dock-cycle header and nothing under it.
+  it('renders nothing for a plugin view carrying no envelope', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { plugin, ...withoutEnvelope } = pluginTab('fixture', 'fixture');
+    expect(plugin).toBeDefined();
+
+    const { container } = render(
+      <DockedPluginBody
+        tab={withoutEnvelope as TabView} index={0} visible client={client} onClose={vi.fn()}
+      />,
+    );
+
+    expect(container.innerHTML).toBe('');
   });
 });
