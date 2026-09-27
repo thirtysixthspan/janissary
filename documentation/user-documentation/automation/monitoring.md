@@ -97,6 +97,8 @@ monitors                    list active monitors with their targets and suggesti
 
 A monitor's session also ends on its own when its owner tab closes or every one of its tab targets has been removed. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
 
+None of this survives a `janus --relaunch`: a monitor's session is a live process, and its reporting tab is a live view, so both are gone after a restart. Start them again from the tab that owned them, or from a [profile](/user-documentation/automation/profiles) that carries a `monitors` entry.
+
 Closing a reporting tab stops the monitors feeding it. If two owners share a reporting tab, closing one owner stops only that owner's monitor; the reporting tab remains while another monitor still feeds it.
 
 A reply or error that turns up after its monitor was stopped, or after its session was replaced by a reset or an automatic error recovery, is ignored: nothing is suggested, no reporting tab reopens, and no session is restarted. Stopping a monitor mid-prompt never leaves an untracked session behind. `monitor ask` is the one exception, and only for the command bar: a late reply still closes the running `monitor ask` entry with the text it would have shown, so you are never left waiting. The session is still not restarted.

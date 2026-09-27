@@ -39,7 +39,7 @@ Each tab's state is one JSON file under `.janissary/state/`, named after the tab
 
 A tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch, for every view tab such as an [image](/user-documentation/tab-types/image-viewer) or [page](/user-documentation/tab-types/web-pages) tab, and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here.
 
-Work that lands after you close a tab does not put that tab back. A scheduled command that fires, or a shell command that finishes, minutes after the tab is gone writes nothing, so the tab stays closed on the next `--relaunch`. The state directory is wiped on an ordinary launch and kept on `--relaunch`; see [Resuming a session](/user-documentation/getting-started/startup#resuming-a-session-with---relaunch).
+Work that lands after you close a tab does not put that tab back. A scheduled command that fires, or a shell command that finishes, minutes after the tab is gone writes nothing, so the tab stays closed on the next `--relaunch`. The state directory is wiped on an ordinary launch and kept on `--relaunch`; see [Resuming a session](/user-documentation/getting-started/startup#resuming-a-session-with-relaunch).
 
 ## `theme`
 

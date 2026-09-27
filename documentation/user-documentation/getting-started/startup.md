@@ -72,7 +72,9 @@ janus --relaunch
 
 A harness or agent you parked on another machine is the exception to that. `--relaunch` reconnects every remote session you had detached, opening its tabs as each host answers, and one unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
 
-What comes back is read from one JSON file per tab under `.janissary/state/`, named after the tab. Run `state` in a tab to see the fields it holds and what `--relaunch` would restore; see [`state`](/user-documentation/command-bar/commands#state).
+What comes back is read from one JSON file per tab under `.janissary/state/`, named after the tab, with the transcript kept beside it in its own file under `.janissary/transcripts/`. Run `state` in a tab to see the fields the state file holds and what `--relaunch` would restore; see [`state`](/user-documentation/command-bar/commands#state).
+
+A relaunch comes back in one pane. A split you left open collapses to a single tab strip, and the first tab in the saved order takes focus.
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 
