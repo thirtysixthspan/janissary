@@ -105,6 +105,6 @@ A track that won't decode is an ordinary media outcome, not a failure of the pla
 
 ## Lifecycle
 
-An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`, and a [profile](/user-documentation/automation/profiles) neither records one nor reopens it, so a profile launched later will not bring your playlist back.
+An audio tab is a live view, not saved state. The playlist belongs to the open tab, not to the files: close it and open the same track again and you start a fresh queue from the beginning. Audio tabs are not restored by `janus --relaunch`, and a [profile](/user-documentation/automation/profiles) will not bring your playlist back either — a saved profile records the audio tab, but with a path nothing can open, so the launch reports `Could not open audio tab "player".` and no player comes up.
 
 Closing the tab stops playback and releases every file it was serving. Only files you've explicitly opened are ever served to the player.
