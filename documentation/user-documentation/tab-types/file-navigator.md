@@ -154,8 +154,7 @@ that answers a right-click everywhere else in the app. The tree's own menu takes
 `↑`/`↓` move through its entries, `Enter` chooses one, and `Escape`, a click elsewhere, or a choice all
 put your cursor back in the tree.
 
-A navigator is a quiet tab. Opening or using one writes nothing to any transcript, and it never queues
-behind a busy agent or interrupts one: it does its own filesystem work and leaves your agent to its turn.
+A navigator is a quiet tab. Opening or editing a file from the tree records nothing in any transcript and nothing in command history, and it never queues behind a busy agent or interrupts one: it does its own filesystem work and leaves your agent to its turn. Typing `files` is the one thing that does leave a trace, and only in the tab you typed it in: your command appears there as the input, with no output.
 
 Files opened from the tree land in the same [group](/user-documentation/getting-started/groups) as the tree tab —
 including while the tree is docked to a sidebar; opened files still land in that group.
@@ -312,6 +311,7 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | `PageUp` / `PageDown` | Move by a screenful |
 | Type letters | Jump to the next row starting with what you typed |
 | `Backspace` / `Delete` | Open a confirmation dialog to delete the selected file or directory |
+| `Escape` | Clear the selection and the cursor, and disarm a pending copy or cut |
 | `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
 | `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
@@ -323,6 +323,11 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 
 Deleting uses the same selection normalization as moving. One item asks `Delete "<name>"?`.
 Multiple items ask `Delete <count> items?`.
+
+`Escape` only acts when the tree has something to clear. With nothing selected and nothing on the
+clipboard it belongs to the window again, so it goes on resetting the transcript scroll the way it
+does everywhere else. Clearing the clipboard through it clears the marks in every open navigator,
+not only the one you pressed it in.
 Both dialogs offer **Delete** and **Cancel**. A confirmed bulk delete continues after individual
 failures, reported as one line in the notifications feed instead of a dialog:
 `Could not delete <failed> of <total> items: <names>`, naming up to three failed items and
