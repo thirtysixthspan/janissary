@@ -106,6 +106,16 @@ export function executeShellCmd(
   shell.stdin!.write(shellCommandInput(command, prompt));
 }
 
+// A pty shell's stream can carry more than the answer ahead of the marker — a previous command's
+// tail, prompt markers, line-editor redraws, the echoed `pwd` — so only the last absolute path line
+// is taken, and a window with none reports nothing rather than the debris.
+const PATH_ANSWER = /^\/[^\p{Cc}]*$/u;
+
+function pwdAnswer(text: string): string {
+  const lines = text.split('\n').map((line) => line.replaceAll('\r', '').trim());
+  return lines.findLast((line) => PATH_ANSWER.test(line)) ?? '';
+}
+
 // Asks the shell for its working directory. A shell that is gone, or whose output ends before the
 // answer, completes with an empty result, which callers treat as nothing to report.
 export function queryShellPwd(
@@ -128,7 +138,7 @@ export function queryShellPwd(
     const endIndex = buffer.indexOf(prompt);
     if (endIndex !== -1) {
       done();
-      onResult(buffer.slice(0, Math.max(0, endIndex)).trim());
+      onResult(pwdAnswer(buffer.slice(0, Math.max(0, endIndex))));
     }
   };
 

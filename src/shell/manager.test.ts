@@ -139,6 +139,38 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
 
+  // A cwd recorded from a garbled pwd answer, or a directory since deleted, must not kill every shell
+  // the tab will ever start: `pty.spawn` exits at once in a working directory that does not exist.
+  it('starts a local pty shell in the launch directory when the tab\'s cwd is not a directory', async () => {
+    const managers = makeManagers();
+    managers.tab.setCwd('janus', `${tmpDir}\r\n__JS_END_0_1__\r\n%\r \rpwd\r\necho "`);
+    new ShellManager(managers).run('janus', 'ls');
+
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    expect(spawnTransportMock.mock.calls[0][3]).toBe(process.cwd());
+  });
+
+  it('starts a local pty shell in the tab\'s cwd when it is a directory', async () => {
+    const managers = makeManagers();
+    managers.tab.setCwd('janus', tmpDir);
+    new ShellManager(managers).run('janus', 'ls');
+
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    expect(spawnTransportMock.mock.calls[0][3]).toBe(tmpDir);
+  });
+
+  it('writes no cd to a piped shell when the tab\'s cwd is not a directory', async () => {
+    writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
+    loadConfig(tmpDir);
+    const managers = makeManagers();
+    managers.tab.setCwd('janus', path.join(tmpDir, 'missing'));
+    new ShellManager(managers).run('janus', 'ls');
+
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    const shell = spawnShellMock.mock.results[0].value as { stdin: { write: ReturnType<typeof vi.fn> } };
+    expect(shell.stdin.write).not.toHaveBeenCalled();
+  });
+
   it('leaves a remote tab on its channel shell whatever the setting says', async () => {
     const managers = makeManagers();
     managers.remote = { get: () => ({}) } as unknown as Managers['remote'];

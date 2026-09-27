@@ -12,7 +12,7 @@ Shell commands (the `shell` keyword, stripped) are written to the tab's persiste
 
 The command and its delimiter are written as a single line the shell must read in full before it can run anything. This matters for a command that reads its own stdin — a password prompt, a `read`, a REPL. Anything still unread when such a command starts is input the shell hands to it, so a delimiter written on its own line would be consumed as that command's first line of input and never come back: the command would never be seen to finish, its agent would stay busy, and a terminal it had been promoted to would never close. Written this way, nothing is left over and the user's own typing is the command's first input. A command that is empty or nothing but a comment still ends normally.
 
-A local tab's shell runs inside a pseudo-terminal, so every command it runs has a real terminal attached (see Interactive detection below). One consequence is visible immediately: programs that adapt to a terminal now behave as they would in one — tools emit color, and commands that page their own output, such as `git log` and `git diff`, open a pager rather than dumping plain text. The environment is otherwise left alone. Before any command runs, the shell is put into a quiet state — echo off, empty prompts — so the terminal's own echo cannot appear in captured output. Remote tabs' shells, and every tab's shell when interactive detection is turned off, are plain pipes as before.
+A local tab's shell runs inside a pseudo-terminal, so every command it runs has a real terminal attached (see Interactive detection below). One consequence is visible immediately: programs that adapt to a terminal now behave as they would in one — tools emit color, and commands that page their own output, such as `git log` and `git diff`, open a pager rather than dumping plain text. The environment is otherwise left alone. Before any command runs, the shell is put into a quiet state — echo off, empty prompts — so the terminal's own echo cannot appear in captured output. Under zsh the quiet state also turns off zsh's own line editor, which would otherwise redraw each line the shell reads, and its partial-line `%` marker, so a zsh tab's output and working directory are captured as cleanly as a bash tab's. Remote tabs' shells, and every tab's shell when interactive detection is turned off, are plain pipes as before.
 
 ### Shell output streaming
 
@@ -92,8 +92,10 @@ All agent tabs with a running interactive PTY stay mounted simultaneously (only 
 
 ### Per-agent cwd tracking
 
-After each shell command completes, `queryShellPwd` sends `pwd` to the shell and captures the response. The working directory is saved to the agent state file's `cwd` field and kept in a `cwdRef` map keyed by agent label.
+After each shell command completes, `queryShellPwd` sends `pwd` to the shell and captures the response. The working directory is saved to the agent state file's `cwd` field and kept in a `cwdRef` map keyed by agent label. Only the absolute path the shell printed is kept, never any surrounding terminal output; when no path comes back, the previously recorded working directory stays in place.
 
 ### Restoration on relaunch
 
 On `--relaunch`, saved cwd values are loaded from agent state files into `cwdRef`. When `getShell` creates a new shell for a tab, it checks `cwdRef` for the tab's label and sends `cd "<cwd>"` to the shell before any user commands.
+
+A local tab whose recorded working directory is no longer a directory — deleted since it was saved, or never a real path — still gets a working shell: the shell starts in the directory Janissary was launched from, and the working directory recorded after the tab's next command replaces the stale value.

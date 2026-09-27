@@ -25,7 +25,9 @@ export type PtyShellSpawn = {
   id: string;
 };
 
-const SEED_COMMAND = "stty -echo 2>/dev/null; PS1=''; PS2=''";
+// `stty -echo` and empty `PS1`/`PS2` quiet bash. zsh also needs its line editor off — it redraws each
+// line it reads, sentinel included, whatever the tty's echo setting — and its partial-line marker.
+const SEED_COMMAND ="stty -echo 2>/dev/null; PS1=''; PS2=''; [ -n \"$ZSH_VERSION\" ] && { PROMPT=''; RPROMPT=''; unsetopt zle prompt_cr prompt_sp; }";
 
 // Everything the shell emits before this marker is the seed's own echo and prompt noise.
 //
