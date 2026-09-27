@@ -30,11 +30,14 @@ open external clip.mp4            your configured video player (QuickTime Player
 open external paper.pdf           your configured PDF application (the OS default otherwise)
 open external papers.zip          whichever application your OS opens archives with
 open external https://example.com the OS default browser
+open external page example.com    the same, for a bare address
 ```
 
 This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.zip`, so `open external` hands the file over and confirms with `Opening papers.zip in your default viewer…`. A video, an audio file, and a PDF each name their own reader: `Opening clip.mp4 in your default video player…`, `Opening track.mp3 in your default audio player…`, `Opening paper.pdf in your default PDF viewer…`. When you've named an application in `externalViewers`, the confirmation names that one instead: `Opening clip.mp4 in QuickTime Player…`. If nothing can be launched at all, you get the path rather than an application: `No video player available. The file is at <file>`.
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
+
+A web address has no tab to be the confirmation, so the line names the site instead: `Opening example.com in your browser…`, and `No browser available. The address is https://example.com/` when nothing can launch one.
 
 `open external` is refused for a remote file, because an external application could change only the local cached copy with no way to write that change back to the remote host. That refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the tab you typed it in, since a file navigator has no transcript of its own: `Remote files cannot be opened externally. Edit or open the file in a tab instead.`
 
@@ -99,12 +102,12 @@ Past 10 matches, the first 10 open and a note reports how many matched in total.
 
 Mistakes are reported in the current tab before anything opens:
 
-- A malformed invocation prints the usage line: `open [external] [page] <target>`.
-- A file that doesn't exist is named as missing: `open: notes.md: no such file`.
+- A malformed invocation prints the usage line: `Usage: open [external] [page] <target>`.
+- A file that doesn't exist is named as missing, by the full path it resolved to: `open: /Users/name/dev/project/notes.md: no such file`.
 - A pattern that matches nothing is named too: `open: docs/*.rst: no matching files`.
 - A wildcard matching more than ten files opens the first ten and says so: `Opening the first 10 of 24 matching files.`
-- A malformed or non-`http(s)` address is reported as invalid: `open: invalid URL "htp:/example.com"`, or `unsupported scheme in "javascript:alert(1)"` for a scheme that isn't `http` or `https`.
-- A web address with no `page` keyword is taken as a file path, and a path that looks like one is refused: `open: no viewer for web addresses`. Spell it `open page example.com` to embed a site.
+- A malformed address, or one whose scheme is neither `http` nor `https`, is reported as invalid: `open: invalid URL "htp:/example.com"`, and `open: invalid URL "javascript:alert(1)"` for the scheme.
+- A bare address with no `page` keyword is a file path, not a web address, so it is looked for on disk and named as missing: `open: /Users/name/dev/project/slashdot.org: no such file`. Spell it `open page slashdot.org` to embed a site.
 - A `:<line>` suffix is refused, because `open` looks for an opener by extension and finds none for `notes.md:42`: `No opener for ".md:42" files.` Drop the suffix and it opens, or use `edit notes.md:42` to land on the line.
 
 The `video`, `audio`, and `pdf` commands have their own two. Given no argument, each prints its usage: `Usage: video <path>`, `Usage: audio <path>`, `Usage: pdf <path>`. Given a file that isn't its kind, each refuses it by name: `video: notes.txt: not a video file`, and the same shape for `audio` and `pdf`, including `pdf external notes.txt`.
