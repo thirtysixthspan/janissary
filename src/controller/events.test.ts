@@ -64,6 +64,14 @@ describe('the bus subscriptions the controller projects onto clients', () => {
     });
   });
 
+  it('passes a layout update through whole, without its bus discriminant', () => {
+    const { sinks } = wire();
+
+    messageBus.emit('layout', { type: 'update', tabAreaPct: 40, focusRight: 'notifications' });
+
+    expect(sinks.sendLayout.mock.calls[0][0]).toStrictEqual({ tabAreaPct: 40, focusRight: 'notifications' });
+  });
+
   it('projects a selection-collection request as its id alone', () => {
     const { sinks } = wire();
 

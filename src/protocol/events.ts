@@ -29,14 +29,14 @@ export type RpcReply = { t: 'rpc-reply'; id: number; result?: unknown; error?: s
 export type ByeEvent = { t: 'bye' };
 // A profile's `layout` sidebar/tab-area sizes, applied on `profile launch`. Window sizing is
 // applied directly over CDP and never reaches the client — see product/specs/profiles.md.
-export type LayoutEvent = {
-  t: 'layout';
+export type LayoutUpdate = {
   sidebarLeft?: number;
   sidebarRight?: number;
   tabAreaPct?: number;
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
 };
+export type LayoutEvent = { t: 'layout' } & LayoutUpdate;
 // Asks every connected client to report its file navigators' cursor/anchor/selection, which live
 // only in client state. Issued by `profile save`, which waits briefly for the matching
 // `reportFileNavigatorSelection` reply before writing the file — see src/file-navigator/selection-request.ts.

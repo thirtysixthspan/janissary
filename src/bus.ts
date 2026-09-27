@@ -4,6 +4,7 @@
 
 import { errorText } from './error-text.js';
 import type { LogEntry, Tab } from './tab/types.js';
+import type { LayoutUpdate } from './protocol/events.js';
 
 export type Subscription = { unsubscribe: () => void };
 export type Listener<E> = (event: E) => void;
@@ -121,14 +122,7 @@ type PtyEvent =
   | { type: 'data'; id: string; data: string }
   | { type: 'exit'; id: string; exitCode: number }
   | { type: 'resize'; id: string; cols: number; rows: number };
-type LayoutEvent = {
-  type: 'update';
-  sidebarLeft?: number;
-  sidebarRight?: number;
-  tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications';
-  focusRight?: 'files' | 'notifications';
-};
+type LayoutEvent = { type: 'update' } & LayoutUpdate;
 // A one-shot request for every connected client's file-navigator selections, issued by
 // `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
 type FileNavigatorEvent = { type: 'collect'; id: number };
