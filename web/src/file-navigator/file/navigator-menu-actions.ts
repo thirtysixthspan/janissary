@@ -60,8 +60,11 @@ export function createFileNavigatorActions({
 
   const createNewDirectory = () => {
     const targetDir = newFileTargetDir(files.rows, selection.cursor);
-    setPendingNewDir(newDirectoryTargetPath(targetDir));
-    client.send({ method: 'fileNavigatorCreateDirectory', params: { label, destination: targetDir ?? '' } });
+    void client.request<string | undefined>({
+      method: 'fileNavigatorCreateDirectory', params: { label, destination: targetDir ?? '' },
+    }).then((result) => {
+      if (result.ok && result.value === newDirectoryTargetPath(targetDir)) setPendingNewDir(result.value);
+    });
   };
 
   const beginRename = (row: FileNavigatorRow) => rename.begin(row.path, row.name);

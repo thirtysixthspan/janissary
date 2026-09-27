@@ -58,11 +58,10 @@ export function FileNavigatorTab({
     containerRef.current?.querySelector(`[data-path="${CSS.escape(selection.cursor)}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [selection.cursor]);
 
-  // New-directory auto-rename: once the directory created by `createNewDirectory` shows up at its
-  // guessed path (the OS-level watcher rebuild that already brings any newly created row into
-  // view), select it and open its rename field. A name collision server-side (the guessed path
-  // doesn't match the actual created name) just means this never fires for that creation — see the
-  // plan's accepted limitation.
+  // New-directory auto-rename: once the directory `createNewDirectory` created shows up at the path
+  // the server replied with (the OS-level watcher rebuild that already brings any newly created row
+  // into view), select it and open its rename field. A collision-named creation (`untitled-2`, …)
+  // never becomes pending, so this does not fire for it.
   useEffect(() => {
     const row = findPendingNewDir(files.rows, pendingNewDir);
     if (!row) return;
