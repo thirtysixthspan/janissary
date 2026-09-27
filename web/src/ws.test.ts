@@ -367,6 +367,16 @@ describe('JanusClient', () => {
     expect(clear).not.toHaveBeenCalled();
   });
 
+  it('delivers a layout event to its listeners as the update alone, without the wire discriminant', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onLayout(listener);
+
+    messageHandler!({ data: JSON.stringify({ t: 'layout', sidebarRight: 280, focusLeft: 'files' }) });
+
+    expect(listener.mock.calls[0][0]).toStrictEqual({ sidebarRight: 280, focusLeft: 'files' });
+  });
+
   it('dispose stops layout listeners being called for a later layout event', () => {
     const client = new JanusClient();
     const listener = vi.fn();

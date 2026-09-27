@@ -1,4 +1,4 @@
-import type { ServerEvent, RpcCall, StateEvent } from '@shared/protocol';
+import type { ServerEvent, RpcCall, StateEvent, LayoutEvent, LayoutUpdate } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 import { resourceUrl } from './session-url';
@@ -11,13 +11,8 @@ export type { RequestResult } from './rpc-exchange';
 
 export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
-export type LayoutListener = (event: {
-  sidebarLeft?: number;
-  sidebarRight?: number;
-  tabAreaPct?: number;
-  focusLeft?: 'files' | 'notifications';
-  focusRight?: 'files' | 'notifications';
-}) => void;
+export type LayoutListener = (event: LayoutUpdate) => void;
+const layoutUpdateOf = ({ t: _t, ...update }: LayoutEvent): LayoutUpdate => update;
 // One notification to show in the corner, and the signal that empties the corner at once.
 
 // How long a wake's liveness probe waits for `init`'s reply before treating an `OPEN`-but-silent
@@ -110,12 +105,8 @@ export class JanusClient {
     break;
     }
     case 'layout': {
-      for (const l of this.layoutListeners) {
-        l({
-          sidebarLeft: event.sidebarLeft, sidebarRight: event.sidebarRight, tabAreaPct: event.tabAreaPct,
-          focusLeft: event.focusLeft, focusRight: event.focusRight,
-        });
-      }
+      const update = layoutUpdateOf(event);
+      for (const l of this.layoutListeners) l(update);
 
     break;
     }

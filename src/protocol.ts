@@ -94,6 +94,7 @@ export type {
   RpcReply,
   ByeEvent,
   LayoutEvent,
+  LayoutUpdate,
   CollectTreeStateEvent,
   ServerEvent,
 } from './protocol/events.js';

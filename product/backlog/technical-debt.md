@@ -4,17 +4,6 @@
 
 ## development
 
-* Declare a profile layout update's five fields once, in the wire contract, and have the message bus, the controller sink, and the web client's layout listener all use that type and pass the record through whole instead of copying it field by field.
-
-Existing Debt: The `sidebarLeft` / `sidebarRight` / `tabAreaPct` / `focusLeft` / `focusRight` shape, with its `'files' | 'notifications'` union, is spelled out independently four times — the bus's `LayoutEvent`, the wire `LayoutEvent`, the `sendLayout` parameter on `Sinks`, and the web `LayoutListener` — and two relays between them re-list every field by hand, so the one record is a hand-maintained mirror on both sides of the socket, which principle 7 in `ai/guidelines/architecture-principles.md` rules out. Severity: 3/10
-
-Existing Risk: 3/10 - A new layout field (a focus target for another dockable view, a second split ratio) added to the wire type and set by the profile code typechecks everywhere yet is dropped at whichever relay was not updated, so a profile launch silently ignores that part of its saved layout and no compile error or test points at the missing line.
-
-Proposal Risk: 1/10 - One type and pass-through relays mean a new field reaches the client without touching the relays, and a renamed one is a compile error on both sides; the remaining exposure is `useLayoutState` ignoring a field it has not been taught to apply, which is the intended place for that decision.
-
-Proposal: The copies are `LayoutEvent` in `src/bus.ts` (with `type: 'update'`), `LayoutEvent` in `src/protocol/events.ts` (with `t: 'layout'`), the inline parameter type of `sendLayout` in `src/controller/types.ts`, and `LayoutListener` in `web/src/ws.ts`; the field-by-field relays are the `messageBus.on('layout', 'update', …)` arm in `src/controller/events.ts` and the `case 'layout'` arm of `JanusClient.onEvent` in `web/src/ws.ts`. Export a `LayoutUpdate` object type (the five optional fields) from `src/protocol/events.ts` and define the wire event as `{ t: 'layout' } & LayoutUpdate`, the bus event as `{ type: 'update' } & LayoutUpdate`, `Sinks.sendLayout` as `(event: LayoutUpdate) => void`, and `LayoutListener` as `(event: LayoutUpdate) => void` imported through `@shared/protocol`. Replace the two relays with a destructure that strips only the discriminant (`const { type: _type, ...update } = event` on the server, `const { t: _t, ...update } = event` in `ws.ts`). The emitters in `src/profile/layout.ts` and `src/profile/notifications.ts` need no change. `web/src/useLayoutState.test.tsx`, `web/src/ws.test.ts`, `src/profile/layout.test.ts`, and `src/profile/notifications.test.ts` pin today's delivered fields and must keep passing unchanged.
-
-
 * Deliver which harnesses accept auto-approve on the launch dialog's catalog, instead of the web dialog keeping its own hardcoded copy of the server's gate table.
 
 Existing Debt: `supportsHarnessAutoApprove` in the server's harness module is documented as the single source of truth "so validation cannot drift from the detectors that actually exist", but the "New harness" dialog decides whether to offer and default auto-approve from its own `AUTO_APPROVE_HARNESSES = new Set(['claude', 'codex'])`, commented as a mirror of it, and the parser's and profile opener's refusal messages spell the same two names again — a server rule forked into the client, which principles 1 and 7 of `ai/guidelines/architecture-principles.md` rule out. Severity: 3/10

@@ -17,13 +17,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     if (event.entry.from) notify(managers, 'incoming-message', event.tabLabel, event.entry.from);
   });
   messageBus.on('app', 'exit', () => sinks.exit?.());
-  messageBus.on('layout', 'update', (event) => sinks.sendLayout?.({
-    sidebarLeft: event.sidebarLeft,
-    sidebarRight: event.sidebarRight,
-    tabAreaPct: event.tabAreaPct,
-    focusLeft: event.focusLeft,
-    focusRight: event.focusRight,
-  }));
+  messageBus.on('layout', 'update', ({ type: _type, ...update }) => sinks.sendLayout?.(update));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
   messageBus.on('notifications', ['toast', 'clear', 'reveal'], (event) => {
     if (event.type === 'clear') { sinks.sendToastClear?.(); return; }
