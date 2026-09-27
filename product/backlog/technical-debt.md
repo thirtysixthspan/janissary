@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Move the WebSocket client's notification listener registry out of the toasts feature so the transport stops importing a feature directory.
 
 Existing Debt: The transport service `web/src/ws.ts` imports `NotificationEventListeners` and its three listener types straight out of the toasts feature, from `web/src/toasts/notification-event-listeners.ts`, which is the one module in the app whose only consumer is that client, so §3 (a feature never imports another feature) is broken in the direction that costs most — the service reaching down into a feature — and §8's service row forbids it outright, while `web/src/client-state-collectors.ts` states the opposite invariant in prose ("it never adds an import to `ws.ts`") that nothing enforces. Severity: 5/10
@@ -69,6 +67,7 @@ Proposal Risk: 3/10 - Nothing about the rendered output changes, but `scheduleOn
 
 Proposal: Change `web/src/shared/status-windows/StatusPanels.tsx` to take the two row lists in place of `tab`, naming them `connectionRows` and `scheduleRows` and typing them off the wire type as `NonNullable<TabView['connections']>` and `NonNullable<TabView['schedule']>` so they cannot drift from it and no new protocol import is needed; keep the existing `connections` and `schedule` props as the window handlers, which the component already destructures under those local names, and keep `scheduleOnly` as its own prop rather than folding it into an empty array. Update the four callers to pass the two arrays off the tab each already holds: `web/src/agent-tabs/AgentTabBody.tsx` and `web/src/agent-tabs/InactiveAgentTabBody.tsx` from `current` and `tab` respectively, `web/src/harness/HarnessTabLayer.tsx` from the `t` it renders, and `web/src/editor/EditorConnectionsPanel.tsx` from the `tab` it forwards — the editor panel keeps its own `tab: TabView` prop because its close-row callback needs `isEditorTabView`, and only the two arrays it hands down change. `web/src/shared/status-windows/StatusPanels.test.tsx` drops its `makeTab` factory and builds the two arrays per case, and `web/src/App.test.tsx` renders `StatusPanels` directly in one place and needs the same change. No import path outside the panel moves, and the `statusButton(current.connections.length > 0, ...)` calls in `web/src/agent-tabs/AgentTabBody.tsx` and `web/src/editor/useEditorConnections.ts` are unaffected — they read the count off the tab and keep doing so.
 
+## development
 
 ## deferred
 
