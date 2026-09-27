@@ -61,6 +61,11 @@ describe('completeCommandLine', () => {
     expect(r.newCursor).toBe('cat unique.log '.length);
   });
 
+  it('completes the token on a continuation line of a multi-line command', () => {
+    expect(completeCommandLine('ls\nsrc', 6, dir).newInput).toBe('ls\nsrcdir/');
+    expect(completeCommandLine('cat report.txt\nuni', 18, dir).newInput).toBe('cat report.txt\nunique.log ');
+  });
+
   it('returns no matches for an unknown prefix', () => {
     const r = completeCommandLine('cat zzz', 7, dir);
     expect(r.matches).toEqual([]);
@@ -74,6 +79,10 @@ describe('completeCommandLine — agent names', () => {
 
   it('completes a unique agent recipient for msg and adds a space', () => {
     expect(completeCommandLine('msg bi', 6, noFiles, agents).newInput).toBe('msg bilal ');
+  });
+
+  it('completes a recipient typed on the line after msg', () => {
+    expect(completeCommandLine('msg\nbi', 6, noFiles, agents).newInput).toBe('msg\nbilal ');
   });
 
   it('fills the common prefix when several agents match', () => {

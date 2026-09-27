@@ -20,6 +20,15 @@ describe('readCompletionCursor', () => {
     expect(cursor.token).toBe('jan');
   });
 
+  it('treats a newline as a token boundary and counts the words of earlier lines', () => {
+    const cursor = readCompletionCursor('cat alpha.md\nbe', 15);
+    expect(cursor.tokenStart).toBe(13);
+    expect(cursor.token).toBe('be');
+    expect(cursor.preceding).toEqual(['cat', 'alpha.md']);
+    expect(cursor.command).toBe('cat');
+    expect(cursor.argumentIndex).toBe(2);
+  });
+
   it('gives an empty token after a trailing space and counts every preceding word', () => {
     const cursor = readCompletionCursor('connection  close ', 18);
     expect(cursor.token).toBe('');
