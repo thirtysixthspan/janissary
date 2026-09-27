@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import React, { forwardRef, useImperativeHandle } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { ShellTabLayer } from './ShellTabLayer';
@@ -7,10 +7,16 @@ import type { TabView } from '@shared/protocol';
 import type { ShellTabHandle } from './shared/tab/handles';
 
 vi.mock('./ShellTab', () => ({
-  ShellTab: forwardRef<ShellTabHandle, { ptyId: string; remote?: TabView['remote'] }>(function ShellTab({ ptyId, remote }, ref) {
-    useImperativeHandle(ref, () => ({ focus: () => {} }), []);
-    return <div data-ptyid={ptyId} data-remote={remote?.address}>shell</div>;
-  }),
+  ShellTab: forwardRef<ShellTabHandle, { ptyId: string; remote?: TabView['remote']; onSplit?: () => void }>(
+    function ShellTab({ ptyId, remote, onSplit }, ref) {
+      useImperativeHandle(ref, () => ({ focus: () => {} }), []);
+      return (
+        <button type="button" data-ptyid={ptyId} data-remote={remote?.address} onClick={onSplit}>
+          shell
+        </button>
+      );
+    },
+  ),
 }));
 
 function fakeClient(): JanusClient {
@@ -132,5 +138,28 @@ describe('ShellTabLayer', () => {
       <ShellTabLayer tabs={tabs} activeLabel="a" client={fakeClient()} onHandle={onHandle} />,
     );
     expect(onHandle).toHaveBeenCalledWith('my-pty', expect.anything());
+  });
+
+  // The chord is bound to the layer's own index, not to the tab's pty id or a stale zero: splitting
+  // the wrong shell is the failure, and nothing in the rendered output would show it.
+  it('splits the shell at its own index in the layer', () => {
+    const onSplit = vi.fn();
+    const tabs = [makeTab({ label: 'a', activePty: 'pty1' }), makeTab({ label: 'b', activePty: 'pty2' })];
+    render(
+      <ShellTabLayer tabs={tabs} activeLabel="a" client={fakeClient()} onHandle={() => {}} onSplit={onSplit} />,
+    );
+
+    fireEvent.click(screen.getAllByText('shell')[1]!);
+
+    expect(onSplit).toHaveBeenCalledWith(1);
+  });
+
+  it('offers no split when the caller passes no handler', () => {
+    const tabs = [makeTab({ label: 'a', activePty: 'pty1' })];
+    render(
+      <ShellTabLayer tabs={tabs} activeLabel="a" client={fakeClient()} onHandle={() => {}} />,
+    );
+
+    expect(() => fireEvent.click(screen.getByText('shell'))).not.toThrow();
   });
 });
