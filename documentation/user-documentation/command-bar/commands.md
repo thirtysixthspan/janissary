@@ -35,7 +35,9 @@ These commands manage the app itself — the current tab's transcript and name, 
 > state
 ```
 
-Each tab's state is one JSON file under `.janissary/state/`, named after the tab. `state` reads that file and prints the fields it holds. For an agent tab those are `name`, `active`, `dotColor`, `number`, `focus`, `group`, `groupColor`, `title`, `cwd`, `offline`, `cmdHistory`, `log`, `context`, `commandQueue`, `workspaceDir`, and `schedule`. The transcript is in `log`, the commands you have run in `cmdHistory`, the shell's working directory in `cwd`, and any [schedules](/user-documentation/automation/scheduling) attached to the tab in `schedule`. A long list or nested value is cut to its last ten lines behind a `... (N lines omitted)` marker, so the end of a transcript is what survives.
+Each tab's state is one JSON file under `.janissary/state/`, named after the tab. `state` reads that file and prints the fields it holds. For an agent tab those are `name`, `active`, `dotColor`, `number`, `group`, `groupColor`, `title`, `cwd`, `offline`, `cmdHistory`, `context`, `commandQueue`, and `schedule` — plus `remote` when the tab's shell lives on another machine. The commands you have run are in `cmdHistory`, the shell's working directory in `cwd`, and any [schedules](/user-documentation/automation/scheduling) attached to the tab in `schedule`. A long list or nested value is cut to its last ten lines behind a `... (N lines omitted)` marker, so the end of a list is what survives.
+
+The transcript is not in that file. It is kept separately, one file per tab under `.janissary/transcripts/`, and `--relaunch` reads it from there.
 
 A tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch, for every view tab such as an [image](/user-documentation/tab-types/image-viewer) or [page](/user-documentation/tab-types/web-pages) tab, and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here.
 
