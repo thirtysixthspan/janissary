@@ -92,10 +92,14 @@ describe('the prompt', () => {
     expect(text).toContain('{"kind":"file","path":"…"}');
   });
 
-  it('says a note for the model about the source, in place of the datasets', () => {
+  // A note about the source used to stand in for the data section, so the moment anything in a message
+  // looked like a refused address the model lost the columns, the row count and the sample of a source
+  // the user had named one message earlier — and could not answer the question actually asked.
+  it('says a note for the model about the source beside the data it already has', () => {
     const text = chatPrompt(record(), { ...WORKSPACE, sourceNote: 'They have not given you a source yet.' });
     expect(text).toContain('They have not given you a source yet.');
-    expect(text).not.toContain('- revenue (number)');
+    expect(text).toContain('- revenue (number)');
+    expect(text.indexOf('They have not given you a source yet.')).toBeLessThan(text.indexOf('- revenue (number)'));
   });
 
   it('shows a visualization with no charts as having none', () => {

@@ -71,13 +71,18 @@ function exchangeOf(turns: readonly VisualizationTurnView[]): string {
 export function chatPrompt(record: VisualizationRecord, context: PromptContext): string {
   const datasets = record.datasets.map((one) => describeDataset(one)).join('\n\n');
   const charts = record.charts.length === 0 ? 'There are no charts yet.' : record.charts.map((one) => describeChart(one)).join('\n');
+  // A refusal about the source sits above the data rather than in place of it. What the user named one
+  // message ago is usually still held, and a prompt that showed only the refusal left the model with no
+  // columns, no row count and no sample — so it could not answer the question that was actually asked
+  // and said so, for a reason having nothing to do with the question.
+  const data = [context.sourceNote, datasets].filter((part) => part !== undefined && part !== '').join('\n\n');
   return [
     'You are helping someone chart data. They name a source, you work out how to reach the data behind it, you ask what they want to see, you draw it, and then you keep answering their questions about it and the chart.',
     '',
     `Their workspace is ${context.workspace}. Write anything you acquire there and nowhere else.`,
     '',
     '## The data',
-    context.sourceNote ?? datasets,
+    data,
     '',
     '## The charts',
     charts,

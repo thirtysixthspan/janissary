@@ -18,7 +18,7 @@ A visualization nobody has started is not a saved one: it is not listed in the i
 
 ### Naming a source
 
-A source is one `http` or `https` address, or a path to a file, written anywhere in a sentence. The most recent one you name is the one being worked on, so pointing somewhere else part way through is ordinary rather than refused. A bare host is read as `https`, and any other scheme is refused with the reason the application's other web targets give.
+A source is one `http` or `https` address, or a path to a file, written anywhere in a sentence. The most recent one you name is the one being worked on, so pointing somewhere else part way through is ordinary rather than refused. A bare host is read as `https`, and any other scheme is refused with the reason the application's other web targets give. An address begins where a word begins, so a slash in the middle of one is not an address: "plot revenue/employee by region" is a question, and it is answered as one.
 
 A local file may only be read from the project directory or your home directory, and the check is made on the resolved path — so a `..` traversal, a `~` that expands elsewhere, and a symbolic link pointing out of the tree are all refused, each naming the two directories a source would have to be under. A source anywhere else reports that it is outside them.
 

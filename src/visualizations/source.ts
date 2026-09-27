@@ -63,7 +63,12 @@ function within(candidate: string, root: string): boolean {
 // what it found by exactly the rules every other route into a source is judged by. A path is
 // recognised by its leading `/`, `~` or `.` rather than by a scheme, so a local file works in a
 // sentence the way a URL does.
-const ADDRESS = /(?:https?:\/\/[^\s<>"'`)\]]+|\/[^\s<>"'`)\]]*|~[^\s<>"'`)\]]*)/iu;
+//
+// A slash only opens an address at the start of a word. `plot revenue/employee by region` has one
+// slash in the middle of a word and no address in it at all, and reading that run as a path is how a
+// perfectly ordinary question became a refused source and left the model with nothing to chart — the
+// slash is as likely to be a ratio as a separator.
+const ADDRESS = /(?<![A-Za-z0-9_])(?:https?:\/\/[^\s<>"'`)\]]+|\/[^\s<>"'`)\]]*|~[^\s<>"'`)\]]*)/iu;
 
 export function addressIn(text: string): string | undefined {
   const found = ADDRESS.exec(text);

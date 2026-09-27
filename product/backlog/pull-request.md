@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Carry a refused address to the model beside the data it already has, rather than in place of it. Severity: 6/10
-
-Existing Issue: `chatPrompt` in `src/visualizations/prompts.ts` substitutes `context.sourceNote` for the whole datasets section, and `addressIn` in `src/visualizations/source.ts` matches any run beginning with a slash — so a message like "plot revenue/employee by region" yields the address `revenue/employee`, `parseSource` refuses it, and the prompt's entire data section becomes the refusal. Severity: 6/10
-
-Existing Risk: 6/10 - The model is shown no columns, no row count and no sample for the source the user named one message earlier, so it cannot draw anything and says so; the user is told their question could not be answered for a reason that has nothing to do with their question, and the fix — saying "revenue per employee" instead — is not discoverable from the message.
-
-Proposal Risk: 2/10 - The refusal still reaches the model before the next reply, so the same recovery advice is delivered; what changes is that the data stays in the prompt beside it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: keep the data in the prompt when an address in the message is refused". In `src/visualizations/prompts.ts`, render the note as a line above the datasets rather than as a replacement for them, so `## The data` always carries what is actually held. Then tighten `addressIn` in `src/visualizations/source.ts` so a bare slash run is only read as a path when it begins at the start of a word rather than in the middle of one, which is what `revenue/employee` is; a sentence still containing a genuine path is unaffected. Add a case to `src/visualizations/prompts.test.ts` asserting the datasets survive a source note — the existing `'says a note for the model about the source, in place of the datasets'` case pins the behaviour being changed and should be replaced — and a case to a new `src/visualizations/source.test.ts` or the existing one if there is one, asserting that `addressIn` does not return `revenue/employee` from that sentence and does return a real path from one.
-
 * Give the transformation vocabulary a total row count, so a capped source is reported as capped under a chart. Severity: 6/10
 
 Existing Issue: `resolve` in `src/visualizations/chart-spec.ts` sets `total: applied.table.rows.length` on the resolved table, so `total` can never differ from `rows.length`, and `caption` in `web/src/plugins/visualizations/VisualizationChartCard.tsx` — the only consumer of the field — can therefore only ever read "5 rows" or "showing 5 of 5 rows". Severity: 6/10

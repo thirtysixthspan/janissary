@@ -2,7 +2,7 @@ import { rmSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readSource } from './fetch.js';
-import { defaultSourceRoots, parseSource } from './source.js';
+import { addressIn, defaultSourceRoots, parseSource } from './source.js';
 
 // The roots these tests are given are the process's own working directory and home, so a path built
 // from either is inside one of them and a path into a system directory is inside neither.
@@ -99,5 +99,30 @@ describe('a symlink out of a root is refused by the reader', () => {
     } finally {
       rmSync(link, { force: true });
     }
+  });
+});
+
+// A slash in the middle of a word is a ratio as often as it is a separator, and reading it as a path is
+// how a question became a refused source and left the model with nothing to chart. The address has to
+// begin at a word boundary, which every real path in a sentence does.
+describe('an address inside a sentence', () => {
+  it('finds a url wherever the sentence puts it', () => {
+    expect(addressIn('the data is at https://example.com/a.csv thanks')).toBe('https://example.com/a.csv');
+  });
+
+  it('finds a path at the start of a word', () => {
+    expect(addressIn('plot /tmp/data.csv for me')).toBe('/tmp/data.csv');
+    expect(addressIn('plot ~/data/a.csv for me')).toBe('~/data/a.csv');
+    expect(addressIn('/tmp/data.csv is what I want')).toBe('/tmp/data.csv');
+    expect(addressIn('see ("/tmp/a.csv")')).toBe('/tmp/a.csv');
+  });
+
+  it('does not read a slash in the middle of a word as a path', () => {
+    expect(addressIn('plot revenue/employee by region')).toBeUndefined();
+    expect(addressIn('compare cost/benefit over time')).toBeUndefined();
+  });
+
+  it('finds nothing in a sentence that names no address', () => {
+    expect(addressIn('what does the data say?')).toBeUndefined();
   });
 });
