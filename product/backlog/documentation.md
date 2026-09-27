@@ -2,8 +2,6 @@
 
 ## ready
 
-* agent-command-queue (2/10) — 0 of 22 facts missing and none wrong: `documentation/user-documentation/command-bar/queue.md` carries the whole surface, including the popup's key table, the empty-row rule, the edit-versus-drain race, the `Queued:` and `→ <label> (queued):` lines, and the usage string, and it is more accurate than the spec it came from. `product/specs/agent-command-queue.md` is the stale document: its list of commands that never queue omits bare `theme` and bare `profile launch`, both of which the client intercepts, and it does not carry the `Usage: queue <agent> <command>` refusal the page documents. Ground truth is `web/src/agent-tabs/command-input/useCommandBarSubmit.ts` and `src/commands/queue.ts`. Nothing belongs in the user documentation; the spec wants updating by whoever owns it.
-
 * history (1/10) — 0 of 17 facts missing and none wrong: the page covers per-tab recall and the transient draft, the multi-line input rule, ghost text's matching and its global source, the picker, both caps, per-tab duplicate suppression, the atomic global-history write, the single warning, and the multi-instance sharing, and it documents the `##` comment stripping that `product/specs/history.md` does not mention. Ground truth is `product/specs/history.md`, `web/src/history.ts` and `src/global-history.ts`. No user-documentation change; the spec is the thinner document here.
 
 * quick-open (1/10) — 0 of 13 facts missing and none wrong: the page covers opening, the gitignore-aware set, the `Searching…` state, the fuzzy match with its ranking rules and the top-10 cap, both empty states, selection, and the fetch-once-per-open behavior including discarding a late answer. `product/specs/quick-open.md` is stale where it says `Return` opens the highlighted file in an editor tab, since the app opens the tab kind the file wants and the page already says so. Ground truth is `product/specs/quick-open.md`, `web/src/pickers/useQuickOpen.ts` and `web/src/pickers/QuickOpen.tsx`. No user-documentation change.
@@ -165,3 +163,4 @@
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md (removed 2026-09-27)
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md (removed 2026-09-27)
 * send — documented in documentation/user-documentation/command-bar/send.md (removed 2026-09-27)
+* agent-command-queue — already documented: documentation/user-documentation/command-bar/queue.md carries the whole surface and its never-queues list matches the client interception chain in web/src/agent-tabs/command-input/useCommandBarSubmit.ts exactly, so product/specs/agent-command-queue.md, not a user-documentation page, is the document that needs updating (removed 2026-09-27)
