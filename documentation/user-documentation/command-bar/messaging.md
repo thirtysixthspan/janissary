@@ -18,12 +18,25 @@ Each recipient has its own FIFO queue, processed one message at a time, so messa
 | Kind | What happens at the recipient |
 |---|---|
 | `info` | Shown in the recipient's transcript and added to its context. Nothing runs. |
-| `request` | Runs `<text>` through the recipient's full command pipeline (same as if typed there), then sends the captured output back to the sender as a response. |
-| `command` | Runs `<text>` through the recipient's full command pipeline, same as `request`, but sends no response back. |
+| `request` | Recorded in the recipient's transcript as `sent request: <text>`, attributed to you, then run through its full command pipeline (same as if typed there). The captured output comes back to the sender as a response. |
+| `command` | Recorded in the recipient's transcript as `sent command: <text>`, attributed to you, then run through its full command pipeline, same as `request`, but sends no response back. |
 
-Each kind also accepts a short alias: `i` for `info`, `r` for `request`, `c` for `command`.
+Each kind also accepts a short alias: `i` or `informational` for `info`, `r` or `req` for `request`, `c` or `cmd` for `command`.
 
-A `request`'s response arrives in the sender's transcript as a `response from <agent>` block, and is added to the sender's context. On the sender's side, every sent message (of any kind) is recorded in the sender's own transcript as `→ <to> (<kind>): <text>`, so you have a record of what you sent even though it happened in another tab.
+A `request`'s response arrives in the sender's transcript as a `response from <agent>` block, and is added to the sender's context. On the sender's side, every `msg` is recorded in the sender's own transcript as `→ <to> (<kind>): <text>`, so you have a record of what you sent even though it happened in another tab. A `broadcast` writes no such line.
+
+## When a message names nobody
+
+<img class="agent-float left" src="/agents/selim-south-west.png" alt="" />
+
+A `msg` to a name no open tab answers to reports `No agent named "<name>".` in the tab you typed it in, and a `broadcast` whose list holds one or more unknown names reports them together as `No agent named: <name>, <name>.` Reaching the other recipients is not reported, and `broadcast` writes no line of its own when every name was found. The rest of the grammar is refused in the same place:
+
+| What you typed | What you get |
+|---|---|
+| `msg bilal` or bare `msg` | `Usage: msg <agent> <info\|request\|command> <text>` |
+| `msg bilal note find the bug` | `Unknown message type "note". Use info, request, or command.` |
+| `msg bilal info` with no text | `Message text is empty.` |
+| `broadcast` or `broadcast * info` with no text | `Usage: broadcast <all\|agent[,agent...]> <info\|request\|command> <text>` |
 
 ![An info message and a request/response exchange between two agent tabs in the transcript.](/screenshots/messaging-output.png)
 
@@ -33,10 +46,10 @@ A `request`'s response arrives in the sender's transcript as a `response from <a
 
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to more than one agent:
 
-- `all` (or `*`) targets every other active agent tab.
-- A comma-separated list (`bilal,cavus`) targets exactly those agents.
+- `all` (or `*`) targets every other tab, whatever kind it is — an editor, a page, a file navigator, a monitor, anything with a label.
+- A comma-separated list (`bilal,cavus`) targets exactly those tabs, and nothing filters the list: name yourself and you message yourself, exactly as naming a tab twice would.
 
-The sender is never included as a target, even if named explicitly. If any named recipient doesn't exist, the result reports it by name rather than silently dropping it.
+Reaching the other tabs is not reported back. What you do get is a line naming any recipient that doesn't exist, and no line at all when every name was found; see [When a message names nobody](#when-a-message-names-nobody).
 
 ## What a messaged command can run
 
