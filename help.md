@@ -24,6 +24,7 @@
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
+| `visualizations` | Open the visualization index; `visualizations left`/`right` docks it, and `visualizations <title>` opens a saved visualization by title, ignoring case |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |

@@ -1,6 +1,6 @@
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { ConversationTurnView } from '../protocol.js';
-import type { ConversationSessions } from './sessions.js';
+import type { AcpSessionPool } from '../acp/session-pool.js';
 import type { Conversation } from './store.js';
 import type { ConversationStore } from './store.js';
 import {
@@ -31,7 +31,7 @@ export class ConversationResponder {
 
   constructor(
     private store: ConversationStore,
-    private sessions: ConversationSessions,
+    private sessions: AcpSessionPool,
     private now: () => number,
     private changed: () => void,
   ) {}

@@ -1,0 +1,126 @@
+/* The visualizations index and the visualization tab. Everything is expressed in the application's own
+   custom properties, so a chart follows the theme it is drawn in — which is also what an exported chart
+   has to have resolved before it leaves the browser, since a serialized SVG knows nothing about them. */
+
+.visualization-list, .visualization-tab { min-height: 0; }
+.visualization-list-header, .visualization-header { min-height: 28px; }
+
+/* The index frames itself the way the host's own tab bodies do rather than through the padded plugin
+   frame, so its metadata row reads like the agent, harness, and file-navigator rows: a full-width band
+   of muted 12px text with a rule beneath it. The rows and the empty message take back the padding the
+   frame gives up. */
+.visualization-list.plugin-tab { padding: 0; gap: 0; }
+.visualization-list-header { padding: 6px 12px; font-size: 12px; border-bottom: 1px solid var(--border); }
+
+.visualization-list-header .plugin-actions button, .visualization-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.visualization-list-header .plugin-actions button:hover, .visualization-header .plugin-actions button:hover { color: var(--fg); }
+.visualization-list-header .plugin-actions button:disabled, .visualization-header .plugin-actions button:disabled {
+  opacity: 0.45; cursor: default; color: var(--muted);
+}
+
+.visualization-empty { color: var(--muted); padding: 10px 12px; }
+.visualization-rows { overflow: auto; min-height: 0; padding: 4px 8px; }
+
+/* The list carries the current row itself, so it hides the browser's focus ring around the whole box the
+   way the file-navigator tree does. The current row is marked the way that tree marks its cursor — an
+   accent bar down the leading edge — because hover paints the same soft background and would otherwise
+   be indistinguishable from it. */
+.visualization-list { outline: none; }
+.visualization-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 8px; border-radius: 4px; cursor: pointer; border-left: 2px solid transparent;
+}
+.visualization-row:hover { background: var(--bg-soft); }
+.visualization-row.selected { background: var(--bg-soft); border-left-color: var(--accent); }
+.visualization-row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visualization-row time, .visualization-source { color: var(--muted); font-size: 12px; }
+.visualization-row button { border: 0; background: transparent; color: var(--muted); }
+
+/* The two selectors ride in the right-aligned action group with the export and split controls, so that
+   group's 2px gap — meant for adjacent icon buttons — has to widen or the model selector jams against
+   the refresh one. */
+.visualization-header .plugin-actions { gap: 8px; }
+.visualization-header .plugin-actions select { max-width: min(28vw, 220px); }
+.visualization-header .plugin-actions select[aria-label="Refresh"] { max-width: min(10vw, 90px); }
+
+.visualization-source { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.visualization-title { cursor: text; }
+.visualization-title-input {
+  font: inherit; font-weight: 600; color: var(--fg); background: transparent;
+  border: none; outline: none; padding: 0; margin: 0;
+}
+
+/* The tab gives up the padded plugin frame for the same reason the conversation tab does: the command
+   bar it ends with is a full-width band with a rule along its top, and an inset one reads as a floating
+   box. */
+.visualization-tab.plugin-tab { padding: 0; gap: 0; }
+.visualization-header { padding: 8px 12px 0; }
+
+.visualization-figure {
+  flex: 1; min-height: 0; margin: 0; padding: 12px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px; overflow: auto;
+}
+.visualization-chart { max-width: 100%; height: auto; }
+.visualization-chart-title { fill: var(--fg); font-size: 14px; font-weight: 600; }
+.visualization-chart-empty, .visualization-chart-legend { fill: var(--muted); font-size: 11px; }
+.visualization-figure figcaption { color: var(--muted); font-size: 11px; }
+
+.visualization-pending, .visualization-gone { color: var(--muted); padding: 16px 12px; }
+.visualization-gone, .visualization-export-error, .visualization-reason-text { color: var(--error); }
+.visualization-export-error { padding: 0 12px; margin: 0; font-size: 12px; }
+
+.visualization-reason { padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; }
+.visualization-reason-text { margin: 0; }
+.visualization-reason-actions { display: flex; gap: 8px; }
+.visualization-reason-actions button, .visualization-source-form button {
+  background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 10px;
+}
+.visualization-reason-actions button:disabled, .visualization-source-form button:disabled { opacity: 0.45; cursor: default; }
+
+.visualization-source-form { display: flex; gap: 6px; align-items: center; }
+.visualization-source-form input {
+  flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg); font: inherit; font-size: 12px; padding: 4px 8px;
+}
+
+/* The question region: a progress line, the question, its suggestions as one-click answers, and a field
+   for the answer none of them covers. */
+.visualization-question { padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.visualization-question-progress { color: var(--muted); font-size: 12px; margin: 0; }
+.visualization-question-text { margin: 0; }
+.visualization-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.visualization-suggestion {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 12px;
+}
+.visualization-suggestion:disabled { opacity: 0.45; cursor: default; }
+.visualization-answer { display: flex; gap: 6px; }
+.visualization-answer input {
+  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg); font: inherit; padding: 5px 8px;
+}
+.visualization-answer button {
+  background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg); cursor: pointer; padding: 4px 12px;
+}
+.visualization-answer button:disabled { opacity: 0.45; cursor: default; }
+
+/* The exchange that changes the chart: a scrollable transcript above the command bar, inset further than
+   either of them so the conversation reads as its own region. */
+.visualization-chat {
+  flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px;
+  padding: 16px 12px;
+}
+.visualization-chat:only-child { flex: 0; }
+.visualization-chat-empty { color: var(--muted); padding: 8px 12px; margin: 0; }
+.visualization-chat-turn { display: flex; flex-direction: column; gap: 5px; }
+.visualization-chat-query {
+  align-self: flex-end; max-width: 80%; margin: 0; padding: 8px 10px; border-radius: 8px;
+  background: var(--bg-soft); white-space: pre-wrap;
+}
+.visualization-chat-response { user-select: text; }
+.visualization-chat-error { color: var(--error); margin: 0; }

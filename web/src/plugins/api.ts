@@ -49,6 +49,13 @@ export {
   type ListSelection,
 } from '../shared/list-selection';
 
+// Pinning a scrolling transcript to its bottom, for a plugin whose tab grows as output arrives. Published
+// for the same reason as the selection pair above: the rule is subtle enough that a second copy would
+// drift from the first without anything in the tree showing it — the 1px-versus-40px threshold and the
+// "a pin that lands after newer output is not the user scrolling" rule are both easy to get subtly
+// wrong. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { useStickToBottom } from '../shared/stick-to-bottom';
+
 // A plugin tab's unsaved work, in the shape the host's close guard already reasons about (see
 // `DirtyTabHandle`). A plugin may not refuse a host-initiated close itself, render its own modal
 // over the app, or choose a host dialog's wording — it supplies these three answers and the host

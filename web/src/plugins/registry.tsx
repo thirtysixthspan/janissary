@@ -39,6 +39,7 @@ export const clientPluginLoaders = {
   schedules: () => import('./schedules/index'),
   sessions: () => import('./sessions/index'),
   video: () => import('./video/index'),
+  visualizations: () => import('./visualizations/index'),
 } satisfies Record<ProductionTabPluginId, () => Promise<unknown>>;
 
 // Wraps one plugin entry in the guard the host runs before any plugin behavior renders. The guard
@@ -81,4 +82,5 @@ export const clientPluginRegistry = createClientPluginRegistry({
   schedules: clientPlugin(1, clientPluginLoaders.schedules),
   sessions: clientPlugin(1, clientPluginLoaders.sessions),
   video: clientPlugin(1, clientPluginLoaders.video),
+  visualizations: clientPlugin(1, clientPluginLoaders.visualizations),
 } satisfies Record<ProductionTabPluginId, ClientPluginRegistration>);

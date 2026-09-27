@@ -1,14 +1,18 @@
-import { connectAcp } from '../acp/index.js';
-import { acpLaunchFor } from '../acp/launch.js';
-import type { AcpSession } from '../acp/types.js';
+// One live ACP agent subprocess per key, kept alive between calls and confined to the workspace the
+// caller names. Both callers key it by their own subject — a conversation id, a visualization id —
+// so the pool is the reason neither of them owns a session map of its own, and why neither of them
+// spawns a process directly.
+import { connectAcp } from './index.js';
+import { acpLaunchFor } from './launch.js';
+import type { AcpSession } from './types.js';
 import type { ConversationModelPair } from '../protocol.js';
 
-export type ConversationSessionHooks = {
+export type AcpSessionPoolHooks = {
   onError: (message: string) => void;
   onConnect?: () => void;
 };
 
-export class ConversationSessions {
+export class AcpSessionPool {
   private sessions = new Map<string, AcpSession>();
 
   has(id: string): boolean {
@@ -19,7 +23,7 @@ export class ConversationSessions {
     id: string,
     pair: ConversationModelPair,
     workspaceDir: string,
-    hooks: ConversationSessionHooks,
+    hooks: AcpSessionPoolHooks,
   ): AcpSession {
     let session = this.sessions.get(id);
     if (!session) {

@@ -157,9 +157,9 @@ notify: (event, capabilities) => {
 },
 ```
 
-v1 defines one topic, `schedules`, whose data is the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
+v1 defines four topics: `schedules`, whose data is the aggregated scheduled-command rows; `conversations`, whose data is the conversation view; `sessions`, whose data is the remote-session rows; and `visualizations`, whose data is the visualization view and which a refresh timer raises. A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
 
-A notification tells you a topic changed, which leaves two gaps a view has to fill on its own. `topicData(topic)` closes the first: it reads what the topic carries right now, which is what you need when you are building a tab for the first time and no notification has fired yet. `topicAction(action)` closes the second: it is how you act on what you are showing. Each topic names its own actions — `schedules` defines `cancel` (drop one row), `clear` (drop them all), and `focusOwner` (focus the tab a row belongs to, refused for a tab that owns no row):
+A notification tells you a topic changed, which leaves two gaps a view has to fill on its own. `topicData(topic)` closes the first: it reads what the topic carries right now, which is what you need when you are building a tab for the first time and no notification has fired yet. `topicAction(action)` closes the second: it is how you act on what you are showing. Each topic names its own actions — `schedules` defines `cancel` (drop one row), `clear` (drop them all), and `focusOwner` (focus the tab a row belongs to, refused for a tab that owns no row), while `visualizations` defines the whole lifecycle of one record:
 
 ```ts
 capabilities.topicAction({ topic: 'schedules', action: 'cancel', tab, id });

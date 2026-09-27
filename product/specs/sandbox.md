@@ -19,6 +19,8 @@ install root, and a workspaced spawn its credentials, neither of which is a conf
 [Environment scrubbing](#environment-scrubbing)). Everything a sandboxed process itself spawns
 inherits the same confinement.
 
+A visualization's ACP agent is confined the same way, to a workspace belonging to the durable visualization rather than to a tab or a project clone, and created on its first read rather than when it is made. See [[visualizations]].
+
 A conversation's ACP agent is also confined to its own private workspace. An ordinary agent launched from the conversation's metadata row uses the same directory as its sandbox workspace. That workspace belongs to the durable conversation rather than to a tab or project clone, and closing the conversation tab or shutting down the application does not sweep it. See [[conversations]].
 
 ### Filesystem policy

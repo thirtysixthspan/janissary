@@ -18,41 +18,26 @@ export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, 
 export type { CompletionResult } from './completion/types.js';
 export type { ProfileRow } from './profile/types.js';
 
-export type ConversationHarness = 'claude' | 'opencode';
-
-export type ConversationModelPair = {
-  harness: ConversationHarness;
-  model: string;
-};
-
-export type ConversationSummaryView = {
-  id: string;
-  title: string;
-  updatedAt: number;
-};
-
-export type ConversationTurnView = {
-  query: string;
-  response: string;
-  pair: ConversationModelPair;
-  error?: string;
-  streaming?: boolean;
-};
-
-export type ConversationWindowView = {
-  id: string;
-  title: string;
-  pair: ConversationModelPair;
-  turns: ConversationTurnView[];
-  hasOlder: boolean;
-  deleted?: boolean;
-};
-
-export type ConversationsView = {
-  summaries: ConversationSummaryView[];
-  windows: ConversationWindowView[];
-  models: ConversationModelPair[];
-};
+export type {
+  ConversationHarness,
+  ConversationModelPair,
+  ConversationsView,
+  ConversationSummaryView,
+  ConversationTurnView,
+  ConversationWindowView,
+} from './protocol/conversations.js';
+export type {
+  VisualizationChartKind,
+  VisualizationChartView,
+  VisualizationColumnType,
+  VisualizationColumnView,
+  VisualizationQuestionView,
+  VisualizationSummaryView,
+  VisualizationTableView,
+  VisualizationTurnView,
+  VisualizationWindowView,
+  VisualizationsView,
+} from './protocol/visualizations.js';
 
 export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';

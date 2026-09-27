@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AcpOptions, AcpSession } from '../acp/types.js';
+import type { AcpOptions, AcpSession } from './types.js';
 
 const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
-vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
+vi.mock('./index.js', () => ({ connectAcp: mocks.connectAcp }));
 
-import { ConversationSessions } from './sessions.js';
+import { AcpSessionPool } from './session-pool.js';
 
 function session(): AcpSession {
   return { prompt: vi.fn(), kill: vi.fn() };
@@ -12,11 +12,11 @@ function session(): AcpSession {
 
 beforeEach(() => { mocks.connectAcp.mockReset(); });
 
-describe('ConversationSessions', () => {
-  it('connects lazily and reuses one session per conversation', () => {
+describe('AcpSessionPool', () => {
+  it('connects lazily and reuses one session per key', () => {
     const connected = session();
     mocks.connectAcp.mockReturnValue(connected);
-    const sessions = new ConversationSessions();
+    const sessions = new AcpSessionPool();
     const pair = { harness: 'opencode' as const, model: 'google/gemini' };
 
     expect(sessions.has('first')).toBe(false);
@@ -28,7 +28,7 @@ describe('ConversationSessions', () => {
 
   it('confines each tool-less session to its own workspace', () => {
     mocks.connectAcp.mockImplementation(() => session());
-    const sessions = new ConversationSessions();
+    const sessions = new AcpSessionPool();
     const pair = { harness: 'claude' as const, model: 'claude-sonnet' };
 
     sessions.session('first', pair, '/tmp/first', { onError: vi.fn() });
@@ -42,11 +42,11 @@ describe('ConversationSessions', () => {
     expect(options.every((value) => !Object.hasOwn(value, 'allowedTools'))).toBe(true);
   });
 
-  it('closes only the named conversation', () => {
+  it('closes only the named key', () => {
     const first = session();
     const second = session();
     mocks.connectAcp.mockReturnValueOnce(first).mockReturnValueOnce(second);
-    const sessions = new ConversationSessions();
+    const sessions = new AcpSessionPool();
     const pair = { harness: 'opencode' as const, model: 'model' };
     sessions.session('first', pair, '/tmp/first', { onError: vi.fn() });
     sessions.session('second', pair, '/tmp/second', { onError: vi.fn() });
@@ -61,7 +61,7 @@ describe('ConversationSessions', () => {
     const first = session();
     const second = session();
     mocks.connectAcp.mockReturnValueOnce(first).mockReturnValueOnce(second);
-    const sessions = new ConversationSessions();
+    const sessions = new AcpSessionPool();
     const pair = { harness: 'opencode' as const, model: 'model' };
     sessions.session('first', pair, '/tmp/first', { onError: vi.fn() });
     sessions.session('second', pair, '/tmp/second', { onError: vi.fn() });

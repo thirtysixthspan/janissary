@@ -12,7 +12,7 @@ import {
 } from './api.js';
 import { TabPluginHost } from './host.js';
 import { ConversationResponder } from '../conversations/responder.js';
-import type { ConversationSessions } from '../conversations/sessions.js';
+import type { AcpSessionPool } from '../acp/session-pool.js';
 import type { ConversationStore } from '../conversations/store.js';
 import { CONVERSATION_SCHEMA_VERSION } from '../conversations/store.js';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
@@ -128,7 +128,7 @@ describe('tab plugin notifications', () => {
       session: () => session,
       close: vi.fn(),
       dispose: vi.fn(),
-    } as unknown as ConversationSessions;
+    } as unknown as AcpSessionPool;
     const store = {
       ensure: () => '/tmp/first',
       write: vi.fn(),

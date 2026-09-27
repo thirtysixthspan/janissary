@@ -1,4 +1,10 @@
-import type { AggregatedScheduleView, ConversationsView, RemoteSessionView } from '../protocol.js';
+import type {
+  AggregatedScheduleView,
+  ConversationsView,
+  RemoteSessionView,
+  VisualizationsView,
+} from '../protocol.js';
+import type { ConversationModelPair } from '../protocol/conversations.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -8,7 +14,8 @@ import type { AggregatedScheduleView, ConversationsView, RemoteSessionView } fro
 // Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
 // — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
 // shell output. Adding one is additive; each needs its own justification and its own data slice.
-export type TabPluginNotificationTopic = 'schedules' | 'conversations' | 'sessions';
+export type TabPluginNotificationTopic =
+  | 'schedules' | 'conversations' | 'sessions' | 'visualizations';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -16,6 +23,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   schedules: true,
   conversations: true,
   sessions: true,
+  visualizations: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -42,6 +50,11 @@ export type TabPluginNotification =
   | {
     topic: 'sessions';
     data: readonly RemoteSessionView[];
+    tabs: readonly string[];
+  }
+  | {
+    topic: 'visualizations';
+    data: VisualizationsView;
     tabs: readonly string[];
   };
 
@@ -87,4 +100,26 @@ export type TabPluginTopicAction =
   | { topic: 'sessions'; action: 'attach' | 'terminate' | 'forget'; session: string }
   // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
   // only by pressing attach or terminate.
-  | { topic: 'sessions'; action: 'refresh' };
+  | { topic: 'sessions'; action: 'refresh' }
+  // The whole lifecycle of one visualization, and nothing else. The plugin never fetches a source,
+  // never parses one, and never speaks to a model: it names what the user asked for and the host does
+  // all of it, which is why a source line and a model pair are the only new facts it can introduce.
+  | { topic: 'visualizations'; action: 'create'; id: string; source: string }
+  | { topic: 'visualizations'; action: 'load'; id: string }
+  | { topic: 'visualizations'; action: 'delete'; id: string }
+  | { topic: 'visualizations'; action: 'rename'; id: string; title: string }
+  // Replace the source and begin again. Refused once a chart exists, because it would silently
+  // invalidate every answer the user gave to the questions asked about the old one.
+  | { topic: 'visualizations'; action: 'setSource'; id: string; source: string }
+  | { topic: 'visualizations'; action: 'setModel'; id: string; pair: ConversationModelPair }
+  // Ask the model what to chart, and answer the question it is currently asking. The answer is free
+  // text; the suggestions the question carries are the host's to show, not the plugin's to require.
+  | { topic: 'visualizations'; action: 'startInterview'; id: string }
+  | { topic: 'visualizations'; action: 'answer'; id: string; questionId: string; answer: string }
+  // A modification query against the current chart, and the one cancellation that covers it.
+  | { topic: 'visualizations'; action: 'revise'; id: string; query: string }
+  | { topic: 'visualizations'; action: 'cancel'; id: string }
+  // Re-read the source now, and set the interval that re-reads it on its own. Zero seconds is the
+  // interval that never fires, which is the default a new visualization starts on.
+  | { topic: 'visualizations'; action: 'refreshNow'; id: string }
+  | { topic: 'visualizations'; action: 'setRefresh'; id: string; seconds: number };

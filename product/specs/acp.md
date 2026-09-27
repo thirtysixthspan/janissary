@@ -20,7 +20,7 @@ If the agent process dies — a failed spawn, a missing binary, or a crash mid-s
 
 The report carries whatever the agent said on its own standard error, on the line below the message. The agent's standard output is the protocol transport, so standard error is the only place it can explain itself — an authentication that expired, a version it will not speak, what to run to start a new session. When it said nothing, the line is the message alone: `ACP: ACP agent exited.` What it kept is bounded to the last 2000 characters and the last 10 lines of them, so an agent that spews before dying cannot flood the transcript. See [[transcript]].
 
-The `acp` command's per-tab session and a [[conversations]] session are separate uses of the same protocol channel. A conversation session is tool-less, runs in the conversation's own workspace, and sends a plain text query directly; it does not enter the `acp` command's database/browser tool loop.
+The `acp` command's per-tab session, a [[conversations]] session, and a [[visualizations]] session are three separate uses of the same protocol channel. Both of the latter are tool-less and run in a workspace of their own subject's, and send a plain text prompt directly; neither enters the `acp` command's database/browser tool loop. A visualization's prompt carries the whole state it needs, so it behaves the same on a new session as on a continuing one and nothing is replayed.
 
 ### Reply streaming
 

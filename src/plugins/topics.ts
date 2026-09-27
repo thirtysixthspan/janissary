@@ -109,8 +109,30 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
   }
 }
 
-const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
-  schedules: {
+// Every visualization action is refused for an id the manager does not hold, and the two that could
+// be destructive of a chart's work — `setSource` and `startInterview` — are refused by the manager
+// itself while a chart exists. The grant is therefore exactly the list of things a tab showing one
+// visualization could reasonably do to it, and nothing that reaches another one.
+function actOnVisualizations(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'visualizations') return;
+  const viz = managers.visualizations;
+  switch (action.action) {
+    case 'create': { viz.create(action.id, action.source); return; }
+    case 'load': { viz.load(action.id); return; }
+    case 'delete': { viz.delete(action.id); return; }
+    case 'rename': { viz.rename(action.id, action.title); return; }
+    case 'setSource': { viz.setSource(action.id, action.source); return; }
+    case 'setModel': { viz.setModel(action.id, action.pair); return; }
+    case 'startInterview': { viz.startInterview(action.id); return; }
+    case 'answer': { viz.answer(action.id, action.questionId, action.answer); return; }
+    case 'revise': { viz.revise(action.id, action.query); return; }
+    case 'cancel': { viz.cancel(action.id); return; }
+    case 'refreshNow': { viz.refreshNow(action.id); return; }
+    case 'setRefresh': { viz.setRefresh(action.id, action.seconds); }
+  }
+}
+
+const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {  schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
     read: (managers) => managers.schedule.aggregatedView(),
     act: actOnSchedules,
@@ -127,6 +149,12 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => managers.sessions.view(),
     act: actOnSessions,
     empty: [],
+  },
+  visualizations: {
+    subscribe: (fire) => messageBus.on('visualizations', 'changed', fire),
+    read: (managers) => managers.visualizations.view(),
+    act: actOnVisualizations,
+    empty: { summaries: [], windows: [], models: [] },
   },
 };
 

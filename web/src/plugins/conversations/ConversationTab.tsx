@@ -2,11 +2,10 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
-import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
+import { renderMarkdown, useStickToBottom, type TabPluginClientCapabilities } from '../api';
 import { ConversationComposer } from './ConversationComposer';
 import { ConversationTitle } from './ConversationTitle';
 import { modelGroups, pairValue } from './model-pairs';
-import { useStickToBottom } from './useStickToBottom';
 
 export function ConversationTab({
   payload,

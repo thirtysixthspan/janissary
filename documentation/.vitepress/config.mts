@@ -107,6 +107,7 @@ export default defineConfig({
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
             { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },
+            { text: "Visualizations", link: "/user-documentation/tab-types/visualizations" },
           ],
         },
         {

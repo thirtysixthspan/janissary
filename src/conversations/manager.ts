@@ -2,7 +2,7 @@ import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { ConversationModelPair, ConversationsView } from '../protocol.js';
 import { ConversationResponder } from './responder.js';
-import { ConversationSessions } from './sessions.js';
+import { AcpSessionPool } from '../acp/session-pool.js';
 import {
   CONVERSATION_SCHEMA_VERSION,
   type Conversation,
@@ -19,7 +19,7 @@ import {
 
 type ManagerOptions = {
   store?: ConversationStore;
-  sessions?: ConversationSessions;
+  sessions?: AcpSessionPool;
   now?: () => number;
 };
 
@@ -33,7 +33,7 @@ export class ConversationsManager {
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
     this.store = options.store ?? new ConversationStore();
-    const sessions = options.sessions ?? new ConversationSessions();
+    const sessions = options.sessions ?? new AcpSessionPool();
     this.now = options.now ?? Date.now;
     this.responder = new ConversationResponder(
       this.store, sessions, this.now, () => { this.changed(); },

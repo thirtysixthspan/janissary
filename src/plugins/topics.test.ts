@@ -79,6 +79,12 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       refresh: vi.fn(), detach: vi.fn(), attach: vi.fn(), terminate: vi.fn(), forget: vi.fn(),
       focus: vi.fn(), close: vi.fn(),
     },
+    visualizations: {
+      view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
+      create: vi.fn(), load: vi.fn(), delete: vi.fn(), rename: vi.fn(), setSource: vi.fn(),
+      setModel: vi.fn(), startInterview: vi.fn(), answer: vi.fn(), revise: vi.fn(),
+      cancel: vi.fn(), refreshNow: vi.fn(), setRefresh: vi.fn(),
+    },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
 }
@@ -146,6 +152,52 @@ describe('the conversations topic source', () => {
     runTopicAction(managers, { topic: 'conversations', action: 'launchAgent', id: 'one' });
     expect(managers.conversations.openFiles).toHaveBeenCalledWith('one');
     expect(managers.conversations.launchAgent).toHaveBeenCalledWith('one');
+  });
+});
+
+describe('the visualizations topic source', () => {
+  it('reads the manager view and routes every action', () => {
+    const { managers } = makeManagers();
+    expect(readTopicData(managers, 'visualizations')).toEqual({ summaries: [], windows: [], models: [] });
+    const actions: TabPluginTopicAction[] = [
+      { topic: 'visualizations', action: 'create', id: 'one', source: 'https://example.com/d.csv' },
+      { topic: 'visualizations', action: 'load', id: 'one' },
+      { topic: 'visualizations', action: 'delete', id: 'one' },
+      { topic: 'visualizations', action: 'rename', id: 'one', title: 'Revenue' },
+      { topic: 'visualizations', action: 'setSource', id: 'one', source: 'https://example.com/o.csv' },
+      {
+        topic: 'visualizations', action: 'setModel', id: 'one',
+        pair: { harness: 'claude', model: 'sonnet' },
+      },
+      { topic: 'visualizations', action: 'startInterview', id: 'one' },
+      { topic: 'visualizations', action: 'answer', id: 'one', questionId: 'q1', answer: 'revenue' },
+      { topic: 'visualizations', action: 'revise', id: 'one', query: 'make it a line' },
+      { topic: 'visualizations', action: 'cancel', id: 'one' },
+      { topic: 'visualizations', action: 'refreshNow', id: 'one' },
+      { topic: 'visualizations', action: 'setRefresh', id: 'one', seconds: 30 },
+    ];
+    for (const action of actions) runTopicAction(managers, action);
+    const viz = managers.visualizations;
+    expect(viz.create).toHaveBeenCalledWith('one', 'https://example.com/d.csv');
+    expect(viz.load).toHaveBeenCalledWith('one');
+    expect(viz.delete).toHaveBeenCalledWith('one');
+    expect(viz.rename).toHaveBeenCalledWith('one', 'Revenue');
+    expect(viz.setSource).toHaveBeenCalledWith('one', 'https://example.com/o.csv');
+    expect(viz.setModel).toHaveBeenCalledWith('one', { harness: 'claude', model: 'sonnet' });
+    expect(viz.startInterview).toHaveBeenCalledWith('one');
+    expect(viz.answer).toHaveBeenCalledWith('one', 'q1', 'revenue');
+    expect(viz.revise).toHaveBeenCalledWith('one', 'make it a line');
+    expect(viz.cancel).toHaveBeenCalledWith('one');
+    expect(viz.refreshNow).toHaveBeenCalledWith('one');
+    expect(viz.setRefresh).toHaveBeenCalledWith('one', 30);
+  });
+
+  it('refuses a visualizations action when the plugin did not declare the topic', () => {
+    const { managers } = makeManagers();
+    const capabilities = contextFor(managers, ['topicAction'], []);
+    expect(() => capabilities.topicAction({ topic: 'visualizations', action: 'delete', id: 'one' }))
+      .toThrow('used topic "visualizations" without declaring it');
+    expect(managers.visualizations.delete).not.toHaveBeenCalled();
   });
 });
 

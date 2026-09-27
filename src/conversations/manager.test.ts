@@ -7,7 +7,7 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { ConversationsManager } from './manager.js';
-import { ConversationSessions } from './sessions.js';
+import { AcpSessionPool } from '../acp/session-pool.js';
 import { CONVERSATION_SCHEMA_VERSION, ConversationStore } from './store.js';
 
 const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
@@ -40,7 +40,7 @@ function fixture() {
   let time = 100;
   const manager = new ConversationsManager(managers, {
     store,
-    sessions: new ConversationSessions(),
+    sessions: new AcpSessionPool(),
     now: () => ++time,
   });
   return { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store };

@@ -28,6 +28,7 @@ import { notify } from '../notifications/index.js';
 import { TabPluginHost } from '../plugins/host.js';
 import { ConversationsManager } from '../conversations/manager.js';
 import { SessionsManager } from '../sessions/manager.js';
+import { VisualizationsManager } from '../visualizations/manager.js';
 import { NotificationQueue } from '../notifications/queue.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
@@ -54,6 +55,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   });
   managers.conversations = new ConversationsManager(managers);
   managers.sessions = new SessionsManager(managers);
+  managers.visualizations = new VisualizationsManager(managers);
   managers.plugins = new TabPluginHost(managers);
   managers.workspace = new WorkspaceManager(projectDir);
   managers.gitSync = new GitSync(managers.workspace);

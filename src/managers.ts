@@ -24,6 +24,7 @@ import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
 import type { SessionsManager } from './sessions/manager.js';
+import type { VisualizationsManager } from './visualizations/manager.js';
 import type { NotificationQueue } from './notifications/queue.js';
 
 export type ManagerLifecycle = {
@@ -57,6 +58,7 @@ type ManagerRegistry = {
   plugins: TabPluginHost;
   conversations: ConversationsManager;
   sessions: SessionsManager;
+  visualizations: VisualizationsManager;
   notifications: NotificationQueue;
 };
 
@@ -102,6 +104,9 @@ export const MANAGER_DISPOSE_ORDER = [
   'workspace',
   'plugins',
   'conversations',
+  // Beside `conversations` and before `remote`, for the same reason: it reads the tabs, the bus, and
+  // its own store while tearing down, and it holds a subprocess pool and a refresh timer to release.
+  'visualizations',
   // Before `remote`, because it reads channels — their addresses, workspaces, and session ids —
   // while tearing down, and after them there would be nothing left to read.
   'sessions',

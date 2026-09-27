@@ -204,6 +204,15 @@ export type {
   RemoteSessionKind,
   RemoteSessionState,
   RemoteSessionView,
+  VisualizationChartKind,
+  VisualizationChartView,
+  VisualizationColumnView,
+  VisualizationQuestionView,
+  VisualizationSummaryView,
+  VisualizationTableView,
+  VisualizationTurnView,
+  VisualizationWindowView,
+  VisualizationsView,
 } from '../protocol.js';
 
 // Resolution: core openers and commands resolve first, then one plugin contribution by exact

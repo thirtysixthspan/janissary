@@ -143,6 +143,12 @@ type ConversationsEvent = { type: 'changed' };
 // this at all, and `SessionsManager`'s record comparison keeps a burst of transitions from becoming
 // a write apiece.
 type SessionsEvent = { type: 'changed' };
+// A visualization's saved set changed, or one of them did: a record created, renamed, charted,
+// modified, deleted, or re-read by its refresh timer. Its own channel for the same reason the three
+// above have one — a named, low-frequency signal a tab plugin may subscribe to. The refresh timer is
+// what keeps that true: it fires on its own interval and not on a mutation elsewhere, so this never
+// rides `state: dirty`.
+type VisualizationsEvent = { type: 'changed' };
 // What the notification path asks the client to show in the corner. `toast` is one notification
 // with no feed on screen to carry it; `clear` empties the corner at once, which is what escalation
 // and a toast click both do once the feed becomes visible and starts showing those same lines.
@@ -155,6 +161,6 @@ export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
-  sessions: SessionsEvent; notifications: NotificationsEvent;
+  sessions: SessionsEvent; visualizations: VisualizationsEvent; notifications: NotificationsEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();
