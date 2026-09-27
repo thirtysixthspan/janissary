@@ -54,6 +54,7 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
 - **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude and codex and `false` for opencode; explicitly setting it to `true` for opencode reports an unsupported setting and skips that entry.
 - **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
+- **`browser`**: `true` launches the harness with a browser attached, the same as the `-b` flag on an interactive `harness` command. A `profile save`d entry records it, so a saved session of a `-b` harness reopens with its browser.
 - **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.
 - **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
 - **`run`** — commands typed into the harness once, shortly after launch.
@@ -96,7 +97,7 @@ The `plugin`, `page`, and `ssh` types reopen the rest of a working session — a
 { "type": "ssh", "destination": "devbox", "options": ["-p", "2222"], "number": 6 }
 ```
 
-A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab, and is what `profile save` writes for any plugin tab you have open. For one that opens on a file — `image`, `markdown`, `video` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
+A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plugins) that owns the tab, and is what `profile save` writes for any plugin tab you have open. For one that opens on a file — `image`, `markdown`, `video`, `pdf`, `audio` — it carries that file's path, and a launch reopens it by opening the file again. A plugin reached only by its own command, such as the `schedules` list, carries no path; a launch reissues the command instead. The older `{ "type": "image", "path": … }` and `{ "type": "markdown", "path": … }` spellings still launch exactly the same way, so profiles you saved before are unaffected.
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
@@ -143,7 +144,7 @@ Each agent is captured as a clean template: its name, working directory, and tab
 
 Open images, markdown previews, videos, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
 
-The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. Under `--no-open`, the window size is omitted and the command reports that omission, while the sidebar and tab-area sizes are still captured. The only thing left out and named in the command's report is a monitor's own reporting tab.
+The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. Under `--no-open`, the window size is omitted and the command reports that omission, while the sidebar and tab-area sizes are still captured. A monitor's own reporting tab is the one thing left out, and it is left out quietly: it appears neither in the profile nor in the report's skipped list.
 
 Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
 
