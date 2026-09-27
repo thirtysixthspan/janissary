@@ -52,7 +52,7 @@ Your edits are a list of steps replayed from the original, so nothing is baked i
 
 <img class="agent-float" src="/agents/malik-south-east.png" alt="" />
 
-**Save**, or `Cmd+S` / `Ctrl+S`, writes the edited image over the original file. There's no Save As: the destination is always the file you opened. The button stays dim until you have something to save, and the header confirms with `Saved <name>` for a few seconds afterwards. Your edits stay live, so you can keep working and save again.
+**Save**, or `Cmd+S` / `Ctrl+S`, writes the edited image over the original file. There's no Save As: the destination is always the file you opened. The button stays dim until you have something to save, and the header confirms with `Saved <name>` for a few seconds afterwards. The size in the header follows the save too, which matters when the picture changes shape on disk: an SVG or an animated GIF becomes a single PNG, and the header then shows the size of the file that is actually there. Your edits stay live, so you can keep working and save again.
 
 Whether the tab counts as saved is a question about your edits, not about how many steps you have taken. Undoing back to exactly what was written reads as saved again, and redoing forward to it does too. A different edit applied on top of an undone one lands at the same step but is not what was written, so the tab still reads as unsaved. Two routes to the same picture are never recognised as equal, so the tab leans toward calling the work unsaved. While a dot beside the tab name marks the tab unsaved, it clears the moment the save lands. An edit you make while a save is still in flight is not covered by that save, so the dot stays until you save again.
 
