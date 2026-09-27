@@ -93,7 +93,9 @@ A tab's label in the strip is not something you can select and copy. The metadat
 
 <img class="agent-float left" src="/agents/orhan-south.png" alt="" />
 
-`rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; Enter commits, Escape cancels. Either way the new name is capped at 50 characters, which is its own limit and not the shorter one the strip uses to truncate a label it has to fit.
+`rename <newname>` gives the current tab a display alias — a name shown in the strip in place of its real label. Bare `rename` clears the alias. You can also double-click the label of the active tab and type a new name in place; the current name arrives selected, so typing replaces it, and Enter commits, clicking away commits, Escape cancels. Either way the new name is capped at 50 characters, which is its own limit and not the shorter one the strip uses to truncate a label it has to fit.
+
+A tab kind that renames its own tab can take the alias back. A page tab is the one that does: follow a link inside a page and its label goes back to the new domain, discarding a name you gave it.
 
 An alias changes what you see, not what you can type: commands that target a tab by name take either one. `msg`, `broadcast`, [`send`](/user-documentation/command-bar/send), `queue`, `close`/`exit`, `schedule … in <tab>`, and monitor targets all match the alias or the original label, ignoring case. The rename confirmation says routing still uses the label, and internally it does — that's the name a message is delivered under, the one a transcript records, and the one `state` shows — but you don't have to remember it to address the tab.
 
