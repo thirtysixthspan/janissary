@@ -59,6 +59,10 @@ A set of emacs-style keys answers as well, for a keyboard without those chords:
 
 Note that `Ctrl+A` and `Ctrl+D` mean something different here than they do in a [file navigator](/user-documentation/tab-types/file-navigator): in the editor they move to the start of the line and delete forward.
 
+The app's other shortcuts keep working while you type. `Cmd+Shift+[` and `Cmd+Shift+]` switch tabs, `Ctrl+←` and `Ctrl+→` move this tab along the strip, `Ctrl+G` opens the tab navigator, `Ctrl+R` the command history picker, `Cmd+P` [Quick Open](/user-documentation/command-bar/quick-open), and `Cmd+T` a new agent tab. Where a chord means something in both places, the buffer keeps its own: `Ctrl+A` and `Ctrl+E` stay the start and end of the line, so no task picker or queue popup opens from here, `Ctrl+P` and `Ctrl+N` move the cursor, `Escape` collapses the selections, and `Cmd+F` opens the line search below.
+
+A picker opened that way appears over the editor and takes every keystroke while it is up. Nothing you type reaches the file, pasting does nothing, and the caret is hidden until you close it, at which point the caret is back and you can type again.
+
 A long line wraps across several visual rows instead of scrolling horizontally. `↑`/`↓` (or `Ctrl+P`/`Ctrl+N`) move the cursor one visual row at a time, so crossing a wrapped line takes as many presses as it has rows on screen; once you reach the wrapped line's first or last row, the next press continues into the line above or below it.
 
 Typing with an IME — composing characters from several keystrokes, as Japanese or Chinese input methods do — works normally: the editor waits for composition to finish before applying what you typed.
@@ -69,7 +73,7 @@ Press `Cmd+/` to comment the lines your selection covers. With no selection, it 
 
 JavaScript, TypeScript, and JSON use `//`. Ruby, shell scripts, Python, YAML, and plain text use `#`. Markdown and HTML wrap the selected lines in `<!-- -->`, while CSS uses `/* */`. A file with an unknown extension, or no extension, is left unchanged.
 
-Line comments align at the least-indented selected line, so the block keeps its relative indentation. Blank lines in the selection are included. If the selection mixes commented and uncommented lines, the shortcut adds one comment marker to every line; the next press removes that one marker again.
+Line comments align at the least-indented selected line, so the block keeps its relative indentation. Blank lines in the selection are included, and a line that was blank before you commented comes back blank when you press the shortcut again, indentation and all. If the selection mixes commented and uncommented lines, the shortcut adds one comment marker to every line; the next press removes that one marker again.
 
 ## Indent and outdent lines
 

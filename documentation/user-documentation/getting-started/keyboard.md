@@ -4,7 +4,7 @@ Use these shortcuts to run commands, move between tabs, scroll transcripts, and 
 
 <img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
-The command bar accepts the shortcuts below while an agent tab is active. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
+The command bar accepts the shortcuts below while an agent tab is active. The ones that switch tabs, move a tab or open a picker belong to the window rather than to the command bar, so they work from the other view tabs as well: an [editor tab](/user-documentation/tab-types/editor)'s text buffer, for example, keeps only the keys it edits with and passes the rest through. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
 
 | Key | Action |
 |---|---|
@@ -55,7 +55,7 @@ The focused section changes without sending a command to the application.
 
 `Shift+Tab` works while a file navigator or harness tab has focus. It is handled before those views receive the key, so you can always leave them. A file navigator still captures its own arrow keys, `Home`, `End`, `PageUp`, `PageDown`, `Enter`, `Space`, and printable characters for tree navigation. A harness receives its other keystrokes, including `Ctrl+C`.
 
-An editor tab is different. While you're typing in its text, `Shift+Tab` outdents the current lines instead of moving focus (see [Editor](/user-documentation/tab-types/editor)). To leave an editor tab, click another section.
+An editor tab is different. While you're typing in its text, `Shift+Tab` outdents the current lines instead of moving focus (see [Editor](/user-documentation/tab-types/editor)). To leave an editor tab, press `Cmd+Shift+[` or `Cmd+Shift+]`, or click another section.
 
 Bare `Tab` keeps its command-completion behavior in the command bar.
 
