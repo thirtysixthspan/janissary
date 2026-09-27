@@ -4,17 +4,6 @@
 
 ## development
 
-* Accept only a positive integer from the instance lock file before any caller probes or signals it, and create the lock exclusively and atomically so a crash or a concurrent start cannot leave it empty or doubly held.
-
-Existing Debt: The lock file's contents are read with `Number(readFileSync(...).trim())` and trusted as a pid wherever they are read, rejecting only `NaN`, so the signalling code treats `0` (what an empty or truncated file parses to) and negative numbers as real pids even though `process.kill` gives both a process-group meaning; and `acquireLock` checks for the file and then writes it with a plain truncating `writeFileSync`, which is neither exclusive nor atomic. Severity: 5/10
-
-Existing Risk: 6/10 - A lock file left empty by a crash or a full disk between truncate and write makes every later `janus` in that directory refuse to start with "already running (pid 0)", because `process.kill(0, 0)` probes the caller's own process group and succeeds, and makes `janus stop` send SIGTERM to its own process group; a file holding `-1` would make `janus stop` signal every process the user owns; and two `janus` starts in one directory at the same moment both pass the existence check and both run.
-
-Proposal Risk: 2/10 - Only a pid that could name one real process is ever probed or signalled, and the lock is taken in one exclusive step; the residual case is a stale lock over a recycled pid this user owns, which `isOwnInstanceAlive` already documents and which still needs the manual delete the error message describes.
-
-Proposal: `src/instance-lock.ts` parses the file in three places — `readLockPid`, `acquireLock`, and `releaseLock` — each with its own `Number(...)`. Route all three through one parser that returns the pid only when it is a safe integer greater than zero (`Number.isSafeInteger(pid) && pid > 0`) and `undefined` otherwise; `acquireLock` then treats an unparseable file as stale and takes it over, and `readLockPid` returns `undefined`, which already makes `stopInstance` in `src/stop-instance.ts` report "no running janus instance" and makes `isWorkspaceRunning` in `src/launch-name/leftover.ts` fall through to its other checks. For the write, create the file with `writeFileSync(file, String(process.pid), { flag: 'wx' })`, and on `EEXIST` read it through the parser: live and ours means refuse as today, anything else means remove it and retry the exclusive create once (a second `EEXIST` means another instance won the race, and is refused). `src/instance-lock.test.ts` pins acquisition, stale takeover, and release and must keep passing; add cases for an empty file, a `0`, a negative number, and a non-numeric file (each taken over by `acquireLock` and read as `undefined` by `readLockPid`), and in `src/stop-instance.test.ts` a case that an empty lock file never reaches `process.kill` with a signal — on the current code that test would signal the test runner's own process group, so stub `process.kill` before writing it.
-
-
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.

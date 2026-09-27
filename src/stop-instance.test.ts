@@ -50,6 +50,23 @@ describe('stopInstance', () => {
     writeSpy.mockRestore();
   });
 
+  // An empty lock parses to 0, which `process.kill` would take as this process's own group — so the
+  // stub goes in before the file exists, and no signal of any kind may be sent.
+  it('reports no running instance for an empty lock file without signalling anything', () => {
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), '');
+
+    stopInstance(projectDir);
+
+    expect(kill).not.toHaveBeenCalled();
+    expect(writeSpy).toHaveBeenCalledWith(`no running janus instance for ${projectDir}\n`);
+    kill.mockRestore();
+    writeSpy.mockRestore();
+  });
+
   it('reports no running instance when the locked pid is dead', () => {
     const dir = path.join(projectDir, '.janissary');
     mkdirSync(dir, { recursive: true });
