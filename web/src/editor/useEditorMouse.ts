@@ -56,6 +56,7 @@ export function useEditorMouse(api: EditorApi, bodyRef: React.RefObject<HTMLDivE
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 2) { focus(); e.preventDefault(); return; }
     if (e.button !== undefined && e.button !== 0) return;
     focus();
     const hit = hitFromEvent(e);

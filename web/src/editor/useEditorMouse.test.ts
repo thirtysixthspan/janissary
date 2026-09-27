@@ -79,7 +79,7 @@ describe('useEditorMouse', () => {
     body.remove();
   });
 
-  it('leaves the selection alone on a right-click', () => {
+  it('keeps the keyboard in the buffer on a right-click without moving the selection', () => {
     const api = makeApi(makeState(['hello']));
     const body = makeEditorBody(1);
     const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
@@ -88,10 +88,25 @@ describe('useEditorMouse', () => {
     const content = body.querySelector('.editor-content') as HTMLElement;
     const event = { button: 2, preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
     act(() => { result.current.onMouseDown(event); });
-    expect(focus).not.toHaveBeenCalled();
+    expect(focus).toHaveBeenCalled();
+    expect(event.preventDefault).toHaveBeenCalled();
     expect(api.sealUndo).not.toHaveBeenCalled();
     expect(api.setState).not.toHaveBeenCalled();
+    body.remove();
+  });
+
+  it('ignores a middle-button press', () => {
+    const api = makeApi(makeState(['hello']));
+    const body = makeEditorBody(1);
+    const bodyRef = { current: body } as React.RefObject<HTMLDivElement | null>;
+    const focus = vi.fn();
+    const { result } = renderHook(() => useEditorMouse(api, bodyRef, focus));
+    const content = body.querySelector('.editor-content') as HTMLElement;
+    const event = { button: 1, preventDefault: vi.fn(), target: content, clientX: 10, clientY: 10, detail: 1, shiftKey: false } as unknown as React.MouseEvent;
+    act(() => { result.current.onMouseDown(event); });
+    expect(focus).not.toHaveBeenCalled();
     expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(api.setState).not.toHaveBeenCalled();
     body.remove();
   });
 

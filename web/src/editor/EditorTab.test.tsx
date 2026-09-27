@@ -845,6 +845,29 @@ describe('EditorTab', () => {
     expect(selectedClick.defaultPrevented).toBe(false);
   });
 
+  it('a right-click on a selected line keeps the keyboard and the selection in the buffer', async () => {
+    const { client } = makeClient();
+    const { container } = await renderLoaded(client);
+    const body = container.querySelector<HTMLElement>('.editor-body')!;
+    const line = container.querySelector('.editor-content')!;
+    fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
+    expect(body.dataset.editorSelection).toBe('l');
+
+    const rightDown = createEvent.mouseDown(line, { button: 2 });
+    fireEvent(line, rightDown);
+    expect(rightDown.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(textarea());
+    expect(body.dataset.editorSelection).toBe('l');
+
+    const outside = document.createElement('input');
+    document.body.append(outside);
+    outside.focus();
+    fireEvent.mouseDown(line, { button: 2 });
+    expect(document.activeElement).toBe(textarea());
+    expect(body.dataset.editorSelection).toBe('l');
+    outside.remove();
+  });
+
   it('renders hljs-* spans for a .ts file after load', async () => {
     const { client } = makeClient();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
