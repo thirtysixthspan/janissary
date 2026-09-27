@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Give the transformation vocabulary a total row count, so a capped source is reported as capped under a chart. Severity: 6/10
-
-Existing Issue: `resolve` in `src/visualizations/chart-spec.ts` sets `total: applied.table.rows.length` on the resolved table, so `total` can never differ from `rows.length`, and `caption` in `web/src/plugins/visualizations/VisualizationChartCard.tsx` — the only consumer of the field — can therefore only ever read "5 rows" or "showing 5 of 5 rows". Severity: 6/10
-
-Existing Risk: 6/10 - A chart over a source of twelve thousand rows silently shows five hundred of them and says "500 rows", which is precisely the omission `product/specs/visualizations.md` calls a chart lying by omission; a reader has no way to tell a complete picture from a cropped one.
-
-Proposal Risk: 2/10 - The two numbers are now genuinely different, which is what the caption was written for; the transformations still report their own row count honestly.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: report how much of a capped source a chart is showing". In `src/visualizations/chart-spec.ts`, have `resolve` carry the source's true row count through rather than replacing it with the transformed count: keep `total` as the number of rows the source held and let `rows.length` be what the transformations left, so `truncated` and a `total` above `rows.length` are reachable together. Confirm against `src/visualizations/table.ts`'s `TableResult`, whose `total` and `truncated` are already the source's own figures, and against the transform pipeline in `src/visualizations/transforms.ts`, which has no notion of the pre-transform count. Add a case to `src/visualizations/chart-spec.test.ts` asserting that resolving a truncated source yields a table whose `total` is the source's count and whose `truncated` is true, and a case to `web/src/plugins/visualizations/VisualizationChartCard.test.tsx` asserting the caption reads `showing 500 of 12043 rows` for a chart over a truncated source. Correct the sentence in `product/specs/visualizations.md` under "The tab" that describes what the caption says, if its wording changes.
-
 * Refuse a filter value that is not the column's own type, rather than coercing it into a silent empty chart. Severity: 6/10
 
 Existing Issue: `typed` in `src/visualizations/transforms.ts` coerces with `Number(cell)` for a numeric column, and `isFilterStep` in `src/visualizations/chart-spec.ts` accepts any string as a filter value, so `"twenty-twenty-four"` becomes `NaN` and fails every comparison; a `contains` step with no value at all is likewise accepted and matches every row. Severity: 6/10

@@ -167,14 +167,18 @@ export function resolve(
   if ('error' in applied) return applied;
   const verdict = validateChart(chart, applied.table);
   if ('error' in verdict) return verdict;
-  // The row count a chart reports is the count its own transformations left, so a limit says how many
-  // rows there are; the cap says how many of what was read, which is the source's own flag.
+  // The two row counts are the source's own, and the point of carrying both is that they are allowed to
+  // differ: `rows` is what the chart is drawn from, `total` is how much the source actually held. A
+  // limit lowers the first and the transformations below report that in words; a cap lowers it too, and
+  // nothing else would ever say so. Overwriting `total` with the row count made the caption's
+  // "showing 500 of 12043 rows" unreachable, which is the chart lying by omission the specification
+  // names — a cropped picture reading exactly like a complete one.
   return {
     table: {
       columns: applied.table.columns,
       rows: applied.table.rows,
-      total: applied.table.rows.length,
-      truncated: source.truncated,
+      total: source.total,
+      truncated: source.truncated || source.total > applied.table.rows.length,
     },
   };
 }

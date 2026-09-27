@@ -96,11 +96,19 @@ describe('resolve', () => {
     expect(resolved).toEqual({ error: 'no column named "per region"' });
   });
 
-  it('reports the rows the transformations left, and the source\'s own cap', () => {
+  // The two counts exist so a cropped picture can say it is cropped. A limit of one over a source of
+  // nine is exactly the case the caption's "showing 1 of 9 rows" was written for, and the old
+  // assignment made total === rows.length in every case, so the caption could never reach that branch.
+  it('keeps the source\'s own total beside the rows the transformations left', () => {
     const resolved = resolve({ ...TABLE, total: 9, truncated: true }, shape({
       transforms: [{ op: 'limit', count: 1 }],
     }));
-    expect(resolved).toEqual({ table: { ...TABLE, rows: [TABLE.rows[0]], total: 1, truncated: true } });
+    expect(resolved).toEqual({ table: { ...TABLE, rows: [TABLE.rows[0]], total: 9, truncated: true } });
+  });
+
+  it('reports a complete source as complete', () => {
+    const resolved = resolve(TABLE, shape());
+    expect(resolved).toEqual({ table: { ...TABLE, total: TABLE.rows.length, truncated: false } });
   });
 });
 
