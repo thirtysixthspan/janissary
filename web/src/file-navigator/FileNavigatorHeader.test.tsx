@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FileNavigatorHeader } from './FileNavigatorHeader';
 
@@ -78,6 +78,24 @@ describe('FileNavigatorHeader', () => {
   it('renders no pull button without onPull', () => {
     const { container } = render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
     expect(container.querySelector('.files-pull')).toBeNull();
+  });
+
+  it('hands the GitHub button the url the tree reported, not the one it was given', () => {
+    const onOpenGithub = vi.fn();
+    const { container } = render(
+      <FileNavigatorHeader root="/local/ws" githubUrl="https://github.com/owner/repo/commits/main/" {...callbacks} onOpenGithub={onOpenGithub} />,
+    );
+    const button = container.querySelector('.files-github');
+    expect(button).not.toBeNull();
+
+    fireEvent.click(button!);
+
+    expect(onOpenGithub).toHaveBeenCalledWith('https://github.com/owner/repo/commits/main/');
+  });
+
+  it('offers no GitHub button for a tree with no remote', () => {
+    const { container } = render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
+    expect(container.querySelector('.files-github')).toBeNull();
   });
 
   it('passes the pull status through to the button', () => {
