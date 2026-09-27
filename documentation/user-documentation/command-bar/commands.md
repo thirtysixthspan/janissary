@@ -25,7 +25,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `help`
 
-`help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide. If that file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history. Each full guide is one click away in the app's help menu.
+`help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide. If that file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
 ## `state`
 
@@ -73,7 +73,9 @@ A picker needs a screen, so a command that arrives from somewhere without one an
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
-`quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+Typed by you, `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+
+A `quit` nobody typed is not asked about. A [schedule](/user-documentation/automation/scheduling) that fires a `quit`, or another tab telling this one to `quit`, exits the app outright, with no dialog and no unsaved-changes guard.
 
 Don't reach for `exit` to leave the app: `exit` is an alias of `close` and closes the current *tab*. The one overlap is the last tab — closing it exits the app, so `close`, `exit`, the tab strip's × and `Cmd+W`/`Ctrl+W` all show the same confirmation dialog there (see [Tabs](/user-documentation/getting-started/tabs)).
 

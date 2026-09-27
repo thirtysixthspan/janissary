@@ -44,7 +44,7 @@
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
 | `monitors` | List active monitors with their targets and suggestion counts |
-| `theme` | Set the application UI theme (`theme <name>`); `theme` alone lists available themes; `theme sync` sets the syntax theme to match the app theme name |
+| `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `syntax` | `syntax theme <name>` sets the editor tab's syntax-highlighting theme (applies to every open editor tab); `syntax theme` alone opens a theme-picker modal |
 
 ### Key Bindings
