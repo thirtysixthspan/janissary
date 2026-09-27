@@ -38,8 +38,11 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // retention and the file-navigator drop handle key on rather than `active`. A standalone render is
   // on screen.
   visible?: boolean;
+  // Whether a window overlay (a picker or chooser) is open. It claims every key while it is, so the
+  // buffer hands them all on, hides its caret, and takes focus back once the overlay closes.
+  overlayOpen?: boolean;
   onSplit?: () => void;
-}>(function EditorTab({ editor, tab, client, active, visible = true, onSplit }, ref) {
+}>(function EditorTab({ editor, tab, client, active, visible = true, overlayOpen = false, onSplit }, ref) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
@@ -65,7 +68,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   useEditorLineJump(editor, api, caretRef);
   const find = useEditorFind(state?.lines ?? null, active);
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
-  const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey });
+  const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
 
   useEditorDrop(tab.label, visible, textareaRef, api.insert);
 
@@ -78,7 +81,9 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const [renaming, setRenaming] = useState(editor.newFile === true);
   // `preventScroll` because the textarea is pinned to the top of the scrollport (see theme.css): a
   // plain focus() on a scrolled buffer drags it back into view, undoing the restored position.
-  useEffect(() => { if (active && loaded && !renaming) textareaRef.current?.focus({ preventScroll: true }); }, [active, loaded, renaming]);
+  useEffect(() => {
+    if (active && loaded && !renaming && !overlayOpen) textareaRef.current?.focus({ preventScroll: true });
+  }, [active, loaded, renaming, overlayOpen]);
   const initialScrollDone = useRef(false);
   const lastCursorRef = useRef<{ line: number; col: number } | null>(null);
   useEffect(() => {
@@ -163,7 +168,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
             state={state}
             tokens={tokens}
             suggest={suggest}
-            active={active}
+            active={active && !overlayOpen}
             gutterCh={gutterCh}
             caretRef={caretRef}
           />

@@ -26,6 +26,10 @@ type Properties = {
   // Told when a plugin tab's unsaved state changes, so the tab strip can mark it. The handle itself
   // goes into `tabHandles` beside the editor tabs'; this is only the signal that it moved.
   onPluginDirty?: (label: string, dirty: boolean) => void;
+  // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
+  // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
+  pickerOverlays?: React.ReactNode;
+  overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
   // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
@@ -41,6 +45,7 @@ function TabBodyDiv({
       data-pane-index={index}
       style={{
         borderLeft: tabBodyBorder(tab.dotColor, tab.label === current.label),
+        position: 'relative',
         display: visibleLabels.includes(tab.label) ? 'flex' : 'none',
         gridColumn: tab.pane === 'right' ? 2 : 1,
         gridRow: 2,
@@ -56,7 +61,7 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty,
+  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab,
 }: Properties) {
@@ -86,8 +91,10 @@ export function MountedViewLayers({
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
           <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label}
             visible={visibleLabels.includes(t.label)}
+            overlayOpen={overlayOpen}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
+          {t.label === current.label && pickerOverlays}
         </TabBodyDiv>
       ))}
 
