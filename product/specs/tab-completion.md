@@ -11,6 +11,8 @@ When the `Tab` key is pressed, the shell attempts to complete the token immediat
 
 The completion logic determines the context based on the command and the argument position of the cursor within the command line.
 
+A command typed over several lines with `Shift+Enter` completes the same way on every line. On a continuation line the token starts after the newline, and the words on earlier lines still set the command and the argument position: `ls`, `Shift+Enter`, `do` completes to `docs/`, and `msg`, `Shift+Enter`, `bi` completes the recipient.
+
 ## Contextual Completion Rules
 
 The shell uses the following rules, in order of precedence:
