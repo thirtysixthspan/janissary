@@ -306,10 +306,41 @@ describe('live update', () => {
     clock += 11_000;
     vi.advanceTimersByTime(11_000);
     await settle();
-
     expect(reads).toBe(2);
+
+    // A failed read must not leave the dataset due forever: the poll measures its next wait from when a
+    // dataset was last *read*, so one more interval goes by without a third attempt. Otherwise the timer
+    // re-arms at zero and hammers an endpoint that has already refused.
+    clock += 1000;
+    vi.advanceTimersByTime(1000);
+    await settle();
+    expect(reads).toBe(2);
+
     // A failed re-read must not take the chart off the screen.
     expect(built.manager.view().windows[0]?.charts).toHaveLength(1);
+    vi.useRealTimers();
+  });
+
+  it('polls nothing for a record that was deleted while its tab is still open', async () => {
+    let reads = 0;
+    let clock = 1000;
+    const built = build({ read: async () => { reads += 1; return { text: CSV }; }, now: () => clock });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk('{"charts":[{"kind":"bar","x":"region","y":"revenue","title":"T"}]}');
+    built.end();
+    const chartId = built.manager.view().windows[0]?.charts[0]?.id ?? '';
+    built.manager.setChartRefresh('v1', chartId, 10);
+    built.manager.delete('v1');
+    const before = reads;
+
+    vi.useFakeTimers();
+    clock += 60_000;
+    vi.advanceTimersByTime(60_000);
+    await settle();
+    expect(reads).toBe(before);
     vi.useRealTimers();
   });
 

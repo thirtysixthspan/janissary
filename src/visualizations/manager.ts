@@ -199,8 +199,11 @@ export class VisualizationsManager {
     return first === undefined ? false : this.agent.reacquire(record, first);
   }
 
+  // What the poll is owed, per dataset. A deleted record is not among them: the timer would keep
+  // re-arming for a visualization nothing can act on any more, because every read it could ask for is
+  // refused.
   private dueFor(id: string) {
-    const record = this.index.find(id);
+    const record = this.index.live(id);
     if (record === undefined) return [];
     return dueByDataset(
       record.charts,

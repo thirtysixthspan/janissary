@@ -123,7 +123,9 @@ describe('reading a dataset', () => {
 
     expect(dataset?.error).toBe('returned 500');
     expect(dataset?.table).toBe(TABLE);
-    expect(dataset?.readAt).toBe(1);
+    // The attempt is stamped even though it failed, because the poll measures its next wait from when a
+    // dataset was last read rather than from when it last succeeded.
+    expect(dataset?.readAt).toBe(9);
     expect(commits[0]?.error).toBeUndefined();
   });
 
