@@ -32,6 +32,9 @@ export class JanusClient {
   private get ws(): WebSocket { return this.connection.socket; }
   private rpc = new RpcExchange(() => this.connection.socket);
   private stateListeners = new Set<StateListener>();
+  // The server answers `init` with one snapshot and never resends it, and that reply can land before
+  // App's effect has subscribed. Kept so a late subscriber still starts from the current state.
+  private latestState: StateEvent | undefined;
   private exitListeners = new Set<ExitListener>();
   private layoutListeners = new Set<LayoutListener>();
   private notificationEvents = new NotificationEventListeners();
@@ -88,6 +91,7 @@ export class JanusClient {
         ...event, route: event.route ?? null,
         harnessLaunch: event.harnessLaunch ?? null, scheduleLaunch: event.scheduleLaunch ?? null,
       };
+      this.latestState = snapshot;
       for (const listener of this.stateListeners) listener(snapshot);
     
     break;
@@ -219,7 +223,11 @@ export class JanusClient {
     return () => { delete this.stateCollectors[name]; };
   }
 
-  onState(l: StateListener): () => void { this.stateListeners.add(l); return () => this.stateListeners.delete(l); }
+  onState(l: StateListener): () => void {
+    this.stateListeners.add(l);
+    if (this.latestState) l(this.latestState);
+    return () => this.stateListeners.delete(l);
+  }
   onPtyExit(l: ExitListener): () => void { this.exitListeners.add(l); return () => this.exitListeners.delete(l); }
   onLayout(l: LayoutListener): () => void { this.layoutListeners.add(l); return () => this.layoutListeners.delete(l); }
   onToast(l: ToastListener): () => void { return this.notificationEvents.onToast(l); }
@@ -241,6 +249,7 @@ export class JanusClient {
   dispose(): void {
     this.connection.dispose();
     this.stateListeners.clear();
+    this.latestState = undefined;
     this.exitListeners.clear();
     this.layoutListeners.clear();
     this.notificationEvents.dispose();

@@ -133,6 +133,25 @@ describe('JanusClient', () => {
     }));
   });
 
+  it('hands a listener that subscribes after a snapshot arrived the latest snapshot at once', () => {
+    const client = new JanusClient();
+    const snapshot = (activeTab: number) => ({
+      t: 'state', tabs: [], activeTab, route: null, tabNameMaxLength: 20, activeTabNameMaxLength: 40,
+      globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
+      profiles: [], projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
+    });
+    messageHandler!({ data: JSON.stringify(snapshot(0)) });
+    messageHandler!({ data: JSON.stringify(snapshot(1)) });
+    const late = vi.fn();
+    client.onState(late);
+    expect(late).toHaveBeenCalledExactlyOnceWith(snapshot(1));
+
+    client.dispose();
+    const afterDispose = vi.fn();
+    client.onState(afterDispose);
+    expect(afterDispose).not.toHaveBeenCalled();
+  });
+
   it('onState unsubscribe stops the listener from being called', () => {
     const client = new JanusClient();
     const listener = vi.fn();

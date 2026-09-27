@@ -9,6 +9,10 @@ clears the secondary tab. Missing or null route and launch dialogs are treated a
 opened route chooser selects its last choice, or its first position when there are no choices;
 repeated updates for the same command preserve the current choice.
 
+The most recent snapshot is kept by the client, so the app shows the session's current state as
+soon as it is ready to display it, even when the snapshot answering `init` arrived first. A launch
+never sits on `Connecting…` while the session is up just because that one reply came early.
+
 ### Reconnection and browser history restoration
 
 When the browser restores the app from its back/forward cache, the previously released WebSocket client is replaced with a new connection and sends the normal `init` request. The server keeps the session available for one second after its last client disconnects, and cancels that pending shutdown when the replacement connection arrives during that window.
