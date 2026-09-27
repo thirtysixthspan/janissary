@@ -10,7 +10,7 @@ conversations
 
 <img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
-The list shows conversations in order of most recent activity. If you haven't saved any, it says `No conversations yet`. Click **New conversation** in the header, or press `Cmd+N` / `Ctrl+N` while the list has focus, to open a new conversation tab.
+The list shows conversations in order of most recent activity, each row carrying its title, the date and time it was last touched, and a **Delete** button. If you haven't saved any, it says `No conversations yet`. Click **New conversation** in the header, or press `Cmd+N` / `Ctrl+N` while the list has focus, to open a new conversation tab.
 
 The first row is selected when the list opens. `↑` and `↓` move the selection without wrapping; `Home` and `End` select the first and last rows. Press `Enter` to open the selected conversation. With the mouse, click the same row twice: the first click selects it, and the next opens it. This also applies to a row already selected by the keyboard. Opening a conversation focuses its existing tab if one is open.
 
@@ -26,7 +26,7 @@ Title matching ignores case. If there is no match, you see `No conversation matc
 
 ## Ask a question
 
-Type your query into **Message** at the bottom of the conversation tab. Press `Enter` or `Ctrl+Enter` to send it; `Shift+Enter` adds a newline. The input grows with your text, then scrolls when it reaches its maximum height. It takes focus when you open the tab on screen.
+Type your query into **Message** at the bottom of the conversation tab. Press `Enter` or `Ctrl+Enter` to send it; `Shift+Enter` adds a newline. `Escape` throws away what you have typed and is not sent. The input grows with your text, then scrolls when it reaches its maximum height. It takes focus when you open the tab on screen.
 
 Replies appear progressively as formatted Markdown. Each turn shows your query, the reply, and the harness/model pair that answered it. The view follows new queries and streamed replies to the bottom, unless you scroll away to review earlier turns — scrolling back to the bottom resumes following. It initially shows the newest 20 turns; scroll to the top to load 20 older turns at a time.
 
@@ -48,15 +48,13 @@ Double-click the title in the header to rename it. Press `Enter` or click away t
 
 The **Model** selector in the header groups available models under `claude` and `opencode`. Choose a pair for your next query. Changing it starts a fresh session; earlier turns keep the pair that answered them. The selector is disabled while a reply streams. If a saved model is no longer available, the next query uses the first available pair.
 
-The last pair you chose is remembered for the rest of your time with the app: it crosses between conversations and survives a restart, and every conversation you open afterwards starts on it. Sending a query does not change that memory — only picking a different pair does. So a conversation started from the list and one started from **Chat about this** begin identically.
+The last pair you chose is remembered for the rest of your time with the app: it crosses between conversations and survives a restart, and every new conversation starts on it. A conversation you reopen keeps the pair it was saved with. Sending a query does not change that memory — only picking a different pair does. So a conversation started from the list and one started from **Chat about this** begin identically.
 
-A conversation runs one agent session at a time. Restarting the app, cancelling a reply, changing the model, a failed connection, or closing the tab all end that session; the next query starts another and replays the twenty most recent completed turns into it first, so a conversation picks up its context rather than starting cold.
-
-Restarting the app, cancelling a reply, or a failed connection also ends the live session. Closing the tab while a reply streams cancels that reply. When a query starts a fresh session, it includes the last 20 stored turns as context, including the error text of failed turns. Older history remains available to read in the tab.
+A conversation runs one agent session at a time. Restarting the app, cancelling a reply, changing the model, a failed connection, or closing the tab all end that session; the next query starts another and replays the 20 most recent turns into it first, so a conversation picks up its context rather than starting cold. A turn that failed is replayed too, error text and all. Older history remains available to read in the tab.
 
 ## Cancel or retry a reply
 
-Press `Escape` while a reply streams to discard that partial turn. It is not saved. If that query supplied the initial title, cancellation restores `New conversation`, unless you renamed it while the reply was streaming.
+Press `Escape` while a reply streams to discard that partial turn. It is not saved. Closing the tab mid-reply does the same. If that query supplied the initial title, cancellation restores `New conversation`, unless you renamed it while the reply was streaming.
 
 A failed query stays in the history with its error in place of the reply. Rate-limit errors begin with `Rate limited:`. Send another query when you're ready to retry; the failed session is replaced automatically.
 
@@ -66,7 +64,7 @@ A failed query stays in the history with its error in place of the reply. Rate-l
 
 Each conversation has a private workspace. The header's **Open file navigator in this workspace** folder button opens a left-docked navigator there, or retargets the most recently focused navigator, while keeping focus on the conversation. **New agent in this workspace** opens an agent in the same group, with that workspace as its working directory and sandbox boundary.
 
-The conversation's own ACP agent is confined to that workspace in the same way, so it cannot read or write outside it either. The workspace belongs to the conversation rather than to the tab: closing the tab or quitting the app leaves it in place, and it goes only when you delete the conversation.
+The conversation's own ACP agent has no tools at all. It cannot read, write, or run anything — not inside the workspace and not outside it — so the reply is text and nothing else. The workspace belongs to the conversation rather than to the tab: closing the tab or quitting the app leaves it in place, and it goes only when you delete the conversation.
 
 The first query or either workspace button creates the workspace. Using a workspace button before asking anything also saves the empty conversation, so you can reopen it after restarting.
 
@@ -74,6 +72,6 @@ Saved conversations live under `~/.janissary/conversations/`, shared across proj
 
 ## Delete a conversation
 
-Use the row's **Delete** button in the conversation list. Confirming deletes its saved history, private workspace, and everything inside that workspace. Cancelling leaves them intact.
+Use the row's **Delete** button in the conversation list. It asks `Delete conversation "<title>"?` before touching anything. Confirming deletes its saved history, private workspace, and everything inside that workspace. Cancelling leaves them intact.
 
 A conversation that opens while you are looking at another tab does not pull focus away from it — you get the empty message box waiting, and it takes your typing when you switch to it. Nothing about a conversation is created until it is needed: its files are written the first time you send a query or use one of the workspace buttons, and using a workspace button first still counts, so the workspace is there after a restart. The record outlives restarts and workspace sweeps, and is removed only when you delete the conversation.
