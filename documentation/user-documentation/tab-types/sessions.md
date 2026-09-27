@@ -12,6 +12,10 @@ sessions
 
 `sessions` opens the list, or focuses it if it's already open — there's only ever one. `sessions left` and `sessions right` dock it into that sidebar; a bare `sessions` on a docked list returns it to the center. A docked list stacks each session onto two lines so it reads in a narrow sidebar. Any other argument shows `Usage: sessions [left|right]`. See [Tabs](/user-documentation/getting-started/tabs) for more on docking.
 
+The list brings its own header bar. In the center it holds **Refresh** and **Split** together at the right edge, where **Split** moves the list into the other pane; docked, it pairs **Refresh** with the control that moves the list to the other sidebar and has no **Split** of its own.
+
+![A sessions list with an otherwise empty header bar, Refresh and Split controls together at its right edge, and the words No remote sessions below.](/screenshots/sessions-list.png)
+
 ## What's in the list
 
 A row appears for every remote harness, remote agent, `ssh` tab, and remote file navigator this project has open, plus one row per process still running on a host you've detached from. There's no row for a connection by itself — tabs sharing one connection are grouped under the row that launched it, indented beneath it, so one glance shows what a single detach would take with it. Rows sort by most recent activity, newest first.
@@ -30,11 +34,13 @@ Each row shows:
 
 Hover a row to see its full destination, its remote workspace path, and the reason a previous attempt on it failed, if there was one.
 
+A docked row carries the same information on two lines: the tab's name with its actions above, then the plug and state word, the host, and how long ago the row last changed. When a field is too wide for the line it is cut short with an ellipsis and the tooltip still shows the whole value, and the tab's name is the field that gives way first so its actions stay reachable. A docked row hides the type, which stays in the tooltip; the columns come back on their own when the list returns to the center, however narrow that center pane is.
+
 ## States
 
 <img class="agent-float left" src="/agents/dogan-south.png" alt="" />
 
-The **State** column shows a plug icon ahead of the state's name, colored the same way every other surface in the app marks a connection: green while it's up, blue while it's parked on its host, red once it's over.
+The **State** column shows a plug icon ahead of the state's name, colored the same way every other surface in the app marks a connection: green while it's up, blue while it's parked on its host, red once it's over. A row that hasn't settled yet — one still `provisioning` or still `reconnecting` — has no color of its own, so its plug sits muted and the state word is what tells those two apart.
 
 - `provisioning` — a remote tab whose workspace clone hasn't landed yet
 - `active` — connected and running
@@ -46,9 +52,9 @@ The **State** column shows a plug icon ahead of the state's name, colored the sa
 
 Every row shows only the actions it can actually do.
 
-- **Attach** brings a parked session back, opening a tab for every process still running on it. On a reconnecting row it skips the retry wait and tries now.
-- **Detach** gives up the local tabs for a live session while leaving it running on its host. It asks you to confirm, naming the host; closing the local tabs never stops the remote processes, and attaching later restores the same running process rather than starting a new one. A harness's screen recording is per attachment, so detaching closes the current file and the later Attach starts a fresh one — see [Recordings](/user-documentation/advanced-agents/harness#recordings).
-- **Terminate** stops a parked session for good: Janissary reconnects long enough to tell the peer to stop its processes and remove its remote workspace, then asks you to confirm. Terminating a live session's launching row stops the peer and closes every tab sharing it.
+- **Attach** brings a parked session back, opening a tab for every process still running on it. On a reconnecting row it skips the retry wait and tries now. It works from a machine that holds no copy of the remote workspace at all: the restored tabs come back on the host's own workspace, so you can pick a session up from somewhere other than the machine that launched it.
+- **Detach** gives up the local tabs for a live session while leaving it running on its host. It asks you to confirm, naming the host; closing the local tabs never stops the remote processes, and attaching later restores the same running process rather than starting a new one. A harness's screen recording is per attachment, so detaching closes the current file and the later Attach starts a fresh one — see [Recordings](/user-documentation/advanced-agents/harness#recordings). The control lives on the row that launched the connection, since a detach has to take every tab riding it. If you close that launching tab while its joined tabs keep the connection alive, the surviving rows carry **Detach** instead, so the connection is never left with nothing to give it up from.
+- **Terminate** stops a parked session for good: Janissary reconnects long enough to tell the peer to stop its processes and remove its remote workspace, then asks you to confirm. Terminating a live session's launching row stops the peer and closes every tab sharing it. The row stays on screen while the attempt runs, marked as terminating with its **Terminate** and **Attach** controls unpressable, because reaching a slow or unreachable host can take minutes and a row that vanished for the duration would read as a terminate that had already worked. A host that never answers leaves the row parked with the failure reported beside it and **Attach** still there.
 - **Forget** removes Janissary's own record without touching anything on the far side. It only appears once an attach or a terminate has already failed to reach that host, or on a row that's already terminated.
 
 Detach and Terminate both ask first, and the dialog behaves like every other confirmation in the app: `y` confirms, `n` and `Escape` cancel, `←`/`→` move between the two buttons, and `Enter` takes whichever is selected — with Cancel selected to begin with, so a reflexive `Enter` is safe. While a confirmation is open the list's own `↑`/`↓` don't move the row selection, so a stray arrow can't change what you're about to agree to.
