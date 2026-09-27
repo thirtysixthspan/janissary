@@ -6,21 +6,20 @@ import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-l
 
 type Properties = { view: HarnessLaunchView; client: JanusClient };
 
-function initialFields(names: string[]): HarnessLaunchFields {
-  const name = names[0] ?? 'claude';
+function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
+  const name = view.names[0] ?? 'claude';
   return {
     name, label: '', workspace: true, offline: false, browser: false,
-    autoApprove: autoApproveSupported(name), model: '', effort: '',
+    autoApprove: autoApproveSupported(view, name), model: '', effort: '',
   };
 }
 
 const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
-// Which harnesses accept auto-approve (`-y`). Mirrors the server's supportsHarnessAutoApprove so the
+// Whether `name` accepts auto-approve (`-y`), read from the catalog the server delivers so the
 // dialog only ever builds a command the command parser will accept.
-const AUTO_APPROVE_HARNESSES = new Set(['claude', 'codex']);
-function autoApproveSupported(name: string): boolean {
-  return AUTO_APPROVE_HARNESSES.has(name);
+function autoApproveSupported(view: HarnessLaunchView, name: string): boolean {
+  return view.autoApprove.includes(name);
 }
 
 // Remembered across reopen within a single app run (module-level, never persisted to disk).
@@ -35,18 +34,19 @@ export function resetHarnessLaunchDialogMemory(): void {
 // catalog: it enforces the flag constraints by disabling controls that would build an invalid
 // command, so Create can only ever submit a valid `harness …` string via the normal command path.
 export function HarnessLaunchDialog({ view, client }: Properties) {
-  const [fields, setFields] = useState<HarnessLaunchFields>(() => remembered ?? initialFields(view.names));
+  const [fields, setFields] = useState<HarnessLaunchFields>(() => remembered ?? initialFields(view));
   const [hadRemembered] = useState(() => remembered !== null);
 
   const models = view.models[fields.name] ?? [];
-  const autoApproveEnabled = autoApproveSupported(fields.name);
+  const autoApproveEnabled = autoApproveSupported(view, fields.name);
+  const autoApproveNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoApprove);
 
   const update = useCallback((patch: Partial<HarnessLaunchFields>) => {
     setFields((prev) => {
       const next = { ...prev, ...patch };
       if (!(view.models[next.name] ?? []).includes(next.model)) next.model = '';
-      if (!autoApproveSupported(next.name)) next.autoApprove = false;
-      else if (patch.name !== undefined && !autoApproveSupported(prev.name)) next.autoApprove = true;
+      if (!autoApproveSupported(view, next.name)) next.autoApprove = false;
+      else if (patch.name !== undefined && !autoApproveSupported(view, prev.name)) next.autoApprove = true;
       remembered = next;
       return next;
     });
@@ -88,7 +88,7 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
               disabled={!autoApproveEnabled}
               onChange={(e) => update({ autoApprove: e.target.checked })}
             />
-            Auto-approve (-y) — claude and codex only
+            Auto-approve (-y) — {autoApproveNames} only
           </label>
           <label>Model
             <select value={fields.model} disabled={models.length === 0} onChange={(e) => update({ model: e.target.value })}>

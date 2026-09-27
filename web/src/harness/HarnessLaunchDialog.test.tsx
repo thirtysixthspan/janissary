@@ -8,6 +8,7 @@ import { HarnessLaunchDialog, resetHarnessLaunchDialogMemory } from './HarnessLa
 const view: HarnessLaunchView = {
   names: ['claude', 'opencode', 'codex'],
   models: { claude: ['opus', 'sonnet'], opencode: ['opencode-go/glm-5.2'], codex: [] },
+  autoApprove: ['claude', 'codex'],
 };
 
 function makeClient() {
@@ -15,9 +16,9 @@ function makeClient() {
   return { client: { send } as unknown as JanusClient, send };
 }
 
-function renderDialog() {
+function renderDialog(launchView: HarnessLaunchView = view) {
   const { client, send } = makeClient();
-  const utils = render(<HarnessLaunchDialog view={view} client={client} />);
+  const utils = render(<HarnessLaunchDialog view={launchView} client={client} />);
   return { ...utils, send };
 }
 
@@ -74,6 +75,22 @@ describe('HarnessLaunchDialog', () => {
   it('renders the claude-and-codex auto-approve label', () => {
     const { getByText } = renderDialog();
     expect(getByText(/Auto-approve \(-y\) — claude and codex only/)).toBeTruthy();
+  });
+
+  it('offers Auto-approve for exactly the harnesses the delivered catalog lists', () => {
+    const { getByLabelText, getByText, container } = renderDialog({ ...view, autoApprove: ['claude', 'opencode', 'codex'] });
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'opencode' } });
+    const auto = getByLabelText(/Auto-approve/) as HTMLInputElement;
+    expect(auto.disabled).toBe(false);
+    expect(auto.checked).toBe(true);
+    expect(getByText(/Auto-approve \(-y\) — claude, opencode, and codex only/)).toBeTruthy();
+  });
+
+  it('defaults Auto-approve off and disabled when the catalog lists no harness for it', () => {
+    const { getByLabelText } = renderDialog({ ...view, autoApprove: [] });
+    const auto = getByLabelText(/Auto-approve/) as HTMLInputElement;
+    expect(auto.disabled).toBe(true);
+    expect(auto.checked).toBe(false);
   });
 
   it('submits an explicit opt-out when codex auto-approve is unchecked', () => {

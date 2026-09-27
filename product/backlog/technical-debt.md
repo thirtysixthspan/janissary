@@ -4,17 +4,6 @@
 
 ## development
 
-* Deliver which harnesses accept auto-approve on the launch dialog's catalog, instead of the web dialog keeping its own hardcoded copy of the server's gate table.
-
-Existing Debt: `supportsHarnessAutoApprove` in the server's harness module is documented as the single source of truth "so validation cannot drift from the detectors that actually exist", but the "New harness" dialog decides whether to offer and default auto-approve from its own `AUTO_APPROVE_HARNESSES = new Set(['claude', 'codex'])`, commented as a mirror of it, and the parser's and profile opener's refusal messages spell the same two names again — a server rule forked into the client, which principles 1 and 7 of `ai/guidelines/architecture-principles.md` rule out. Severity: 3/10
-
-Existing Risk: 3/10 - The gate table is expected to grow (its comment names an opencode detector as deliberate later work), and when it does, a typed `harness opencode` auto-approves by default while the dialog keeps the checkbox disabled and submits `--no-auto-approve`, so the same launch behaves differently depending on which way the user started it, with nothing failing to flag it.
-
-Proposal Risk: 1/10 - The dialog reads the set the parser validates against, so the two cannot disagree; what remains is the refusal text's own list of names, which the change derives from the same table.
-
-Proposal: `HarnessLaunchView` in `src/protocol/tab.ts` is `{ names: string[]; models: Record<string, string[]> }`, built by `HarnessManager.harnessLaunchView()` in `src/harness/manager.ts` from `HARNESS_NAMES` and `modelsFor`. Add `autoApprove: string[]` to it, filled with `HARNESS_NAMES.filter(supportsHarnessAutoApprove)` (`src/harness/auto-approve.ts`). In `web/src/harness/HarnessLaunchDialog.tsx`, delete `AUTO_APPROVE_HARNESSES` and make `autoApproveSupported` read `view.autoApprove.includes(name)`, passing `view` into `initialFields` so the default is computed from it too. In `src/harness/command-parse.ts` and `src/profile/entry-openers.ts`, build the two "only supported for the claude and codex harnesses" refusals from the same filtered list rather than the literal names; `product/specs/harness.md` quotes the parser's text and stays correct while the list is unchanged. `web/src/harness/HarnessLaunchDialog.test.tsx` constructs the view and must gain the new field; its cases for the auto-approve checkbox pin the current behavior and must keep passing, as must the refusal-text assertions in `src/harness/command-parse.test.ts`, `src/harness/index.test.ts`, and `src/profile/agent-opener.test.ts`, which should produce identical strings.
-
-
 * Accept only a positive integer from the instance lock file before any caller probes or signals it, and create the lock exclusively and atomically so a crash or a concurrent start cannot leave it empty or doubly held.
 
 Existing Debt: The lock file's contents are read with `Number(readFileSync(...).trim())` and trusted as a pid wherever they are read, rejecting only `NaN`, so the signalling code treats `0` (what an empty or truncated file parses to) and negative numbers as real pids even though `process.kill` gives both a process-group meaning; and `acquireLock` checks for the file and then writes it with a plain truncating `writeFileSync`, which is neither exclusive nor atomic. Severity: 5/10

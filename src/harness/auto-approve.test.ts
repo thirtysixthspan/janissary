@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { detectPermissionGate, HarnessAutoApprover, autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove } from './auto-approve.js';
+import {
+  detectPermissionGate, HarnessAutoApprover, autoApproveWithoutWorkspaceWarning, supportsHarnessAutoApprove,
+  autoApproveHarnessNames, describeAutoApproveHarnesses,
+} from './auto-approve.js';
 import type { ScreenCapture } from './screen.js';
 
 // The five claude gate variants captured live (see the plan's Ground truth section).
@@ -297,6 +300,18 @@ describe('supportsHarnessAutoApprove', () => {
     expect(supportsHarnessAutoApprove('codex')).toBe(true);
     expect(supportsHarnessAutoApprove('opencode')).toBe(false);
     expect(supportsHarnessAutoApprove('gemini')).toBe(false);
+  });
+});
+
+describe('autoApproveHarnessNames', () => {
+  it('lists the harnesses with a gate detector, in catalog order', () => {
+    expect(autoApproveHarnessNames()).toEqual(['claude', 'codex']);
+  });
+});
+
+describe('describeAutoApproveHarnesses', () => {
+  it('names the auto-approve harnesses as prose', () => {
+    expect(describeAutoApproveHarnesses()).toBe('claude and codex');
   });
 });
 

@@ -1,4 +1,5 @@
 import type { ScreenCapture } from './screen.js';
+import { HARNESS_NAMES } from './index.js';
 import { detectCodexPermissionGate, CODEX_APPROVAL_KEYSTROKE } from './codex-permission-gate.js';
 
 // The highlighted default option-1 line, e.g. `❯ 1. Yes` (possibly with trailing text). The `❯`
@@ -64,6 +65,17 @@ const GATE_TABLE: Record<string, GateEntry> = {
 // this predicate, so validation cannot drift from the detectors that actually exist.
 export function supportsHarnessAutoApprove(harnessName: string): boolean {
   return GATE_TABLE[harnessName] !== undefined;
+}
+
+// Every harness that supports auto-approve, in catalog order — delivered to the launch dialog so it
+// offers the checkbox for exactly the harnesses the command parser accepts `-y` for.
+export function autoApproveHarnessNames(): string[] {
+  return HARNESS_NAMES.filter((name) => supportsHarnessAutoApprove(name));
+}
+
+// The auto-approve harnesses as prose ("claude and codex"), for the refusals that name them.
+export function describeAutoApproveHarnesses(): string {
+  return new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(autoApproveHarnessNames());
 }
 
 // Whether the rendered screen `text` is a recognized permission gate for `harnessName`. Pure and

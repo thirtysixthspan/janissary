@@ -63,7 +63,9 @@ an **Auto-approve** toggle (`-y`), a **Model** dropdown, and an **Effort** dropd
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
 disabled unless the selected harness is claude or codex — switching between those two keeps its
-checked state, while switching to opencode clears and disables it — while **E2E browser** stays
+checked state, while switching to opencode clears and disables it. The dialog offers Auto-approve
+for exactly the harnesses the `harness` command accepts `-y` for, so the two can never disagree about
+which harnesses support it. **E2E browser** stays
 enabled for every harness, since none rejects it. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,

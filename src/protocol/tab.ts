@@ -37,7 +37,12 @@ export type RouteChooserView = { cmd: string; choices: string[] };
 
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.
-export type HarnessLaunchView = { names: string[]; models: Record<string, string[]> };
+export type HarnessLaunchView = {
+  names: string[];
+  models: Record<string, string[]>;
+  // The harnesses that accept auto-approve (`-y`), in `names` order.
+  autoApprove: string[];
+};
 
 export type QuestionKind = 'ask' | 'approve';
 export type PendingQuestionView = {
