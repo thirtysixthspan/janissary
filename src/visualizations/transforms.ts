@@ -33,12 +33,22 @@ function columnType(table: Table, name: string): VisualizationColumnType | undef
 
 // A cell as the value of a column of the declared type, or undefined when it is not one. The four
 // types each have their own order, and a filter compares in that order: an instant for a date, a
-// number for a number, a boolean for a boolean, and a string for text.
+// number for a number, a boolean for a boolean, and a string for text. A number that cannot be read as
+// one is nothing rather than `NaN`, and an empty cell is nothing rather than `0` — `Number` does both,
+// and a filter built on either matched nothing at all while looking like a chart about a data set with
+// no such rows in it.
 function typed(table: Table, name: string, cell: Cell): string | number | boolean | undefined {
   const type = columnType(table, name);
   if (type === 'date') return instant(cell);
   if (type === 'boolean') return booleanOf(cell);
-  if (type === 'number') return typeof cell === 'number' ? cell : Number(cell);
+  if (type === 'number') {
+    if (typeof cell === 'number') return cell;
+    if (typeof cell === 'string') {
+      const value = Number(cell.trim());
+      return cell.trim() !== '' && Number.isFinite(value) ? value : undefined;
+    }
+    return undefined;
+  }
   return cell === null ? '' : String(cell);
 }
 
@@ -100,10 +110,37 @@ function matches(
 // is a question with an empty answer, not an error.
 type Applied = { table: Table } | { error: string };
 
+// The four types this module knows, said the way a sentence wants them: a value is "not a number" and a
+// column "holds numbers", rather than the same noun twice in one clause.
+const ARTICLES: Record<VisualizationColumnType, string> = {
+  number: 'a number',
+  date: 'a date',
+  boolean: 'a boolean',
+  string: 'a string',
+};
+
+const PLURALS: Record<VisualizationColumnType, string> = {
+  number: 'numbers',
+  date: 'dates',
+  boolean: 'booleans',
+  string: 'strings',
+};
+
 function filterStep(table: Table, step: VisualizationFilter): Applied {
   const index = columnIndex(table, step.column);
-  if (index === -1) return { error: `no column named "${step.column}" to filter on` };
+  const type = columnType(table, step.column);
+  if (index === -1 || type === undefined) return { error: `no column named "${step.column}" to filter on` };
   const values = step.values ?? [step.value ?? null];
+  // A value that is not of the column's own type is refused by name, the way a missing column is. It
+  // used to compare as nothing and match no row, which is a chart with no marks and no reason anywhere
+  // on screen — indistinguishable, to the person looking at it, from a filter that was always going to
+  // come back empty. A `null` value is left alone: it is how you ask for the cells that are empty.
+  for (const value of values) {
+    if (value !== null && typed(table, step.column, value) === undefined) {
+      const kind = ARTICLES[type];
+      return { error: `"${text(value)}" is not ${kind}, and "${step.column}" holds ${PLURALS[type]}` };
+    }
+  }
   const kept = table.rows.filter((row) => {
     const cell = typed(table, step.column, row[index] ?? null);
     return values.some((value) => matches(cell, typed(table, step.column, value), step.compare));

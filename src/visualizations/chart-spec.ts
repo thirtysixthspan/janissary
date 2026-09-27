@@ -103,11 +103,14 @@ export function isDataRef(value: unknown): value is VisualizationDataRef {
 
 // `in` is a membership test, so it is the only comparison that takes a list, and the list is bounded
 // here rather than where it is applied. Every other comparison takes one value, and a list beside one
-// is refused rather than quietly ignored.
+// is refused rather than quietly ignored. A value is required: `null` is a value, and filtering for the
+// cells that are empty is a thing people want, but a comparison with nothing to compare against is not a
+// question about the data — it matches every row or none, and which of the two it does is not something
+// a chart should be silently built on.
 function isFilterStep(value: Record<string, unknown>): boolean {
   if (typeof value.column !== 'string' || value.column === '') return false;
   if (typeof value.compare !== 'string' || !(COMPARES as readonly string[]).includes(value.compare)) return false;
-  if (value.compare !== 'in') return value.values === undefined && (value.value === undefined || isCell(value.value));
+  if (value.compare !== 'in') return value.values === undefined && isCell(value.value);
   return Array.isArray(value.values)
     && value.values.length > 0
     && value.values.length <= MAX_FILTER_VALUES

@@ -79,6 +79,45 @@ describe('transformed', () => {
       .toEqual({ error: 'no column named "nope" to filter on' });
   });
 
+  // `Number('twenty-twenty-four')` is NaN, which compares false against every cell, so the filter kept
+  // nothing and the chart was drawn with no marks and no reason anywhere on screen — the same thing a
+  // filter that was always going to come back empty looks like.
+  it('refuses a value that is not the column\'s own type', () => {
+    expect(run([{ op: 'filter', column: 'year', compare: 'eq', value: 'twenty-twenty-four' }]))
+      .toEqual({ error: '"twenty-twenty-four" is not a number, and "year" holds numbers' });
+  });
+
+  it('refuses a value of the wrong type inside a list', () => {
+    const flags = table([{ name: 'open', type: 'boolean' }], [[true], [false]]);
+    expect(run([{ op: 'filter', column: 'open', compare: 'in', values: [true, 'maybe'] }], flags, 'open'))
+      .toEqual({ error: '"maybe" is not a boolean, and "open" holds booleans' });
+  });
+
+  // A number is a string that has not been quoted yet, so a text column accepts one rather than
+  // refusing it; what is refused is a value no string can be.
+  it('accepts a number against a text column', () => {
+    const years = table([{ name: 'label', type: 'string' }], [['2024'], ['north']]);
+    expect(rowsOf(run([{ op: 'filter', column: 'label', compare: 'eq', value: 2024 }], years, 'label')))
+      .toEqual([['2024']]);
+  });
+
+  // A CSV produces a number as text, so a numeric string is read as the number it is rather than
+  // refused; that is the whole difference between this and the case above.
+  it('accepts a number written as a string', () => {
+    const rows = rowsOf(run([{ op: 'filter', column: 'revenue', compare: 'gt', value: '99' }]));
+    expect(rows).toHaveLength(3);
+  });
+
+  it('keeps a numeric column\'s empty cells out of a numeric comparison', () => {
+    const gappy = table([{ name: 'v', type: 'number' }], [[null], [0], [5]]);
+    expect(rowsOf(run([{ op: 'filter', column: 'v', compare: 'eq', value: 0 }], gappy, 'v'))).toEqual([[0]]);
+  });
+
+  it('still matches the empty cells, because null is how you ask for them', () => {
+    const gappy = table([{ name: 'v', type: 'number' }], [[null], [0], [5]]);
+    expect(rowsOf(run([{ op: 'filter', column: 'v', compare: 'eq', value: null }], gappy, 'v'))).toEqual([[null]]);
+  });
+
   it('adds a derived column and leaves the others alone', () => {
     const result = run([{ op: 'derive', name: 'per region', expression: 'revenue / 10' }]);
     const rows = rowsOf(result);

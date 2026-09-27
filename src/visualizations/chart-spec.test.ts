@@ -145,6 +145,15 @@ describe('isTransform', () => {
     expect(isTransform({ op: 'filter', column: 'c', compare: 'like', value: 1 })).toBe(false);
   });
 
+  // A comparison with nothing to compare against is not a question about the data: it matches every row
+  // or none, and a chart built on it says nothing about which. `null` is a value, so filtering for the
+  // empty cells still goes through.
+  it('refuses a filter with no value at all', () => {
+    expect(isTransform({ op: 'filter', column: 'c', compare: 'eq' })).toBe(false);
+    expect(isTransform({ op: 'filter', column: 'c', compare: 'contains' })).toBe(false);
+    expect(isTransform({ op: 'filter', column: 'c', compare: 'eq', value: null })).toBe(true);
+  });
+
   it('refuses a list beside a single-value comparison, and a list with an in', () => {
     expect(isTransform({ op: 'filter', column: 'c', compare: 'eq', value: 1, values: [1] })).toBe(false);
     expect(isTransform({ op: 'filter', column: 'c', compare: 'in', value: 1 })).toBe(false);

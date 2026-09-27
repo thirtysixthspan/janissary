@@ -51,7 +51,7 @@ Every reply may carry two to four requests you could have made next, shown as on
 - **sort** — order the rows by one column, in that column's own order, with the source order kept among equal values so the same data always draws the same way.
 - **limit** — keep the first *n* **distinct categories of the chart's own x column**, in the order the sort left them. Counted in categories rather than rows so a chart split into series loses a whole bar or line rather than one of a category's series, which would leave a mark a different height from its neighbour with nothing to explain it.
 
-A `sort` followed by a `limit` is a top-N; the reverse is a first-N. A step naming a column the data does not have is refused by name rather than quietly doing nothing, and a step that leaves no rows produces an empty chart rather than a failure — "only 2024" against a 2023-only source is a question with an empty answer.
+A `sort` followed by a `limit` is a top-N; the reverse is a first-N. A step naming a column the data does not have is refused by name rather than quietly doing nothing, and so is a value that is not of the column's own type — "only twenty-twenty-four" against a numeric column is a mistyped question, not a data set with no such rows. A step that leaves no rows, having asked a question the data does answer, produces an empty chart rather than a failure: "only 2024" against a 2023-only source is a question with an empty answer.
 
 **Add and remove charts.** "Also plot revenue per employee by region" adds a second chart beside the first. Charts are named by what the agent calls them, and a reply can name one to change it and another to change which, so a later request reaches the right chart.
 
