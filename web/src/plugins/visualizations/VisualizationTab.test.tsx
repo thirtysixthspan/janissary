@@ -162,6 +162,23 @@ describe('VisualizationTab', () => {
     expect(screen.getByText('Reading the source…')).toBeInTheDocument();
   });
 
+  // The promise the spec and the pull request description both make: a source that stops answering
+  // does not take the chart off the screen. The manager already keeps the table, so this is the half
+  // that was not holding.
+  it('keeps the chart on screen when a re-read has failed, with the reason above it', () => {
+    const { container } = tab({
+      table: TABLE, chart: CHART, error: 'https://example.com/d.csv returned 500',
+    });
+    expect(container.querySelector('svg.visualization-chart')).toBeInTheDocument();
+    expect(screen.getByText('https://example.com/d.csv returned 500')).toBeInTheDocument();
+  });
+
+  it('shows the reason on its own when the failure left no table to keep a chart from', () => {
+    const { container } = tab({ error: 'https://example.com/d.csv returned 404' });
+    expect(container.querySelector('svg.visualization-chart')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Change the source' })).toBeInTheDocument();
+  });
+
   it('emits a modification from the composer, and offers a model and an interval', () => {
     const intent = withIntent();
     fireEvent.change(screen.getByLabelText('Change the chart'), { target: { value: 'make it a line' } });

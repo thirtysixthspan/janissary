@@ -28,11 +28,17 @@ export type BodyProperties = {
 export function VisualizationBody(props: BodyProperties): React.ReactElement {
   const { view } = props;
   if (view.deleted === true) return <p className="visualization-gone">This visualization was deleted.</p>;
-  if (view.error !== undefined) return <Reason {...props} reason={view.error} />;
   if (view.pendingQuestionId !== undefined) return <Question {...props} />;
-  if (view.table === undefined) return <p className="visualization-pending">Reading the source…</p>;
-  if (view.chart === undefined) return <Nothing {...props} />;
-  return <Drawn {...props} />;
+  if (view.table === undefined) {
+    return view.error === undefined
+      ? <p className="visualization-pending">Reading the source…</p>
+      : <Reason {...props} reason={view.error} />;
+  }
+  if (view.chart === undefined) return <Nothing {...props} reason={view.error} />;
+  // A failure that follows data the tab already has is a note above the chart, not a replacement for
+  // it: the marks are still true of the table they were drawn from, and taking them away would cost the
+  // user the chart at exactly the moment a flaky endpoint makes it worth having.
+  return <Drawn {...props} reason={view.error} />;
 }
 
 function Reason({ view, busy, reason, onAskAgain, onSetSource }: BodyProperties & { reason: string }): React.ReactElement {
@@ -66,14 +72,16 @@ function Question({ view, busy, onAnswer }: BodyProperties): React.ReactElement 
 
 // A source read and a model consulted, and still nothing to draw. The two controls are the only two
 // things that can change that, so they are the only things on screen.
-function Nothing({ view, busy, onAskAgain, onSetSource }: BodyProperties): React.ReactElement {
+function Nothing({
+  view, busy, onAskAgain, onSetSource, reason,
+}: BodyProperties & { reason?: string }): React.ReactElement {
+  const idle = view.questions.length === 0
+    ? 'The model had no questions to ask.'
+    : 'No chart yet. Answering the last question produces one.';
   return (
     <div className="visualization-reason">
-      <p className="visualization-reason-text">
-        {view.questions.length === 0
-          ? 'The model had no questions to ask.'
-          : 'No chart yet. Answering the last question produces one.'}
-      </p>
+      {reason === undefined ? null : <p className="visualization-reason-text">{reason}</p>}
+      <p className="visualization-reason-text">{idle}</p>
       <div className="visualization-reason-actions">
         <button type="button" disabled={busy} onClick={onAskAgain}>Ask again</button>
         <SourceButton busy={busy} onSetSource={onSetSource} />
@@ -133,13 +141,14 @@ function caption(table: VisualizationTable, readAt: number | undefined): string 
   return readAt === undefined ? rows : `${rows} · read ${new Date(readAt).toLocaleTimeString()}`;
 }
 
-function Drawn(props: BodyProperties): React.ReactElement {
-  const { view, busy, active, chartRef, onRevise, onCancel } = props;
+function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement {
+  const { view, busy, active, chartRef, onRevise, onCancel, reason } = props;
   const table = view.table;
   const chart = view.chart;
   if (!table || !chart) return <p className="visualization-pending">Reading the source…</p>;
   return (
     <>
+      {reason === undefined ? null : <p className="visualization-reason-note">{reason}</p>}
       <figure className="visualization-figure">
         <ChartSvg ref={chartRef} chart={chart} table={table} />
         <figcaption>{caption(table, view.readAt)}</figcaption>

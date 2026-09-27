@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep a chart on screen when a refresh fails, which is what the spec and the pull request description both promise and what the shipped region order takes away.
-
-Existing Issue: The body's four regions are chosen in order, and a recorded error is checked before the chart, so a re-read that fails replaces a working chart with a failure screen, while `product/specs/visualizations.md` and the pull request description both state that a source which stops answering does not take the chart off the screen. Severity: 6/10
-
-Existing Risk: 6/10 - The first time a poll hits a flaky endpoint the user loses the chart they were reading, which is the moment the feature is most worth having, and the only recovery is to re-read successfully or start over from the source.
-
-Proposal Risk: 2/10 - The failure and the chart would share a region, so a failed re-read still costs the vertical space the chart had, but the marks stay and the reason reads as an annotation rather than as a replacement.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: keep the chart on screen when a refresh fails". In `web/src/plugins/visualizations/VisualizationBody.tsx`, split the recorded `error` out of the region dispatch: a window that has a `chart` and a `table` should render `Drawn` regardless of `error`, and the reason should render inside it — as a line above the figure, using the existing `.visualization-reason-text` styling — with the source-replacement and ask-again controls still reachable. Only a window with no `table` should fall through to the full `Reason` region, because that is the case where there is nothing to keep on screen. Pass the reason down to `Drawn` as an optional prop rather than reading it from a second source, and give the caption line the same treatment so the read time and the failure read as one block of metadata. Add cases to `web/src/plugins/visualizations/VisualizationTab.test.tsx`: a window carrying both a chart and an `error` must still render `svg.visualization-chart` and must also render the error text, and a window carrying an `error` and no `table` must still render the reason region. `web/src/plugins/visualizations/visualizations-style.test.ts` asserts on the existing class names and is unaffected. No server change is needed: the manager already keeps the previous table on a failed re-read, which is the half that is correct today.
-
-
 * Deliver the interviewer test the completed plan names, since the state machine it covers is the riskiest logic in the diff and has no test of its own.
 
 Existing Issue: The plan's Tests section specifies `src/visualizations/interview.test.ts` covering the opening call, the closing call, a refused second call, cancellation, a rate-limited failure, and a modification, and no such file exists, so the module that routes a model's reply into a stored chart, a stored reply, or a recorded error is exercised only indirectly through the manager. Severity: 6/10
