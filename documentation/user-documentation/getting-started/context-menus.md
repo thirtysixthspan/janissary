@@ -1,6 +1,6 @@
 # Right-click menus
 
-Right-click almost anywhere in Janissary to copy or paste text. A few views draw their own menu instead, and keep using it.
+Right-click almost anywhere in Janissary to copy or paste text. The [file navigator](/user-documentation/tab-types/file-navigator#mouse) draws its own menu instead, and keeps using it.
 
 ## The default menu
 
@@ -29,8 +29,8 @@ Right-click a text selection — on the page, in an editor, or in a terminal —
 
 The menu sits alongside the copy and paste shortcuts rather than in place of them. `Cmd+C` and `Cmd+V` in an editor tab, and a terminal's own copy chords, work exactly as they always did, on the same selection the menu's **Copy** would take.
 
-If a bundled plugin offers a **Chat about this** entry that never becomes usable, choosing it reports `Tab plugin "<id>" contributes no default-menu action "<label>"` in the transcript rather than silently doing nothing.
+A plugin's entry is only as good as the plugin behind it. Disable that plugin while the menu is open and choosing its entry does nothing at all: no line in the transcript, nothing in the notifications feed, and the menu closes as if you had dismissed it.
 
 ## Menus a view defines itself
 
-A few views draw their own right-click menu, and the default menu never overrides it. The [file navigator](/user-documentation/tab-types/file-navigator#mouse)'s row menu is the main example: it offers file actions like Open, Edit, and Delete, along with its own Copy and Paste, which act on files rather than on selected text.
+A view that draws its own right-click menu keeps it; the default menu never overrides it or adds to it. The [file navigator](/user-documentation/tab-types/file-navigator#mouse)'s row menu is the only one today: it offers file actions like Open, Edit, and Delete, along with its own Copy and Paste, which act on files rather than on selected text.
