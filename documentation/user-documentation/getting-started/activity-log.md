@@ -30,6 +30,8 @@ A new file starts at local midnight, not UTC. The split follows your machine's c
 
 Command input and its resulting output are logged as separate lines, so you can follow the request and the response in order. Messages sent between agents, ACP prompts and responses, and shell command output are all included.
 
+A line holds those three fields and nothing more. A message one agent sends another is labelled with the tab that received it, so the line does not name the sender, and no line records the directory a command ran in.
+
 ## Retention
 
 <img class="agent-float left" src="/agents/ekrem-south-east.png" alt="" />
