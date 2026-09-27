@@ -215,6 +215,36 @@ describe('App closing a tab from its button', () => {
   }, 15_000);
 });
 
+// The focused pane's split chord is built in `AppMain` and had no test, so the RPC it sends — the
+// active tab's *index*, not its label — was unverified. A stale index moves whichever tab now sits
+// there.
+describe('App splitting the focused pane', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('moves the focused tab to the other pane by its index', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 1, null, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Split' }));
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'moveTabToOtherPane', params: { index: 1 } });
+  }, 15_000);
+
+  it('splits the first tab at index zero when it is the focused one', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Split' }));
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'moveTabToOtherPane', params: { index: 0 } });
+  }, 15_000);
+});
+
 describe('App tab navigator', () => {
   beforeEach(() => {
     sendMock.mockClear();
