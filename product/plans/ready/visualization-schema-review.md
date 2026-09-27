@@ -26,11 +26,17 @@ Column types are worked out for the user and never shown to them. A column of nu
 
 1. **`src/visualizations/store.ts`.** A `reviewed` flag on the record, false when a record is created and when its source changes, and accepted by the record guard.
 2. **`src/protocol/visualizations.ts`** and **`src/plugins/visualizations/shared.ts`.** `reviewed` on the window, mirrored and guarded, so a tab can tell a review that is open from an interview that is about to start.
-3. **`src/visualizations/manager.ts`.** `readSource` stops opening the interview and instead compares the incoming schema with the one the user confirmed. Two new methods: `setColumnType`, which rewrites a declared type and is refused once the review is closed, and `confirmSchema`, which marks the review closed and opens the interview. `setSource` clears the flag.
+3. **`src/visualizations/review.ts` (new), `src/visualizations/reading.ts` (new), and `src/visualizations/manager.ts`.** The review rule is its own module, and the read pipeline is another. Both are forced: `manager.ts` was at 194 of its 200 lines before this entry, and the gate needs about eleven more, so the only way to land it is to move something out. Extracting the two delegates alone was not enough — 205 lines — because the read pipeline is what the gate actually changes. So `reading.ts` takes the one read and owns the in-flight guard and the ingest step, and `review.ts` owns the confirmed flag, the four declared types, and the schema comparison. What is left in the manager is the sequence. `setSource` clears the flag.
 4. **`src/plugins/api-topics.ts`** and **`src/plugins/topics.ts`**. The two actions, `setColumnType` and `confirmSchema`, wired to the manager beside the ones already there.
 5. **`web/src/plugins/visualizations/SchemaReview.tsx` (new).** The region: every column with its name and inferred type, a select per column, and the button that starts the interview.
 6. **`web/src/plugins/visualizations/VisualizationBody.tsx`.** The review is offered in place of the pending message whenever a table has been read, nothing has been asked, and the review is open — before the question branch, because a question cannot exist until the review is closed.
 7. **`web/src/plugins/visualizations/VisualizationTab.tsx`.** The two intents, emitted by the new region.
+
+## Two things to get right that the entry does not say
+
+**`startInterview` must refuse while the review is open.** It is the "Ask again" action, and left as it is it opens an interview that bypasses the confirmation — so the gate would hold on the normal path and be trivially walked around. The fix is one condition: the record must already be reviewed.
+
+**The manager still needs a real split, and this entry is where to start it.** Even after both extractions it sits just under the ceiling, which means the next change to this domain will hit it again. The natural seam is the projection side: `view()`'s window building belongs beside `summaries()` in `VisualizationIndex`, which already owns the projection of the same records. Doing that here, rather than leaving it for the next change to trip over, is a few lines and leaves the manager with nothing but the sequence.
 
 ## Tests
 
