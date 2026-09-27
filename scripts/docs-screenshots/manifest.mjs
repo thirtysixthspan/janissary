@@ -146,4 +146,12 @@ export default [
     setup: ['harness'],
     target: 'harness-launch-dialog',
   },
+  {
+    // The scratch fixture has no remote host to park a session on, so this shows the list's own
+    // header — Refresh and Split together at the right edge — above its empty state.
+    name: 'sessions-list',
+    setup: ['sessions'],
+    target: 'sessions-list',
+    clipHeight: 110,
+  },
 ];

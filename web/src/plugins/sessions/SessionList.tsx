@@ -73,7 +73,7 @@ export function SessionList({
   const RowBody = narrow ? NarrowSessionRow : WideSessionRow;
 
   return (
-    <div className={`session-list plugin-tab${narrow ? ' session-list-narrow' : ''}`} ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
+    <div className={`session-list plugin-tab${narrow ? ' session-list-narrow' : ''}`} ref={listRef} tabIndex={0} onKeyDown={onKeyDown} data-doc-shot="sessions-list">
       <PluginActionsHeader className="plugin-meta session-list-header">
         <span className="plugin-actions">
           <button
