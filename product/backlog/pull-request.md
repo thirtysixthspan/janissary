@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Resolve a model-named workspace file through its symlinks, and bound it, before reading it. Severity: 9/10
-
-Existing Issue: `readWorkspaceFile` in `src/visualizations/reading.ts` applies `realpathSync` to the workspace base but resolves the model's path with `path.resolve`, which is purely lexical, and then calls `readFileSync` with no size check and no type check. Severity: 9/10
-
-Existing Risk: 10/10 - The agent may run commands inside its own workspace, so `ln -s ~/.aws/credentials data.json` is one command away from a path that passes the containment check; the unsandboxed host then reads the target, `ingest` classifies a one-column body as a page rather than a table, and the next prompt ships its contents to the model — the one read `product/specs/visualizations.md` promises the grant cannot make. The same lexical pass admits a link to `/dev/zero`, and because `acquire` calls this synchronously from inside the reply handler the host blocks the event loop on it indefinitely.
-
-Proposal Risk: 2/10 - A symlink the agent genuinely created inside its workspace still resolves to itself and is read; what goes away is the ability to name anything outside it, and the bounds are the same ones `src/visualizations/fetch.ts` already applies to a source.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: resolve and bound a model-named workspace file before reading it". In `src/visualizations/reading.ts`, move the whole body of `readWorkspaceFile` inside a `try` so a missing workspace is reported as a reason rather than thrown, as the module's own contract claims; then resolve the target through `realpathSync` the way `src/visualizations/fetch.ts`'s `resolvedTarget` does, re-checking containment against the resolved base rather than the lexical one, so a link pointing out of the tree is refused by name. Add the same two bounds `fetch.ts` already applies — a `statSync` size check against a named maximum, and a refusal of anything that is not a regular file — and state in the comment that a model-named file is read under the same bounds as a source, because it is a file the model chose and the agent is the one that can write it. Add cases to `src/visualizations/reading.test.ts` for a symlink inside the workspace pointing outside it, for a path above the size cap, for a non-regular file, and for a missing workspace directory. Correct the sentence in `product/specs/visualizations.md` under "A source that is a page rather than a table" that says the agent cannot read a credential file the host's own read could not have read, so it describes the check that now actually runs.
-
 * Enforce the dataset ceiling, or stop pretending a record has one, before a visualization can become unreadable. Severity: 8/10
 
 Existing Issue: `MAX_DATASETS` in `src/visualizations/chart-record.ts` is checked by `isDatasetList` and enforced nowhere: `ensureDataset` in `src/visualizations/charts.ts` pushes unconditionally and nothing prunes, and `src/visualizations/agent.ts`'s `place` acquires a dataset for every chart entry in a reply before `placed` refuses the ones past the chart ceiling. Severity: 8/10

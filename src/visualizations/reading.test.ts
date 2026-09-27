@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -65,6 +65,43 @@ describe('readWorkspaceFile', () => {
       .toEqual({ error: '"../secrets.json" is outside the visualization\'s own workspace' });
     expect(readWorkspaceFile(workspace, '/etc/hosts'))
       .toEqual({ error: '"/etc/hosts" is outside the visualization\'s own workspace' });
+  });
+
+  // The agent can run commands inside its workspace, so it can create a link there. A containment check
+  // that is purely lexical lets `ln -s ~/.aws/credentials data.json` through, and the unsandboxed host
+  // then reads the target and hands it to the model in the next prompt.
+  it('refuses a link inside the workspace that points outside it', () => {
+    const outside = path.join(home, 'outside.json');
+    writeFileSync(outside, 'region,revenue\nnorth,10\n');
+    symlinkSync(outside, path.join(workspace, 'data.json'));
+
+    const result = readWorkspaceFile(workspace, 'data.json');
+
+    expect(result).toEqual({ error: '"data.json" resolves outside the visualization\'s own workspace' });
+  });
+
+  it('reads a link that points back inside the workspace', () => {
+    writeFileSync(path.join(workspace, 'real.json'), 'region,revenue\nnorth,10\n');
+    symlinkSync(path.join(workspace, 'real.json'), path.join(workspace, 'data.json'));
+
+    expect(readWorkspaceFile(workspace, 'data.json')).toEqual({ text: 'region,revenue\nnorth,10\n' });
+  });
+
+  it('refuses anything that is not a regular file', () => {
+    mkdirSync(path.join(workspace, 'out'), { recursive: true });
+    expect(readWorkspaceFile(workspace, 'out')).toEqual({ error: 'out is not a file' });
+  });
+
+  it('refuses a file past the size cap rather than slurping it', () => {
+    writeFileSync(path.join(workspace, 'big.json'), 'x'.repeat(8 * 1024 * 1024 + 1));
+    const result = readWorkspaceFile(workspace, 'big.json');
+    expect(result).toHaveProperty('error');
+    expect(String((result as { error: string }).error)).toContain('byte limit');
+  });
+
+  it('reports a missing workspace rather than throwing at the caller', () => {
+    expect(readWorkspaceFile(path.join(home, 'gone'), 'data.json'))
+      .toHaveProperty('error');
   });
 
   it('reports a file that is not there rather than throwing', () => {

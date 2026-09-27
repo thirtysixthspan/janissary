@@ -30,7 +30,7 @@ Reading a local file is worth understanding before pointing one at it. The file 
 
 A source may be a page describing an API instead of a file of values, and that is not a failure. What the host fetches is handed to the agent as it stands, and the agent's job is to work out how to reach the data behind it — read the documentation, find the request it describes, add the header or the query parameter the page mentions, follow the pagination, reshape the response — and to write what it fetched into its own workspace as JSON or delimited text with a header row.
 
-The agent runs commands to do this, inside the workspace it is confined to and no further. Its reach is the same reach the host's own read has: the network, and whatever the sandbox profile allows. It cannot read a credential file the host's own read could not have read either. What is different is that the commands are the model's, and your own message is the only thing that starts them.
+The agent runs commands to do this, inside the workspace it is confined to and no further. Its reach is the same reach the host's own read has: the network, and whatever the sandbox profile allows. A file it names for the host to read is resolved through its symlinks and must land inside that workspace, must be a regular file, and is held to the same eight-megabyte ceiling a source is — so a link it creates cannot turn the unsandboxed host into a reader of something the sandbox would have denied it. What is different is that the commands are the model's, and your own message is the only thing that starts them.
 
 A chart naming such a file says so in the line under it, naming the file it came from, so a picture that stopped an hour ago never reads like one that stopped a second ago.
 
