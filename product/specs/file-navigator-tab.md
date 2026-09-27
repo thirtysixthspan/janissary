@@ -863,7 +863,8 @@ selected automatically and its rename field opens immediately, pre-filled with `
 name can be typed over right away without a separate select-then-rename step (see "Renaming a file
 or directory"). If a collision meant the directory was created under a different name
 (`untitled-2`, …), it is not auto-selected or auto-renamed — the user selects and renames it like
-any other row.
+any other row. The existing `untitled` directory that caused the collision is left alone too: it
+is not selected and its rename field does not open.
 
 This same dock/location-cycle mechanism is shared with the notifications tab (see
 `notifications.md`), which is the other dockable tab kind. The two can share one sidebar side at

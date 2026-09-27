@@ -1195,53 +1195,55 @@ describe('FileNavigatorTab', () => {
       expect(screen.getByTitle('New directory')).toBeInTheDocument();
     });
 
-    it('creates inside a selected directory', () => {
+    // A client whose create request replies with the path the server created.
+    function directoryClient(created: string | undefined) {
       const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+      const request = vi.fn().mockResolvedValue({ ok: true, value: created });
+      return { send, request, client: { send, request } as unknown as JanusClient };
+    }
+
+    it('creates inside a selected directory', async () => {
+      const { request, client } = directoryClient('src/untitled');
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('src'));
-      fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      expect(request).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
     });
 
-    it("creates in a selected file's containing directory", () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+    it("creates in a selected file's containing directory", async () => {
+      const { request, client } = directoryClient('src/untitled');
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByText('index.ts'));
-      fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      expect(request).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: 'src' } });
     });
 
-    it('creates at the tree root when nothing is selected', () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+    it('creates at the tree root when nothing is selected', async () => {
+      const { request, client } = directoryClient('untitled');
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
-      fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      expect(request).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
     });
 
-    it('creates under the tree root when the navigator is rooted somewhere else', () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+    it('creates under the tree root when the navigator is rooted somewhere else', async () => {
+      const { request, client } = directoryClient('untitled');
       const files = makeFiles({ root: '/Users/ash/dev/bctci', absoluteRoot: '/Users/ash/dev/bctci' });
       render(<FileNavigatorTab files={files} client={client} index={0} label="files" />);
-      fireEvent.click(screen.getByTitle('New directory'));
-      expect(send).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      expect(request).toHaveBeenCalledWith({ method: 'fileNavigatorCreateDirectory', params: { label: 'files', destination: '' } });
     });
 
-    it('sends no command message when creating a directory locally', () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+    it('sends no command message when creating a directory locally', async () => {
+      const { send, client } = directoryClient('untitled');
       render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
-      fireEvent.click(screen.getByTitle('New directory'));
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
       expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
     });
 
-    it('selects and opens the rename field once the created directory appears in files.rows', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+    it('selects and opens the rename field once the created directory appears in files.rows', async () => {
+      const { client } = directoryClient('untitled');
       const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
-      fireEvent.click(screen.getByTitle('New directory'));
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
       const withNewDir = makeFiles({
         rows: [...makeFiles().rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }],
       });
@@ -1250,10 +1252,26 @@ describe('FileNavigatorTab', () => {
       expect(input.value).toBe('untitled');
     });
 
-    it('does nothing when an unrelated row appears instead', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+    it('opens the rename field when the created row appeared before the reply did', async () => {
+      let reply: (result: RequestResult<string>) => void = () => {};
+      // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+      const request = vi.fn(() => new Promise<RequestResult<string>>((resolve) => { reply = resolve; }));
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
       fireEvent.click(screen.getByTitle('New directory'));
+      const withNewDir = makeFiles({
+        rows: [...makeFiles().rows, { path: 'untitled', name: 'untitled', depth: 0, dir: true }],
+      });
+      rerender(<FileNavigatorTab files={withNewDir} client={client} index={0} label="files" />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      await act(async () => { reply({ ok: true, value: 'untitled' }); });
+      expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('untitled');
+    });
+
+    it('does nothing when an unrelated row appears instead', async () => {
+      const { client } = directoryClient('untitled');
+      const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
       const withOtherFile = makeFiles({
         rows: [...makeFiles().rows, { path: 'other.txt', name: 'other.txt', depth: 0, dir: false }],
       });
@@ -1261,15 +1279,37 @@ describe('FileNavigatorTab', () => {
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     });
 
-    it('does nothing when the actual created name differs from the guess (collision)', () => {
-      const client = { send: vi.fn() } as unknown as JanusClient;
+    it('does nothing when a collision gave the created directory another name', async () => {
+      const { client } = directoryClient('untitled-2');
       const { rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
-      fireEvent.click(screen.getByTitle('New directory'));
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
       const withRenamedDir = makeFiles({
         rows: [...makeFiles().rows, { path: 'untitled-2', name: 'untitled-2', depth: 0, dir: true }],
       });
       rerender(<FileNavigatorTab files={withRenamedDir} client={client} index={0} label="files" />);
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('does nothing when the create fails', async () => {
+      const { client } = directoryClient(undefined);
+      render(<FileNavigatorTab files={makeFiles()} client={client} index={0} label="files" />);
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('leaves an existing untitled directory alone when the server creates untitled-2 beside it', async () => {
+      const { client } = directoryClient('untitled-2');
+      const existing ={ path: 'untitled', name: 'untitled', depth: 0, dir: true };
+      const withExisting = makeFiles({ rows: [...makeFiles().rows, existing] });
+      const { rerender } = render(<FileNavigatorTab files={withExisting} client={client} index={0} label="files" />);
+      await act(async () => { fireEvent.click(screen.getByTitle('New directory')); });
+      const withCreated = makeFiles({
+        rows: [...withExisting.rows, { path: 'untitled-2', name: 'untitled-2', depth: 0, dir: true }],
+      });
+      rerender(<FileNavigatorTab files={withCreated} client={client} index={0} label="files" />);
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      const existingRow = screen.getByText('untitled').closest('[role="treeitem"]') as HTMLElement;
+      expect(existingRow.getAttribute('aria-selected')).toBe('false');
     });
   });
 

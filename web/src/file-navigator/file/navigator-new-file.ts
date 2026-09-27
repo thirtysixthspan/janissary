@@ -1,9 +1,9 @@
 import type { FileNavigatorRow } from '@shared/protocol';
 import { dirname } from '../../shared/rel-path';
 
-// The directory row matching a pending new-directory creation's guessed path, or undefined if it
-// hasn't shown up yet (or a name collision meant the guess never matches — see
-// `newDirectoryTargetPath`). Kept out of `FileNavigatorTab.tsx` to stay under the file-size limit.
+// The directory row matching a pending new-directory creation's path — the one the server replied it
+// created — or undefined if it hasn't shown up yet. Kept out of `FileNavigatorTab.tsx` to stay under
+// the file-size limit.
 export function findPendingNewDir(rows: FileNavigatorRow[], pendingNewDir: string | null): FileNavigatorRow | undefined {
   if (pendingNewDir === null) return undefined;
   return rows.find((r) => r.path === pendingNewDir && r.dir);
@@ -21,11 +21,10 @@ export function newFileTargetDir(rows: FileNavigatorRow[], selected: string | nu
   return row.path.includes('/') ? dirname(row.path) : null;
 }
 
-// The tree-relative path a new `untitled` directory is expected to land at, given the resolved
-// target directory. This is a guess, not a guarantee — a same-named collision at the target makes
-// the server pick the next free name (`untitled-2`, …) instead, which this can't predict. Used
-// client-side to recognize the created row once it appears so the tree can select it and start an
-// in-place rename.
+// The tree-relative path a new `untitled` directory lands at when nothing already sits there, given
+// the resolved target directory. A same-named collision makes the server pick the next free name
+// (`untitled-2`, …) instead. Compared against the server's reply so only an un-collided creation is
+// auto-selected and put into an in-place rename.
 export function newDirectoryTargetPath(targetDir: string | null): string {
   return targetDir === null ? 'untitled' : `${targetDir}/untitled`;
 }
