@@ -40,7 +40,11 @@ Answering the last question produces the chart. A reply the model could not be r
 
 ### The chart
 
-A chart is a kind, an x column, a y column, an optional series column that splits the marks into one each, a title, and optional axis labels. The five kinds are `bar`, `line`, `area`, `scatter`, and `pie`. A pie sums the measure per category, which is the only aggregation there is. A row whose measure is not a number is dropped rather than plotted as a zero.
+A chart is a kind, an x column, a y column, an optional series column that splits the marks into one each, a title, and optional axis labels. The five kinds are `bar`, `line`, `area`, `scatter`, and `pie`. A row whose measure is not a number is dropped rather than plotted as a zero.
+
+An optional aggregate reduces the measure before anything is drawn, within each category and within each series of a category where the chart is split. It is one of `sum`, `mean`, `count`, `min`, and `max`, and leaving it out means every row is its own mark. A pie sums when it is left out, because a pie is a share of a whole. `count` counts the rows that would have been drawn, so a row whose measure is not a number is not counted either. An aggregate the grammar does not have is refused rather than ignored, because a chart that draws successfully while meaning something other than what was asked for cannot be noticed.
+
+Where a measure is reduced, every place the chart is described says so: the line under the chart names the reduction and the measure, the chart's own description for a screen reader reads as a sum or a mean rather than as a value, and the sentence left behind when the model changes a chart without explaining itself says the same.
 
 The chart's own title names the visualization and its tab, once, and only while the visualization has not been named some other way. Double-clicking the name in the metadata row renames it instead; a committed name is trimmed and capped at 60 characters, and a blank one changes nothing.
 

@@ -75,7 +75,6 @@ export const ChartSvg = React.forwardRef<SVGSVGElement, ChartProperties>(functio
           box={BOX}
           chart={chart}
           marks={marks}
-          table={table}
           {...(chart.kind === 'scatter' && { scatter: scatterFor(table, chart) })}
         />
       )}

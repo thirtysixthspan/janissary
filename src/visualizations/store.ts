@@ -12,6 +12,7 @@ import type {
 } from '../protocol.js';
 import { trustWorkspace, untrustWorkspace } from '../workspace/index.js';
 import { isModelPair, isRecord } from '../value-guards.js';
+import { isAggregate } from './chart-spec.js';
 
 export const VISUALIZATION_SCHEMA_VERSION = 1;
 
@@ -48,6 +49,7 @@ function isChart(value: unknown): value is VisualizationChartView {
     && typeof value.y === 'string'
     && typeof value.title === 'string'
     && (value.series === undefined || typeof value.series === 'string')
+    && (value.aggregate === undefined || isAggregate(value.aggregate))
     && (value.xLabel === undefined || typeof value.xLabel === 'string')
     && (value.yLabel === undefined || typeof value.yLabel === 'string');
 }

@@ -127,6 +127,40 @@ describe('the closing call', () => {
       .toBe('Now a line chart of revenue by day, split by region.');
   });
 
+  // This sentence is the only thing a user reads when the model changed the chart and explained nothing.
+  // "Revenue by region" with no word about the reduction reads as one bar per transaction, and is not.
+  it('names the aggregate in the summary, in words that fit each of the five', () => {
+    expect(chartSummary({ kind: 'bar', x: 'region', y: 'revenue', aggregate: 'sum', title: 'T' }))
+      .toBe('Now a bar chart of revenue by region, summed.');
+    expect(chartSummary({ kind: 'bar', x: 'region', y: 'revenue', aggregate: 'mean', title: 'T' }))
+      .toBe('Now a bar chart of revenue by region, averaged.');
+    expect(chartSummary({ kind: 'bar', x: 'region', y: 'revenue', aggregate: 'count', title: 'T' }))
+      .toBe('Now a bar chart of revenue by region, counted.');
+    expect(chartSummary({ kind: 'bar', x: 'region', y: 'revenue', aggregate: 'min', title: 'T' }))
+      .toBe('Now a bar chart of revenue by region, reduced to the smallest.');
+    expect(chartSummary({ kind: 'bar', x: 'region', y: 'revenue', aggregate: 'max', title: 'T' }))
+      .toBe('Now a bar chart of revenue by region, reduced to the largest.');
+  });
+
+  // A chart that only changes how it aggregates is still a redraw: the picture on screen is a different
+  // picture, and an untitled visualization should take the name the model gave it either way.
+  it('counts a change of aggregate alone as a redraw', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ questions: [{ id: 'q1', question: 'Q?', suggestions: [], answer: 'a' }] });
+
+    interviewer.close(subject);
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T"}');
+    end();
+    expect(subject.chart?.aggregate).toBeUndefined();
+
+    interviewer.revise(subject, 'sum it by region');
+    chunk('{"kind":"bar","x":"region","y":"revenue","aggregate":"sum","title":"T","note":"summed"}');
+    end();
+
+    expect(subject.chart?.aggregate).toBe('sum');
+    expect(subject.turns.at(-1)?.response).toBe('summed');
+  });
+
   it('leaves a name the user chose alone', () => {
     const { interviewer, chunk, end } = fixture();
     const subject = record({

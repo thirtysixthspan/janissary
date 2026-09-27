@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateChart } from './chart-spec.js';
+import { AGGREGATES, validateChart } from './chart-spec.js';
 import type { VisualizationChartView } from '../protocol/visualizations.js';
 import type { Table } from './table.js';
 
@@ -43,5 +43,19 @@ describe('validateChart', () => {
 
   it('refuses a chart when the source has not been read', () => {
     expect(validateChart(chart(), undefined)).toEqual({ error: 'the source has not been read yet' });
+  });
+
+  it('accepts each of the five aggregations', () => {
+    for (const aggregate of AGGREGATES) {
+      expect(validateChart(chart({ aggregate }), TABLE)).toEqual({ ok: true });
+    }
+  });
+
+  // An unknown aggregate is refused rather than ignored. Ignored, the chart would draw successfully and
+  // mean something other than what the model said, and the tab would say the number beside the bar was
+  // a value when it was a total.
+  it('refuses an aggregation the grammar does not have, naming it', () => {
+    const rogue = { ...chart(), aggregate: 'median' } as unknown as VisualizationChartView;
+    expect(validateChart(rogue, TABLE)).toEqual({ error: '"median" is not an aggregation' });
   });
 });

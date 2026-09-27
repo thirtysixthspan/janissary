@@ -51,6 +51,23 @@ describe('chartPrompt', () => {
   it('says so when there were no questions at all', () => {
     expect(chartPrompt(TABLE, [])).toContain('asked no questions');
   });
+
+  // A field the prompt never names is a field the model never fills in, so the aggregate has to be in
+  // the prose and in the example rather than left to be guessed at.
+  it('names the aggregate, its values, and when to use one', () => {
+    const prompt = chartPrompt(TABLE, []);
+    expect(prompt).toContain('`aggregate` is optional');
+    for (const aggregate of ['sum', 'mean', 'count', 'min', 'max']) {
+      expect(prompt).toContain(`"${aggregate}"`);
+    }
+    expect(prompt).toContain('"aggregate":"sum"');
+    expect(prompt).toContain('one row per transaction needs "sum"');
+  });
+
+  it('tells a revision to leave the aggregate alone unless the query is about it', () => {
+    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line'))
+      .toContain('including the aggregate');
+  });
 });
 
 describe('revisionPrompt', () => {
@@ -106,5 +123,20 @@ describe('parseChart', () => {
   it('refuses a reply that is not JSON, and one holding an array', () => {
     expect(parseChart('here is a bar chart of revenue')).toBeUndefined();
     expect(parseChart('[{"kind":"bar"}]')).toBeUndefined();
+  });
+
+  it('keeps an aggregate the grammar has, and leaves the field off when the reply omits it', () => {
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":"sum","title":"T"}')?.chart)
+      .toEqual({ kind: 'bar', x: 'r', y: 'v', aggregate: 'sum', title: 'T' });
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T"}')?.chart)
+      .toEqual({ kind: 'bar', x: 'r', y: 'v', title: 'T' });
+  });
+
+  // Every other optional field on a chart is dropped when it is the wrong shape, because losing a label
+  // costs a label. An aggregate dropped would leave a chart that draws successfully and means something
+  // other than the model said, so it fails the whole specification the way an unknown kind does.
+  it('refuses a whole chart naming an aggregate the grammar does not have', () => {
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":"median","title":"T"}')).toBeUndefined();
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":7,"title":"T"}')).toBeUndefined();
   });
 });

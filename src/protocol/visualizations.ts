@@ -8,6 +8,12 @@ import type { ConversationModelPair } from './conversations.js';
 
 export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie';
 
+// How `y` is reduced before the marks are built, where each aggregate runs over the rows sharing a
+// category — and, where the chart is split, over the rows of one series within it. `count` counts those
+// rows rather than measuring them, which is why it still obeys the rule that a row whose measure is not
+// a number is not plotted and so is not counted either.
+export type VisualizationAggregate = 'sum' | 'mean' | 'count' | 'min' | 'max';
+
 // The one thing the model decides: which mark, over which columns, called what. Everything the
 // client draws follows from these fields, which is what lets a reply be checked against the real
 // columns before it is shown.
@@ -20,6 +26,10 @@ export type VisualizationChartView = {
   // An optional third column whose distinct values split the marks into one bar or line each. Absent
   // means a single series.
   series?: string;
+  // An optional reduction of `y` within each category, so a source whose grain is finer than the
+  // question — one row per transaction rather than one per region — can be charted at all. Absent
+  // means every row is its own mark. A pie sums when it is absent, because that is what a pie is.
+  aggregate?: VisualizationAggregate;
   title: string;
   xLabel?: string;
   yLabel?: string;

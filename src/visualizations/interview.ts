@@ -1,6 +1,6 @@
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { ConversationModelPair, VisualizationTurnView } from '../protocol.js';
-import type { VisualizationChartView } from '../protocol/visualizations.js';
+import type { VisualizationAggregate, VisualizationChartView } from '../protocol/visualizations.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { validateChart } from './chart-spec.js';
 import { chartPrompt, openingPrompt, parseChart, parseQuestions, revisionPrompt } from './prompts.js';
@@ -182,7 +182,8 @@ export class VisualizationInterviewer {
     const redrawn = previous?.kind !== parsed.chart.kind
       || previous.x !== parsed.chart.x
       || previous.y !== parsed.chart.y
-      || previous.series !== parsed.chart.series;
+      || previous.series !== parsed.chart.series
+      || previous.aggregate !== parsed.chart.aggregate;
     record.chart = parsed.chart;
     if (isUntitled(record) && redrawn) record.title = visualizationTitle(parsed.chart.title);
     if (turn) turn.response = parsed.note || chartSummary(parsed.chart);
@@ -203,11 +204,24 @@ function tableOf(record: VisualizationRecord): Table {
   return { columns: record.table?.columns ?? [], rows: record.table?.rows ?? [] };
 }
 
+// Each aggregate said the way a sentence can carry it. A suffix would be shorter and wrong for four of
+// the five — "meanmed", "countmed" — so the wording is written out rather than composed.
+const AGGREGATE_PHRASES: Record<VisualizationAggregate, string> = {
+  sum: 'summed',
+  mean: 'averaged',
+  count: 'counted',
+  min: 'reduced to the smallest',
+  max: 'reduced to the largest',
+};
+
 // What a chart is now, in one sentence, for the case where the model changed it and said nothing.
 // Composed from the specification rather than invented: a sentence built from what the chart
 // demonstrably is is worth reading, where an invented explanation would be worse than the empty reply
-// it replaces. The model's own words always win — this is only reached when there are none.
+// it replaces. The model's own words always win — this is only reached when there are none. A chart that
+// aggregates is described as aggregating, because "revenue by region" with no word about the reduction
+// reads as one bar per transaction and is not.
 export function chartSummary(chart: VisualizationChartView): string {
   const split = chart.series === undefined ? '' : `, split by ${chart.series}`;
-  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${split}.`;
+  const how = chart.aggregate === undefined ? '' : `, ${AGGREGATE_PHRASES[chart.aggregate]}`;
+  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${split}${how}.`;
 }

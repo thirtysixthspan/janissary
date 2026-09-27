@@ -37,7 +37,7 @@ Answering the last question produces the chart.
 
 ## Read the chart
 
-The chart fills the tab, with its title above it and the row count below. When the source has more rows than the chart shows, the line under the chart says how many of how many.
+The chart fills the tab, with its title above it and the row count below. When the source has more rows than the chart shows, the line under the chart says how many of how many. When the measure is reduced before it is drawn, that line names the reduction — `sum of revenue`, `mean of revenue` — because a bar showing a total otherwise reads as a single value.
 
 **Data table**, under the chart, opens the numbers behind the picture: one row per mark the chart draws, with the series column too when the chart is split by one. It also states the chart in a sentence — the kind, the measure, its range, and its largest and smallest mark — which is what a screen reader is given in place of the drawing, along with the chart's title. Both are built from the same marks the chart is drawn from, so they cannot disagree with it. Neither is part of an exported file.
 
@@ -49,7 +49,7 @@ You can rename the chart by double-clicking its name in the header.
 
 Type into the bar at the bottom the way you would in a terminal. Press `Enter` to send, `Shift+Enter` for a newline, and `Escape` to clear what you have typed.
 
-Ask for what you want: *make it a line chart*, *split by region*, *show visits instead of revenue*. The model answers with an updated chart, and its explanation appears above the bar. The whole exchange stays in the tab, so you can see what you asked for and what came back.
+Ask for what you want: *make it a line chart*, *split by region*, *show visits instead of revenue*, *sum the revenue by region*. The model answers with an updated chart, and its explanation appears above the bar. The whole exchange stays in the tab, so you can see what you asked for and what came back.
 
 ## Keep it current
 

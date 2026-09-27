@@ -45,8 +45,23 @@ describe('describeChart', () => {
 
   it('describes a pie by its summed categories, largest first', () => {
     expect(describeChart(TABLE, chart({ kind: 'pie' }))).toBe(
-      'A pie chart of revenue summed over 2 categories: north is the largest at 16, south the smallest at 4.',
+      'A pie chart of the sum of revenue over 2 categories: north is the largest at 16, south the smallest at 4.',
     );
+  });
+
+  // The reduction is the difference between a total and a raw value, so a sentence that left it out
+  // would tell a reader the wrong number even though every figure in it is right.
+  it('names the aggregate, so a total is never read as a raw value', () => {
+    expect(describeChart(TABLE, chart({ aggregate: 'mean' }))).toContain('of the mean of revenue');
+    expect(describeChart(TABLE, chart({ aggregate: 'count' }))).toContain('of the count of revenue');
+    expect(describeChart(TABLE, chart({ aggregate: 'min' }))).toContain('of the minimum of revenue');
+    expect(describeChart(TABLE, chart({ aggregate: 'max' }))).toContain('of the maximum of revenue');
+    expect(describeChart(TABLE, chart())).toBe('A bar chart of revenue: 3 marks, from 4 at south to 10 at north.');
+  });
+
+  // A pie sums whether or not the model said so, so an unlabelled pie is still described as a sum.
+  it('describes a pie as a sum even when its specification names no aggregate', () => {
+    expect(describeChart(TABLE, chart({ kind: 'pie' }))).toContain('the sum of revenue');
   });
 
   it('describes a scatter by its two numeric columns', () => {
@@ -61,7 +76,7 @@ describe('describeChart', () => {
     expect(describeChart({ columns: TABLE.columns, rows: [] }, chart()))
       .toBe('A bar chart of revenue with nothing to plot.');
     expect(describeChart({ columns: TABLE.columns, rows: [] }, chart({ kind: 'pie' })))
-      .toBe('A pie chart of revenue with nothing to plot.');
+      .toBe('A pie chart of the sum of revenue with nothing to plot.');
     expect(describeChart({ columns: TABLE.columns, rows: [] }, chart({ kind: 'scatter' })))
       .toBe('A scatter chart of revenue against region with nothing to plot.');
   });

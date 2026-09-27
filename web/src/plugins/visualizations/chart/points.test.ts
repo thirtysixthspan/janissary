@@ -82,6 +82,92 @@ describe('marksFor', () => {
   });
 });
 
+// The reason the aggregate exists: a source with one row per transaction cannot answer "revenue by
+// region" without one, and without one it answers it wrongly rather than not at all.
+describe('marksFor with an aggregate', () => {
+  it('sums the rows sharing a category, in the order the source listed them', () => {
+    const marks = marksFor(TABLE, chart({ aggregate: 'sum' }));
+    expect(marks.points).toEqual([
+      { band: 0, value: 16, series: SINGLE_SERIES, label: 'north' },
+      { band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
+    ]);
+  });
+
+  it('averages, counts, and takes the extremes of the same groups', () => {
+    expect(marksFor(TABLE, chart({ aggregate: 'mean' })).points.map((point) => point.value))
+      .toEqual([8, 4]);
+    expect(marksFor(TABLE, chart({ aggregate: 'count' })).points.map((point) => point.value))
+      .toEqual([2, 1]);
+    expect(marksFor(TABLE, chart({ aggregate: 'min' })).points.map((point) => point.value))
+      .toEqual([6, 4]);
+    expect(marksFor(TABLE, chart({ aggregate: 'max' })).points.map((point) => point.value))
+      .toEqual([10, 4]);
+  });
+
+  // A band is a slot on the category axis and the series share it, which is the shape the bar renderer
+  // already draws a multi-series chart in. Numbering by group instead would give each series its own
+  // slot, which is a different chart rather than an aggregated one.
+  it('gives the series of one category the same band', () => {
+    const marks = marksFor(TABLE, chart({ aggregate: 'sum', series: 'region', x: 'year' }));
+    expect(marks.points).toEqual([
+      { band: 0, value: 10, series: 'north', label: '2024' },
+      { band: 1, value: 4, series: 'south', label: '2025' },
+      { band: 1, value: 6, series: 'north', label: '2025' },
+    ]);
+    expect(marks.series).toEqual(['north', 'south']);
+  });
+
+  it('numbers aggregated bands densely, so a dropped row leaves no gap', () => {
+    const gappy: Table = {
+      columns: [{ name: 'a', type: 'string' }, { name: 'b', type: 'number' }],
+      rows: [['x', 1], ['y', 'n/a'], ['z', 3]],
+    };
+    expect(marksFor(gappy, chart({ x: 'a', y: 'b', aggregate: 'sum' })).points)
+      .toEqual([
+        { band: 0, value: 1, series: SINGLE_SERIES, label: 'x' },
+        { band: 1, value: 3, series: SINGLE_SERIES, label: 'z' },
+      ]);
+  });
+
+  // `count` measures the rows rather than the values, and it still obeys the rule that a row whose
+  // measure is not a number is not plotted — so it is not counted either. Counting it would make one
+  // column counted in one chart and ignored in the next.
+  it('counts only the rows that would have been plotted', () => {
+    const gappy: Table = {
+      columns: [{ name: 'a', type: 'string' }, { name: 'b', type: 'number' }],
+      rows: [['x', 1], ['y', 'n/a'], ['x', 5]],
+    };
+    expect(marksFor(gappy, chart({ x: 'a', y: 'b', aggregate: 'count' })).points)
+      .toEqual([
+        { band: 0, value: 2, series: SINGLE_SERIES, label: 'x' },
+      ]);
+  });
+
+  it('takes the mean of a pie when told to, rather than its sum', () => {
+    expect(marksFor(TABLE, chart({ kind: 'pie', aggregate: 'mean' })).slices)
+      .toEqual([{ label: 'north', value: 8 }, { label: 'south', value: 4 }]);
+  });
+
+  // The regression this could have caused: a pie with no aggregate summed before this field existed and
+  // must still sum, with the same slices in the same order.
+  it('leaves a pie with no aggregate summing exactly as it was', () => {
+    expect(marksFor(TABLE, chart({ kind: 'pie' })).slices)
+      .toEqual([{ label: 'north', value: 16 }, { label: 'south', value: 4 }]);
+  });
+
+  it('leaves a chart with no aggregate byte-for-byte as it was', () => {
+    expect(marksFor(TABLE, chart())).toEqual({
+      points: [
+        { band: 0, value: 10, series: SINGLE_SERIES, label: 'north' },
+        { band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
+        { band: 2, value: 6, series: SINGLE_SERIES, label: 'north' },
+      ],
+      slices: [],
+      series: [SINGLE_SERIES],
+    });
+  });
+});
+
 describe('scatterFor', () => {
   it('reads both axes as numbers, and drops a row where either is not', () => {
     expect(scatterFor(TABLE, chart({ kind: 'scatter', x: 'year', y: 'revenue' })))

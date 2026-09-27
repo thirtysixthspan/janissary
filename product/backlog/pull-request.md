@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the gap that the chart grammar cannot aggregate, where every comparable product answers a question about a measure it was not handed.
-
-Existing Issue: `product/specs/visualizations.md` fixes the chart at a kind, an x column, a y column, and an optional series column, and `web/src/plugins/visualizations/chart/points.ts` plots one mark per row with the single exception of a pie, which sums per category, so a source with one row per transaction cannot answer "revenue by region" at all. Severity: 7/10
-
-Existing Risk: 7/10 - A source whose grain is finer than the question is the common case rather than the edge one, and the failure is invisible: the chart draws, the axis carries the right column names, and the number beside each bar is simply the wrong one.
-
-Proposal Risk: 4/10 - An aggregate the model chooses wrongly produces a confidently wrong chart, which is worse than the blank one the grammar refuses today, so the specification has to carry the aggregate and the tab has to show it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: let a chart specification name an aggregate". Extend the chart specification in `src/protocol/visualizations.ts` and its re-declaration in `src/plugins/visualizations/shared.ts` with an optional aggregate — no aggregation, sum, mean, count, minimum, maximum — applied to the y column before the marks are built, and accept nothing else. Validate it in `src/visualizations/chart-spec.ts` rather than in the model, so an unrecognised aggregate is refused exactly as an unknown column is. Apply it in `web/src/plugins/visualizations/chart/points.ts` at the one place marks are produced, and let the pie's per-category sum become that same aggregate rather than its own special case, keeping the behavior `web/src/plugins/visualizations/chart/points.test.ts` already pins. State the aggregate in the chart's caption in `web/src/plugins/visualizations/VisualizationBody.tsx` so a summed bar is visibly a sum and nobody reads it as a raw value. Teach the model the field by naming it in the closing prompt in `src/visualizations/prompts.ts` with one worked example, and keep the specification's title-based naming working when it is absent. Add cases to `src/visualizations/chart-spec.test.ts` and `web/src/plugins/visualizations/chart/points.test.ts` for each aggregate, for an unknown one being refused, and for the pie no longer treating its sum separately. Sources: https://julius.ai/docs/get-started/quickstart , https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-ask-data-question
-
-
 * Close the gap that a date column is a character axis, where a time-series question is the first thing anyone asks a chart of dated data.
 
 Existing Issue: `product/specs/visualizations.md` says dates are deliberately left as text so a chart over a date column draws a category axis rather than guessing a format, and `web/src/plugins/visualizations/chart/points.ts` consequently gives a date band no more meaning than its first appearance in the file, so a month of daily rows is thirty-one evenly spaced categories in file order. Severity: 6/10

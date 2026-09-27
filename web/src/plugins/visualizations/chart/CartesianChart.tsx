@@ -1,6 +1,6 @@
 import React from 'react';
 import { Axes } from './Axes';
-import { extentOf, type ChartShape, type Marks, type ScatterPoint, type Table } from './points';
+import { extentOf, type ChartShape, type Marks, type ScatterPoint } from './points';
 import { band, linear, seriesOffset, type Box, type Linear } from './scale';
 
 // The one component that draws every mark kind sharing a rectangular frame: a bar, a line, an area, and
@@ -8,8 +8,8 @@ import { band, linear, seriesOffset, type Box, type Linear } from './scale';
 // measure, so splitting them into four components would duplicate the frame, the y scale, and the point
 // list four times over.
 //
-// Nothing here reads the table or chooses a domain it could have been handed: `marks` and `table` arrive
-// with the arithmetic already done, which is what keeps this file about drawing.
+// Nothing here reads the table or chooses a domain it could have been handed: `marks` arrive with the
+// arithmetic already done, which is what keeps this file about drawing.
 
 const SERIES_COLOURS = [
   'var(--accent)', 'var(--success)', 'var(--running)', 'var(--error)', 'var(--muted)',
@@ -23,7 +23,6 @@ export type CartesianProperties = {
   box: Box;
   chart: ChartShape;
   marks: Marks;
-  table: Table;
   // Only a scatter needs these: its x column is a measure, so its points come from the numeric read
   // rather than from the banded one every other kind draws.
   scatter?: ScatterPoint[];
@@ -101,7 +100,7 @@ function dots(scatter: readonly ScatterPoint[], prepared: Prepared): React.React
 }
 
 export function CartesianChart(properties: CartesianProperties): React.ReactElement {
-  const { box, chart, marks, table } = properties;
+  const { box, chart, marks } = properties;
   const prepared = prepare(properties);
   const isScatter = chart.kind === 'scatter';
   return (
@@ -126,7 +125,6 @@ export function CartesianChart(properties: CartesianProperties): React.ReactElem
         ))
         : null}
       {isScatter ? dots(properties.scatter ?? [], prepared) : null}
-      <desc>{`${table.rows.length} rows plotted as ${chart.kind}`}</desc>
     </g>
   );
 }

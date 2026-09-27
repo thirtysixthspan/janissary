@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type {
+  VisualizationChart,
   VisualizationTable,
   VisualizationWindow,
 } from '@shared/plugins/visualizations/shared';
@@ -137,9 +138,14 @@ function SourceButton({ busy, onSetSource }: { busy: boolean; onSetSource(source
   );
 }
 
-function caption(table: VisualizationTable, readAt: number | undefined): string {
+// The line under the chart says how much of the source it is showing, and how the measure was reduced —
+// because a bar whose height is a sum reads as a raw value to anyone who is not told otherwise, and the
+// tab is the only place they will be.
+function caption(table: VisualizationTable, chart: VisualizationChart, readAt: number | undefined): string {
   const rows = table.truncated ? `showing ${table.rows.length} of ${table.total} rows` : `${table.rows.length} rows`;
-  return readAt === undefined ? rows : `${rows} · read ${new Date(readAt).toLocaleTimeString()}`;
+  const how = chart.aggregate === undefined ? '' : ` · ${chart.aggregate} of ${chart.y}`;
+  const when = readAt === undefined ? '' : ` · read ${new Date(readAt).toLocaleTimeString()}`;
+  return `${rows}${how}${when}`;
 }
 
 function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement {
@@ -152,7 +158,7 @@ function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement 
       {reason === undefined ? null : <p className="visualization-reason-note">{reason}</p>}
       <figure className="visualization-figure">
         <ChartSvg ref={chartRef} chart={chart} table={table} />
-        <figcaption>{caption(table, view.readAt)}</figcaption>
+        <figcaption>{caption(table, chart, view.readAt)}</figcaption>
       </figure>
       <VisualizationData chart={chart} table={table} />
       <VisualizationChat

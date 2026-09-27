@@ -1,6 +1,12 @@
 // Turning a table plus a chart specification into numbers a renderer can draw. Pure throughout, so the
 // whole of the chart's arithmetic is testable without a DOM, a canvas, or a render.
 
+import { groupsFor, reduce, type Aggregate } from './aggregate';
+
+// Re-exported because a chart specification names an aggregate, and the specification's type is
+// declared here; the reduction itself lives beside the arithmetic that applies it.
+export type { Aggregate } from './aggregate';
+
 export type Cell = string | number | boolean | null;
 
 export type Column = { name: string; type: 'number' | 'boolean' | 'string' };
@@ -24,6 +30,7 @@ export type ChartShape = {
   x: string;
   y: string;
   series?: string;
+  aggregate?: Aggregate;
   title: string;
   xLabel?: string;
   yLabel?: string;
@@ -70,29 +77,64 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
   // A specification that names a series column the table does not have cannot be drawn as asked, and
   // quietly falling back to one unnamed series would draw a different chart than the one requested.
   if (chart.series !== undefined && si === -1) return { points: [], slices: [], series: [] };
-  const points: Point[] = [];
+  const raw: Point[] = [];
   for (const [band, row] of table.rows.entries()) {
     const value = numeric(row[yi]);
     if (value === undefined) continue;
-    points.push({
+    raw.push({
       band,
       value,
       series: si === -1 ? SINGLE_SERIES : label(row[si]),
       label: label(row[xi]),
     });
   }
-  if (chart.kind === 'pie') return { points, slices: slicesFor(points), series: [] };
-  return { points, slices: [], series: seriesNames(points, si !== -1) };
+  const aggregate = effectiveAggregate(chart);
+  if (aggregate === undefined) {
+    if (chart.kind === 'pie') return { points: raw, slices: slicesFor(raw), series: [] };
+    return { points: raw, slices: [], series: seriesNames(raw, si !== -1) };
+  }
+  // A pie is cut from categories and has no second dimension to split by; every other kind is banded by
+  // category with its series inside, which is the shape the bar renderer already draws a multi-series
+  // chart in.
+  const pie = chart.kind === 'pie';
+  const split = !pie && si !== -1;
+  const reduced = groupsFor(raw, split, SINGLE_SERIES);
+  if (pie) {
+    return {
+      points: raw,
+      slices: reduced.map((group) => ({ label: group.label, value: reduce(aggregate, group.values) })),
+      series: [],
+    };
+  }
+  // Bands are numbered per category rather than per group, because a band is a slot on the category
+  // axis and the series share it. Numbering by group would give each series its own slot, which is a
+  // different chart rather than an aggregated one.
+  const bands = new Map<string, number>();
+  const points = reduced.map((group) => {
+    let band = bands.get(group.label);
+    if (band === undefined) {
+      band = bands.size;
+      bands.set(group.label, band);
+    }
+    return { band, value: reduce(aggregate, group.values), series: group.series, label: group.label };
+  });
+  return { points, slices: [], series: seriesNames(points, split) };
 }
 
-// A pie sums the measure per category. That is the one aggregation the grammar has, and it is the only
-// one there can be: every other aggregate would be a decision the user did not ask anyone to make.
+// The aggregate a chart applies, where a pie sums whether or not it was told to: a pie is a share of a
+// whole, and that whole is the sum of the rows it is cut from. Everything else aggregates only when
+// asked, so a chart whose rows are already one answer each is left exactly as it was.
+function effectiveAggregate(chart: ChartShape): Aggregate | undefined {
+  if (chart.aggregate !== undefined) return chart.aggregate;
+  return chart.kind === 'pie' ? 'sum' : undefined;
+}
+
+// A pie sums the measure per category. That is the grammar's one built-in aggregation, reached through
+// the same reduction as every other one, so there is a single place that aggregates rather than two that
+// could disagree.
 function slicesFor(points: readonly Point[]): PieSlice[] {
-  const totals = new Map<string, number>();
-  for (const point of points) {
-    totals.set(point.label, (totals.get(point.label) ?? 0) + point.value);
-  }
-  return [...totals].map(([name, value]) => ({ label: name, value }));
+  return groupsFor(points, false, SINGLE_SERIES)
+    .map((group) => ({ label: group.label, value: reduce('sum', group.values) }));
 }
 
 export function scatterFor(table: Table, chart: ChartShape): ScatterPoint[] {

@@ -11,11 +11,14 @@ export type ConversationModelPair = { harness: 'claude' | 'opencode'; model: str
 
 export type VisualizationSummary = { id: string; title: string; updatedAt: number };
 
+export type VisualizationAggregate = 'sum' | 'mean' | 'count' | 'min' | 'max';
+
 export type VisualizationChart = {
   kind: 'bar' | 'line' | 'area' | 'scatter' | 'pie';
   x: string;
   y: string;
   series?: string;
+  aggregate?: VisualizationAggregate;
   title: string;
   xLabel?: string;
   yLabel?: string;
@@ -105,6 +108,7 @@ function isSummary(value: unknown): value is VisualizationSummary {
 }
 
 const CHART_KINDS = new Set(['bar', 'line', 'area', 'scatter', 'pie']);
+const AGGREGATES = new Set(['sum', 'mean', 'count', 'min', 'max']);
 
 function isChart(value: unknown): value is VisualizationChart {
   return isRecord(value)
@@ -113,6 +117,7 @@ function isChart(value: unknown): value is VisualizationChart {
     && typeof value.y === 'string'
     && typeof value.title === 'string'
     && (value.series === undefined || typeof value.series === 'string')
+    && (value.aggregate === undefined || (typeof value.aggregate === 'string' && AGGREGATES.has(value.aggregate)))
     && (value.xLabel === undefined || typeof value.xLabel === 'string')
     && (value.yLabel === undefined || typeof value.yLabel === 'string');
 }

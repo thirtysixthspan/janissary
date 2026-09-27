@@ -2,7 +2,7 @@
 // renderer draws rather than from the table it was handed, so what the chart says and what the chart shows
 // cannot come to disagree.
 
-import { marksFor, scatterFor, type ChartShape, type Point, type Table } from './points';
+import { marksFor, scatterFor, type Aggregate, type ChartShape, type Point, type Table } from './points';
 
 export type DataCell = string | number;
 
@@ -14,6 +14,24 @@ export type DataTable = { columns: DataColumn[]; rows: DataCell[][] };
 // when it did not.
 function measureName(chart: ChartShape): string {
   return chart.yLabel ?? chart.y;
+}
+
+// What the numbers beside the marks are, said where a reader can see it. A pie sums whether or not it
+// was told to, so a pie is described as a sum even when its specification names no aggregate — which is
+// the whole point: a sentence that left out the reduction would describe a total as a raw value. The
+// empty string is a raw chart, and the trailing space is part of the prefix rather than of the sentence,
+// so a sentence with no reduction in it has no double space where the word would have been.
+const REDUCTIONS: Record<Aggregate, string> = {
+  sum: 'the sum of ',
+  mean: 'the mean of ',
+  count: 'the count of ',
+  min: 'the minimum of ',
+  max: 'the maximum of ',
+};
+
+function reduction(chart: ChartShape): string {
+  if (chart.aggregate !== undefined) return REDUCTIONS[chart.aggregate];
+  return chart.kind === 'pie' ? REDUCTIONS.sum : '';
 }
 
 function categoryName(chart: ChartShape): string {
@@ -40,7 +58,7 @@ function round(value: number): number {
 
 function describePoints(kind: string, chart: ChartShape, points: readonly Point[]): string {
   const bounds = extremes(points);
-  if (!bounds) return `A ${kind} chart of ${measureName(chart)} with nothing to plot.`;
+  if (!bounds) return `A ${kind} chart of ${reduction(chart)}${measureName(chart)} with nothing to plot.`;
   const { lowest, highest } = bounds;
   const first = points.at(0);
   const last = points.at(-1);
@@ -49,20 +67,22 @@ function describePoints(kind: string, chart: ChartShape, points: readonly Point[
   // saying "over north" about a chart whose middle mark is south would claim something the data does not
   // say.
   const span = first.label === last.label ? '' : ` over ${first.label} to ${last.label}`;
-  return `A ${kind} chart of ${measureName(chart)}${span}: ${points.length} marks, `
+  return `A ${kind} chart of ${reduction(chart)}${measureName(chart)}${span}: ${points.length} marks, `
     + `from ${round(lowest.value)} at ${lowest.label} to ${round(highest.value)} at ${highest.label}.`;
 }
 
-// A pie is the one kind whose marks are not band/value pairs, so its sentence is about the summed
-// categories its slices are cut from.
+// A pie is the one kind whose marks are not band/value pairs, so its sentence is about the categories
+// its slices are cut from.
 function describeSlices(chart: ChartShape, marks: ReturnType<typeof marksFor>): string {
   const { slices } = marks;
-  if (slices.length === 0) return `A pie chart of ${measureName(chart)} with nothing to plot.`;
+  if (slices.length === 0) {
+    return `A pie chart of ${reduction(chart)}${measureName(chart)} with nothing to plot.`;
+  }
   const sorted = slices.toSorted((a, b) => b.value - a.value);
   const largest = sorted.at(0);
   const smallest = sorted.at(-1);
-  if (largest === undefined || smallest === undefined) return `A pie chart with nothing to plot.`;
-  return `A pie chart of ${measureName(chart)} summed over ${slices.length} categories: `
+  if (largest === undefined || smallest === undefined) return 'A pie chart with nothing to plot.';
+  return `A pie chart of ${reduction(chart)}${measureName(chart)} over ${slices.length} categories: `
     + `${largest.label} is the largest at ${round(largest.value)}, `
     + `${smallest.label} the smallest at ${round(smallest.value)}.`;
 }

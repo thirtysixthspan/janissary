@@ -91,6 +91,18 @@ describe('VisualizationTab', () => {
     expect(screen.getByText('showing 2 of 12043 rows')).toBeInTheDocument();
   });
 
+  // A bar whose height is a sum reads as a raw value to anyone not told otherwise, and the caption is
+  // the one place they are told without opening anything.
+  it('says how the measure was reduced, and says nothing when it was not', () => {
+    tab({ table: TABLE, chart: { ...CHART, aggregate: 'sum' } });
+    expect(screen.getByText('2 rows · sum of revenue')).toBeInTheDocument();
+  });
+
+  it('leaves the caption alone for a chart with no aggregate', () => {
+    tab({ table: TABLE, chart: CHART });
+    expect(screen.getByText('2 rows')).toBeInTheDocument();
+  });
+
   it('renders the current question with its suggestions, and emits the answer', () => {
     const { intent, value } = capabilities();
     render(<VisualizationTab
