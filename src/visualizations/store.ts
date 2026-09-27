@@ -5,38 +5,39 @@ import { atomicWriteFile } from '../atomic-write.js';
 import { errorText } from '../error-text.js';
 import type {
   ConversationModelPair,
-  VisualizationChartView,
+  VisualizationChartRecord,
+  VisualizationDatasetView,
   VisualizationSummaryView,
-  VisualizationTableView,
   VisualizationTurnView,
 } from '../protocol.js';
 import { trustWorkspace, untrustWorkspace } from '../workspace/index.js';
 import { isModelPair, isRecord } from '../value-guards.js';
-import { isAggregate } from './chart-spec.js';
+import { isChartList, isDatasetList } from './chart-record.js';
 
-export const VISUALIZATION_SCHEMA_VERSION = 1;
+// Version 2 is the first version this feature ever shipped as, and the one this change introduces: a
+// visualization holds a list of charts rather than one, and the questions and the column review are
+// gone. A version-1 document is not migrated — the feature has never been in a release, so there is
+// nobody's saved work to lose, and a migration would be a second shape to keep true for no user. The
+// scan below reports one the way it reports a malformed document.
+export const VISUALIZATION_SCHEMA_VERSION = 2;
 
-// What is on disk. Deliberately a superset of the tab window: the record also holds the refresh
-// interval and the timestamps, which are the manager's business and the tab's business respectively,
-// so neither has to be threaded through the other's shape.
+// What is on disk. Deliberately a superset of the tab window: the record also holds the datasets' raw
+// tables and their documents, which the model is shown and the client never sees, so neither side has
+// to be threaded through the other's shape.
 export type VisualizationRecord = {
   schemaVersion: typeof VISUALIZATION_SCHEMA_VERSION;
   id: string;
   title: string;
   createdAt: number;
   updatedAt: number;
+  // The most recent address the user named, empty until they name one. A visualization with no source
+  // is a conversation waiting for its first message, not a broken record.
   source: string;
   pair: ConversationModelPair;
-  refreshSeconds: number;
-  readAt?: number;
-  // Whether the user has seen the columns the parser inferred and had the chance to correct a type. The
-  // interview does not start until it is true.
-  reviewed: boolean;
-  questions: { id: string; question: string; suggestions: string[]; answer?: string }[];
-  chart?: VisualizationChartView;
-  table?: VisualizationTableView;
-  followUps?: string[];
+  datasets: VisualizationDatasetView[];
+  charts: VisualizationChartRecord[];
   turns: VisualizationTurnView[];
+  followUps?: string[];
   error?: string;
 };
 
@@ -46,42 +47,18 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 }
 
-function isChart(value: unknown): value is VisualizationChartView {
-  return isRecord(value)
-    && typeof value.kind === 'string'
-    && typeof value.x === 'string'
-    && typeof value.y === 'string'
-    && typeof value.title === 'string'
-    && (value.series === undefined || typeof value.series === 'string')
-    && (value.aggregate === undefined || isAggregate(value.aggregate))
-    && (value.xLabel === undefined || typeof value.xLabel === 'string')
-    && (value.yLabel === undefined || typeof value.yLabel === 'string');
-}
-
-function isTable(value: unknown): value is VisualizationTableView {
-  return isRecord(value)
-    && Array.isArray(value.columns)
-    && Array.isArray(value.rows)
-    && typeof value.total === 'number'
-    && typeof value.truncated === 'boolean';
-}
-
+// A stored turn may be marked streaming, because a turn is persisted before the model is called and a
+// process that exits mid-reply leaves that flag on disk — refusing it would make the whole record
+// unreadable, and therefore delete the visualization, at exactly the moment a crash would. The window
+// guard in the plugin's shared contract still requires the flag to be absent, because a payload never
+// carries one: a tab the server is not answering is not a state the browser has to render.
 function isTurn(value: unknown): value is VisualizationTurnView {
   return isRecord(value)
     && typeof value.query === 'string'
     && typeof value.response === 'string'
     && isModelPair(value.pair)
     && (value.error === undefined || typeof value.error === 'string')
-    && value.streaming === undefined;
-}
-
-function isQuestions(value: unknown): value is VisualizationRecord['questions'] {
-  return Array.isArray(value) && value.every((entry) =>
-    isRecord(entry)
-    && typeof entry.id === 'string'
-    && typeof entry.question === 'string'
-    && isStringArray(entry.suggestions)
-    && (entry.answer === undefined || typeof entry.answer === 'string'));
+    && (value.streaming === undefined || typeof value.streaming === 'boolean');
 }
 
 export function isVisualizationRecord(value: unknown): value is VisualizationRecord {
@@ -93,15 +70,11 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && typeof value.updatedAt === 'number'
     && typeof value.source === 'string'
     && isModelPair(value.pair)
-    && typeof value.refreshSeconds === 'number'
-    && (value.readAt === undefined || typeof value.readAt === 'number')
-    && typeof value.reviewed === 'boolean'
-    && isQuestions(value.questions)
-    && (value.chart === undefined || isChart(value.chart))
-    && (value.table === undefined || isTable(value.table))
-    && (value.followUps === undefined || isStringArray(value.followUps))
+    && isDatasetList(value.datasets)
+    && isChartList(value.charts)
     && Array.isArray(value.turns)
-    && value.turns.every((turn) => isTurn(turn))
+    && value.turns.every(isTurn)
+    && (value.followUps === undefined || isStringArray(value.followUps))
     && (value.error === undefined || typeof value.error === 'string');
 }
 
@@ -111,13 +84,12 @@ function assertId(id: string): void {
 
 export const DEFAULT_VISUALIZATION_TITLE = 'New visualization';
 
-// A record the moment it is created: no table, no questions, no chart, and no polling. Everything the
-// tab can show arrives later, from a read and a model, and a visualization the user abandoned before
-// either is still this — which is why a refresh of zero is the default rather than a decision made at
-// the point somebody sets one.
+// A record the moment it is created: no source, no data, no charts, and no polling. Everything the
+// tab can show arrives later, from a read and a conversation, and a visualization the user abandoned
+// before either is still this — which is why a refresh of zero is the default rather than a decision
+// made at the point somebody sets one.
 export function freshVisualization(
   id: string,
-  source: string,
   pair: ConversationModelPair,
   now: number,
 ): VisualizationRecord {
@@ -127,11 +99,10 @@ export function freshVisualization(
     title: DEFAULT_VISUALIZATION_TITLE,
     createdAt: now,
     updatedAt: now,
-    source: source.trim(),
+    source: '',
     pair,
-    refreshSeconds: 0,
-    reviewed: false,
-    questions: [],
+    datasets: [],
+    charts: [],
     turns: [],
   };
 }
@@ -140,6 +111,14 @@ export function isCataloguedPair(pair: ConversationModelPair, catalogued: readon
   return catalogued.some(
     (candidate) => candidate.harness === pair.harness && candidate.model === pair.model,
   );
+}
+
+// A visualization with no source, no charts and nothing said is a conversation nobody has started. It is
+// kept in memory so its tab can be open and empty, and it is neither written to disk nor listed in the
+// index — which is the property the previous design got by not creating a record until the first read,
+// and which a chat-only tab has to keep some other way.
+export function isEmptyRecord(record: VisualizationRecord): boolean {
+  return record.source === '' && record.charts.length === 0 && record.turns.length === 0;
 }
 
 export class VisualizationStore {
@@ -180,6 +159,9 @@ export class VisualizationStore {
     });
   }
 
+  // The empty workspace this record's agent is confined to, and the one directory a file it acquired
+  // may be read from. Created on first use rather than at creation, so a visualization nobody ever
+  // asked anything of leaves nothing on disk.
   ensure(id: string): string {
     assertId(id);
     const workspace = path.join(this.directory(id), 'workspace');

@@ -1,6 +1,6 @@
 import type { Tab } from '../tab/types.js';
 import type { VisualizationSummaryView, VisualizationWindowView } from '../protocol.js';
-import type { VisualizationRecord, VisualizationStore } from './store.js';
+import { isEmptyRecord, type VisualizationRecord, type VisualizationStore } from './store.js';
 import { summaryOf, windowOf } from './view.js';
 
 const PLUGIN_ID = 'visualizations';
@@ -67,7 +67,9 @@ export class VisualizationIndex {
   summaries(): VisualizationSummaryView[] {
     const summaries = new Map(this.store.list().map((entry) => [entry.id, entry]));
     for (const record of this.records.values()) {
-      if (!this.deleted.has(record.id)) summaries.set(record.id, summaryOf(record));
+      // A conversation nobody has started is not a saved visualization, so it does not appear in the
+      // index even though its tab may be open — the same rule the store's own write follows.
+      if (!this.deleted.has(record.id) && !isEmptyRecord(record)) summaries.set(record.id, summaryOf(record));
     }
     return [...summaries.values()].toSorted((a, b) => b.updatedAt - a.updatedAt);
   }

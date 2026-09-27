@@ -1,6 +1,6 @@
 # Visualizations
 
-A visualization is one data source plus one chart made from it. The source is a URL or a file the application reads; the chart is drawn from what was read. Pointing at a source, being asked what to look at, and changing the chart afterwards are all done by an ACP-capable model, and the model answers with a chart specification rather than with code.
+A visualization is a conversation about data. You name a source, the agent works out how to reach it, asks what you want to see, draws a chart, and then answers whatever you ask next about the data or the chart. Everything that changes a chart is a sentence you type.
 
 ### Command grammar
 
@@ -8,113 +8,98 @@ A visualization is one data source plus one chart made from it. The source is a 
 
 `visualizations <title>` opens the visualization whose title matches case-insensitively. The docking words take precedence over visualizations titled `left` or `right`. A missing match reports `No visualization matching "<title>".`
 
+### Starting one
+
+The index's plus control opens a tab with nothing in it but a conversation and one line of prompt: **Paste the URL of a data file, or of a page that describes an API, and tell me what you would like to see.** There is no form and no field. What you type is the whole of it, and the tab shows a chart once there is one.
+
+**Visualize this** in the default context menu does the same thing with your current selection as the first message, so selecting an address anywhere in the application is the shortest route there is.
+
+A visualization nobody has started is not a saved one: it is not listed in the index and nothing is written to disk until you say something.
+
 ### Naming a source
 
-A source is one line: an `http` or `https` address, or a path to a file. A bare host is read as `https`, and any other scheme is refused with the reason the application's other web targets give. Two routes reach it, and they exist so that naming a source takes no more typing than pasting one: **Visualize this** in the default context menu takes the current text selection as the source verbatim, and the index's own field takes what is typed into it. Nothing inspects the selection first, so a selection that is not a source is answered by the same refusal a typed one would be.
-
-The source is read by the application, not by the browser, so an arbitrary address works without that address having agreed to be fetched. The read carries no credentials of any kind, follows at most five redirects, gives up after fifteen seconds, and refuses a body over eight megabytes.
+A source is one `http` or `https` address, or a path to a file, written anywhere in a sentence. The most recent one you name is the one being worked on, so pointing somewhere else part way through is ordinary rather than refused. A bare host is read as `https`, and any other scheme is refused with the reason the application's other web targets give.
 
 A local file may only be read from the project directory or your home directory, and the check is made on the resolved path — so a `..` traversal, a `~` that expands elsewhere, and a symbolic link pointing out of the tree are all refused, each naming the two directories a source would have to be under. A source anywhere else reports that it is outside them.
 
-Reading a local file is worth understanding before pointing one at it. The file is read, parsed into a table, kept in the visualization's saved record, and — once the interview runs — a sample of it is sent to whichever model pair the visualization is using. A source naming a credential or a key file therefore exposes that file's contents to a third party. That is the same reach as opening the file yourself and pasting part of it into a prompt, which is not nothing, so the two directories are named above rather than left to be discovered.
+The host reads an address with the same bounds it has always used: no credentials of any kind, at most five redirects, fifteen seconds, and a body of at most eight megabytes.
 
-### What a source can be
+Reading a local file is worth understanding before pointing one at it. The file is read, parsed into a table, and — once the agent is asked about it — a sample of it is sent to whichever model pair the visualization is using. A source naming a credential or a key file therefore exposes that file's contents to a third party. That is the same reach as opening the file yourself and pasting part of it into a prompt, which is not nothing, so the two directories are named above rather than left to be discovered.
 
-JSON must be an array of objects, or an object holding one — directly, or one level down, which is the shape `{"data": {"items": [...]}}` takes. Delimited text must be header-led, with the delimiter taken from a tab, comma, semicolon, or pipe. Quoted fields are honoured, a doubled quote inside one is a literal, a missing value is empty, and a short row is padded rather than dropped.
+### A source that is a page rather than a table
 
-A document that begins like JSON is reported as a JSON failure when it is not valid JSON, rather than reinterpreted as a table. Anything else that will not parse reports the format it looked like and what was wrong with it.
+A source may be a page describing an API instead of a file of values, and that is not a failure. What the host fetches is handed to the agent as it stands, and the agent's job is to work out how to reach the data behind it — read the documentation, find the request it describes, add the header or the query parameter the page mentions, follow the pagination, reshape the response — and to write what it fetched into its own workspace as JSON or delimited text with a header row.
 
-### The table
+The agent runs commands to do this, inside the workspace it is confined to and no further. Its reach is the same reach the host's own read has: the network, and whatever the sandbox profile allows. It cannot read a credential file the host's own read could not have read either. What is different is that the commands are the model's, and your own message is the only thing that starts them.
 
-Column names come from the first object or the header line, trimmed, de-duplicated, and capped. A column is numeric when every non-empty value in it is a number, boolean when every value is one of the two spellings, a date when every value is an ISO 8601 date the calendar agrees with, and text otherwise.
+A chart naming such a file says so in the line under it, naming the file it came from, so a picture that stopped an hour ago never reads like one that stopped a second ago.
 
-Only ISO 8601 is recognized, and a date is refused rather than reinterpreted: a day the month does not have, a month past twelve, an hour of twenty-four, and a format a reader could read two ways such as `2026-1-31` or `06/01/2024` all leave the column as text, which is a category exactly as it was. A date column is not a measure, so it cannot be plotted against; a timestamp carrying no offset is read in the machine's own zone rather than in one chosen for it.
+### Asking
 
-A chart over a date column draws its categories in the order the dates name rather than the order the source listed them, so a month of daily rows reads as a month. A scatter reads a date as a number and places each point by its instant, which is the one kind whose x axis is continuous.
+The exchange is the interface. The agent asks what it needs to know — which measure, compared against what, grouped how, called what — and you answer in the same box, in your own words. It also draws without asking if the data makes the answer obvious, and it says plainly when it could not get the data rather than inventing a chart.
 
-The application keeps at most 500 rows and 32 columns of what it read, and says so: the tab reports how much of the source it is showing, and whether it is showing the first columns, rather than implying the chart is the whole source. A source with no rows, or with no numeric column to measure, is refused by name.
+Every reply may carry two to four requests you could have made next, shown as one-click buttons above the composer. Clicking one sends it as your own words, the row is replaced by the next reply's, and it is gone the moment one is used so the same request cannot be asked twice. A reply that offers none shows no row at all.
 
-### The columns
+### What you can say
 
-A source that has been read shows every column it has, with the type read for it, and waits. A type nobody saw is a type nobody could have corrected, and a correction arriving after the first question is a correction to a conversation already resting on the wrong type — so the interview begins on a confirmation rather than on a read.
+**Change the chart.** Its kind, the columns it plots, the column that splits it into series, how the measure is reduced, its title, and its axis labels. "Make it a line chart", "split by year", "call it Revenue per head", "sum it rather than counting rows."
 
-A type may be changed to any of the four the reader infers, which are the four a chart and the model both branch on. Only the type changes: the values stay exactly as they were read, because a chart already reads a number written as text and rewriting the values would be a second, lossy copy of the decision. Once confirmed, the types are fixed — a change after that would invalidate questions already answered, and there is no honest way to un-ask them.
+**Change the data.** Four transformations, applied in order, each one a step you can see in the caption under the chart:
 
-A re-read that finds the same columns and types leaves the confirmation closed, so a refresh on a timer does not ask again every tick. A re-read that finds a different schema re-opens it, because what was confirmed is no longer what is on screen. Changing the source re-opens it whatever the old one was.
+- **filter** — keep only the rows where a column equals, differs from, exceeds, or falls below a value, contains a substring, or is one of several values. The comparison is made in the column's own type: numerically for a number, by instant for a date, against a boolean for a boolean, as text for text.
+- **derive** — add a new numeric column computed from an arithmetic expression over the columns already there, using numbers, column names, `+ - * /`, unary minus and parentheses and nothing else. "Revenue per employee", "margin as a share of revenue".
+- **sort** — order the rows by one column, in that column's own order, with the source order kept among equal values so the same data always draws the same way.
+- **limit** — keep the first *n* **distinct categories of the chart's own x column**, in the order the sort left them. Counted in categories rather than rows so a chart split into series loses a whole bar or line rather than one of a category's series, which would leave a mark a different height from its neighbour with nothing to explain it.
 
-### The interview
+A `sort` followed by a `limit` is a top-N; the reverse is a first-N. A step naming a column the data does not have is refused by name rather than quietly doing nothing, and a step that leaves no rows produces an empty chart rather than a failure — "only 2024" against a 2023-only source is a question with an empty answer.
 
-Reading a source is followed by a model call carrying a sample of it: every column with its type, the row count, and the first rows. The model replies with a series of questions about what to look at — which measure, what to compare it against, how to group it, what to call it — and the tab asks them one at a time.
+**Add and remove charts.** "Also plot revenue per employee by region" adds a second chart beside the first. Charts are named by what the agent calls them, and a reply can name one to change it and another to change which, so a later request reaches the right chart.
 
-Each question shows the model's suggested answers as one-click buttons, and the field beside them is always available. Clicking a suggestion is two interactions and typing is one, and typing stays possible because the useful answer is often none of the suggestions.
+**Rename it.** "Call this Revenue by region" renames the tab, the index entry and the saved record. A name the agent has set is not overwritten by a later chart's title.
 
-Answering the last question produces the chart. A reply the model could not be read from, or a chart naming a column the data does not have, a measure that is not numeric, or a pie whose category is a number, is refused and reported in the tab rather than stored; the questions and the answers are kept, so **Ask again** retries without redoing any of it.
+### The charts
 
-### The chart
+A chart is a specification, not generated code: a kind (`bar`, `line`, `area`, `scatter`, `pie`), an x column, a y column, an optional series column that splits the marks into one each, an optional aggregate, a title, and optional axis labels. The specification is checked against the real table before it is shown, so a reply naming a column the data does not have, or a measure that is not a number, or a pie whose category is a number, is refused and reported in the conversation — and one refused chart in a reply of four costs one chart, not the other three.
 
-A chart is a kind, an x column, a y column, an optional series column that splits the marks into one each, a title, and optional axis labels. The five kinds are `bar`, `line`, `area`, `scatter`, and `pie`. A row whose measure is not a number is dropped rather than plotted as a zero.
+An optional aggregate reduces the measure before anything is drawn, within each category and within each series of a category where the chart is split. It is one of `sum`, `mean`, `count`, `min`, and `max`, and leaving it out means every row is its own mark. A pie sums when it is left out, because a pie is a share of a whole. `count` counts the rows that would have been drawn, so a row whose measure is not a number is not counted either.
 
-An optional aggregate reduces the measure before anything is drawn, within each category and within each series of a category where the chart is split. It is one of `sum`, `mean`, `count`, `min`, and `max`, and leaving it out means every row is its own mark. A pie sums when it is left out, because a pie is a share of a whole. `count` counts the rows that would have been drawn, so a row whose measure is not a number is not counted either. An aggregate the grammar does not have is refused rather than ignored, because a chart that draws successfully while meaning something other than what was asked for cannot be noticed.
+A visualization holds at most eight charts. That is a bound on what it costs to send on every keystroke, not a judgement about how many are useful.
 
-Where a measure is reduced, every place the chart is described says so: the line under the chart names the reduction and the measure, the chart's own description for a screen reader reads as a sum or a mean rather than as a value, and the sentence left behind when the model changes a chart without explaining itself says the same.
+### The tab
 
-The chart's own title names the visualization and its tab, once, and only while the visualization has not been named some other way. Double-clicking the name in the metadata row renames it instead; a committed name is trimmed and capped at 60 characters, and a blank one changes nothing.
+The tab has no dropdowns and no controls of its own. Its metadata row is the name, the source as text, and the split control the host draws. The only things you can operate are the charts and the composer, and the only thing that changes a chart is what you type.
 
-### Reading a chart without seeing it
+Each chart carries its own four controls: read its data now, live update, export as PNG, and export as PDF. They belong to the chart rather than to the tab because they act on it alone.
 
-A chart is a picture, so the tab carries what the picture says. The chart names itself for a screen reader and describes its own content: the kind, the measure, the range it spans, and the largest and smallest mark. A description of a chart with nothing to plot says so rather than describing an empty range.
+A chart is also its own text alternative. It names itself for a screen reader and describes its own content — the kind, the measure, the range it spans, and the largest and smallest mark. A disclosure labelled **Data table** holds one row per mark the chart draws, generated from the same marks, so the table cannot disagree with the picture. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
 
-Beneath the chart, a disclosure labelled **Data table** holds one row per mark the chart draws — the category, the measure, and the series when the chart is split by one, for a pie the summed categories, and for a scatter its two numeric columns. It is closed by default, so the tab opens on a chart rather than on a table, and it is generated from the same marks the chart is drawn from, so it cannot disagree with the chart. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
-
-### Looking closer
-
-A drawn chart carries three controls: an **Order** choosing as read, by category, or by value largest first; a **Show** choosing all of them or the largest five, ten, or twenty; and an **Only** filter narrowing the chart to one category. They are the tab's own view of the data it already holds, so none of them asks the model anything, and none of them is stored: the chart specification stays the model's and the view stays the reader's.
-
-A cap is counted in categories rather than in marks, so a chart split by a second column loses a whole category rather than one of its series, which would leave a bar a different height from its neighbour with nothing to explain it. A narrowed chart renumbers its categories so the axis has no gap where a category was dropped.
-
-The line under a narrowed chart says so, naming the cap and the filter, and the data table and the chart's description follow the same narrowing as the picture. A re-read replaces the table the view was narrowing, so the view is dropped with it rather than carrying over onto data the user never saw.
-
-### Changing the chart
-
-Once a chart exists the tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query, Shift+Enter starts a new line, Escape clears an unsent one, and Escape during a reply cancels it. A second query is refused while a reply is in flight, and a refused Enter leaves the typed text in place.
-
-The model is asked for the updated chart and may answer with prose instead, in which case what it said is shown as the reply and the chart is left as it was. When it changes the chart and explains nothing, the tab says what the chart now is instead — the kind, the measure against the category, and the column it is split by — so a change never lands silently. The exchange stays in the tab, oldest first, and follows new output to the bottom until the user scrolls away.
-
-The answers given to the interview are recorded as the first turn, and the chart the interview produced is its reply, so the reasoning behind a chart is readable after the fact rather than only at the moment it was given.
-
-Every reply that produces a chart may carry two to four follow-up requests with it, offered above the command bar as one-click modifications, because the suggestions are useful exactly when there is a chart to react to. Each sends its own text as the request, the row is replaced by whichever reply comes next, and it is dropped the moment one is used so the same request cannot be sent twice. A reply offering none shows no row at all. A revision is told what was already suggested, so its replacement is a replacement rather than the same requests again.
-
-The reply is rendered as sanitized Markdown, the same as any other model reply in the application. Only the reply text is shown; whatever reasoning the model did is not.
+The line under a chart says how many rows it is showing, how the measure was reduced, each transformation in the order it was applied, where the data came from, and when it was read. A chart showing five of twelve regions with nothing saying so is a chart lying by omission, and so is one whose bars are totals presented as raw values.
 
 ### Export
 
-**Export as PNG** and **Export as PDF** are available once there is a chart, and write a file named after the chart's title. Both rasterize what is on screen at twice its size, so an export matches the tab rather than a redrawing of it. The page colour is laid down first, because a chart exported transparent looks broken in a viewer. A PDF is one page holding one image, deflated where the browser can deflate and uncompressed where it cannot.
+**Export this chart as PNG** and **Export this chart as PDF** are available on each chart and write a file named after that chart's title. Both rasterize what is on screen at twice its size, so an export matches the tab rather than a redrawing of it. The page colour is laid down first, because a chart exported transparent looks broken in a viewer. A PDF is one page holding one image, deflated where the browser can deflate and uncompressed where it cannot. An export that fails says so in the tab and leaves the chart alone.
 
-An export that fails says so in the tab and leaves the chart alone.
+### Live update
 
-### Staying current
+Each chart has its own interval, offered as a single control that steps through off, ten seconds, thirty seconds, a minute and five minutes, and says in its tooltip both where it is and where a click goes. A refresh happens only while a tab for that visualization is open, so a saved visualization is never fetched behind your back.
 
-A visualization is read once and then left alone. The refresh control offers off, ten seconds, thirty seconds, a minute, and five minutes, and **Read the source now** re-reads on demand without changing the interval. A refresh happens only while a tab for that visualization is open, so a saved visualization is never fetched behind the user's back, and a re-read never overlaps one already in flight.
-
-A re-read that fails records the reason and leaves the previous table on screen, so a source that stops answering does not also take the chart off the screen. The tab reports when the data was last read. A re-read that changes the data does not change the chart: the specification is the user's, and asking for a different one is what changes it.
+A re-read that fails records the reason and leaves the previous table on screen, so a source that stops answering does not also take the chart off the screen. A re-read that changes the data does not change the chart: the specification is yours, and asking is what changes it. A chart whose data the agent acquired is re-asked rather than re-read, because nothing else knows how that data is reached — which is the one case where live update costs a model call, and why the interval is a choice rather than a number.
 
 ### Recovery
 
-While there is no chart, the source can be replaced. That discards the interview and every answer in it, so it is confirmed first, and the previous source stays until a replacement is given. Once a chart exists the source cannot be replaced, because every answer the user gave was given about the old data; the control is not shown then, rather than shown and refused.
-
-A model that asked nothing leaves a visualization with a source and no questions, which says so and offers **Ask again**.
+A source that will not read, an address refused, a transformation over a column that is not there, a model that answered with something unreadable: each is reported in the conversation and leaves the tab working. Pointing at a different address in a later message is the way back, and the charts you already have are unaffected.
 
 ### Deleting
 
-Deleting from the index asks first, and removes the record, its private workspace, and the workspace's trust entry. A tab that was open for it stays open, saying the visualization was deleted, with every control on it disabled.
+Deleting from the index asks first, and removes the record, its private workspace, and the workspace's trust entry. A tab that was open for it stays open, saying the visualization was deleted, with its composer disabled.
 
 ### Storage and the agent
 
 Each visualization is stored in its own directory under the user's Janissary data directory, holding the record, an empty private workspace, and that workspace's private temporary directory. The directory is created on the first read, so a visualization that was never read leaves nothing on disk, and it survives application restarts and project workspace sweeps.
 
-The model is tool-less and runs in that workspace, so it receives neither the project tree nor another visualization's data. Seatbelt confinement is best-effort: it applies on macOS while workspace sandboxing is enabled and available. See [[sandbox]] and [[acp]].
+The model is chosen from the catalogued `claude` and `opencode` models, and applies from the first call onward. Every prompt carries the whole state it needs, so a new session behaves exactly as a continuing one and nothing is replayed. The exchange shown is the last twelve turns; the tab shows all of them.
 
-The model is chosen from the catalogued `claude` and `opencode` models in the metadata row, grouped by harness, and applies from the next call onward. Changing it ends the current session. Unlike a conversation, every prompt carries the whole state it needs, so a new session behaves exactly as a continuing one and nothing is replayed.
+Seatbelt confinement of the agent is best-effort: it applies on macOS while workspace sandboxing is enabled and available. See [[sandbox]] and [[acp]].
 
 ### Profiles
 

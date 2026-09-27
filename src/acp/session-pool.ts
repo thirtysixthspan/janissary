@@ -10,6 +10,11 @@ import type { ConversationModelPair } from '../protocol.js';
 export type AcpSessionPoolHooks = {
   onError: (message: string) => void;
   onConnect?: () => void;
+  // Passed through to `connectAcp` for a session opened with it. A visualization's agent sets it so
+  // it may run the commands that acquire its data; every other caller leaves it off and its session
+  // stays tool-less. Only honoured when a session is first connected, which is the same rule as the
+  // pair it is keyed by.
+  allowEveryTool?: boolean;
 };
 
 export class AcpSessionPool {
@@ -33,6 +38,7 @@ export class AcpSessionPool {
         workspaceDir,
         onError: hooks.onError,
         onConnect: hooks.onConnect,
+        ...(hooks.allowEveryTool === true && { allowEveryTool: true }),
       });
       this.sessions.set(id, session);
     }

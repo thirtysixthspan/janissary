@@ -39,19 +39,7 @@
 .visualization-row time, .visualization-source { color: var(--muted); font-size: 12px; }
 .visualization-row button { border: 0; background: transparent; color: var(--muted); }
 
-/* The two selectors ride in the right-aligned action group with the export and split controls, so that
-   group's 2px gap — meant for adjacent icon buttons — has to widen or the model selector jams against
-   the refresh one. */
-.visualization-header .plugin-actions { gap: 8px; }
-.visualization-header .plugin-actions select { max-width: min(28vw, 220px); }
-.visualization-header .plugin-actions select[aria-label="Refresh"] { max-width: min(10vw, 90px); }
-
 .visualization-source { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
-.visualization-title { cursor: text; }
-.visualization-title-input {
-  font: inherit; font-weight: 600; color: var(--fg); background: transparent;
-  border: none; outline: none; padding: 0; margin: 0;
-}
 
 /* The tab gives up the padded plugin frame for the same reason the conversation tab does: the command
    bar it ends with is a full-width band with a rule along its top, and an inset one reads as a floating
@@ -59,37 +47,37 @@
 .visualization-tab.plugin-tab { padding: 0; gap: 0; }
 .visualization-header { padding: 8px 12px 0; }
 
-/* The note above a chart that is still on screen after a failed re-read. It shares the reason text's
-   colour and nothing else, because it is a note on the metadata rather than a page in its own right. */
-.visualization-reason-note { color: var(--error); margin: 0; padding: 0 12px; font-size: 12px; }
-
-.visualization-figure {
-  flex: 1; min-height: 0; margin: 0; padding: 12px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 6px; overflow: auto;
+/* The charts, one above the next in a scrolling column above the exchange. The tab holds several of them
+   now, so the column rather than the tab scrolls and the composer stays where a composer belongs. */
+.visualization-cards { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.visualization-card {
+  margin: 0; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
+.visualization-card + .visualization-card { border-top: 1px solid var(--border); }
 .visualization-chart { max-width: 100%; height: auto; }
 .visualization-chart-title { fill: var(--fg); font-size: 14px; font-weight: 600; }
 .visualization-chart-empty, .visualization-chart-legend { fill: var(--muted); font-size: 11px; }
-.visualization-figure figcaption { color: var(--muted); font-size: 11px; }
+.visualization-card figcaption { color: var(--muted); font-size: 11px; text-align: center; }
 
-/* The three ways of looking closer, in a row above the chart's own data table. They are labels wrapping
-   selects rather than buttons, so each one is announced with what it controls. */
-.visualization-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 0 12px 8px; }
-.visualization-controls label { display: flex; gap: 4px; align-items: center; color: var(--muted); font-size: 12px; }
-.visualization-controls select {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
-  font: inherit; font-size: 12px; padding: 2px 4px;
+/* A chart's own controls, right-aligned under it. Four icon buttons, because the tab has none and the
+   live-update one says in its tooltip both where it is and where a click goes. */
+.visualization-card-actions { display: flex; gap: 8px; justify-content: flex-end; width: 100%; }
+.visualization-card-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 2px 4px; line-height: 1;
 }
-.visualization-controls button {
-  background: transparent; border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
-  cursor: pointer; font-size: 12px; padding: 2px 10px;
-}
+.visualization-card-actions button:hover:not(:disabled) { color: var(--fg); }
+.visualization-card-actions button:disabled { opacity: 0.45; cursor: default; }
 
-/* The chart's text alternative, closed by default so the tab still opens on a chart and not on a table.
-   It sits between the figure and the exchange because it belongs to the chart rather than to the
-   conversation about it, and the table scrolls inside its own box so a long one cannot push the chart
-   off the screen. */
-.visualization-data { padding: 0 12px 8px; font-size: 12px; }
+/* The note above a chart that is still on screen after a failed re-read, and the one above the composer
+   when the failure is the source rather than any one chart. Both share the reason colour, because both
+   are notes on the metadata rather than pages in their own right. */
+.visualization-reason-note { color: var(--error); margin: 0; padding: 8px 12px 0; font-size: 12px; }
+
+/* The chart's text alternative, closed by default so a tab opens on a chart and not on a table. It sits
+   inside the chart's own card because it belongs to the chart rather than to the conversation about it,
+   and the table scrolls inside its own box so a long one cannot push the exchange off the screen. */
+.visualization-data { width: 100%; font-size: 12px; }
 .visualization-data > summary { color: var(--muted); cursor: pointer; padding: 4px 0; }
 .visualization-data > summary:hover { color: var(--fg); }
 .visualization-data-summary { color: var(--muted); margin: 6px 0; }
@@ -103,71 +91,13 @@
 .visualization-data th.is-numeric, .visualization-data td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .visualization-data tbody tr:last-child td { border-bottom: none; }
 
-/* The schema, shown before the interview asks anything. A column name and a select per column, laid out
-   as a two-column grid so a long column name truncates rather than pushing its own type control off the
-   edge. */
-.visualization-review { padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
-.visualization-review-text { margin: 0; }
-.visualization-review-columns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.visualization-review-column { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
-.visualization-review-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.visualization-review-column select {
-  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
-  font: inherit; font-size: 12px; padding: 2px 4px;
-}
-.visualization-review-confirm {
-  align-self: flex-start; background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 10px;
-}
-.visualization-review-confirm:disabled { opacity: 0.45; cursor: default; }
-
 .visualization-pending, .visualization-gone { color: var(--muted); padding: 16px 12px; }
 .visualization-gone, .visualization-export-error, .visualization-reason-text { color: var(--error); }
-.visualization-export-error { padding: 0 12px; margin: 0; font-size: 12px; }
+.visualization-export-error { margin: 0; font-size: 12px; align-self: flex-start; }
 
-.visualization-reason { padding: 16px 12px; display: flex; flex-direction: column; gap: 12px; }
-.visualization-reason-text { margin: 0; }
-.visualization-reason-actions { display: flex; gap: 8px; }
-.visualization-reason-actions button, .visualization-source-form button {
-  background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 10px;
-}
-.visualization-reason-actions button:disabled, .visualization-source-form button:disabled { opacity: 0.45; cursor: default; }
-
-.visualization-source-form { display: flex; gap: 6px; align-items: center; }
-.visualization-source-form input {
-  flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); font: inherit; font-size: 12px; padding: 4px 8px;
-}
-
-/* The question region: a progress line, the question, its suggestions as one-click answers, and a field
-   for the answer none of them covers. */
-.visualization-question { padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
-.visualization-question-progress { color: var(--muted); font-size: 12px; margin: 0; }
-.visualization-question-text { margin: 0; }
-.visualization-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
-.visualization-suggestion {
-  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px;
-  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 12px;
-}
-.visualization-suggestion:disabled { opacity: 0.45; cursor: default; }
-.visualization-answer { display: flex; gap: 6px; }
-.visualization-answer input {
-  flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); font: inherit; padding: 5px 8px;
-}
-.visualization-answer button {
-  background: transparent; border: 1px solid var(--border); border-radius: 4px;
-  color: var(--fg); cursor: pointer; padding: 4px 12px;
-}
-.visualization-answer button:disabled { opacity: 0.45; cursor: default; }
-
-/* The exchange that changes the chart: a scrollable transcript above the command bar, inset further than
-   either of them so the conversation reads as its own region. */
-/* The follow-up row above the command bar. It borrows the interview's suggestion styling wholesale, so
-   it only needs to say where it sits. */
+/* The exchange, a scrollable transcript above the command bar. The suggestion row above the composer
+   borrows the interview's own button styling, so it only needs to say where it sits. */
 .visualization-follow-ups { padding: 0 12px 6px; }
-
 .visualization-chat {
   flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px;
   padding: 16px 12px;
@@ -181,3 +111,9 @@
 }
 .visualization-chat-response { user-select: text; }
 .visualization-chat-error { color: var(--error); margin: 0; }
+.visualization-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
+.visualization-suggestion {
+  background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 12px;
+}
+.visualization-suggestion:disabled { opacity: 0.45; cursor: default; }

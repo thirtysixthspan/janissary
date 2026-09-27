@@ -20,7 +20,8 @@ import { childOutputTail, withChildOutput } from '../child-output.js';
  *
  * Scope: streams `agent_message_chunk` text into the prompt handler and advertises no fs/terminal
  * capabilities (so the agent never calls those back). Tool permission requests are denied unless
- * `options.allowedTools` opts a classified web tool in (see acp-tools.ts) — undefined/empty (every
+ * `options.allowedTools` opts a classified web tool in, or `options.allowEveryTool` asks for every
+ * request to be granted the least-privilege way (see acp-tools.ts) — undefined/empty (every
  * non-monitor caller and every tool-less persona) denies every request, as before.
  *
  * `workspaceDir`/`offline` confine the subprocess to that workspace via a Seatbelt sandbox (see
@@ -64,9 +65,12 @@ export function connectAcp(options: AcpOptions): AcpSession {
         current?.onChunk(update.content.text);
       }
     },
-    // Deny every tool request unless the persona's allowlist opts a classified web tool in.
+    // Deny every tool request unless the persona's allowlist opts a classified web tool in, or the
+    // caller asked for every request to be granted the least-privilege way.
     async requestPermission(params) {
-      return { outcome: decidePermission(options.allowedTools, params.toolCall, params.options) };
+      return {
+        outcome: decidePermission(options.allowedTools, params.toolCall, params.options, options.allowEveryTool),
+      };
     },
   };
 

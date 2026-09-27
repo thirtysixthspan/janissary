@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { dataTableFor, describeChart } from './describe';
 import type { ChartShape, Table } from './points';
-import { DEFAULT_VIEW } from './view';
-// Every existing case here describes a chart nobody has narrowed, which is the regression this suite
-// exists to protect; the viewed cases live in their own describe blocks below.
-const described = (table: Table, chart: ChartShape) => describeChart(table, chart, DEFAULT_VIEW);
-const tabled = (table: Table, chart: ChartShape) => dataTableFor(table, chart, DEFAULT_VIEW);
+// Every case here describes the chart the specification asked for. The transformations that narrow one
+// are applied on the server and reach the browser as a table already narrowed, so there is no view to
+// pass and nothing in this suite may reintroduce one.
+const described = (table: Table, chart: ChartShape) => describeChart(table, chart);
+const tabled = (table: Table, chart: ChartShape) => dataTableFor(table, chart);
 
 
 const TABLE: Table = {

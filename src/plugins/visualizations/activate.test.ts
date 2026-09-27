@@ -16,9 +16,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     title: 'Revenue',
     source: 'https://example.com/d.csv',
     pair: { harness: 'opencode', model: 'model' },
-    refreshSeconds: 0,
-    reviewed: true,
-    questions: [],
+    charts: [],
     turns: [],
     ...over,
   };
@@ -44,7 +42,7 @@ function fixture(data: VisualizationsView = viewOf()) {
   const topicAction = (action: TabPluginTopicAction) => {
     actions.push(action);
     if (action.topic === 'visualizations' && action.action === 'create') {
-      data.windows.push(windowOf({ id: action.id, title: 'New visualization', source: action.source }));
+      data.windows.push(windowOf({ id: action.id, title: 'New visualization', source: '' }));
     }
   };
   const capabilities = {
@@ -125,20 +123,22 @@ describe('visualizations command', () => {
 });
 
 describe('Visualize this', () => {
-  it('creates a visualization from the selection, verbatim', () => {
+  // The selection is the opening message rather than a field the tab has to offer, so a user who selected
+  // an address anywhere in the application lands in a tab that has already been sent it.
+  it('creates a visualization whose first message is the selection, verbatim', () => {
     const fake = fixture();
     activate().defaultMenuAction?.('https://example.com/d.csv', fake.capabilities);
     const created = fake.actions.find((action) => action.action === 'create');
-    expect(created).toMatchObject({ topic: 'visualizations', source: 'https://example.com/d.csv' });
+    expect(created).toMatchObject({ topic: 'visualizations', message: 'https://example.com/d.csv' });
     expect(fake.opened).toHaveLength(1);
   });
 
-  // A selection that is not a source is answered by the host refusing to read it, and this is where
+  // A selection that is not an address is answered by the host refusing to read it, and this is where
   // that refusal happens — the plugin passes the text through without inspecting it.
   it('passes a selection that is not a source straight through', () => {
     const fake = fixture();
     activate().defaultMenuAction?.('just some text', fake.capabilities);
-    expect(fake.actions[0]).toMatchObject({ source: 'just some text' });
+    expect(fake.actions[0]).toMatchObject({ message: 'just some text' });
   });
 });
 
@@ -175,9 +175,11 @@ describe('visualizations notifications', () => {
 });
 
 describe('visualizations list intents', () => {
-  it('creates from a source, opens by id, and deletes by id', () => {
-    expect(intent('create', { source: 'https://example.com/d.csv' }, LIST).actions)
-      .toContainEqual({ topic: 'visualizations', action: 'create', id: expect.any(String), source: 'https://example.com/d.csv' });
+  it('creates an empty one, opens by id, and deletes by id', () => {
+    expect(intent('create', {}, LIST).actions)
+      .toContainEqual({ topic: 'visualizations', action: 'create', id: expect.any(String) });
+    expect(intent('create', { message: 'https://example.com/d.csv' }, LIST).actions)
+      .toContainEqual({ topic: 'visualizations', action: 'create', id: expect.any(String), message: 'https://example.com/d.csv' });
     expect(intent('open', { id: 'one' }, LIST).actions)
       .toEqual([{ topic: 'visualizations', action: 'load', id: 'one' }]);
     expect(intent('delete', { id: 'one' }, LIST).actions)
@@ -189,7 +191,7 @@ describe('visualizations list intents', () => {
   });
 
   it('rejects a malformed payload without disabling the plugin', () => {
-    expect(() => intent('create', { source: '' }, LIST)).toThrow('invalid create payload');
+    expect(() => intent('create', { message: '  ' }, LIST)).toThrow('invalid create payload');
     expect(() => intent('open', { id: '' }, LIST)).toThrow('invalid open payload');
     expect(() => intent('delete', {}, LIST)).toThrow('invalid delete payload');
   });
@@ -201,17 +203,10 @@ describe('visualizations list intents', () => {
 
 describe('visualizations record intents', () => {
   const cases: [string, unknown, Record<string, unknown>][] = [
-    ['start-interview', {}, { action: 'startInterview' }],
     ['cancel', {}, { action: 'cancel' }],
-    ['refresh-now', {}, { action: 'refreshNow' }],
-    ['answer', { questionId: 'q1', answer: 'revenue' }, { action: 'answer', questionId: 'q1', answer: 'revenue' }],
-    ['revise', { query: 'make it a line' }, { action: 'revise', query: 'make it a line' }],
-    ['set-refresh', { seconds: 30 }, { action: 'setRefresh', seconds: 30 }],
-    ['rename', { title: 'Quarterly' }, { action: 'rename', title: 'Quarterly' }],
-    ['set-source', { source: 'https://example.com/o.csv' }, { action: 'setSource', source: 'https://example.com/o.csv' }],
-    ['select-model', { harness: 'claude', model: 'm' }, { action: 'setModel', pair: { harness: 'claude', model: 'm' } }],
-    ['confirm-schema', {}, { action: 'confirmSchema' }],
-    ['set-column-type', { column: 'revenue', type: 'number' }, { action: 'setColumnType', column: 'revenue', type: 'number' }],
+    ['send', { query: 'make it a line' }, { action: 'send', query: 'make it a line' }],
+    ['set-chart-refresh', { chartId: 'c1', seconds: 30 }, { action: 'setChartRefresh', chartId: 'c1', seconds: 30 }],
+    ['refresh-chart', { chartId: 'c1' }, { action: 'refreshChart', chartId: 'c1' }],
   ];
 
   for (const [name, payload, expected] of cases) {
@@ -224,12 +219,10 @@ describe('visualizations record intents', () => {
 
   it('rejects a payload the named intent does not accept', () => {
     expect(() => intent('cancel', { extra: 1 }, TAB)).toThrow('invalid cancel payload');
-    expect(() => intent('answer', { questionId: 'q1' }, TAB)).toThrow('invalid answer payload');
-    expect(() => intent('revise', { query: '  ' }, TAB)).toThrow('invalid revise payload');
-    expect(() => intent('set-refresh', { seconds: -1 }, TAB)).toThrow('invalid set-refresh payload');
-    expect(() => intent('set-source', { source: '' }, TAB)).toThrow('invalid set-source payload');
-    expect(() => intent('set-column-type', { column: 'revenue', type: 'currency' }, TAB)).toThrow('invalid set-column-type payload');
-    expect(() => intent('confirm-schema', { extra: 1 }, TAB)).toThrow('invalid confirm-schema payload');
+    expect(() => intent('send', { query: '  ' }, TAB)).toThrow('invalid send payload');
+    expect(() => intent('set-chart-refresh', { chartId: 'c1', seconds: -1 }, TAB)).toThrow('invalid set-chart-refresh payload');
+    expect(() => intent('set-chart-refresh', { seconds: 30 }, TAB)).toThrow('invalid set-chart-refresh payload');
+    expect(() => intent('refresh-chart', { chartId: '' }, TAB)).toThrow('invalid refresh-chart payload');
   });
 
   it('rejects an intent it does not declare, including one every object carries', () => {

@@ -1,191 +1,184 @@
 import { describe, expect, it } from 'vitest';
-import { chartPrompt, openingPrompt, parseChart, parseQuestions, revisionPrompt } from './prompts.js';
-import type { Table } from './table.js';
+import { chatPrompt, refreshPrompt } from './prompts.js';
+import { parseReply } from './reply.js';
+import { VISUALIZATION_SCHEMA_VERSION, type VisualizationRecord } from './store.js';
+import type { VisualizationTableView } from '../protocol.js';
 
-const TABLE: Table = {
+const TABLE: VisualizationTableView = {
   columns: [
     { name: 'region', type: 'string' },
     { name: 'revenue', type: 'number' },
   ],
   rows: [['north', 10], ['south', 4]],
+  total: 2,
+  truncated: false,
 };
 
-describe('openingPrompt', () => {
-  it('names every column with its type, the row count, and a sample of the rows', () => {
-    const prompt = openingPrompt('https://example.com/d.csv', TABLE);
-    expect(prompt).toContain('- region (string)');
-    expect(prompt).toContain('- revenue (number)');
-    expect(prompt).toContain('Rows available: 2');
-    expect(prompt).toContain('[["north",10],["south",4]]');
-    expect(prompt).toContain('https://example.com/d.csv');
+const WORKSPACE = { workspace: '/tmp/workspace' };
+
+function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
+  return {
+    schemaVersion: VISUALIZATION_SCHEMA_VERSION,
+    id: 'one',
+    title: 'New visualization',
+    createdAt: 1,
+    updatedAt: 1,
+    source: 'https://example.com/d.csv',
+    pair: { harness: 'opencode', model: 'model' },
+    datasets: [{ key: 'source', table: TABLE, readAt: 1 }],
+    charts: [],
+    turns: [],
+    ...over,
+  };
+}
+
+describe('the prompt', () => {
+  it('names the source, its columns, their types, its rows, and the first of them', () => {
+    const text = chatPrompt(record(), WORKSPACE);
+    expect(text).toContain('the source the user pointed at');
+    expect(text).toContain('- region (string)');
+    expect(text).toContain('- revenue (number)');
+    expect(text).toContain('Rows available: 2');
+    expect(text).toContain('[["north",10],["south",4]]');
   });
 
-  it('asks for questions and says the answer may be free text', () => {
-    const prompt = openingPrompt('x', TABLE);
-    expect(prompt).toContain('questions');
-    expect(prompt).toContain('own words');
-    expect(prompt).toContain('one JSON object');
-  });
-});
-
-describe('chartPrompt', () => {
-  it('carries the answered questions and the shape it wants back', () => {
-    const prompt = chartPrompt(TABLE, [
-      { question: 'Which measure?', answer: 'revenue' },
-      { question: 'Split by?', answer: 'region' },
-    ]);
-    expect(prompt).toContain('Q: Which measure?\nA: revenue');
-    expect(prompt).toContain('Q: Split by?\nA: region');
-    expect(prompt).toContain('"kind"');
+  it('names the workspace the agent may write into', () => {
+    expect(chatPrompt(record(), WORKSPACE)).toContain('Their workspace is /tmp/workspace');
   });
 
-  it('ignores an unanswered question rather than sending a blank answer', () => {
-    const prompt = chartPrompt(TABLE, [
-      { question: 'Which measure?', answer: 'revenue' },
-      { question: 'Split by?' },
-    ]);
-    expect(prompt).toContain('Q: Which measure?');
-    expect(prompt).not.toContain('Q: Split by?');
+  it('says a cap is a cap rather than presenting the kept rows as the whole source', () => {
+    const text = chatPrompt(record({
+      datasets: [{ key: 'source', table: { ...TABLE, rows: TABLE.rows.slice(0, 1), total: 12_043, truncated: true } }],
+    }), WORKSPACE);
+    expect(text).toContain('(of 12043 read; only the first 1 are kept)');
   });
 
-  it('says so when there were no questions at all', () => {
-    expect(chartPrompt(TABLE, [])).toContain('asked no questions');
+  // The whole of the API case: the model is handed the page, because working out what it describes is
+  // its job and it cannot do it from a summary.
+  it('hands over a page verbatim, and says what to do with it', () => {
+    const page = '<html>GET /sales?year=</html>';
+    const text = chatPrompt(record({ datasets: [{ key: 'source', document: page }] }), WORKSPACE);
+    expect(text).toContain('It is not itself a table');
+    expect(text).toContain(page);
+    expect(text).toContain('write what you fetched into your workspace');
   });
 
-  // A field the prompt never names is a field the model never fills in, so the aggregate has to be in
-  // the prose and in the example rather than left to be guessed at.
-  it('names the aggregate, its values, and when to use one', () => {
-    const prompt = chartPrompt(TABLE, []);
-    expect(prompt).toContain('`aggregate` is optional');
-    for (const aggregate of ['sum', 'mean', 'count', 'min', 'max']) {
-      expect(prompt).toContain(`"${aggregate}"`);
-    }
-    expect(prompt).toContain('"aggregate":"sum"');
-    expect(prompt).toContain('one row per transaction needs "sum"');
+  it('names a file the agent acquired as that file', () => {
+    const text = chatPrompt(record({
+      datasets: [{ key: 'source', table: TABLE }, { key: 'data.json', table: TABLE }],
+    }), WORKSPACE);
+    expect(text).toContain('the file "data.json" you acquired');
   });
 
-  it('tells a revision to leave the aggregate alone unless the query is about it', () => {
-    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line'))
-      .toContain('including the aggregate');
+  it('carries the exchange, and no more than the last twelve turns', () => {
+    const turns = Array.from({ length: 14 }, (_, index) => ({
+      query: `ask ${index}`, response: `answer ${index}`, pair: { harness: 'opencode' as const, model: 'm' },
+    }));
+    const text = chatPrompt(record({ turns }), WORKSPACE);
+    expect(text).toContain('User: ask 13');
+    expect(text).not.toContain('User: ask 0');
   });
 
-  it('asks for follow-up questions in both chart prompts', () => {
-    expect(chartPrompt(TABLE, [])).toContain('follow-up questions');
-    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line'))
-      .toContain('follow-up questions');
+  it('states the contract, the five kinds, the five aggregates and the four transformations', () => {
+    const text = chatPrompt(record(), WORKSPACE);
+    expect(text).toContain('Reply with one JSON object and nothing else');
+    expect(text).toContain('bar, line, area, scatter, pie');
+    expect(text).toContain('"sum", "mean", "count", "min", "max"');
+    expect(text).toContain('"op":"filter"');
+    expect(text).toContain('"op":"derive"');
+    expect(text).toContain('"op":"sort"');
+    expect(text).toContain('"op":"limit"');
+    expect(text).toContain('{"kind":"source"}');
+    expect(text).toContain('{"kind":"file","path":"…"}');
   });
 
-  // Without the set it already offered, a reply proposes from scratch and the same question comes back
-  // after a change that answered it.
-  it('carries the follow-ups it already offered into a revision', () => {
-    const prompt = revisionPrompt(
-      TABLE,
-      { kind: 'bar', x: 'region', y: 'revenue', title: 'T' },
-      'make it a line',
-      ['split by region', '  ', 'show visits'],
-    );
-    expect(prompt).toContain('You already suggested these');
-    expect(prompt).toContain('- split by region');
-    expect(prompt).toContain('- show visits');
-    expect(prompt).not.toContain('-   \n');
+  it('says a note for the model about the source, in place of the datasets', () => {
+    const text = chatPrompt(record(), { ...WORKSPACE, sourceNote: 'They have not given you a source yet.' });
+    expect(text).toContain('They have not given you a source yet.');
+    expect(text).not.toContain('- revenue (number)');
   });
 
-  it('says nothing about earlier suggestions when there were none', () => {
-    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line', []))
-      .not.toContain('You already suggested these');
-  });
-});
-
-describe('revisionPrompt', () => {
-  it('carries the query and the chart as it stands', () => {
-    const prompt = revisionPrompt(TABLE, { kind: 'bar', x: 'region', y: 'revenue', title: 'T' }, 'make it a line');
-    expect(prompt).toContain('make it a line');
-    expect(prompt).toContain('"kind":"bar"');
-    expect(prompt).toContain('answer it in `note`');
+  it('shows a visualization with no charts as having none', () => {
+    expect(chatPrompt(record(), WORKSPACE)).toContain('There are no charts yet.');
   });
 });
 
-describe('parseQuestions', () => {
-  it('reads a bare JSON object and numbers the questions', () => {
-    expect(parseQuestions('{"questions":[{"question":"Which measure?","suggestions":["revenue","visits"]}]}'))
-      .toEqual([{ id: 'q1', question: 'Which measure?', suggestions: ['revenue', 'visits'] }]);
+describe('the re-read prompt', () => {
+  const chart = {
+    id: 'c1',
+    data: { kind: 'file' as const, path: 'data.json' },
+    transforms: [],
+    refreshSeconds: 30,
+    table: TABLE,
+    kind: 'bar' as const,
+    x: 'region',
+    y: 'revenue',
+    title: 'Revenue by region',
+  };
+
+  it('asks for a file to be fetched again, into the same place, with the same specification', () => {
+    const text = refreshPrompt(record({ charts: [chart] }), chart, WORKSPACE);
+    expect(text).toContain('Fetch it again');
+    expect(text).toContain('the same chart specification');
   });
 
-  it('unwraps a fenced block and drops anything around it', () => {
-    const reply = 'Here you go:\n```json\n{"questions":[{"question":"Q?","suggestions":[]}]}\n```\nHope that helps!';
-    expect(parseQuestions(reply)).toEqual([{ id: 'q1', question: 'Q?', suggestions: [] }]);
-  });
-
-  it('drops an entry with no question, and an empty suggestion', () => {
-    const reply = '{"questions":[{"question":"","suggestions":["a"]},{"question":"Q?","suggestions":["a","",3]}]}';
-    expect(parseQuestions(reply)).toEqual([{ id: 'q1', question: 'Q?', suggestions: ['a'] }]);
-  });
-
-  it('refuses a reply that is not a JSON object, or carries no questions', () => {
-    expect(parseQuestions('I am not sure what to ask.')).toBeUndefined();
-    expect(parseQuestions('{"questions":[]}')).toBeUndefined();
-    expect(parseQuestions('{"other":1}')).toBeUndefined();
+  it('asks for nothing but the specification when the host will re-read the source itself', () => {
+    const onSource = { ...chart, data: { kind: 'source' as const } };
+    const text = refreshPrompt(record(), onSource, WORKSPACE);
+    expect(text).toContain('the host re-reads the source');
   });
 });
 
-describe('parseChart', () => {
-  it('reads a chart and its note', () => {
-    expect(parseChart('{"kind":"line","x":"region","y":"revenue","title":"Revenue"}'))
-      .toEqual({ chart: { kind: 'line', x: 'region', y: 'revenue', title: 'Revenue' }, note: '', followUps: [] });
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","note":"here"}')?.note).toBe('here');
+describe('parsing a reply', () => {
+  const chart = { kind: 'bar', x: 'region', y: 'revenue', title: 'Revenue by region' };
+
+  it('reads a complete reply', () => {
+    const reply = parseReply(JSON.stringify({
+      say: 'Here it is.', name: 'Regional revenue',
+      charts: [{ ...chart, data: { kind: 'source' }, transforms: [] }],
+      remove: ['old'], followUps: ['make it a line chart', '  ', 'split by year'],
+    }));
+    expect(reply?.say).toBe('Here it is.');
+    expect(reply?.name).toBe('Regional revenue');
+    expect(reply?.remove).toEqual(['old']);
+    expect(reply?.followUps).toEqual(['make it a line chart', 'split by year']);
+    expect(reply?.charts[0]).toMatchObject({ kind: 'bar', x: 'region', title: 'Revenue by region' });
   });
 
-  it('keeps a series column and axis labels when they are given, and drops empty ones', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","series":"g","title":"T","xLabel":"G","yLabel":""}'))
-      .toEqual({ chart: { kind: 'bar', x: 'r', y: 'v', series: 'g', title: 'T', xLabel: 'G' }, note: '', followUps: [] });
+  it('reads a chart that changes only what it names', () => {
+    const reply = parseReply(JSON.stringify({ charts: [{ id: 'c1', ...chart }] }));
+    expect(reply?.charts[0]?.id).toBe('c1');
+    expect(reply?.charts[0]?.data).toBeUndefined();
+    expect(reply?.charts[0]?.transforms).toBeUndefined();
   });
 
-  it('refuses a chart naming a kind it does not draw, or missing a column or a title', () => {
-    expect(parseChart('{"kind":"radar","x":"r","y":"v","title":"T"}')).toBeUndefined();
-    expect(parseChart('{"kind":"bar","x":"r","title":"T"}')).toBeUndefined();
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"  "}')).toBeUndefined();
+  it('unwraps a fenced reply, which is the common case rather than the exception', () => {
+    const reply = parseReply(['```json', JSON.stringify({ say: 'fenced' }), '```', 'And that is that.'].join('\n'));
+    expect(reply?.say).toBe('fenced');
   });
 
-  it('refuses a reply that is not JSON, and one holding an array', () => {
-    expect(parseChart('here is a bar chart of revenue')).toBeUndefined();
-    expect(parseChart('[{"kind":"bar"}]')).toBeUndefined();
+  it('drops a chart it could not read rather than filling it in', () => {
+    const reply = parseReply(JSON.stringify({ charts: [{ kind: 'bar', x: 'region' }, chart] }));
+    expect(reply?.charts).toHaveLength(1);
+    expect(reply?.charts[0]?.y).toBe('revenue');
   });
 
-  it('keeps an aggregate the grammar has, and leaves the field off when the reply omits it', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":"sum","title":"T"}')?.chart)
-      .toEqual({ kind: 'bar', x: 'r', y: 'v', aggregate: 'sum', title: 'T' });
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T"}')?.chart)
-      .toEqual({ kind: 'bar', x: 'r', y: 'v', title: 'T' });
+  it('drops a data reference and a transform list it could not read', () => {
+    const reply = parseReply(JSON.stringify({
+      charts: [{ ...chart, data: { kind: 'url' }, transforms: [{ op: 'pivot' }] }],
+    }));
+    expect(reply?.charts[0]?.data).toBeUndefined();
+    expect(reply?.charts[0]?.transforms).toBeUndefined();
   });
 
-  // Every other optional field on a chart is dropped when it is the wrong shape, because losing a label
-  // costs a label. An aggregate dropped would leave a chart that draws successfully and means something
-  // other than the model said, so it fails the whole specification the way an unknown kind does.
-  it('refuses a whole chart naming an aggregate the grammar does not have', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":"median","title":"T"}')).toBeUndefined();
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":7,"title":"T"}')).toBeUndefined();
+  it('caps the suggestions at four and drops the blank ones', () => {
+    const reply = parseReply(JSON.stringify({ followUps: ['a', ' ', 'b', '', 'c', 'd', 'e'] }));
+    expect(reply?.followUps).toEqual(['a', 'b', 'c', 'd']);
   });
 
-  it('reads the follow-up questions the model offered with the chart', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":["split by region","make it a line"]}')
-      ?.followUps).toEqual(['split by region', 'make it a line']);
-  });
-
-  it('offers none when the model offers none, rather than an absent reply', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T"}')?.followUps).toEqual([]);
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":"split by region"}')?.followUps)
-      .toEqual([]);
-  });
-
-  // One bad entry should cost the model one button, not the whole row.
-  it('drops a blank or non-string suggestion and keeps the rest', () => {
-    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":["  keep me  ","",7,"  "]}')
-      ?.followUps).toEqual(['keep me']);
-  });
-
-  it('shows no more suggestions than the interview would', () => {
-    const many = Array.from({ length: 9 }, (_, index) => `"ask ${index}"`).join(',');
-    expect(parseChart(`{"kind":"bar","x":"r","y":"v","title":"T","followUps":[${many}]}`)?.followUps)
-      .toHaveLength(4);
+  it('refuses prose, a bare list, and an object with nothing usable in it', () => {
+    expect(parseReply('I would rather not answer in JSON.')).toBeUndefined();
+    expect(parseReply('[1, 2, 3]')).toBeUndefined();
+    expect(parseReply('{}')).toEqual({ say: '', charts: [], remove: [], followUps: [] });
   });
 });

@@ -2,30 +2,41 @@ import React, { useRef, useState } from 'react';
 import { CommandBarShell, renderMarkdown, useCommandBarKeys, useStickToBottom } from '../api';
 import type { VisualizationTurn } from '@shared/plugins/visualizations/shared';
 
-// The exchange that changes the chart. It is a conversation about one chart rather than a fresh one, so
+// The conversation a visualization is. It is a conversation about its charts rather than a fresh one, so
 // it reuses the same command bar, the same history recall, and the same stick-to-bottom rule an agent
 // tab's does — and the same refusal while a reply is in flight, with the typed text left in place.
+//
+// A visualization nobody has started yet shows one line asking for an address, because the whole of what
+// it needs to begin is one: a data file, or a page describing an API. It is the tab's own copy rather
+// than a first turn, so a user who opens the tab and closes it again leaves no conversation behind.
+
+export const PROMPT_LINE = 'Paste the URL of a data file, or of a page that describes an API, and tell me what you would like to see.';
+
 export type ChatProperties = {
   turns: VisualizationTurn[];
-  // Two to four requests the model offered about the chart it last produced, shown as one-click
+  // Two to four requests the model offered about what it has just said or drawn, shown as one-click
   // modifications. The row disappears the moment one is used, so it never grows.
   followUps?: string[];
+  // The last thing that went wrong, shown above the composer so a failed read is not mistaken for a
+  // chart that simply drew nothing.
+  error?: string;
+  prompted: boolean;
   busy: boolean;
   disabled: boolean;
   active: boolean;
-  onRevise: (query: string) => void;
+  onSend: (query: string) => void;
   onCancel: () => void;
 };
 
 export function VisualizationChat({
-  turns, followUps, busy, disabled, active, onRevise, onCancel,
+  turns, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const turnsRef = useRef<HTMLDivElement>(null);
   const rePinKey = turns.map((turn) => `${turn.query}${turn.response}`).join(' ');
   const { onScroll } = useStickToBottom(turnsRef, active, rePinKey);
-  const bar = useCommandBarKeys({ value: query, setValue: setQuery, inputRef, history: [], onSubmit: onRevise });
+  const bar = useCommandBarKeys({ value: query, setValue: setQuery, inputRef, history: [], onSubmit: onSend });
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Escape') {
@@ -34,7 +45,7 @@ export function VisualizationChat({
       else setQuery('');
       return;
     }
-    // A second query is refused while a reply is in flight, and refusing it must leave the typed text
+    // A second message is refused while a reply is in flight, and refusing it must leave the typed text
     // where it is — so the guard sits ahead of the bar's own Enter handling.
     if (event.key === 'Enter' && !event.shiftKey && busy) {
       event.preventDefault();
@@ -46,7 +57,9 @@ export function VisualizationChat({
   return (
     <>
       {turns.length === 0 ? (
-        <p className="visualization-chat-empty">Ask for a change to the chart.</p>
+        <p className="visualization-chat-empty">
+          {prompted ? PROMPT_LINE : 'Ask for a change to a chart.'}
+        </p>
       ) : (
         <div className="visualization-chat" ref={turnsRef} onScroll={(event) => { onScroll(event.currentTarget); }}>
           {turns.map((turn, index) => (
@@ -66,8 +79,9 @@ export function VisualizationChat({
           ))}
         </div>
       )}
+      {error === undefined ? null : <p className="visualization-reason-note">{error}</p>}
       {/* The interview's own suggestion markup and classes, not a second implementation of them: a row of
-          suggestions is a row of suggestions, whichever question asked for it. Hidden while a reply is in
+          suggestions is a row of suggestions, whichever reply asked for it. Hidden while a reply is in
           flight, because a button that does nothing while the model works is worse than no button. */}
       {followUps !== undefined && followUps.length > 0 && !busy ? (
         <div className="visualization-suggestions visualization-follow-ups">
@@ -77,7 +91,7 @@ export function VisualizationChat({
               type="button"
               className="visualization-suggestion"
               disabled={disabled}
-              onClick={() => { onRevise(suggestion); }}
+              onClick={() => { onSend(suggestion); }}
             >
               {suggestion}
             </button>
@@ -93,7 +107,7 @@ export function VisualizationChat({
         busy={busy}
         disabled={disabled}
         autoFocus={active}
-        ariaLabel="Change the chart"
+        ariaLabel="Ask about the data or the chart"
       />
     </>
   );

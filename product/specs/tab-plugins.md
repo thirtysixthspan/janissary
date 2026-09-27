@@ -178,7 +178,7 @@ Conversations claims no files and contributes the `conversations` command. It ow
 
 ### Bundled visualizations plugin
 
-Visualizations claims no files and contributes the `visualizations` command plus a **Visualize this** entry for a text selection. It owns a singleton index tab plus one tab per open visualization, and redraws those tabs from the visualization topic. It never reads a source, never parses one, and never speaks to a model: every one of those is a topic action, so the plugin has no route to a source it is not already showing and no route to another visualization. It declares exactly the seven capabilities the conversations plugin does, and no new tab-plugin capability is needed for it. See [[visualizations]].
+Visualizations claims no files and contributes the `visualizations` command plus a **Visualize this** entry for a text selection, whose selection becomes the new visualization's first message. It owns a singleton index tab plus one tab per open visualization, and redraws those tabs from the visualization topic. It never reads a source, never parses one, never acquires data, and never speaks to a model: every one of those is a topic action, so the plugin has no route to a source it is not already showing and no route to another visualization. Its whole control surface is a chat and the controls on each chart, and its window carries resolved tables rather than the transformations that produced them, because the browser applies nothing. It declares exactly the seven capabilities the conversations plugin does, and no new tab-plugin capability is needed for it. See [[visualizations]].
 
 ### Bundled video plugin
 

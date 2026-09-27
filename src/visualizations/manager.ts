@@ -1,25 +1,19 @@
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type {
-  ConversationModelPair,
-  VisualizationColumnType,
-  VisualizationsView,
-} from '../protocol.js';
+import type { VisualizationsView } from '../protocol.js';
 import { AcpSessionPool } from '../acp/session-pool.js';
+import { VisualizationAgent } from './agent.js';
+import { chartById, ensureDataset } from './charts.js';
+import { datasetKey } from './chart-spec.js';
 import { readSource } from './fetch.js';
 import { VisualizationIndex } from './index.js';
-import { VisualizationInterviewer } from './interview.js';
-import { VisualizationRefresh } from './refresh.js';
-import { reader } from './reading.js';
-import { VisualizationReview } from './review.js';
-import { defaultSourceRoots, parseSource, type SourceRoots } from './source.js';
-import {
-  VisualizationStore, freshVisualization, isCataloguedPair,
-} from './store.js';
+import { acquire, reader } from './reading.js';
+import { dueByDataset, VisualizationRefresh } from './refresh.js';
+import { addressIn, defaultSourceRoots, parseSource, type SourceRoots } from './source.js';
+import { VisualizationStore, freshVisualization, isEmptyRecord } from './store.js';
 import type { VisualizationRecord } from './store.js';
-import {
-  availableVisualizationModels, interviewComplete, pendingQuestion, titled,
-} from './view.js';
+import { availableVisualizationModels } from './view.js';
+import type { VisualizationChartRecord, VisualizationDataRef } from '../protocol.js';
 
 type ManagerOptions = {
   store?: VisualizationStore;
@@ -31,18 +25,19 @@ type ManagerOptions = {
   read?: (source: string) => Promise<{ text: string } | { error: string }>;
 };
 
-// The host's side of a visualization: it owns the records, reads the sources, drives the model, and
+const SOURCE: VisualizationDataRef = { kind: 'source' };
+
+// The host's side of a visualization: it owns the records, reads the sources, drives the agent, and
 // publishes the slice the plugin redraws from. The plugin owns none of it — it names what the user
 // asked for through the topic and reads what comes back.
 export class VisualizationsManager {
   private readonly store: VisualizationStore;
   private readonly now: () => number;
   private readonly index: VisualizationIndex;
-  private readonly review: VisualizationReview;
-  private readonly interviewer: VisualizationInterviewer;
+  private readonly agent: VisualizationAgent;
   private readonly tabRemoved: Subscription;
   private readonly refresh: VisualizationRefresh;
-  private readonly readOnce: (id: string) => void;
+  private readonly readData: (id: string, data: VisualizationDataRef) => Promise<unknown>;
   private readonly roots: SourceRoots;
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
@@ -50,27 +45,30 @@ export class VisualizationsManager {
     this.now = options.now ?? Date.now;
     this.roots = defaultSourceRoots(options.projectDir ?? this.managers.tab.launchDir);
     this.index = new VisualizationIndex(this.store);
-    this.review = new VisualizationReview((record) => { this.commit(record); });
-    this.readOnce = reader({
+    const workspace = (id: string): string => this.store.ensure(id);
+    this.readData = reader({
       read: options.read ?? ((source) => readSource(source, this.roots)),
+      workspace,
       index: this.index,
-      review: this.review,
       now: this.now,
       commit: (record, error) => { this.commit(record, error); },
     });
-    this.interviewer = new VisualizationInterviewer({
+    this.agent = new VisualizationAgent({
       pool: options.pool ?? new AcpSessionPool(),
-      workspace: (id) => this.store.ensure(id),
+      workspace,
       now: this.now,
       changed: () => { this.changed(); },
       commit: (record, error) => { this.commit(record, error); },
+      reacquired: (record, data) => { void this.readData(record.id, data); },
+      acquire: (record, data) => { acquire(record, data, workspace(record.id), this.now()); },
     });
-    this.refresh = new VisualizationRefresh(
-      this.now,
-      () => this.index.openIds(this.managers.tab.tabs),
-      this.readOnce,
-      (id) => this.index.find(id),
-    );
+    this.refresh = new VisualizationRefresh({
+      now: this.now,
+      openIds: () => this.index.openIds(this.managers.tab.tabs),
+      read: (id, data) => { void this.readData(id, data); },
+      reacquire: (id, data) => { this.reacquire(id, data); },
+      dueFor: (id) => this.dueFor(id),
+    });
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
       queueMicrotask(() => { this.releaseClosed(); });
     });
@@ -81,20 +79,25 @@ export class VisualizationsManager {
   view(): VisualizationsView {
     return {
       summaries: this.index.summaries(),
-      windows: this.index.windows(this.index.openIds(this.managers.tab.tabs), (id) => this.interviewer.busy(id)),
+      windows: this.index.windows(this.index.openIds(this.managers.tab.tabs), (id) => this.agent.busy(id)),
       models: availableVisualizationModels(),
     };
   }
 
-  create(id: string, source: string): boolean {
+  // A new visualization is a conversation with nothing in it, which is why it needs no source: the tab
+  // prompts for one and the first message carries it. An optional first message is what the context
+  // menu's **Visualize this** sends, so a selection becomes the opening turn rather than a field. An
+  // empty record is not written, so a visualization opened from the index and abandoned leaves nothing
+  // on disk.
+  create(id: string, message?: string): boolean {
     if (this.index.find(id)) return false;
-    if ('error' in parseSource(source, this.roots)) return false;
     const pair = availableVisualizationModels()[0];
     if (!pair) throw new Error('No ACP conversation models configured.');
-    const record = freshVisualization(id, source, pair, this.now());
+    const record = freshVisualization(id, pair, this.now());
     this.index.remember(record);
     this.index.expectTab(id);
-    this.readOnce(id);
+    this.changed();
+    if (message !== undefined && message.trim() !== '') void this.send(id, message);
     return true;
   }
 
@@ -104,123 +107,114 @@ export class VisualizationsManager {
     return true;
   }
 
-  // A source may be replaced only while there is no chart. Past that point every answer the user gave
-  // was given about the old data, and quietly starting again over them would be the worst available
-  // reading of what they asked.
-  setSource(id: string, source: string): boolean {
+  // One message, and everything it implies. An address in the text becomes the source — the most
+  // recent one wins, so pointing somewhere else mid-conversation is ordinary rather than refused — and
+  // is read before the model is called, so the model is asked with the data in hand rather than told to
+  // go and get it. The tab is busy from the moment the message is accepted, so the read counts as part
+  // of the call and a second message is refused throughout it.
+  send(id: string, query: string): boolean {
     const record = this.index.live(id);
-    if (!record || record.chart !== undefined) return false;
-    if ('error' in parseSource(source, this.roots)) return false;
-    record.source = source.trim();
-    record.questions = [];
-    record.table = undefined;
-    record.readAt = undefined;
-    // A different source is a different schema, so the review is open again whatever the old one was.
-    record.reviewed = false;
-    delete record.error;
-    this.readOnce(id);
-    return true;
+    if (!record) return false;
+    const address = addressIn(query);
+    return this.agent.ask(record, query, async () => {
+      if (address === undefined) {
+        return this.index.live(id)?.source === ''
+          ? 'They have not given you a source yet. Ask them for one.'
+          : undefined;
+      }
+      return this.adopt(id, address);
+    });
   }
 
-  setModel(id: string, pair: ConversationModelPair): boolean {
+  // An address the user typed, judged by exactly the rules every other route into a source is judged
+  // by. A refusal is handed to the model rather than swallowed, so the exchange says why nothing was
+  // read instead of the model reasoning about data that was never there.
+  private async adopt(id: string, address: string): Promise<string | undefined> {
     const record = this.index.live(id);
-    if (!record || !isCataloguedPair(pair, availableVisualizationModels())) return false;
-    this.interviewer.cancel(id);
-    record.pair = pair;
+    if (!record) return undefined;
+    const parsed = parseSource(address, this.roots);
+    if ('error' in parsed) return `The address ${address} was refused: ${parsed.error}.`;
+    record.source = address.trim();
+    // A dataset exists for the source whether or not a chart has asked for it yet, so the model is
+    // shown the data it named on the very message that named it.
+    ensureDataset(record, SOURCE, () => ({ key: 'source' }));
+    await this.readData(id, SOURCE);
+    return undefined;
+  }
+
+  cancel(id: string): boolean {
+    const record = this.index.find(id);
+    const stopped = this.agent.cancel(id);
+    if (record) record.turns = record.turns.filter((turn) => turn.streaming === undefined);
+    return stopped;
+  }
+
+  // The interval belongs to one chart, because the description attaches live update to individual
+  // graphs rather than to the visualization. A refusal is a chart id the record does not hold.
+  setChartRefresh(id: string, chartId: string, seconds: number): boolean {
+    const record = this.index.live(id);
+    const chart = record === undefined ? undefined : chartById(record, chartId);
+    if (!record || !chart || !Number.isFinite(seconds) || seconds < 0) return false;
+    chart.refreshSeconds = seconds;
     this.commit(record);
     return true;
   }
 
-  rename(id: string, title: string): boolean {
+  // Read one chart's data now. On a chart the agent acquired this is a model call, because nothing else
+  // knows how that data is reached — which is the one place a re-read costs more than a fetch.
+  refreshChart(id: string, chartId: string): boolean {
     const record = this.index.live(id);
-    const name = titled(title);
-    if (!record || name === '') return false;
-    record.title = name;
-    this.commit(record);
-    return true;
+    const chart = record === undefined ? undefined : chartById(record, chartId);
+    if (!record || !chart) return false;
+    return chart.data.kind === 'source' ? this.readNow(id, chart.data) : this.reacquire(id, chart.data);
   }
 
-  // Deleting from the index removes the record, its workspace, and its trust entry. A tab that was open
-  // for it stays open and is told so, because removing its window from under it would leave it showing
-  // the last thing the server broadcast with nothing to say why.
   delete(id: string): void {
-    this.interviewer.forget(id);
+    this.agent.forget(id);
     this.index.markDeleted(id);
     this.store.delete(id);
     this.changed();
     this.refresh.reschedule();
   }
 
-  startInterview(id: string): boolean {
-    const record = this.index.live(id);
-    return record?.table && record.reviewed ? this.interviewer.open(record) : false;
-  }
-
-  // The two thin ends of the review gate, which owns the rule.
-  confirmSchema(id: string): boolean {
-    const record = this.index.live(id);
-    return record ? this.review.confirm(record) : false;
-  }
-
-  setColumnType(id: string, column: string, type: VisualizationColumnType): boolean {
-    const record = this.index.live(id);
-    return record ? this.review.correct(record, column, type) : false;
-  }
-
-  answer(id: string, questionId: string, answer: string): boolean {
-    const record = this.index.live(id);
-    const question = record?.questions.find((entry) => entry.id === questionId);
-    if (!record || !question || question.answer !== undefined) return false;
-    if (answer.trim() === '' || pendingQuestion(record) !== questionId) return false;
-    question.answer = answer.trim();
-    this.commit(record);
-    // The last answer is what closes the interview, so it is the only one that can lead straight to a
-    // chart. Anything earlier waits for the next one.
-    if (interviewComplete(record)) this.interviewer.close(record);
-    return true;
-  }
-
-  revise(id: string, query: string): boolean {
-    const record = this.index.live(id);
-    return record ? this.interviewer.revise(record, query) : false;
-  }
-
-  cancel(id: string): boolean {
-    const record = this.index.find(id);
-    const stopped = this.interviewer.cancel(id);
-    if (record) record.turns = record.turns.filter((turn) => turn.streaming === undefined);
-    return stopped;
-  }
-
-  // The interval a visualization may be set to. Zero is off, and it is the default: a visualization
-  // costs one read and then nothing until the user asks for more.
-  setRefresh(id: string, seconds: number): boolean {
-    const record = this.index.live(id);
-    if (!record || !Number.isFinite(seconds) || seconds < 0) return false;
-    record.refreshSeconds = seconds;
-    this.commit(record);
-    return true;
-  }
-
-  refreshNow(id: string): boolean {
-    if (!this.index.live(id)) return false;
-    this.readOnce(id);
-    return true;
-  }
-
   dispose(): void {
     this.tabRemoved.unsubscribe();
     this.refresh.dispose();
-    this.interviewer.dispose();
+    this.agent.dispose();
+  }
+
+  private readNow(id: string, data: VisualizationDataRef): boolean {
+    if (this.index.live(id) === undefined) return false;
+    void this.readData(id, data);
+    return true;
+  }
+
+  // Re-ask for a file the agent acquired. Every chart drawing from it is covered by one call, because the
+  // file is the data and they all read it; the reply carries their specifications back.
+  private reacquire(id: string, data: VisualizationDataRef): boolean {
+    const record = this.index.live(id);
+    if (!record) return false;
+    if (data.kind === 'source') return this.readNow(id, data);
+    const first: VisualizationChartRecord | undefined = record.charts.find((chart) => datasetKey(chart.data) === data.path);
+    return first === undefined ? false : this.agent.reacquire(record, first);
+  }
+
+  private dueFor(id: string) {
+    const record = this.index.find(id);
+    if (record === undefined) return [];
+    return dueByDataset(
+      record.charts,
+      (data) => record.datasets.find((entry) => entry.key === datasetKey(data))?.readAt ?? 0,
+    );
   }
 
   private commit(record: VisualizationRecord, error?: string): void {
     record.updatedAt = this.now();
     if (error === undefined) delete record.error;
     else record.error = error;
-    this.store.write(record);
+    if (!isEmptyRecord(record)) this.store.write(record);
     this.changed();
-    // Every commit re-arms the poll. The interval and the open set both change through a commit, and
+    // Every commit re-arms the poll. The intervals and the open set both change through a commit, and
     // recomputing one timer here is cheaper than remembering to at each of the four places either can.
     this.refresh.reschedule();
   }
@@ -230,12 +224,11 @@ export class VisualizationsManager {
   // deleted record is released here because that is the point at which nothing can render it.
   private releaseClosed(): void {
     const open = this.index.openIds(this.managers.tab.tabs);
-    for (const id of this.interviewer.ids()) {
+    for (const id of this.agent.ids()) {
       if (!open.includes(id)) this.cancel(id);
     }
     for (const id of this.index.ids()) {
-      if (!open.includes(id)) continue;
-      this.index.release(id);
+      if (!open.includes(id)) this.index.release(id);
     }
     this.refresh.reschedule();
   }

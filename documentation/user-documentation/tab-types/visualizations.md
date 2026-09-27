@@ -1,96 +1,86 @@
 # Visualizations
 
-Point at a data source, answer a few questions about it, and get a chart you can change by asking and keep by saving.
+Point at data, say what you want to see, and get a chart you can change by asking. Everything that changes a chart is a sentence you type.
 
 ```
 visualizations
 ```
 
-## Name a source
+## Start a chart
 
-A source is a URL or a path to a file. The quickest way to name one is to select it anywhere you can select text and choose **Visualize this** from the right-click menu. The selection is used as-is, so whatever you had selected becomes the source.
+Press the **＋** button in the index header. The new tab opens with one line and a box to type in:
 
-The other route is the **＋** button in the index header, which opens a field. Type a URL or a path and press **Visualize**.
+> Paste the URL of a data file, or of a page that describes an API, and tell me what you would like to see.
 
-Both routes open a new tab. It reads the source, then shows you the columns it found and the type read for each.
+Paste the address and, if you like, a sentence about what you want out of it. There is no form and no field to fill in.
 
-## Check the columns
+The fastest route to a new tab is to select an address anywhere you can select text and choose **Visualize this** from the right-click menu. Your selection becomes the first message.
 
-Every column is listed with its type, and each type can be changed to `number`, `boolean`, `date` or `string` before anything else happens.
+A visualization you start but never say anything to is not saved: it does not appear in the index, and nothing is written to disk.
 
-This matters when the reader gets a column wrong. A column of numbers written as `$1,234.00` reads as text, and everything built on it — the questions, the chart, the measure — is built on the wrong assumption. Changing the type to `number` puts it right. Only the type changes; the values stay as they were read.
+## What a source can be
 
-**Ask about this data** starts the interview. Once started, the types are fixed: a change then would invalidate the answers you had already given.
+A source is a web address or a path to a file, written anywhere in what you type. The most recent address you name is the one being worked on, so pointing somewhere else part way through is ordinary.
 
-A re-read that finds the same columns leaves this step alone, so a refresh on a timer does not ask you again. A re-read that finds different columns brings it back.
-
-What can be read:
-
-- **JSON** — an array of objects, or an object holding one. `{"data": {"items": [...]}}` works too.
-- **Delimited text** — comma, tab, semicolon, or pipe, with a header row. Quoted fields are fine, and so is a quoted field containing the delimiter.
-
-Column types are worked out for you, so you never have to pick one — but you are shown them, and can change any of them before the questions start. A column of numbers is a measure you can plot; a column of anything else is a category you can group by.
-
-A column of ISO dates — `2026-01-31`, or `2026-01-31T09:00:00Z` — is recognized as dates rather than as text, and a chart over it puts its categories in date order instead of the order the file happened to list them, so a month of daily rows reads as a month. Only that format is recognized, and only when the date is real: `2026-02-31`, `2026-13-01`, `2026-1-31` and `06/01/2024` all stay text, which makes them categories. A timestamp with no timezone is read as local time.
+- **A file of values** — JSON, or delimited text. JSON must be an array of objects or an object holding one; `{"data": {"items": [...]}}` works too. Delimited text needs a header row and uses a comma, tab, semicolon or pipe; quoted fields are fine, including one containing the delimiter.
+- **A page describing an API** — documentation, an OpenAPI file, an endpoint. The agent works out how to reach the data behind it, fetches it, and carries on. A chart built that way names the file it read underneath, so you can tell a picture that is current from one that stopped a while ago.
 
 A local file has to be inside this project directory or your home directory. Anything else is refused and says so. Symlinks are followed before the check, so a link pointing outside those two directories is refused too.
 
-Pointing a visualization at a local file means the file is read, turned into a table, and kept in the visualization's saved record, and a sample of it is sent to the model to ask the questions. Don't point one at a credentials file.
+Pointing a visualization at a local file means the file is read and a sample of it is sent to the model to answer your question. Don't point one at a credentials file.
 
-## Answer the questions
+Columns are worked out for you: a column of numbers is a measure you can plot, a column of ISO dates (`2026-01-31`) is read in date order, and anything else is a category you can group by. If one is read wrong, say so — *treat the `total` column as a number* — and the rest of the conversation is built on the corrected reading.
 
-<img class="agent-float" src="/agents/malik-south-west.png" alt="" />
+## What you can ask for
 
-The model looks at a sample of the data and asks what it needs to know: which measure to plot, what to compare against, how to split it, what to call the result. It asks one question at a time.
+**A different chart.** Its kind, the columns it plots, the column that splits it into series, how the measure is reduced, its title, and its axis labels. *Make it a line chart.* *Split by year.* *Sum the revenue rather than counting rows.* *Call it Revenue by region.*
 
-Each question shows the answers it expected as buttons. Click one, or type your own into the field — the useful answer is often none of them.
+**The data, transformed.** Four things, applied in order and each one named in the line under the chart:
 
-Answering the last question produces the chart.
+- **filter** — *only 2024*, *just the north region*, *where revenue is over 500*.
+- **derive** — a new column computed from the ones you have. *Add revenue per employee.* *Margin as a share of revenue.* The expression uses numbers, column names, `+ - * /`, and brackets, and nothing else.
+- **sort** — *largest first*, *in alphabetical order*.
+- **limit** — *the top ten*. Counted in categories rather than rows, so a chart split into series loses a whole bar rather than half of one.
 
-## Read the chart
+A sort followed by a limit is a top-ten; the reverse is the first ten.
 
-The chart fills the tab, with its title above it and the row count below. When the source has more rows than the chart shows, the line under the chart says how many of how many. When the measure is reduced before it is drawn, that line names the reduction — `sum of revenue`, `mean of revenue` — because a bar showing a total otherwise reads as a single value.
+**Another chart.** *Also plot revenue per employee by region* adds one beside the first. A visualization holds up to eight.
 
-**Data table**, under the chart, opens the numbers behind the picture: one row per mark the chart draws, with the series column too when the chart is split by one. It also states the chart in a sentence — the kind, the measure, its range, and its largest and smallest mark — which is what a screen reader is given in place of the drawing, along with the chart's title. Both are built from the same marks the chart is drawn from, so they cannot disagree with it. Neither is part of an exported file.
+**A name.** *Call this Revenue by region* renames the tab, the index entry and the saved record. A name you have given is not overwritten by a later chart's own title.
 
-**Export as PNG** and **Export as PDF** write a file named after the chart, at twice the size it appears in the tab. Both buttons are greyed out until there is a chart to export.
+Type into the bar at the bottom the way you would in a terminal. Press `Enter` to send, `Shift+Enter` for a newline, and `Escape` to clear what you have typed, or to stop a reply in progress.
 
-You can rename the chart by double-clicking its name in the header.
+Above the bar, the model usually offers two to four things you could ask next as buttons. Clicking one asks for it exactly as if you had typed it. The row is replaced by the next reply, and disappears as soon as you use one, so you cannot ask the same thing twice by accident. If the model offers nothing, no row appears.
 
-## Look closer without asking
+## Read a chart
 
-Three controls sit under the chart, and none of them asks the model anything:
+Charts stack above the conversation. Each carries its own controls and its own caption, and nothing about one chart's controls reaches another.
 
-- **Order** — as read, by category, or by value largest first.
-- **Show** — all of them, or the largest five, ten, or twenty.
-- **Only** — narrow the chart to one category.
+The caption under a chart says how many rows it is showing — `showing 500 of 12043 rows` when the source had more than it kept — how the measure was reduced, each transformation in the order it was applied, where the data came from, and when it was read.
 
-**Reset** puts all three back, and only appears once you have changed one. The line under the chart says what was narrowed, and the **Data table** follows the same narrowing as the picture. A re-read of the source drops the narrowing, because the new data is not the data you were looking at. None of this is saved: the chart is the model's, and the order and the filter are yours.
+**Data table**, under each chart, opens the numbers behind that picture: one row per mark the chart draws, with the series column too when the chart is split by one. It also states the chart in a sentence — the kind, the measure, its range, and its largest and smallest mark — which is what a screen reader is given in place of the drawing. Both are built from the same marks, so they cannot disagree with the picture. Neither is part of an exported file.
 
-## Change the chart
+## Keep a chart current
 
-Type into the bar at the bottom the way you would in a terminal. Press `Enter` to send, `Shift+Enter` for a newline, and `Escape` to clear what you have typed.
+Each chart has its own **live update** control. Clicking it steps through off, 10s, 30s, 1m and 5m, and its tooltip says both where it is and where the next click goes. A refresh only happens while that tab is open, so nothing is fetched in the background once you close it.
 
-Ask for what you want: *make it a line chart*, *split by region*, *show visits instead of revenue*, *sum the revenue by region*. The model answers with an updated chart, and its explanation appears above the bar. The whole exchange stays in the tab, so you can see what you asked for and what came back.
+**Read the data now** re-reads that one chart's source immediately, without changing its interval.
 
-Above the bar, the model usually offers two to four follow-ups as buttons — *split by region*, *show the largest five*. Clicking one asks for it exactly as if you had typed it, which is faster than writing it out. The row is replaced by the next reply, and disappears as soon as you use one, so you cannot ask the same thing twice by accident. If the model offers nothing, no row appears.
+When a re-read fails, the reason appears above the conversation and the chart you already had stays on screen. A re-read that succeeds but brings different columns leaves the chart as it was and says why, rather than replacing a working picture with an empty one.
 
-## Keep it current
+A re-read that changes the data does not change the chart. The chart is what you asked for; asking again is what changes it.
 
-A visualization reads its source once and then leaves it alone. To have it re-read on a timer, pick an interval from the **Refresh** menu in the header: off, 10s, 30s, 1m, or 5m.
+## Export a chart
 
-**Refresh** in the header re-reads right now without changing the interval. A re-read only happens while that tab is open, so nothing is fetched in the background once you close it.
-
-When a re-read fails, the reason appears in the tab and the chart you already had stays on screen.
+**Export this chart as PNG** and **Export this chart as PDF** write a file named after that chart, at twice the size it appears in the tab.
 
 ## When something goes wrong
 
-- **The source could not be read.** The reason is in the tab. Press **Change the source** to point at a different one.
-- **The data could not be understood.** The reason says what was wrong with it. **Change the source** and try another.
-- **The model asked nothing.** There is nothing to answer. **Ask again** starts over.
-- **The model asked for a chart the data cannot show.** The reason is in the tab, and the questions you answered are kept. **Ask again** retries.
-
-Changing the source throws away the questions and your answers, so it asks first. Once there is a chart the source cannot be changed, because every answer you gave was about the old data, and the control is not shown then.
+- **The address could not be read.** The reason is above the conversation. Paste a different one.
+- **The data could not be understood.** The reason says what was wrong with it. Paste a different source, or say what the data should be read as.
+- **The model could not reach the data at all.** It says so. A URL to the data itself, rather than to a page describing it, is the thing to try.
+- **The model asked for a chart the data cannot show.** The reason is under its reply, and the chart that did work is still there. Ask again in your own words.
+- **The model changed a column type wrongly.** Say so — *treat the `total` column as a number* — and it redraws.
 
 ## Reopen and delete
 
@@ -104,4 +94,4 @@ Matching ignores case. The words `left` and `right` are reserved for docking.
 
 `visualizations left` and `visualizations right` dock the index in a sidebar. Bare `visualizations` brings it back to the center. See [Tabs](/user-documentation/getting-started/tabs) for shared sidebars.
 
-Deleting asks first, and removes the visualization, its saved data, and its private workspace. A tab that was open for it stays open, saying the visualization was deleted, with its controls disabled — close it when you are done with it.
+Deleting asks first, and removes the visualization, its saved data, and its private workspace. A tab that was open for it stays open, saying the visualization was deleted, with its box disabled — close it when you are done with it.

@@ -3,8 +3,8 @@ import { needsLegend } from './Axes';
 import { CartesianChart } from './CartesianChart';
 import { PieChart, pieLegend } from './PieChart';
 import { scatterFor, type ChartShape, type Table } from './points';
-import { viewedMarksFor, type ChartView } from './view';
 import { describeChart } from './describe';
+import { marksFor } from './points';
 
 // The frame the other two charts sit in, and the only place that knows what a chart specification is.
 // It computes the marks once, decides which component draws them, and lays out the title, the legend,
@@ -24,9 +24,6 @@ const BOX = {
 export type ChartProperties = {
   chart: ChartShape;
   table: Table;
-  // How the marks are being looked at right now. The chart draws what the view leaves, so a narrowed
-  // chart is a narrower picture rather than a picture with something drawn over it.
-  view: ChartView;
 };
 
 const SERIES_COLOURS = [
@@ -36,9 +33,9 @@ const SERIES_COLOURS = [
 // The ref is forwarded because export rasterizes this element, and a rasterizer that cannot reach the
 // element it is meant to be rasterizing has nothing to work from.
 export const ChartSvg = React.forwardRef<SVGSVGElement, ChartProperties>(function ChartSvg(
-  { chart, table, view }, ref,
+  { chart, table }, ref,
 ) {
-  const marks = viewedMarksFor(table, chart, view);
+  const marks = marksFor(table, chart);
   const pie = chart.kind === 'pie';
   const empty = marks.points.length === 0 && marks.slices.length === 0;
   const series = pie ? pieLegend(marks.slices) : marks.series.map((name, index) => ({
@@ -63,7 +60,7 @@ export const ChartSvg = React.forwardRef<SVGSVGElement, ChartProperties>(functio
       height={HEIGHT}
     >
       <title id={titleId}>{chart.title}</title>
-      <desc id={descriptionId}>{describeChart(table, chart, view)}</desc>
+      <desc id={descriptionId}>{describeChart(table, chart)}</desc>
       <text className="visualization-chart-title" x={MARGIN.left} y={22}>{chart.title}</text>
       {empty ? (
         <text

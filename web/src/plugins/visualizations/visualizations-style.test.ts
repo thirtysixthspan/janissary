@@ -55,4 +55,11 @@ describe('the visualizations stylesheet', () => {
   it('strips the browser button chrome from the metadata actions, as the host ones do', () => {
     expect(visualizations).toMatch(/\.visualization-header \.plugin-actions button \{[^}]*background: transparent;/u);
   });
+
+  // The tab has no dropdowns at all, and a stylesheet rule reintroducing one would be the single place
+  // that quietly put a `<select>` back. Matched on the property a `select` rule needs, not on the word
+  // "selected", which the current-row marker and `user-select` both legitimately use.
+  it('styles no select element, because the tab has none', () => {
+    expect(visualizations).not.toMatch(/select\s*[{,]/u);
+  });
 });

@@ -1,0 +1,137 @@
+import { isRecord } from '../value-guards.js';
+import { AGGREGATES, CHART_KINDS, MAX_FILTER_VALUES, MAX_TRANSFORMS, chartShapeOf, isDataRef, isTransformList } from './chart-spec.js';
+import type { ChartShape, VisualizationDataRef, VisualizationTransform } from '../protocol/visualizations.js';
+
+// What a reply may say, and how it is read.
+//
+// The reply is one JSON object: prose in `say`, the charts to add or change in `charts`, chart ids to
+// drop in `remove`, a name for the visualization in `name`, and two to four requests the user could
+// make in `followUps`. A chart carrying an `id` merges over the chart that id names, so "just change
+// the title" is one field and nothing else moves; a chart with no id is a new one.
+//
+// Nothing here casts. A reply is a value produced by a system that was handed a sample of someone
+// else's data, and every field that cannot be read is dropped rather than believed — a chart missing
+// its measure is not a chart, and a step naming a column the grammar does not have is not a step.
+
+export const MAX_FOLLOW_UPS = 4;
+export const MAX_TURNS_IN_PROMPT = 12;
+
+// What a reply asked for, once every field has been read. A chart entry carries the specification the
+// model chose, plus whichever of `id`, `data` and `transforms` it stated; a chart being changed may
+// state only what changes, and a chart being added must state the rest.
+export type ReplyChart = {
+  id?: string;
+  data?: VisualizationDataRef;
+  transforms?: VisualizationTransform[];
+} & ChartShape;
+
+export type Reply = {
+  say: string;
+  charts: ReplyChart[];
+  remove: string[];
+  name?: string;
+  followUps: string[];
+};
+
+function strings(value: unknown, cap: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+    .map((entry) => entry.trim())
+    .slice(0, cap);
+}
+
+// A chart entry, or nothing. `id` and the data reference and the transforms are all optional because a
+// chart being changed may state only what changes; everything else is required, so a half-specified
+// chart is refused rather than filled in with a guess.
+function chartOf(value: Record<string, unknown>): ReplyChart | undefined {
+  const shape = chartShapeOf(value);
+  if (!shape) return undefined;
+  const id = typeof value.id === 'string' && value.id !== '' ? value.id : undefined;
+  const data = isDataRef(value.data) ? value.data : undefined;
+  const transforms = value.transforms === undefined
+    ? undefined
+    : (isTransformList(value.transforms) ? [...value.transforms] : undefined);
+  return {
+    ...shape,
+    ...(id !== undefined && { id }),
+    ...(data !== undefined && { data }),
+    ...(transforms !== undefined && { transforms }),
+  };
+}
+
+// A model that wrapped its answer in a fence is the common case, not the exception, so unwrapping is
+// part of parsing rather than a fallback. Everything after the object is dropped for the same reason a
+// fence is: a model that added a sentence after the JSON meant the JSON.
+function unwrap(text: string): string {
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/u.exec(text);
+  const body = fenced?.[1] ?? text;
+  return body.slice(body.indexOf('{'), body.lastIndexOf('}') + 1);
+}
+
+export function parseReply(text: string): Reply | undefined {
+  const body = unwrap(text);
+  if (body === '') return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return undefined;
+  }
+  if (!isRecord(parsed)) return undefined;
+  const charts = Array.isArray(parsed.charts)
+    ? parsed.charts.flatMap((entry) => { const one = chartOf(entry); return one ? [one] : []; })
+    : [];
+  const name = typeof parsed.name === 'string' && parsed.name.trim() !== '' ? parsed.name.trim() : undefined;
+  return {
+    say: typeof parsed.say === 'string' ? parsed.say : '',
+    charts,
+    remove: strings(parsed.remove, MAX_FOLLOW_UPS * 4),
+    ...(name !== undefined && { name }),
+    followUps: strings(parsed.followUps, MAX_FOLLOW_UPS),
+  };
+}
+
+// The vocabulary, stated once and used by both prompts. A model told a field once answers with it, and
+// told it twice inconsistently answers with either shape — so each list below appears in exactly one
+// rule string that both prompts quote.
+export const KIND_RULE = `\`kind\` is one of ${CHART_KINDS.join(', ')}.`;
+
+export const AGGREGATE_RULE = [
+  '`aggregate` is optional and reduces `y` within each category — and within each series of a category where `series` is given — before anything is drawn.',
+  `It is one of ${AGGREGATES.map((one) => `"${one}"`).join(', ')}.`,
+  'Leave it out when every row is its own mark, which is right when one row is already one point of the answer.',
+  'Set it when the rows are finer than the question: one row per transaction needs "sum" to answer revenue by region, and "count" answers how many transactions each region had.',
+  'A pie sums when you leave it out.',
+  'A row whose `y` is not a number is never drawn and never counted, whichever aggregate you choose.',
+].join(' ');
+
+export const TRANSFORM_RULE = [
+  `\`transforms\` is an ordered list of at most ${MAX_TRANSFORMS} steps, each one of:`,
+  '`{"op":"filter","column":"…","compare":"eq"|"ne"|"gt"|"gte"|"lt"|"lte"|"contains","value":…}` keeps only the rows that match,',
+  `or \`{"op":"filter","column":"…","compare":"in","values":[…]}\` for any of up to ${MAX_FILTER_VALUES} values;`,
+  '`{"op":"derive","name":"…","expression":"…"}` adds one numeric column computed from an arithmetic expression over the columns already there, using numbers, column names, `+ - * /`, unary minus and parentheses and nothing else;',
+  '`{"op":"sort","column":"…","direction":"asc"|"desc"}` orders the rows by one column;',
+  '`{"op":"limit","count":N}` keeps the rows of the first N distinct values of the chart\'s own x column, in the order the sort left them.',
+  'They are applied in order, so a sort followed by a limit is a top-N and the reverse is a first-N. Give the whole list every time; it replaces what was there rather than adding to it.',
+].join(' ');
+
+export const DATA_RULE = [
+  '`data` is where the chart\'s data comes from: `{"kind":"source"}` for the source the user pointed at,',
+  'or `{"kind":"file","path":"…"}` for a file you acquired yourself and wrote inside your workspace.',
+  'Use a file whenever the source is not itself the data — a page describing an API, an endpoint needing a header, a response needing reshaping — and write what you fetched there as JSON or delimited text with a header row.',
+].join(' ');
+
+const CONTRACT = 'Reply with one JSON object and nothing else — no prose before or after it, no code fence.';
+
+const EXAMPLE = '{"say":"…","name":"…","charts":[{"id":"…","data":{"kind":"source"},"transforms":[],"kind":"bar","x":"…","y":"…","series":"…","aggregate":"sum","title":"…","xLabel":"…","yLabel":"…"}],"remove":[],"followUps":["…","…"]}';
+
+// Two to four requests the user could make next, each a request rather than a question so clicking one
+// sends it as the user's own words.
+export const FOLLOW_UP_RULE = [
+  'Alongside `say`, offer two to four short follow-up requests the user could make about this — the next things worth looking at, in the same voice as a modification such as "split by region".',
+  'Each is sent as the user\'s request, so make each one a request rather than a question.',
+  'Offer none when the data and the charts answer everything they can.',
+].join(' ');
+
+export { CONTRACT, EXAMPLE };

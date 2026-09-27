@@ -30,9 +30,17 @@ function windowPayload(data: VisualizationsView, id: string): VisualizationTabPa
 export class VisualizationTabs {
   // Create the record, then open its tab. The host refuses an id it already holds, and a record whose
   // window is missing is a host that lost it — a failure here rather than a tab with nothing in it.
-  create(source: string, capabilities: TabPluginServerCapabilities): void {
+  // The first message is optional: the index's plus control sends none, and the default menu's
+  // **Visualize this** sends the current selection.
+  create(input: { message?: string }, capabilities: TabPluginServerCapabilities): void {
     const id = randomUUID();
-    capabilities.topicAction({ topic: 'visualizations', action: 'create', id, source });
+    const message = input.message?.trim();
+    capabilities.topicAction({
+      topic: 'visualizations',
+      action: 'create',
+      id,
+      ...(message !== undefined && message !== '' && { message }),
+    });
     const payload = windowPayload(dataFrom(capabilities), id);
     if (!payload) return capabilities.reportFailure('created visualization is unavailable');
     capabilities.openOrFocusTab(id, () => ({

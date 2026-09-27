@@ -35,6 +35,11 @@ export type AcpOptions = {
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
   // (every non-monitor caller and every tool-less persona) means deny every tool request.
   allowedTools?: string[];
+  // Approve every tool request rather than only a classified web tool. Set only by a caller whose
+  // whole purpose is to let the agent run commands — a visualization's agent acquiring the data a
+  // web page describes — and only for a session already confined to its own workspace by
+  // `workspaceDir`. The decision still takes the least-privilege allow option (see `decidePermission`).
+  allowEveryTool?: boolean;
 };
 
 export type AcpPromptHandlers = {

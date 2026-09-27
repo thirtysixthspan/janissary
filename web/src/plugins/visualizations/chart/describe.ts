@@ -2,8 +2,7 @@
 // renderer draws rather than from the table it was handed, so what the chart says and what the chart shows
 // cannot come to disagree.
 
-import { scatterFor, type Aggregate, type ChartShape, type Marks, type Point, type Table } from './points';
-import { viewedMarksFor, type ChartView } from './view';
+import { marksFor, scatterFor, type Aggregate, type ChartShape, type Marks, type Point, type Table } from './points';
 
 export type DataCell = string | number;
 
@@ -101,8 +100,8 @@ function describeScatter(chart: ChartShape, points: readonly { x: number; y: num
 
 // One sentence naming the kind, the measure, its range, and both ends of it. Every number in it is read
 // off marks already computed, so it describes the data rather than interpreting it.
-export function describeChart(table: Table, chart: ChartShape, view: ChartView): string {
-  const marks = viewedMarksFor(table, chart, view);
+export function describeChart(table: Table, chart: ChartShape): string {
+  const marks = marksFor(table, chart);
   if (chart.kind === 'pie') return describeSlices(chart, marks);
   if (chart.kind === 'scatter') return describeScatter(chart, scatterFor(table, chart));
   return describePoints(chart.kind, chart, marks.points);
@@ -112,11 +111,11 @@ export function describeChart(table: Table, chart: ChartShape, view: ChartView):
 // source's 500 rows and 32 columns would answer a different question, and not the one the picture poses.
 // A narrowed chart's table is the narrowed one, because a table of rows the chart no longer draws is a
 // table of a different chart.
-export function dataTableFor(table: Table, chart: ChartShape, view: ChartView): DataTable {
+export function dataTableFor(table: Table, chart: ChartShape): DataTable {
   const category: DataColumn = { name: categoryName(chart), numeric: false };
   const measure: DataColumn = { name: measureName(chart), numeric: true };
   if (chart.kind === 'pie') {
-    return { columns: [category, measure], rows: viewedMarksFor(table, chart, view).slices.map((slice) => [slice.label, slice.value]) };
+    return { columns: [category, measure], rows: marksFor(table, chart).slices.map((slice) => [slice.label, slice.value]) };
   }
   if (chart.kind === 'scatter') {
     // A scatter's x is a number rather than a category, so the column carries the numeric flag the
@@ -126,7 +125,7 @@ export function dataTableFor(table: Table, chart: ChartShape, view: ChartView): 
       rows: scatterFor(table, chart).map((point) => [point.x, point.y]),
     };
   }
-  const marks = viewedMarksFor(table, chart, view);
+  const marks = marksFor(table, chart);
   // The series column is carried only when the specification named one, which is the same condition
   // `marksFor` splits on — a chart with no series column has a single unnamed series and nothing to show.
   if (chart.series === undefined) {

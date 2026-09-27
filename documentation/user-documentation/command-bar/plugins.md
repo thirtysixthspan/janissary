@@ -18,7 +18,7 @@ pdf 1.0.0 api=1 state=declared
 schedules 1.0.0 api=1 state=declared
 sessions 1.0.0 api=1 state=declared
 video 1.0.0 api=1 state=declared
-visualizations 1.0.0 api=1 state=declared
+visualizations 2.0.0 api=1 state=declared
 ```
 
 Each line names the plugin, its own version, the plugin API version it was built against, and its state. A plugin's own version moves independently of the app's, which is why `conversations` is on a later version than the rest. There is nothing to install, enable, or configure. These ten are part of the app, and no plugin comes from anywhere else.

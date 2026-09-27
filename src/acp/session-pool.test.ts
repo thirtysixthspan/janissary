@@ -42,6 +42,19 @@ describe('AcpSessionPool', () => {
     expect(options.every((value) => !Object.hasOwn(value, 'allowedTools'))).toBe(true);
   });
 
+  it('passes allowEveryTool through to the session it connects', () => {
+    mocks.connectAcp.mockImplementation(() => session());
+    const sessions = new AcpSessionPool();
+    const pair = { harness: 'claude' as const, model: 'claude-sonnet' };
+
+    sessions.session('tools', pair, '/tmp/tools', { onError: vi.fn(), allowEveryTool: true });
+    sessions.session('plain', pair, '/tmp/plain', { onError: vi.fn() });
+
+    const options = mocks.connectAcp.mock.calls.map(([value]) => value as AcpOptions);
+    expect(options[0]?.allowEveryTool).toBe(true);
+    expect(Object.hasOwn(options[1] ?? {}, 'allowEveryTool')).toBe(false);
+  });
+
   it('closes only the named key', () => {
     const first = session();
     const second = session();

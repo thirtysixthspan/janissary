@@ -56,3 +56,20 @@ function within(candidate: string, root: string): boolean {
   const base = root.endsWith(path.sep) ? root : root + path.sep;
   return candidate === root || candidate.startsWith(base);
 }
+
+// The first address in a line of text, which is how a URL inside a sentence becomes the source
+// without a form field to type it into. Deliberately not a URL parser: it finds where an address
+// *starts* and stops at the first character that cannot be part of one, and `parseSource` then judges
+// what it found by exactly the rules every other route into a source is judged by. A path is
+// recognised by its leading `/`, `~` or `.` rather than by a scheme, so a local file works in a
+// sentence the way a URL does.
+const ADDRESS = /(?:https?:\/\/[^\s<>"'`)\]]+|\/[^\s<>"'`)\]]*|~[^\s<>"'`)\]]*)/iu;
+
+export function addressIn(text: string): string | undefined {
+  const found = ADDRESS.exec(text);
+  if (!found) return undefined;
+  // A trailing full stop is a sentence, not part of an address, and every rule about reading a
+  // source would be applied to a path that is really `https://example.com.`
+  const trimmed = found[0].replace(/[.,;:!?]+$/u, '');
+  return trimmed === '' ? undefined : trimmed;
+}

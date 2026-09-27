@@ -65,4 +65,29 @@ describe('decidePermission', () => {
   it('denies when no allow option is offered', () => {
     expect(decidePermission(['web_fetch'], toolCall({ kind: 'fetch' }), [rejectOnce])).toEqual({ outcome: 'cancelled' });
   });
+
+  it('approves an unclassifiable tool when every tool is allowed', () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute', title: 'Bash' }), [rejectOnce, allowOnce], true))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+  });
+
+  it('approves a classified web tool the allowlist omits, when every tool is allowed', () => {
+    expect(decidePermission([], toolCall({ kind: 'search', title: 'Search files' }), [allowOnce], true))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+  });
+
+  it('still prefers allow_once over allow_always when every tool is allowed', () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute' }), [allowAlways, allowOnce], true))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+  });
+
+  it('cancels when every tool is allowed but no allow option is offered', () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute' }), [rejectOnce], true))
+      .toEqual({ outcome: 'cancelled' });
+  });
+
+  it('leaves the allowlist answer unchanged when every tool is not allowed', () => {
+    expect(decidePermission(['web_search'], toolCall({ kind: 'execute', title: 'Bash' }), [allowOnce], false))
+      .toEqual({ outcome: 'cancelled' });
+  });
 });

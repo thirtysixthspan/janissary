@@ -4,8 +4,6 @@ import type {
   RemoteSessionView,
   VisualizationsView,
 } from '../protocol.js';
-import type { ConversationModelPair } from '../protocol/conversations.js';
-import type { VisualizationColumnType } from '../protocol/visualizations.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -103,32 +101,18 @@ export type TabPluginTopicAction =
   // only by pressing attach or terminate.
   | { topic: 'sessions'; action: 'refresh' }
   // The whole lifecycle of one visualization, and nothing else. The plugin never fetches a source,
-  // never parses one, and never speaks to a model: it names what the user asked for and the host does
-  // all of it, which is why a source line and a model pair are the only new facts it can introduce.
-  | { topic: 'visualizations'; action: 'create'; id: string; source: string }
+  // never parses one, and never speaks to a model: it names what the user said and the host does all
+  // of it, which is why a message and a chart id are the only new facts it can introduce. A `create`
+  // may carry the first message, which is what the default menu's **Visualize this** sends, so a
+  // selection becomes the opening turn rather than a field the tab has to offer.
+  | { topic: 'visualizations'; action: 'create'; id: string; message?: string }
   | { topic: 'visualizations'; action: 'load'; id: string }
   | { topic: 'visualizations'; action: 'delete'; id: string }
-  | { topic: 'visualizations'; action: 'rename'; id: string; title: string }
-  // Replace the source and begin again. Refused once a chart exists, because it would silently
-  // invalidate every answer the user gave to the questions asked about the old one.
-  | { topic: 'visualizations'; action: 'setSource'; id: string; source: string }
-  | { topic: 'visualizations'; action: 'setModel'; id: string; pair: ConversationModelPair }
-  // Ask the model what to chart, and answer the question it is currently asking. The answer is free
-  // text; the suggestions the question carries are the host's to show, not the plugin's to require.
-  | { topic: 'visualizations'; action: 'startInterview'; id: string }
-  | { topic: 'visualizations'; action: 'confirmSchema'; id: string }
-  | {
-      topic: 'visualizations';
-      action: 'setColumnType';
-      id: string;
-      column: string;
-      type: VisualizationColumnType;
-    }
-  | { topic: 'visualizations'; action: 'answer'; id: string; questionId: string; answer: string }
-  // A modification query against the current chart, and the one cancellation that covers it.
-  | { topic: 'visualizations'; action: 'revise'; id: string; query: string }
+  // A message, and the one cancellation that covers the model call it starts.
+  | { topic: 'visualizations'; action: 'send'; id: string; query: string }
   | { topic: 'visualizations'; action: 'cancel'; id: string }
-  // Re-read the source now, and set the interval that re-reads it on its own. Zero seconds is the
-  // interval that never fires, which is the default a new visualization starts on.
-  | { topic: 'visualizations'; action: 'refreshNow'; id: string }
-  | { topic: 'visualizations'; action: 'setRefresh'; id: string; seconds: number };
+  // One chart's live-update interval, and the one-shot re-read of one chart's data. Both name a chart
+  // rather than a visualization because live update belongs to an individual graph, and on a chart
+  // whose data the agent acquired the second is a model call.
+  | { topic: 'visualizations'; action: 'setChartRefresh'; id: string; chartId: string; seconds: number }
+  | { topic: 'visualizations'; action: 'refreshChart'; id: string; chartId: string };

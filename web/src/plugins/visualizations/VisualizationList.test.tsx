@@ -43,29 +43,16 @@ describe('VisualizationList', () => {
     expect(container.querySelectorAll('time')).toHaveLength(2);
   });
 
-  it('shows the empty state, and offers the source field instead of a bare plus', () => {
-    const { value } = capabilities();
-    render(<VisualizationList payload={list([])} capabilities={value} />);
-    expect(screen.getByText('No visualizations yet')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByTitle('New visualization'));
-    expect(screen.getByLabelText('Data source')).toBeInTheDocument();
-  });
-
-  it('creates a visualization from what was typed in the source field', () => {
+  // A visualization now begins with a question rather than with a source, so there is no field here to
+  // fill in: the control makes an empty conversation and its tab asks for the address.
+  it('shows the empty state, and a bare plus that makes an empty conversation', () => {
     const { intent, value } = capabilities();
     render(<VisualizationList payload={list([])} capabilities={value} />);
-    fireEvent.click(screen.getByTitle('New visualization'));
-    fireEvent.change(screen.getByLabelText('Data source'), { target: { value: 'https://example.com/d.csv' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Visualize' }));
-    expect(intent).toHaveBeenCalledWith('create', { source: 'https://example.com/d.csv' });
-  });
+    expect(screen.getByText('No visualizations yet')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Data source')).not.toBeInTheDocument();
 
-  it('refuses a blank source rather than creating a record with nothing in it', () => {
-    const { value } = capabilities();
-    render(<VisualizationList payload={list([])} capabilities={value} />);
     fireEvent.click(screen.getByTitle('New visualization'));
-    expect(screen.getByRole('button', { name: 'Visualize' })).toBeDisabled();
+    expect(intent).toHaveBeenCalledWith('create', {});
   });
 
   it('focuses the active list and highlights its first row', () => {
@@ -112,15 +99,14 @@ describe('VisualizationList', () => {
     expect(intent).toHaveBeenLastCalledWith('open', { id: 'second' });
   });
 
-  it('offers the source field on Cmd+N and on Ctrl+N', () => {
-    const { value } = capabilities();
+  it('creates one on Cmd+N and on Ctrl+N too', () => {
+    const { intent, value } = capabilities();
     const { container } = render(<VisualizationList payload={list([])} capabilities={value} />);
     const listNode = container.querySelector('.visualization-list')!;
     fireEvent.keyDown(listNode, { key: 'n', metaKey: true });
-    expect(screen.getByLabelText('Data source')).toBeInTheDocument();
-    fireEvent.keyDown(listNode, { key: 'Escape' });
+    expect(intent).toHaveBeenCalledWith('create', {});
     fireEvent.keyDown(listNode, { key: 'n', ctrlKey: true });
-    expect(screen.getByLabelText('Data source')).toBeInTheDocument();
+    expect(intent).toHaveBeenCalledTimes(2);
   });
 
   it('deletes a row only after the confirmation is answered', () => {
