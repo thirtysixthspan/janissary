@@ -2,8 +2,6 @@
 
 ## ready
 
-* tab-completion (3/10) — 2 of 18 facts missing and none wrong: `documentation/user-documentation/command-bar/tab-completion.md` never says that a command typed over several lines with `Shift+Enter` completes on its continuation lines, where the token starts after the newline and the words on earlier lines still set the command and the argument position — `ls`, `Shift+Enter`, `do` completes to `docs/`, and `msg`, `Shift+Enter`, `bi` completes the recipient — so anyone who has watched `Tab` do nothing on a second line will assume it never works there. The second gap sits in the closing sentence: the page says path completion expands `~` to your home directory, but not that the completed token keeps the tilde, and not that a bare `~` completes exactly as `~/` does, offering the home directory's own entries. Ground truth is `product/specs/tab-completion.md`, `src/completion/cursor.ts`, `src/completion/helpers.ts` and `src/completion/fs.ts`. Both sentences belong in that page's final paragraph, and the trailing paragraph of `help.md` already describes the tilde loosely enough not to contradict them.
-
 * release (2/10) — 6 facts, none of them reachable by a Janissary user: `product/specs/release.md` documents the maintainer script `node scripts/release.mjs <patch|minor|major|version> [--for-real]`, the changelog section it builds from conventional-commit subjects, the two version-carrying files it bumps, the `feat(package): bump version to <version>` commit and `v<version>` tag it leaves behind, its dry-run default, and its refusals on a dirty tree or off the primary branch. Nothing in that set is something the application exposes, so no page under `documentation/user-documentation/` and no `help.md` row should ever carry it, and the area scores 2 rather than the 10 its absent page would otherwise earn. Ground truth is `product/specs/release.md` and `scripts/release.mjs`; this belongs in the contributor documentation, and the next run can close it as out of scope for the user surfaces.
 
 ## development
@@ -158,3 +156,4 @@
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-09-27)
 * image-tab — documented in documentation/user-documentation/tab-types/image-viewer.md (removed 2026-09-27)
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-09-27)
+* tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md (removed 2026-09-27)
