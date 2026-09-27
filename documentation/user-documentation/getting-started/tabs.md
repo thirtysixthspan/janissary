@@ -115,7 +115,9 @@ Closing the **last** remaining tab quits the app, so it asks first. Bare `close`
 
 ## How paths are shown: `$root`
 
-The app shortens project paths to `$root` in its prompts, panels, headers, and status messages:
+The app shortens project paths to `$root` in its prompts, panels, headers, and status messages. The
+root is the directory you launched Janissary from — the project the session is working in — so a
+second window started somewhere else has its own root and its own `$root`:
 
 ```
 $root/                  = /Users/name/dev/project
@@ -137,9 +139,13 @@ know the clone's directory — a tab whose shell lives on another host — the m
 to the ordinary `$root` form instead of showing `$workspace` at all.
 
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
-editor tab's metadata header, and the transcript line a [profile](/user-documentation/automation/profiles)
-launch writes. It is **not** used for the launch and refusal lines the notifications feed posts, which name the workspace by its full absolute path; see [Agents](/user-documentation/getting-started/agents#names) for how those read. It is display-only. The
-underlying absolute paths do not change, and the raw output of your shell commands is never rewritten.
+editor tab's metadata header, a file navigator's root, and the transcript line a workspaced
+[agent](/user-documentation/getting-started/agents#workspaced-agents) launch writes once its clone is
+ready: `Agent "emrah" ready. (workspace: $root/workspace/emrah)`. It is **not** used for the launch
+and refusal lines the notifications feed posts, which name the workspace by its full absolute path;
+see [Agents](/user-documentation/getting-started/agents#names) for how those read. It is display-only.
+The underlying absolute paths do not change, and the raw output of your shell commands is never
+rewritten.
 
 You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, `newdir`, or `files`:
 
