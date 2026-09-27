@@ -156,7 +156,10 @@ function isTurn(value: unknown): value is VisualizationTurn {
     && typeof value.response === 'string'
     && isModelPair(value.pair)
     && (value.error === undefined || typeof value.error === 'string')
-    && value.streaming === undefined;
+    // The flag is on the wire, not merely on disk: the host records a turn before it calls the model
+    // and copies it onto the window it projects, and a tab cannot disable its composer or offer a
+    // cancel without it. A guard that refused it would refuse the host's own payload.
+    && (value.streaming === undefined || typeof value.streaming === 'boolean');
 }
 
 function isStringList(value: unknown): value is string[] {

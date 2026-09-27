@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Accept the payload the host actually sends, so a reply in flight does not stop every visualization tab repainting. Severity: 9/10
-
-Existing Issue: `src/plugins/visualizations/shared.ts`'s `isTurn` requires `value.streaming === undefined` — a window guard the host's own `src/visualizations/agent.ts` violates, since it creates a turn with `streaming: true` and `src/visualizations/view.ts` copies it onto the wire — so from the moment a message is accepted until its reply lands, `windowOf` produces a window the client's `isVisualizationWindow` refuses. Severity: 9/10
-
-Existing Risk: 9/10 - `src/plugins/visualizations/activate.ts` bails on the whole topic delivery when `isVisualizationsData` fails, so while any visualization is working no tab repaints at all: the tab never learns `busy`, Escape cannot cancel, Enter is accepted and then silently dropped by the server's refusal, and `src/plugins/visualizations/tabs.ts`'s `dataFrom` calls `reportFailure`, which throws and disables the plugin outright — so opening a saved visualization during a reply takes the whole feature down, and because `src/visualizations/store.ts` deliberately persists a streaming turn, a quit mid-reply leaves a record that disables the plugin on every later launch with no way back.
-
-Proposal Risk: 2/10 - The guard becomes a check that the host's shape really is the client's shape, which is what it was for; the `streaming` flag stays on the wire because the tab needs it, and the reachable hole narrows to a record hand-edited on disk.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: accept the host's payload so a reply in flight does not stop every visualization tab repainting". The payload guard in `src/plugins/visualizations/shared.ts` has `isTurn` end with `&& value.streaming === undefined;`. Change it to accept the flag as an optional boolean, exactly as `src/visualizations/store.ts`'s own `isTurn` already does, and correct the comment in `src/visualizations/store.ts` that claims the window guard requires the flag to be absent — a payload does carry one. Then delete the two lines in `src/plugins/visualizations/shared.test.ts` that assert a streaming turn is refused, and replace them with the test this finding is really about: build a window the way the host builds one — a turn with `streaming: true` and a `busy: true` window — and assert `isVisualizationsPayload` accepts it. `web/src/plugins/visualizations/VisualizationTab.test.tsx` should gain a case asserting that a `busy: true` window disables the composer and that Enter on it emits nothing while Escape emits `cancel`, which is the behaviour a rejected payload currently prevents. The change is one condition in one guard; do not alter the host's streaming flag, which the tab depends on. `src/acp/tools.ts` is unrelated and must stay as it is.
-
 * Stop the live-update poll re-arming at zero after a read fails, so a dead endpoint is not hammered. Severity: 8/10
 
 Existing Issue: `src/visualizations/reading.ts`'s `applyRead` returns early on a failure without advancing the dataset's `readAt`, and `src/visualizations/refresh.ts`'s `waitOf` computes `Math.max(entry.seconds * 1000 - (now - entry.readAt), 0)`, so a dataset that failed to read is permanently due and `poll` re-arms the timer at `0` with no backoff. Severity: 8/10

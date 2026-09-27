@@ -113,6 +113,25 @@ describe('a new visualization tab', () => {
     expect(held.value).toBe('and a line chart');
   });
 
+  // The whole of the tab while a reply is in flight, and the payload carrying it: Enter is refused
+  // rather than silently dropped by the server, the typed text stays where it is, and the one thing
+  // that still works is the one that stops the reply.
+  it('refuses a message and offers a cancel while the window is busy', () => {
+    show(payload({
+      busy: true,
+      turns: [turn({ response: '', streaming: true })],
+    }));
+    const input = screen.getByLabelText('Ask about the data or the chart') as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: 'and a line chart' } });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(CAPABILITIES.intent).not.toHaveBeenCalled();
+    expect(input.value).toBe('and a line chart');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(CAPABILITIES.intent).toHaveBeenCalledWith('cancel', {});
+  });
+
   it('cancels a reply with Escape', () => {
     show(payload({ busy: true }));
     fireEvent.keyDown(screen.getByLabelText('Ask about the data or the chart'), { key: 'Escape' });

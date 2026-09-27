@@ -114,7 +114,7 @@ describe('visualizations shared contract', () => {
     })).toBe(true);
   });
 
-  it('refuses a chart kind it does not draw, a data reference it does not know, and a turn marked streaming', () => {
+  it('refuses a chart kind it does not draw, a data reference it does not know, and a turn with no query', () => {
     expect(isVisualizationsPayload({
       kind: 'visualization',
       window: { ...WINDOW, charts: [{ ...CHART, kind: 'radar' as never }] },
@@ -130,9 +130,30 @@ describe('visualizations shared contract', () => {
       models: [],
       windows: [{
         ...WINDOW,
-        turns: [{ query: 'q', response: '', pair: { harness: 'claude', model: 'm' }, streaming: true }],
+        turns: [{ response: '', pair: { harness: 'claude', model: 'm' } } as never],
       }],
     })).toBe(false);
+  });
+
+  // The guard's whole job is to agree with the host about the window the host produces, and the host
+  // produces one with a streaming turn for as long as a reply is in flight. A guard that refused that
+  // would stop every tab repainting at the moment they most need to, so this is the test that pins the
+  // two sides together — and it is deliberately built the way `windowOf` builds one.
+  it('accepts the window the host projects while a reply is in flight', () => {
+    expect(isVisualizationsPayload({
+      kind: 'visualization',
+      window: {
+        ...WINDOW,
+        busy: true,
+        turns: [{
+          query: 'plot revenue by region',
+          response: '',
+          pair: { harness: 'opencode', model: 'model' },
+          streaming: true,
+        }],
+      },
+      models: [{ harness: 'opencode', model: 'model' }],
+    })).toBe(true);
   });
 
   // The transformations do not reach the browser — the caption arrives as words instead — so the guard

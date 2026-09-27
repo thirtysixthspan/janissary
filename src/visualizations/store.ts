@@ -50,8 +50,8 @@ function isStringArray(value: unknown): value is string[] {
 // A stored turn may be marked streaming, because a turn is persisted before the model is called and a
 // process that exits mid-reply leaves that flag on disk — refusing it would make the whole record
 // unreadable, and therefore delete the visualization, at exactly the moment a crash would. The window
-// guard in the plugin's shared contract still requires the flag to be absent, because a payload never
-// carries one: a tab the server is not answering is not a state the browser has to render.
+// guard in the plugin's shared contract accepts the same flag, because a payload carries one too: the
+// tab cannot disable its composer or offer a cancel without it.
 function isTurn(value: unknown): value is VisualizationTurnView {
   return isRecord(value)
     && typeof value.query === 'string'
