@@ -58,6 +58,35 @@ describe('acquireLock', () => {
     expect(readFileSync(path.join(dir, 'lock'), 'utf8').trim()).toBe(String(process.pid));
   });
 
+  // An empty file (a crash between truncate and write), 0, and negative numbers all have a
+  // process-group meaning to `process.kill`; none is a pid, so each is stale and never probed.
+  it.each([[''], ['0'], ['-1'], ['not-a-pid']])('takes over a lock file holding %j without probing it', (content) => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), content);
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    try { acquireLock(projectDir); } finally { kill.mockRestore(); }
+    expect(kill).not.toHaveBeenCalled();
+    expect(readFileSync(path.join(dir, 'lock'), 'utf8')).toBe(String(process.pid));
+  });
+
+  // Another starter replaces the stale lock while this one is judging it: the fresh lock is left in
+  // place and this start is refused, rather than both running.
+  it('refuses when another instance takes over a stale lock first', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'lock');
+    writeFileSync(file, '999999');
+    const kill = vi.spyOn(process, 'kill').mockImplementation(() => {
+      writeFileSync(file, '424242');
+      throw Object.assign(new Error('ESRCH'), { code: 'ESRCH' });
+    });
+    try {
+      expect(() => acquireLock(projectDir)).toThrow(/already running in this directory \(pid 424242\)/);
+    } finally { kill.mockRestore(); }
+    expect(readFileSync(file, 'utf8')).toBe('424242');
+  });
+
   it('succeeds when the lock file contains a pid that is not alive', () => {
     const dir = path.join(projectDir, '.janissary');
     mkdirSync(dir, { recursive: true });
@@ -84,6 +113,13 @@ describe('readLockPid', () => {
     writeFileSync(path.join(dir, 'lock'), '999999');
     expect(readLockPid(projectDir)).toBe(999_999);
   });
+
+  it.each([[''], ['0'], ['-1'], ['1.5'], ['not-a-pid']])('returns undefined for a lock file holding %j', (content) => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'lock'), content);
+    expect(readLockPid(projectDir)).toBeUndefined();
+  });
 });
 
 describe('releaseLock', () => {
@@ -101,5 +137,14 @@ describe('releaseLock', () => {
     releaseLock(projectDir);
     expect(existsSync(file)).toBe(true);
     expect(readFileSync(file, 'utf8').trim()).toBe('999999');
+  });
+
+  it('leaves a lock file that holds no valid pid untouched', () => {
+    const dir = path.join(projectDir, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, 'lock');
+    writeFileSync(file, '');
+    releaseLock(projectDir);
+    expect(existsSync(file)).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 /**
@@ -54,34 +54,68 @@ function lockPath(projectDir: string): string {
   return path.join(projectDir, '.janissary', 'lock');
 }
 
-// The PID recorded in a directory's lock file, or undefined when no lock file exists (or its
-// contents don't parse as a number). Used by `janus stop` to find the instance to signal.
-export function readLockPid(projectDir: string): number | undefined {
-  const file = lockPath(projectDir);
-  if (!existsSync(file)) return undefined;
-  const pid = Number(readFileSync(file, 'utf8').trim());
-  return Number.isNaN(pid) ? undefined : pid;
+// The pid a lock file's contents record, or undefined unless it could name one real process.
+// `process.kill` gives 0 and negative numbers a process-group meaning — and an empty or truncated
+// file parses to 0 — so probing or signalling anything but a positive integer would reach the
+// caller's own process group, or every process the user owns.
+function parseLockPid(content: string): number | undefined {
+  const pid = Number(content.trim());
+  return Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
 }
 
+// The lock file's contents, or undefined when there is no lock file.
+function readLockContent(file: string): string | undefined {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+// The PID recorded in a directory's lock file, or undefined when no lock file exists (or its
+// contents are not a valid pid). Used by `janus stop` to find the instance to signal.
+export function readLockPid(projectDir: string): number | undefined {
+  const content = readLockContent(lockPath(projectDir));
+  return content === undefined ? undefined : parseLockPid(content);
+}
+
+// Create the lock file holding this process's pid, in one exclusive step: false when one already
+// exists, so two starters racing for a free lock cannot both win.
+function createLockFile(file: string): boolean {
+  try {
+    writeFileSync(file, String(process.pid), { flag: 'wx' });
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
+    throw error;
+  }
+}
+
+function alreadyRunning(file: string, pid: number | undefined): Error {
+  const holder = pid === undefined ? '' : ` (pid ${pid})`;
+  return new Error(
+    `another janus instance is already running in this directory${holder}. Run janus <other-directory> to start a second instance elsewhere. If you're sure no other instance is running, delete ${file} to clear the lock.`,
+  );
+}
+
+// Take the directory's lock, refusing while a live instance of ours holds it. A lock naming no live
+// instance — a dead or foreign pid, or contents that are not a pid at all — is stale and taken over
+// once. It is removed only if unchanged since it was judged stale, so a lock another starter took
+// over in the meantime survives, and the retry then refuses rather than admitting both.
 export function acquireLock(projectDir: string): void {
   const file = lockPath(projectDir);
-  if (existsSync(file)) {
-    const pid = Number(readFileSync(file, 'utf8').trim());
-    if (isOwnInstanceAlive(pid)) {
-      throw new Error(
-        `another janus instance is already running in this directory (pid ${pid}). Run janus <other-directory> to start a second instance elsewhere. If you're sure no other instance is running, delete ${file} to clear the lock.`,
-      );
-    }
-  }
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, String(process.pid));
+  if (createLockFile(file)) return;
+  const content = readLockContent(file);
+  const pid = content === undefined ? undefined : parseLockPid(content);
+  if (pid !== undefined && isOwnInstanceAlive(pid)) throw alreadyRunning(file, pid);
+  if (content !== undefined && readLockContent(file) === content) rmSync(file, { force: true });
+  if (!createLockFile(file)) throw alreadyRunning(file, readLockPid(projectDir));
 }
 
 export function releaseLock(projectDir: string): void {
-  const file = lockPath(projectDir);
-  if (!existsSync(file)) return;
-  const pid = Number(readFileSync(file, 'utf8').trim());
-  if (pid === process.pid) {
-    rmSync(file, { force: true });
+  if (readLockPid(projectDir) === process.pid) {
+    rmSync(lockPath(projectDir), { force: true });
   }
 }
