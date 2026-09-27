@@ -2,8 +2,6 @@
 
 ## ready
 
-* release (2/10) — 6 facts, none of them reachable by a Janissary user: `product/specs/release.md` documents the maintainer script `node scripts/release.mjs <patch|minor|major|version> [--for-real]`, the changelog section it builds from conventional-commit subjects, the two version-carrying files it bumps, the `feat(package): bump version to <version>` commit and `v<version>` tag it leaves behind, its dry-run default, and its refusals on a dirty tree or off the primary branch. Nothing in that set is something the application exposes, so no page under `documentation/user-documentation/` and no `help.md` row should ever carry it, and the area scores 2 rather than the 10 its absent page would otherwise earn. Ground truth is `product/specs/release.md` and `scripts/release.mjs`; this belongs in the contributor documentation, and the next run can close it as out of scope for the user surfaces.
-
 ## development
 
 ## deferred
@@ -157,3 +155,4 @@
 * image-tab — documented in documentation/user-documentation/tab-types/image-viewer.md (removed 2026-09-27)
 * shell — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-09-27)
 * tab-completion — documented in documentation/user-documentation/command-bar/tab-completion.md (removed 2026-09-27)
+* release — already documented where it belongs: documentation/developer-documentation/release-process.md covers both scripts, the dry-run default, the changelog rules, the version bumps, the commit and tag, and the refusals, so no user-documentation page or help.md row should carry a maintainer script (removed 2026-09-27)
