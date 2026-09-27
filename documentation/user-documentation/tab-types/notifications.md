@@ -9,17 +9,24 @@ notifications right   open it docked in the right sidebar
 notifications clear   empty the queue, the record file, and any toasts on screen
 ```
 
-There is only ever one notifications tab. The feed has no command line. Every notification of the
-current run is held in a queue (the most recent 200), independent of whether the feed is open —
-closing it and reopening it loses nothing, since the reopened feed is seeded from the queue.
+There is only ever one notifications tab, and its label is always `notifications`, with no type or
+status marker added to it. The feed has no command line, and an empty one shows nothing at all: not
+the hint an agent tab shows when its transcript is empty, because there is nothing to type into.
+Every notification of the current run is held in a queue (the most recent 200), independent of
+whether the feed is open — closing it and reopening it loses nothing, since the reopened feed is
+seeded from the queue.
 
 <img class="agent-float" src="/agents/hamza-south-west.png" alt="" />
 
 You don't have to open it first. A notification with no feed on screen appears as a **toast** in
-the window's upper-right corner instead: visible for about four seconds, then fading out over two,
+the window's upper-right corner instead: the tab it came from's colored dot, that tab's label, and
+the message, and nothing else. It is visible for about four seconds, then fading out over two,
 without opening or rearranging anything. Hovering a toast holds its clock; moving away resumes it
 with the time that was left. Clicking a toast makes the feed visible — docked into the right
 sidebar if it doesn't exist yet, brought onto screen without changing which tab you're working in.
+Anything that brings the feed onto the screen empties that window's corner, so a click takes the
+rest of the toasts with it. A window that reloads or reconnects comes back with an empty corner:
+toasts are never re-sent, though the feed still holds everything.
 A toast is silent: no sound plays and no operating-system notification is raised, so a notification
 only reaches you if you happen to be looking. A toast is also the shortened form of the line: it
 carries no timestamp and none of the clickable targets the feed entry has, and a long message is cut
