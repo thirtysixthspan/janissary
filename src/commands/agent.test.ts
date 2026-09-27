@@ -52,9 +52,9 @@ describe('resolveAgentName', () => {
     expect(result).toBe('ahmed');
   });
 
-  it('truncates an explicit name to the configured max length', () => {
-    const result = resolveAgentName('agent abcdefghijklmnopqrstuvwxyz', ['janus']);
-    expect(result).toBe('abcdefghijklmnop'); // 16 chars, the default tabNameMaxLength
+  it('keeps the whole lowercased name past the tab strip display length', () => {
+    const result = resolveAgentName('agent Alpha-Bravo-Charlie', ['janus']);
+    expect(result).toBe('alpha-bravo-charlie');
   });
 });
 
@@ -106,9 +106,9 @@ describe('parseAgentCommand', () => {
     expect(result).toEqual({ name: 'ahmed', workspace: true, offline: false });
   });
 
-  it('truncates the name to the configured max length', () => {
-    const result = parseAgentCommand('agent abcdefghijklmnopqrstuvwxyz');
-    expect(result).toEqual({ name: 'abcdefghijklmnop', workspace: true, offline: false }); // 16 chars
+  it('keeps the whole lowercased name past the tab strip display length', () => {
+    const result = parseAgentCommand('agent Alpha-Bravo-Charlie');
+    expect(result).toEqual({ name: 'alpha-bravo-charlie', workspace: true, offline: false });
   });
 
   it('extracts the offline flag', () => {

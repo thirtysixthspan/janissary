@@ -6,6 +6,7 @@ import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { parseAgentCommand } from '../agent/commands.js';
 import { resolveLocalLaunchName } from './local.js';
 import { localRunningRefusal } from './messages.js';
 
@@ -47,6 +48,17 @@ describe('resolveLocalLaunchName', () => {
     const managers = managersWith([{ label: 'bekir', workspaceDir: workspacePath('bar') }]);
 
     expect(resolveLocalLaunchName(managers, { creator: 'janus', name: 'Foo', explicit: true, workspace: true })).toBe('Foo');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('keeps two typed names apart when they share their first 16 characters', () => {
+    const first = parseAgentCommand('agent alpha-bravo-charlie').name;
+    const managers = managersWith([{ label: first, workspaceDir: workspacePath(first) }]);
+
+    const second = parseAgentCommand('agent alpha-bravo-charlot').name;
+
+    expect(first).toBe('alpha-bravo-charlie');
+    expect(resolveLocalLaunchName(managers, { creator: 'janus', name: second, explicit: true, workspace: true })).toBe('alpha-bravo-charlot');
     expect(notify).not.toHaveBeenCalled();
   });
 });

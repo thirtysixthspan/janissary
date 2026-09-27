@@ -104,7 +104,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | Setting | Default | What it does |
 |---|---|---|
 | `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. This also limits new agent names. A `harness claude as <label>` is not capped, and is only shortened for display |
+| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither an `agent <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
 | `activeTabNameMaxLength` | `50` | The longest focused tab name shown in the strip. Focusing a tab expands its name up to this limit. |
 | `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
