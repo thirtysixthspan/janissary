@@ -24,7 +24,7 @@ export type VisualizationChart = {
   yLabel?: string;
 };
 
-export type VisualizationColumn = { name: string; type: 'number' | 'boolean' | 'string' };
+export type VisualizationColumn = { name: string; type: 'number' | 'boolean' | 'string' | 'date' };
 
 export type VisualizationTable = {
   columns: VisualizationColumn[];
@@ -122,7 +122,7 @@ function isChart(value: unknown): value is VisualizationChart {
     && (value.yLabel === undefined || typeof value.yLabel === 'string');
 }
 
-const COLUMN_TYPES = new Set(['number', 'boolean', 'string']);
+const COLUMN_TYPES = new Set(['number', 'boolean', 'string', 'date']);
 
 function isColumn(value: unknown): value is VisualizationColumn {
   return isRecord(value)

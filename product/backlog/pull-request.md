@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the gap that a date column is a character axis, where a time-series question is the first thing anyone asks a chart of dated data.
-
-Existing Issue: `product/specs/visualizations.md` says dates are deliberately left as text so a chart over a date column draws a category axis rather than guessing a format, and `web/src/plugins/visualizations/chart/points.ts` consequently gives a date band no more meaning than its first appearance in the file, so a month of daily rows is thirty-one evenly spaced categories in file order. Severity: 6/10
-
-Existing Risk: 6/10 - "Revenue over time" is the most common request anyone makes of dated data, and the chart it produces is unreadable rather than wrong — no trend, and thirty thinned labels where three months belong.
-
-Proposal Risk: 4/10 - Recognizing any date format reintroduces exactly the guessing `product/specs/visualizations.md` decided against, so an unrecognized format has to stay a deliberate visible state rather than a silent one, and that sentence has to be revised rather than worked around.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: give a recognized date column a time axis". Infer a `date` column type in `src/visualizations/table.ts` beside the three that exist, recognizing only ISO 8601 and leaving a column as text when no format is recognized rather than guessing, and note in that file why the narrow recognition is deliberate. Add the type to the guards in `src/plugins/visualizations/shared.ts`, to the wire type in `src/protocol/visualizations.ts`, and to `validateChart` in `src/visualizations/chart-spec.ts` so a scatter's x may be a date while a pie's category still may not be a number. In `web/src/plugins/visualizations/chart/points.ts`, sort a date axis by parsed value rather than by row order, and let `web/src/plugins/visualizations/chart/scale.ts` give it a linear scale with readable tick steps. Revise the sentence in `product/specs/visualizations.md` that currently rules dates out so it states what is recognized and what falls back to text. Add cases to `src/visualizations/table.test.ts` for ISO recognition and for a format left as text, to `web/src/plugins/visualizations/chart/points.test.ts` for a date axis sorted by value, and to `src/visualizations/chart-spec.test.ts` for a `date` type refused where a number is required. Sources: https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-ask-data-question , https://help.tableau.com/current/online/en-gb/pulse_ask_discover_qa.htm
-
-
 * Close the gap that a chart is a picture with no way to look closer, where filtering and sorting are table stakes on every dashboard surface.
 
 Existing Issue: `product/specs/visualizations.md` has the model choose the columns and the tab draws them, and nothing in the chart is interactive — no filter, no sort, no top-N, no selection — so the only way to narrow a chart is to ask the model again and wait for it. Severity: 5/10

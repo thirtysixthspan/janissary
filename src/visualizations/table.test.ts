@@ -109,8 +109,43 @@ describe('column type inference', () => {
 
   // A date column stays a string on purpose. Claiming a date type would mean deciding a format and a
   // timezone, and a wrong answer there is worse than a category axis.
-  it('leaves a date column a string', () => {
-    expect(typesOf(parseJsonText('[{"d":"2026-01-31"}]'))).toEqual({ d: 'string' });
+  it('reads a column of ISO 8601 dates as a date, which is what orders a time axis', () => {
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31"}]'))).toEqual({ d: 'date' });
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31T09:00:00Z"}]'))).toEqual({ d: 'date' });
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31 09:00"}]'))).toEqual({ d: 'date' });
+  });
+
+  // `Date.parse` checks no calendar, so a pattern alone would type a column of typos as a date and then
+  // plot the rollovers. These are the cases that makes real.
+  it('leaves a date the calendar disagrees with a string', () => {
+    expect(typesOf(parseJsonText('[{"d":"2026-02-31"}]'))).toEqual({ d: 'string' });
+    expect(typesOf(parseJsonText('[{"d":"2026-13-01"}]'))).toEqual({ d: 'string' });
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31T24:00:00Z"}]'))).toEqual({ d: 'string' });
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31T09:60:00Z"}]'))).toEqual({ d: 'string' });
+  });
+
+  it('knows which years have a 29th of February', () => {
+    expect(typesOf(parseJsonText('[{"d":"2024-02-29"}]'))).toEqual({ d: 'date' });
+    expect(typesOf(parseJsonText('[{"d":"2023-02-29"}]'))).toEqual({ d: 'string' });
+  });
+
+  // Both of these are readable by `Date.parse` and both ambiguous to a person, so neither is a date
+  // here — a column in either format stays a category, which is what it was before this type existed.
+  it('leaves an unambiguous-looking but ambiguous format a string', () => {
+    expect(typesOf(parseJsonText('[{"d":"2026-1-31"}]'))).toEqual({ d: 'string' });
+    expect(typesOf(parseJsonText('[{"d":"01/31/2026"}]'))).toEqual({ d: 'string' });
+  });
+
+  it('needs every value present to be a date before the column is one', () => {
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31"},{"d":null}]'))).toEqual({ d: 'date' });
+    expect(typesOf(parseJsonText('[{"d":"2026-01-31"},{"d":"sometime"}]'))).toEqual({ d: 'string' });
+  });
+
+  // A date is a category, not a measure, so a source holding nothing but dates still cannot be charted
+  // against anything. The new type must not open that door by being mistaken for a number.
+  it('reads a date column as nothing but a date, never as a measure', () => {
+    expect(chartable(tableOf(parseJsonText('[{"d":"2026-01-31"}]')).table))
+      .toEqual({ error: 'the source has no numeric column to measure' });
   });
 
   it('de-duplicates a repeated header name and names an empty one', () => {

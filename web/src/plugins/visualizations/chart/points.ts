@@ -9,7 +9,7 @@ export type { Aggregate } from './aggregate';
 
 export type Cell = string | number | boolean | null;
 
-export type Column = { name: string; type: 'number' | 'boolean' | 'string' };
+export type Column = { name: string; type: 'number' | 'boolean' | 'string' | 'date' };
 
 export type Table = { columns: Column[]; rows: Cell[][] };
 
@@ -59,6 +59,51 @@ function columnIndex(table: Table, name: string | undefined): number {
   return table.columns.findIndex((column) => column.name === name);
 }
 
+// A date column's order is the order of the instants it names, which is the only reason a time series
+// reads as one: a month of daily rows in whatever order the file listed them is thirty-one categories
+// with no trend in them. The server decided the column is a date, so this only reads the instant back —
+// there is no second calendar check here to disagree with the one that typed it.
+function isDateColumn(table: Table, index: number): boolean {
+  return table.columns[index]?.type === 'date';
+}
+
+function instant(cell: Cell | undefined): number | undefined {
+  if (typeof cell !== 'string' || cell.trim() === '') return undefined;
+  const parsed = Date.parse(cell.trim());
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+// The marks in the order they will be drawn, which is row order for every column but a date.
+function ordered(points: Point[], chronological: boolean): Point[] {
+  if (!chronological) return points;
+  // A stable sort, so two rows naming the same instant keep the order the source listed them in: an
+  // unstable one would draw the same source differently on two runs.
+  return points
+    .map((point, index) => ({ point, index }))
+    .toSorted((a, b) => (instant(a.point.label) ?? 0) - (instant(b.point.label) ?? 0) || a.index - b.index)
+    .map((entry) => entry.point);
+}
+
+// Every band number below comes from this list, so a date axis's slots are its instants and every other
+// axis's are the rows the source listed. First-seen order is the identity here, which is why a chart
+// with no date in it is numbered exactly as it was.
+function bandOrder(points: readonly Point[], chronological: boolean): string[] {
+  const inOrder = ordered([...points], chronological);
+  const labels: string[] = [];
+  for (const point of inOrder) {
+    if (!labels.includes(point.label)) labels.push(point.label);
+  }
+  return labels;
+}
+
+// A raw mark keeps its source row as its band, because a dropped row leaves a gap and the axis labels
+// band `n` with the n-th mark. That gap is the pre-existing behaviour this change does not touch, so a
+// date axis — which is re-numbered anyway — is the only one that gets dense bands, in date order.
+function banded(points: Point[], chronological: boolean): Point[] {
+  if (!chronological) return points;
+  return ordered(points, true).map((point, index) => ({ ...point, band: index }));
+}
+
 function seriesNames(points: readonly Point[], split: boolean): string[] {
   if (!split) return [SINGLE_SERIES];
   const names: string[] = [];
@@ -89,9 +134,10 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
     });
   }
   const aggregate = effectiveAggregate(chart);
+  const chronological = isDateColumn(table, xi);
   if (aggregate === undefined) {
     if (chart.kind === 'pie') return { points: raw, slices: slicesFor(raw), series: [] };
-    return { points: raw, slices: [], series: seriesNames(raw, si !== -1) };
+    return { points: banded(raw, chronological), slices: [], series: seriesNames(raw, si !== -1) };
   }
   // A pie is cut from categories and has no second dimension to split by; every other kind is banded by
   // category with its series inside, which is the shape the bar renderer already draws a multi-series
@@ -109,15 +155,18 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
   // Bands are numbered per category rather than per group, because a band is a slot on the category
   // axis and the series share it. Numbering by group would give each series its own slot, which is a
   // different chart rather than an aggregated one.
-  const bands = new Map<string, number>();
-  const points = reduced.map((group) => {
-    let band = bands.get(group.label);
-    if (band === undefined) {
-      band = bands.size;
-      bands.set(group.label, band);
-    }
-    return { band, value: reduce(aggregate, group.values), series: group.series, label: group.label };
-  });
+  const slots = new Map<string, number>();
+  for (const [index, label] of bandOrder(raw, chronological).entries()) slots.set(label, index);
+  // Emitted in band order rather than in the order the groups were found, because on a date axis those
+  // are not the same order and the axis reads the array as well as the numbers.
+  const points = reduced
+    .map((group) => ({
+      band: slots.get(group.label) ?? 0,
+      value: reduce(aggregate, group.values),
+      series: group.series,
+      label: group.label,
+    }))
+    .toSorted((a, b) => a.band - b.band);
   return { points, slices: [], series: seriesNames(points, split) };
 }
 
@@ -141,8 +190,11 @@ export function scatterFor(table: Table, chart: ChartShape): ScatterPoint[] {
   const xi = columnIndex(table, chart.x);
   const yi = columnIndex(table, chart.y);
   if (xi === -1 || yi === -1) return [];
+  // A scatter is the one kind with a linear x already, so a date x is read as the instant it names and
+  // the existing scale places the point by time — which is the whole of "a time axis" for this kind.
+  const dated = isDateColumn(table, xi);
   return table.rows.flatMap((row) => {
-    const x = numeric(row[xi]);
+    const x = dated ? instant(row[xi]) : numeric(row[xi]);
     const y = numeric(row[yi]);
     return x === undefined || y === undefined ? [] : [{ x, y }];
   });

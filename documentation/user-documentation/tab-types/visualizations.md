@@ -19,7 +19,9 @@ What can be read:
 - **JSON** — an array of objects, or an object holding one. `{"data": {"items": [...]}}` works too.
 - **Delimited text** — comma, tab, semicolon, or pipe, with a header row. Quoted fields are fine, and so is a quoted field containing the delimiter.
 
-Column types are worked out for you, so you never pick them. A column of numbers is a measure you can plot; a column of anything else is a category you can group by. Dates are treated as text, which means a date column works as an axis but is not measured.
+Column types are worked out for you, so you never pick them. A column of numbers is a measure you can plot; a column of anything else is a category you can group by.
+
+A column of ISO dates — `2026-01-31`, or `2026-01-31T09:00:00Z` — is recognized as dates rather than as text, and a chart over it puts its categories in date order instead of the order the file happened to list them, so a month of daily rows reads as a month. Only that format is recognized, and only when the date is real: `2026-02-31`, `2026-13-01`, `2026-1-31` and `06/01/2024` all stay text, which makes them categories. A timestamp with no timezone is read as local time.
 
 A local file has to be inside this project directory or your home directory. Anything else is refused and says so. Symlinks are followed before the check, so a link pointing outside those two directories is refused too.
 

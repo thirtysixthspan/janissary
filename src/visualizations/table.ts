@@ -1,4 +1,5 @@
 import { isRecord } from '../value-guards.js';
+import { isIsoDate } from './dates.js';
 import type {
   VisualizationColumnType,
   VisualizationColumnView,
@@ -47,15 +48,18 @@ function booleanOrUndefined(value: Cell): boolean | undefined {
   return undefined;
 }
 
-// A column is numeric when every non-empty value in it is, and boolean when every value is. An empty
-// column is a string: it has told us nothing, and claiming a type it does not have would let a chart
-// claim a measure that is not there. Dates are deliberately not inferred — a date column stays a
-// string, so a line chart over it draws a category axis rather than guessing a timezone.
+// A column is numeric when every non-empty value in it is, boolean when every value is, and a date when
+// every value is an ISO 8601 date the calendar agrees with. An empty column is a string: it has told us
+// nothing, and claiming a type it does not have would let a chart claim a measure that is not there.
+// The date check is narrow on purpose and lives in ./dates.ts, which says why: any other format stays
+// text, so a column of `2024-6-1` or `06/01/2024` is a category exactly as it is today rather than a
+// date read one of two ways.
 function inferType(values: readonly Cell[]): VisualizationColumnType {
   const present = values.filter((value) => value !== null && value !== '');
   if (present.length === 0) return 'string';
   if (present.every((value) => numberOrUndefined(value) !== undefined)) return 'number';
   if (present.every((value) => booleanOrUndefined(value) !== undefined)) return 'boolean';
+  if (present.every((value) => isIsoDate(value))) return 'date';
   return 'string';
 }
 

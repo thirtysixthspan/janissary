@@ -26,7 +26,11 @@ A document that begins like JSON is reported as a JSON failure when it is not va
 
 ### The table
 
-Column names come from the first object or the header line, trimmed, de-duplicated, and capped. A column is numeric when every non-empty value in it is a number, boolean when every value is one of the two spellings, and text otherwise. Dates are deliberately left as text, so a chart over a date column draws a category axis rather than guessing a format and a timezone.
+Column names come from the first object or the header line, trimmed, de-duplicated, and capped. A column is numeric when every non-empty value in it is a number, boolean when every value is one of the two spellings, a date when every value is an ISO 8601 date the calendar agrees with, and text otherwise.
+
+Only ISO 8601 is recognized, and a date is refused rather than reinterpreted: a day the month does not have, a month past twelve, an hour of twenty-four, and a format a reader could read two ways such as `2026-1-31` or `06/01/2024` all leave the column as text, which is a category exactly as it was. A date column is not a measure, so it cannot be plotted against; a timestamp carrying no offset is read in the machine's own zone rather than in one chosen for it.
+
+A chart over a date column draws its categories in the order the dates name rather than the order the source listed them, so a month of daily rows reads as a month. A scatter reads a date as a number and places each point by its instant, which is the one kind whose x axis is continuous.
 
 The application keeps at most 500 rows and 32 columns of what it read, and says so: the tab reports how much of the source it is showing, and whether it is showing the first columns, rather than implying the chart is the whole source. A source with no rows, or with no numeric column to measure, is refused by name.
 

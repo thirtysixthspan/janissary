@@ -37,6 +37,17 @@ describe('describeChart', () => {
       .toBe('A bar chart of revenue over 2024 to 2025: 3 marks, from 4 at 2025 to 10 at 2024.');
   });
 
+  // A date axis's span is only meaningful because the marks are in chronological order, so this pins the
+  // two together: order the axis, and the sentence reads the first date to the last.
+  it('spans a date axis from its first date to its last', () => {
+    const dates: Table = {
+      columns: [{ name: 'day', type: 'date' }, { name: 'revenue', type: 'number' }],
+      rows: [['2024-03-01', 7], ['2024-01-01', 3]],
+    };
+    expect(describeChart(dates, chart({ x: 'day', y: 'revenue' })))
+      .toBe('A bar chart of revenue over 2024-01-01 to 2024-03-01: 2 marks, from 3 at 2024-01-01 to 7 at 2024-03-01.');
+  });
+
   // A specification can rename a measure for the reader, and the sentence has to use the name the
   // reader was given rather than the column it came from.
   it('uses the labels the specification gave rather than the column names', () => {

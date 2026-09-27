@@ -35,7 +35,10 @@ export type VisualizationChartView = {
   yLabel?: string;
 };
 
-export type VisualizationColumnType = 'number' | 'boolean' | 'string';
+// `date` is a column every value of which is an ISO 8601 date the calendar agrees with, and nothing
+// else. It is not a measure, so it cannot be plotted against; it is a category whose order is its
+// order, which is what makes a time series read as one.
+export type VisualizationColumnType = 'number' | 'boolean' | 'string' | 'date';
 
 export type VisualizationColumnView = {
   name: string;

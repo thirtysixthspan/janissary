@@ -21,6 +21,19 @@ function chart(over: Partial<ChartShape> = {}): ChartShape {
   return { kind: 'bar', x: 'region', y: 'revenue', title: 'Revenue', ...over };
 }
 
+// Deliberately out of date order, because the point of a time axis is that the order comes from the dates
+// rather than from the file.
+const DATES: Table = {
+  columns: [
+    { name: 'day', type: 'date' },
+    { name: 'revenue', type: 'number' },
+  ],
+  rows: [
+    ['2024-03-01', 7],
+    ['2024-01-01', 3],
+  ],
+};
+
 describe('numeric', () => {
   it('reads a number, and a string holding one, which is what a CSV read produces', () => {
     expect(numeric(10)).toBe(10);
@@ -176,6 +189,77 @@ describe('scatterFor', () => {
 
   it('produces nothing when an x column holds text', () => {
     expect(scatterFor(TABLE, chart({ kind: 'scatter' }))).toEqual([]);
+  });
+
+  // A scatter is the one kind that already had a linear x, so a date x is read as the instant it names
+  // and the existing scale places the point by time. This is the whole of "a time axis" for this kind.
+  it('reads a date x as an instant, so a point is placed by time rather than dropped', () => {
+    const dated = scatterFor(DATES, chart({ kind: 'scatter', x: 'day', y: 'revenue' }));
+    expect(dated).toEqual([
+      { x: Date.parse('2024-03-01'), y: 7 },
+      { x: Date.parse('2024-01-01'), y: 3 },
+    ]);
+  });
+
+  it('produces nothing when a date x holds something unparseable', () => {
+    const broken: Table = {
+      columns: [{ name: 'day', type: 'date' }, { name: 'revenue', type: 'number' }],
+      rows: [['2024-01-01', 3], ['whenever', 4]],
+    };
+    expect(scatterFor(broken, chart({ kind: 'scatter', x: 'day', y: 'revenue' })))
+      .toEqual([{ x: Date.parse('2024-01-01'), y: 3 }]);
+  });
+});
+
+// The gap this closes: a month of daily rows in whatever order the file listed them is thirty-one
+// categories with no trend in them, so "revenue over time" draws nothing a reader can read.
+describe('marksFor over a date column', () => {
+  it('orders the bands by the instant they name, whatever order the rows arrived in', () => {
+    const marks = marksFor(DATES, chart({ x: 'day', y: 'revenue' }));
+    expect(marks.points.map((point) => [point.band, point.label]))
+      .toEqual([[0, '2024-01-01'], [1, '2024-03-01']]);
+  });
+
+  it('keeps two marks of one instant in the order the source listed them', () => {
+    const same: Table = {
+      columns: [{ name: 'day', type: 'date' }, { name: 'revenue', type: 'number' }],
+      rows: [['2024-01-01', 3], ['2024-01-01', 5], ['2023-12-31', 9]],
+    };
+    // An unstable sort would put the 5 before the 3, and would do it differently on another run.
+    expect(marksFor(same, chart({ x: 'day', y: 'revenue' })).points)
+      .toEqual([
+        { band: 0, value: 9, series: SINGLE_SERIES, label: '2023-12-31' },
+        { band: 1, value: 3, series: SINGLE_SERIES, label: '2024-01-01' },
+        { band: 2, value: 5, series: SINGLE_SERIES, label: '2024-01-01' },
+      ]);
+  });
+
+  it('numbers a date axis densely, so a dropped row leaves no gap in it', () => {
+    const gappy: Table = {
+      columns: [{ name: 'day', type: 'date' }, { name: 'revenue', type: 'number' }],
+      rows: [['2024-01-01', 1], ['2024-01-02', 'n/a'], ['2024-01-03', 3]],
+    };
+    expect(marksFor(gappy, chart({ x: 'day', y: 'revenue' })).points.map((point) => point.band))
+      .toEqual([0, 1]);
+  });
+
+  it('orders an aggregated date axis by the instant too, not by first appearance', () => {
+    const marks = marksFor(DATES, chart({ x: 'day', y: 'revenue', aggregate: 'sum' }));
+    expect(marks.points.map((point) => [point.band, point.label, point.value]))
+      .toEqual([[0, '2024-01-01', 3], [1, '2024-03-01', 7]]);
+  });
+
+  it('leaves a text axis in source order, which is the only order it has', () => {
+    const shuffled: Table = {
+      columns: [{ name: 'day', type: 'string' }, { name: 'revenue', type: 'number' }],
+      rows: [['March', 7], ['January', 3]],
+    };
+    expect(marksFor(shuffled, chart({ x: 'day', y: 'revenue' })).points.map((point) => point.band))
+      .toEqual([0, 1]);
+  });
+
+  it('plots nothing for a date measure, because a date is not a number', () => {
+    expect(marksFor(DATES, chart({ x: 'revenue', y: 'day' })).points).toEqual([]);
   });
 });
 
