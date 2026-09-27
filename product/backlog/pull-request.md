@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the completed plan, which describes four modules and a streaming behavior the shipped code does not have.
-
-Existing Issue: The plan states the domain "holds six modules", names a client set of `BarChart`/`LineChart`/`ScatterChart`/`PieChart` plus `export/raster.ts` and `export/deflate.ts`, places the domain calculation in the scale module, and specifies that chunks "coalesce into bounded ticks" — where the shipped code has ten modules after three extractions the 200-line limit required, one `CartesianChart` covering four kinds, `export/download.ts`, the extent in the points module, and no tick at all because a partial JSON reply is not renderable. Severity: 4/10
-
-Existing Risk: 4/10 - The plan ships as the record of why this code looks the way it does, so the three extractions that exist only to satisfy the file-size rule look unmotivated and the removed tick looks like an oversight rather than a decision.
-
-Proposal Risk: 1/10 - Prose only; the code and its tests are unaffected.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: correct the completed plan to match the shipped code". Edit `product/plans/complete/visualizations-tab.md` so it describes what shipped, and change nothing else. In the "Checkpoint 3" section, replace "holds six modules" with the ten that exist — `source.ts`, `fetch.ts`, `table.ts`, `ingest.ts`, `chart-spec.ts`, `prompts.ts`, `interview.ts`, `refresh.ts`, `store.ts`, `manager.ts` — and add a short sentence for the three the plan did not name, saying why each exists: `ingest.ts` because the format decision belongs apart from the manager that calls it, `refresh.ts` because one timer serving every visualization is its own concern and the manager's file was over the limit without it, and `index.ts` because which records are known and which have a tab open is what bounds the payload and deserves its own testable module. In the same section, state that the domain calculation lives in `chart/points.ts` rather than the scale module. In the "Checkpoint 5" section, replace the per-kind component list with the four files that shipped — `chart/Axes.tsx`, `chart/CartesianChart.tsx`, `chart/PieChart.tsx`, `chart/ChartSvg.tsx` — and say in one sentence that bar, line, area, and scatter share a frame and differ only in the mark emitted, and replace `export/raster.ts` and `export/deflate.ts` with `export/download.ts`, which holds both the rasterizing and the browser wiring so the writer beside it stays free of browser APIs. In the Tests section, drop the "chunks coalesce into bounded ticks" clause from the interviewer line and say instead that a partial reply is not rendered because it is half a JSON object. Finally, amend the one sentence describing the client plugin's import boundary, which currently reads as though a plugin may reach `web/src/shared/`: it may not, so the sentence should say the stick-to-bottom hook is published through `web/src/plugins/api.ts` alongside the command bar, the selection hooks, and the dialog, exactly as those are.
-
-
 * Remove the export no consumer reads, which exists only to publish the read bounds nothing calls.
 
 Existing Issue: `src/visualizations/fetch.ts` exports `SOURCE_LIMITS`, and a repository-wide search finds no other reference, so a named constant pair reads as a contract for callers that does not exist. Severity: 2/10
