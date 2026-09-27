@@ -51,7 +51,7 @@
 
 | Key | Action |
 | --- | ------ |
-| `←` / `→` / `Ctrl+B` / `Ctrl+F` | Move cursor in the input field |
+| `←` / `→` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
 | `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
 | `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
@@ -62,9 +62,10 @@
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R` | Open command history picker |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
-| `Ctrl+E` | Open the queue picker to send a command to another agent tab |
+| `Ctrl+E` | Open the queue picker to send a command to another agent tab (no-op on a tab that is not an agent tab) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead on a shell tab |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
+| `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
 | `Cmd+T` | Open a new agent tab (same as typing `agent`) |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |

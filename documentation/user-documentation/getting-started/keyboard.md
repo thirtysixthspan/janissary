@@ -10,8 +10,8 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 |---|---|
 | `Return` | Execute the input line |
 | `Ctrl+C` | Quit the application |
-| `←` / `Ctrl+B` | Move the input cursor left |
-| `→` / `Ctrl+F` | Move the input cursor right |
+| `←` | Move the input cursor left |
+| `→` | Move the input cursor right |
 | `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab |
 | `Shift+→` / `Cmd+Shift+]` | Switch to the next tab |
 | `Ctrl+←` | Move the current tab one position left |
@@ -28,11 +28,12 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `Ctrl+R` | Open the command history picker |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
-| `Ctrl+E` | Open the queue picker |
+| `Ctrl+E` | Open the queue picker; does nothing on a tab that is not an agent tab |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
+| `Ctrl+O` | Move the command currently running into a full-tab terminal, where you can type to it; does nothing when nothing is running |
 | `Cmd+F` | Search the current tab's transcript |
 | `Cmd+P` | Open the Quick Open file finder |
-| `Cmd+T` | Open a new agent tab |
+| `Cmd+T` | Open a new [workspaced agent tab](/user-documentation/advanced-agents/workspaced-agent) |
 | `Cmd+I` / `Ctrl+I` | Start a chat with the current text selection |
 | `Tab` | Complete a file path, agent name, connection, browser subcommand, or window ID |
 | `Backspace` / `Delete` | Delete the character before the cursor |
