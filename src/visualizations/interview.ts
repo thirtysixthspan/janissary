@@ -117,9 +117,10 @@ export class VisualizationInterviewer {
     if (pending.call === 'open') return this.applyQuestions(record, pending.accumulated);
     const turn = pending.call === 'revise' ? record.turns.find((entry) => entry.streaming) : undefined;
     if (turn) delete turn.streaming;
-    if (!this.applyChart(record, pending.accumulated)) {
-      if (turn) turn.response = 'The model answered with something I could not read.';
-      this.options.commit(record);
+    if (!this.applyChart(record, pending.accumulated, turn) && turn) {
+      // The refusal reason is already on the record from `applyChart`; this only gives the turn
+      // something to read, and deliberately commits nothing, which would clear that reason.
+      turn.response = 'The model answered with something I could read as a chart, but not with one I could use.';
     }
   }
 
@@ -134,11 +135,22 @@ export class VisualizationInterviewer {
   }
 
   // A chart naming a column the table does not have is not stored, and neither is one whose measure
-  // is not numeric: the tab would open on a plot area with nothing in it. The model's own words are
-  // kept, so the user sees what it said and can ask again. Returns whether a chart was stored.
-  private applyChart(record: VisualizationRecord, reply: string): boolean {
+  // is not numeric: the tab would open on a plot area with nothing in it. Every refusal here commits
+  // exactly once, with its reason, and the caller commits nothing more — a second commit with no
+  // reason would clear the one just recorded, and the tab would show neither a chart nor a failure.
+  // The turn is passed in rather than looked up. It used to be found by searching for the one still
+  // marked streaming, which stopped working the moment the caller cleared that flag above — so the
+  // model's own words were dropped on the floor and the turn rendered empty.
+  private applyChart(
+    record: VisualizationRecord,
+    reply: string,
+    turn?: VisualizationTurnView,
+  ): boolean {
     const parsed = parseChart(reply);
-    if (!parsed) return false;
+    if (!parsed) {
+      this.options.commit(record, 'The model did not return a chart I could read.');
+      return false;
+    }
     const verdict = validateChart(parsed.chart, record.table);
     if ('error' in verdict) {
       this.options.commit(record, `The model asked for a chart this data cannot show: ${verdict.error}.`);
@@ -151,7 +163,6 @@ export class VisualizationInterviewer {
       || previous.series !== parsed.chart.series;
     record.chart = parsed.chart;
     if (isUntitled(record) && redrawn) record.title = visualizationTitle(parsed.chart.title);
-    const turn = record.turns.find((entry) => entry.streaming !== undefined);
     if (turn) turn.response = parsed.note;
     this.options.commit(record);
     return true;

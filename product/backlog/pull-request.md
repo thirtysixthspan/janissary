@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the interviewer test the completed plan names, since the state machine it covers is the riskiest logic in the diff and has no test of its own.
-
-Existing Issue: The plan's Tests section specifies `src/visualizations/interview.test.ts` covering the opening call, the closing call, a refused second call, cancellation, a rate-limited failure, and a modification, and no such file exists, so the module that routes a model's reply into a stored chart, a stored reply, or a recorded error is exercised only indirectly through the manager. Severity: 6/10
-
-Existing Risk: 6/10 - Every path that decides what a model is allowed to change is untested, so a regression that stores a chart naming a column the data lacks, or that loses an in-flight turn, would reach a user rather than a failing test.
-
-Proposal Risk: 3/10 - The tests would pin the routing, but they would pin it against a stubbed session, so a real model's shape still varies.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: add the interviewer test the plan specifies". Add `src/visualizations/interview.test.ts`, driving `VisualizationInterviewer` directly with a stubbed `AcpSessionPool` and a fake `commit`, in the shape `src/visualizations/manager.test.ts` already uses for its injected collaborators. Cover, in the order the plan lists them: an `open` call whose parsed reply carries questions sets them on the record and commits with no error; a `close` call whose reply carries a valid chart stores it and, when the record is still untitled, takes the chart's title; a chart naming a column the table lacks is not stored and commits with the refusal reason instead; a reply that parses as no chart commits with the unreadable reason; a second call while one is in flight is refused for each of `open`, `close`, and `revise`; `cancel` drops the in-flight entry, returns false when nothing is in flight, and does not commit a partial; an `onError` from the session commits a rate-limited reason through `isRateLimitError` and closes the session; a `revise` pushes a streaming turn before the call and replaces it with the parsed note on completion, keeping the turn on the record; and `dispose` clears the in-flight set and disposes the pool. The plan's wording that chunks "coalesce into bounded ticks" describes behavior the implementation deliberately dropped — a partial JSON reply is not renderable, and `interview.ts` says so — so record the accumulator as it is rather than testing for a tick that does not exist.
-
-
 * Correct the completed plan, which describes four modules and a streaming behavior the shipped code does not have.
 
 Existing Issue: The plan states the domain "holds six modules", names a client set of `BarChart`/`LineChart`/`ScatterChart`/`PieChart` plus `export/raster.ts` and `export/deflate.ts`, places the domain calculation in the scale module, and specifies that chunks "coalesce into bounded ticks" — where the shipped code has ten modules after three extractions the 200-line limit required, one `CartesianChart` covering four kinds, `export/download.ts`, the extent in the points module, and no tick at all because a partial JSON reply is not renderable. Severity: 4/10
