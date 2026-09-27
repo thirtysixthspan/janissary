@@ -127,6 +127,18 @@ describe('useSectionNav', () => {
     expect(focusCenter).not.toHaveBeenCalled();
   });
 
+  it('leaves Shift+Tab to an element that claims the chord', () => {
+    document.body.innerHTML = '<div class="app-center"><textarea data-claims-shift-tab id="buffer"></textarea></div>';
+    const focusCenter = vi.fn();
+    renderHook(() => useSectionNav([makeTab()], focusCenter));
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    document.querySelector('#buffer')!.dispatchEvent(event);
+
+    expect(focusCenter).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('is a no-op when center is the only present section', () => {
     document.body.innerHTML = '<div class="app-center"></div>';
     const focusCenter = vi.fn();

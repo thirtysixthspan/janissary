@@ -71,7 +71,7 @@
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
 | `Tab` | Complete a file path, a tab label for `msg` / `broadcast` / `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
-| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a modal dialog is open |
+| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a modal dialog is open. In an editor tab's text, outdents instead |
 | `Enter` | Execute the current command |
 | `Ctrl+C` | Exit |
 

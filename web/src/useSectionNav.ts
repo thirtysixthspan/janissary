@@ -38,6 +38,10 @@ export function nextSection(current: Section, present: Section[]): Section {
   return present[(index + 1) % present.length];
 }
 
+function claimsShiftTab(target: EventTarget | null): boolean {
+  return target instanceof Element && target.matches('[data-claims-shift-tab]');
+}
+
 function focusSection(section: Section, focusCenter: () => void): void {
   if (section === 'center') { focusCenter(); return; }
   const selector = section === 'left' ? '.sidebar-left' : section === 'right' ? '.sidebar-right' : '.reporting-section';
@@ -50,7 +54,8 @@ function focusSection(section: Section, focusCenter: () => void): void {
 // currently-visible tab. Runs in the capture phase so it intercepts the chord ahead of xterm
 // (which would otherwise consume it inside a focused terminal) and ahead of the browser's own
 // focus traversal. It stands down while a modal dialog is open, so the chord cannot pull focus out
-// of the dialog.
+// of the dialog, and when the key lands on an element marked `data-claims-shift-tab`, such as the
+// editor's text buffer, which binds the chord to outdent.
 export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -60,7 +65,7 @@ export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.defaultPrevented || isModalOpen()) return;
+      if (e.defaultPrevented || isModalOpen() || claimsShiftTab(e.target)) return;
       const present = getPresentSections(tabsRef.current);
       const current = resolveCurrentSection(document.activeElement);
       const next = nextSection(current, present);
