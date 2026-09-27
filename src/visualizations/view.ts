@@ -68,6 +68,9 @@ export function windowOf(
     ...(pendingQuestion(record) !== undefined && { pendingQuestionId: pendingQuestion(record) }),
     ...(record.chart !== undefined && { chart: record.chart }),
     ...(record.table !== undefined && { table: record.table }),
+    // A copy, because the record's array is the live one the next reply replaces, and a payload that
+    // shares it would mutate out from under a tab already holding the old suggestions.
+    ...(record.followUps !== undefined && { followUps: [...record.followUps] }),
     turns: record.turns.map((turn) => ({ ...turn })),
     ...(busy && { busy: true }),
     ...(record.error !== undefined && { error: record.error }),

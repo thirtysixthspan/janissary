@@ -146,6 +146,10 @@
 
 /* The exchange that changes the chart: a scrollable transcript above the command bar, inset further than
    either of them so the conversation reads as its own region. */
+/* The follow-up row above the command bar. It borrows the interview's suggestion styling wholesale, so
+   it only needs to say where it sits. */
+.visualization-follow-ups { padding: 0 12px 6px; }
+
 .visualization-chat {
   flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px;
   padding: 16px 12px;

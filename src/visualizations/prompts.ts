@@ -9,12 +9,21 @@ export const CHART_KINDS: readonly VisualizationChartKind[] =
 export type Question = { id: string; question: string; suggestions: string[] };
 export type Reply =
   | { kind: 'questions'; questions: Question[] }
-  | { kind: 'chart'; chart: VisualizationChartView; note: string }
+  | { kind: 'chart'; chart: VisualizationChartView; note: string; followUps: string[] }
   | { kind: 'text'; text: string };
 
 const SAMPLE_ROWS = 8;
 const MAX_QUESTIONS = 6;
 const MAX_SUGGESTIONS = 4;
+
+// How the chart prompts ask for follow-ups. One sentence, stated the same way in both, because a model
+// told the field once answers with it and told it twice inconsistently answers with either shape.
+const FOLLOW_UP_RULE = [
+  'Alongside `note`, suggest two to four short follow-up questions the user could ask about this chart —',
+  'the next things worth looking at, in the same voice as a modification such as "split by region".',
+  'Each is sent as the user\'s request in place of nothing, so make each one a request rather than a question mark.',
+  'Offer none if the chart answers everything the data can.',
+].join(' ');
 
 // How the chart prompt states the aggregate, in one place because the same sentence has to appear in
 // both prompts: a model told the field once will answer with it, and told it twice inconsistently will
@@ -27,7 +36,7 @@ const AGGREGATE_RULE = [
   'A row whose `y` is not a number is never drawn and never counted, whichever aggregate you choose.',
 ].join(' ');
 
-const EXAMPLE = '{"kind":"bar","x":"...","y":"...","series":"...","aggregate":"sum","title":"...","xLabel":"...","yLabel":"...","note":"..."}';
+const EXAMPLE = '{"kind":"bar","x":"...","y":"...","series":"...","aggregate":"sum","title":"...","xLabel":"...","yLabel":"...","note":"...","followUps":["...","..."]}';
 
 // The shape each prompt asks for, stated as prose in the prompt itself and enforced again by the
 // guards below. A model asked for prose will sometimes answer with prose, so the parser has to be
@@ -82,6 +91,7 @@ export function chartPrompt(
     `\`kind\` is one of ${CHART_KINDS.join(', ')}. \`x\` and \`y\` must name columns listed above, and \`y\` must be a numeric column. \`series\` is optional and names a column whose distinct values split the marks into one each; leave it out for a single series. For \`pie\`, \`x\` is the category and \`y\` is reduced per category.`,
     AGGREGATE_RULE,
     'Give a short title, and axis labels only where they add something the column names do not already say.',
+    FOLLOW_UP_RULE,
     CONTRACT,
     EXAMPLE,
   ].join('\n');
@@ -91,14 +101,22 @@ export function revisionPrompt(
   table: Table,
   chart: VisualizationChartView,
   query: string,
+  followUps: readonly string[] = [],
 ): string {
+  const offered = followUps.filter((entry) => entry.trim() !== '');
   return [
     'The user is asking for a change to a chart.',
     `They said: ${query}`,
     describe(table),
     `The chart now is: ${JSON.stringify(chart)}`,
+    // What it already suggested, so a replacement is a replacement and not the same three questions
+    // again after a change that answered one of them.
+    ...(offered.length === 0
+      ? []
+      : [`You already suggested these, and the chart has since changed: ${offered.map((entry) => `- ${entry}`).join(' ')}`]),
     '',
     'Answer with the updated chart if the request changes what is drawn, using the same shape as before. If the request is a question about the data rather than a change to the chart, answer it in `note` and repeat the chart unchanged. Never change anything the request did not ask about — including the aggregate, which stays as it is unless the request is about how the measure is reduced.',
+    FOLLOW_UP_RULE,
     CONTRACT,
     EXAMPLE,
   ].join('\n');
@@ -154,6 +172,17 @@ function noteOf(value: Record<string, unknown>): string {
   return typeof value.note === 'string' ? value.note : '';
 }
 
+// A blank or absurdly long entry is dropped and the rest are kept: one bad suggestion should cost the
+// model one button, not the whole row. The cap is the interview's, so the longest row a user can meet is
+// the same length in both places.
+function followUpsOf(value: Record<string, unknown>): string[] {
+  if (!Array.isArray(value.followUps)) return [];
+  return value.followUps
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim() !== '')
+    .map((entry) => entry.trim())
+    .slice(0, MAX_SUGGESTIONS);
+}
+
 // Questions are numbered rather than given ids of the model's own, because the id has to survive a
 // round trip through the record and through the tab payload, and a model-supplied id is neither.
 export function parseQuestions(text: string): Question[] | undefined {
@@ -173,9 +202,11 @@ export function parseQuestions(text: string): Question[] | undefined {
   return questions.length > 0 ? questions : undefined;
 }
 
-export function parseChart(text: string): { chart: VisualizationChartView; note: string } | undefined {
+export function parseChart(
+  text: string,
+): { chart: VisualizationChartView; note: string; followUps: string[] } | undefined {
   const parsed = parseJsonObject(unwrap(text));
   if (!parsed) return undefined;
   const chart = chartOf(parsed);
-  return chart && { chart, note: noteOf(parsed) };
+  return chart && { chart, note: noteOf(parsed), followUps: followUpsOf(parsed) };
 }

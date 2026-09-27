@@ -97,6 +97,9 @@ export type VisualizationWindowView = {
   pendingQuestionId?: string;
   chart?: VisualizationChartView;
   table?: VisualizationTableView;
+  // Two to four questions the model offered about the chart it has just produced, shown as one-click
+  // modifications and replaced by whichever reply comes next.
+  followUps?: string[];
   turns: VisualizationTurnView[];
   // A call in flight: the opening one, the one that closes the interview, or a modification. What it
   // is for is the tab's business — the tab renders one busy state for all of them.

@@ -122,8 +122,50 @@ describe('the closing call', () => {
     expect(subject.turns[0]?.response).toBe('revenue is the clearest measure');
   });
 
-  it('names the series column in the summary when the chart is split', () => {
-    expect(chartSummary({ kind: 'line', x: 'day', y: 'revenue', series: 'region', title: 'T' }))
+  it('keeps the follow-up questions the model offered with the chart', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ questions: [{ id: 'q1', question: 'Q?', suggestions: [], answer: 'a' }] });
+
+    interviewer.close(subject);
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T","followUps":["split by region"]}');
+    end();
+
+    expect(subject.followUps).toEqual(['split by region']);
+  });
+
+  // "Offer none" and "offered nothing" have to be the same state, or the record carries an empty list and
+  // the tab has to decide whether an empty row is a row.
+  it('leaves the field absent when the model offers nothing', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ questions: [{ id: 'q1', question: 'Q?', suggestions: [], answer: 'a' }] });
+
+    interviewer.close(subject);
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T","followUps":[]}');
+    end();
+
+    expect(subject.followUps).toBeUndefined();
+  });
+
+  // The row goes before the call does, so a suggestion cannot be clicked twice and send the same request
+  // again, and so a tab reopened mid-call does not still offer it.
+  it('drops the suggestions as a revision starts, not when it lands', () => {
+    const { interviewer, chunk, end } = fixture();
+    const subject = record({ questions: [{ id: 'q1', question: 'Q?', suggestions: [], answer: 'a' }] });
+
+    interviewer.close(subject);
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T","followUps":["split by region"]}');
+    end();
+    expect(subject.followUps).toEqual(['split by region']);
+
+    interviewer.revise(subject, 'make it a line');
+    expect(subject.followUps).toBeUndefined();
+
+    chunk('{"kind":"bar","x":"region","y":"revenue","title":"T","followUps":["show visits"]}');
+    end();
+    expect(subject.followUps).toEqual(['show visits']);
+  });
+
+  it('names the series column in the summary when the chart is split', () => {    expect(chartSummary({ kind: 'line', x: 'day', y: 'revenue', series: 'region', title: 'T' }))
       .toBe('Now a line chart of revenue by day, split by region.');
   });
 

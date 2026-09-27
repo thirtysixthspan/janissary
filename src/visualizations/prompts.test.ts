@@ -68,6 +68,32 @@ describe('chartPrompt', () => {
     expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line'))
       .toContain('including the aggregate');
   });
+
+  it('asks for follow-up questions in both chart prompts', () => {
+    expect(chartPrompt(TABLE, [])).toContain('follow-up questions');
+    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line'))
+      .toContain('follow-up questions');
+  });
+
+  // Without the set it already offered, a reply proposes from scratch and the same question comes back
+  // after a change that answered it.
+  it('carries the follow-ups it already offered into a revision', () => {
+    const prompt = revisionPrompt(
+      TABLE,
+      { kind: 'bar', x: 'region', y: 'revenue', title: 'T' },
+      'make it a line',
+      ['split by region', '  ', 'show visits'],
+    );
+    expect(prompt).toContain('You already suggested these');
+    expect(prompt).toContain('- split by region');
+    expect(prompt).toContain('- show visits');
+    expect(prompt).not.toContain('-   \n');
+  });
+
+  it('says nothing about earlier suggestions when there were none', () => {
+    expect(revisionPrompt(TABLE, { kind: 'bar', x: 'a', y: 'b', title: 'T' }, 'make it a line', []))
+      .not.toContain('You already suggested these');
+  });
 });
 
 describe('revisionPrompt', () => {
@@ -105,13 +131,13 @@ describe('parseQuestions', () => {
 describe('parseChart', () => {
   it('reads a chart and its note', () => {
     expect(parseChart('{"kind":"line","x":"region","y":"revenue","title":"Revenue"}'))
-      .toEqual({ chart: { kind: 'line', x: 'region', y: 'revenue', title: 'Revenue' }, note: '' });
+      .toEqual({ chart: { kind: 'line', x: 'region', y: 'revenue', title: 'Revenue' }, note: '', followUps: [] });
     expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","note":"here"}')?.note).toBe('here');
   });
 
   it('keeps a series column and axis labels when they are given, and drops empty ones', () => {
     expect(parseChart('{"kind":"bar","x":"r","y":"v","series":"g","title":"T","xLabel":"G","yLabel":""}'))
-      .toEqual({ chart: { kind: 'bar', x: 'r', y: 'v', series: 'g', title: 'T', xLabel: 'G' }, note: '' });
+      .toEqual({ chart: { kind: 'bar', x: 'r', y: 'v', series: 'g', title: 'T', xLabel: 'G' }, note: '', followUps: [] });
   });
 
   it('refuses a chart naming a kind it does not draw, or missing a column or a title', () => {
@@ -138,5 +164,28 @@ describe('parseChart', () => {
   it('refuses a whole chart naming an aggregate the grammar does not have', () => {
     expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":"median","title":"T"}')).toBeUndefined();
     expect(parseChart('{"kind":"bar","x":"r","y":"v","aggregate":7,"title":"T"}')).toBeUndefined();
+  });
+
+  it('reads the follow-up questions the model offered with the chart', () => {
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":["split by region","make it a line"]}')
+      ?.followUps).toEqual(['split by region', 'make it a line']);
+  });
+
+  it('offers none when the model offers none, rather than an absent reply', () => {
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T"}')?.followUps).toEqual([]);
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":"split by region"}')?.followUps)
+      .toEqual([]);
+  });
+
+  // One bad entry should cost the model one button, not the whole row.
+  it('drops a blank or non-string suggestion and keeps the rest', () => {
+    expect(parseChart('{"kind":"bar","x":"r","y":"v","title":"T","followUps":["  keep me  ","",7,"  "]}')
+      ?.followUps).toEqual(['keep me']);
+  });
+
+  it('shows no more suggestions than the interview would', () => {
+    const many = Array.from({ length: 9 }, (_, index) => `"ask ${index}"`).join(',');
+    expect(parseChart(`{"kind":"bar","x":"r","y":"v","title":"T","followUps":[${many}]}`)?.followUps)
+      .toHaveLength(4);
   });
 });

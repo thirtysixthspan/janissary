@@ -79,13 +79,18 @@ export class VisualizationInterviewer {
   // streams.
   revise(record: VisualizationRecord, query: string): boolean {
     if (this.busy(record.id) || !query.trim() || !record.chart || !record.table) return false;
+    const previous = record.followUps ?? [];
     const pair: ConversationModelPair = usablePair(record.pair);
     record.pair = pair;
+    // The row of suggestions goes before the call goes out, not when the reply lands. A suggestion left
+    // on the record would still be there after a reload, and could be clicked a second time and send the
+    // same request again.
+    delete record.followUps;
     const turn: VisualizationTurnView = { query, response: '', pair, streaming: true };
     record.turns.push(turn);
     record.updatedAt = this.options.now();
     this.options.changed();
-    return this.prompt(record, 'revise', revisionPrompt(tableOf(record), record.chart, query), turn);
+    return this.prompt(record, 'revise', revisionPrompt(tableOf(record), record.chart, query, previous), turn);
   }
 
   // Cancelling ends the session rather than the turn alone: `AcpSession` has no per-prompt abort, so
@@ -185,6 +190,10 @@ export class VisualizationInterviewer {
       || previous.series !== parsed.chart.series
       || previous.aggregate !== parsed.chart.aggregate;
     record.chart = parsed.chart;
+    // An empty list is stored as an absent field, so a model offering nothing leaves the row absent
+    // rather than present and empty.
+    if (parsed.followUps.length > 0) record.followUps = parsed.followUps;
+    else delete record.followUps;
     if (isUntitled(record) && redrawn) record.title = visualizationTitle(parsed.chart.title);
     if (turn) turn.response = parsed.note || chartSummary(parsed.chart);
     this.options.commit(record);

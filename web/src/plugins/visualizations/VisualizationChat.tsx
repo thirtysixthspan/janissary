@@ -7,6 +7,9 @@ import type { VisualizationTurn } from '@shared/plugins/visualizations/shared';
 // tab's does — and the same refusal while a reply is in flight, with the typed text left in place.
 export type ChatProperties = {
   turns: VisualizationTurn[];
+  // Two to four requests the model offered about the chart it last produced, shown as one-click
+  // modifications. The row disappears the moment one is used, so it never grows.
+  followUps?: string[];
   busy: boolean;
   disabled: boolean;
   active: boolean;
@@ -15,7 +18,7 @@ export type ChatProperties = {
 };
 
 export function VisualizationChat({
-  turns, busy, disabled, active, onRevise, onCancel,
+  turns, followUps, busy, disabled, active, onRevise, onCancel,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -63,6 +66,24 @@ export function VisualizationChat({
           ))}
         </div>
       )}
+      {/* The interview's own suggestion markup and classes, not a second implementation of them: a row of
+          suggestions is a row of suggestions, whichever question asked for it. Hidden while a reply is in
+          flight, because a button that does nothing while the model works is worse than no button. */}
+      {followUps !== undefined && followUps.length > 0 && !busy ? (
+        <div className="visualization-suggestions visualization-follow-ups">
+          {followUps.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              className="visualization-suggestion"
+              disabled={disabled}
+              onClick={() => { onRevise(suggestion); }}
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <CommandBarShell
         value={query}
         onChange={setQuery}

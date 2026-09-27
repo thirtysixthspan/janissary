@@ -185,6 +185,7 @@ function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement 
       <VisualizationData chart={chart} table={table} view={shown} />
       <VisualizationChat
         turns={view.turns}
+        {...(view.followUps !== undefined && { followUps: view.followUps })}
         busy={busy}
         disabled={false}
         active={active}

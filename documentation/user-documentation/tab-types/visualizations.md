@@ -63,6 +63,8 @@ Type into the bar at the bottom the way you would in a terminal. Press `Enter` t
 
 Ask for what you want: *make it a line chart*, *split by region*, *show visits instead of revenue*, *sum the revenue by region*. The model answers with an updated chart, and its explanation appears above the bar. The whole exchange stays in the tab, so you can see what you asked for and what came back.
 
+Above the bar, the model usually offers two to four follow-ups as buttons — *split by region*, *show the largest five*. Clicking one asks for it exactly as if you had typed it, which is faster than writing it out. The row is replaced by the next reply, and disappears as soon as you use one, so you cannot ask the same thing twice by accident. If the model offers nothing, no row appears.
+
 ## Keep it current
 
 A visualization reads its source once and then leaves it alone. To have it re-read on a timer, pick an interval from the **Refresh** menu in the header: off, 10s, 30s, 1m, or 5m.

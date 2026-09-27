@@ -64,13 +64,14 @@ function tab(over: Partial<VisualizationWindow> = {}) {
   return { ...rendered, intent, value };
 }
 
-// A drawn tab, which is the only state that carries the composer and the export controls.
-function withIntent() {
+// A drawn tab, which is the only state that carries the composer, the export controls, and the row of
+// follow-up suggestions.
+function withIntent(over: Partial<VisualizationWindow> = {}) {
   const { intent, value } = capabilities();
   render(<VisualizationTab
     payload={{
       kind: 'visualization',
-      window: view({ table: TABLE, chart: CHART }),
+      window: view({ table: TABLE, chart: CHART, ...over }),
       models: [{ harness: 'opencode', model: 'model-a' }],
     }}
     capabilities={value}
@@ -307,6 +308,37 @@ describe('VisualizationTab', () => {
 
   // Every answer to a follow-up about a chart costs a model call, so the tab can narrow one itself. The
   // property that matters is that the picture, the table beside it, and the caption all narrow together.
+  describe('follow-up suggestions', () => {
+    it('offers none before there is a chart to ask about', () => {
+      tab({ table: TABLE, questions: [], pendingQuestionId: undefined });
+      expect(screen.queryByRole('button', { name: 'split by region' })).toBeNull();
+    });
+
+    it('offers the model follow-ups as one-click modifications', () => {
+      tab({ table: TABLE, chart: CHART, followUps: ['split by region', 'make it a line'] });
+      expect(screen.getByRole('button', { name: 'split by region' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'make it a line' })).toBeInTheDocument();
+    });
+
+    // The whole reason they exist: a follow-up costs no model call to phrase and no wait to send.
+    it('sends a suggestion as the query, rather than filling the field', () => {
+      const intent = withIntent({ followUps: ['split by region'] });
+      fireEvent.click(screen.getByRole('button', { name: 'split by region' }));
+      expect(intent).toHaveBeenCalledWith('revise', { query: 'split by region' });
+    });
+
+    it('shows no row for a chart the model offered nothing about', () => {
+      tab({ table: TABLE, chart: CHART });
+      expect(screen.queryByRole('button', { name: 'split by region' })).toBeNull();
+    });
+
+    // A button that does nothing while the model works is worse than no button.
+    it('hides the row while a reply is in flight', () => {
+      tab({ table: TABLE, chart: CHART, followUps: ['split by region'], busy: true });
+      expect(screen.queryByRole('button', { name: 'split by region' })).toBeNull();
+    });
+  });
+
   describe('narrowing a chart', () => {
     // Six regions, so the smallest cap the control offers can actually narrow something: a cap of five
     // over three rows is a no-op, which is the right behaviour and a useless fixture.

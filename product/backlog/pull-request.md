@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the gap that the interview is the only place a suggested question is offered, where the moment a user most wants one is after they can see the chart.
-
-Existing Issue: `web/src/plugins/visualizations/VisualizationQuestion.tsx` renders a model's suggested answers one question at a time before the chart exists, and once a chart is drawn `web/src/plugins/visualizations/VisualizationChat.tsx` is a bare command bar, so the suggestions stop at the moment the user has something to react to. Severity: 4/10
-
-Existing Risk: 4/10 - Someone staring at a chart they did not choose has to invent the follow-up themselves, which is the exact hesitation the interview was built to remove, and it makes the feature feel as though it worked once and then stopped helping.
-
-Proposal Risk: 2/10 - Suggestions come from a model that can propose a change the data cannot show, so they must be refusable and the refusal has to read as ordinary.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: offer follow-up suggestions after the chart is drawn". Ask the model for two to four follow-up questions alongside the note it already returns, carrying the same shape `src/visualizations/prompts.ts` already parses for the interview, and widen `VisualizationQuestion`'s existing `suggestions` field rather than inventing a second shape, so the parsing and the refusal wording in `web/src/plugins/visualizations/VisualizationQuestion.tsx` are reused rather than rewritten. Add the follow-ups to the revision prompt in `src/visualizations/prompts.ts` so a follow-up is asked in the same terms the first one was, and store them on the record in `src/visualizations/store.ts` beside the chart. Render them as the same one-click buttons in `web/src/plugins/visualizations/VisualizationChat.tsx`, offered after the last turn and cleared once one is used so the row never grows without bound, and add a case to `src/visualizations/prompts.test.ts` asserting a reply carrying follow-ups parses, and to `web/src/plugins/visualizations/VisualizationTab.test.tsx` asserting the buttons appear after a chart and clear once used. Sources: https://tableau.github.io/tableau-mcp/docs/tools/pulse/generate-pulse-insight-brief , https://help.tableau.com/current/online/en-gb/pulse_ask_discover_qa.htm
-
-
 * Close the gap that the column types are inferred and never shown, where every comparable product puts the inferred schema in front of the user before querying it.
 
 Existing Issue: `src/visualizations/table.ts` infers each column's type and `product/specs/visualizations.md` never mentions where the user sees or corrects it, because nothing renders the schema — the tab goes from "Reading the source…" straight to the model's first question. Severity: 6/10

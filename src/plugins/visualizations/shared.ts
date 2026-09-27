@@ -60,6 +60,7 @@ export type VisualizationWindow = {
   pendingQuestionId?: string;
   chart?: VisualizationChart;
   table?: VisualizationTable;
+  followUps?: string[];
   turns: VisualizationTurn[];
   busy?: boolean;
   error?: string;
@@ -147,6 +148,10 @@ function isQuestion(value: unknown): value is VisualizationQuestion {
     && (value.answer === undefined || typeof value.answer === 'string');
 }
 
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
+}
+
 function isTurn(value: unknown): value is VisualizationTurn {
   return isRecord(value)
     && typeof value.query === 'string'
@@ -169,6 +174,7 @@ export function isVisualizationWindow(value: unknown): value is VisualizationWin
     && (value.pendingQuestionId === undefined || typeof value.pendingQuestionId === 'string')
     && (value.chart === undefined || isChart(value.chart))
     && (value.table === undefined || isTable(value.table))
+    && (value.followUps === undefined || isStringList(value.followUps))
     && Array.isArray(value.turns) && value.turns.every(isTurn)
     && (value.busy === undefined || typeof value.busy === 'boolean')
     && (value.error === undefined || typeof value.error === 'string');

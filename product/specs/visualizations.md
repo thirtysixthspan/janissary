@@ -74,6 +74,8 @@ The model is asked for the updated chart and may answer with prose instead, in w
 
 The answers given to the interview are recorded as the first turn, and the chart the interview produced is its reply, so the reasoning behind a chart is readable after the fact rather than only at the moment it was given.
 
+Every reply that produces a chart may carry two to four follow-up requests with it, offered above the command bar as one-click modifications, because the suggestions are useful exactly when there is a chart to react to. Each sends its own text as the request, the row is replaced by whichever reply comes next, and it is dropped the moment one is used so the same request cannot be sent twice. A reply offering none shows no row at all. A revision is told what was already suggested, so its replacement is a replacement rather than the same requests again.
+
 The reply is rendered as sanitized Markdown, the same as any other model reply in the application. Only the reply text is shown; whatever reasoning the model did is not.
 
 ### Export

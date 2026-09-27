@@ -32,6 +32,7 @@ export type VisualizationRecord = {
   questions: { id: string; question: string; suggestions: string[]; answer?: string }[];
   chart?: VisualizationChartView;
   table?: VisualizationTableView;
+  followUps?: string[];
   turns: VisualizationTurnView[];
   error?: string;
 };
@@ -94,6 +95,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && isQuestions(value.questions)
     && (value.chart === undefined || isChart(value.chart))
     && (value.table === undefined || isTable(value.table))
+    && (value.followUps === undefined || isStringArray(value.followUps))
     && Array.isArray(value.turns)
     && value.turns.every((turn) => isTurn(turn))
     && (value.error === undefined || typeof value.error === 'string');
