@@ -12,7 +12,11 @@ A visualization is one data source plus one chart made from it. The source is a 
 
 A source is one line: an `http` or `https` address, or a path to a file. A bare host is read as `https`, and any other scheme is refused with the reason the application's other web targets give. Two routes reach it, and they exist so that naming a source takes no more typing than pasting one: **Visualize this** in the default context menu takes the current text selection as the source verbatim, and the index's own field takes what is typed into it. Nothing inspects the selection first, so a selection that is not a source is answered by the same refusal a typed one would be.
 
-The source is read by the application, not by the browser, so an arbitrary address works without that address having agreed to be fetched. The read carries no credentials of any kind, follows at most five redirects, gives up after fifteen seconds, and refuses a body over eight megabytes. A local file is refused by its size before it is read.
+The source is read by the application, not by the browser, so an arbitrary address works without that address having agreed to be fetched. The read carries no credentials of any kind, follows at most five redirects, gives up after fifteen seconds, and refuses a body over eight megabytes.
+
+A local file may only be read from the project directory or your home directory, and the check is made on the resolved path — so a `..` traversal, a `~` that expands elsewhere, and a symbolic link pointing out of the tree are all refused, each naming the two directories a source would have to be under. A source anywhere else reports that it is outside them.
+
+Reading a local file is worth understanding before pointing one at it. The file is read, parsed into a table, kept in the visualization's saved record, and — once the interview runs — a sample of it is sent to whichever model pair the visualization is using. A source naming a credential or a key file therefore exposes that file's contents to a third party. That is the same reach as opening the file yourself and pasting part of it into a prompt, which is not nothing, so the two directories are named above rather than left to be discovered.
 
 ### What a source can be
 

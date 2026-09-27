@@ -21,6 +21,10 @@ What can be read:
 
 Column types are worked out for you, so you never pick them. A column of numbers is a measure you can plot; a column of anything else is a category you can group by. Dates are treated as text, which means a date column works as an axis but is not measured.
 
+A local file has to be inside this project directory or your home directory. Anything else is refused and says so. Symlinks are followed before the check, so a link pointing outside those two directories is refused too.
+
+Pointing a visualization at a local file means the file is read, turned into a table, and kept in the visualization's saved record, and a sample of it is sent to the model to ask the questions. Don't point one at a credentials file.
+
 ## Answer the questions
 
 <img class="agent-float" src="/agents/malik-south-west.png" alt="" />

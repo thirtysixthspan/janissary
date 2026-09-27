@@ -7,7 +7,7 @@ import { ingest } from './ingest.js';
 import { VisualizationIndex } from './index.js';
 import { VisualizationInterviewer } from './interview.js';
 import { VisualizationRefresh } from './refresh.js';
-import { parseSource } from './source.js';
+import { defaultSourceRoots, parseSource, type SourceRoots } from './source.js';
 import {
   VisualizationStore, freshVisualization, isCataloguedPair,
 } from './store.js';
@@ -20,6 +20,9 @@ type ManagerOptions = {
   store?: VisualizationStore;
   pool?: AcpSessionPool;
   now?: () => number;
+  // The project directory a local source may be read from. Defaults to the launch directory, which is
+  // what the tab manager itself uses when no project was named.
+  projectDir?: string;
   read?: (source: string) => Promise<{ text: string } | { error: string }>;
 };
 
@@ -35,11 +38,13 @@ export class VisualizationsManager {
   private readonly tabRemoved: Subscription;
   private readonly refresh: VisualizationRefresh;
   private readonly reading = new Set<string>();
+  private readonly roots: SourceRoots;
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
     this.store = options.store ?? new VisualizationStore();
     this.now = options.now ?? Date.now;
-    this.read = options.read ?? ((source) => readSource(source));
+    this.roots = defaultSourceRoots(options.projectDir ?? this.managers.tab.launchDir);
+    this.read = options.read ?? ((source) => readSource(source, this.roots));
     this.index = new VisualizationIndex(this.store);
     this.interviewer = new VisualizationInterviewer({
       pool: options.pool ?? new AcpSessionPool(),
@@ -75,7 +80,7 @@ export class VisualizationsManager {
 
   create(id: string, source: string): boolean {
     if (this.index.find(id)) return false;
-    if ('error' in parseSource(source)) return false;
+    if ('error' in parseSource(source, this.roots)) return false;
     const pair = availableVisualizationModels()[0];
     if (!pair) throw new Error('No ACP conversation models configured.');
     const record = freshVisualization(id, source, pair, this.now());
@@ -94,7 +99,7 @@ export class VisualizationsManager {
   setSource(id: string, source: string): boolean {
     const record = this.index.live(id);
     if (!record || record.chart !== undefined) return false;
-    if ('error' in parseSource(source)) return false;
+    if ('error' in parseSource(source, this.roots)) return false;
     record.source = source.trim();
     record.questions = [];
     record.table = undefined;

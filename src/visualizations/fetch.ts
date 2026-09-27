@@ -1,5 +1,6 @@
-import { readFileSync, statSync } from 'node:fs';
-import { parseSource, type SourceRef } from './source.js';
+import { readFileSync, realpathSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { parseSource, type SourceRef, type SourceRoots } from './source.js';
 
 // Every bound this module sets exists because a source is a line the user pasted, and a line the
 // user pasted must not be able to make the server read the whole disk, wait forever, or hang on a
@@ -15,27 +16,55 @@ type FetchLike = (url: string, init: { redirect: 'manual'; signal: AbortSignal }
   text(): Promise<string>;
 }>;
 
-type ReadOptions = { fetchImpl?: FetchLike; maxBytes?: number; timeoutMs?: number };
+type ReadOptions = { roots: SourceRoots; fetchImpl?: FetchLike; maxBytes?: number; timeoutMs?: number };
 
 type ReadResult = { text: string } | { error: string };
 
 type Response = Awaited<ReturnType<FetchLike>>;
 
-// A local file is read whole once its size is known to be inside the cap, so a large file is refused
-// by a stat rather than by buffering it and then noticing.
-function readFile(ref: SourceRef & { kind: 'file' }, maxBytes: number): ReadResult {
+// A local file is refused twice over. The size check keeps a large file from being read at all, and the
+// containment check keeps a path from resolving out of the roots `parseSource` accepted it for: the
+// reader's contract is that a `SourceRef` it is handed has been checked, and a symlink is the one way
+// a checked path can still turn out to point somewhere else, so the link is resolved before the read.
+function readFile(ref: SourceRef & { kind: 'file' }, options: Required<ReadOptions>): ReadResult {
+  const target = resolvedTarget(ref.path, options.roots);
+  if ('error' in target) return target;
+  const file = target.path;
   let size: number;
   try {
-    size = statSync(ref.path).size;
+    size = statSync(file).size;
   } catch (error) {
     return { error: `cannot read ${ref.path}: ${message(error)}` };
   }
-  if (size > maxBytes) return { error: `${ref.path} is larger than the ${maxBytes} byte limit` };
+  if (size > options.maxBytes) return { error: `${ref.path} is larger than the ${options.maxBytes} byte limit` };
   try {
-    return { text: readFileSync(ref.path, 'utf8') };
+    return { text: readFileSync(file, 'utf8') };
   } catch (error) {
     return { error: `cannot read ${ref.path}: ${message(error)}` };
   }
+}
+
+// A file that does not exist has no real path to resolve, so the literal one is used and the read below
+// reports it as missing. A file that does is resolved through its symlinks first, then held to the same
+// roots — that is what catches a link pointing out of the tree, which no check on the literal path can.
+function resolvedTarget(target: string, roots: SourceRoots): { path: string } | { error: string } {
+  let real: string;
+  try {
+    real = realpathSync(target);
+  } catch {
+    return { path: target };
+  }
+  if (!insideRoots(real, roots)) {
+    return { error: `${target} resolves outside the project directory and your home directory` };
+  }
+  return { path: real };
+}
+
+function insideRoots(candidate: string, roots: SourceRoots): boolean {
+  return [roots.project, roots.home].some((root) => {
+    const base = path.resolve(root);
+    return candidate === base || candidate.startsWith(base.endsWith(path.sep) ? base : base + path.sep);
+  });
 }
 
 async function readBody(url: string, response: Response, maxBytes: number): Promise<ReadResult> {
@@ -89,8 +118,8 @@ function redirectedTo(from: string, location: string): { url: string } | { error
   } catch {
     return unusable;
   }
-  const parsed = parseSource(resolved);
-  return 'error' in parsed || parsed.kind !== 'url' ? unusable : { url: parsed.url };
+  if (!/^https?:/iu.test(resolved)) return unusable;
+  return { url: resolved };
 }
 
 function message(error: unknown): string {
@@ -100,13 +129,14 @@ function message(error: unknown): string {
 // Reads a source and returns its text, or the reason it could not be read. Nothing here throws at the
 // caller: a source that will not read is an ordinary outcome the caller records on the record and
 // shows in the tab, and a thrown error would be indistinguishable from a bug in this module.
-export async function readSource(line: string, options: ReadOptions = {}): Promise<ReadResult> {
-  const parsed = parseSource(line);
+export async function readSource(line: string, roots: SourceRoots, options: Omit<ReadOptions, 'roots'> = {}): Promise<ReadResult> {
+  const parsed = parseSource(line, roots);
   if ('error' in parsed) return parsed;
   const resolved: Required<ReadOptions> = {
+    roots,
     fetchImpl: options.fetchImpl ?? ((url, init) => fetch(url, init)),
     maxBytes: options.maxBytes ?? MAX_BYTES,
     timeoutMs: options.timeoutMs ?? TIMEOUT_MS,
   };
-  return parsed.kind === 'file' ? readFile(parsed, resolved.maxBytes) : readUrl(parsed.url, resolved);
+  return parsed.kind === 'file' ? readFile(parsed, resolved) : readUrl(parsed.url, resolved);
 }
