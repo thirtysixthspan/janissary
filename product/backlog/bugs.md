@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Keep Shift+Tab inside a pending question panel, on the answer buttons and the answer field
 
 Existing Bug: The first Shift+Tab pressed in a pending question panel moves keyboard focus out of the panel and into the tab's command line — in both the approval and the free-text form, and from every button — where the spec promises it steps backward between the panel's buttons and wraps. Severity: 5/10
@@ -75,6 +73,8 @@ Existing Risk: 3/10 - Every dry run misreports it, and the value it shows is not
 Proposal Risk: 2/10 - The subject is built where the tag is, so surfacing the same string `git commit` will use is a one-line change; the only way it goes wrong is a second copy of the subject being printed elsewhere and drifting from the one that is committed.
 
 Proposal: The spec promises that a dry run "names the files it would bump … and reports the commit subject and tag it would create", and separately that "The commit's subject is `feat(package): bump version to <version>` and it is tagged `v<version>`". Reproduce it from a clean checkout of the primary branch with nothing staged: run `node scripts/release.mjs patch`. Expected: a report naming the commit subject `feat(package): bump version to 0.15.1` and, separately, the tag `v0.15.1`. Observed: the changelog preview between the `── CHANGELOG.md preview ──` markers is correct and complete — `Preparing release 0.15.0 -> 0.15.1 (DRY-RUN)`, a `## [0.15.1] - 2026-09-27` section grouped into Breaking Changes, Features, Bug Fixes, Documentation, Refactoring, Chores and Other with `perf(remote)!: encode navigator file contents once on the wire (#1212)` correctly filed under Breaking Changes, then `Version 0.15.0 -> 0.15.1 in package.json, package-lock.json (dry-run, not saved)` — and the last two lines read `Would commit: "v0.15.1"` and `Would tag:    v0.15.1`, the tag printed for both. The subject is right where it matters: `scripts/release.mjs` builds `feat(package): bump version to ${newVersion}` in the argument to `git commit` for a real run, so only the dry-run report is wrong. Line 149 of `scripts/release.mjs` interpolates the already-computed tag into the `Would commit` line instead of the subject the commit will carry. Compute the commit subject once, next to the tag, use it for both the `git commit` message and the `Would commit` report, and leave the tag for the `Would tag` line. `scripts/release.mjs` has no test file, so nothing asserts the dry-run report's wording; a regression test should run the dry path over a fixture repository and assert that the report contains `feat(package): bump version to <new>` and that the commit line and the tag line carry different values.
+
+## development
 
 ## deferred
 
