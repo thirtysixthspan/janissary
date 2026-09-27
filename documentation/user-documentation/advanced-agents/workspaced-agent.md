@@ -72,7 +72,7 @@ A workspace lasts exactly as long as the tabs sharing it:
 - **Shared** when you use a workspaced tab's ➕ button; every joined tab works in the same directory.
 - **Kept** when one sharing tab closes and another still uses it.
 - **Removed** when the last sharing tab closes, along with everything in it that wasn't pushed. Removal happens in the background, so deleting a large clone never freezes the app; quitting before it finishes still cleans up.
-- **Not restored**: `janus --relaunch` brings the agent tab back, but not its workspace — the restored tab starts in its last known working directory. Fresh app launches also clear any workspace directories left behind.
+- **Not restored**: `janus --relaunch` brings the agent tab back, but not its workspace. The tab still shows as workspaced, though the clone is gone, so its shell starts in the project directory instead. Fresh app launches also clear any workspace directories left behind.
 
 The Claude trust entry Janissary writes for a workspace is removed again along with it, on the last tab close, at shutdown, and when a leftover folder is cleared. Entries appear in and disappear from your `~/.claude.json` as workspaces come and go.
 
