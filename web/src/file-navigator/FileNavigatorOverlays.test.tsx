@@ -352,7 +352,7 @@ describe('FileNavigatorOverlays', () => {
     expect(request).toHaveBeenCalledWith(['src']);
   });
 
-  function renderOverlays(commit: Commit) {
+  function renderOverlays(commit: Commit, overrides: { focusTree?: () => void } = {}) {
     return render(
       <FileNavigatorOverlays
         drag={makeDrag()}
@@ -366,7 +366,7 @@ describe('FileNavigatorOverlays', () => {
         menuActions={makeMenuActions()}
         hasBranch={false}
         onCloseMenu={() => {}}
-        focusTree={() => {}}
+        focusTree={overrides.focusTree ?? (() => {})}
       />,
     );
   }
@@ -392,5 +392,50 @@ describe('FileNavigatorOverlays', () => {
       focusTree={() => {}} />,);
     expect((screen.getByLabelText('Commit message') as HTMLInputElement).value).toBe('sync: 3 files');
     expect(screen.getByText('Commit message (3 files)')).toBeInTheDocument();
+  });
+
+  // The popup has no cancel button on purpose — clicking away leaves it open with its text intact,
+  // because what it holds is a sentence the user composed. Escape and an emptied field are the only
+  // ways out, and both have to hand focus back to the tree so the next keystroke is a tree command.
+  it('cancels the pending commit on Escape and refocuses the tree', () => {
+    const cancel = vi.fn();
+    const focusTree = vi.fn();
+    const pendingCommit = { id: 1, paths: ['notes.md'], defaultMessage: 'sync: notes.md', fileCount: 1 };
+    renderOverlays(makeCommit({ pendingCommit, cancel }), { focusTree });
+
+    fireEvent.keyDown(screen.getByLabelText('Commit message'), { key: 'Escape' });
+
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(focusTree).toHaveBeenCalled();
+  });
+
+  it('cancels rather than committing nothing when the message is emptied', () => {
+    const confirm = vi.fn();
+    const cancel = vi.fn();
+    const focusTree = vi.fn();
+    const pendingCommit = { id: 1, paths: ['notes.md'], defaultMessage: 'sync: notes.md', fileCount: 1 };
+    renderOverlays(makeCommit({ pendingCommit, confirm, cancel }), { focusTree });
+    const input = screen.getByLabelText('Commit message');
+    fireEvent.change(input, { target: { value: ' '.repeat(3) } });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(confirm).not.toHaveBeenCalled();
+    expect(focusTree).toHaveBeenCalled();
+  });
+
+  it('confirms the composed message and refocuses the tree', () => {
+    const confirm = vi.fn();
+    const focusTree = vi.fn();
+    const pendingCommit = { id: 1, paths: ['notes.md'], defaultMessage: 'sync: notes.md', fileCount: 1 };
+    renderOverlays(makeCommit({ pendingCommit, confirm }), { focusTree });
+    const input = screen.getByLabelText('Commit message');
+    fireEvent.change(input, { target: { value: 'wip: half a thought' } });
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(confirm).toHaveBeenCalledWith('wip: half a thought');
+    expect(focusTree).toHaveBeenCalled();
   });
 });
