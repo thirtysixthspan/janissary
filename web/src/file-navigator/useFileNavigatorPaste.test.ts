@@ -155,4 +155,46 @@ describe('useFileNavigatorPaste', () => {
     // Nothing was pasted, so a cut still has somewhere to go.
     expect(getClipboardSnapshot()).toEqual({ mode: 'cut', paths: ['/other/a.txt'] });
   });
+
+  // One item and several are different questions, and the dialog's title is the only place the
+  // difference is visible: a single name is actionable, a count is not, so the multi case names the
+  // destination folder instead.
+  it('names the destination folder when several items already exist', async () => {
+    setClipboard('copy', ['/other/a.txt', '/other/b.txt']);
+    const request = vi.fn().mockResolvedValue({
+      ok: true, value: { conflictPaths: ['/other/a.txt', '/other/b.txt'] },
+    });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
+
+    await act(async () => { result.current.paste(makeRows(), 'dest'); await Promise.resolve(); });
+
+    expect(result.current.pendingConflict?.title).toBe('Some items already exist in "dest".');
+  });
+
+  it('names the single item that already exists when only one does', async () => {
+    setClipboard('copy', ['/other/notes.txt']);
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { conflictPaths: ['/other/notes.txt'] } });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
+
+    await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
+
+    expect(result.current.pendingConflict?.title).toBe('"notes.txt" already exists here. Overwrite it?');
+  });
+
+  it('cancelConflict closes the dialog and re-sends nothing', async () => {
+    setClipboard('copy', ['/other/a.txt']);
+    const request = vi.fn().mockResolvedValue({ ok: true, value: { conflictPaths: ['/other/a.txt'] } });
+    const client = { request } as unknown as JanusClient;
+    const { result } = renderHook(() => useFileNavigatorPaste(client, 'files', '/root'));
+    await act(async () => { result.current.paste(makeRows(), null); await Promise.resolve(); });
+    expect(result.current.pendingConflict).not.toBeNull();
+    const sentBefore = request.mock.calls.length;
+
+    act(() => { result.current.cancelConflict(); });
+
+    expect(result.current.pendingConflict).toBeNull();
+    expect(request).toHaveBeenCalledTimes(sentBefore);
+  });
 });
