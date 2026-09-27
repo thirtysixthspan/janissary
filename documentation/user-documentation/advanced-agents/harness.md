@@ -187,6 +187,8 @@ Chromium reports its own status the same way, and that line is left out of the n
 
 A later connect starts a fresh browser behind the same endpoint, with its own state — a different browser from the one that died, so treat a crash that comes back that way as the fault to report rather than as a browser you're losing repeatedly. The dead browser's scratch directory is still kept for the post-mortem, and the new browser gets one of its own. Closing a tab whose browser is still running stops it and removes its scratch directory.
 
+Those retries are counted, and there is a limit to them. A start that ends in a report counts against the tab: a refused spawn, a child that dies before it is listening, a launch that never starts listening in time, or a browser that dies within thirty seconds of coming up. A browser that stayed up longer than that is treated as one that ran, and the count starts again. After a hundred such starts in a row the tab is given no further browser at all. The next connect is closed with `e2e browser will not be restarted`, one last report says so, and the guard keeps listening, so the tab is still there to read and to close.
+
 A browser that died keeps its scratch directory instead, so there's something left to look at. It's under `.janissary/workspace/browsers/` in the project directory, named after the tab it belonged to, and it holds Chromium's profile, its temp files, and any crash dump it managed to write — exactly as the browser left them. Closing the dead tab doesn't clear it, since that's the first thing you're likely to do after reading the report. Janissary clears the whole workspace directory the next time it starts, so copy anything you want to keep before then.
 
 ## Knowing when a harness needs you
