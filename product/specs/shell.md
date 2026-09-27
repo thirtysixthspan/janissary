@@ -98,4 +98,4 @@ After each shell command completes, `queryShellPwd` sends `pwd` to the shell and
 
 On `--relaunch`, saved cwd values are loaded from agent state files into `cwdRef`. When `getShell` creates a new shell for a tab, it checks `cwdRef` for the tab's label and sends `cd "<cwd>"` to the shell before any user commands.
 
-A local tab whose recorded working directory is no longer a directory — deleted since it was saved, or never a real path — still gets a working shell: the shell starts in the directory Janissary was launched from, and the working directory recorded after the tab's next command replaces the stale value.
+A local tab whose recorded working directory is no longer a directory — deleted since it was saved, or never a real path — still gets a working shell: the shell starts in the project directory, where a new tab starts, and the working directory recorded after the tab's next command replaces the stale value.

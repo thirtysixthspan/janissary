@@ -23,13 +23,13 @@ A throwaway script, `temp/repro-pwd.ts`, run with `npx tsx`, wraps a real `node-
 
 ## Correct behavior
 
-Per `product/specs/history.md`, the persisted `cwd` is "the shell's working directory", and per `product/specs/shell.md` the pty shell is put into "a quiet state — echo off, empty prompts — so the terminal's own echo cannot appear in captured output" before any command runs. Under zsh as under bash, command output and the pwd answer contain only what the command and `pwd` printed, the stored `cwd` is a bare absolute path, and a local tab whose stored `cwd` is not a directory still gets a working shell (started in the launch directory, after which the next pwd query repairs the stored value).
+Per `product/specs/history.md`, the persisted `cwd` is "the shell's working directory", and per `product/specs/shell.md` the pty shell is put into "a quiet state — echo off, empty prompts — so the terminal's own echo cannot appear in captured output" before any command runs. Under zsh as under bash, command output and the pwd answer contain only what the command and `pwd` printed, the stored `cwd` is a bare absolute path, and a local tab whose stored `cwd` is not a directory still gets a working shell (started in the project directory, after which the next pwd query repairs the stored value).
 
 ## Approach
 
 - Extend the seed so zsh goes quiet too: when `$ZSH_VERSION` is set, also clear `PROMPT` and `RPROMPT` and `unsetopt zle prompt_cr prompt_sp`. Bash never enters the zsh branch and keeps its `PS1`/`PS2` handling. Verified with the reproduction script: under zsh all three commands then return `one`/`two`/`three` and every pwd is the bare path.
 - Make `queryShellPwd` keep only the answer: the last line before the marker that, stripped of `\r` and surrounding whitespace, is an absolute path (starts with `/` and holds no control characters). A window with no such line yields `''`, which `ShellManager` already treats as nothing to report, leaving the previous cwd in place.
-- In `ShellManager.spawnFor`, resolve a local shell's starting directory through a directory check: a stored cwd that is not an existing directory is dropped, so the pty shell starts in `process.cwd()` and the piped shell gets no `cd`. Remote tabs are untouched: their cwd is a path on another machine.
+- In `ShellManager.spawnFor`, resolve a local shell's starting directory through a directory check: a stored cwd that is not an existing directory is dropped, so the shell starts in the project directory (`TabManager.launchDir`, where every new tab starts) — the pty shell is spawned there and the piped shell is `cd`'d there. `process.cwd()` is not used, because it is wherever the `janus` process happened to be started, which need not be the project. A tab with no recorded cwd at all is unchanged. Remote tabs are untouched: their cwd is a path on another machine.
 
 ## Implementation steps
 
@@ -38,21 +38,25 @@ Per `product/specs/history.md`, the persisted `cwd` is "the shell's working dire
 3. `src/shell/index.ts`: add a `pwdAnswer(text)` helper that returns the last absolute-path line, with a comment naming the debris it skips, and have `queryShellPwd` use it.
 4. `src/shell/index.test.ts`: add a case feeding `queryShellPwd` the PTY-shaped buffer from the reproduction (leftover output, a sentinel, the `%` marker with escapes, the echoed `pwd`, the path, the start of the next `echo "` line) and asserting the bare path; add a case for a path-less buffer yielding `''`.
 5. `src/shell/manager.ts`: add a local `existingDirectory(cwd)` check, with a comment saying why a non-directory is dropped, and use it in `spawnFor` for the local branches.
-6. `src/shell/manager.test.ts`: assert a pty shell whose tab cwd is not a directory is spawned in `process.cwd()`, a real directory is passed through, and a piped shell gets no `cd` for a non-directory.
+6. `src/shell/manager.test.ts`: assert a pty shell whose tab cwd is not a directory is spawned in the project directory, a real directory is passed through, and a piped shell is `cd`'d into the project directory for a non-directory.
 7. Run `./scripts/run.mjs check-diff` after each step.
 
 ## Regression test
 
 - `src/shell/index.test.ts` — "keeps only the path when the answer arrives among terminal debris": fails today (the result is the whole blob), passes with the fix.
 - `src/shell/pty-session.test.ts` — "quiets zsh's own prompts and line editor too": fails today (the seed has no `PROMPT`/`RPROMPT`/`zle`), passes with the fix.
-- `src/shell/manager.test.ts` — "starts a local pty shell in the launch directory when the tab's cwd is not a directory": fails today (the blob is passed to `spawnTransport`), passes with the fix.
+- `src/shell/manager.test.ts` — "starts a local pty shell in the project directory when the tab's cwd is not a directory": fails today (the blob is passed to `spawnTransport`), passes with the fix.
+
+## Verification in the app
+
+Run against a scratch project under `SHELL=/bin/zsh` with `node bin/janus.mjs --no-open`, driven through the attached browser and then over the app's websocket. On `master`, `echo one` then `echo two` left the debris blob in `cwd`; after `--relaunch`, every command ended `(shell exited)` and `cwd` never repaired. With the fix, the transcript showed only `one`/`two`, the header showed `$root/`, `cwd` was the project path, and relative Tab completion worked. After `--relaunch`, `pwd` printed the saved directory, and `cd docs` was restored on the next relaunch. With a debris blob planted in the saved `cwd`, the relaunched tab's shell started in the project directory and the next pwd query repaired `cwd`. This check is what moved the fallback from `process.cwd()` to the project directory: the first stale-cwd run started the shell in the directory `janus` had been run from, which was not the project.
 
 ## Specs and docs
 
-`product/specs/shell.md`: say the quiet state covers zsh's own line editor and prompt markers as well as echo and prompts, that the working directory recorded after a command is the shell's bare path, and that a local shell whose recorded directory no longer exists starts in the launch directory. `help.md` and `documentation/user-documentation/` do not describe the pwd bookkeeping, so neither changes.
+`product/specs/shell.md`: say the quiet state covers zsh's own line editor and prompt markers as well as echo and prompts, that the working directory recorded after a command is the shell's bare path, and that a local shell whose recorded directory no longer exists starts in the project directory. `help.md` and `documentation/user-documentation/` do not describe the pwd bookkeeping, so neither changes.
 
 ## Out of scope
 
 - A directory check inside `TabManager.setCwd`: the same setter receives remote tabs' cwd (a path on another machine that cannot be checked locally) and file-navigator roots, so guarding it there would break remote tabs. The value is instead cleaned where it is produced (`queryShellPwd`) and checked where a local shell consumes it (`spawnFor`).
-- Repairing already-persisted state files: a bad stored cwd now yields a shell in the launch directory, and the first command's pwd query overwrites the stored value with a real path.
+- Repairing already-persisted state files: a bad stored cwd now yields a shell in the project directory, and the first command's pwd query overwrites the stored value with a real path.
 - Tab completion's use of the tab cwd (`src/completion/`): it is correct once the cwd is a path.

@@ -18,7 +18,7 @@ export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bas
 const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
 
 // A local shell started in a recorded cwd that is not a directory — deleted since, or never a path —
-// exits at once, and so would every respawn after it; it starts in its default directory instead.
+// exits at once, and so would every respawn after it; it starts in the project directory instead.
 function existingDirectory(dir: string | undefined): string | undefined {
   if (!dir) return undefined;
   try { return statSync(dir).isDirectory() ? dir : undefined; } catch { return undefined; }
@@ -136,7 +136,7 @@ export class ShellManager {
       offline: tab?.offline,
       tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
     };
-    const localCwd = existingDirectory(cwd);
+    const localCwd = cwd ? existingDirectory(cwd) ?? existingDirectory(this.managers.tab.launchDir) : undefined;
     if (getConfig().interactiveShellDetection) return this.spawnPtyShellFor(label, localCwd, sandbox);
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
     if (localCwd) shell.stdin?.write(`cd "${localCwd}"\n`);
