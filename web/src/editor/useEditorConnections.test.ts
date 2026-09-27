@@ -50,4 +50,41 @@ describe('useEditorConnections', () => {
       params: { url: '/open/1', persona: 'reviewer' },
     });
   });
+
+  // There is no connection to close without the editor payload that names the file, so a tab missing
+  // it is left alone rather than dereferenced — the row simply does nothing.
+  it('closeRow does nothing for a tab carrying no editor payload', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { editor, ...withoutEditor } = makeTab();
+    expect(editor).toBeDefined();
+    const { result } = renderHook(() => useEditorConnections(client, withoutEditor as TabView));
+
+    result.current.closeRow({ text: 'reviewer (acp)', kind: 'acp' });
+
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('closeRow sends a persona with no acp suffix unchanged', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.closeRow({ text: 'reviewer', kind: 'shell' });
+
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'closeEditorConnection',
+      params: { url: '/open/1', persona: 'reviewer' },
+    });
+  });
+
+  it('openAcpTranscript addresses the agent connection by its own reference', () => {
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const { result } = renderHook(() => useEditorConnections(client, makeTab()));
+
+    result.current.openAcpTranscript({ scope: 'editor', label: 'notes', persona: 'reviewer' });
+
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'openAcpTranscript',
+      params: { acpRef: { scope: 'editor', label: 'notes', persona: 'reviewer' } },
+    });
+  });
 });
