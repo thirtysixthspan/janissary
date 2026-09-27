@@ -176,6 +176,32 @@ describe('ImageEditor crop', () => {
     expect(screen.getByText('400 × 300')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
   });
+
+  // Crop is a toggle, not a one-way door: pressing it again disarms the drag and throws away the
+  // rectangle, so a user who starts a gesture and changes their mind does not have to commit or hunt
+  // for Cancel.
+  it('disarms the gesture and drops the rectangle when Crop is pressed again', () => {
+    const { container } = renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: 'Crop' }));
+    dragOverlay(screen.getByTestId('crop-overlay'), { x: 0, y: 0 }, { x: 50, y: 50 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Crop' }));
+
+    expect(container.querySelector(':scope .image-crop-overlay')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Apply crop' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Crop' }).className).not.toContain('active');
+  });
+
+  it('rearms from the source dimensions after a gesture was dropped, not from the last rectangle', () => {
+    renderEditor();
+    fireEvent.click(screen.getByRole('button', { name: 'Crop' }));
+    dragOverlay(screen.getByTestId('crop-overlay'), { x: 0, y: 0 }, { x: 50, y: 50 });
+    fireEvent.click(screen.getByRole('button', { name: 'Crop' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Crop' }));
+
+    expect(within(screen.getByTestId('crop-overlay')).getByText('400 × 300')).toBeInTheDocument();
+  });
 });
 
 describe('ImageEditor saving', () => {
