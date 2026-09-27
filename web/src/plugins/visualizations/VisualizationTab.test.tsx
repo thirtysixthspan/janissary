@@ -259,4 +259,37 @@ describe('VisualizationTab', () => {
       unmount();
     }
   });
+
+  // A chart is a picture, and a screen reader told only its title has been told nothing about the data.
+  // The label has to resolve to real elements inside the element it labels, which is why this reads the
+  // ids back off the attribute rather than searching for a title by text.
+  it('names the chart and describes its content for a screen reader', () => {
+    const { container } = tab({ table: TABLE, chart: CHART });
+    const svg = container.querySelector('svg.visualization-chart')!;
+    expect(svg).toHaveAttribute('role', 'img');
+    const labelledBy = svg.getAttribute('aria-labelledby')!;
+    const [titleId, descriptionId] = labelledBy.split(' ');
+    const byId = (id: string): Element | null => document.querySelector(`[id="${CSS.escape(id)}"]`);
+    expect(byId(titleId!)?.textContent).toBe('Revenue by region');
+    expect(byId(descriptionId!)?.textContent)
+      .toBe('A bar chart of revenue over north to south: 2 marks, from 4 at south to 10 at north.');
+  });
+
+  it('offers the drawn marks as a table, reachable one keystroke away', () => {
+    tab({ table: TABLE, chart: CHART });
+    const disclosure = screen.getByText('Data table');
+    expect(disclosure.closest('details')).not.toHaveAttribute('open');
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers.map((header) => header.textContent)).toEqual(['region', 'revenue']);
+    for (const header of headers) expect(header).toHaveAttribute('scope', 'col');
+    const cells = screen.getAllByRole('cell').map((cell) => cell.textContent);
+    expect(cells).toEqual(['north', '10', 'south', '4']);
+  });
+
+  // A re-read that fails keeps the chart, and the table is part of the chart rather than an extra that a
+  // failure is allowed to cost the user.
+  it('keeps the data table when a re-read has failed', () => {
+    tab({ table: TABLE, chart: CHART, error: 'https://example.com/d.csv returned 500' });
+    expect(screen.getByText('Data table')).toBeInTheDocument();
+  });
 });

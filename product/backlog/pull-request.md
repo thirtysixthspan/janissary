@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the gap that a chart has no data table behind it, where every mature charting surface treats the table as the chart's real text alternative.
-
-Existing Issue: `product/specs/visualizations.md` describes a chart drawn as SVG with a caption, and `web/src/plugins/visualizations/chart/ChartSvg.tsx` gives the root `role="img"` and an `aria-label` carrying only the chart's title, so a screen reader is told the title and nothing about the values. Severity: 6/10
-
-Existing Risk: 6/10 - A screen reader user gets the title of a chart and none of its content, which is the single most common way a charting surface becomes unusable, and the export path produces a file with the same absence baked in.
-
-Proposal Risk: 3/10 - A table adds a region beside the chart and a toggle, and a written summary can misdescribe the data where a table never does, so the table is the part that must not be dropped if the summary is wrong.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: give a chart a reachable data table and a text summary". Follow the W3C's Writing Accessible SVG and the UK Government Analysis Function's chart checklist: add a `<title>` and `<desc>` to the root `<svg>` in `web/src/plugins/visualizations/chart/ChartSvg.tsx` and point `aria-labelledby` at them, keeping the existing `role="img"` — leave a comment explaining that both are needed, because a bare `<title>` is exposed inconsistently across screen readers. Build the summary in `web/src/plugins/visualizations/chart/points.ts` beside the marks it describes, stating the kind, the measure, its range, and the largest and smallest mark, which are facts about data already in hand rather than inferences. Render a real `<table>` with `<th scope>` beside the figure in `web/src/plugins/visualizations/VisualizationBody.tsx`, behind a `<details>` toggle so it is one keystroke away and the default view stays a chart, generated from the same marks so the two cannot drift, and keep it out of the PNG and PDF export paths because an image of a table is not a text alternative. Add cases to `web/src/plugins/visualizations/VisualizationTab.test.tsx` asserting the `<svg>` carries `aria-labelledby` resolving to a `<title>` and a `<desc>`, that the table's header cells carry `scope`, and that the summary names the measure and its range. Sources: https://www.w3.org/TR/2026/WD-svg-aam-1.0-20260311/ , https://w3c.github.io/writing-accessible-svg/accessible-svg.html , https://analysisfunction.civilservice.gov.uk/policy-store/charts-a-checklist/
-
-
 * Close the gap that the chart grammar cannot aggregate, where every comparable product answers a question about a measure it was not handed.
 
 Existing Issue: `product/specs/visualizations.md` fixes the chart at a kind, an x column, a y column, and an optional series column, and `web/src/plugins/visualizations/chart/points.ts` plots one mark per row with the single exception of a pie, which sums per category, so a source with one row per transaction cannot answer "revenue by region" at all. Severity: 7/10

@@ -6,6 +6,7 @@ import type {
 import { ConfirmDialog } from '../api';
 import { ChartSvg } from './chart/ChartSvg';
 import { VisualizationChat } from './VisualizationChat';
+import { VisualizationData } from './VisualizationData';
 import { VisualizationQuestion } from './VisualizationQuestion';
 
 // Everything below the metadata row. Which of the four things it shows is decided entirely by the
@@ -153,6 +154,7 @@ function Drawn(props: BodyProperties & { reason?: string }): React.ReactElement 
         <ChartSvg ref={chartRef} chart={chart} table={table} />
         <figcaption>{caption(table, view.readAt)}</figcaption>
       </figure>
+      <VisualizationData chart={chart} table={table} />
       <VisualizationChat
         turns={view.turns}
         busy={busy}

@@ -72,6 +72,24 @@
 .visualization-chart-empty, .visualization-chart-legend { fill: var(--muted); font-size: 11px; }
 .visualization-figure figcaption { color: var(--muted); font-size: 11px; }
 
+/* The chart's text alternative, closed by default so the tab still opens on a chart and not on a table.
+   It sits between the figure and the exchange because it belongs to the chart rather than to the
+   conversation about it, and the table scrolls inside its own box so a long one cannot push the chart
+   off the screen. */
+.visualization-data { padding: 0 12px 8px; font-size: 12px; }
+.visualization-data > summary { color: var(--muted); cursor: pointer; padding: 4px 0; }
+.visualization-data > summary:hover { color: var(--fg); }
+.visualization-data-summary { color: var(--muted); margin: 6px 0; }
+.visualization-data-empty { color: var(--muted); margin: 6px 0; }
+.visualization-data-scroll { max-height: 220px; overflow: auto; border: 1px solid var(--border); border-radius: 4px; }
+.visualization-data table { border-collapse: collapse; width: 100%; }
+.visualization-data th, .visualization-data td {
+  padding: 3px 8px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.visualization-data th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--bg); }
+.visualization-data th.is-numeric, .visualization-data td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.visualization-data tbody tr:last-child td { border-bottom: none; }
+
 .visualization-pending, .visualization-gone { color: var(--muted); padding: 16px 12px; }
 .visualization-gone, .visualization-export-error, .visualization-reason-text { color: var(--error); }
 .visualization-export-error { padding: 0 12px; margin: 0; font-size: 12px; }

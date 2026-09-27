@@ -44,6 +44,12 @@ A chart is a kind, an x column, a y column, an optional series column that split
 
 The chart's own title names the visualization and its tab, once, and only while the visualization has not been named some other way. Double-clicking the name in the metadata row renames it instead; a committed name is trimmed and capped at 60 characters, and a blank one changes nothing.
 
+### Reading a chart without seeing it
+
+A chart is a picture, so the tab carries what the picture says. The chart names itself for a screen reader and describes its own content: the kind, the measure, the range it spans, and the largest and smallest mark. A description of a chart with nothing to plot says so rather than describing an empty range.
+
+Beneath the chart, a disclosure labelled **Data table** holds one row per mark the chart draws — the category, the measure, and the series when the chart is split by one, for a pie the summed categories, and for a scatter its two numeric columns. It is closed by default, so the tab opens on a chart rather than on a table, and it is generated from the same marks the chart is drawn from, so it cannot disagree with the chart. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
+
 ### Changing the chart
 
 Once a chart exists the tab ends in the same command bar an agent tab does, and behaves the same way. Enter sends the query, Shift+Enter starts a new line, Escape clears an unsent one, and Escape during a reply cancels it. A second query is refused while a reply is in flight, and a refused Enter leaves the typed text in place.

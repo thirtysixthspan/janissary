@@ -39,6 +39,8 @@ Answering the last question produces the chart.
 
 The chart fills the tab, with its title above it and the row count below. When the source has more rows than the chart shows, the line under the chart says how many of how many.
 
+**Data table**, under the chart, opens the numbers behind the picture: one row per mark the chart draws, with the series column too when the chart is split by one. It also states the chart in a sentence — the kind, the measure, its range, and its largest and smallest mark — which is what a screen reader is given in place of the drawing, along with the chart's title. Both are built from the same marks the chart is drawn from, so they cannot disagree with it. Neither is part of an exported file.
+
 **Export as PNG** and **Export as PDF** write a file named after the chart, at twice the size it appears in the tab. Both buttons are greyed out until there is a chart to export.
 
 You can rename the chart by double-clicking its name in the header.
