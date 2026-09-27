@@ -2,28 +2,6 @@
 
 # pull-request
 
-* Remove the export no consumer reads, which exists only to publish the read bounds nothing calls.
-
-Existing Issue: `src/visualizations/fetch.ts` exports `SOURCE_LIMITS`, and a repository-wide search finds no other reference, so a named constant pair reads as a contract for callers that does not exist. Severity: 2/10
-
-Existing Risk: 2/10 - Harmless on its own, but it invites a later change to the bounds through a surface that has no test and no caller, which is how the two numbers stop matching what the module actually enforces.
-
-Proposal Risk: 1/10 - The constants stay, only the unused export goes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: drop the unused SOURCE_LIMITS export". Delete the `SOURCE_LIMITS` export from `src/visualizations/fetch.ts` and leave `TIMEOUT_MS`, `MAX_BYTES`, and `MAX_REDIRECTS` as the module-private constants they already are, since each is already used at its own use site and the comment above them explains why they exist. If a test wants to assert a bound, `src/visualizations/fetch.test.ts` already passes an explicit `maxBytes` and `timeoutMs` through `ReadOptions`, so the constants themselves are not what that test depends on — confirm that before removing the export, and add a case pinning the defaults against a body just under and just over the real cap only if the existing cap test does not already cover the boundary. No other file changes; `knip` will confirm the export has no consumer.
-
-
-* Drop the test that asserts an export is a function, and the export it forced, since neither checks anything.
-
-Existing Issue: `web/src/plugins/visualizations/visualizations-style.test.ts` imports `withResolvedColours` purely to assert `typeof ... === 'function'`, and that function is exported from `web/src/plugins/visualizations/export/download.ts` for no production reason, so one test block and one widened module surface exist to say nothing about behaviour. Severity: 3/10
-
-Existing Risk: 3/10 - A test that cannot fail for a real reason is a green mark standing in for a check, and the wider export invites a caller that depends on the internal shape of a serialization step.
-
-Proposal Risk: 1/10 - The colour assertions that share the file are unaffected.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: drop the export that exists only for a test that asserts nothing". Remove the final `describe` block from `web/src/plugins/visualizations/visualizations-style.test.ts` and make `withResolvedColours` module-private again in `web/src/plugins/visualizations/export/download.ts`. Then replace the coverage that block was standing in for with one that can fail for a real reason: assert that the property list `withResolvedColours` reads — `--bg`, `--bg-soft`, `--fg`, `--muted`, `--faint`, `--border`, `--accent`, `--running`, `--success`, `--error` — is exactly the set of custom properties the chart stylesheet paints with, which is the pairing that decides whether an exported chart looks like the one on screen. Extract that list into a named constant in `download.ts` and derive the stylesheet assertion from it, so the two can no longer drift apart, and keep the constant unexported. This needs no DOM: it is a comparison of two lists, not a call into the function.
-
-
 * Give a modification turn something to read when the model returns a chart with no note.
 
 Existing Issue: A revision whose reply parses stores the model's `note` on the turn, and the note is optional, so a model that answers with a bare chart object leaves the turn with an empty response, which renders as an empty bubble under the user's query. Severity: 3/10

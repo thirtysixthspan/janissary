@@ -9,8 +9,6 @@ const TIMEOUT_MS = 15_000;
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_REDIRECTS = 5;
 
-export const SOURCE_LIMITS = { timeoutMs: TIMEOUT_MS, maxBytes: MAX_BYTES };
-
 type FetchLike = (url: string, init: { redirect: 'manual'; signal: AbortSignal }) => Promise<{
   status: number;
   headers: { get(name: string): string | null };

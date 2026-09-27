@@ -8,10 +8,25 @@ import { pdfDocument } from './pdf';
 // The theme's custom properties are what the chart is drawn in, and an SVG serialized on its own knows
 // nothing about them. Resolving them here against the element's own computed style is what makes an
 // exported chart look like the one on screen rather than like a black rectangle.
-export function withResolvedColours(svg: SVGSVGElement): string {
+//
+// The list is the stylesheet's, and the stylesheet is held to it: a chart that paints a property not
+// named here exports as whatever the browser defaults to for it, which is the failure this pair exists
+// to prevent. `visualizations-style.test.ts` asserts the two agree, so a colour added to one and not
+// the other fails rather than exporting wrongly.
+const CHART_PROPERTIES = [
+  '--bg', '--bg-soft', '--fg', '--muted', '--faint', '--border', '--accent', '--running', '--success',
+  '--error',
+];
+
+// The list is published so a test can hold the stylesheet to it. A getter rather than the constant
+// itself, so a caller cannot reach in and change what the export resolves.
+export function chartProperties(): readonly string[] {
+  return CHART_PROPERTIES;
+}
+
+function withResolvedColours(svg: SVGSVGElement): string {
   const style = getComputedStyle(svg);
-  const properties = ['--bg', '--bg-soft', '--fg', '--muted', '--faint', '--border', '--accent', '--running', '--success', '--error'];
-  const declarations = properties
+  const declarations = CHART_PROPERTIES
     .map((name) => `${name}: ${style.getPropertyValue(name).trim()}`)
     .filter((entry) => !entry.endsWith(':'))
     .join('; ');
