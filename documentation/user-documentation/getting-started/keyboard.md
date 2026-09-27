@@ -14,8 +14,8 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `→` | Move the input cursor right |
 | `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab |
 | `Shift+→` / `Cmd+Shift+]` | Switch to the next tab |
-| `Ctrl+←` | Move the current tab one position left |
-| `Ctrl+→` | Move the current tab one position right |
+| `Ctrl+←` | Move the current tab one position left, within its group |
+| `Ctrl+→` | Move the current tab one position right, within its group |
 | `↑` | Walk backward through command history |
 | `↓` | Walk forward through command history |
 | `Shift+↑` / `Ctrl+↑` | Scroll the transcript up with acceleration |
@@ -31,6 +31,7 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `Ctrl+E` | Open the queue picker; does nothing on a tab that is not an agent tab |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `Ctrl+O` | Move the command currently running into a full-tab terminal, where you can type to it; does nothing when nothing is running |
+| `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Cmd+F` | Search the current tab's transcript |
 | `Cmd+P` | Open the Quick Open file finder |
 | `Cmd+T` | Open a new [workspaced agent tab](/user-documentation/advanced-agents/workspaced-agent) |
