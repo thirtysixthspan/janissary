@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type {
   VisualizationChart,
+  VisualizationColumnType,
   VisualizationTable,
   VisualizationWindow,
 } from '@shared/plugins/visualizations/shared';
@@ -9,6 +10,7 @@ import { bandsOf, DEFAULT_VIEW, viewedMarksFor, type ChartView } from './chart/v
 import { ChartControls } from './ChartControls';
 import { ChartSvg } from './chart/ChartSvg';
 import { VisualizationChat } from './VisualizationChat';
+import { SchemaReview } from './SchemaReview';
 import { VisualizationData } from './VisualizationData';
 import { VisualizationQuestion } from './VisualizationQuestion';
 
@@ -26,6 +28,8 @@ export type BodyProperties = {
   onRevise(query: string): void;
   onCancel(): void;
   onSetSource(source: string): void;
+  onSetColumnType(column: string, type: VisualizationColumnType): void;
+  onConfirmSchema(): void;
   chartRef: React.RefObject<SVGSVGElement | null>;
 };
 
@@ -38,11 +42,26 @@ export function VisualizationBody(props: BodyProperties): React.ReactElement {
       ? <p className="visualization-pending">Reading the source…</p>
       : <Reason {...props} reason={view.error} />;
   }
+  // The review sits between a table being read and the interview asking anything, so it is reached before
+  // the empty state and before a question: a question cannot exist until the review is closed. Nothing
+  // here is a step in the interview — it has no question, no suggestions, and no answers.
+  if (!view.reviewed && view.chart === undefined) return <Review {...props} />;
   if (view.chart === undefined) return <Nothing {...props} reason={view.error} />;
   // A failure that follows data the tab already has is a note above the chart, not a replacement for
   // it: the marks are still true of the table they were drawn from, and taking them away would cost the
   // user the chart at exactly the moment a flaky endpoint makes it worth having.
   return <Drawn {...props} reason={view.error} />;
+}
+
+function Review({ view, busy, onSetColumnType, onConfirmSchema }: BodyProperties): React.ReactElement {
+  return (
+    <SchemaReview
+      columns={view.table?.columns ?? []}
+      busy={busy}
+      onSetType={onSetColumnType}
+      onConfirm={onConfirmSchema}
+    />
+  );
 }
 
 function Reason({ view, busy, reason, onAskAgain, onSetSource }: BodyProperties & { reason: string }): React.ReactElement {

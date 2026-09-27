@@ -17,6 +17,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     source: 'https://example.com/d.csv',
     pair: { harness: 'opencode', model: 'model' },
     refreshSeconds: 0,
+    reviewed: true,
     questions: [],
     turns: [],
     ...over,
@@ -209,6 +210,8 @@ describe('visualizations record intents', () => {
     ['rename', { title: 'Quarterly' }, { action: 'rename', title: 'Quarterly' }],
     ['set-source', { source: 'https://example.com/o.csv' }, { action: 'setSource', source: 'https://example.com/o.csv' }],
     ['select-model', { harness: 'claude', model: 'm' }, { action: 'setModel', pair: { harness: 'claude', model: 'm' } }],
+    ['confirm-schema', {}, { action: 'confirmSchema' }],
+    ['set-column-type', { column: 'revenue', type: 'number' }, { action: 'setColumnType', column: 'revenue', type: 'number' }],
   ];
 
   for (const [name, payload, expected] of cases) {
@@ -225,6 +228,8 @@ describe('visualizations record intents', () => {
     expect(() => intent('revise', { query: '  ' }, TAB)).toThrow('invalid revise payload');
     expect(() => intent('set-refresh', { seconds: -1 }, TAB)).toThrow('invalid set-refresh payload');
     expect(() => intent('set-source', { source: '' }, TAB)).toThrow('invalid set-source payload');
+    expect(() => intent('set-column-type', { column: 'revenue', type: 'currency' }, TAB)).toThrow('invalid set-column-type payload');
+    expect(() => intent('confirm-schema', { extra: 1 }, TAB)).toThrow('invalid confirm-schema payload');
   });
 
   it('rejects an intent it does not declare, including one every object carries', () => {

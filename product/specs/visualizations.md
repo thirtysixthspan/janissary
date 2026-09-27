@@ -34,6 +34,14 @@ A chart over a date column draws its categories in the order the dates name rath
 
 The application keeps at most 500 rows and 32 columns of what it read, and says so: the tab reports how much of the source it is showing, and whether it is showing the first columns, rather than implying the chart is the whole source. A source with no rows, or with no numeric column to measure, is refused by name.
 
+### The columns
+
+A source that has been read shows every column it has, with the type read for it, and waits. A type nobody saw is a type nobody could have corrected, and a correction arriving after the first question is a correction to a conversation already resting on the wrong type — so the interview begins on a confirmation rather than on a read.
+
+A type may be changed to any of the four the reader infers, which are the four a chart and the model both branch on. Only the type changes: the values stay exactly as they were read, because a chart already reads a number written as text and rewriting the values would be a second, lossy copy of the decision. Once confirmed, the types are fixed — a change after that would invalidate questions already answered, and there is no honest way to un-ask them.
+
+A re-read that finds the same columns and types leaves the confirmation closed, so a refresh on a timer does not ask again every tick. A re-read that finds a different schema re-opens it, because what was confirmed is no longer what is on screen. Changing the source re-opens it whatever the old one was.
+
 ### The interview
 
 Reading a source is followed by a model call carrying a sample of it: every column with its type, the row count, and the first rows. The model replies with a series of questions about what to look at — which measure, what to compare it against, how to group it, what to call it — and the tab asks them one at a time.

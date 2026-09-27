@@ -16,6 +16,8 @@ import {
   isTitleIntent,
   isVisualizationsData,
   isVisualizationsPayload,
+  COLUMN_TYPES,
+  type VisualizationColumnType,
   type VisualizationsPayload,
 } from './shared.js';
 import { LIST_KEY, listPayload, dataFrom, VisualizationTabs } from './tabs.js';
@@ -25,8 +27,9 @@ const LIST_INTENTS = new Set(['create', 'open', 'delete']);
 // The intents a record's tab raises, and the topic action each becomes. Every one of them is a thing
 // the tab can see itself doing, which is the whole of the grant: the plugin has no route to a source
 // it is not already showing, and no route to another record.
-const EMPTY_INTENT_ACTIONS = new Map<string, 'startInterview' | 'cancel' | 'refreshNow'>([
+const EMPTY_INTENT_ACTIONS = new Map<string, 'startInterview' | 'cancel' | 'refreshNow' | 'confirmSchema'>([
   ['start-interview', 'startInterview'], ['cancel', 'cancel'], ['refresh-now', 'refreshNow'],
+  ['confirm-schema', 'confirmSchema'],
 ]);
 
 export function activate(): TabPluginActivation {
@@ -117,6 +120,18 @@ function runCallIntent(
   return capabilities.rejectRequest(`unknown visualizations intent "${intent}"`);
 }
 
+// A column type the user corrected: the one intent carrying a value the boundary checks against its own
+// grammar rather than passing on as a string. The narrowing is a cast because the guard has already
+// established the shape, and this file is the boundary, not a second place to re-derive it.
+function isColumnTypeIntent(
+  value: unknown,
+): value is { column: string; type: VisualizationColumnType } {
+  if (typeof value !== 'object' || value === null) return false;
+  const { column, type } = value as { column?: unknown; type?: unknown };
+  if (typeof column !== 'string' || typeof type !== 'string') return false;
+  return (COLUMN_TYPES as readonly string[]).includes(type);
+}
+
 // The three that describe the record itself rather than talk to the model: what it is called, where it
 // reads from, and which model answers for it.
 function runSettingIntent(
@@ -160,6 +175,15 @@ function runRecordIntent(
   if (bare) {
     if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
     capabilities.topicAction({ topic: 'visualizations', action: bare, id });
+    return null;
+  }
+  if (intent === 'set-column-type') {
+    if (!isColumnTypeIntent(value)) {
+      return capabilities.rejectRequest('invalid set-column-type payload');
+    }
+    capabilities.topicAction({
+      topic: 'visualizations', action: 'setColumnType', id, column: value.column, type: value.type,
+    });
     return null;
   }
   if (CALL_INTENTS.has(intent)) return runCallIntent(intent, value, id, capabilities);

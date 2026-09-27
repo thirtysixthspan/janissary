@@ -27,6 +27,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     source: 'https://example.com/d.csv',
     pair: { harness: 'opencode', model: 'model' },
     refreshSeconds: 0,
+    reviewed: false,
     questions: [],
     turns: [],
     ...over,

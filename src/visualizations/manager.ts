@@ -1,19 +1,24 @@
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
-import type { ConversationModelPair, VisualizationsView } from '../protocol.js';
+import type {
+  ConversationModelPair,
+  VisualizationColumnType,
+  VisualizationsView,
+} from '../protocol.js';
 import { AcpSessionPool } from '../acp/session-pool.js';
 import { readSource } from './fetch.js';
-import { ingest } from './ingest.js';
 import { VisualizationIndex } from './index.js';
 import { VisualizationInterviewer } from './interview.js';
 import { VisualizationRefresh } from './refresh.js';
+import { reader } from './reading.js';
+import { VisualizationReview } from './review.js';
 import { defaultSourceRoots, parseSource, type SourceRoots } from './source.js';
 import {
   VisualizationStore, freshVisualization, isCataloguedPair,
 } from './store.js';
 import type { VisualizationRecord } from './store.js';
 import {
-  availableVisualizationModels, interviewComplete, pendingQuestion, titled, windowOf,
+  availableVisualizationModels, interviewComplete, pendingQuestion, titled,
 } from './view.js';
 
 type ManagerOptions = {
@@ -32,20 +37,27 @@ type ManagerOptions = {
 export class VisualizationsManager {
   private readonly store: VisualizationStore;
   private readonly now: () => number;
-  private readonly read: NonNullable<ManagerOptions['read']>;
   private readonly index: VisualizationIndex;
+  private readonly review: VisualizationReview;
   private readonly interviewer: VisualizationInterviewer;
   private readonly tabRemoved: Subscription;
   private readonly refresh: VisualizationRefresh;
-  private readonly reading = new Set<string>();
+  private readonly readOnce: (id: string) => void;
   private readonly roots: SourceRoots;
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
     this.store = options.store ?? new VisualizationStore();
     this.now = options.now ?? Date.now;
     this.roots = defaultSourceRoots(options.projectDir ?? this.managers.tab.launchDir);
-    this.read = options.read ?? ((source) => readSource(source, this.roots));
     this.index = new VisualizationIndex(this.store);
+    this.review = new VisualizationReview((record) => { this.commit(record); });
+    this.readOnce = reader({
+      read: options.read ?? ((source) => readSource(source, this.roots)),
+      index: this.index,
+      review: this.review,
+      now: this.now,
+      commit: (record, error) => { this.commit(record, error); },
+    });
     this.interviewer = new VisualizationInterviewer({
       pool: options.pool ?? new AcpSessionPool(),
       workspace: (id) => this.store.ensure(id),
@@ -56,7 +68,7 @@ export class VisualizationsManager {
     this.refresh = new VisualizationRefresh(
       this.now,
       () => this.openIds(),
-      (id) => { this.readSource(id); },
+      this.readOnce,
       (id) => this.index.find(id),
     );
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
@@ -67,13 +79,9 @@ export class VisualizationsManager {
   // What the plugin is shown. Only the visualizations with an open tab are projected; see
   // `VisualizationIndex` for why that is the whole of the decision.
   view(): VisualizationsView {
-    const open = this.openIds();
     return {
       summaries: this.index.summaries(),
-      windows: open.flatMap((id) => {
-        const record = this.index.find(id);
-        return record ? [windowOf(record, this.interviewer.busy(id), this.index.isDeleted(id))] : [];
-      }),
+      windows: this.index.windows(this.openIds(), (id) => this.interviewer.busy(id)),
       models: availableVisualizationModels(),
     };
   }
@@ -85,7 +93,7 @@ export class VisualizationsManager {
     if (!pair) throw new Error('No ACP conversation models configured.');
     const record = freshVisualization(id, source, pair, this.now());
     this.index.remember(record);
-    this.readSource(id);
+    this.readOnce(id);
     return true;
   }
 
@@ -104,8 +112,10 @@ export class VisualizationsManager {
     record.questions = [];
     record.table = undefined;
     record.readAt = undefined;
+    // A different source is a different schema, so the review is open again whatever the old one was.
+    record.reviewed = false;
     delete record.error;
-    this.readSource(id);
+    this.readOnce(id);
     return true;
   }
 
@@ -140,7 +150,18 @@ export class VisualizationsManager {
 
   startInterview(id: string): boolean {
     const record = this.index.live(id);
-    return record?.table ? this.interviewer.open(record) : false;
+    return record?.table && record.reviewed ? this.interviewer.open(record) : false;
+  }
+
+  // The two thin ends of the review gate, which owns the rule.
+  confirmSchema(id: string): boolean {
+    const record = this.index.live(id);
+    return record ? this.review.confirm(record) : false;
+  }
+
+  setColumnType(id: string, column: string, type: VisualizationColumnType): boolean {
+    const record = this.index.live(id);
+    return record ? this.review.correct(record, column, type) : false;
   }
 
   answer(id: string, questionId: string, answer: string): boolean {
@@ -180,7 +201,7 @@ export class VisualizationsManager {
 
   refreshNow(id: string): boolean {
     if (!this.index.live(id)) return false;
-    this.readSource(id);
+    this.readOnce(id);
     return true;
   }
 
@@ -203,30 +224,6 @@ export class VisualizationsManager {
     // Every commit re-arms the poll. The interval and the open set both change through a commit, and
     // recomputing one timer here is cheaper than remembering to at each of the four places either can.
     this.refresh.reschedule();
-  }
-
-  // Reading is asynchronous and the view is not, so a read is started here and its result committed
-  // when it lands. Two reads of one source never overlap: a second request while one is in flight is
-  // dropped, which is what keeps a fast refresh interval from queueing work it cannot use. A read that
-  // fails records the reason and leaves the previous table in place, so a source that stops answering
-  // does not also take the chart off the screen.
-  private readSource(id: string): void {
-    if (this.reading.has(id)) return;
-    const record = this.index.live(id);
-    if (!record) return;
-    this.reading.add(id);
-    void this.read(record.source).then((result) => {
-      this.reading.delete(id);
-      const current = this.index.find(id);
-      if (!current || this.index.isDeleted(id)) return;
-      if ('error' in result) return this.commit(current, result.error);
-      const ingested = ingest(result.text);
-      if (ingested.error !== undefined) return this.commit(current, ingested.error);
-      current.table = ingested.table;
-      current.readAt = this.now();
-      this.commit(current);
-      this.interviewer.open(current);
-    });
   }
 
   // A tab that closed takes its in-flight call and its pending poll with it. The call is cancelled

@@ -103,6 +103,24 @@
 .visualization-data th.is-numeric, .visualization-data td.is-numeric { text-align: right; font-variant-numeric: tabular-nums; }
 .visualization-data tbody tr:last-child td { border-bottom: none; }
 
+/* The schema, shown before the interview asks anything. A column name and a select per column, laid out
+   as a two-column grid so a long column name truncates rather than pushing its own type control off the
+   edge. */
+.visualization-review { padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.visualization-review-text { margin: 0; }
+.visualization-review-columns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.visualization-review-column { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.visualization-review-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.visualization-review-column select {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--fg);
+  font: inherit; font-size: 12px; padding: 2px 4px;
+}
+.visualization-review-confirm {
+  align-self: flex-start; background: transparent; border: 1px solid var(--border); border-radius: 4px;
+  color: var(--fg); cursor: pointer; font-size: 12px; padding: 4px 10px;
+}
+.visualization-review-confirm:disabled { opacity: 0.45; cursor: default; }
+
 .visualization-pending, .visualization-gone { color: var(--muted); padding: 16px 12px; }
 .visualization-gone, .visualization-export-error, .visualization-reason-text { color: var(--error); }
 .visualization-export-error { padding: 0 12px; margin: 0; font-size: 12px; }

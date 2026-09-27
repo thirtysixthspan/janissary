@@ -19,6 +19,7 @@ const WINDOW: VisualizationWindow = {
   source: 'https://example.com/d.csv',
   pair: { harness: 'opencode', model: 'model' },
   refreshSeconds: 0,
+  reviewed: true,
   questions: [],
   turns: [],
 };

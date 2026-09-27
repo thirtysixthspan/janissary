@@ -91,6 +91,9 @@ export type VisualizationWindowView = {
   refreshSeconds: number;
   // When the table was last read from the source, absent until a read has succeeded.
   readAt?: number;
+  // Whether the user has confirmed the columns the parser inferred. A tab holding a table, no chart, no
+  // questions, and this false is showing those columns and waiting.
+  reviewed: boolean;
   questions: VisualizationQuestionView[];
   // The question awaiting an answer. Absent once the interview is over, which is not the same as a
   // chart existing: a model that asked nothing leaves both absent.

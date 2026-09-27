@@ -24,7 +24,9 @@ export type VisualizationChart = {
   yLabel?: string;
 };
 
-export type VisualizationColumn = { name: string; type: 'number' | 'boolean' | 'string' | 'date' };
+export type VisualizationColumnType = 'number' | 'boolean' | 'string' | 'date';
+
+export type VisualizationColumn = { name: string; type: VisualizationColumnType };
 
 export type VisualizationTable = {
   columns: VisualizationColumn[];
@@ -56,6 +58,7 @@ export type VisualizationWindow = {
   pair: ConversationModelPair;
   refreshSeconds: number;
   readAt?: number;
+  reviewed: boolean;
   questions: VisualizationQuestion[];
   pendingQuestionId?: string;
   chart?: VisualizationChart;
@@ -123,12 +126,15 @@ function isChart(value: unknown): value is VisualizationChart {
     && (value.yLabel === undefined || typeof value.yLabel === 'string');
 }
 
-const COLUMN_TYPES = new Set(['number', 'boolean', 'string', 'date']);
+// The four declared types, exported because two places need to agree on them: the guard that checks a
+// column, and the intent that corrects one. A fifth is refused at the boundary rather than reaching the
+// host, which is the only place that could act on it anyway.
+export const COLUMN_TYPES: readonly VisualizationColumnType[] = ['number', 'boolean', 'string', 'date'];
 
 function isColumn(value: unknown): value is VisualizationColumn {
   return isRecord(value)
     && typeof value.name === 'string'
-    && COLUMN_TYPES.has(value.type as string);
+    && (COLUMN_TYPES as readonly string[]).includes(value.type as string);
 }
 
 function isTable(value: unknown): value is VisualizationTable {
@@ -170,6 +176,7 @@ export function isVisualizationWindow(value: unknown): value is VisualizationWin
     && isModelPair(value.pair)
     && typeof value.refreshSeconds === 'number'
     && (value.readAt === undefined || typeof value.readAt === 'number')
+    && typeof value.reviewed === 'boolean'
     && Array.isArray(value.questions) && value.questions.every(isQuestion)
     && (value.pendingQuestionId === undefined || typeof value.pendingQuestionId === 'string')
     && (value.chart === undefined || isChart(value.chart))

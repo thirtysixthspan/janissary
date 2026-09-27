@@ -1,7 +1,7 @@
 import type { Tab } from '../tab/types.js';
-import type { VisualizationSummaryView } from '../protocol.js';
+import type { VisualizationSummaryView, VisualizationWindowView } from '../protocol.js';
 import type { VisualizationRecord, VisualizationStore } from './store.js';
-import { summaryOf } from './view.js';
+import { summaryOf, windowOf } from './view.js';
 
 const PLUGIN_ID = 'visualizations';
 
@@ -68,6 +68,17 @@ export class VisualizationIndex {
       if (!this.deleted.has(record.id)) summaries.set(record.id, summaryOf(record));
     }
     return [...summaries.values()].toSorted((a, b) => b.updatedAt - a.updatedAt);
+  }
+
+  // The window payloads for the records with a tab on screen, which is the whole of what the plugin is
+  // shown for them. Beside `summaries` because it is the same projection of the same records. It takes
+  // the open set rather than tracking it, for the reason the class comment gives, and a deleted record
+  // still projects — its tab is open and has to be told something.
+  windows(open: readonly string[], isBusy: (id: string) => boolean): VisualizationWindowView[] {
+    return open.flatMap((id) => {
+      const record = this.find(id);
+      return record ? [windowOf(record, isBusy(id), this.deleted.has(id))] : [];
+    });
   }
 
   // The instance keys of this plugin's open tabs, list tab excluded: the index is a singleton the host

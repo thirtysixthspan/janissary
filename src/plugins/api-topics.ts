@@ -5,6 +5,7 @@ import type {
   VisualizationsView,
 } from '../protocol.js';
 import type { ConversationModelPair } from '../protocol/conversations.js';
+import type { VisualizationColumnType } from '../protocol/visualizations.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -115,6 +116,14 @@ export type TabPluginTopicAction =
   // Ask the model what to chart, and answer the question it is currently asking. The answer is free
   // text; the suggestions the question carries are the host's to show, not the plugin's to require.
   | { topic: 'visualizations'; action: 'startInterview'; id: string }
+  | { topic: 'visualizations'; action: 'confirmSchema'; id: string }
+  | {
+      topic: 'visualizations';
+      action: 'setColumnType';
+      id: string;
+      column: string;
+      type: VisualizationColumnType;
+    }
   | { topic: 'visualizations'; action: 'answer'; id: string; questionId: string; answer: string }
   // A modification query against the current chart, and the one cancellation that covers it.
   | { topic: 'visualizations'; action: 'revise'; id: string; query: string }

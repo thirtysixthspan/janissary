@@ -29,6 +29,9 @@ export type VisualizationRecord = {
   pair: ConversationModelPair;
   refreshSeconds: number;
   readAt?: number;
+  // Whether the user has seen the columns the parser inferred and had the chance to correct a type. The
+  // interview does not start until it is true.
+  reviewed: boolean;
   questions: { id: string; question: string; suggestions: string[]; answer?: string }[];
   chart?: VisualizationChartView;
   table?: VisualizationTableView;
@@ -92,6 +95,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && isModelPair(value.pair)
     && typeof value.refreshSeconds === 'number'
     && (value.readAt === undefined || typeof value.readAt === 'number')
+    && typeof value.reviewed === 'boolean'
     && isQuestions(value.questions)
     && (value.chart === undefined || isChart(value.chart))
     && (value.table === undefined || isTable(value.table))
@@ -126,6 +130,7 @@ export function freshVisualization(
     source: source.trim(),
     pair,
     refreshSeconds: 0,
+    reviewed: false,
     questions: [],
     turns: [],
   };

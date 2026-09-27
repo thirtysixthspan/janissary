@@ -64,6 +64,7 @@ export function windowOf(
     pair: record.pair,
     refreshSeconds: record.refreshSeconds,
     ...(record.readAt !== undefined && { readAt: record.readAt }),
+    reviewed: record.reviewed,
     questions: record.questions.map((entry) => ({ ...entry })),
     ...(pendingQuestion(record) !== undefined && { pendingQuestionId: pendingQuestion(record) }),
     ...(record.chart !== undefined && { chart: record.chart }),

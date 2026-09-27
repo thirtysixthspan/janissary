@@ -42,6 +42,7 @@ function view(over: Partial<VisualizationWindow> = {}): VisualizationWindow {
     source: 'https://example.com/d.csv',
     pair: { harness: 'opencode', model: 'model-a' },
     refreshSeconds: 0,
+    reviewed: true,
     questions: [],
     turns: [],
     ...over,
@@ -308,6 +309,52 @@ describe('VisualizationTab', () => {
 
   // Every answer to a follow-up about a chart costs a model call, so the tab can narrow one itself. The
   // property that matters is that the picture, the table beside it, and the caption all narrow together.
+  describe('the schema review', () => {
+    function unreviewed(over: Partial<VisualizationWindow> = {}) {
+      return tab({ table: TABLE, reviewed: false, ...over });
+    }
+
+    it('shows the columns and the types read for them, and not the pending message', () => {
+      unreviewed();
+      expect(screen.queryByText('Reading the source…')).toBeNull();
+      expect(screen.getByText('region')).toBeInTheDocument();
+      expect(screen.getByText('revenue')).toBeInTheDocument();
+      expect((screen.getByLabelText('Type of revenue') as HTMLSelectElement).value).toBe('number');
+      expect((screen.getByLabelText('Type of region') as HTMLSelectElement).value).toBe('string');
+    });
+
+    it('emits a corrected type and a confirmation as two separate intents', () => {
+      const { intent, value } = capabilities();
+      render(<VisualizationTab
+        payload={{
+          kind: 'visualization',
+          window: view({ table: TABLE, reviewed: false }),
+          models: [],
+        }}
+        capabilities={value}
+      />);
+      fireEvent.change(screen.getByLabelText('Type of revenue'), { target: { value: 'string' } });
+      expect(intent).toHaveBeenCalledWith('set-column-type', { column: 'revenue', type: 'string' });
+      fireEvent.click(screen.getByRole('button', { name: 'Ask about this data' }));
+      expect(intent).toHaveBeenCalledWith('confirm-schema', {});
+    });
+
+    it('offers the four types the parser infers, and nothing else', () => {
+      unreviewed();
+      const options = [...screen.getByLabelText('Type of revenue').querySelectorAll('option')]
+        .map((option) => option.textContent);
+      expect(options).toEqual(['number', 'boolean', 'date', 'string']);
+    });
+
+    it('is not offered again once the review is closed, a question exists, or a chart does', () => {
+      for (const over of [{ reviewed: true }, { pendingQuestionId: 'q1' }, { chart: CHART }]) {
+        const { unmount } = unreviewed(over);
+        expect(screen.queryByText('Type of revenue')).toBeNull();
+        unmount();
+      }
+    });
+  });
+
   describe('follow-up suggestions', () => {
     it('offers none before there is a chart to ask about', () => {
       tab({ table: TABLE, questions: [], pendingQuestionId: undefined });

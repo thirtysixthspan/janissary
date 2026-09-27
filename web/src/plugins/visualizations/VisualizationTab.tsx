@@ -128,6 +128,8 @@ export function VisualizationTab({ payload, capabilities }: TabProperties) {
         onRevise={(query) => { intent('revise', { query }); }}
         onCancel={() => { intent('cancel', {}); }}
         onSetSource={(source) => { intent('set-source', { source }); }}
+        onSetColumnType={(column, type) => { intent('set-column-type', { column, type }); }}
+        onConfirmSchema={() => { intent('confirm-schema', {}); }}
       />
     </div>
   );

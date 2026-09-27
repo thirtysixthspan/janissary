@@ -12,14 +12,24 @@ A source is a URL or a path to a file. The quickest way to name one is to select
 
 The other route is the **＋** button in the index header, which opens a field. Type a URL or a path and press **Visualize**.
 
-Both routes open a new tab. It reads the source, then asks you what to look at.
+Both routes open a new tab. It reads the source, then shows you the columns it found and the type read for each.
+
+## Check the columns
+
+Every column is listed with its type, and each type can be changed to `number`, `boolean`, `date` or `string` before anything else happens.
+
+This matters when the reader gets a column wrong. A column of numbers written as `$1,234.00` reads as text, and everything built on it — the questions, the chart, the measure — is built on the wrong assumption. Changing the type to `number` puts it right. Only the type changes; the values stay as they were read.
+
+**Ask about this data** starts the interview. Once started, the types are fixed: a change then would invalidate the answers you had already given.
+
+A re-read that finds the same columns leaves this step alone, so a refresh on a timer does not ask you again. A re-read that finds different columns brings it back.
 
 What can be read:
 
 - **JSON** — an array of objects, or an object holding one. `{"data": {"items": [...]}}` works too.
 - **Delimited text** — comma, tab, semicolon, or pipe, with a header row. Quoted fields are fine, and so is a quoted field containing the delimiter.
 
-Column types are worked out for you, so you never pick them. A column of numbers is a measure you can plot; a column of anything else is a category you can group by.
+Column types are worked out for you, so you never have to pick one — but you are shown them, and can change any of them before the questions start. A column of numbers is a measure you can plot; a column of anything else is a category you can group by.
 
 A column of ISO dates — `2026-01-31`, or `2026-01-31T09:00:00Z` — is recognized as dates rather than as text, and a chart over it puts its categories in date order instead of the order the file happened to list them, so a month of daily rows reads as a month. Only that format is recognized, and only when the date is real: `2026-02-31`, `2026-13-01`, `2026-1-31` and `06/01/2024` all stay text, which makes them categories. A timestamp with no timezone is read as local time.
 

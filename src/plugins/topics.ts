@@ -124,6 +124,8 @@ function actOnVisualizations(managers: Managers, action: TabPluginTopicAction): 
     case 'setSource': { viz.setSource(action.id, action.source); return; }
     case 'setModel': { viz.setModel(action.id, action.pair); return; }
     case 'startInterview': { viz.startInterview(action.id); return; }
+    case 'confirmSchema': { viz.confirmSchema(action.id); return; }
+    case 'setColumnType': { viz.setColumnType(action.id, action.column, action.type); return; }
     case 'answer': { viz.answer(action.id, action.questionId, action.answer); return; }
     case 'revise': { viz.revise(action.id, action.query); return; }
     case 'cancel': { viz.cancel(action.id); return; }

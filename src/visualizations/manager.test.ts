@@ -169,6 +169,61 @@ describe('VisualizationsManager', () => {
     expect(manager.rename('one', ' '.repeat(3))).toBe(false);
   });
 
+  it('reads a source and waits to be asked about, rather than asking on its own', async () => {
+    const manager = build({ read: reading(CSV) });
+    openTab('one');
+
+    expect(manager.create('one', 'https://example.com/d.csv')).toBe(true);
+    await settle();
+
+    const [window] = manager.view().windows;
+    expect(window?.table).toMatchObject({ total: 2, truncated: false });
+    // The whole point of the gate: a read is not a question.
+    expect(window?.reviewed).toBe(false);
+    expect(window?.questions).toEqual([]);
+    expect(window?.pendingQuestionId).toBeUndefined();
+  });
+
+  it('starts the interview on a confirmation, and not before', async () => {
+    const manager = build({ read: reading(CSV) });
+    openTab('one');
+    manager.create('one', 'https://example.com/d.csv');
+    await settle();
+
+    // "Ask again" is the path that would otherwise walk straight around the gate.
+    expect(manager.startInterview('one')).toBe(false);
+    expect(manager.confirmSchema('one')).toBe(true);
+    expect(manager.confirmSchema('one')).toBe(false);
+  });
+
+  it('refuses a correction once the review is closed, and accepts one before it', async () => {
+    const manager = build({ read: reading(CSV) });
+    openTab('one');
+    manager.create('one', 'https://example.com/d.csv');
+    await settle();
+
+    // Declared type only: the cells are exactly as they were read. The cell is still the number 10 even
+    // though the column now claims to be text, which is the shape of a real correction — the user is
+    // asserting a type, not asking for the data to be rewritten.
+    expect(manager.setColumnType('one', 'revenue', 'string')).toBe(true);
+    expect(manager.view().windows[0]?.table?.columns[1])
+      .toEqual({ name: 'revenue', type: 'string' });
+    expect(manager.view().windows[0]?.table?.rows[0]).toEqual(['north', 10]);
+
+    manager.confirmSchema('one');
+    expect(manager.setColumnType('one', 'revenue', 'number')).toBe(false);
+  });
+
+  it('refuses a correction naming a column or a type that is not there', async () => {
+    const manager = build({ read: reading(CSV) });
+    openTab('one');
+    manager.create('one', 'https://example.com/d.csv');
+    await settle();
+
+    expect(manager.setColumnType('one', 'missing', 'number')).toBe(false);
+    expect(manager.setColumnType('one', 'revenue', 'currency')).toBe(false);
+  });
+
   it('refuses every action for a record it does not hold', () => {
     const manager = build();
     expect(manager.rename('nope', 'T')).toBe(false);
