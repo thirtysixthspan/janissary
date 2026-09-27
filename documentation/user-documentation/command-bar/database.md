@@ -9,11 +9,12 @@ db sqlite create notes
 db sqlite query notes CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)
 ```
 
-`sqlite` is the only supported engine, and it is the first word after `db`. Any other engine name is rejected with `Unsupported engine "<name>". Only "sqlite" is supported.`
+`sqlite` is the only supported engine, and it is the first word after `db`. Any other engine name is rejected with `Unsupported engine "<name>". Only "sqlite" is supported.` The four subcommand words are the exception: in that position they read as an engine name, so `db list` and `db create notes` print `Usage: db sqlite <create|delete|query|list> [name] [query]` instead.
 
 You can type an unprefixed SQL statement when this tab has an open database. If exactly one database
-is open and the statement is recognized confidently, it runs there. With no database or several
-databases open, the route chooser lets you pick the destination. To skip the chooser, name the engine
+is open and the statement is recognized confidently, it runs there. With several databases open, the
+route chooser lets you pick the destination; with none open, there is no database to run against, so
+the statement is not offered one at all. To skip the chooser, name the engine
 and the database yourself: `db sqlite query notes SELECT * FROM items`. The word after `db` is always
 read as the engine name, so `db SELECT * FROM items` is rejected with
 `Unsupported engine "select". Only "sqlite" is supported.`
