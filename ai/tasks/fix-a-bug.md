@@ -24,7 +24,7 @@ Read any file in the repo. Run read-only commands to replicate the reported bug.
 2. **Editing files the fix does not touch.** Stay in scope. If you discover a fix requires changes beyond what you planned, update the plan first — do not silently expand scope.
 3. **Running `npm run check`.** That is the human's end-of-work gate. Use `$janissary/scripts/run.mjs check-diff` during development.
 4. **Skipping the regression test.** Every fix needs a test that fails without the fix and passes with it. Verify with `$janissary/scripts/run.mjs check-diff`.
-5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the line for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a bug named at invocation to the file.
+5. **Editing `./product/backlog/bugs.md` beyond removing the fixed entry.** Only remove the entry for the bug you fixed — do not reorder, rephrase, or otherwise modify the remaining entries, and never add a bug named at invocation to the file.
 6. **Merging the PR.** `ai/tasks/workspace/open-feature-pull-request.md` opens it; merging is the human's decision.
 
 ---
@@ -37,7 +37,7 @@ Execute `ai/tasks/workspace/prepare-workspace.md` in full before doing anything 
 
 ## Step 1 — Pick a bug and replicate it
 
-1. Read `./product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`.
+1. Read `./product/backlog/bugs.md`. Bugs are grouped under `## ready`, `## development`, and `## deferred`. Only consider bugs under `## ready`. An entry is either a single prose paragraph or the structured format [`find-bugs.md`](research/find-bugs.md) writes: a `*` summary bullet followed by `Existing Bug`, `Existing Risk`, `Proposal Risk`, and `Proposal` paragraphs. For a structured entry, the summary bullet is the bug text for reporting, and the `Proposal` paragraph is the bug report: its reproduction is where sub-step 4 starts, not a substitute for running it.
 2. If there are no bugs under `## ready` **and** the task invocation named no bug, report "No ready bugs in `./product/backlog/bugs.md`" and stop. When a bug was named, an empty `## ready` section is not a reason to stop — go on to the named-bug branch below.
 3. Pick the bug to fix. Do **not** evaluate, rank, or compare the bugs for scope, tractability, or any other quality — the human who filed them decided they belong here:
    - **If a specific bug is named in the task invocation** (e.g. `execute ai/tasks/fix-a-bug.md "<bug text>"`), fix that one. First look for the entry in `./product/backlog/bugs.md` it refers to — the argument may be quoted text, a paraphrase, or a position such as "the second one". **If no entry matches, the named text is itself the bug report**: take it at face value and fix it exactly as if it had been listed, without stopping and without adding it to the bugs file. A named bug is never rejected for being absent from the backlog — but it is still subject to every rule below, above all the replication requirement in sub-step 4: an unlisted bug you cannot reproduce is reported and stopped on, exactly like a listed one.
@@ -134,7 +134,7 @@ The fix only needs a documentation update if it changes behavior that `help.md` 
    ```bash
    mv ./product/plans/ready/<bug-name>.md ./product/plans/complete/<bug-name>.md
    ```
-2. Remove **only** the fixed bug's line from the `## ready` group in `./product/backlog/bugs.md`. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry. If the bug came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
+2. Remove **only** the fixed bug's entry from the `## ready` group in `./product/backlog/bugs.md`. Remove it whole: from its `*` bullet through its last paragraph (the `Proposal` paragraph of a structured entry), plus the blank lines that separated it from the next entry. Do not touch the `## development` or `## deferred` groups, the group headings, or any other bug entry. If the bug came from the task invocation and was never listed in the file, there is nothing to remove: leave the file untouched.
 
 ---
 
