@@ -55,7 +55,10 @@ function uncommentEdit(
   // One following space comes off with the marker, so `// x` round-trips; a comment hand-written
   // without a space keeps every character that is not the marker itself.
   const width = marker.length + (line.slice(after, after + 1) === ' ' ? 1 : 0);
-  return { start: { line: lineNumber, col: at }, end: { line: lineNumber, col: at + width }, text: '' };
+  // A line that holds nothing but the marker was blank, or only spaces, before the comment step
+  // padded it out to the marker column; the padding comes off too, so a blank line comes back blank.
+  const start = at + width === line.length ? 0 : at;
+  return { start: { line: lineNumber, col: start }, end: { line: lineNumber, col: at + width }, text: '' };
 }
 
 export function toggleLineComments(
