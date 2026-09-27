@@ -1,6 +1,6 @@
 import type { ChartShape, ChartSpec } from '../protocol.js';
 import { chartNotes, datasetKey, resolve } from './chart-spec.js';
-import { MAX_CHARTS } from './chart-record.js';
+import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import type { VisualizationRecord } from './store.js';
 import type {
   VisualizationChartRecord,
@@ -21,6 +21,11 @@ export function datasetFor(record: VisualizationRecord, key: string): Visualizat
   return record.datasets.find((dataset) => dataset.key === key);
 }
 
+// The dataset a key names, created empty if it is not there yet. Refused past `MAX_DATASETS`, and the
+// refusal is load-bearing rather than defensive: the store's record guard applies the same ceiling, so
+// a record holding one more than the guard accepts cannot be read back at all — the visualization would
+// vanish from the index with nothing but a stderr warning to say so. A dataset is dropped when the last
+// chart drawing from it is removed, which is what keeps the ceiling from being reached by ordinary use.
 export function ensureDataset(
   record: VisualizationRecord,
   data: VisualizationDataRef,
@@ -29,9 +34,17 @@ export function ensureDataset(
   const key = datasetKey(data);
   const existing = datasetFor(record, key);
   if (existing) return existing;
+  if (record.datasets.length >= MAX_DATASETS) return undefined;
   const created = make();
   record.datasets.push(created);
   return created;
+}
+
+// A dataset with nothing left reading it, dropped so the ceiling above is a bound on what is in use
+// rather than on what has ever been named.
+export function pruned(record: VisualizationRecord): void {
+  const used = new Set(record.charts.map((chart) => datasetKey(chart.data)));
+  record.datasets = record.datasets.filter((dataset) => dataset.key === 'source' || used.has(dataset.key));
 }
 
 // A chart as it stands, with its resolved table filled in. A specification that cannot be drawn

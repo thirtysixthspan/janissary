@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
-import { placed } from './charts.js';
+import { datasetFor, placed, pruned } from './charts.js';
+import { datasetKey } from './chart-spec.js';
+import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
 import { parseReply, type Reply } from './reply.js';
 import { isUntitled, titled, usablePair, visualizationTitle } from './view.js';
@@ -216,20 +218,37 @@ export class VisualizationAgent {
       record.charts = record.charts.filter((chart) => chart.id !== id);
       if (record.charts.length === before) refused.push(`There is no chart "${id}" to remove.`);
     }
+    if (refused.length === 0) pruned(record);
     return refused;
   }
 
   // The first chart the reply drew, which is the one the sentence describes and the one an untitled
   // visualization takes its name from. A chart naming a file the agent has just acquired is given that
-  // data before it is placed, because the file is the only place it can be.
+  // data before it is placed, because the file is the only place it can be — so the check that would
+  // refuse the chart comes first, or a reply naming fifty files would spend the dataset ceiling on
+  // charts that were about to be refused anyway.
   private place(
     record: VisualizationRecord,
     entries: Reply['charts'],
     refused: string[],
   ): VisualizationChartRecord | undefined {
     let first: VisualizationChartRecord | undefined;
-    for (const entry of entries) {
-      if (entry.data !== undefined) this.options.acquire(record, entry.data);
+    const room = MAX_CHARTS - record.charts.length;
+    if (entries.length > room) {
+      refused.push(`A visualization may hold ${MAX_CHARTS} charts, and this reply named ${entries.length}.`);
+    }
+    for (const entry of entries.slice(0, room)) {
+      if (entry.data !== undefined) {
+        // A data reference the record already holds costs nothing; a new one is refused here rather than
+        // after the read, because the ceiling is on what a record may carry at all and a dataset written
+        // past it would make the whole record unreadable.
+        if (datasetFor(record, datasetKey(entry.data)) === undefined
+          && record.datasets.length >= MAX_DATASETS) {
+          refused.push(`A visualization may read ${MAX_DATASETS} data sources, and this one already reads them all.`);
+          continue;
+        }
+        this.options.acquire(record, entry.data);
+      }
       const result = placed(record, entry, randomUUID);
       if ('error' in result) {
         refused.push(`Not drawn: ${result.error}.`);

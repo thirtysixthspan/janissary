@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Enforce the dataset ceiling, or stop pretending a record has one, before a visualization can become unreadable. Severity: 8/10
-
-Existing Issue: `MAX_DATASETS` in `src/visualizations/chart-record.ts` is checked by `isDatasetList` and enforced nowhere: `ensureDataset` in `src/visualizations/charts.ts` pushes unconditionally and nothing prunes, and `src/visualizations/agent.ts`'s `place` acquires a dataset for every chart entry in a reply before `placed` refuses the ones past the chart ceiling. Severity: 8/10
-
-Existing Risk: 8/10 - Eight charts plus the source dataset plus one acquired file each is nine datasets, which is inside every documented limit and produces a `visualization.json` that `isVisualizationRecord` rejects — so the visualization vanishes from the index, `index.find` cannot load it, and the only trace is a stderr warning, which is data loss rather than an error a user can act on. A single reply naming fifty files creates fifty datasets and fifty synchronous unbounded reads, of which forty-two are then refused for the chart ceiling after the datasets have already been spent.
-
-Proposal Risk: 3/10 - A visualization that genuinely needs more sources is told so in the conversation rather than silently written to disk and lost, and the ordinary eight-chart case is unaffected.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: enforce the dataset ceiling so a record cannot become unreadable". In `src/visualizations/charts.ts`, make `ensureDataset` refuse past `MAX_DATASETS` and return nothing, the way `ensureDataset` already returns nothing for no other reason. In `src/visualizations/agent.ts`'s `place`, stop acquiring a dataset for a chart entry that cannot be placed: check the chart ceiling before calling `this.options.acquire`, and cap how many chart entries one reply may name, so a model cannot spend the whole ceiling on charts that are about to be refused. Make the refusal a named line in the conversation through the existing `refused` array, so a user who asks for a ninth source is told the ceiling rather than watching it vanish. Add cases to `src/visualizations/agent.test.ts` for a reply naming more files than the ceiling and for one naming more charts than `MAX_CHARTS`, and a case to `src/visualizations/store.test.ts` asserting a record at the ceiling still round-trips through write and read.
-
 * Carry a refused address to the model beside the data it already has, rather than in place of it. Severity: 6/10
 
 Existing Issue: `chatPrompt` in `src/visualizations/prompts.ts` substitutes `context.sourceNote` for the whole datasets section, and `addressIn` in `src/visualizations/source.ts` matches any run beginning with a slash — so a message like "plot revenue/employee by region" yields the address `revenue/employee`, `parseSource` refuses it, and the prompt's entire data section becomes the refusal. Severity: 6/10

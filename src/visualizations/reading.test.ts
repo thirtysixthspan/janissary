@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { readWorkspaceFile, reader } from './reading.js';
+import { acquire, readWorkspaceFile, reader } from './reading.js';
 import { drawn } from './charts.js';
 import { VisualizationIndex } from './index.js';
 import { VisualizationStore, VISUALIZATION_SCHEMA_VERSION, type VisualizationRecord } from './store.js';
@@ -126,6 +126,21 @@ function harness(subject: VisualizationRecord, read: (source: string) => Promise
 }
 
 describe('reading a dataset', () => {
+  // The store's own guard refuses to read back a record holding more datasets than it allows, so a ninth
+  // would not merely be wasted: the whole record would become unreadable and the visualization would
+  // vanish from the index with nothing but a warning to say so. The ceiling is therefore checked before
+  // the read rather than after it.
+  it('reads nothing for a ninth source', () => {
+    const subject = record({
+      datasets: [{ key: 'source' }, ...Array.from({ length: 7 }, (_, index) => ({ key: `d${index}.json` }))],
+    });
+
+    const dataset = acquire(subject, { kind: 'file', path: 'new.json' }, workspace, 9);
+
+    expect(dataset).toBeUndefined();
+    expect(subject.datasets).toHaveLength(8);
+  });
+
   it('stores the table it found and the time it was read', async () => {
     const subject = record();
     const { readOne, commits } = harness(subject, async () => ({ text: 'region,revenue\nnorth,10\nsouth,4\n' }));

@@ -78,6 +78,7 @@ function fixture() {
   };
   const commits: { error?: string }[] = [];
   const reacquired: string[] = [];
+  const acquired: string[] = [];
   const agent = new VisualizationAgent({
     pool: pool as unknown as AcpSessionPool,
     workspace: () => '/tmp/workspace',
@@ -85,9 +86,11 @@ function fixture() {
     changed: vi.fn(),
     commit: (_record, error) => { commits.push(error === undefined ? {} : { error }); },
     reacquired: (_record, data) => { reacquired.push(data.kind === 'source' ? 'source' : data.path); },
+    acquire: (_record, data) => { acquired.push(data.kind === 'source' ? 'source' : data.path); },
   });
   return {
     agent,
+    acquired,
     commits,
     reacquired,
     prompts,
@@ -254,8 +257,56 @@ describe('a reply that draws', () => {
     expect(subject.turns[0]?.response).toBe('Two of them.\n\nNot drawn: no column named "nope".');
   });
 
-  it('refuses a chart past the ceiling rather than dropping one already there', async () => {
+  // A reply naming more charts than the record has room for is cut at the room, not refused wholesale:
+  // the charts that fit are what the user asked for, and the message says how many did not.
+  it('cuts a reply naming more charts than the record has room for', async () => {
     const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({
+      say: 'All of them.',
+      charts: Array.from({ length: 9 }, (_, index) => ({ kind: 'bar', x: 'region', y: 'revenue', title: `R${index}` })),
+    }));
+    end();
+    expect(subject.charts).toHaveLength(8);
+    expect(subject.turns[0]?.response).toContain('may hold 8 charts');
+  });
+
+  // The read is the expensive half of acquiring a file, and a reply naming fifty of them would spend
+  // the dataset ceiling on charts about to be refused. The refusal therefore comes before the read.
+  it('refuses a new data source past the ceiling without reading it', async () => {
+    const { agent, acquired, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    const made = subject.charts[0]!;
+    subject.charts = Array.from({ length: 7 }, (_, index) => ({ ...made, id: `c${index}`, data: { kind: 'file', path: `d${index}.json` } }));
+    subject.datasets = [{ key: 'source' }, ...Array.from({ length: 7 }, (_, index) => ({ key: `d${index}.json` }))];
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'One more.', charts: [{ kind: 'bar', x: 'region', y: 'revenue', title: 'New', data: { kind: 'file', path: 'new.json' } }] }));
+    end();
+    expect(acquired).toEqual([]);
+    expect(subject.charts).toHaveLength(7);
+    expect(subject.turns[0]?.response).toContain('may read 8 data sources');
+  });
+
+  // A dataset is dropped when the last chart drawing from it goes, so the ceiling is a bound on what is
+  // in use rather than on what has ever been named.
+  it('drops a dataset nothing reads any more', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    subject.datasets = [{ key: 'source' }, { key: 'old.json' }];
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'Gone.', charts: [], remove: ['chart-1'] }));
+    end();
+    expect(subject.datasets).toEqual([{ key: 'source' }]);
+  });
+
+  it('refuses a chart past the ceiling rather than dropping one already there', async () => {    const { agent, chunk, end } = fixture();
     const subject = record();
     const made = withChart(subject);
     subject.charts = Array.from({ length: 8 }, (_, index) => ({ ...made, id: `c${index}` }));
