@@ -185,6 +185,36 @@ describe('App syntax theme picker', () => {
   }, 15_000);
 });
 
+// The close button and the `close` command reach `App`'s handler by different routes: the command is
+// the server's to interpret, while the button names a tab outright. The button's route was untested,
+// including the guard the command line installs in front of it.
+describe('App closing a tab from its button', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('asks the server to close the tab the button belongs to', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(screen.getAllByTitle(/close/i)[1]!);
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'other' } });
+  }, 15_000);
+
+  it('offers the quit confirm instead of closing the only tab', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(screen.getAllByTitle(/close/i)[0]!);
+
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
+  }, 15_000);
+});
+
 describe('App tab navigator', () => {
   beforeEach(() => {
     sendMock.mockClear();
