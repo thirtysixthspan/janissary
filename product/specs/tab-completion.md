@@ -47,6 +47,6 @@ The shell uses the following rules, in order of precedence:
 - **Context:** Default fallback for all other positions.
 - **Behavior:**
     - Completes based on the filesystem relative to the current working directory.
-    - Supports tilde (`~`) expansion to the user's home directory.
+    - Supports tilde (`~`) expansion to the user's home directory. The completed token keeps the tilde, and a bare `~` completes the same as `~/`, offering the home directory's own entries (`~` + Tab can become `~/projects/`).
     - Hides hidden files (dotfiles) unless the partial name typed explicitly starts with a dot (`.`).
     - Appends a `/` if the match is a directory, and a space if it is a file.
