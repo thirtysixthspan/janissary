@@ -63,6 +63,21 @@ describe('the find-bugs playbook', () => {
     }
   });
 
+  // Bug entries copy the five-part format `find-technical-debt.md` defines, and the playbook says the
+  // risk scale is identical in both. Nothing else would notice one table being reworded without the
+  // other, so the copy is pinned byte for byte, along with the order of the parts the template names.
+  it('copies the risk scale from the technical-debt playbook unchanged', () => {
+    const riskTable = (file) => file.match(/^\| Risk \|.*\n(?:\|.*\n)+/m)?.[0];
+    const debtPlaybook = read('ai/tasks/research/find-technical-debt.md');
+    expect(riskTable(debtPlaybook)).toBeDefined();
+    expect(riskTable(playbook)).toBe(riskTable(debtPlaybook));
+  });
+
+  it('writes the five entry parts in order', () => {
+    const template = /^\* <one sentence, glanceable>\n\nExisting Bug: .*Severity: <N>\/10\n\nExisting Risk: <N>\/10 - .*\n\nProposal Risk: <N>\/10 - .*\n\nProposal: /m;
+    expect(playbook).toMatch(template);
+  });
+
   // The run delegates its workspace setup, its app launch, and its teardown to the three workspace
   // tasks it does not own. A prose delegation's failure mode is one side renamed and the other still
   // pointing at it, which nothing else in the repository would catch.

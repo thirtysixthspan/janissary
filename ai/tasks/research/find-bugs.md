@@ -100,13 +100,77 @@ A reproduced divergence remains eligible when no root cause can be located. Say 
 
 ## Step 7 — Dedupe and write the backlog
 
-Read every entry in every section of `./product/backlog/bugs.md` before filing. Match underlying behavior and cause, not just wording. Select at most **10 backlog changes total**, shared between new entries and existing entries receiving evidence. If more qualify, keep the best-evidenced, most user-visible findings and list the rest under `Not filed` as over the cap. Zero findings is valid.
+Read every entry in every section of `./product/backlog/bugs.md` before filing. Entries come in two shapes and both count. Older ones are a single prose paragraph. Newer ones follow the structured format below, where a `*` summary bullet leads and labeled paragraphs beneath it carry the rest. Identify each entry by its lead `*` bullet and read it as written; this run never migrates an older entry. Match underlying behavior and cause, not just wording. Select at most **10 backlog changes total**, shared between new entries and existing entries receiving evidence. If more qualify, keep the best-evidenced, most user-visible findings and list the rest under `Not filed` as over the cap. Zero findings is valid.
 
-For a new bug, append one lowercase prose bullet at the end of `## development`. Each bullet is a single paragraph containing the quoted spec promise, reproduction steps through the browser or tool, expected versus observed behavior, the likely root cause with file/function names, and a likely fix. Preserve exact case inside quotes, paths, commands, and identifiers. If the root cause remains unknown, include the Step 6 account instead of inventing one.
+For a new bug, append one entry in the format below at the end of `## development`.
 
 If `## development` is missing, insert it directly before `## deferred`, or at the end when `## deferred` is absent too. The standard section order is `ready`, `development`, `deferred`, `declined`; do not reorder existing sections to enforce it.
 
-A match under `## ready`, `## development`, or `## deferred` receives only missing evidence, appended at the end of its existing paragraph as a sentence beginning `re-observed on <YYYY-MM-DD>:`. Include only reproduction, spec quote, or root-cause detail it lacked. Do not reword, move, or remove any existing text, and make no edit if the entry already contains all the evidence. A match under `## declined` is never edited or duplicated elsewhere; name it under `Not filed` as matching `## declined`.
+A match under `## ready`, `## development`, or `## deferred` receives only missing evidence. Append it at the end of the entry's last paragraph as a sentence beginning `re-observed on <YYYY-MM-DD>:`. That is the `Proposal` paragraph of a structured entry and the only paragraph of an older one. Include only reproduction, spec quote, or root-cause detail it lacked. Do not reword, move, or remove any existing text, and make no edit if the entry already contains all the evidence. A match under `## declined` is never edited or duplicated elsewhere; name it under `Not filed` as matching `## declined`.
+
+### The entry format
+
+Every entry is one `*` bullet carrying a one-sentence summary, followed by four labeled paragraphs: `Existing Bug`, `Existing Risk`, `Proposal Risk`, `Proposal`, in that order and no other. Nothing is indented and nothing is bolded. Every part sits flush at the left margin with a plain-text label, and a blank line separates it from the part before. No IDs, no extra parts beyond these five, and no scores beyond the three the template names:
+
+```
+* <one sentence, glanceable>
+
+Existing Bug: <one sentence> Severity: <N>/10
+
+Existing Risk: <N>/10 - <one sentence>
+
+Proposal Risk: <N>/10 - <one sentence>
+
+Proposal: <the evidence and the fix, with code references an agent can act on>
+```
+
+An entry begins at its `*` bullet and runs through its `Proposal` paragraph, and the next `*` bullet begins the next entry. Separate one entry from the next with **two** blank lines, not one. A single blank line separates an entry's own parts, so the wider gap is what makes the boundary between entries visible when scanning a long section.
+
+This format is copied from [`find-technical-debt.md`](find-technical-debt.md) Step 4. It differs on purpose in three places. The first labeled paragraph is `Existing Bug` rather than `Existing Debt`. The severity scale is reworded for a runtime divergence from a spec. And the `Proposal` opens with the evidence this run gathered, because the agent that fixes the bug has to replicate it first. The risk scale is identical in both files.
+
+The five parts:
+
+- **The summary bullet.** One sentence, readable at a glance, naming what the fix makes work and where a user meets it. It carries no label. Write it as a change, not as a complaint: "Make Shift+Tab outdent in an editor tab", not "Shift+Tab is broken". Keep it free of paths. The place belongs in words ("in the file tree's header", "on the settings page") and the file references belong in the `Proposal` paragraph.
+- **Existing Bug.** One sentence stating the divergence as observed: what the app does where its spec promises something else. Describe what *is*, not the fix. Then a **bug severity** score from the scale below, written as a trailing `Severity: <N>/10` after that sentence's full stop.
+- **Existing Risk.** An **existing risk** score, then ` - `, then one sentence on what users meet if the bug is never fixed: how often they hit it and what it costs them when they do.
+- **Proposal Risk.** A **proposed risk** score, then ` - `, then one sentence on the risk left once the fix lands: a regression the fix could cause, an adjacent case it leaves open, or a cause it only narrows. Both risk paragraphs come before the `Proposal` paragraph, so write each to stand on its own. Name the hazard rather than pointing at a step the reader has not reached.
+- **Proposal.** The evidence and the fix, and the only long part. Write it for an agent that never saw this run, opening the entry cold and expected to replicate the bug and fix it from what it says. Give, in this order: the quoted spec promise; the reproduction steps through the browser or tool, including any scratch fixture content the steps depend on; expected versus observed behavior; the likely root cause, naming each file by path and each function by name; the likely fix; and which existing tests cover the area or what a regression test should assert. If Step 6 did not find the root cause, give its account of what was checked and ruled out instead of inventing one, and describe the fix only as far as the evidence supports. Reference files by path only, never by line number, because the entry may wait a while before anyone takes it. Preserve exact case inside quotes, paths, commands, and identifiers. Multiple sentences are expected; keep it to one paragraph.
+
+"Low risk" is not a risk. If you genuinely see none in either risk paragraph, say what would make it visible if you were wrong.
+
+### The scales
+
+Both scales run 1–10. Score the **bug severity** by how far the observed behavior falls from the spec's promise:
+
+| Bug severity | Meaning |
+|--------------|---------|
+| **1–3** | Cosmetic, or a promise broken only at an edge a user rarely reaches, with the intended result still reachable another way. |
+| **4–7** | A promised interaction fails in normal use: a dead key, the wrong row selected, a view that does not update. The user notices and has to work around it, but nothing is lost. |
+| **8–10** | A core path fails for every user, or the app loses or silently changes data, or weakens a security or sandbox boundary. |
+
+Score both **risk** values on one scale. Risk is likelihood times blast radius, judged against the app as it stands (`Existing Risk`) and as it would stand after the fix (`Proposal Risk`):
+
+| Risk | Meaning |
+|------|---------|
+| **1–3** | Unlikely to bite, or bites harmlessly: a cosmetic glitch, an edge case behind a rarely-taken branch, something a test would catch first. |
+| **4–7** | Plausible failure in normal use with real user-visible consequences — a broken interaction, a stale view, data that has to be re-entered — but recoverable and contained to one area. |
+| **8–10** | Likely, or catastrophic when it happens: data loss, silent corruption, a security or sandbox weakness, or a failure that takes out a core path for every user. |
+
+A real fix should bring `Proposal Risk` in well below `Existing Risk`. When it does not, the proposed fix is probably a workaround. Say so in the `Proposal Risk` sentence and let the two numbers sit close together; never close the gap by scoring optimistically. Unlike a debt candidate, a reproduced bug is filed even when its fix is weak.
+
+### Worked example
+
+```
+* Restore a note deleted with Undo to the list it came from, instead of to the inbox.
+
+Existing Bug: Pressing Undo on the toast that follows a delete puts the note back in the inbox, where the spec promises it returns to the list it was deleted from. Severity: 5/10
+
+Existing Risk: 5/10 - Every undone delete outside the inbox strands the note in the wrong list, and a user who does not notice straight away has to hunt for it later.
+
+Proposal Risk: 2/10 - Notes return to their own list, but a list deleted between the delete and the Undo is a new branch, and a fallback nothing tests could drop the note entirely.
+
+Proposal: The spec promises "Deleting a note moves it to the trash, and Undo in the toast that follows restores it to the list it came from." Reproduce it with a scratch list named `groceries` holding one note, `milk`: open `groceries`, delete `milk`, and click Undo in the toast before it closes. Expected: `milk` is back in `groceries`. Observed: `groceries` is empty and `milk` sits at the bottom of the inbox; deleting from the inbox and undoing behaves as specified, so only the source list is lost. The root cause is that `moveToTrash` in `src/notes/trash.ts` writes a trash record without the note's `listId`, and `restoreNote` in the same file rebuilds the note from that record and falls back to the inbox for a missing list. Carry `listId` on the trash record in `moveToTrash`, restore into it in `restoreNote`, and fall back to the inbox only when that list no longer exists. `src/notes/trash.test.ts` covers delete and restore only from the inbox; a regression test should delete from another list and assert Undo returns the note there, and a second should delete the list before Undo and assert the note lands in the inbox.
+```
 
 ## Step 8 — Tear down
 
