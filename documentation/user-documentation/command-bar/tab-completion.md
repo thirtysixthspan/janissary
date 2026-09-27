@@ -4,6 +4,8 @@
 
 Press `Tab` to complete the token just before the cursor. One match replaces the token outright — with a trailing `/` for a directory or a space for a file. Several matches fill in their longest common prefix and list the candidates above the command bar; no match does nothing. That list of candidates is there to be read, not chosen from: there is no key that moves through it and no way to accept one, so keep typing to narrow the token down and press `Tab` again when the answer is what you have.
 
+A command can run over more than one line. Press `Shift+Enter` to add a line and keep going, and `Tab` completes the word on whichever line the cursor is sitting on. The words on the earlier lines still decide what you are completing, so `ls`, `Shift+Enter`, then `do` and `Tab` gives `ls docs/`, and `msg`, `Shift+Enter`, then `bi` and `Tab` completes the recipient on a tab named `bilal`.
+
 What gets completed depends on where in the command you are:
 
 | Context | Candidates |
@@ -19,4 +21,4 @@ What gets completed depends on where in the command you are:
 | After `search` | `transcript`, its only subcommand |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 
-Path completion expands `~` to your home directory, and hides dotfiles unless what you've typed already starts with a `.`.
+Path completion lists your home directory for `~` and leaves the tilde in the token it writes back, so `ls ~/pro` and `Tab` gives `ls ~/projects/` when there is one match. A bare `~` works the same as `~/`: `ls ~` and `Tab` offers what's in your home directory rather than in the folder above it. Dotfiles stay hidden unless what you've typed already starts with a `.`.
