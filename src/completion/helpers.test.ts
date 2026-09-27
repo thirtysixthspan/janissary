@@ -44,27 +44,27 @@ describe('longestCommonPrefix', () => {
 
 describe('splitToken', () => {
   it('treats a slash-less token as a bare base name in cwd', () => {
-    expect(splitToken('read', '/repo')).toEqual({ dir: '/repo', base: 'read' });
+    expect(splitToken('read', '/repo')).toEqual({ dir: '/repo', base: 'read', prefix: '' });
   });
 
   it('splits on the last slash and resolves dir against cwd', () => {
-    expect(splitToken('src/comp', '/repo')).toEqual({ dir: '/repo/src', base: 'comp' });
+    expect(splitToken('src/comp', '/repo')).toEqual({ dir: '/repo/src', base: 'comp', prefix: 'src/' });
   });
 
   it('treats a trailing-slash token as browsing that directory with an empty base', () => {
-    expect(splitToken('src/', '/repo')).toEqual({ dir: '/repo/src', base: '' });
+    expect(splitToken('src/', '/repo')).toEqual({ dir: '/repo/src', base: '', prefix: 'src/' });
   });
 
   it('resolves an absolute path independent of cwd', () => {
-    expect(splitToken('/etc/pass', '/repo')).toEqual({ dir: '/etc', base: 'pass' });
+    expect(splitToken('/etc/pass', '/repo')).toEqual({ dir: '/etc', base: 'pass', prefix: '/etc/' });
   });
 
   it('falls back to the filesystem root when the token is just a slash', () => {
-    expect(splitToken('/', '/repo')).toEqual({ dir: '/', base: '' });
+    expect(splitToken('/', '/repo')).toEqual({ dir: '/', base: '', prefix: '/' });
   });
 
   it('expands a leading ~ to the home directory', () => {
-    expect(splitToken('~/proj', '/repo')).toEqual({ dir: homedir(), base: 'proj' });
+    expect(splitToken('~/proj', '/repo')).toEqual({ dir: homedir(), base: 'proj', prefix: '~/' });
   });
 });
 

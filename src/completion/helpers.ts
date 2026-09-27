@@ -21,14 +21,15 @@ export const longestCommonPrefix = (items: string[]): string => {
   return prefix;
 };
 
-export const splitToken = (token: string, cwd: string): { dir: string; base: string } => {
-  const expanded = token.startsWith('~') ? homedir() + token.slice(1) : token;
-  const slash = expanded.lastIndexOf('/');
-  if (slash !== -1) {
-    const dirPart = expanded.slice(0, slash + 1) || '/';
-    return { dir: path.resolve(cwd, dirPart), base: expanded.slice(slash + 1) };
-  }
-  return { dir: cwd, base: expanded };
+// Splits the typed token (a bare `~` reads as `~/`) so `prefix` is exactly the directory text the
+// user typed; only `dir` sees the home directory, so rebuilding from `prefix` keeps the tilde.
+export const splitToken = (token: string, cwd: string): { dir: string; base: string; prefix: string } => {
+  const typed = token === '~' ? '~/' : token;
+  const slash = typed.lastIndexOf('/');
+  if (slash === -1) return { dir: cwd, base: typed, prefix: '' };
+  const prefix = typed.slice(0, slash + 1);
+  const dirPart = prefix.startsWith('~/') ? homedir() + prefix.slice(1) : prefix;
+  return { dir: path.resolve(cwd, dirPart), base: typed.slice(slash + 1), prefix };
 };
 
 export const replaceToken = (

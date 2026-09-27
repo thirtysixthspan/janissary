@@ -6,7 +6,7 @@ import { isDir, longestCommonPrefix, splitToken, replaceToken } from './helpers.
 export function completeFilePath(cursor: CompletionCursor, cwd: string): CompletionResult {
   const { token, before, after } = cursor;
   const unchanged: CompletionResult = { newInput: before + after, newCursor: before.length, matches: [] };
-  const { dir, base } = splitToken(token, cwd);
+  const { dir, base, prefix } = splitToken(token, cwd);
   let entries: string[];
   try {
     entries = readdirSync(dir);
@@ -26,6 +26,5 @@ export function completeFilePath(cursor: CompletionCursor, cwd: string): Complet
     suffix = isDir(path.join(dir, matches[0])) ? '/' : ' ';
   }
 
-  const typedDirPrefix = token.slice(0, token.length - base.length);
-  return replaceToken(cursor, typedDirPrefix + completedName + suffix, matches);
+  return replaceToken(cursor, prefix + completedName + suffix, matches);
 }
