@@ -123,6 +123,7 @@
 | `Cmd+D` | Select the word under the caret, then add its next exact occurrence |
 | `Cmd+U` | Drop the most recently added selection |
 | `Escape` (with multiple selections) | Collapse to the most recently added selection |
+| Window shortcuts | Tab switching, tab moving, `Ctrl+G`, `Ctrl+R`, `Cmd+P` and `Cmd+T` work from the buffer too |
 
 **File navigator controls** (active only while a file navigator is focused):
 
