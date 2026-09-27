@@ -98,8 +98,25 @@ describe('ToastStack', () => {
     expect(screen.getByRole('button').className).toContain('toast--fading');
   });
 
-  it('clears the stack immediately on the clear event', () => {
+  // The same hold, reached by keyboard rather than by pointer: a toast is a button, so tabbing to
+  // it has to stop the fade for exactly as long as hovering it does. Without the focus handler a
+  // keyboard user would lose a message to the timer while reading it.
+  it('holds while focused and resumes with the remaining time after', () => {
     const fixture = makeClient();
+    render(<ToastStack client={fixture.client} notificationsVisible={false} />);
+    fixture.toast({ from: 'janus', message: 'one' });
+
+    advance(3000);
+    fireEvent.focus(screen.getByRole('button'));
+    advance(60_000);
+    expect(screen.getByRole('button').className).not.toContain('toast--fading');
+
+    fireEvent.blur(screen.getByRole('button'));
+    advance(1000);
+    expect(screen.getByRole('button').className).toContain('toast--fading');
+  });
+
+  it('clears the stack immediately on the clear event', () => {    const fixture = makeClient();
     render(<ToastStack client={fixture.client} notificationsVisible={false} />);
     fixture.toast({ from: 'janus', message: 'one' });
     fixture.toast({ from: 'build', message: 'two' });
