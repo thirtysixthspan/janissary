@@ -85,7 +85,7 @@ A visualization holds at most eight charts. That is a bound on what it costs to 
 
 The tab has no dropdowns and no controls of its own. Its metadata row is the name, the source as text, and the split control the host draws. The only things you can operate are the charts and the composer, and the only thing that changes a chart is what you type.
 
-Each chart carries its own four controls: read its data now, live update, export as PNG, and export as PDF. They belong to the chart rather than to the tab because they act on it alone.
+Each chart carries its own six controls: read its data now, live update, and export as PNG, PDF, SVG or CSV. They belong to the chart rather than to the tab because they act on it alone, and a reader thinking about a picture thinks about one picture. The SVG is vector, so it stays sharp however far it is scaled and can be edited afterwards; the CSV holds the rows the chart was drawn from — the same rows as the table beneath it, not the source — with a comment naming the chart, its transformations and where the data came from, so a file found on its own three months later still says what produced it. A value holding a comma or a quote is quoted, and one beginning =, + or - is quoted too, because a spreadsheet would read it as a formula and data out of a log is not one.
 
 A chart is also its own text alternative. It names itself for a screen reader and describes its own content — the kind, the measure, the range it spans, and the largest and smallest mark. A disclosure labelled **Data table** holds one row per mark the chart draws, generated from the same marks, so the table cannot disagree with the picture. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
 

@@ -1,11 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowsRotate, faFileArrowDown, faFilePdf, faRepeat } from '@fortawesome/free-solid-svg-icons';
+import { faArrowsRotate, faFileArrowDown, faFileCode, faFileCsv, faFilePdf, faRepeat } from '@fortawesome/free-solid-svg-icons';
 import type { VisualizationChart } from '@shared/plugins/visualizations/shared';
 import { ChartSvg } from './chart/ChartSvg';
 import { reduction } from './chart/describe';
 import { VisualizationData } from './VisualizationData';
-import { exportPdf, exportPng } from './export/download';
+import { csvOf } from './export/csv';
+import { exportCsv, exportPdf, exportPng, exportSvg } from './export/download';
+import { dataTableFor } from './chart/describe';
 
 // One chart, and everything that belongs to it: the picture, the line under it saying what the picture
 // is showing, the four controls that act on this chart alone, and the data table that is the chart's
@@ -40,12 +42,34 @@ export function VisualizationChartCard({
   const [exportFailure, setExportFailure] = useState('');
 
   const next = nextInterval(chart.refreshSeconds);
-  const exportChart = async (kind: 'png' | 'pdf') => {
+  const exportChart = async (kind: 'png' | 'pdf' | 'svg' | 'csv') => {
     const svg = chartRef.current;
     if (!svg) return;
     try {
-      if (kind === 'png') await exportPng(svg, chart.title);
-      else await exportPdf(svg, chart.title);
+      // The rows a chart was drawn from, not the source: a chart over a transformed table is a chart of
+      // the transformed table, and a CSV of the source would answer a different question than the picture.
+      const rows = () => csvOf(dataTableFor(chart.table, chart), {
+        title: chart.title,
+        source: chart.data.kind === 'file' ? chart.data.path : 'the source',
+        notes: chart.notes,
+      });
+      switch (kind) {
+        case 'png': {
+          await exportPng(svg, chart.title);
+          break;
+        }
+        case 'pdf': {
+          await exportPdf(svg, chart.title);
+          break;
+        }
+        case 'svg': {
+          exportSvg(svg, chart.title);
+          break;
+        }
+        default: {
+          exportCsv(rows(), chart.title);
+        }
+      }
       setExportFailure('');
     } catch (error) {
       setExportFailure(error instanceof Error ? error.message : String(error));
@@ -90,6 +114,22 @@ export function VisualizationChartCard({
           onClick={() => { void exportChart('pdf'); }}
         >
           <FontAwesomeIcon icon={faFilePdf} />
+        </button>
+        <button
+          type="button"
+          title="Export this chart as SVG"
+          disabled={disabled || busy}
+          onClick={() => { void exportChart('svg'); }}
+        >
+          <FontAwesomeIcon icon={faFileCode} />
+        </button>
+        <button
+          type="button"
+          title="Export the rows behind this chart as CSV"
+          disabled={disabled || busy}
+          onClick={() => { void exportChart('csv'); }}
+        >
+          <FontAwesomeIcon icon={faFileCsv} />
         </button>
       </div>
       <VisualizationData chart={chart} table={chart.table} />

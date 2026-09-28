@@ -94,8 +94,8 @@ describe('a new visualization tab', () => {
   it('has no dropdown and no tab-level control beyond the host split action', () => {
     show(payload({ charts: [chart()], turns: [turn()] }));
     expect(document.querySelectorAll('select')).toHaveLength(0);
-    // The only buttons are the chart's own four and the composer.
-    expect(document.querySelectorAll('.visualization-card-actions button')).toHaveLength(4);
+    // The only buttons are the chart's own six - read, live update, PNG, PDF, SVG, CSV - and the composer.
+    expect(document.querySelectorAll('.visualization-card-actions button')).toHaveLength(6);
   });
 
   it('sends what was typed, and keeps the text when a reply is in flight', () => {

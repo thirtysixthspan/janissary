@@ -103,6 +103,21 @@ async function deflate(data: Uint8Array): Promise<Uint8Array | undefined> {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
+// The vector form of what is on screen, with the theme properties resolved into literal values, because an
+// SVG carrying `var(--accent)` renders as black in anything that is not this tab. Vega's view offers the
+// same three shapes of export - svg, canvas, image URL - and the reason a vector one is worth having is
+// that it survives being scaled into a document and being edited afterwards.
+export function exportSvg(svg: SVGSVGElement, title: string): void {
+  saveBlob(new Blob([withResolvedColours(svg)], { type: 'image/svg+xml' }), fileName(title, 'svg'));
+}
+
+// The rows behind the chart, as a file. The table under the card is the same data in HTML; this is the one
+// that can be opened, diffed and pasted somewhere, and it is the export a reader who cannot see the
+// picture most needs.
+export function exportCsv(rows: string, title: string): void {
+  saveBlob(new Blob([rows], { type: 'text/csv' }), fileName(title, 'csv'));
+}
+
 export async function exportPdf(svg: SVGSVGElement, title: string, scale = 2): Promise<void> {
   const { context, width, height } = await pixelsOf(svg, scale);
   const image = context.getImageData(0, 0, width, height);

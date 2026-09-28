@@ -132,8 +132,18 @@ describe('the caption', () => {
   it('names every mark for assistive technology', () => {
     const value = chart({ aggregate: 'sum', y: 'revenue' });
     const { container } = render(<VisualizationChartCard chart={value} busy={false} disabled={false} onRefreshNow={vi.fn()} onSetRefresh={vi.fn()} />);
-    const labels = [...container.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label'));
+    const labels = [...container.querySelectorAll(':scope [aria-label]')].map((node) => node.getAttribute('aria-label'));
     expect(labels.some((one) => one?.includes('region north') && one.includes('the sum of revenue is 10'))).toBe(true);
+  });
+
+  // Both exports are per chart rather than per tab, matching the two they sit beside: a card is the unit
+  // a reader thinks in, and a tab with three charts is not one thing to export.
+  it('offers the vector and the rows beside the raster exports', () => {
+    const value = chart();
+    const { container } = render(<VisualizationChartCard chart={value} busy={false} disabled={false} onRefreshNow={vi.fn()} onSetRefresh={vi.fn()} />);
+    const titles = [...container.querySelectorAll(':scope .visualization-card-actions button')].map((node) => node.getAttribute('title'));
+    expect(titles).toContain('Export this chart as SVG');
+    expect(titles).toContain('Export the rows behind this chart as CSV');
   });
 
   it('names the measure a chart draws when the user named one', () => {
