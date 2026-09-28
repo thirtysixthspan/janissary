@@ -198,24 +198,23 @@ export function chartById(record: VisualizationRecord, id: string): Visualizatio
   return record.charts.find((chart) => chart.id === id);
 }
 
+// The chart as the browser is shown it. The specification is copied whole rather than field by field,
+// because naming each field is how `percentile`, `xUnit` and `stack` were left behind: all three are
+// optional, so the type was satisfied, the compiler said nothing, and a percentile chart arrived at the
+// renderer with no percentile and was drawn at the median while its caption said ninety-fifth.
 export function chartViewOf(chart: VisualizationChartRecord): VisualizationChartView {
+  // The transformations are dropped by name rather than spread: the browser receives the words they
+  // became, and re-declaring the grammar in the contract to render six words is the mirroring that produces
+  // drift. Everything else is copied, so a field the grammar gains later cannot be left behind.
+  const { metric, data, ...shape } = chart;
+  delete (shape as { transforms?: unknown }).transforms;
   return {
-    id: chart.id,
-    ...(chart.metric !== undefined && { metric: chart.metric }),
-    data: { ...chart.data },
+    ...shape,
+    ...(metric !== undefined && { metric }),
+    data: { ...data },
     notes: chartNotes(chart),
     refreshSeconds: chart.refreshSeconds,
     table: chart.table,
-    kind: chart.kind,
-    x: chart.x,
-    y: chart.y,
-    title: chart.title,
-    ...(chart.readAt !== undefined && { readAt: chart.readAt }),
-    ...(chart.error !== undefined && { error: chart.error }),
-    ...(chart.series !== undefined && { series: chart.series }),
-    ...(chart.aggregate !== undefined && { aggregate: chart.aggregate }),
-    ...(chart.xLabel !== undefined && { xLabel: chart.xLabel }),
-    ...(chart.yLabel !== undefined && { yLabel: chart.yLabel }),
   };
 }
 

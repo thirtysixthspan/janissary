@@ -162,6 +162,14 @@ describe('the caption', () => {
     expect(caption(chart())).not.toContain('by month');
   });
 
+  // The axis labels follow the unit the host bucketed by, and the unit has to survive the projection for
+  // the labels to be anything but the ISO dates underneath them.
+  it('labels a monthly axis with months, and a yearly one with years', () => {
+    const value = chart({ x: 'day', xUnit: 'month', table: { ...chart().table, columns: [{ name: 'day', type: 'date' }, { name: 'revenue', type: 'number' }], rows: [['2026-01-01', 10], ['2026-06-01', 4]] } });
+    const { container } = render(<VisualizationChartCard chart={value} busy={false} disabled={false} onRefreshNow={vi.fn()} onSetRefresh={vi.fn()} />);
+    expect([...container.querySelectorAll('text')].map((node) => node.textContent).join(' ')).toContain('Jan 2026');
+  });
+
   it('says how much of a capped source it is showing', () => {
     const value = chart();
     expect(caption({

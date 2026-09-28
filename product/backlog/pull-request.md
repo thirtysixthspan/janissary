@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Carry `percentile`, `xUnit` and `stack` through the projection, so three shipped features are not no-ops. Severity: 9/10
-
-Existing Issue: `chartViewOf` in `src/visualizations/charts.ts` copies `kind`, `x`, `y`, `title`, `series`, `aggregate`, `xLabel`, `yLabel` and `metric` by hand, and the three fields the last three feature commits added to `ChartShape` are not copied, although every one of them is optional on `VisualizationChartView` and so satisfies the type without a word from the compiler. Severity: 9/10
-
-Existing Risk: 9/10 - Three features that exist are invisible. A percentile chart reaches the renderer with no percentile, so the client reduces at its default of 50 while the caption and the turn's sentence say "reduced to the 95th percentile" — a chart confidently stating a number that is not the one on screen, which is the one failure a chart cannot make. A stacked chart is drawn side by side with the caption silent about it, and a chart bucketed by month carries ISO dates on its axis while the data is monthly. `points.test.ts` pins the stacking and the percentile against the marks builder, so both look covered; the untested seam is the projection, and there is no server test for `chartViewOf` at all.
-
-Proposal Risk: 2/10 - Copying three optional fields the stored chart already holds changes nothing for a chart that has none of them, and the renderer's own defaults are unchanged.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: carry percentile, xUnit and stack through the chart projection". Spread the specification's own fields into `chartViewOf` rather than naming them one at a time, so a field the grammar gains later cannot be left behind the same way, and add cases in a new `src/visualizations/charts.test.ts` for a chart carrying each of the three and for one carrying none. Verify with an end-to-end case in `src/visualizations/manager.test.ts` asserting the window payload of a percentile chart carries both `aggregate: 'percentile'` and its number, of a stacked chart carries its mode, and of a monthly chart carries its unit, and with the client case in `web/src/plugins/visualizations/VisualizationChartCard.test.tsx` asserting the rendered card of a monthly chart labels its axis with months.
-
 * Keep a turn's snapshot to the specifications, and bound the turns, so a live update stops rewriting megabytes. Severity: 8/10
 
 Existing Issue: `snapshot` in `src/visualizations/undo.ts` copies each chart with `{...chart, transforms: [...]}`, and a stored chart carries its resolved `table` — so every turn that changed something carries up to eight full tables of 500 rows by 32 columns, while `record.turns` is appended to without any bound (`MAX_TURNS_IN_PROMPT` bounds the prompt, not the record), and `store.write` serializes the whole record on every commit, of which `reading.ts` makes one per read. Severity: 8/10
