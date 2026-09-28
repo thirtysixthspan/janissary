@@ -57,6 +57,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     source: 'https://example.com/sales.csv',
     pair: { harness: 'claude', model: 'opus' },
     charts: [],
+    notices: [],
     turns: [],
     ...over,
   };
@@ -136,6 +137,21 @@ describe('a new visualization tab', () => {
   // the recall return immediately, so ArrowUp did nothing at all and a user who had asked this
   // visualization several things had to retype them. A live-update turn carries no query and is skipped
   // rather than recalled as an empty string.
+  // A notice is a measurement rather than something the model said, and it is the only text in the tab
+  // that is not part of the exchange — which is why it is set apart from it and why it names its chart.
+  it('shows what the host noticed in the data, above the exchange', () => {
+    show(payload({
+      notices: ['In "Latency", north has a latency of 4200, outside the 98 to 103 that the middle half of the other 9 latency values occupies.'],
+      turns: [turn()],
+    }));
+    const notice = screen.getByText(/north has a latency of 4200/u);
+    expect(notice.className).toBe('visualization-notice');
+  });
+
+  it('shows no findings region at all when there is nothing to report', () => {
+    expect(show(payload()).container.querySelector('.visualization-notices')).toBeNull();
+  });
+
   it('recalls the conversation\'s own earlier queries on ArrowUp', () => {
     show(payload({
       turns: [

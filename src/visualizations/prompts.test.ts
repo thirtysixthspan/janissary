@@ -102,6 +102,22 @@ describe('the prompt', () => {
     expect(text.indexOf('They have not given you a source yet.')).toBeLessThan(text.indexOf('- revenue (number)'));
   });
 
+  // The model is told what the host measured rather than being asked to notice it itself, because a
+  // spike described in the model's own words reads as an opinion and the same spike read twice reads as
+  // two opinions.
+  it('shows the findings the host made about the data, and says who made them', () => {
+    const text = chatPrompt(record(), { ...WORKSPACE, notices: ['In "Latency", north has a latency of 4200, outside the 98 to 103 that the middle half of the other 9 latency values occupies.'] });
+    expect(text).toContain('## What the data is doing');
+    expect(text).toContain('The host checked');
+    expect(text).toContain('north has a latency of 4200');
+    expect(text.indexOf('## What the data is doing')).toBeLessThan(text.indexOf('## So far'));
+  });
+
+  it('leaves the findings out entirely when there are none', () => {
+    expect(chatPrompt(record(), { ...WORKSPACE, notices: [] })).not.toContain('## What the data is doing');
+    expect(chatPrompt(record(), WORKSPACE)).not.toContain('## What the data is doing');
+  });
+
   it('shows a visualization with no charts as having none', () => {
     expect(chatPrompt(record(), WORKSPACE)).toContain('There are no charts yet.');
   });
@@ -183,6 +199,6 @@ describe('parsing a reply', () => {
   it('refuses prose, a bare list, and an object with nothing usable in it', () => {
     expect(parseReply('I would rather not answer in JSON.')).toBeUndefined();
     expect(parseReply('[1, 2, 3]')).toBeUndefined();
-    expect(parseReply('{}')).toEqual({ say: '', charts: [], remove: [], followUps: [] });
+    expect(parseReply('{}')).toEqual({ say: '', charts: [], remove: [], notices: [], followUps: [] });
   });
 });

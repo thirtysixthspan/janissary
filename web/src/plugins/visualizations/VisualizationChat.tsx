@@ -20,6 +20,10 @@ export type ChatProperties = {
   // The last thing that went wrong, shown above the composer so a failed read is not mistaken for a
   // chart that simply drew nothing.
   error?: string;
+  // What the host's own statistics found in the data, above the exchange. They are the host's
+  // measurements rather than the model's words, which is why they are plain sentences with no markdown
+  // and no reply around them: a reader should be able to see that a number came from a rule.
+  notices: string[];
   prompted: boolean;
   busy: boolean;
   disabled: boolean;
@@ -29,7 +33,7 @@ export type ChatProperties = {
 };
 
 export function VisualizationChat({
-  turns, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
+  turns, notices, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -79,6 +83,11 @@ export function VisualizationChat({
               />
             </div>
           ))}
+        </div>
+      )}
+      {notices.length === 0 ? null : (
+        <div className="visualization-notices">
+          {notices.map((notice) => <p key={notice} className="visualization-notice">{notice}</p>)}
         </div>
       )}
       {error === undefined ? null : <p className="visualization-reason-note">{error}</p>}

@@ -20,6 +20,9 @@ export type PromptContext = {
   workspace: string;
   // True while this prompt is asking for a re-read rather than answering a message.
   refresh?: boolean;
+  // What the host's own statistics found in the data, as sentences. They are shown to the model so it
+  // does not re-derive a finding the host has already made in its own voice.
+  notices?: string[];
 };
 
 function columnsOf(dataset: VisualizationDatasetView): string {
@@ -68,6 +71,18 @@ function exchangeOf(turns: readonly VisualizationTurnView[]): string {
     .join('\n');
 }
 
+// The findings the host has already made, under a heading that says who made them: a notice is a
+// deterministic measurement, and the model is being asked what to do about it rather than whether it is
+// real. A chart that is merely unusual and a spike that is a fault look the same from here.
+function noticesSectionOf(notices: readonly string[] | undefined): string {
+  if (notices === undefined || notices.length === 0) return '';
+  return [
+    '## What the data is doing',
+    "The host checked the charts' own data and found:",
+    ...notices.map((one) => `- ${one}`),
+  ].join('\n');
+}
+
 export function chatPrompt(record: VisualizationRecord, context: PromptContext): string {
   const datasets = record.datasets.map((one) => describeDataset(one)).join('\n\n');
   const charts = record.charts.length === 0 ? 'There are no charts yet.' : record.charts.map((one) => describeChart(one)).join('\n');
@@ -76,6 +91,7 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
   // columns, no row count and no sample — so it could not answer the question that was actually asked
   // and said so, for a reason having nothing to do with the question.
   const data = [context.sourceNote, datasets].filter((part) => part !== undefined && part !== '').join('\n\n');
+  const notices = noticesSectionOf(context.notices);
   return [
     'You are helping someone chart data. They name a source, you work out how to reach the data behind it, you ask what they want to see, you draw it, and then you keep answering their questions about it and the chart.',
     '',
@@ -86,6 +102,7 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
     '',
     '## The charts',
     charts,
+    notices,
     '',
     '## So far',
     exchangeOf(record.turns) || 'This is the beginning of the conversation.',
@@ -97,6 +114,7 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
     DATA_RULE,
     TRANSFORM_RULE,
     `Comparisons are ${COMPARES.join(', ')}.`,
+    '`notices` is optional: one or two things you noticed in the data itself, as a plain sentence naming the value and where it was. The host shows its own measurements of the data separately, so do not repeat one of those; say what it means rather than what it is. Leave it out when you have noticed nothing.',
     '`remove` is a list of chart ids to drop.',
     '`name` renames the visualization, and is how the user renames it in words.',
     'Answer with prose and no charts when the user asked a question about the data rather than for a change.',

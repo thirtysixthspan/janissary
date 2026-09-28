@@ -68,6 +68,7 @@ export type VisualizationWindow = {
   pair: ConversationModelPair;
   charts: VisualizationChart[];
   followUps?: string[];
+  notices: string[];
   turns: VisualizationTurn[];
   busy?: boolean;
   error?: string;
@@ -103,6 +104,10 @@ function isModelPair(value: unknown): value is ConversationModelPair {
   return isRecord(value)
     && (value.harness === 'claude' || value.harness === 'opencode')
     && typeof value.model === 'string';
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === 'string';
 }
 
 function isSummary(value: unknown): value is VisualizationSummary {
@@ -176,6 +181,7 @@ export function isVisualizationWindow(value: unknown): value is VisualizationWin
     && isModelPair(value.pair)
     && Array.isArray(value.charts) && value.charts.every((chart) => isChart(chart))
     && (value.followUps === undefined || isStringList(value.followUps))
+    && Array.isArray(value.notices) && value.notices.every(isText)
     && Array.isArray(value.turns) && value.turns.every((turn) => isTurn(turn))
     && (value.busy === undefined || typeof value.busy === 'boolean')
     && (value.error === undefined || typeof value.error === 'string');

@@ -87,6 +87,12 @@ Each chart has its own interval, offered as a single control that steps through 
 
 A re-read that fails records the reason and leaves the previous table on screen, so a source that stops answering does not also take the chart off the screen. A re-read that changes the data does not change the chart: the specification is yours, and asking is what changes it. A chart whose data the agent acquired is re-asked rather than re-read, because nothing else knows how that data is reached — which is the one case where live update costs a model call, and why the interval is a choice rather than a number.
 
+### What the data is doing
+
+The host checks its own charts' data and says what it finds, above the conversation and in plain sentences: a value outside the fences the middle half of the others occupy, a value outside the band the values before it were within, a series that stepped between two levels, a rate that changed by at least a factor of two. Each finding names the row, the value and the figures the rule used, so a reader can check it; the two time-based rules need an ordered x column, and none of them speaks until there is enough data to be worth speaking about. A finding is a measurement, not a verdict — a spike may be entirely expected, and it is set apart from the conversation for that reason.
+
+The findings are rebuilt whenever the data changes, so a live update that has come back down stops reporting the spike. They are in the next prompt too, so the agent is answering a question about something already measured rather than being asked to notice it itself; what it makes of a finding is its own, in `notices`, and the two are kept apart because one is a reading and the other is a measurement. Removing a chart removes its finding with it.
+
 ### Recovery
 
 A source that will not read, an address refused, a transformation over a column that is not there, a model that answered with something unreadable: each is reported in the conversation and leaves the tab working. Pointing at a different address in a later message is the way back, and the charts you already have are unaffected.

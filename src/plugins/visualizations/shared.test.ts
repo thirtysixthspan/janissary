@@ -38,6 +38,7 @@ const WINDOW: VisualizationWindow = {
   source: 'https://example.com/d.csv',
   pair: { harness: 'opencode', model: 'model' },
   charts: [CHART],
+  notices: [],
   turns: [],
 };
 
@@ -96,6 +97,7 @@ describe('visualizations shared contract', () => {
         busy: true,
         error: 'boom',
         followUps: ['make it a line chart'],
+        notices: [],
         turns: [{ query: 'q', response: 'a', pair: { harness: 'claude', model: 'm' } }],
         charts: [{
           ...CHART,

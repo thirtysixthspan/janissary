@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
-import { datasetFor, placed, pruned } from './charts.js';
+import { datasetFor, noticed, placed, pruned } from './charts.js';
 import { datasetKey } from './chart-spec.js';
 import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
@@ -156,7 +156,14 @@ export class VisualizationAgent {
     }
     const workspace = this.options.workspace(record.id);
     const sourceNote = typeof note === 'string' ? note : undefined;
-    const context: PromptContext = { workspace, ...(sourceNote !== undefined && { sourceNote }) };
+    // The notices go in with the data, so the model is answering a question about a spike the host has
+    // already measured rather than being asked to notice one itself and reaching a different conclusion
+    // each time.
+    const context: PromptContext = {
+      workspace,
+      ...(sourceNote !== undefined && { sourceNote }),
+      ...(record.notices.length > 0 && { notices: record.notices }),
+    };
     const text = chart === undefined ? chatPrompt(record, context) : refreshPrompt(record, chart, context);
     const session = this.options.pool.session(record.id, record.pair, workspace, {
       onError: (message) => { this.fail(record, pending, message); },
@@ -202,6 +209,9 @@ export class VisualizationAgent {
     const named = titled(reply.name ?? '');
     if (named !== '' && isUntitled(record)) record.title = named;
     const first = this.place(record, reply.charts, refused);
+    // Whatever the reply did to the charts, the notices are the data's own account of itself rather than
+    // the model's, so they are rebuilt here from what the charts now say rather than asked for.
+    noticed(record);
     if (isUntitled(record) && first !== undefined) record.title = visualizationTitle(first.title);
     if (reply.followUps.length > 0) record.followUps = reply.followUps;
     else delete record.followUps;
@@ -210,7 +220,7 @@ export class VisualizationAgent {
     // lands silently.
     if (turn) {
       const said = reply.say.trim();
-      turn.response = [said, ...refused].filter((line) => line !== '').join('\n\n')
+      turn.response = [said, ...reply.notices, ...refused].filter((line) => line !== '').join('\n\n')
         || (first === undefined ? '' : chartSummary(first));
     }
     this.options.commit(record);

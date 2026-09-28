@@ -192,6 +192,12 @@ export type VisualizationWindowView = {
   // Two to four requests the model offered about what it has just said or drawn, shown as one-click
   // modifications and replaced by whichever reply comes next.
   followUps?: string[];
+  // What the host's own statistics found in the data behind the charts, as sentences. They reach the
+  // browser so a reader sees them without asking, and they reach the model so it does not re-derive a
+  // finding the host has already made — the model is told what the data did, and asked for what to do
+  // about it, which is the division that keeps a spike from being described in a different voice each
+  // time it is asked about.
+  notices: string[];
   turns: VisualizationTurnView[];
   // A call in flight: the read of a new source, or the model call that follows it. What it is for is
   // the tab's business — the tab renders one busy state for all of them.

@@ -74,6 +74,13 @@
    are notes on the metadata rather than pages in their own right. */
 .visualization-reason-note { color: var(--error); margin: 0; padding: 8px 12px 0; font-size: 12px; }
 
+/* The notices are measurements, not alarms: a spike is a fact about the data and may be entirely
+   expected, so they are set in the ordinary text colour with a rule down the side rather than in the
+   error colour a failure uses. The one thing they must not do is read as something went wrong. */
+.visualization-notices { border-left: 2px solid var(--border); margin: 8px 12px 0; padding-left: 10px; }
+
+.visualization-notice { color: var(--fg); margin: 0 0 4px; font-size: 12px; }
+
 /* The chart's text alternative, closed by default so a tab opens on a chart and not on a table. It sits
    inside the chart's own card because it belongs to the chart rather than to the conversation about it,
    and the table scrolls inside its own box so a long one cannot push the exchange off the screen. */

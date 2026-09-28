@@ -61,6 +61,7 @@ export function windowOf(
     // A copy, because the record's array is the live one the next reply replaces, and a payload that
     // shares it would mutate out from under a tab already holding the old suggestions.
     ...(record.followUps !== undefined && { followUps: [...record.followUps] }),
+    notices: [...(record.notices ?? [])],
     turns: record.turns.map((turn) => ({ ...turn })),
     ...(busy && { busy: true }),
     ...(failure !== undefined && { error: failure }),

@@ -28,6 +28,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     pair: { harness: 'opencode', model: 'model' },
     datasets: [{ key: 'source', table: TABLE, readAt: 1 }],
     charts: [],
+    notices: [],
     turns: [],
     ...over,
   };

@@ -38,6 +38,11 @@ export type VisualizationRecord = {
   charts: VisualizationChartRecord[];
   turns: VisualizationTurnView[];
   followUps?: string[];
+  // What the host noticed in the data behind the charts: a value outside the fences, a point outside the
+  // band its own history has been sitting in, a rate that has changed. Rebuilt from the charts whenever
+  // they change, so a live update that has come back down stops reporting the spike, and the list is a
+  // property of the visualization rather than of one card.
+  notices: string[];
   error?: string;
 };
 
@@ -74,6 +79,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && Array.isArray(value.turns)
     && value.turns.every(isTurn)
     && (value.followUps === undefined || isStringArray(value.followUps))
+    && (value.notices === undefined || isStringArray(value.notices))
     && (value.error === undefined || typeof value.error === 'string');
 }
 
@@ -103,6 +109,7 @@ export function freshVisualization(
     datasets: [],
     charts: [],
     turns: [],
+    notices: [],
   };
 }
 

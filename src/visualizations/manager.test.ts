@@ -323,6 +323,39 @@ describe('live update', () => {
     expect(manager.setChartRefresh('v1', 'c1', -1)).toBe(false);
   });
 
+  // The case the notices exist for. A live update that has come back down must stop reporting the spike,
+  // which means the list is rebuilt from the data on every read rather than accumulated — otherwise a tab
+  // left open overnight keeps announcing a fault that was fixed at lunchtime.
+  it('rebuilds the notices on a live read, so a spike that has gone stops being reported', async () => {
+    const spiking = ['region,latency', 'north,100', 'south,104', 'east,98', 'west,102', 'north,101', 'south,99', 'east,103', 'west,100', 'north,102', 'south,100'].join('\n') + '\n';
+    let clock = 1000;
+    let reads = 0;
+    const built = build({
+      read: async () => {
+        reads += 1;
+        return { text: `${spiking}${reads > 1 ? '' : 'north,4200\n'}` };
+      },
+      now: () => clock,
+    });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk('{"charts":[{"kind":"line","x":"region","y":"latency","title":"Latency by region"}]}');
+    built.end();
+    const chartId = built.manager.view().windows[0]?.charts[0]?.id ?? '';
+    expect(built.manager.view().windows[0]?.notices.join(' ')).toContain('4200');
+
+    vi.useFakeTimers();
+    expect(built.manager.setChartRefresh('v1', chartId, 10)).toBe(true);
+    clock += 11_000;
+    vi.advanceTimersByTime(11_000);
+    await settle();
+    vi.useRealTimers();
+
+    expect(built.manager.view().windows[0]?.notices).toEqual([]);
+  });
+
   it('re-reads on the interval it was given, and a failed re-read keeps the chart', async () => {
     let reads = 0;
     let clock = 1000;

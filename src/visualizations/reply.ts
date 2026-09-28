@@ -13,6 +13,11 @@ import type { ChartShape, VisualizationDataRef, VisualizationTransform } from '.
 // else's data, and every field that cannot be read is dropped rather than believed — a chart missing
 // its measure is not a chart, and a step naming a column the grammar does not have is not a step.
 
+// How many of the model's own observations are carried into a turn, beside the host's. Bounded for the
+// same reason the suggestions are: a reply is a sentence and a list, and a list with no bound is whatever
+// the model felt like returning.
+export const MAX_NOTICES = 4;
+
 export const MAX_FOLLOW_UPS = 4;
 export const MAX_TURNS_IN_PROMPT = 12;
 
@@ -30,6 +35,11 @@ export type Reply = {
   charts: ReplyChart[];
   remove: string[];
   name?: string;
+  // What the model noticed in the data, in its own words and bounded like the suggestions. The host has
+  // its own notices, computed from the data and shown beside these; the two are kept apart because this
+  // one is a reading of the data and the other is a measurement of it, and a reader who cannot tell
+  // which is which has been told something as a fact that is only an opinion.
+  notices: string[];
   followUps: string[];
 };
 
@@ -88,6 +98,7 @@ export function parseReply(text: string): Reply | undefined {
     charts,
     remove: strings(parsed.remove, MAX_FOLLOW_UPS * 4),
     ...(name !== undefined && { name }),
+    notices: strings(parsed.notices, MAX_NOTICES),
     followUps: strings(parsed.followUps, MAX_FOLLOW_UPS),
   };
 }

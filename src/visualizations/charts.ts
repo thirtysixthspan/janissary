@@ -1,6 +1,7 @@
 import type { ChartShape, ChartSpec } from '../protocol.js';
 import { chartNotes, datasetKey, resolve } from './chart-spec.js';
 import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
+import { noticesFor } from './insights.js';
 import type { VisualizationRecord } from './store.js';
 import type {
   VisualizationChartRecord,
@@ -74,6 +75,15 @@ export function drawn(
   };
 }
 
+// What the data behind this record's charts has going on, rebuilt from scratch every time anything
+// about them changes. Rebuilt rather than accumulated so a live update that has come back down stops
+// reporting the spike, and so a chart the user removed takes its notice with it without a second list to
+// reconcile — the charts are the whole of what a notice is about.
+export function noticed(record: VisualizationRecord): string[] {
+  record.notices = noticesFor(record.charts);
+  return record.notices;
+}
+
 // A chart carrying an id, merged over the chart that id names. Merging rather than replacing is what
 // makes "just change the title" one field and nothing else moving; an id that names no chart is a new
 // chart, because a reply that asked for a chart and produced nothing is worse than one that made a
@@ -108,6 +118,7 @@ function shapeOf(entry: ChartShape): ChartShape {
     title: entry.title,
     ...(entry.series !== undefined && { series: entry.series }),
     ...(entry.aggregate !== undefined && { aggregate: entry.aggregate }),
+    ...(entry.percentile !== undefined && { percentile: entry.percentile }),
     ...(entry.xLabel !== undefined && { xLabel: entry.xLabel }),
     ...(entry.yLabel !== undefined && { yLabel: entry.yLabel }),
   };
@@ -147,6 +158,10 @@ export function redrawn(record: VisualizationRecord, key: string): string[] {
     }
     return [chart];
   });
+  // A live update is the case the notices exist for: the read that produced them is the same read that
+  // decides whether the spike is still there, so they are rebuilt here rather than waiting for the model
+  // to be asked again.
+  noticed(record);
   return reasons;
 }
 

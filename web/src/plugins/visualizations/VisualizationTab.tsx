@@ -49,6 +49,7 @@ export function VisualizationTab({ payload, capabilities }: TabProperties) {
       )}
       <VisualizationChat
         turns={view.turns}
+        notices={view.notices}
         {...(view.followUps !== undefined && { followUps: view.followUps })}
         {...(view.error !== undefined && { error: view.error })}
         prompted={view.source === '' && view.turns.length === 0}
