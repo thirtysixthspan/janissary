@@ -5,19 +5,31 @@
 import type { Cell, Table } from './table.js';
 import type { VisualizationColumnView } from '../protocol.js';
 
-// A column's values as numbers, in row order, with the cells that are not numbers dropped — which is the
-// same rule the renderer applies, so a notice is never about a row the chart did not draw. A column that
-// is not numeric at all yields nothing, and the detector that asked says nothing rather than asking again.
-export function numericValues(table: Table, name: string): number[] {
-  const column = table.columns.findIndex((one) => one.name === name);
-  if (column === -1) return [];
-  if (!isNumeric(table.columns[column])) return [];
-  const values: number[] = [];
-  for (const row of table.rows) {
-    const cell = row[column];
-    if (typeof cell === 'number' && Number.isFinite(cell)) values.push(cell);
+// A value of a column beside the row it came from, and the two together are the whole of what a notice
+// needs to be checkable: the figure and the row it is about. Carrying the row is not bookkeeping — a
+// notice that names a row by its position among the values it kept is one dropped row away from naming
+// the wrong day, which is the only kind of wrong a reader cannot catch.
+export type Row = { index: number; value: number };
+
+// The values of a column with the row each came from, in row order, with the cells that are not numbers
+// dropped — which is the same rule the renderer applies, so a notice is never about a row the chart did
+// not draw. A column that is not numeric at all yields nothing, and the detector that asked says nothing
+// rather than asking again.
+export function rowsOf(table: Table, column: string): Row[] {
+  const at = table.columns.findIndex((one) => one.name === column);
+  if (at === -1) return [];
+  if (!isNumeric(table.columns[at])) return [];
+  const rows: Row[] = [];
+  for (const [index, row] of table.rows.entries()) {
+    const cell = row[at];
+    if (typeof cell === 'number' && Number.isFinite(cell)) rows.push({ index, value: cell });
   }
-  return values;
+  return rows;
+}
+
+// The same values without the rows, for the arithmetic that only counts and fits.
+export function numericValues(table: Table, name: string): number[] {
+  return rowsOf(table, name).map((one) => one.value);
 }
 
 // The same, as the x positions a rate is measured against. A date column is read as its instant — which

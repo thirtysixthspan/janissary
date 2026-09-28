@@ -16,7 +16,7 @@
 //   * an unexpected value, against the band the values before it have been sitting in;
 //   * a trend change, when the rate of the second half differs from the rate of the first.
 
-import { fencesOf, labelOf, lineThrough, meanAndSpread, numericValues, positions, slopeOf } from './insights-statistics.js';
+import { fencesOf, labelOf, lineThrough, meanAndSpread, numericValues, positions, rowsOf, slopeOf } from './insights-statistics.js';
 import type { Table } from './table.js';
 import type { VisualizationChartRecord } from '../protocol.js';
 
@@ -100,29 +100,33 @@ function outliers(chart: VisualizationChartRecord): Finding {
 // about the excursion itself — a band including the excursion would be a band that always contains it.
 function unexpected(chart: VisualizationChartRecord, alreadySpoken: ReadonlySet<number>): Finding {
   const table = chart.table;
-  const values = numericValues(table, chart.y);
+  // Each value with the row it came from, and both indexes mean the same thing: the row is the table's
+  // own, which is what a set of rows the fences already named holds, so the two detectors cannot disagree
+  // about which spike is one spike. A row the fences spoke for is not spoken for again and not counted as
+  // another, since a count of further findings is a claim about sentences the reader has not seen.
+  const measured = rowsOf(table, chart.y);
+  const values = measured.map((one) => one.value);
   const along = positions(table, chart.x);
   if (values.length < MINIMUM_BEFORE_BAND + 2 || along.length !== values.length) return { clauses: [], rows: [] };
   const where = columnOf(table, chart.x);
   const clauses: string[] = [];
   const found: number[] = [];
   let total = 0;
-  for (let index = MINIMUM_BEFORE_BAND; index < values.length; index += 1) {
-    const before = values.slice(0, index);
+  for (let at = MINIMUM_BEFORE_BAND; at < measured.length; at += 1) {
+    const point = measured[at];
+    if (point === undefined || alreadySpoken.has(point.index)) continue;
+    const before = values.slice(0, at);
     const { mean, spread } = meanAndSpread(before);
     if (!Number.isFinite(mean) || spread === 0) continue;
     const low = mean - BAND_SPREADS * spread;
     const high = mean + BAND_SPREADS * spread;
-    const value = values[index] ?? NaN;
-    if (value >= low && value <= high) continue;
+    if (point.value >= low && point.value <= high) continue;
     total += 1;
-    if (clauses.length < MAX_PER_KIND) {
-      if (alreadySpoken.has(index)) continue;
-      const at = labelOf(table.rows[index]?.[where]);
-      const span = `${round(low)} to ${round(high)} that the ${before.length} earlier ${chart.y} values have been within`;
-      found.push(index);
-      clauses.push(`${at === '' ? '' : `${at} has `}a ${chart.y} of ${round(value)}, outside the ${span}`);
-    }
+    if (clauses.length >= MAX_PER_KIND) continue;
+    const label = labelOf(table.rows[point.index]?.[where]);
+    const span = `${round(low)} to ${round(high)} that the ${before.length} earlier ${chart.y} values have been within`;
+    found.push(point.index);
+    clauses.push(`${label === '' ? '' : `${label} has `}a ${chart.y} of ${round(point.value)}, outside the ${span}`);
   }
   return { clauses: bounded(clauses, total, (one) => one, 'value'), rows: found };
 }
@@ -194,21 +198,6 @@ function bounded<T>(shown: readonly T[], total: number, clause: (one: T) => stri
   const tail = said[last] ?? '';
   said[last] = rest > 0 ? `${tail}, and ${rest} more ${noun}${rest === 1 ? '' : 's'} ${rest === 1 ? 'is' : 'are'} outside the same range` : tail;
   return said;
-}
-
-type Row = { index: number; value: number };
-
-// The value of a column beside the row it came from, so a notice can name the row rather than only the
-// number. A row whose measure is not a number is absent, which is the renderer's own rule.
-function rowsOf(table: Table, column: string): Row[] {
-  const at = columnOf(table, column);
-  if (at === -1) return [];
-  const rows: Row[] = [];
-  for (const [index, row] of table.rows.entries()) {
-    const cell = row[at];
-    if (typeof cell === 'number' && Number.isFinite(cell)) rows.push({ index, value: cell });
-  }
-  return rows;
 }
 
 // 0, 1, 2, ... — the position of each point in its own half, which is the axis a rate per step is

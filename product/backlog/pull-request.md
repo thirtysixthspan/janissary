@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Say the right row in an unexpected-value notice, so a finding never names a date it is not about. Severity: 7/10
-
-Existing Issue: `outliers` in `src/visualizations/insights.ts` returns row indexes taken from `table.rows.entries()`, and those are compared by `unexpected` against indexes into the compacted array `numericValues` builds — two coordinate systems that agree only when every row of the measure is a number, and the `along.length !== values.length` guard catches only rows that `y` and `x` drop differently. Severity: 7/10
-
-Existing Risk: 7/10 - A CSV with one row empty in both the date and the measure — a trailing summary line, a missing record — shifts every later index by one, so a notice names yesterday's date for today's value, the same spike is reported twice in one sentence because the already-spoken set misses, and the "and N more" count over-counts. A notice is the one place the host claims a rule was applied and quotes figures a reader can check, so a wrong date in one is a false statement about a specific day.
-
-Proposal Risk: 3/10 - Carrying the table row index alongside each compacted value is bookkeeping rather than arithmetic, and the detector is silent below its minimums either way.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: address an unexpected-value notice to the row it is about". Have `numericValues` in `src/visualizations/insights-statistics.ts` return each value with the row it came from, and have `unexpected` in `src/visualizations/insights.ts` label from that index rather than from its own, so the two coordinate systems cannot drift. Verify with a case in `src/visualizations/insights.test.ts` whose table has a row empty in both the date and the measure and which asserts the notice names the right date, that a spike already named by the fences is not named twice, and that the "and N more" count is right when a row was dropped.
-
 * Take back the turn whose button was clicked, not the first one that says the same thing. Severity: 7/10
 
 Existing Issue: `reverted` in `src/visualizations/undo.ts` finds its turn with `record.turns.find((one) => one.query === query)`, and the client sends only the query text, which is not unique — two turns can carry the same sentence, whether re-sent or clicked twice from a re-offered suggestion row. Severity: 7/10

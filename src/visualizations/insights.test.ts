@@ -168,6 +168,52 @@ describe('noticesFor', () => {
     expect(found[0]?.match(/2026-04-14 has a latency of 5000/gu)).toHaveLength(1);
   });
 
+  // A row that is empty in both the date and the measure is not drawn, so it is not in the values a
+  // notice is computed from — and the values that follow it are one position further on than the rows
+  // they came from. A notice that labels a value by its own position among the kept values therefore
+  // names the day before, and the set of rows the fences already spoke for is held in the row
+  // positions, so the two detectors miss each other and say the same spike twice under two dates.
+  it('names a spike by its own row when a row above it was not drawn', () => {
+    const gappy = table(
+      [{ name: 'day', type: 'date' }, { name: 'latency', type: 'number' }],
+      [
+        ['2026-06-01', 100], ['2026-06-02', 102], ['2026-06-03', 98], ['2026-06-04', 101],
+        ['2026-06-05', 100], ['2026-06-06', 99], [null, null],
+        ['2026-06-07', 103], ['2026-06-08', 9000],
+        ['2026-06-09', 20], ['2026-06-10', 22], ['2026-06-11', 19], ['2026-06-12', 21],
+      ],
+    );
+    const found = noticesFor([chartOf({ table: gappy as unknown as VisualizationTableView })]);
+    const said = found.join(' ');
+    expect(said).toContain('2026-06-08 has a latency of 9000');
+    expect(said).toContain('2026-06-07 has a latency of 103');
+    // The day before the 103 is what a value indexed among the kept values names, and the 9000 twice is
+    // what two detectors disagreeing about which row is the same row sounds like.
+    expect(said).not.toContain('2026-06-06 has');
+    expect(said.match(/9000/gu)).toHaveLength(1);
+  });
+
+  // 'and N more' counts the findings the sentence does not have, so a row the fences already named
+  // is neither said again nor counted as one more: both spikes below are in the same sentence, and a
+  // second report of either would be the reader finding the same figure twice in one line.
+  it('does not count a spike the fences already named as one more', () => {
+    const sawtooth = table(
+      [{ name: 'day', type: 'date' }, { name: 'latency', type: 'number' }],
+      [
+        ['2026-06-01', 100], ['2026-06-02', 102], ['2026-06-03', 98], ['2026-06-04', 101],
+        ['2026-06-05', 100], ['2026-06-06', 99], ['2026-06-07', 103], ['2026-06-08', 100],
+        ['2026-06-09', 9000], ['2026-06-10', 10], ['2026-06-11', 101], ['2026-06-12', 99],
+        ['2026-06-13', 10], ['2026-06-14', 102], ['2026-06-15', 10],
+      ],
+    );
+    const found = noticesFor([chartOf({ table: sawtooth as unknown as VisualizationTableView })]);
+    const said = found.join(' ');
+    expect(said).toContain('and 2 more rows are outside the same range');
+    // The band finds the 103 and nothing else here, and a tail on its clause would be counting the
+    // 9000 and the 10 the fences have already named in the clause before it.
+    expect(said).not.toMatch(/\d+ more values? (?:is|are) outside the same range/u);
+  });
+
   // A chart with no numbers in it cannot produce a notice, and one with a measure that is text is not
   // refused loudly either: the renderer would not have drawn it.
   it('says nothing when the measure is not a number', () => {
