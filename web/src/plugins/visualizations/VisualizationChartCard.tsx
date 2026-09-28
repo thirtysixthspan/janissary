@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowsRotate, faFileArrowDown, faFilePdf, faRepeat } from '@fortawesome/free-solid-svg-icons';
 import type { VisualizationChart } from '@shared/plugins/visualizations/shared';
 import { ChartSvg } from './chart/ChartSvg';
+import { reduction } from './chart/describe';
 import { VisualizationData } from './VisualizationData';
 import { exportPdf, exportPng } from './export/download';
 
@@ -119,7 +120,10 @@ function label(seconds: number): string {
 export function caption(chart: VisualizationChart): string {
   const table = chart.table;
   const rows = table.truncated ? `showing ${table.rows.length} of ${table.total} rows` : `${table.rows.length} rows`;
-  const how = chart.aggregate === undefined ? '' : `${chart.aggregate} of ${chart.y}`;
+  // The reduction is worded once, in `describe.ts`, and both the caption and the chart's own spoken
+  // description use it: a bar whose height is a 95th percentile reads as a raw value to anyone not told
+  // otherwise, and it reads that way whichever of the two lines they happen to look at.
+  const how = `${reduction(chart)}${chart.y}`;
   // A chart drawn from a file the agent acquired is not a live feed, and says so — otherwise a picture
   // that stopped an hour ago reads exactly like one that stopped a second ago.
   const from = chart.data.kind === 'file' ? `from ${chart.data.path}, acquired by the agent` : '';

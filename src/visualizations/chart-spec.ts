@@ -28,7 +28,9 @@ import type {
 } from '../protocol/visualizations.js';
 
 export const CHART_KINDS: readonly VisualizationChartKind[] = ['bar', 'line', 'area', 'scatter', 'pie'];
-export const AGGREGATES: readonly VisualizationAggregate[] = ['sum', 'mean', 'count', 'min', 'max'];
+export const AGGREGATES: readonly VisualizationAggregate[] = [
+  'sum', 'mean', 'median', 'percentile', 'variance', 'count', 'distinct', 'min', 'max',
+];
 export const COMPARES: readonly VisualizationCompare[] = ['eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'contains', 'in'];
 
 // Named bounds, for the reason the row cap in `table.ts` is: a chart's table is re-sent on essentially
@@ -45,11 +47,18 @@ export const MAX_FILTER_VALUES = 32;
 function optionalShapeOf(value: Record<string, unknown>): Partial<ChartShape> | undefined {
   if (value.series !== undefined && (typeof value.series !== 'string' || value.series === '')) return undefined;
   if (value.aggregate !== undefined && !isAggregate(value.aggregate)) return undefined;
+  // A percentile travels beside the aggregate rather than inside it, so the grammar has to hold the two
+  // together: a percentile with no number to interpolate towards and a number beside an aggregate that
+  // is not one are the same mistake in two directions, and both would draw a chart meaning something
+  // other than what the model said.
+  const percentile = value.percentile;
+  if (value.aggregate === 'percentile' ? !isPercentile(percentile) : percentile !== undefined) return undefined;
   if (value.xLabel !== undefined && typeof value.xLabel !== 'string') return undefined;
   if (value.yLabel !== undefined && typeof value.yLabel !== 'string') return undefined;
   return {
     ...(value.series !== undefined && { series: value.series }),
     ...(value.aggregate !== undefined && { aggregate: value.aggregate }),
+    ...(isPercentile(percentile) && { percentile }),
     ...(value.xLabel !== undefined && { xLabel: value.xLabel }),
     ...(value.yLabel !== undefined && { yLabel: value.yLabel }),
   };
@@ -76,6 +85,12 @@ export function isChartShape(value: unknown): value is ChartShape {
 
 export function isAggregate(value: unknown): value is VisualizationAggregate {
   return typeof value === 'string' && (AGGREGATES as readonly string[]).includes(value);
+}
+
+// A percentile is a whole number between the two ends, where the ends are the aggregates this already
+// had: 0 is the smallest and 100 the largest, so both are accepted and neither is news.
+function isPercentile(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 && value <= 100;
 }
 
 function isKind(value: unknown): value is VisualizationChartKind {
@@ -194,15 +209,25 @@ export function chartNotes(chart: Pick<ChartSpec, 'transforms'>): string[] {
   return chart.transforms.map((step) => transformSummary(step));
 }
 
-// Each aggregate said the way a sentence can carry it. A suffix would be shorter and wrong for four of
-// the five — "meanmed", "countmed" — so the wording is written out rather than composed.
-const AGGREGATE_PHRASES: Record<VisualizationAggregate, string> = {
+// Each aggregate said the way a sentence can carry it. A suffix would be shorter and wrong for most of
+// them — "meanmed", "countmed" — so the wording is written out rather than composed. The percentile is
+// a function rather than a phrase because the number is the point: "aggregated" would be true of every
+// percentile and say nothing about which one the chart is showing.
+const AGGREGATE_PHRASES: Record<Exclude<VisualizationAggregate, 'percentile'>, string> = {
   sum: 'summed',
   mean: 'averaged',
+  median: 'reduced to the middle',
+  variance: 'reduced to the spread',
   count: 'counted',
+  distinct: 'counted by distinct value',
   min: 'reduced to the smallest',
   max: 'reduced to the largest',
 };
+
+export function aggregatePhrase(aggregate: VisualizationAggregate, percentile = 50): string {
+  if (aggregate !== 'percentile') return AGGREGATE_PHRASES[aggregate];
+  return `reduced to the ${percentile}th percentile`;
+}
 
 // What a chart is now, in one sentence, for the case where the model changed it and said nothing.
 // Composed from the specification rather than invented: a sentence built from what the chart
@@ -212,7 +237,7 @@ const AGGREGATE_PHRASES: Record<VisualizationAggregate, string> = {
 // region" with no word about either reads as one bar per transaction and is not.
 export function chartSummary(chart: ChartSpec): string {
   const split = chart.series === undefined ? '' : `, split by ${chart.series}`;
-  const how = chart.aggregate === undefined ? '' : `, ${AGGREGATE_PHRASES[chart.aggregate]}`;
+  const how = chart.aggregate === undefined ? '' : `, ${aggregatePhrase(chart.aggregate, chart.percentile)}`;
   const notes = chartNotes(chart);
   const steps = notes.length === 0 ? '' : `, over data ${notes.join(', then ')}`;
   return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${split}${how}${steps}.`;

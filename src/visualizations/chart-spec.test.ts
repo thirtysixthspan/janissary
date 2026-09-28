@@ -203,11 +203,46 @@ describe('isChartShape', () => {
   });
 
   it('refuses an aggregation the grammar does not have rather than dropping it', () => {
-    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'median' })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'geommedian' })).toBe(false);
+  });
+
+  // The median and the variance arrived with the research pass because a mean over a long-tailed measure
+  // is the wrong answer to "how big is a request", and the distinct count because "how many regions
+  // does this log mention" is not "how many rows does it have".
+  it('accepts the aggregates that summarise a distribution rather than a total', () => {
+    for (const aggregate of ['median', 'variance', 'distinct']) {
+      expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate })).toBe(true);
+    }
+  });
+
+  // The percentile is the one aggregate that needs a second field, so the grammar has to hold the two
+  // together: a percentile with nothing to interpolate towards and a number beside an aggregate that is
+  // not one are the same mistake in two directions.
+  it('requires the percentile to carry a whole number, and only alongside a percentile', () => {
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'percentile', percentile: 95 })).toBe(true);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'percentile' })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'percentile', percentile: 95.5 })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'percentile', percentile: 101 })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'percentile', percentile: '95' })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'a', y: 'b', title: 'T', aggregate: 'sum', percentile: 95 })).toBe(false);
   });
 });
 
 describe('chartSummary', () => {
+  // The sentence a chart leaves behind when the model changed it and said nothing is read by a person
+  // deciding whether the chart is what they asked for, so a percentile that reads as "aggregated" tells
+  // them nothing and tells the next turn nothing either.
+  it('names which percentile a chart is showing', () => {
+    expect(chartSummary(shape({ aggregate: 'percentile', percentile: 95 })))
+      .toContain('reduced to the 95th percentile');
+    expect(chartSummary(shape({ aggregate: 'percentile', percentile: 50 })))
+      .toContain('reduced to the 50th percentile');
+  });
+
+  it('says the middle and the spread rather than an average', () => {
+    expect(chartSummary(shape({ aggregate: 'median' }))).toContain('reduced to the middle');
+    expect(chartSummary(shape({ aggregate: 'variance' }))).toContain('reduced to the spread');
+  });
   it('says what the chart is now', () => {
     expect(chartSummary(shape({ kind: 'line' }))).toBe('Now a line chart of revenue by region.');
   });

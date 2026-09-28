@@ -13,7 +13,14 @@ export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie'
 // category — and, where the chart is split, over the rows of one series within it. `count` counts those
 // rows rather than measuring them, which is why it still obeys the rule that a row whose measure is not
 // a number is not plotted and so is not counted either.
-export type VisualizationAggregate = 'sum' | 'mean' | 'count' | 'min' | 'max';
+// `median` and `percentile` are here because the mean is the wrong summary of a long-tailed measure —
+// a latency, a duration, a size — and a user asking for "the middle" or "the 95th" would otherwise be
+// answered with an average that hides exactly the rows they were asking about. `variance` answers how
+// spread a series is, and `distinct` counts the values a column holds rather than the rows, which is
+// how many regions or services a log actually mentions.
+export type VisualizationAggregate =
+  | 'sum' | 'mean' | 'median' | 'percentile' | 'variance'
+  | 'count' | 'distinct' | 'min' | 'max';
 
 // Where a chart's data comes from: the visualization's own source, or a file the agent acquired
 // inside its own workspace because the source described an API rather than holding values. The path
@@ -106,6 +113,10 @@ export type ChartShape = {
   // question — one row per transaction rather than one per region — can be charted at all. Absent
   // means every row is its own mark. A pie sums when it is absent, because that is what a pie is.
   aggregate?: VisualizationAggregate;
+  // Which percentile, when the aggregate is one. Carried as its own field rather than baked into the
+  // aggregate name because a closed set of p50/p90/p95 leaves p99 unreachable, and p99 is the number
+  // most often wanted. Required when the aggregate is a percentile and refused when it is not.
+  percentile?: number;
   title: string;
   xLabel?: string;
   yLabel?: string;

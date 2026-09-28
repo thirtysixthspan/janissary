@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { VisualizationChartCard, caption, REFRESH_CHOICES } from './VisualizationChartCard';
+import { describeChart } from './chart/describe';
 import type { VisualizationChart } from '@shared/plugins/visualizations/shared';
 
 const onSetRefresh = vi.fn();
@@ -106,7 +107,16 @@ describe('the caption', () => {
     expect(caption(chart({
       aggregate: 'sum',
       notes: ['only year eq \'2024\'', 'the first 10 categories'],
-    }))).toBe("2 rows · sum of revenue · only year eq '2024' · the first 10 categories");
+    }))).toBe("2 rows · the sum of revenue · only year eq '2024' · the first 10 categories");
+  });
+
+  // A percentile beside a bar is only readable if the caption says which one, and the sentence under a
+  // chart is generated from the same marks the renderer draws so the two cannot disagree.
+  it('names which percentile the measure was reduced to', () => {
+    expect(caption(chart({ aggregate: 'percentile', percentile: 95 })))
+      .toContain('the 95th percentile of revenue');
+    const middled = chart({ aggregate: 'median' });
+    expect(describeChart(middled.table, middled)).toContain('the median of revenue');
   });
 
   it('says how much of a capped source it is showing', () => {

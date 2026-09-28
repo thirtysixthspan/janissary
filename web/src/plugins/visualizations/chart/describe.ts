@@ -21,15 +21,21 @@ function measureName(chart: ChartShape): string {
 // the whole point: a sentence that left out the reduction would describe a total as a raw value. The
 // empty string is a raw chart, and the trailing space is part of the prefix rather than of the sentence,
 // so a sentence with no reduction in it has no double space where the word would have been.
-const REDUCTIONS: Record<Aggregate, string> = {
+const REDUCTIONS: Record<Exclude<Aggregate, 'percentile'>, string> = {
   sum: 'the sum of ',
   mean: 'the mean of ',
+  median: 'the median of ',
+  variance: 'the variance of ',
   count: 'the count of ',
+  distinct: 'the number of distinct ',
   min: 'the minimum of ',
   max: 'the maximum of ',
 };
 
-function reduction(chart: ChartShape): string {
+// The percentile says which one, because "the percentile of" beside a number on a chart tells a reader
+// nothing about what was reduced to it.
+export function reduction(chart: ChartShape): string {
+  if (chart.aggregate === 'percentile') return `the ${chart.percentile ?? 50}th percentile of `;
   if (chart.aggregate !== undefined) return REDUCTIONS[chart.aggregate];
   return chart.kind === 'pie' ? REDUCTIONS.sum : '';
 }

@@ -79,11 +79,11 @@ describe('the prompt', () => {
     expect(text).not.toContain('User: ask 0');
   });
 
-  it('states the contract, the five kinds, the five aggregates and the four transformations', () => {
+  it('states the contract, the five kinds, the aggregates and the four transformations', () => {
     const text = chatPrompt(record(), WORKSPACE);
     expect(text).toContain('Reply with one JSON object and nothing else');
     expect(text).toContain('bar, line, area, scatter, pie');
-    expect(text).toContain('"sum", "mean", "count", "min", "max"');
+    expect(text).toContain('"sum", "mean", "median", "percentile", "variance", "count", "distinct", "min", "max"');
     expect(text).toContain('"op":"filter"');
     expect(text).toContain('"op":"derive"');
     expect(text).toContain('"op":"sort"');

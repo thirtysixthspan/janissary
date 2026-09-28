@@ -31,6 +31,7 @@ export type ChartShape = {
   y: string;
   series?: string;
   aggregate?: Aggregate;
+  percentile?: number;
   title: string;
   xLabel?: string;
   yLabel?: string;
@@ -162,7 +163,7 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
   const points = reduced
     .map((group) => ({
       band: slots.get(group.label) ?? 0,
-      value: reduce(aggregate, group.values),
+      value: reduce(aggregate, group.values, chart.percentile),
       series: group.series,
       label: group.label,
     }))

@@ -102,6 +102,7 @@ export const AGGREGATE_RULE = [
   `It is one of ${AGGREGATES.map((one) => `"${one}"`).join(', ')}.`,
   'Leave it out when every row is its own mark, which is right when one row is already one point of the answer.',
   'Set it when the rows are finer than the question: one row per transaction needs "sum" to answer revenue by region, and "count" answers how many transactions each region had.',
+  'Reach for "median" or "percentile" rather than "mean" when the measure is long-tailed — a duration, a size, a latency — because a mean is dragged by the tail into a number that describes no row at all. "percentile" also carries a "percentile" field holding a whole number from 0 to 100; it is refused without one, and beside any other aggregate. "variance" says how spread a series is, and "distinct" counts the values a column holds rather than the rows it has.',
   'A pie sums when you leave it out.',
   'A row whose `y` is not a number is never drawn and never counted, whichever aggregate you choose.',
 ].join(' ');
