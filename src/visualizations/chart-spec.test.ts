@@ -228,6 +228,51 @@ describe('isChartShape', () => {
   });
 });
 
+describe('a time unit', () => {
+  const DAILY: VisualizationTableView = {
+    columns: [{ name: 'day', type: 'date' }, { name: 'n', type: 'number' }],
+    rows: [
+      ['2026-01-30', 1], ['2026-01-31', 2], ['2026-02-01', 3], ['2026-02-02', 4],
+    ],
+    total: 4,
+    truncated: false,
+  };
+
+  // Two months of daily rows is the case a time unit exists for, and the rows are all kept so the chart's
+  // own aggregate still reduces them: a mean of pre-summed rows is not the mean the chart would show.
+  it('groups a date column by the unit, keeping every row', () => {
+    const resolved = resolve(DAILY, { kind: 'line', x: 'day', y: 'n', xUnit: 'month', title: 'T', transforms: [] });
+    expect(resolved).toEqual({
+      table: {
+        columns: DAILY.columns,
+        rows: [['2026-01-01', 1], ['2026-01-01', 2], ['2026-02-01', 3], ['2026-02-01', 4]],
+        total: 4,
+        truncated: false,
+      },
+    });
+  });
+
+  it('refuses a unit on a column that is not a date', () => {
+    const texts: VisualizationTableView = { columns: [{ name: 'day', type: 'string' }], rows: [], total: 0, truncated: false };
+    expect(resolve(texts, { kind: 'bar', x: 'day', y: 'day', xUnit: 'month', title: 'T', transforms: [] }))
+      .toEqual({ error: 'grouping by month needs a date column, and "day" is string' });
+  });
+
+  // The unit is applied before the transformations, so a limit counts buckets and a filter matches one.
+  it('applies the unit before the transformations, so a limit counts buckets', () => {
+    const resolved = resolve(DAILY, {
+      kind: 'line', x: 'day', y: 'n', xUnit: 'month', title: 'T',
+      transforms: [{ op: 'limit', count: 1 }],
+    });
+    expect('table' in resolved && resolved.table.rows).toEqual([['2026-01-01', 1], ['2026-01-01', 2]]);
+  });
+
+  it('refuses a unit the grammar does not have', () => {
+    expect(isChartShape({ kind: 'line', x: 'day', y: 'n', title: 'T', xUnit: 'fortnight', transforms: [] })).toBe(false);
+    expect(isChartShape({ kind: 'line', x: 'day', y: 'n', title: 'T', xUnit: 'month', transforms: [] })).toBe(true);
+  });
+});
+
 describe('chartSummary', () => {
   // The sentence a chart leaves behind when the model changed it and said nothing is read by a person
   // deciding whether the chart is what they asked for, so a percentile that reads as "aggregated" tells

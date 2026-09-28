@@ -124,9 +124,13 @@ export function caption(chart: VisualizationChart): string {
   // description use it: a bar whose height is a 95th percentile reads as a raw value to anyone not told
   // otherwise, and it reads that way whichever of the two lines they happen to look at.
   const how = `${reduction(chart)}${chart.y}`;
+  // A chart of months says so on its face, and the words are here rather than in the transformation notes
+  // because a time unit is not a transformation: nothing was done to the data except to say which day each
+  // row belongs to.
+  const unit = chart.xUnit === undefined ? '' : `by ${chart.xUnit}`;
   // A chart drawn from a file the agent acquired is not a live feed, and says so — otherwise a picture
   // that stopped an hour ago reads exactly like one that stopped a second ago.
   const from = chart.data.kind === 'file' ? `from ${chart.data.path}, acquired by the agent` : '';
   const when = chart.readAt === undefined ? '' : `read ${new Date(chart.readAt).toLocaleTimeString()}`;
-  return [rows, how, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
+  return [rows, how, unit, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
 }

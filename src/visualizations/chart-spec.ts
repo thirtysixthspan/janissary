@@ -14,6 +14,7 @@
 // words are kept instead of something unusable.
 
 import { isRecord } from '../value-guards.js';
+import { bucketed, isTimeUnit } from './time-units.js';
 import { transformed, transformSummary } from './transforms.js';
 import type { Table } from './table.js';
 import type {
@@ -53,12 +54,14 @@ function optionalShapeOf(value: Record<string, unknown>): Partial<ChartShape> | 
   // other than what the model said.
   const percentile = value.percentile;
   if (value.aggregate === 'percentile' ? !isPercentile(percentile) : percentile !== undefined) return undefined;
+  if (value.xUnit !== undefined && !isTimeUnit(value.xUnit)) return undefined;
   if (value.xLabel !== undefined && typeof value.xLabel !== 'string') return undefined;
   if (value.yLabel !== undefined && typeof value.yLabel !== 'string') return undefined;
   return {
     ...(value.series !== undefined && { series: value.series }),
     ...(value.aggregate !== undefined && { aggregate: value.aggregate }),
     ...(isPercentile(percentile) && { percentile }),
+    ...(value.xUnit !== undefined && { xUnit: value.xUnit }),
     ...(value.xLabel !== undefined && { xLabel: value.xLabel }),
     ...(value.yLabel !== undefined && { yLabel: value.yLabel }),
   };
@@ -159,6 +162,9 @@ export function isTransformList(value: unknown): value is VisualizationTransform
 export function validateChart(chart: ChartShape, table: Table): { error: string } | { ok: true } {
   const x = table.columns.find((column) => column.name === chart.x);
   if (!x) return { error: `no column named "${chart.x}"` };
+  if (chart.xUnit !== undefined && x.type !== 'date') {
+    return { error: `grouping by ${chart.xUnit} needs a date column, and "${chart.x}" is ${x.type}` };
+  }
   const y = table.columns.find((column) => column.name === chart.y);
   if (!y) return { error: `no column named "${chart.y}"` };
   if (chart.series !== undefined && table.columns.every((column) => column.name !== chart.series)) {
@@ -181,7 +187,12 @@ export function resolve(
   chart: ChartSpec,
 ): { table: VisualizationTableView } | { error: string } {
   if (!source) return { error: 'there is no data to draw from yet' };
-  const applied = transformed(source, chart.transforms, chart.x);
+  // The unit is applied first, before the transformations, so a filter on a month and a limit counted in
+  // months both see the same categories the chart is drawn from. Bucketing only rewrites the x cells: the
+  // rows are all kept, because a chart that has already said how it reduces its measure must not have a
+  // second reduction applied to the rows before it gets there.
+  const grouped = chart.xUnit === undefined ? source : bucketed(source, chart.x, chart.xUnit);
+  const applied = transformed(grouped, chart.transforms, chart.x);
   if ('error' in applied) return applied;
   const verdict = validateChart(chart, applied.table);
   if ('error' in verdict) return verdict;
@@ -237,8 +248,9 @@ export function aggregatePhrase(aggregate: VisualizationAggregate, percentile = 
 // region" with no word about either reads as one bar per transaction and is not.
 export function chartSummary(chart: ChartSpec): string {
   const split = chart.series === undefined ? '' : `, split by ${chart.series}`;
+  const unit = chart.xUnit === undefined ? '' : `, by ${chart.xUnit}`;
   const how = chart.aggregate === undefined ? '' : `, ${aggregatePhrase(chart.aggregate, chart.percentile)}`;
   const notes = chartNotes(chart);
   const steps = notes.length === 0 ? '' : `, over data ${notes.join(', then ')}`;
-  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${split}${how}${steps}.`;
+  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${unit}${split}${how}${steps}.`;
 }

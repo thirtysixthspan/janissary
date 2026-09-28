@@ -1,5 +1,6 @@
 import React from 'react';
 import { Axes } from './Axes';
+import { calendarLabel } from './time';
 import { extentOf, type ChartShape, type Marks, type ScatterPoint } from './points';
 import { band, linear, seriesOffset, type Box, type Linear } from './scale';
 
@@ -99,6 +100,14 @@ function dots(scatter: readonly ScatterPoint[], prepared: Prepared): React.React
   ));
 }
 
+// A date x column carries the unit the host bucketed it by, and the tick says that unit rather than the
+// ISO date it was stored as.
+function labelsFor(chart: ChartShape, marks: Marks): string[] {
+  const labels = marks.points.map((point) => point.label);
+  const unit = chart.xUnit;
+  return unit === undefined ? labels : labels.map((label) => calendarLabel(label, unit));
+}
+
 export function CartesianChart(properties: CartesianProperties): React.ReactElement {
   const { box, chart, marks } = properties;
   const prepared = prepare(properties);
@@ -108,7 +117,7 @@ export function CartesianChart(properties: CartesianProperties): React.ReactElem
       <Axes
         box={box}
         y={prepared.y}
-        categoryLabels={marks.points.map((point) => point.label)}
+        categoryLabels={labelsFor(chart, marks)}
         {...(isScatter ? { xNumeric: prepared.xNumeric } : { x: prepared.bands })}
         {...(chart.xLabel !== undefined && { xLabel: chart.xLabel })}
         {...(chart.yLabel !== undefined && { yLabel: chart.yLabel })}

@@ -119,6 +119,7 @@ function shapeOf(entry: ChartShape): ChartShape {
     ...(entry.series !== undefined && { series: entry.series }),
     ...(entry.aggregate !== undefined && { aggregate: entry.aggregate }),
     ...(entry.percentile !== undefined && { percentile: entry.percentile }),
+    ...(entry.xUnit !== undefined && { xUnit: entry.xUnit }),
     ...(entry.xLabel !== undefined && { xLabel: entry.xLabel }),
     ...(entry.yLabel !== undefined && { yLabel: entry.yLabel }),
   };

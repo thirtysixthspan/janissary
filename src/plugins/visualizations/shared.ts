@@ -14,6 +14,8 @@ export type VisualizationSummary = { id: string; title: string; updatedAt: numbe
 
 export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie';
 
+export type VisualizationTimeUnit = 'year' | 'quarter' | 'month' | 'week' | 'day';
+
 export type VisualizationAggregate =
   | 'sum' | 'mean' | 'median' | 'percentile' | 'variance'
   | 'count' | 'distinct' | 'min' | 'max';
@@ -48,6 +50,7 @@ export type VisualizationChart = {
   series?: string;
   aggregate?: VisualizationAggregate;
   percentile?: number;
+  xUnit?: VisualizationTimeUnit;
   title: string;
   xLabel?: string;
   yLabel?: string;

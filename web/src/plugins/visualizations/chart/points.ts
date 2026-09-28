@@ -25,6 +25,8 @@ export type Marks = { points: Point[]; slices: PieSlice[]; series: string[] };
 // than in an evenly spaced band. Kept separate because only that one kind reads it.
 export type ScatterPoint = { x: number; y: number };
 
+import type { TimeUnit } from './time';
+
 export type ChartShape = {
   kind: string;
   x: string;
@@ -32,6 +34,7 @@ export type ChartShape = {
   series?: string;
   aggregate?: Aggregate;
   percentile?: number;
+  xUnit?: TimeUnit;
   title: string;
   xLabel?: string;
   yLabel?: string;

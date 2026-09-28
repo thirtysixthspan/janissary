@@ -119,6 +119,14 @@ describe('the caption', () => {
     expect(describeChart(middled.table, middled)).toContain('the median of revenue');
   });
 
+  // A chart of months says so on its face. The words are in the caption rather than in the
+  // transformation notes because a time unit is not a transformation: nothing was done to the data except
+  // to say which day each row belongs to.
+  it('names the time unit a date axis is grouped by', () => {
+    expect(caption(chart({ x: 'day', xUnit: 'month' }))).toContain('by month');
+    expect(caption(chart())).not.toContain('by month');
+  });
+
   it('says how much of a capped source it is showing', () => {
     const value = chart();
     expect(caption({

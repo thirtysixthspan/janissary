@@ -9,6 +9,11 @@ import type { ConversationModelPair } from './conversations.js';
 
 export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie';
 
+// The calendar unit a date x column is grouped by, or nothing. A daily series of any length is otherwise
+// drawn as that many bands, and "revenue by month over two years" is inexpressible: the model's only
+// route would be a derived column doing epoch arithmetic it has to get right.
+export type VisualizationTimeUnit = 'year' | 'quarter' | 'month' | 'week' | 'day';
+
 // How `y` is reduced before the marks are built, where each aggregate runs over the rows sharing a
 // category — and, where the chart is split, over the rows of one series within it. `count` counts those
 // rows rather than measuring them, which is why it still obeys the rule that a row whose measure is not
@@ -117,6 +122,8 @@ export type ChartShape = {
   // aggregate name because a closed set of p50/p90/p95 leaves p99 unreachable, and p99 is the number
   // most often wanted. Required when the aggregate is a percentile and refused when it is not.
   percentile?: number;
+  // The unit the x column is grouped by, which must be a date for it to be accepted at all.
+  xUnit?: VisualizationTimeUnit;
   title: string;
   xLabel?: string;
   yLabel?: string;
