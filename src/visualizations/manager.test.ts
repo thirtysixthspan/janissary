@@ -198,6 +198,43 @@ describe('sending a message', () => {
     expect(JSON.stringify(view)).toContain('returned 500');
   });
 
+  // The row was replaced only when a reply landed, so for the whole of a reply — which can be a long
+  // one — the button was still offering the question that had just been asked. The used one goes at once;
+  // the rest stay, because the spec promises the used one cannot be asked twice, not that the row empties.
+  it('drops the suggestion a message came from, and keeps the others', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk('{"say":"Here is one.","followUps":["only 2024","make it a line chart"]}');
+    built.end();
+    await settle();
+
+    built.manager.send('v1', 'only 2024');
+    await settle();
+
+    expect(windowOfId(built.manager, 'v1')?.followUps).toEqual(['make it a line chart']);
+  });
+
+  // A refused message was never sent, so the button that would have sent it is still accurate and stays.
+  it('keeps a suggestion whose message was refused', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk('{"say":"Here is one.","followUps":["only 2024"]}');
+    built.end();
+    await settle();
+
+    // The typed message takes the tab busy; clicking the suggestion while it is in flight is refused.
+    expect(built.manager.send('v1', 'and label the axes')).toBe(true);
+    expect(built.manager.send('v1', 'only 2024')).toBe(false);
+
+    expect(windowOfId(built.manager, 'v1')?.followUps).toEqual(['only 2024']);
+  });
+
   it('refuses a second message while one is in flight', () => {
     const { manager } = build();
     openTab('v1');

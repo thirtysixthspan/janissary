@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Clear the suggestion row when one of its suggestions is used, rather than when the reply that replaces it lands. Severity: 5/10
-
-Existing Issue: `agent.apply` in `src/visualizations/agent.ts` replaces `record.followUps` only when a reply arrives, and `agent.fail` leaves them in place, so the row the specification says is "gone the moment one is used" survives both a use and a failure. Severity: 5/10
-
-Existing Risk: 5/10 - The same two-to-four requests can be clicked through repeatedly, each costing a model call and producing an identical chart, and a failed reply leaves the user offered the requests that led to the failure as though they had not been tried — while the tab's own comment claims the buttons are hidden while a reply is in flight, which depends on the `busy` flag the payload finding above prevents the client from ever seeing.
-
-Proposal Risk: 2/10 - The row is replaced by the next reply as before, so nothing is lost; it simply cannot be used twice, which is what the specification promises.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: clear the suggestion row when one of its suggestions is used". In `src/visualizations/agent.ts`, delete `record.followUps` in `start` before the call goes out — the turn is already on the record, and the row is the model's last set of requests, which the exchange now shows as asked — and commit that with the turn so both land together. Leave the replacement on the reply as it is. Add a case to `src/visualizations/agent.test.ts` that asks with a row present, asserts the row is gone before the reply arrives, and asserts the reply's own row replaces it; the existing `'sends a suggestion as the user's own words'` case in `web/src/plugins/visualizations/VisualizationTab.test.tsx` and the payload finding above are the two things that make this observable.
-
 * Give the composer's history recall the turn queries it is documented as reusing. Severity: 4/10
 
 Existing Issue: `VisualizationChat.tsx` passes `history: []` to `useCommandBarKeys`, so `useCommandHistoryRecall` returns immediately and the Up arrow recalls nothing, while the component's own comment and the plan's reuse table both claim the same history recall an agent tab's composer has. Severity: 4/10

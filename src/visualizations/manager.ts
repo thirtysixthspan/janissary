@@ -115,8 +115,16 @@ export class VisualizationsManager {
   send(id: string, query: string): boolean {
     const record = this.index.live(id);
     if (!record) return false;
+    // The suggestion this message came from goes the moment it is used, not when the reply that replaces
+    // the row lands. The row was replaced only on the reply before, so for the whole of a reply — which
+    // can be a long one — the button was still there offering the same question again, and asking it
+    // twice in a row is a mistake the row should not make possible. The remaining suggestions stay: the
+    // spec promises the used one cannot be asked twice, not that the rest go with it.
+    const before = record.followUps;
+    const used = before?.includes(query) === true ? query : undefined;
+    if (used !== undefined) record.followUps = before?.filter((one) => one !== used);
     const address = addressIn(query);
-    return this.agent.ask(record, query, async () => {
+    const asked = this.agent.ask(record, query, async () => {
       if (address === undefined) {
         return this.index.live(id)?.source === ''
           ? 'They have not given you a source yet. Ask them for one.'
@@ -124,6 +132,9 @@ export class VisualizationsManager {
       }
       return this.adopt(id, address);
     });
+    // A refused message was never sent, so the button that would have sent it is still accurate.
+    if (!asked) record.followUps = before;
+    return asked;
   }
 
   // An address the user typed, judged by exactly the rules every other route into a source is judged
