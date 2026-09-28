@@ -12,7 +12,7 @@ export type DataTable = { columns: DataColumn[]; rows: DataCell[][] };
 
 // The name a measure is known by: the specification's own label when it gave one, and its column name
 // when it did not.
-function measureName(chart: ChartShape): string {
+export function measureName(chart: ChartShape): string {
   return chart.yLabel ?? chart.y;
 }
 
@@ -34,6 +34,23 @@ const REDUCTIONS: Record<Exclude<Aggregate, 'percentile'>, string> = {
 
 // The percentile says which one, because "the percentile of" beside a number on a chart tells a reader
 // nothing about what was reduced to it.
+// The spoken name of one mark, built from the same values the renderer draws it from — a mark announced
+// with a different number than the one on screen is worse than a mark not announced at all. Observable Plot
+// puts an aria-label on each mark's <g> for the same reason.
+export function markLabel(chart: ChartShape, mark: { label: string; value: number; series?: string }): string {
+  const where = `${categoryName(chart)} ${mark.label}`;
+  const measure = `${reduction(chart)}${measureName(chart)} is ${roundMark(mark.value)}`;
+  const series = mark.series ?? '';
+  if (series === '') return `${where}, ${measure}`;
+  return `${where}, ${measure}, in ${series}`;
+}
+
+function roundMark(value: number): string {
+  if (!Number.isFinite(value)) return 'nothing';
+  if (Number.isSafeInteger(value)) return String(value);
+  return String(Math.round(value * 100) / 100);
+}
+
 export function reduction(chart: ChartShape): string {
   if (chart.aggregate === 'percentile') return `the ${chart.percentile ?? 50}th percentile of `;
   if (chart.aggregate !== undefined) return REDUCTIONS[chart.aggregate];

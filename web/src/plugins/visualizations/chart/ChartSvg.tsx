@@ -26,6 +26,9 @@ export type ChartProperties = {
   table: Table;
 };
 
+// The series ramp. Named here rather than in the stylesheet, because these are the only colours a chart
+// paints with and the export resolves the same list; a ramp that survived colour-vision deficiency belongs
+// in this file until it can be measured against every theme — see the backlog entry that tracks it.
 const SERIES_COLOURS = [
   'var(--accent)', 'var(--success)', 'var(--running)', 'var(--error)', 'var(--muted)',
 ];

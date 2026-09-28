@@ -89,6 +89,8 @@ Each chart carries its own four controls: read its data now, live update, export
 
 A chart is also its own text alternative. It names itself for a screen reader and describes its own content — the kind, the measure, the range it spans, and the largest and smallest mark. A disclosure labelled **Data table** holds one row per mark the chart draws, generated from the same marks, so the table cannot disagree with the picture. Neither the description nor the table is part of an export, because an exported picture is not a text alternative.
 
+Each mark carries a spoken name of its own — the category, the measure, the value, and the series where there is one — built from the same numbers it is drawn from, and the axis furniture is hidden from assistive technology. The caption beside the chart is the long description: what it shows, how much of it, what was done to the data and where it came from. A chart is a picture of a table, and the table under it is the alternative that cannot misdescribe it.
+
 The line under a chart says how many rows it is showing, how the measure was reduced, each transformation in the order it was applied, where the data came from, and when it was read. A chart showing five of twelve regions with nothing saying so is a chart lying by omission, and so is one whose bars are totals presented as raw values.
 
 ### Export

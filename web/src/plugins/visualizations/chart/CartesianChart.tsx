@@ -1,5 +1,6 @@
 import React from 'react';
 import { Axes } from './Axes';
+import { markLabel, measureName, reduction } from './describe';
 import { calendarLabel } from './time';
 import { extentOf, type ChartShape, type Marks, type ScatterPoint } from './points';
 import { band, linear, seriesOffset, type Box, type Linear } from './scale';
@@ -12,6 +13,9 @@ import { band, linear, seriesOffset, type Box, type Linear } from './scale';
 // Nothing here reads the table or chooses a domain it could have been handed: `marks` arrive with the
 // arithmetic already done, which is what keeps this file about drawing.
 
+// The series ramp. Named here rather than in the stylesheet, because these are the only colours a chart
+// paints with and the export resolves the same list; a ramp that survived colour-vision deficiency belongs
+// in this file until it can be measured against every theme — see the backlog entry that tracks it.
 const SERIES_COLOURS = [
   'var(--accent)', 'var(--success)', 'var(--running)', 'var(--error)', 'var(--muted)',
 ];
@@ -59,7 +63,7 @@ function prepare({ box, chart, marks, scatter }: CartesianProperties): Prepared 
 
 // A stacked segment runs from the top of the one below it to its own top, and an unstacked one runs from
 // the axis. One case rather than two, because the mark already carries both ends.
-function bars(marks: Marks, prepared: Prepared): React.ReactElement[] {
+function bars(chart: ChartShape, marks: Marks, prepared: Prepared): React.ReactElement[] {
   return marks.points.map((point) => {
     const index = prepared.bands.count === 0 ? 0 : marks.series.indexOf(point.series);
     const bottom = Math.min(prepared.y.at(point.from), prepared.y.at(point.value));
@@ -72,6 +76,9 @@ function bars(marks: Marks, prepared: Prepared): React.ReactElement[] {
     return (
       <rect
         key={`${point.band}-${point.series}`}
+        // The name of the mark, built from the same values it is drawn from: a bar announced with a
+        // different number than the one on screen is worse than a bar not announced at all.
+        aria-label={markLabel(chart, point)}
         x={round(prepared.bands.at(point.band) + slot.left)}
         y={round(bottom)}
         width={round(slot.width)}
@@ -102,11 +109,15 @@ function areaPath(marks: Marks, prepared: Prepared, series: string): string {
   return `${linePath(marks, prepared, series)} L${round(right)} ${round(prepared.base)} L${round(left)} ${round(prepared.base)} Z`;
 }
 
-function dots(scatter: readonly ScatterPoint[], prepared: Prepared): React.ReactElement[] {
+function dotsFor(chart: ChartShape, scatter: readonly ScatterPoint[], prepared: Prepared): React.ReactElement[] {
   const x = prepared.xNumeric;
   if (!x) return [];
   return scatter.map((point, index) => (
-    <circle key={index} cx={round(x.at(point.x))} cy={round(prepared.y.at(point.y))} r={2} fill={colour(0)} />
+    <circle
+      key={index}
+      aria-label={markLabel(chart, { label: String(point.x), value: point.y })}
+      cx={round(x.at(point.x))} cy={round(prepared.y.at(point.y))} r={2} fill={colour(0)}
+    />
   ));
 }
 
@@ -132,10 +143,10 @@ export function CartesianChart(properties: CartesianProperties): React.ReactElem
         {...(chart.xLabel !== undefined && { xLabel: chart.xLabel })}
         {...(chart.yLabel !== undefined && { yLabel: chart.yLabel })}
       />
-      {chart.kind === 'bar' ? bars(marks, prepared) : null}
+      {chart.kind === 'bar' ? bars(chart, marks, prepared) : null}
       {chart.kind === 'line' || chart.kind === 'area'
         ? marks.series.map((series, index) => (
-          <g key={series || 'single'}>
+          <g key={series || 'single'} aria-label={`${series || 'every category'}, ${reduction(chart)}${measureName(chart)}`}>
             {chart.kind === 'area' ? (
               <path d={areaPath(marks, prepared, series)} fill={colour(index)} opacity={0.25} />
             ) : null}
@@ -143,7 +154,7 @@ export function CartesianChart(properties: CartesianProperties): React.ReactElem
           </g>
         ))
         : null}
-      {isScatter ? dots(properties.scatter ?? [], prepared) : null}
+      {isScatter ? dotsFor(chart, properties.scatter ?? [], prepared) : null}
     </g>
   );
 }

@@ -126,6 +126,16 @@ describe('the caption', () => {
   // only place that can say which of the two it is.
   // Two charts can be drawn identically and mean different things when one is the p95 and the other a
   // mean of the same column, and the caption is the only place that says which is which.
+  // The root already carries a name and a long description; what it did not carry was the marks. A mark
+  // announced with a different number than the one on screen is worse than a mark not announced at all, so
+  // the label is built from the same values the renderer draws from.
+  it('names every mark for assistive technology', () => {
+    const value = chart({ aggregate: 'sum', y: 'revenue' });
+    const { container } = render(<VisualizationChartCard chart={value} busy={false} disabled={false} onRefreshNow={vi.fn()} onSetRefresh={vi.fn()} />);
+    const labels = [...container.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label'));
+    expect(labels.some((one) => one?.includes('region north') && one.includes('the sum of revenue is 10'))).toBe(true);
+  });
+
   it('names the measure a chart draws when the user named one', () => {
     expect(caption(chart({ metric: 'p95 latency' }))).toContain('p95 latency');
     expect(caption(chart())).not.toContain('p95 latency');

@@ -1,3 +1,4 @@
+import { markLabel } from './describe';
 import { describe, expect, it } from 'vitest';
 import { dataTableFor, describeChart } from './describe';
 import type { ChartShape, Table } from './points';
@@ -24,6 +25,34 @@ const TABLE: Table = {
 function chart(over: Partial<ChartShape> = {}): ChartShape {
   return { kind: 'bar', x: 'region', y: 'revenue', title: 'Revenue', ...over };
 }
+
+// The name of a mark, which is what a screen reader is given instead of a bar. It is built here beside
+// the sentences the caption is built from, because both come from the same marks and a mark named with a
+// different number than the one drawn is worse than a mark not named.
+describe('markLabel', () => {
+  const shape = chart({ aggregate: 'sum', y: 'revenue' });
+
+  it('names the category, the measure and the value', () => {
+    expect(markLabel(shape, { label: 'north', value: 10 })).toBe('region north, the sum of revenue is 10');
+  });
+
+  it('names the series when the chart is split', () => {
+    expect(markLabel(shape, { label: 'north', value: 10, series: 'us-east' }))
+      .toBe('region north, the sum of revenue is 10, in us-east');
+  });
+
+  it('leaves out a series the chart does not have', () => {
+    expect(markLabel(shape, { label: 'north', value: 10, series: '' })).toBe('region north, the sum of revenue is 10');
+  });
+
+  it('says a value it cannot draw is nothing, rather than naming a number that is not there', () => {
+    expect(markLabel(shape, { label: 'north', value: NaN })).toContain('is nothing');
+  });
+
+  it('keeps a decimal to two places, which is what the axis shows', () => {
+    expect(markLabel(shape, { label: 'north', value: 10.4567 })).toContain('is 10.46');
+  });
+});
 
 describe('describeChart', () => {
   it('names the kind, the measure, its range, and both ends of it', () => {
