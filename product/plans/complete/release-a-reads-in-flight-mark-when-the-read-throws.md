@@ -1,0 +1,11 @@
+# Release a read's in-flight mark when the read throws
+
+`reader` in `src/visualizations/reading.ts` added its key to `inFlight`, awaited `options.read`, and deleted the key afterwards, with no `try` around either. The caller discards the promise, so a read that throws leaves the key in place for the life of the process. Every later read of that dataset then returns `undefined` at the in-flight check, with no error recorded anywhere while `VisualizationRefresh` keeps re-arming the poll: the chart silently stops updating and the failure is indistinguishable from a source that has gone quiet. One throw — a socket hang up, a DNS failure surfacing as an exception rather than a status — was permanent for that visualization until janus restarted.
+
+- The mark is built once, named, and deleted in a `finally` around the read, so every path releases it. The key is a NUL-joined id and dataset key, which is what it already was: the invisible byte is worth stating, because neither an id nor a path can contain one and `one / 2.json` cannot be mistaken for `one/2.js` plus `on`.
+- A throw is caught and becomes an ordinary failed read, so the reason lands on the dataset the way a returned error lands on it, the time is stamped, and the next interval tries again. Letting it escape would have been an unhandled rejection that names neither the chart nor the source, in a promise nobody awaits.
+- Nothing else about the read changed. The record is still re-read after the fact, so a delete or close during the read still wins over a result nobody is waiting for.
+
+The case in `src/visualizations/reading.test.ts` throws from the read, asserts the dataset carries `the read failed: socket hang up` with its previous table still there, and then reads the same dataset again and asserts the read was attempted a second time — which fails against the previous code, where the second call was dropped at the in-flight check and the attempts stayed at one.
+
+Writing this also turned up that the mark and the check had drifted: the check read a NUL-joined key and the delete a space-joined one, so the guard matched nothing. The unit that finds it is the in-flight case that already existed, which is the argument for the failure being a test rather than a reading.

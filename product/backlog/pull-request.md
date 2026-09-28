@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Release a read's in-flight mark when the read throws, so a chart does not stop updating for the life of the process. Severity: 6/10
-
-Existing Issue: `reader` in `src/visualizations/reading.ts` adds its key to `inFlight`, awaits `options.read`, and deletes the key afterwards with no `try` around either, and the caller discards the promise, so a throw from the read leaves the key in place. Severity: 6/10
-
-Existing Risk: 6/10 - Every later read of that dataset returns `undefined` at the in-flight check, so the chart silently stops updating with no error anywhere while the poll keeps re-arming — the failure is indistinguishable from a source that has gone quiet, and it lasts until the process restarts.
-
-Proposal Risk: 2/10 - Wrapping the read and the work after it in a `try`/`finally` releases the key on every path, and nothing else about the read changes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: release a read's in-flight mark when the read throws". In `reader` in `src/visualizations/reading.ts`, delete the key in a `finally` around the read and the work that follows it, and record the failure on the dataset the way a returned error is recorded so the chart shows a reason rather than going quiet. Verify with a case in `src/visualizations/reading.test.ts` whose read throws, asserting the second read for the same dataset is attempted and that the dataset carries the reason, and a case asserting a rejected read is not observable as an unhandled rejection.
-
 * Index the value arrays a notice walks by the same row it labels, or say no count. Severity: 6/10
 
 Existing Issue: `outliers` in `src/visualizations/insights.ts` says "the middle half of the ${values.length - 1} other values", computing "other" as one less than the total however many rows were outside the fences, so with two outliers it claims one more other value than there are. Severity: 6/10

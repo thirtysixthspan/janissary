@@ -199,6 +199,37 @@ describe('reading a dataset', () => {
     expect(subject.datasets[0]?.table).toBeDefined();
   });
 
+  // A read that throws is a read that failed. Before, the throw skipped the delete of the in-flight mark
+  // and the key stayed for the life of the process, so every later read of that dataset was dropped at
+  // the check above with no error anywhere and the poll still re-arming: a chart that has stopped
+  // updating for good, with nothing on screen to say so. The second read here is the one that matters.
+  it('releases the in-flight mark when a read throws, and records why', async () => {
+    const subject = record({ datasets: [{ key: 'source', table: TABLE, readAt: 1 }] });
+    const store = new VisualizationStore({ home });
+    const index = new VisualizationIndex(store);
+    index.remember(subject);
+    let attempts = 0;
+    const readOne = reader({
+      read: async () => {
+        attempts += 1;
+        throw new Error('socket hang up');
+      },
+      workspace: () => workspace,
+      index,
+      now: () => 9,
+      commit: () => {},
+    });
+
+    const first = await readOne('one', { kind: 'source' });
+
+    // The reason is on the dataset rather than in a rejection, because nothing is awaiting this promise
+    // and an unhandled rejection says nothing about which chart or which source it belonged to.
+    expect(first?.error).toBe('the read failed: socket hang up');
+    expect(first?.table).toBe(TABLE);
+    await readOne('one', { kind: 'source' });
+    expect(attempts).toBe(2);
+  });
+
   it('reads a file the agent wrote, and refuses one it did not', async () => {
     writeFileSync(path.join(workspace, 'data.json'), '[{"region":"north","revenue":10}]');
     const subject = record({ datasets: [{ key: 'data.json', table: TABLE }] });

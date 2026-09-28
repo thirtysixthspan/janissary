@@ -101,7 +101,7 @@ The line under a chart says how many rows it is showing, how the measure was red
 
 Each chart has its own interval, offered as a single control that steps through off, ten seconds, thirty seconds, a minute and five minutes, and says in its tooltip both where it is and where a click goes. A refresh happens only while a tab for that visualization is open, so a saved visualization is never fetched behind your back.
 
-A re-read that fails records the reason and leaves the previous table on screen, so a source that stops answering does not also take the chart off the screen. A re-read that changes the data does not change the chart: the specification is yours, and asking is what changes it. A chart whose data the agent acquired is re-asked rather than re-read, because nothing else knows how that data is reached — which is the one case where live update costs a model call, and why the interval is a choice rather than a number.
+A re-read that fails records the reason and leaves the previous table on screen, so a source that stops answering does not also take the chart off the screen. A read that fails outright — thrown rather than answered — is the same thing, and the next interval tries again rather than waiting for a restart. A re-read that changes the data does not change the chart: the specification is yours, and asking is what changes it. A chart whose data the agent acquired is re-asked rather than re-read, because nothing else knows how that data is reached — which is the one case where live update costs a model call, and why the interval is a choice rather than a number.
 
 ### What the data is doing
 
