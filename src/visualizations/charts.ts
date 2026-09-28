@@ -137,7 +137,7 @@ export function measured(
   };
 }
 
-function shapeOf(entry: ChartShape): ChartShape {
+export function shapeOf(entry: ChartShape): ChartShape {
   return {
     kind: entry.kind,
     x: entry.x,

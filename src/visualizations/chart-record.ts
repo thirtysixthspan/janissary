@@ -4,6 +4,7 @@ import type {
   VisualizationChartRecord,
   VisualizationDatasetView,
   VisualizationTableView,
+  VisualizationChartSpec,
 } from '../protocol/visualizations.js';
 
 // The guards for the two values a stored record holds that the grammar also has an opinion about: a
@@ -43,6 +44,17 @@ export function isChart(value: unknown): value is VisualizationChartRecord {
     && (value.readAt === undefined || typeof value.readAt === 'number')
     && (value.error === undefined || typeof value.error === 'string')
     && isTable(value.table)
+    && isSpecified(value);
+}
+
+// The specification half of a chart, which is what an undo carries and what a chart is before it is drawn.
+// The grammar is enforced here rather than only on the way in, because a snapshot naming a column or a step
+// the grammar has not got would restore a chart that cannot be drawn.
+function isSpecified(value: Record<string, unknown>): boolean {
+  return typeof value.id === 'string' && value.id !== ''
+    && typeof value.refreshSeconds === 'number'
+    && isDataRef(value.data)
+    && Array.isArray(value.transforms) && value.transforms.every((step) => isTransformList([step]))
     && typeof value.kind === 'string'
     && typeof value.x === 'string' && typeof value.y === 'string'
     && typeof value.title === 'string'
@@ -67,4 +79,15 @@ export function isDatasetList(value: unknown): value is VisualizationDatasetView
 
 export function isChartList(value: unknown): value is VisualizationChartRecord[] {
   return Array.isArray(value) && value.length <= MAX_CHARTS && value.every(isChart);
+}
+
+// The charts an undo carries, which are specifications rather than stored charts: a snapshot is what to
+// draw and not what was drawn, because a restored chart re-resolves against the data it names and the
+// table a snapshot would have carried is megabytes per turn on a record rewritten by every read. The
+// grammar is still enforced, because a snapshot naming a column or a step the grammar has not got would
+// restore a chart that cannot be drawn.
+export function isChartSpecList(value: unknown): value is VisualizationChartSpec[] {
+  return Array.isArray(value)
+    && value.length <= MAX_CHARTS
+    && value.every((chart) => isRecord(chart) && isSpecified(chart) && chart.table === undefined);
 }

@@ -16,7 +16,7 @@ import type {
 } from '../protocol.js';
 import { untrust, workspaceOf } from './store-workspace.js';
 import { isModelPair, isRecord } from '../value-guards.js';
-import { isChartList, isDatasetList } from './chart-record.js';
+import { isChartList, isChartSpecList, isDatasetList } from './chart-record.js';
 
 // Version 2 is the first version this feature ever shipped as, and the one this change introduces: a
 // visualization holds a list of charts rather than one, and the questions and the column review are
@@ -89,7 +89,7 @@ function isTurn(value: unknown): value is VisualizationTurnView {
     // A turn that claims to be undoable with nothing to undo offers a button that restores nothing, and one
     // carrying charts with no claim at all is a copy nobody will use. The two arrive together or not at all.
     && ((value.undo === undefined && value.before === undefined)
-      || (typeof value.undo === 'string' && value.undo !== '' && isChartList(value.before)));
+      || (typeof value.undo === 'string' && value.undo !== '' && isChartSpecList(value.before)));
 }
 
 export function isVisualizationRecord(value: unknown): value is VisualizationRecord {

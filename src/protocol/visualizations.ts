@@ -212,6 +212,11 @@ export type VisualizationChartRecord = ChartSpec & {
   table: VisualizationTableView;
 };
 
+// A chart without its resolved table: what an undo carries, and what a chart is between being specified
+// and being drawn. The table is the expensive half and nothing needs a copy of it — a restored chart
+// re-resolves against the data its own specification names.
+export type VisualizationChartSpec = Omit<VisualizationChartRecord, 'table' | 'readAt' | 'error'>;
+
 // A modification query and the model's reply, the same shape a conversation turn has, because a
 // visualization's chat is a conversation about its charts.
 export type VisualizationTurnView = {
@@ -223,7 +228,7 @@ export type VisualizationTurnView = {
   // agent offers one control to undo a whole run and Hex shows a per-change diff to keep or discard; this
   // is the same guarantee in a form that costs a copy of a list of specifications rather than a diff
   // engine. Never leaves the server: the browser is told what changed and not what to put back.
-  before?: VisualizationChartRecord[];
+  before?: VisualizationChartSpec[];
   // What the turn did to the charts, in a sentence, read from the snapshot rather than recomputed — a label
   // that disagreed with what the turn did would be worse than no label.
   undo?: string;

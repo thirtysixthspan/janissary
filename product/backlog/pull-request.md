@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Keep a turn's snapshot to the specifications, and bound the turns, so a live update stops rewriting megabytes. Severity: 8/10
-
-Existing Issue: `snapshot` in `src/visualizations/undo.ts` copies each chart with `{...chart, transforms: [...]}`, and a stored chart carries its resolved `table` — so every turn that changed something carries up to eight full tables of 500 rows by 32 columns, while `record.turns` is appended to without any bound (`MAX_TURNS_IN_PROMPT` bounds the prompt, not the record), and `store.write` serializes the whole record on every commit, of which `reading.ts` makes one per read. Severity: 8/10
-
-Existing Risk: 8/10 - A wide source with eight charts and a dozen changing turns puts tens of megabytes on disk, and a chart on the ten-second live-update interval rewrites all of it every ten seconds, while the unbounded turn array goes on the wire on every mutation with every response rendered as Markdown. The unbounded growth is exactly what the `MAX_ROWS` and `MAX_DATASETS` bounds exist to prevent, and the file header claims a snapshot "costs what a list of specifications costs" when it costs the tables too.
-
-Proposal Risk: 4/10 - A snapshot without its table restores a chart that has no marks until the next read re-resolves it, so a restored chart would briefly draw nothing, and trimming the turns discards history the user could have undone; both need stating rather than assuming.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: keep an undo snapshot to the specifications and bound the turns". Strip the resolved `table` from the charts a snapshot carries in `snapshot()`, keeping the id, the data reference and the specification, and have `reverted` in `src/visualizations/undo.ts` re-resolve each restored chart against the record's current datasets so a restored chart draws the data it names. Bound `record.turns` in `src/visualizations/agent.ts` to a stated number of turns, dropping the oldest, and say in the spec what a conversation keeps. Verify with a store case in `src/visualizations/store.test.ts` asserting a record with a snapshot and a full table is written and read back with the snapshot carrying no table, a manager case asserting a restored chart's table is present again, and a case asserting a record over the bound keeps the most recent turns and that the first dropped turn is one with nothing to undo.
-
 * Say the right row in an unexpected-value notice, so a finding never names a date it is not about. Severity: 7/10
 
 Existing Issue: `outliers` in `src/visualizations/insights.ts` returns row indexes taken from `table.rows.entries()`, and those are compared by `unexpected` against indexes into the compacted array `numericValues` builds — two coordinate systems that agree only when every row of the measure is a number, and the `along.length !== values.length` guard catches only rows that `y` and `x` drop differently. Severity: 7/10

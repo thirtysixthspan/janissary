@@ -4,8 +4,9 @@ import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
 import { datasetFor, noticed, placed, pruned, roomFor } from './charts.js';
 import { MAX_DATASETS } from './chart-record.js';
+
 import { remembered } from './metrics.js';
-import { keepUndoable, snapshot } from './undo.js';
+import { keepUndoable, kept } from './undo.js';
 import { datasetKey } from './chart-spec.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
 import { parseReply, type Reply } from './reply.js';
@@ -203,7 +204,7 @@ export class VisualizationAgent {
   private apply(record: VisualizationRecord, reply: Reply, turn?: VisualizationTurnView): void {
     // The copy is taken before anything moves, so a reply that removes a chart can be taken back by a turn
     // that has no other way to say so.
-    const before = snapshot(record.charts);
+    const before = record.charts;
     const refused = this.remove(record, reply.remove);
     const named = titled(reply.name ?? '');
     if (named !== '' && isUntitled(record)) record.title = named;
@@ -226,6 +227,7 @@ export class VisualizationAgent {
     // chart and said nothing at all — a sentence composed from the specification, so a change never
     // lands silently.
     if (turn) {
+      record.turns = kept(record.turns);
       const said = reply.say.trim();
       turn.response = [said, ...reply.notices, ...refused].filter((line) => line !== '').join('\n\n')
         || (first === undefined ? '' : chartSummary(first));

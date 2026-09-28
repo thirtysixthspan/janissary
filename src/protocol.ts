@@ -32,6 +32,7 @@ export type {
   VisualizationAggregate,
   VisualizationChartKind,
   VisualizationChartRecord,
+  VisualizationChartSpec,
   VisualizationChartView,
   VisualizationClarify,
   VisualizationColumnType,
