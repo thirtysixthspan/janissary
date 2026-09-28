@@ -24,6 +24,21 @@ export function chartProperties(): readonly string[] {
   return CHART_PROPERTIES;
 }
 
+// The values that leave the exported file with nothing behind the chart. A theme may set `--bg` to
+// transparent deliberately, for a surface that is dark whatever is behind it, and an export has no such
+// surface: the file lands in a viewer that draws white.
+const NOTHING_BEHIND = new Set(['', 'transparent', 'rgba(0, 0, 0, 0)']);
+
+// The colour the page behind the chart is laid down in, which is the theme's own `--bg` and not
+// the chart element's computed background: nothing gives an svg a background, so that value is
+// `rgba(0, 0, 0, 0)` - truthy, so a `||` fallback after it never fires - and a near-white title, tick
+// and axis line land on nothing in the default dark theme. A theme that declares no `--bg` falls back to
+// white, the one background a chart drawn in light ink can be read on.
+export function backgroundOf(style: { getPropertyValue: (name: string) => string }): string {
+  const declared = style.getPropertyValue('--bg').trim().toLowerCase();
+  return NOTHING_BEHIND.has(declared) ? '#ffffff' : declared;
+}
+
 function withResolvedColours(svg: SVGSVGElement): string {
   const style = getComputedStyle(svg);
   const declarations = CHART_PROPERTIES
@@ -66,7 +81,7 @@ async function pixelsOf(svg: SVGSVGElement, scale: number): Promise<{
   if (!context) throw new Error('this browser cannot rasterize a canvas');
   // The chart is transparent by default and most surfaces behind it are not, so the page colour is laid
   // down first. An exported chart with a transparent background is one that looks broken in a viewer.
-  context.fillStyle = getComputedStyle(svg).backgroundColor || '#ffffff';
+  context.fillStyle = backgroundOf(getComputedStyle(svg));
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
   return { context, width, height };

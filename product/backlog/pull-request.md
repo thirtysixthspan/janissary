@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Give the raster exports a background, which the code says they already have. Severity: 7/10
-
-Existing Issue: `pixelsOf` in `web/src/plugins/visualizations/export/download.ts` sets the canvas background from `getComputedStyle(svg).backgroundColor || '#ffffff'`, but nothing gives an `svg` a background, so the computed value is `rgba(0, 0, 0, 0)` — truthy — and the `||` fallback never fires, so the fill paints nothing. Severity: 7/10
-
-Existing Risk: 7/10 - The default theme is dark, so a near-white title, tick and axis line lands on a transparent or white page and is effectively invisible when the export is opened anywhere. The comment above the line states the opposite is prevented, and the style contract pins the custom-property list but not the background, so nothing notices.
-
-Proposal Risk: 2/10 - Reading the theme's own `--bg` instead of the element's computed background fixes it for every theme at once, and changes nothing about what is drawn.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: paint the raster exports with the theme's own background". In `pixelsOf` in `web/src/plugins/visualizations/export/download.ts`, take the fill from the `--bg` custom property already in `CHART_PROPERTIES` and fall back to white only when it resolves to nothing, rather than from the element's transparent `backgroundColor`. Verify with a case in a new `web/src/plugins/visualizations/export/download.test.ts` asserting the chosen fill is the resolved `--bg` and not the transparent computed colour, and with a case asserting the fallback when `--bg` is absent.
-
 * Prune the datasets a removal orphaned, even when some other id in the same list was wrong. Severity: 6/10
 
 Existing Issue: `remove` in `src/visualizations/agent.ts` only calls `pruned` when nothing in the batch was refused, and `reply.ts` accepts up to sixteen arbitrary strings in `remove`, so one invented id alongside a real one skips the pruning that keeps `MAX_DATASETS` a bound on what is in use. Severity: 6/10

@@ -95,7 +95,7 @@ The line under a chart says how many rows it is showing, how the measure was red
 
 ### Export
 
-**Export this chart as PNG** and **Export this chart as PDF** are available on each chart and write a file named after that chart's title. Both rasterize what is on screen at twice its size, so an export matches the tab rather than a redrawing of it. The page colour is laid down first, because a chart exported transparent looks broken in a viewer. A PDF is one page holding one image, deflated where the browser can deflate and uncompressed where it cannot. An export that fails says so in the tab and leaves the chart alone.
+**Export this chart as PNG** and **Export this chart as PDF** are available on each chart and write a file named after that chart's title. Both rasterize what is on screen at twice its size, so an export matches the tab rather than a redrawing of it. The theme's own page colour is laid down first, because a chart exported transparent looks broken in a viewer, and a theme that declares no background — or a transparent one — falls back to white. A PDF is one page holding one image, deflated where the browser can deflate and uncompressed where it cannot. An export that fails says so in the tab and leaves the chart alone.
 
 ### Live update
 
