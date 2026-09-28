@@ -116,6 +116,7 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
     `Comparisons are ${COMPARES.join(', ')}.`,
     '`notices` is optional: one or two things you noticed in the data itself, as a plain sentence naming the value and where it was. The host shows its own measurements of the data separately, so do not repeat one of those; say what it means rather than what it is. Leave it out when you have noticed nothing.',
     '`xUnit` is optional and groups a date x column by a calendar unit — year, quarter, month, week or day — so a two-year daily series can be a chart of months. It is refused on a column that is not a date. Without it a date column is one band per distinct value, which for a daily source is one band per day.',
+    '`stack` is optional and needs a `series`: "zero" draws each series on top of the last so the height of each band is the total, and "normalize" does the same as a share of that total, so the bands read as percentages. Without it the series sit side by side. It is refused on a pie and on a scatter.',
     '`remove` is a list of chart ids to drop.',
     '`name` renames the visualization, and is how the user renames it in words.',
     'Answer with prose and no charts when the user asked a question about the data rather than for a change.',

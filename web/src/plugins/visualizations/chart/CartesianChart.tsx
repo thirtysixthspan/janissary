@@ -34,6 +34,7 @@ type Prepared = {
   base: number;
   bands: ReturnType<typeof band>;
   xNumeric?: Linear;
+  stacked: boolean;
 };
 
 function round(value: number): number {
@@ -41,7 +42,7 @@ function round(value: number): number {
 }
 
 function prepare({ box, chart, marks, scatter }: CartesianProperties): Prepared {
-  const y = linear(box, extentOf(marks.points.map((point) => point.value)));
+  const y = linear(box, extentOf(marks.points.map((point) => point.value), marks.points.map((point) => point.from)));
   return {
     y,
     // The baseline is where zero falls, which is not the bottom of the plot when a measure runs
@@ -49,23 +50,32 @@ function prepare({ box, chart, marks, scatter }: CartesianProperties): Prepared 
     // its value means.
     base: Math.min(Math.max(y.at(0), box.top), box.top + box.height),
     bands: band(box, Math.max(...marks.points.map((point) => point.band), 0) + 1),
+    stacked: chart.stack !== undefined,
     ...(chart.kind === 'scatter' && {
       xNumeric: linear(box, extentOf((scatter ?? []).map((point) => point.x))),
     }),
   };
 }
 
+// A stacked segment runs from the top of the one below it to its own top, and an unstacked one runs from
+// the axis. One case rather than two, because the mark already carries both ends.
 function bars(marks: Marks, prepared: Prepared): React.ReactElement[] {
   return marks.points.map((point) => {
     const index = prepared.bands.count === 0 ? 0 : marks.series.indexOf(point.series);
-    const slot = seriesOffset(Math.max(index, 0), marks.series.length, prepared.bands.width);
+    const bottom = Math.min(prepared.y.at(point.from), prepared.y.at(point.value));
+    const top = Math.max(prepared.y.at(point.from), prepared.y.at(point.value));
+    // A stacked chart gives every series the whole band rather than a slot within it: a segment is a
+    // slice of the band, and a slice with gaps in it is a slice of a smaller bar than the chart says.
+    const slot = prepared.stacked
+      ? { left: 0, width: prepared.bands.width }
+      : seriesOffset(Math.max(index, 0), marks.series.length, prepared.bands.width);
     return (
       <rect
         key={`${point.band}-${point.series}`}
         x={round(prepared.bands.at(point.band) + slot.left)}
-        y={round(Math.min(prepared.y.at(point.value), prepared.base))}
+        y={round(bottom)}
         width={round(slot.width)}
-        height={round(Math.max(Math.abs(prepared.y.at(point.value) - prepared.base), 1))}
+        height={round(Math.max(top - bottom, 1))}
         fill={colour(index)}
       />
     );

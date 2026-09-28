@@ -14,6 +14,8 @@ export type VisualizationSummary = { id: string; title: string; updatedAt: numbe
 
 export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie';
 
+export type VisualizationStack = 'zero' | 'normalize';
+
 export type VisualizationTimeUnit = 'year' | 'quarter' | 'month' | 'week' | 'day';
 
 export type VisualizationAggregate =
@@ -51,6 +53,7 @@ export type VisualizationChart = {
   aggregate?: VisualizationAggregate;
   percentile?: number;
   xUnit?: VisualizationTimeUnit;
+  stack?: VisualizationStack;
   title: string;
   xLabel?: string;
   yLabel?: string;

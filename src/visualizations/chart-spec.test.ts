@@ -267,6 +267,19 @@ describe('a time unit', () => {
     expect('table' in resolved && resolved.table.rows).toEqual([['2026-01-01', 1], ['2026-01-01', 2]]);
   });
 
+  it('refuses a stack the grammar does not have', () => {
+    expect(isChartShape({ kind: 'bar', x: 'day', y: 'n', title: 'T', series: 'r', stack: 'center', transforms: [] })).toBe(false);
+    expect(isChartShape({ kind: 'bar', x: 'day', y: 'n', title: 'T', series: 'r', stack: 'zero', transforms: [] })).toBe(true);
+    expect(isChartShape({ kind: 'bar', x: 'day', y: 'n', title: 'T', series: 'r', stack: 'normalize', transforms: [] })).toBe(true);
+  });
+
+  it('refuses a stack where there is no series to stack', () => {
+    const single = resolve(DAILY, { kind: 'bar', x: 'day', y: 'n', title: 'T', stack: 'zero', transforms: [] });
+    expect('error' in single && single.error).toContain('a stack needs a series column');
+    const pie = resolve(DAILY, { kind: 'pie', x: 'day', y: 'n', title: 'T', series: 'day', stack: 'zero', transforms: [] });
+    expect('error' in pie && pie.error).toContain('a stack needs a series column');
+  });
+
   it('refuses a unit the grammar does not have', () => {
     expect(isChartShape({ kind: 'line', x: 'day', y: 'n', title: 'T', xUnit: 'fortnight', transforms: [] })).toBe(false);
     expect(isChartShape({ kind: 'line', x: 'day', y: 'n', title: 'T', xUnit: 'month', transforms: [] })).toBe(true);

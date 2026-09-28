@@ -122,6 +122,14 @@ describe('the caption', () => {
   // A chart of months says so on its face. The words are in the caption rather than in the
   // transformation notes because a time unit is not a transformation: nothing was done to the data except
   // to say which day each row belongs to.
+  // A percent stack read as an absolute one is a chart that says the wrong thing, and the caption is the
+  // only place that can say which of the two it is.
+  it('says how the series are stacked', () => {
+    expect(caption(chart({ stack: 'normalize' }))).toContain('as a share of each category');
+    expect(caption(chart({ stack: 'zero' }))).toContain('stacked');
+    expect(caption(chart())).not.toContain('stacked');
+  });
+
   it('names the time unit a date axis is grouped by', () => {
     expect(caption(chart({ x: 'day', xUnit: 'month' }))).toContain('by month');
     expect(caption(chart())).not.toContain('by month');

@@ -12,6 +12,8 @@ export type VisualizationChartKind = 'bar' | 'line' | 'area' | 'scatter' | 'pie'
 // The calendar unit a date x column is grouped by, or nothing. A daily series of any length is otherwise
 // drawn as that many bands, and "revenue by month over two years" is inexpressible: the model's only
 // route would be a derived column doing epoch arithmetic it has to get right.
+export type VisualizationStack = 'zero' | 'normalize';
+
 export type VisualizationTimeUnit = 'year' | 'quarter' | 'month' | 'week' | 'day';
 
 // How `y` is reduced before the marks are built, where each aggregate runs over the rows sharing a
@@ -124,6 +126,10 @@ export type ChartShape = {
   percentile?: number;
   // The unit the x column is grouped by, which must be a date for it to be accepted at all.
   xUnit?: VisualizationTimeUnit;
+  // How the series are combined rather than merely split: `zero` stacks them so each band's height is
+  // the total, and `normalize` stacks them as a share of that total. Absent means the series sit side by
+  // side, which is the only thing a bare series column can express.
+  stack?: VisualizationStack;
   title: string;
   xLabel?: string;
   yLabel?: string;

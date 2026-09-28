@@ -15,7 +15,10 @@ export type Table = { columns: Column[]; rows: Cell[][] };
 
 // The band a category mark sits in, and the value it plots. `label` is the category text, kept beside
 // the band so an axis and a legend read from one place rather than each recomputing it.
-export type Point = { band: number; value: number; series: string; label: string };
+// `from` is the bottom of the mark and `value` its top. They are equal for a mark drawn from the axis and
+// differ for a stacked segment, and carrying both means the bar renderer has one case rather than two and
+// the y domain has one thing to be a domain over.
+export type Point = { band: number; value: number; from: number; series: string; label: string };
 
 export type PieSlice = { label: string; value: number };
 
@@ -25,7 +28,7 @@ export type Marks = { points: Point[]; slices: PieSlice[]; series: string[] };
 // than in an evenly spaced band. Kept separate because only that one kind reads it.
 export type ScatterPoint = { x: number; y: number };
 
-import type { TimeUnit } from './time';
+import type { Stack, TimeUnit } from './time';
 
 export type ChartShape = {
   kind: string;
@@ -35,6 +38,7 @@ export type ChartShape = {
   aggregate?: Aggregate;
   percentile?: number;
   xUnit?: TimeUnit;
+  stack?: Stack;
   title: string;
   xLabel?: string;
   yLabel?: string;
@@ -133,6 +137,7 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
     raw.push({
       band,
       value,
+      from: 0,
       series: si === -1 ? SINGLE_SERIES : label(row[si]),
       label: label(row[xi]),
     });
@@ -167,11 +172,33 @@ export function marksFor(table: Table, chart: ChartShape): Marks {
     .map((group) => ({
       band: slots.get(group.label) ?? 0,
       value: reduce(aggregate, group.values, chart.percentile),
+      from: 0,
       series: group.series,
       label: group.label,
     }))
     .toSorted((a, b) => a.band - b.band);
-  return { points, slices: [], series: seriesNames(points, split) };
+  return { points: stacked(chart, points), slices: [], series: seriesNames(points, split) };
+}
+
+// The running total of the series below each segment, and a share of the band for 'normalize'. A
+// negative value stacks downwards from the band it started in, which is what a diverging bar is: a series
+// of losses below a series of gains on the same band, rather than a second band.
+function stacked(chart: ChartShape, points: readonly Point[]): Point[] {
+  if (chart.stack === undefined) return [...points];
+  const running = new Map<number, number>();
+  const totals = new Map<number, number>();
+  if (chart.stack === 'normalize') {
+    for (const point of points) totals.set(point.band, (totals.get(point.band) ?? 0) + point.value);
+  }
+  return points.map((point) => {
+    const from = running.get(point.band) ?? 0;
+    const total = chart.stack === 'normalize' ? (totals.get(point.band) ?? 0) : 1;
+    // The running total is kept in the same units the segments are drawn in, so a normalize stack's
+    // segments end at one rather than at the band's raw total.
+    const share = total === 0 ? 0 : point.value / total;
+    running.set(point.band, from + share);
+    return { ...point, from, value: share };
+  });
 }
 
 // The aggregate a chart applies, where a pie sums whether or not it was told to: a pie is a share of a
@@ -204,12 +231,15 @@ export function scatterFor(table: Table, chart: ChartShape): ScatterPoint[] {
   });
 }
 
-export function extentOf(values: readonly number[]): { min: number; max: number } {
-  const first = values[0];
+// The domain of a chart is over both ends of every mark: a stack whose segments were within the domain
+// individually would have its top segment drawn off the top of the plot.
+export function extentOf(values: readonly number[], froms: readonly number[] = []): { min: number; max: number } {
+  const all = froms.length === 0 ? values : [...values, ...froms];
+  const first = all[0];
   if (first === undefined) return { min: 0, max: 1 };
   let min = first;
   let max = first;
-  for (const value of values) {
+  for (const value of all) {
     if (value < min) min = value;
     if (value > max) max = value;
   }

@@ -128,9 +128,14 @@ export function caption(chart: VisualizationChart): string {
   // because a time unit is not a transformation: nothing was done to the data except to say which day each
   // row belongs to.
   const unit = chart.xUnit === undefined ? '' : `by ${chart.xUnit}`;
+  // A share of each band read as an absolute total is a chart saying the wrong thing, and the caption is
+  // the only place that can say which of the two it is.
+  const stack = chart.stack === undefined
+    ? ''
+    : chart.stack === 'normalize' ? 'as a share of each category' : 'stacked';
   // A chart drawn from a file the agent acquired is not a live feed, and says so — otherwise a picture
   // that stopped an hour ago reads exactly like one that stopped a second ago.
   const from = chart.data.kind === 'file' ? `from ${chart.data.path}, acquired by the agent` : '';
   const when = chart.readAt === undefined ? '' : `read ${new Date(chart.readAt).toLocaleTimeString()}`;
-  return [rows, how, unit, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
+  return [rows, how, unit, stack, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
 }

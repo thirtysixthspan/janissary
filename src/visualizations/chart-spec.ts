@@ -21,6 +21,7 @@ import type {
   ChartShape,
   ChartSpec,
   VisualizationAggregate,
+  VisualizationStack,
   VisualizationChartKind,
   VisualizationCompare,
   VisualizationDataRef,
@@ -55,6 +56,8 @@ function optionalShapeOf(value: Record<string, unknown>): Partial<ChartShape> | 
   const percentile = value.percentile;
   if (value.aggregate === 'percentile' ? !isPercentile(percentile) : percentile !== undefined) return undefined;
   if (value.xUnit !== undefined && !isTimeUnit(value.xUnit)) return undefined;
+  const stack = value.stack;
+  if (stack !== undefined && !isStack(stack)) return undefined;
   if (value.xLabel !== undefined && typeof value.xLabel !== 'string') return undefined;
   if (value.yLabel !== undefined && typeof value.yLabel !== 'string') return undefined;
   return {
@@ -62,6 +65,7 @@ function optionalShapeOf(value: Record<string, unknown>): Partial<ChartShape> | 
     ...(value.aggregate !== undefined && { aggregate: value.aggregate }),
     ...(isPercentile(percentile) && { percentile }),
     ...(value.xUnit !== undefined && { xUnit: value.xUnit }),
+    ...(isStack(stack) && { stack }),
     ...(value.xLabel !== undefined && { xLabel: value.xLabel }),
     ...(value.yLabel !== undefined && { yLabel: value.yLabel }),
   };
@@ -84,6 +88,12 @@ export function chartShapeOf(value: Record<string, unknown>): ChartShape | undef
 
 export function isChartShape(value: unknown): value is ChartShape {
   return isRecord(value) && chartShapeOf(value) !== undefined;
+}
+
+// The two ways a stack may be combined. 'center' is what Vega-Lite also offers and what nothing here
+// needs: a diverging stack is a bar chart of signed values, which the aggregate and the axis already say.
+function isStack(value: unknown): value is VisualizationStack {
+  return value === 'zero' || value === 'normalize';
 }
 
 export function isAggregate(value: unknown): value is VisualizationAggregate {
@@ -162,6 +172,11 @@ export function isTransformList(value: unknown): value is VisualizationTransform
 export function validateChart(chart: ChartShape, table: Table): { error: string } | { ok: true } {
   const x = table.columns.find((column) => column.name === chart.x);
   if (!x) return { error: `no column named "${chart.x}"` };
+  // A stack is about series within a band, and a pie has no series and a scatter has no bands at all:
+  // accepting one there would store a chart whose field does nothing.
+  if (chart.stack !== undefined && (chart.kind === 'pie' || chart.kind === 'scatter' || chart.series === undefined)) {
+    return { error: `a stack needs a series column, and ${chart.kind === 'pie' ? 'a pie' : chart.kind === 'scatter' ? 'a scatter' : 'this chart'} ${chart.kind === 'pie' || chart.kind === 'scatter' ? 'has' : 'does not have'} one` };
+  }
   if (chart.xUnit !== undefined && x.type !== 'date') {
     return { error: `grouping by ${chart.xUnit} needs a date column, and "${chart.x}" is ${x.type}` };
   }
@@ -249,8 +264,11 @@ export function aggregatePhrase(aggregate: VisualizationAggregate, percentile = 
 export function chartSummary(chart: ChartSpec): string {
   const split = chart.series === undefined ? '' : `, split by ${chart.series}`;
   const unit = chart.xUnit === undefined ? '' : `, by ${chart.xUnit}`;
+  const stacked = chart.stack === undefined
+    ? ''
+    : chart.stack === 'normalize' ? ', as a share of each category' : ', stacked';
   const how = chart.aggregate === undefined ? '' : `, ${aggregatePhrase(chart.aggregate, chart.percentile)}`;
   const notes = chartNotes(chart);
   const steps = notes.length === 0 ? '' : `, over data ${notes.join(', then ')}`;
-  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${unit}${split}${how}${steps}.`;
+  return `Now a ${chart.kind} chart of ${chart.y} by ${chart.x}${unit}${split}${stacked}${how}${steps}.`;
 }

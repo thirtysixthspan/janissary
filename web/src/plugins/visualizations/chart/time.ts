@@ -3,9 +3,11 @@
 // The unit arrives with the chart, because the host floored the cells to it and a label that disagreed
 // with the bucketing would be a chart whose axis and data describe different spans.
 
-import type { VisualizationTimeUnit } from '@shared/plugins/visualizations/shared';
+import type { VisualizationStack, VisualizationTimeUnit } from '@shared/plugins/visualizations/shared';
 
 export type TimeUnit = VisualizationTimeUnit;
+
+export type Stack = VisualizationStack;
 
 export function calendarLabel(value: string, unit: TimeUnit): string {
   const at = new Date(`${value}T00:00:00Z`);

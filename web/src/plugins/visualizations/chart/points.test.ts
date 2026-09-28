@@ -55,9 +55,9 @@ describe('marksFor', () => {
   it('produces one mark per row, banded in row order', () => {
     const marks = marksFor(TABLE, chart());
     expect(marks.points).toEqual([
-      { band: 0, value: 10, series: SINGLE_SERIES, label: 'north' },
-      { band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
-      { band: 2, value: 6, series: SINGLE_SERIES, label: 'north' },
+      { from: 0, band: 0, value: 10, series: SINGLE_SERIES, label: 'north' },
+      { from: 0, band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
+      { from: 0, band: 2, value: 6, series: SINGLE_SERIES, label: 'north' },
     ]);
     expect(marks.series).toEqual([SINGLE_SERIES]);
   });
@@ -101,8 +101,8 @@ describe('marksFor with an aggregate', () => {
   it('sums the rows sharing a category, in the order the source listed them', () => {
     const marks = marksFor(TABLE, chart({ aggregate: 'sum' }));
     expect(marks.points).toEqual([
-      { band: 0, value: 16, series: SINGLE_SERIES, label: 'north' },
-      { band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
+      { from: 0, band: 0, value: 16, series: SINGLE_SERIES, label: 'north' },
+      { from: 0, band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
     ]);
   });
 
@@ -123,11 +123,37 @@ describe('marksFor with an aggregate', () => {
   it('gives the series of one category the same band', () => {
     const marks = marksFor(TABLE, chart({ aggregate: 'sum', series: 'region', x: 'year' }));
     expect(marks.points).toEqual([
-      { band: 0, value: 10, series: 'north', label: '2024' },
-      { band: 1, value: 4, series: 'south', label: '2025' },
-      { band: 1, value: 6, series: 'north', label: '2025' },
+      { from: 0, band: 0, value: 10, series: 'north', label: '2024' },
+      { from: 0, band: 1, value: 4, series: 'south', label: '2025' },
+      { from: 0, band: 1, value: 6, series: 'north', label: '2025' },
     ]);
     expect(marks.series).toEqual(['north', 'south']);
+  });
+
+  // A stack is the most ordinary shape a bar chart is asked for and a bare series column cannot express
+  // it at all: every series gets the whole band and starts where the one below it ended, so the height of
+  // the band is the total.
+  it('stacks the series of one band on top of each other', () => {
+    const marks = marksFor(TABLE, chart({ aggregate: 'sum', series: 'region', x: 'year', stack: 'zero' }));
+    expect(marks.points).toEqual([
+      { from: 0, band: 0, value: 10, series: 'north', label: '2024' },
+      { from: 0, band: 1, value: 4, series: 'south', label: '2025' },
+      { from: 4, band: 1, value: 6, series: 'north', label: '2025' },
+    ]);
+  });
+
+  // A share of each band, so the segments of a band sum to one and a reader can compare composition
+  // across bands of different sizes without reading the axis.
+  it('stacks as a share of each band, which sums to one per band', () => {
+    const marks = marksFor(TABLE, chart({ aggregate: 'sum', series: 'region', x: 'year', stack: 'normalize' }));
+    const second = marks.points.filter((point) => point.band === 1);
+    expect(second.map((point) => point.value)).toEqual([0.4, 0.6]);
+    expect(second.map((point) => point.from)).toEqual([0, 0.4]);
+  });
+
+  it('leaves an unstacked chart exactly as it was, every mark starting at the axis', () => {
+    const marks = marksFor(TABLE, chart({ aggregate: 'sum', series: 'region', x: 'year' }));
+    expect(marks.points.every((point) => point.from === 0)).toBe(true);
   });
 
   it('numbers aggregated bands densely, so a dropped row leaves no gap', () => {
@@ -137,8 +163,8 @@ describe('marksFor with an aggregate', () => {
     };
     expect(marksFor(gappy, chart({ x: 'a', y: 'b', aggregate: 'sum' })).points)
       .toEqual([
-        { band: 0, value: 1, series: SINGLE_SERIES, label: 'x' },
-        { band: 1, value: 3, series: SINGLE_SERIES, label: 'z' },
+        { from: 0, band: 0, value: 1, series: SINGLE_SERIES, label: 'x' },
+        { from: 0, band: 1, value: 3, series: SINGLE_SERIES, label: 'z' },
       ]);
   });
 
@@ -152,7 +178,7 @@ describe('marksFor with an aggregate', () => {
     };
     expect(marksFor(gappy, chart({ x: 'a', y: 'b', aggregate: 'count' })).points)
       .toEqual([
-        { band: 0, value: 2, series: SINGLE_SERIES, label: 'x' },
+        { from: 0, band: 0, value: 2, series: SINGLE_SERIES, label: 'x' },
       ]);
   });
 
@@ -171,9 +197,9 @@ describe('marksFor with an aggregate', () => {
   it('leaves a chart with no aggregate byte-for-byte as it was', () => {
     expect(marksFor(TABLE, chart())).toEqual({
       points: [
-        { band: 0, value: 10, series: SINGLE_SERIES, label: 'north' },
-        { band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
-        { band: 2, value: 6, series: SINGLE_SERIES, label: 'north' },
+        { from: 0, band: 0, value: 10, series: SINGLE_SERIES, label: 'north' },
+        { from: 0, band: 1, value: 4, series: SINGLE_SERIES, label: 'south' },
+        { from: 0, band: 2, value: 6, series: SINGLE_SERIES, label: 'north' },
       ],
       slices: [],
       series: [SINGLE_SERIES],
@@ -228,9 +254,9 @@ describe('marksFor over a date column', () => {
     // An unstable sort would put the 5 before the 3, and would do it differently on another run.
     expect(marksFor(same, chart({ x: 'day', y: 'revenue' })).points)
       .toEqual([
-        { band: 0, value: 9, series: SINGLE_SERIES, label: '2023-12-31' },
-        { band: 1, value: 3, series: SINGLE_SERIES, label: '2024-01-01' },
-        { band: 2, value: 5, series: SINGLE_SERIES, label: '2024-01-01' },
+        { from: 0, band: 0, value: 9, series: SINGLE_SERIES, label: '2023-12-31' },
+        { from: 0, band: 1, value: 3, series: SINGLE_SERIES, label: '2024-01-01' },
+        { from: 0, band: 2, value: 5, series: SINGLE_SERIES, label: '2024-01-01' },
       ]);
   });
 
