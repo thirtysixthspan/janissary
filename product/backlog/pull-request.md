@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Prune the datasets a removal orphaned, even when some other id in the same list was wrong. Severity: 6/10
-
-Existing Issue: `remove` in `src/visualizations/agent.ts` only calls `pruned` when nothing in the batch was refused, and `reply.ts` accepts up to sixteen arbitrary strings in `remove`, so one invented id alongside a real one skips the pruning that keeps `MAX_DATASETS` a bound on what is in use. Severity: 6/10
-
-Existing Risk: 6/10 - Each such turn leaves an acquired-file dataset holding a slot with nothing reading it, and after seven of them every chart naming a new file is refused with "this one already reads them all" while only the source is actually in use. It is wasted capacity rather than an unreadable record, but it is permanent for that record.
-
-Proposal Risk: 2/10 - Pruning drops a dataset nothing reads, which is already the rule, and the chart it belonged to is gone either way.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: prune orphaned datasets even when part of a removal was refused". In `remove` in `src/visualizations/agent.ts`, call `pruned` after the loop rather than only when `refused` is empty, since the datasets that survive are exactly those still read by a remaining chart. Verify with a case in `src/visualizations/agent.test.ts` removing a real chart id beside an invented one and asserting the dataset it was the only reader of is gone, and a case asserting a refused id alone still leaves a dataset alone.
-
 * Release a read's in-flight mark when the read throws, so a chart does not stop updating for the life of the process. Severity: 6/10
 
 Existing Issue: `reader` in `src/visualizations/reading.ts` adds its key to `inFlight`, awaits `options.read`, and deletes the key afterwards with no `try` around either, and the caller discards the promise, so a throw from the read leaves the key in place. Severity: 6/10

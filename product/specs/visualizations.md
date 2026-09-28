@@ -79,7 +79,7 @@ An optional `stack` says how a split chart's series are combined rather than mer
 
 An optional aggregate reduces the measure before anything is drawn, within each category and within each series of a category where the chart is split. It is one of `sum`, `mean`, `median`, `percentile`, `variance`, `count`, `distinct`, `min`, and `max`, and leaving it out means every row is its own mark. `percentile` carries its own number from 0 to 100 and is refused without one; it is read by linear interpolation, the way a notebook reads it, so the 95th percentile of ten values is not the largest of them. `median` and `percentile` are the right reduction for a long-tailed measure — a duration, a size, a latency — where an average is dragged by the tail into a number describing no row at all, and `distinct` counts the values a column holds rather than the rows it has. A pie sums when it is left out, because a pie is a share of a whole. `count` counts the rows that would have been drawn, so a row whose measure is not a number is not counted either.
 
-A visualization holds at most eight charts. That is a bound on what it costs to send on every keystroke, not a judgement about how many are useful.
+A visualization holds at most eight charts. That is a bound on what it costs to send on every keystroke, not a judgement about how many are useful. Data the agent acquired for a chart is dropped once the last chart reading it goes, however that removal happened: the list of ids to remove is the model's, and one wrong id in it does not keep data nothing is drawing from.
 
 ### The tab
 

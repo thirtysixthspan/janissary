@@ -311,6 +311,47 @@ describe('a reply that draws', () => {
     expect(subject.datasets).toEqual([{ key: 'source' }]);
   });
 
+  // A removal list is up to sixteen arbitrary strings from the model, so one invented id beside a real
+  // one is the ordinary shape of a batch that got something wrong. The chart that was really removed is
+  // gone either way, so the data nothing reads now is dead weight - and 'this one already reads them
+  // all' is a refusal the user cannot explain when only the source is in use.
+  it('drops a dataset nothing reads even when part of the removal was wrong', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    subject.datasets = [{ key: 'source' }, { key: 'old.json' }];
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: '', charts: [], remove: ['nope', 'chart-1'] }));
+    end();
+    expect(subject.charts).toHaveLength(0);
+    expect(subject.turns[0]?.response).toContain('There is no chart "nope" to remove.');
+    expect(subject.datasets).toEqual([{ key: 'source' }]);
+  });
+
+  // The other direction: nothing was removed, so nothing is dropped. A dataset a chart is still drawing
+  // from is not orphaned by a refusal, and pruning on a refusal would delete the data on screen.
+  it('drops nothing when the only id in the removal was wrong', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    subject.datasets = [{ key: 'source', table: TABLE }, { key: 'live.json', table: TABLE }];
+    const made = drawn(
+      subject,
+      { kind: 'file', path: 'live.json' },
+      [],
+      { kind: 'bar', x: 'region', y: 'revenue', title: 'From the file' },
+      'chart-1',
+      0,
+    );
+    if ('error' in made) throw new Error(made.error);
+    subject.charts = [made.chart];
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: '', charts: [], remove: ['nope'] }));
+    end();
+    expect(subject.datasets).toEqual([{ key: 'source', table: TABLE }, { key: 'live.json', table: TABLE }]);
+  });
+
   it('refuses a chart past the ceiling rather than dropping one already there', async () => {    const { agent, chunk, end } = fixture();
     const subject = record();
     const made = withChart(subject);

@@ -242,7 +242,13 @@ export class VisualizationAgent {
       record.charts = record.charts.filter((chart) => chart.id !== id);
       if (record.charts.length === before) refused.push(`There is no chart "${id}" to remove.`);
     }
-    if (refused.length === 0) pruned(record);
+    // Pruned whatever else the batch got wrong, because the datasets that survive are the ones a
+    // remaining chart still reads: a chart that was really removed is gone, so its data is dead weight,
+    // and `reply` accepts up to sixteen arbitrary strings here, so one invented id beside a real one used
+    // to leave an acquired file holding a slot of the eight with nothing reading it until the record was
+    // deleted. After seven such turns every chart naming a new file was refused as "this one already
+    // reads them all" while only the source was in use.
+    pruned(record);
     return refused;
   }
 
