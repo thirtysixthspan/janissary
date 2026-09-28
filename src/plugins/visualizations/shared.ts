@@ -54,7 +54,6 @@ export type VisualizationTurn = {
   query: string;
   response: string;
   pair: ConversationModelPair;
-  error?: string;
   streaming?: boolean;
 };
 
@@ -87,7 +86,7 @@ export type VisualizationTabPayload = {
 
 export type VisualizationsPayload = VisualizationListPayload | VisualizationTabPayload;
 
-export type CreateIntent = { source?: string; message?: string };
+export type CreateIntent = { message?: string };
 export type IdIntent = { id: string };
 export type SendIntent = { query: string };
 export type ChartIntent = { chartId: string };
@@ -155,7 +154,6 @@ function isTurn(value: unknown): value is VisualizationTurn {
     && typeof value.query === 'string'
     && typeof value.response === 'string'
     && isModelPair(value.pair)
-    && (value.error === undefined || typeof value.error === 'string')
     // The flag is on the wire, not merely on disk: the host records a turn before it calls the model
     // and copies it onto the window it projects, and a tab cannot disable its composer or offer a
     // cancel without it. A guard that refused it would refuse the host's own payload.
@@ -202,9 +200,7 @@ export function isVisualizationsPayload(value: unknown): value is Visualizations
 export function isCreateIntent(value: unknown): value is CreateIntent {
   if (!isRecord(value)) return false;
   const message = value.message;
-  const source = value.source;
-  return (message === undefined || (typeof message === 'string' && message.trim() !== ''))
-    && (source === undefined || (typeof source === 'string' && source.trim() !== ''));
+  return message === undefined || (typeof message === 'string' && message.trim() !== '');
 }
 
 export function isIdIntent(value: unknown): value is IdIntent {

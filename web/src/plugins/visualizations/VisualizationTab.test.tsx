@@ -132,6 +132,27 @@ describe('a new visualization tab', () => {
     expect(CAPABILITIES.intent).toHaveBeenCalledWith('cancel', {});
   });
 
+  // The composer claims the same history recall an agent tab's has, and it had none: `history: []` made
+  // the recall return immediately, so ArrowUp did nothing at all and a user who had asked this
+  // visualization several things had to retype them. A live-update turn carries no query and is skipped
+  // rather than recalled as an empty string.
+  it('recalls the conversation\'s own earlier queries on ArrowUp', () => {
+    show(payload({
+      turns: [
+        turn({ query: 'first question' }),
+        turn({ query: 'second question' }),
+        turn({ query: '', response: '' }),
+      ],
+    }));
+    const input = screen.getByLabelText('Ask about the data or the chart') as HTMLTextAreaElement;
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input.value).toBe('second question');
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' });
+    expect(input.value).toBe('first question');
+  });
+
   it('cancels a reply with Escape', () => {
     show(payload({ busy: true }));
     fireEvent.keyDown(screen.getByLabelText('Ask about the data or the chart'), { key: 'Escape' });

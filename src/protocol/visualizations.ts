@@ -159,7 +159,6 @@ export type VisualizationTurnView = {
   query: string;
   response: string;
   pair: ConversationModelPair;
-  error?: string;
   streaming?: boolean;
 };
 

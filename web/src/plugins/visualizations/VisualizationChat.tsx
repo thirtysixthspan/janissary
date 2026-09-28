@@ -36,7 +36,11 @@ export function VisualizationChat({
   const turnsRef = useRef<HTMLDivElement>(null);
   const rePinKey = turns.map((turn) => `${turn.query}${turn.response}`).join(' ');
   const { onScroll } = useStickToBottom(turnsRef, active, rePinKey);
-  const bar = useCommandBarKeys({ value: query, setValue: setQuery, inputRef, history: [], onSubmit: onSend });
+  // This conversation's own past queries, oldest first, which is what ArrowUp walks back through. A
+  // live-update turn carries no query of its own and is skipped, or the recall would stop on an empty
+  // string and look broken rather than simply having nothing there.
+  const history = turns.map((turn) => turn.query).filter((query) => query !== '');
+  const bar = useCommandBarKeys({ value: query, setValue: setQuery, inputRef, history, onSubmit: onSend });
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Escape') {
@@ -65,16 +69,14 @@ export function VisualizationChat({
           {turns.map((turn, index) => (
             <div key={`${turn.query}-${index}`} className="visualization-chat-turn">
               <p className="visualization-chat-query">{turn.query}</p>
-              {turn.error ? (
-                <p className="visualization-chat-error">{turn.error}</p>
-              ) : (
-                <div
-                  className="visualization-chat-response"
-                  // The model's reply is Markdown, sanitized by the shared renderer, which is the same
-                  // one a conversation's response goes through. It is never rendered as raw model text.
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.response) ?? '' }}
-                />
-              )}
+              <div
+                className="visualization-chat-response"
+                // The model's reply is Markdown, sanitized by the shared renderer, which is the same
+                // one a conversation's response goes through. It is never rendered as raw model text.
+                // A failure is a line of this rather than a second field beside it: `agent.fail` writes
+                // a readable sentence into the response, so a turn has one place to say what happened.
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.response) ?? '' }}
+              />
             </div>
           ))}
         </div>

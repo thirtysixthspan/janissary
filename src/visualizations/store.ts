@@ -57,7 +57,6 @@ function isTurn(value: unknown): value is VisualizationTurnView {
     && typeof value.query === 'string'
     && typeof value.response === 'string'
     && isModelPair(value.pair)
-    && (value.error === undefined || typeof value.error === 'string')
     && (value.streaming === undefined || typeof value.streaming === 'boolean');
 }
 

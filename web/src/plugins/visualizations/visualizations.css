@@ -110,7 +110,6 @@
   background: var(--bg-soft); white-space: pre-wrap;
 }
 .visualization-chat-response { user-select: text; }
-.visualization-chat-error { color: var(--error); margin: 0; }
 .visualization-suggestions { display: flex; flex-wrap: wrap; gap: 6px; }
 .visualization-suggestion {
   background: var(--bg-soft); border: 1px solid var(--border); border-radius: 999px;
