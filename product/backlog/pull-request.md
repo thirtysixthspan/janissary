@@ -2,12 +2,112 @@
 
 # pull-request
 
-* Give the series ramp a palette that survives colour-vision deficiency and clears 3:1 in every theme, rather than a green and a red. Severity: 5/10
+* Derive the plugin's aggregate list from the server's, so a chart the prompt recommends cannot blank the tab. Severity: 9/10
 
-Existing Issue: `SERIES_COLOURS` in `web/src/plugins/visualizations/chart/ChartSvg.tsx` and `web/src/plugins/visualizations/chart/CartesianChart.tsx` is `var(--accent)`, `var(--success)`, `var(--running)`, `var(--error)` and `var(--muted)`, so a split chart can distinguish two of its series by a success green and an error red, where Observable Plot and Vega-Lite draw on CVD-validated qualitative schemes (tableau10, ColorBrewer) and Datawrapper simulates the chosen palette against all three forms of colour-vision deficiency and warns inline when pairs become indistinguishable (https://www.datawrapper.de/accessibility, https://vega.github.io/vega-lite/docs/scale.html). Severity: 5/10
+Existing Issue: `src/plugins/visualizations/shared.ts` validates `aggregate` against its own literal `AGGREGATES` set, still `['sum','mean','count','min','max']`, while the grammar in `src/visualizations/chart-spec.ts` has carried nine since the median/percentile/variance/distinct change, and `chartViewOf` in `src/visualizations/charts.ts` passes the aggregate straight through to the wire, so a `median` chart is stored, validated and projected intact. Severity: 9/10
 
-Existing Risk: 4/10 - WCAG 1.4.1 names this failure by example — a series in red and a series in green are the same series to a reader with deuteranopia, and the rule asks for a visible non-colour alternative even when both colours pass contrast, because a reader with that condition is not necessarily running assistive technology. There are six themes, so a ramp legible in one can be invisible in another.
+Existing Risk: 9/10 - `activate.ts` refuses the payload, `registry.tsx` throws `invalid plugin payload`, and the tab's error boundary renders `null` — so the tab goes blank and every intent is refused the moment a median, percentile, variance or distinct chart lands, which are exactly the aggregates the prompt tells the model to prefer on a long-tailed measure. A record restored from disk holding one is dead on open, and only the console says why. The list has to be pinned against the server's rather than left to two copies, because `shared.test.ts`'s "accepts every optional field" case passes `aggregate: 'sum'` and so never noticed.
 
-Proposal Risk: 4/10 - Okabe-Ito separates by hue but not by contrast: measured against each theme background only one of the twelve light/deep-form cells clears 3:1 (the table is in `product/plans/complete/give-every-mark-an-accessible-name.md`), so a ramp that clears the bar is a per-theme design rather than a substitution, and eight hues kept apart *and* legible is a real constraint. The plugin stylesheet is not the place either — the style contract holds that file to theme custom properties only, and a ramp defined there is not resolved by the export path.
+Proposal Risk: 2/10 - Pinning the two lists against each other in a test changes no runtime behaviour, and the import stays one-way: the shared contract cannot import the server, but a test beside it can.
 
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: design a per-theme series ramp that survives colour-vision deficiency". Design eight series colours per theme in `web/src/theme.css`, beside `--accent` and `--error`, keeping hues that stay apart under deuteranopia, protanopia and tritanopia *and* clear 3:1 against that theme's `--bg`. Replace both `SERIES_COLOURS` lists with the new properties, add them to `CHART_PROPERTIES` in `web/src/plugins/visualizations/export/download.ts` so an exported chart resolves them, and add a non-colour cue — a dash pattern or a direct label on the first mark of each series — so two series are distinguishable with no colour at all. Verify with a contrast case in `web/src/plugins/visualizations/visualizations-style.test.ts` computing every series colour against every theme's background and failing below 3:1, and with a rendering case in `web/src/plugins/visualizations/VisualizationChartCard.test.tsx` asserting two series of one chart differ in a property other than colour.
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: pin the shared contract's aggregate list to the grammar's". In `src/plugins/visualizations/shared.test.ts`, import `AGGREGATES` from `src/visualizations/chart-spec.js` and assert the contract's set equals it exactly, so a grammar that gains an aggregate and a contract that does not fails the suite rather than the tab. Add a payload case carrying `aggregate: 'median'` with a `percentile` beside it, and one carrying every aggregate the grammar has, so the case that missed this cannot miss again. Verify with the payload guard's own test failing when one entry of either list is removed, and with the case in `src/plugins/visualizations/manager.test.ts` that projects a median chart asserting the window payload carries it.
+
+* Carry `percentile`, `xUnit` and `stack` through the projection, so three shipped features are not no-ops. Severity: 9/10
+
+Existing Issue: `chartViewOf` in `src/visualizations/charts.ts` copies `kind`, `x`, `y`, `title`, `series`, `aggregate`, `xLabel`, `yLabel` and `metric` by hand, and the three fields the last three feature commits added to `ChartShape` are not copied, although every one of them is optional on `VisualizationChartView` and so satisfies the type without a word from the compiler. Severity: 9/10
+
+Existing Risk: 9/10 - Three features that exist are invisible. A percentile chart reaches the renderer with no percentile, so the client reduces at its default of 50 while the caption and the turn's sentence say "reduced to the 95th percentile" — a chart confidently stating a number that is not the one on screen, which is the one failure a chart cannot make. A stacked chart is drawn side by side with the caption silent about it, and a chart bucketed by month carries ISO dates on its axis while the data is monthly. `points.test.ts` pins the stacking and the percentile against the marks builder, so both look covered; the untested seam is the projection, and there is no server test for `chartViewOf` at all.
+
+Proposal Risk: 2/10 - Copying three optional fields the stored chart already holds changes nothing for a chart that has none of them, and the renderer's own defaults are unchanged.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: carry percentile, xUnit and stack through the chart projection". Spread the specification's own fields into `chartViewOf` rather than naming them one at a time, so a field the grammar gains later cannot be left behind the same way, and add cases in a new `src/visualizations/charts.test.ts` for a chart carrying each of the three and for one carrying none. Verify with an end-to-end case in `src/visualizations/manager.test.ts` asserting the window payload of a percentile chart carries both `aggregate: 'percentile'` and its number, of a stacked chart carries its mode, and of a monthly chart carries its unit, and with the client case in `web/src/plugins/visualizations/VisualizationChartCard.test.tsx` asserting the rendered card of a monthly chart labels its axis with months.
+
+* Keep a turn's snapshot to the specifications, and bound the turns, so a live update stops rewriting megabytes. Severity: 8/10
+
+Existing Issue: `snapshot` in `src/visualizations/undo.ts` copies each chart with `{...chart, transforms: [...]}`, and a stored chart carries its resolved `table` — so every turn that changed something carries up to eight full tables of 500 rows by 32 columns, while `record.turns` is appended to without any bound (`MAX_TURNS_IN_PROMPT` bounds the prompt, not the record), and `store.write` serializes the whole record on every commit, of which `reading.ts` makes one per read. Severity: 8/10
+
+Existing Risk: 8/10 - A wide source with eight charts and a dozen changing turns puts tens of megabytes on disk, and a chart on the ten-second live-update interval rewrites all of it every ten seconds, while the unbounded turn array goes on the wire on every mutation with every response rendered as Markdown. The unbounded growth is exactly what the `MAX_ROWS` and `MAX_DATASETS` bounds exist to prevent, and the file header claims a snapshot "costs what a list of specifications costs" when it costs the tables too.
+
+Proposal Risk: 4/10 - A snapshot without its table restores a chart that has no marks until the next read re-resolves it, so a restored chart would briefly draw nothing, and trimming the turns discards history the user could have undone; both need stating rather than assuming.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: keep an undo snapshot to the specifications and bound the turns". Strip the resolved `table` from the charts a snapshot carries in `snapshot()`, keeping the id, the data reference and the specification, and have `reverted` in `src/visualizations/undo.ts` re-resolve each restored chart against the record's current datasets so a restored chart draws the data it names. Bound `record.turns` in `src/visualizations/agent.ts` to a stated number of turns, dropping the oldest, and say in the spec what a conversation keeps. Verify with a store case in `src/visualizations/store.test.ts` asserting a record with a snapshot and a full table is written and read back with the snapshot carrying no table, a manager case asserting a restored chart's table is present again, and a case asserting a record over the bound keeps the most recent turns and that the first dropped turn is one with nothing to undo.
+
+* Say the right row in an unexpected-value notice, so a finding never names a date it is not about. Severity: 7/10
+
+Existing Issue: `outliers` in `src/visualizations/insights.ts` returns row indexes taken from `table.rows.entries()`, and those are compared by `unexpected` against indexes into the compacted array `numericValues` builds — two coordinate systems that agree only when every row of the measure is a number, and the `along.length !== values.length` guard catches only rows that `y` and `x` drop differently. Severity: 7/10
+
+Existing Risk: 7/10 - A CSV with one row empty in both the date and the measure — a trailing summary line, a missing record — shifts every later index by one, so a notice names yesterday's date for today's value, the same spike is reported twice in one sentence because the already-spoken set misses, and the "and N more" count over-counts. A notice is the one place the host claims a rule was applied and quotes figures a reader can check, so a wrong date in one is a false statement about a specific day.
+
+Proposal Risk: 3/10 - Carrying the table row index alongside each compacted value is bookkeeping rather than arithmetic, and the detector is silent below its minimums either way.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: address an unexpected-value notice to the row it is about". Have `numericValues` in `src/visualizations/insights-statistics.ts` return each value with the row it came from, and have `unexpected` in `src/visualizations/insights.ts` label from that index rather than from its own, so the two coordinate systems cannot drift. Verify with a case in `src/visualizations/insights.test.ts` whose table has a row empty in both the date and the measure and which asserts the notice names the right date, that a spike already named by the fences is not named twice, and that the "and N more" count is right when a row was dropped.
+
+* Take back the turn whose button was clicked, not the first one that says the same thing. Severity: 7/10
+
+Existing Issue: `reverted` in `src/visualizations/undo.ts` finds its turn with `record.turns.find((one) => one.query === query)`, and the client sends only the query text, which is not unique — two turns can carry the same sentence, whether re-sent or clicked twice from a re-offered suggestion row. Severity: 7/10
+
+Existing Risk: 7/10 - Clicking undo under the second of two identical turns restores the state before the *first*, so both charts vanish rather than one, the first turn's undo is consumed while the second's button stays lit, and clicking it again restores a state that was never on screen. The comment justifies naming a turn by its query over its position, but a position is exactly what disambiguates this.
+
+Proposal Risk: 3/10 - A turn index is stable for the turns that carry a snapshot, and the client has to be told which one it is clicking, so the two ends move together.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: identify the turn an undo names by its index". Add the turn's index to the `undo` action in `src/plugins/api-topics.ts` and to the button in `web/src/plugins/visualizations/VisualizationChat.tsx`, and have `reverted` in `src/visualizations/undo.ts` look the turn up by it, refusing an index the record does not hold or a turn with nothing to take back. Verify with a manager case in `src/visualizations/manager.test.ts` sending the same query twice, undoing the second, and asserting the first turn's chart is still there; a refusal case for an index not held; and a web case in `web/src/plugins/visualizations/VisualizationTab.test.tsx` asserting the button sends the turn it belongs to.
+
+* Give the raster exports a background, which the code says they already have. Severity: 7/10
+
+Existing Issue: `pixelsOf` in `web/src/plugins/visualizations/export/download.ts` sets the canvas background from `getComputedStyle(svg).backgroundColor || '#ffffff'`, but nothing gives an `svg` a background, so the computed value is `rgba(0, 0, 0, 0)` — truthy — and the `||` fallback never fires, so the fill paints nothing. Severity: 7/10
+
+Existing Risk: 7/10 - The default theme is dark, so a near-white title, tick and axis line lands on a transparent or white page and is effectively invisible when the export is opened anywhere. The comment above the line states the opposite is prevented, and the style contract pins the custom-property list but not the background, so nothing notices.
+
+Proposal Risk: 2/10 - Reading the theme's own `--bg` instead of the element's computed background fixes it for every theme at once, and changes nothing about what is drawn.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: paint the raster exports with the theme's own background". In `pixelsOf` in `web/src/plugins/visualizations/export/download.ts`, take the fill from the `--bg` custom property already in `CHART_PROPERTIES` and fall back to white only when it resolves to nothing, rather than from the element's transparent `backgroundColor`. Verify with a case in a new `web/src/plugins/visualizations/export/download.test.ts` asserting the chosen fill is the resolved `--bg` and not the transparent computed colour, and with a case asserting the fallback when `--bg` is absent.
+
+* Prune the datasets a removal orphaned, even when some other id in the same list was wrong. Severity: 6/10
+
+Existing Issue: `remove` in `src/visualizations/agent.ts` only calls `pruned` when nothing in the batch was refused, and `reply.ts` accepts up to sixteen arbitrary strings in `remove`, so one invented id alongside a real one skips the pruning that keeps `MAX_DATASETS` a bound on what is in use. Severity: 6/10
+
+Existing Risk: 6/10 - Each such turn leaves an acquired-file dataset holding a slot with nothing reading it, and after seven of them every chart naming a new file is refused with "this one already reads them all" while only the source is actually in use. It is wasted capacity rather than an unreadable record, but it is permanent for that record.
+
+Proposal Risk: 2/10 - Pruning drops a dataset nothing reads, which is already the rule, and the chart it belonged to is gone either way.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: prune orphaned datasets even when part of a removal was refused". In `remove` in `src/visualizations/agent.ts`, call `pruned` after the loop rather than only when `refused` is empty, since the datasets that survive are exactly those still read by a remaining chart. Verify with a case in `src/visualizations/agent.test.ts` removing a real chart id beside an invented one and asserting the dataset it was the only reader of is gone, and a case asserting a refused id alone still leaves a dataset alone.
+
+* Release a read's in-flight mark when the read throws, so a chart does not stop updating for the life of the process. Severity: 6/10
+
+Existing Issue: `reader` in `src/visualizations/reading.ts` adds its key to `inFlight`, awaits `options.read`, and deletes the key afterwards with no `try` around either, and the caller discards the promise, so a throw from the read leaves the key in place. Severity: 6/10
+
+Existing Risk: 6/10 - Every later read of that dataset returns `undefined` at the in-flight check, so the chart silently stops updating with no error anywhere while the poll keeps re-arming — the failure is indistinguishable from a source that has gone quiet, and it lasts until the process restarts.
+
+Proposal Risk: 2/10 - Wrapping the read and the work after it in a `try`/`finally` releases the key on every path, and nothing else about the read changes.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: release a read's in-flight mark when the read throws". In `reader` in `src/visualizations/reading.ts`, delete the key in a `finally` around the read and the work that follows it, and record the failure on the dataset the way a returned error is recorded so the chart shows a reason rather than going quiet. Verify with a case in `src/visualizations/reading.test.ts` whose read throws, asserting the second read for the same dataset is attempted and that the dataset carries the reason, and a case asserting a rejected read is not observable as an unhandled rejection.
+
+* Index the value arrays a notice walks by the same row it labels, or say no count. Severity: 6/10
+
+Existing Issue: `outliers` in `src/visualizations/insights.ts` says "the middle half of the ${values.length - 1} other values", computing "other" as one less than the total however many rows were outside the fences, so with two outliers it claims one more other value than there are. Severity: 6/10
+
+Existing Risk: 5/10 - The figure a reader checks the notice against is wrong by the number of other findings, which is the only thing that makes a stated rule checkable, and the test pins the wording for the single-outlier case where it happens to be right.
+
+Proposal Risk: 2/10 - The count is the size of the group that was judged minus the rows named, and nothing else reads it.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: count the other values a fence notice is about correctly". In `outliers` in `src/visualizations/insights.ts`, compute the "other" figure as the number of rows that were inside the fences rather than as the total less one, and say so in the sentence. Verify with a case in `src/visualizations/insights.test.ts` planting three outliers and asserting the sentence's count, and the existing single-outlier case unchanged.
+
+* Keep the measures the user named when a reply brings twelve of its own.
+
+Existing Issue: `remembered` in `src/visualizations/metrics.ts` trims the combined list with `.slice(-MAX_METRICS)`, which evicts the oldest entries — including measures the user introduced — when a reply defines enough of its own, and nothing says so. Severity: 5/10
+
+Existing Risk: 5/10 - The model can empty a user's named measures in one turn, `metricList` then stops offering them in the prompt, and every chart naming one is refused from then on, with nothing anywhere saying the measure the user asked for is gone.
+
+Proposal Risk: 3/10 - Preferring the user's measures over the model's is a judgement about whose words outrank whose, and a reply that corrects a measure the user named must still win.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: do not let a reply's measures evict the user's". In `remembered` in `src/visualizations/metrics.ts`, drop the oldest of the *incoming* definitions when the combined list is over the bound rather than the oldest overall, and say in the turn's response when a definition was refused for want of room. Verify with a case in `src/visualizations/metrics.test.ts` folding twelve definitions onto a record holding a user measure and asserting the user measure survives, and a case asserting the oldest incoming one is dropped instead.
+
+* Make the stored-chart guard hold the same four fields the grammar does, so a record cannot carry a unit or a stack the renderer would read differently.
+
+Existing Issue: `isChart` in `src/visualizations/chart-record.ts` checks `kind` and `aggregate` as bare strings and does not mention `percentile`, `xUnit`, `stack` or `metric`, while the grammar in `src/visualizations/chart-spec.ts` is strict about all four, and the header comment there claims one grammar stated in three places. Severity: 6/10
+
+Existing Risk: 6/10 - A record read back from disk, or hand-edited, with `xUnit: 'fortnight'` passes the guard and reaches `startOf`'s `default` branch, which floors every row to the first of January — a chart that draws successfully and means something else. The same drift made four aggregates blank the tab this cycle.
+
+Proposal Risk: 2/10 - Tightening a guard can refuse a record that was readable, which loses a visualization, so the new checks have to be exactly the grammar's.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: hold the stored-chart guard to the grammar's four optional fields". In `src/visualizations/chart-record.ts`, validate `percentile`, `xUnit`, `stack` and `metric` the way `optionalShapeOf` in `src/visualizations/chart-spec.ts` does, reusing that code rather than restating it, so the third copy cannot drift from the second. Verify with cases in `src/visualizations/store.test.ts` for a record carrying each field wrongly and refusing to be read back, and a case carrying each rightly and reading back.
