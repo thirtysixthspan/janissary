@@ -105,6 +105,47 @@ describe('a stored visualization', () => {
     expect(read?.turns[0]?.before?.[0]).not.toHaveProperty('table');
   });
 
+  // The grammar is stated once and the stored-chart guard used to state a third of it, loosely: a record
+  // carrying xUnit 'fortnight' passed, reached startOf's default branch, and floored every row to the
+  // first of January - a chart that draws and means something else, which is the one failure a chart may
+  // not make silently. Each of the four optional fields is checked against the grammar itself now.
+  it('refuses to read back a chart carrying a field the grammar has not got', () => {
+    const wrong: Record<string, unknown>[] = [
+      { xUnit: 'fortnight' },
+      { stack: 'centre' },
+      { percentile: 95 },
+      { aggregate: 'nonsense' },
+      { metric: '#bad' },
+      { metric: '' },
+    ];
+    for (const field of wrong) {
+      const store = new VisualizationStore({ home });
+      const chart = { ...(record().charts as Record<string, unknown>[])[0], ...field };
+      const file = path.join(store.directory('one'), 'visualization.json');
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, JSON.stringify({ ...record(), charts: [chart] }));
+
+      expect({ ...field, read: store.read('one') !== undefined }).toEqual({ ...field, read: false });
+    }
+  });
+
+  it('reads back a chart carrying every field the grammar does have', () => {
+    const store = new VisualizationStore({ home });
+    const chart = {
+      ...(record().charts as Record<string, unknown>[])[0],
+      xUnit: 'week',
+      stack: 'normalize',
+      aggregate: 'percentile',
+      percentile: 95,
+      metric: 'p95 latency',
+    };
+    store.write({ ...record(), charts: [chart] } as never);
+
+    const read = store.read('one');
+
+    expect(read?.charts[0]).toMatchObject({ xUnit: 'week', stack: 'normalize', percentile: 95, metric: 'p95 latency' });
+  });
+
   it('refuses to read back a record whose measures cannot be used', () => {
     const store = new VisualizationStore({ home });
     const file = path.join(store.directory('one'), 'visualization.json');

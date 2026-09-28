@@ -1,5 +1,6 @@
 import { isRecord } from '../value-guards.js';
-import { isDataRef, isTransformList } from './chart-spec.js';
+import { isDataRef, isOptionalShape, isTransformList } from './chart-spec.js';
+import { isMetricName } from './metrics.js';
 import type {
   VisualizationChartRecord,
   VisualizationDatasetView,
@@ -58,10 +59,13 @@ function isSpecified(value: Record<string, unknown>): boolean {
     && typeof value.kind === 'string'
     && typeof value.x === 'string' && typeof value.y === 'string'
     && typeof value.title === 'string'
-    && (value.series === undefined || typeof value.series === 'string')
-    && (value.aggregate === undefined || typeof value.aggregate === 'string')
-    && (value.xLabel === undefined || typeof value.xLabel === 'string')
-    && (value.yLabel === undefined || typeof value.yLabel === 'string');
+    // The optional half, asked of the grammar rather than answered again here: series, aggregate,
+    // percentile, xUnit, stack and the two labels are the grammar's rules, and a third copy of them is
+    // the drift that let a stored chart carry a unit the renderer would read differently.
+    && isOptionalShape(value)
+    // A metric is a name the conversation gave a column, so a stored one naming something that is not a
+    // name is a chart that will resolve to nothing when it is next drawn.
+    && (value.metric === undefined || isMetricName(value.metric));
 }
 
 export function isDataset(value: unknown): value is VisualizationDatasetView {

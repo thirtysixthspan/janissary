@@ -86,6 +86,15 @@ export function chartShapeOf(value: Record<string, unknown>): ChartShape | undef
   return { kind: value.kind, x: value.x, y: value.y, title: value.title, ...optional };
 }
 
+// The same question asked of a chart that is already stored rather than of one arriving in a reply,
+// and the answer has to be the same: a record read back from disk with an xUnit the grammar has not got
+// would reach `startOf`'s default branch and floor every row to the first of January - a chart that
+// draws successfully and means something else. The one place a stored chart is checked therefore asks
+// this function rather than restating it, which is the drift this export exists to stop.
+export function isOptionalShape(value: Record<string, unknown>): boolean {
+  return optionalShapeOf(value) !== undefined;
+}
+
 export function isChartShape(value: unknown): value is ChartShape {
   return isRecord(value) && chartShapeOf(value) !== undefined;
 }
