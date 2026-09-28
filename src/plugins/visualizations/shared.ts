@@ -54,6 +54,10 @@ export type VisualizationChart = {
   percentile?: number;
   xUnit?: VisualizationTimeUnit;
   stack?: VisualizationStack;
+  // The measure the user named this by, as the caption shows it. The definition itself never reaches the
+  // browser: the chart arrives with the column and aggregate already resolved, and a name is all a reader
+  // needs beside them.
+  metric?: string;
   title: string;
   xLabel?: string;
   yLabel?: string;
@@ -146,6 +150,7 @@ function isTable(value: unknown): value is VisualizationTable {
 
 function isChart(value: unknown): value is VisualizationChart {
   return isRecord(value)
+    && (value.metric === undefined || typeof value.metric === 'string')
     && typeof value.id === 'string' && value.id !== ''
     && isDataRef(value.data)
     && Array.isArray(value.notes) && value.notes.every((note) => typeof note === 'string')

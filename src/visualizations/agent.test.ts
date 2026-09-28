@@ -28,6 +28,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     pair: { harness: 'opencode', model: 'model' },
     datasets: [{ key: 'source', table: TABLE, readAt: 1 }],
     charts: [],
+    metrics: [],
     notices: [],
     turns: [],
     ...over,
@@ -319,6 +320,42 @@ describe('a reply that draws', () => {
     end();
     expect(subject.charts).toHaveLength(8);
     expect(subject.turns[0]?.response).toContain('may hold 8 charts');
+  });
+
+  // The whole of a named measure: a turn introduces it, a later chart states only the name, and the two
+  // charts are the same measurement by construction rather than by the model having typed the same column
+  // twice.
+  it('draws a chart that names a measure a previous turn defined', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({
+      say: 'From now on, p95 latency.',
+      charts: [],
+      metrics: [{ name: 'p95 latency', y: 'revenue', aggregate: 'percentile', percentile: 95 }],
+    }));
+    end();
+    agent.ask(subject, 'chart it', ready);
+    await settled();
+    chunk(reply({ metric: 'p95 latency' }));
+    end();
+
+    expect(subject.charts[0]?.y).toBe('revenue');
+    expect(subject.charts[0]?.aggregate).toBe('percentile');
+    expect(subject.charts[0]?.percentile).toBe(95);
+    expect(subject.charts[0]?.metric).toBe('p95 latency');
+  });
+
+  it('refuses a chart naming a measure that does not exist, and names it', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(reply({ metric: 'p99 latency' }));
+    end();
+    expect(subject.charts).toHaveLength(0);
+    expect(subject.turns[0]?.response).toContain('there is no measure named "p99 latency"');
   });
 
   it('renames the visualization when the reply names it and nothing has named it yet', async () => {

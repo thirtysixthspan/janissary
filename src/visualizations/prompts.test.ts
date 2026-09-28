@@ -27,6 +27,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     pair: { harness: 'opencode', model: 'model' },
     datasets: [{ key: 'source', table: TABLE, readAt: 1 }],
     charts: [],
+    metrics: [],
     turns: [],
     ...over,
   };
@@ -105,6 +106,24 @@ describe('the prompt', () => {
   // The model is told what the host measured rather than being asked to notice it itself, because a
   // spike described in the model's own words reads as an opinion and the same spike read twice reads as
   // two opinions.
+  // The measures the user has already named, with the column and the reduction behind each: a model told
+  // a name once and shown the column behind it stops inventing a third name for the same quantity.
+  it('lists the measures the user has named, with their column, reduction and synonyms', () => {
+    const withMeasure = record({
+      metrics: [{ name: 'p95 latency', y: 'revenue', aggregate: 'percentile', percentile: 95, synonyms: ['p95'] }],
+    });
+    const text = chatPrompt(withMeasure, WORKSPACE);
+    expect(text).toContain('## The measures you know');
+    expect(text).toContain('p95 latency: percentile 95 of revenue (also called p95)');
+    expect(text.indexOf('## The measures you know')).toBeLessThan(text.indexOf('## So far'));
+  });
+
+  it('leaves out a measure this data does not have, rather than offering a name that cannot be drawn', () => {
+    const withMeasure = record({ metrics: [{ name: 'p95 latency', y: 'nope', aggregate: 'sum' }] });
+    expect(chatPrompt(withMeasure, WORKSPACE)).not.toContain('## The measures you know');
+    expect(chatPrompt(record(), WORKSPACE)).not.toContain('## The measures you know');
+  });
+
   it('shows the findings the host made about the data, and says who made them', () => {
     const text = chatPrompt(record(), { ...WORKSPACE, notices: ['In "Latency", north has a latency of 4200, outside the 98 to 103 that the middle half of the other 9 latency values occupies.'] });
     expect(text).toContain('## What the data is doing');
@@ -199,6 +218,6 @@ describe('parsing a reply', () => {
   it('refuses prose, a bare list, and an object with nothing usable in it', () => {
     expect(parseReply('I would rather not answer in JSON.')).toBeUndefined();
     expect(parseReply('[1, 2, 3]')).toBeUndefined();
-    expect(parseReply('{}')).toEqual({ say: '', charts: [], remove: [], notices: [], followUps: [] });
+    expect(parseReply('{}')).toEqual({ say: '', charts: [], remove: [], notices: [], metrics: [], followUps: [] });
   });
 });

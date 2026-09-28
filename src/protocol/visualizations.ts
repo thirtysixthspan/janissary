@@ -135,11 +135,35 @@ export type ChartShape = {
   yLabel?: string;
 };
 
+// A measure the user has named once, so every chart of the conversation means the same thing by it. A
+// Pulse metric definition is documented as "the single source of truth for all the metrics based on" it,
+// and Databricks Genie gives each measure a name, code, synonyms and instructions because it "applies
+// the logic exactly as written rather than interpreting it from natural language" - both of which are
+// about the same failure: a quantity re-derived from a column name on every turn is a quantity that
+// changes its meaning between charts.
+export type VisualizationMetric = {
+  // The name the user types, unique in a record. Case-insensitively matched, because "P95 latency" and
+  // "p95 latency" in the same conversation are one metric and not two.
+  name: string;
+  y: string;
+  aggregate?: VisualizationAggregate;
+  percentile?: number;
+  // What the measure is, in a sentence, for a prompt and a caption rather than for a chart.
+  notes?: string;
+  // Other words the user might use for it. The model is shown these so it can reach for the name the
+  // user used rather than inventing a third one.
+  synonyms?: string[];
+};
+
 // A specification plus where its data comes from and what is done to that data first. This is the
 // value a model's reply states and the value a stored chart keeps, and it never reaches the browser.
 export type ChartSpec = ChartShape & {
   data: VisualizationDataRef;
   transforms: VisualizationTransform[];
+  // The metric this chart draws, when it was named rather than spelled out. Kept beside the resolved
+  // `y` and `aggregate` so the caption and the next turn can name the measure the user named, while
+  // everything downstream of here sees only a column and an aggregate.
+  metric?: string;
 };
 
 // What the browser is shown. The transformations are gone and `notes` has taken their place, because a
@@ -151,6 +175,10 @@ export type ChartSpec = ChartShape & {
 export type VisualizationChartView = ChartShape & {
   id: string;
   data: VisualizationDataRef;
+  // The metric the user named this measure by, when they did. The resolved `y` and `aggregate` are here
+  // too — the browser needs those to draw — and this is what the caption adds so a reader can tell which
+  // of two identically-drawn charts is which measure.
+  metric?: string;
   // One clause per transformation, in the order they are applied, for the caption under the chart.
   notes: string[];
   // Seconds between re-reads of this chart's data, where 0 means the data is read once and left

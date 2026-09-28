@@ -124,6 +124,13 @@ describe('the caption', () => {
   // to say which day each row belongs to.
   // A percent stack read as an absolute one is a chart that says the wrong thing, and the caption is the
   // only place that can say which of the two it is.
+  // Two charts can be drawn identically and mean different things when one is the p95 and the other a
+  // mean of the same column, and the caption is the only place that says which is which.
+  it('names the measure a chart draws when the user named one', () => {
+    expect(caption(chart({ metric: 'p95 latency' }))).toContain('p95 latency');
+    expect(caption(chart())).not.toContain('p95 latency');
+  });
+
   it('says how the series are stacked', () => {
     expect(caption(chart({ stack: 'normalize' }))).toContain('as a share of each category');
     expect(caption(chart({ stack: 'zero' }))).toContain('stacked');

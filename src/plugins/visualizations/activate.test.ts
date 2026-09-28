@@ -17,6 +17,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     source: 'https://example.com/d.csv',
     pair: { harness: 'opencode', model: 'model' },
     charts: [],
+    metrics: [],
     notices: [],
     turns: [],
     ...over,

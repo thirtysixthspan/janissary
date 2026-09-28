@@ -3,9 +3,11 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { errorText } from '../error-text.js';
+import { isMetricList } from './metrics.js';
 import type {
   ConversationModelPair,
   VisualizationChartRecord,
+  VisualizationMetric,
   VisualizationDatasetView,
   VisualizationSummaryView,
   VisualizationTurnView,
@@ -36,6 +38,10 @@ export type VisualizationRecord = {
   pair: ConversationModelPair;
   datasets: VisualizationDatasetView[];
   charts: VisualizationChartRecord[];
+  // The measures the user has named in this visualization, so a quantity means the same thing in every
+  // chart of the conversation instead of being re-derived from a column name on each turn. A definition
+  // whose column has gone stays on the record: the user wrote it, and the prompt simply stops offering it.
+  metrics: VisualizationMetric[];
   turns: VisualizationTurnView[];
   followUps?: string[];
   // What the host noticed in the data behind the charts: a value outside the fences, a point outside the
@@ -76,6 +82,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && isModelPair(value.pair)
     && isDatasetList(value.datasets)
     && isChartList(value.charts)
+    && (value.metrics === undefined || isMetricList(value.metrics))
     && Array.isArray(value.turns)
     && value.turns.every(isTurn)
     && (value.followUps === undefined || isStringArray(value.followUps))
@@ -108,6 +115,7 @@ export function freshVisualization(
     pair,
     datasets: [],
     charts: [],
+    metrics: [],
     turns: [],
     notices: [],
   };

@@ -130,6 +130,9 @@ export function caption(chart: VisualizationChart): string {
   const unit = chart.xUnit === undefined ? '' : `by ${chart.xUnit}`;
   // A share of each band read as an absolute total is a chart saying the wrong thing, and the caption is
   // the only place that can say which of the two it is.
+  // A measure the user named. Two charts can be drawn identically and mean different things when one of them
+  // is the p95 and the other a mean of the same column, and the caption is the only place that says which.
+  const metric = chart.metric ?? '';
   const stack = chart.stack === undefined
     ? ''
     : chart.stack === 'normalize' ? 'as a share of each category' : 'stacked';
@@ -137,5 +140,5 @@ export function caption(chart: VisualizationChart): string {
   // that stopped an hour ago reads exactly like one that stopped a second ago.
   const from = chart.data.kind === 'file' ? `from ${chart.data.path}, acquired by the agent` : '';
   const when = chart.readAt === undefined ? '' : `read ${new Date(chart.readAt).toLocaleTimeString()}`;
-  return [rows, how, unit, stack, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
+  return [rows, how, unit, stack, metric, ...chart.notes, from, when].filter((part) => part !== '').join(' · ');
 }

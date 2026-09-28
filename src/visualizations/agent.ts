@@ -3,6 +3,7 @@ import { isRateLimitError } from '../acp/rate-limit.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
 import { datasetFor, noticed, placed, pruned } from './charts.js';
+import { remembered } from './metrics.js';
 import { datasetKey } from './chart-spec.js';
 import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
@@ -208,6 +209,9 @@ export class VisualizationAgent {
     const refused = this.remove(record, reply.remove);
     const named = titled(reply.name ?? '');
     if (named !== '' && isUntitled(record)) record.title = named;
+    // Definitions are applied before the charts, so one turn can introduce a measure and draw with it, and
+    // a name is matched against what this reply defined as well as against what was already there.
+    if (reply.metrics.length > 0) remembered(record, reply.metrics);
     const first = this.place(record, reply.charts, refused);
     // Whatever the reply did to the charts, the notices are the data's own account of itself rather than
     // the model's, so they are rebuilt here from what the charts now say rather than asked for.

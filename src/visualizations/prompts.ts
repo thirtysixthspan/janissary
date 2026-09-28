@@ -1,4 +1,5 @@
 import { COMPARES } from './chart-spec.js';
+import { metricList } from './metrics.js';
 import { AGGREGATE_RULE, CONTRACT, DATA_RULE, EXAMPLE, FOLLOW_UP_RULE, KIND_RULE, MAX_TURNS_IN_PROMPT, TRANSFORM_RULE } from './reply.js';
 import type { VisualizationRecord } from './store.js';
 import type { VisualizationChartRecord, VisualizationDatasetView, VisualizationTurnView } from '../protocol/visualizations.js';
@@ -90,7 +91,13 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
   // message ago is usually still held, and a prompt that showed only the refusal left the model with no
   // columns, no row count and no sample — so it could not answer the question that was actually asked
   // and said so, for a reason having nothing to do with the question.
-  const data = [context.sourceNote, datasets].filter((part) => part !== undefined && part !== '').join('\n\n');
+  // The measures the user has already named, with the column and the reduction behind each and the other
+  // words they use for it. A definition whose column this data does not have is left out rather than shown
+  // and refused later, because a prompt offering a name that cannot be drawn invites a refusal.
+  const known = metricList(record.metrics, (column) =>
+    record.datasets.some((dataset) => dataset.table?.columns.some((one) => one.name === column) === true));
+  const measures = known.length === 0 ? '' : ['## The measures you know', ...known].join('\n');
+  const data = [context.sourceNote, datasets, measures].filter((part) => part !== undefined && part !== '').join('\n\n');
   const notices = noticesSectionOf(context.notices);
   return [
     'You are helping someone chart data. They name a source, you work out how to reach the data behind it, you ask what they want to see, you draw it, and then you keep answering their questions about it and the chart.',
@@ -117,6 +124,8 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
     '`notices` is optional: one or two things you noticed in the data itself, as a plain sentence naming the value and where it was. The host shows its own measurements of the data separately, so do not repeat one of those; say what it means rather than what it is. Leave it out when you have noticed nothing.',
     '`xUnit` is optional and groups a date x column by a calendar unit — year, quarter, month, week or day — so a two-year daily series can be a chart of months. It is refused on a column that is not a date. Without it a date column is one band per distinct value, which for a daily source is one band per day.',
     '`stack` is optional and needs a `series`: "zero" draws each series on top of the last so the height of each band is the total, and "normalize" does the same as a share of that total, so the bands read as percentages. Without it the series sit side by side. It is refused on a pie and on a scatter.',
+    '`metrics` is optional and names measures the user uses, each with the column it means, the aggregate over it, and any other words for it; a name given here is the same measure in every later chart, so use the name rather than re-deriving the column.',
+    "A chart may state `metric` instead of `y` and `aggregate`, and then it draws that named measure. An unknown name is refused rather than drawn as something else.",
     '`remove` is a list of chart ids to drop.',
     '`name` renames the visualization, and is how the user renames it in words.',
     'Answer with prose and no charts when the user asked a question about the data rather than for a change.',

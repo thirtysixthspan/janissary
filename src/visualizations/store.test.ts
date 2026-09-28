@@ -73,6 +73,29 @@ describe('a stored visualization', () => {
     expect(read?.charts[0]?.table.rows).toHaveLength(2);
   });
 
+  // A measure the user named is the one piece of a record whose whole purpose is to be read back by a
+  // later turn, so the round trip is worth pinning on its own rather than folded into another case.
+  it('round-trips a named measure with its synonyms', () => {
+    const store = new VisualizationStore({ home });
+    store.write({
+      ...record(),
+      metrics: [{ name: 'p95 latency', y: 'latency', aggregate: 'percentile', percentile: 95, notes: 'the number a user feels', synonyms: ['p95'] }],
+    });
+
+    expect(store.read('one')?.metrics).toEqual([
+      { name: 'p95 latency', y: 'latency', aggregate: 'percentile', percentile: 95, notes: 'the number a user feels', synonyms: ['p95'] },
+    ]);
+  });
+
+  it('refuses to read back a record whose measures cannot be used', () => {
+    const store = new VisualizationStore({ home });
+    const file = path.join(store.directory('one'), 'visualization.json');
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, JSON.stringify({ ...record(), metrics: [{ name: 'p95', y: 'latency', aggregate: 'nonsense' }] }));
+
+    expect(store.read('one')).toBeUndefined();
+  });
+
   it('round-trips a record holding no document and a chart holding an error', () => {
     const store = new VisualizationStore({ home });
     store.write(record({

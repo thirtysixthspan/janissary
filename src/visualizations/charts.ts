@@ -2,6 +2,7 @@ import type { ChartShape, ChartSpec } from '../protocol.js';
 import { chartNotes, datasetKey, resolve } from './chart-spec.js';
 import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { noticesFor } from './insights.js';
+import { resolveMetric } from './metrics.js';
 import type { VisualizationRecord } from './store.js';
 import type {
   VisualizationChartRecord,
@@ -90,7 +91,7 @@ export function noticed(record: VisualizationRecord): string[] {
 // new one.
 export function placed(
   record: VisualizationRecord,
-  entry: { id?: string; data?: VisualizationDataRef; transforms?: ChartSpec['transforms'] } & ChartShape,
+  entry: { id?: string; data?: VisualizationDataRef; metric?: string; transforms?: ChartSpec['transforms'] } & ChartShape,
   mintId: () => string,
 ): { chart: VisualizationChartRecord } | { error: string } {
   const existing = entry.id === undefined ? undefined : record.charts.find((chart) => chart.id === entry.id);
@@ -101,13 +102,39 @@ export function placed(
   // A transform list replaces rather than merges: a reply that supplies one is stating the whole list
   // the chart now applies, and appending to it would make "only 2024" twice after it was asked twice.
   const transforms = entry.transforms ?? existing?.transforms ?? [];
-  const result = drawn(record, data, transforms, shapeOf(entry), existing?.id ?? entry.id ?? mintId(), existing?.refreshSeconds ?? 0);
+  const named = measured(record, entry);
+  if ('error' in named) return named;
+  const result = drawn(record, data, transforms, named.shape, existing?.id ?? entry.id ?? mintId(), existing?.refreshSeconds ?? 0);
   if ('error' in result) return result;
-  const chart = { ...result.chart, transforms: [...transforms] };
+  const chart = { ...result.chart, transforms: [...transforms], ...(named.metric !== undefined && { metric: named.metric }) };
   record.charts = existing === undefined
     ? [...record.charts, chart]
     : record.charts.map((other) => (other.id === existing.id ? chart : other));
   return { chart };
+}
+
+// The shape a chart is placed with, with a named measure resolved into the column and the reduction it
+// stands for. An unknown name is refused rather than falling back to whatever column the reply also
+// typed: a chart that draws successfully and means something other than what was asked for is the one
+// failure a chart cannot make, and a metric that resolves to a column the data does not have is the same.
+export function measured(
+  record: VisualizationRecord,
+  entry: { metric?: string; data?: VisualizationDataRef } & ChartShape,
+): { shape: ChartShape; metric?: string } | { error: string } {
+  if (entry.metric === undefined) return { shape: shapeOf(entry) };
+  const table = datasetFor(record, datasetKey(entry.data ?? { kind: 'source' }))?.table;
+  const resolved = resolveMetric(record.metrics, entry.metric, (column) => table?.columns.some((one) => one.name === column) === true);
+  if ('error' in resolved) return resolved;
+  const metric = resolved.metric;
+  return {
+    shape: shapeOf({
+      ...entry,
+      y: metric.y,
+      ...(metric.aggregate !== undefined && { aggregate: metric.aggregate }),
+      ...(metric.percentile !== undefined && { percentile: metric.percentile }),
+    }),
+    metric: metric.name,
+  };
 }
 
 function shapeOf(entry: ChartShape): ChartShape {
@@ -174,6 +201,7 @@ export function chartById(record: VisualizationRecord, id: string): Visualizatio
 export function chartViewOf(chart: VisualizationChartRecord): VisualizationChartView {
   return {
     id: chart.id,
+    ...(chart.metric !== undefined && { metric: chart.metric }),
     data: { ...chart.data },
     notes: chartNotes(chart),
     refreshSeconds: chart.refreshSeconds,

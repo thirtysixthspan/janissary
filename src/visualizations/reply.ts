@@ -1,6 +1,7 @@
 import { isRecord } from '../value-guards.js';
+import { MAX_METRICS, metricOf } from './metrics.js';
 import { AGGREGATES, CHART_KINDS, MAX_FILTER_VALUES, MAX_TRANSFORMS, chartShapeOf, isDataRef, isTransformList } from './chart-spec.js';
-import type { ChartShape, VisualizationDataRef, VisualizationTransform } from '../protocol/visualizations.js';
+import type { ChartShape, VisualizationDataRef, VisualizationMetric, VisualizationTransform } from '../protocol/visualizations.js';
 
 // What a reply may say, and how it is read.
 //
@@ -28,6 +29,10 @@ export type ReplyChart = {
   id?: string;
   data?: VisualizationDataRef;
   transforms?: VisualizationTransform[];
+  // A measure the user has named, in place of `y` and `aggregate`. The shape is still required, so the
+  // model states both and the name wins: a stored chart that resolved to a column nobody asked for is a
+  // chart that draws successfully and means something else.
+  metric?: string;
 } & ChartShape;
 
 export type Reply = {
@@ -41,6 +46,9 @@ export type Reply = {
   // which is which has been told something as a fact that is only an opinion.
   notices: string[];
   followUps: string[];
+  // Measures this reply defines or changes, applied before its charts are placed so a single turn can
+  // introduce a measure and draw with it.
+  metrics: VisualizationMetric[];
 };
 
 function strings(value: unknown, cap: number): string[] {
@@ -54,6 +62,19 @@ function strings(value: unknown, cap: number): string[] {
 // A chart entry, or nothing. `id` and the data reference and the transforms are all optional because a
 // chart being changed may state only what changes; everything else is required, so a half-specified
 // chart is refused rather than filled in with a guess.
+// Definitions a reply states, read defensively: one unreadable definition is dropped and the rest kept,
+// because refusing the whole reply over a synonym that was a number would cost the user their chart.
+function metricsOf(value: unknown): VisualizationMetric[] {
+  if (!Array.isArray(value)) return [];
+  const found: VisualizationMetric[] = [];
+  for (const entry of value) {
+    const one = metricOf(entry);
+    if (one) found.push(one);
+    if (found.length === MAX_METRICS) break;
+  }
+  return found;
+}
+
 function chartOf(value: Record<string, unknown>): ReplyChart | undefined {
   const shape = chartShapeOf(value);
   if (!shape) return undefined;
@@ -62,9 +83,13 @@ function chartOf(value: Record<string, unknown>): ReplyChart | undefined {
   const transforms = value.transforms === undefined
     ? undefined
     : (isTransformList(value.transforms) ? [...value.transforms] : undefined);
+  const metric = typeof value.metric === 'string' && value.metric.trim() !== ''
+    ? value.metric.trim()
+    : undefined;
   return {
     ...shape,
     ...(id !== undefined && { id }),
+    ...(metric !== undefined && { metric }),
     ...(data !== undefined && { data }),
     ...(transforms !== undefined && { transforms }),
   };
@@ -99,6 +124,7 @@ export function parseReply(text: string): Reply | undefined {
     remove: strings(parsed.remove, MAX_FOLLOW_UPS * 4),
     ...(name !== undefined && { name }),
     notices: strings(parsed.notices, MAX_NOTICES),
+    metrics: metricsOf(parsed.metrics),
     followUps: strings(parsed.followUps, MAX_FOLLOW_UPS),
   };
 }
