@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Index the value arrays a notice walks by the same row it labels, or say no count. Severity: 6/10
-
-Existing Issue: `outliers` in `src/visualizations/insights.ts` says "the middle half of the ${values.length - 1} other values", computing "other" as one less than the total however many rows were outside the fences, so with two outliers it claims one more other value than there are. Severity: 6/10
-
-Existing Risk: 5/10 - The figure a reader checks the notice against is wrong by the number of other findings, which is the only thing that makes a stated rule checkable, and the test pins the wording for the single-outlier case where it happens to be right.
-
-Proposal Risk: 2/10 - The count is the size of the group that was judged minus the rows named, and nothing else reads it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: count the other values a fence notice is about correctly". In `outliers` in `src/visualizations/insights.ts`, compute the "other" figure as the number of rows that were inside the fences rather than as the total less one, and say so in the sentence. Verify with a case in `src/visualizations/insights.test.ts` planting three outliers and asserting the sentence's count, and the existing single-outlier case unchanged.
-
 * Keep the measures the user named when a reply brings twelve of its own.
 
 Existing Issue: `remembered` in `src/visualizations/metrics.ts` trims the combined list with `.slice(-MAX_METRICS)`, which evicts the oldest entries — including measures the user introduced — when a reply defines enough of its own, and nothing says so. Severity: 5/10

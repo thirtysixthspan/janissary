@@ -147,7 +147,25 @@ describe('noticesFor', () => {
     // distribution can still say is a distribution, so the one value well outside the middle half is
     // named and the two time-based rules stay silent.
     expect(noticesFor([chartOf({ x: 'service', table: byService as unknown as VisualizationTableView })]))
-      .toEqual(['In "Latency", auth has a latency of 2, outside the 0.625 to 1.625 that the middle half of the 7 other latency values occupies; auth has a latency of 9, outside the 0.625 to 1.625 that the middle half of the 7 other latency values occupies.']);
+      .toEqual(['In "Latency", auth has a latency of 2, outside the 0.625 to 1.625 that the middle half of the 6 other latency values occupies; auth has a latency of 9, outside the 0.625 to 1.625 that the middle half of the 6 other latency values occupies.']);
+  });
+
+  // The figure that makes the rule checkable: 'the middle half of the N other values' is the group
+  // the fences were judged over, so N is what was inside them rather than the total less one. With one
+  // finding the two happen to agree, which is why the single-spike wording is not evidence of anything.
+  it('counts the values the fences judged, not the total less one', () => {
+    const three = table(
+      [{ name: 'day', type: 'date' }, { name: 'latency', type: 'number' }],
+      [
+        ...Array.from({ length: 9 }, (_, index) => [`2026-07-${String(index + 1).padStart(2, '0')}`, 100]),
+        ['2026-07-10', 9000], ['2026-07-11', 8000], ['2026-07-12', 7000],
+      ],
+    );
+    const said = noticesFor([chartOf({ table: three as unknown as VisualizationTableView })]).join(' ');
+    // Nine values inside the fences and three outside them, so the other values are nine - not eleven,
+    // which is what the total less one says once more than one row has been named.
+    expect(said.match(/the middle half of the 9 other latency values/gu)).toHaveLength(2);
+    expect(said).not.toContain('the 11 other');
   });
 
   // A notice is one sentence on a screen, so a bounded report says that it is bounded: a reader who

@@ -87,7 +87,12 @@ function outliers(chart: VisualizationChartRecord): Finding {
   const outside = rowsOf(chart.table, chart.y).filter((row) => row.value < low || row.value > high);
   if (outside.length === 0) return { clauses: [], rows: [] };
   const where = columnOf(chart.table, chart.x);
-  const span = `${round(low)} to ${round(high)} that the middle half of the ${values.length - 1} other ${chart.y} values occupies`;
+  // The count is the values the sentence is not about. `values.length - 1` is right for one finding
+  // and wrong for every other: with two spikes it claims the other eleven when ten were judged, so the
+  // figure a reader would check the rule against does not add up. What the middle half of was is the
+  // values inside the fences, which is what the outside rows are counted out of.
+  const inside = values.length - outside.length;
+  const span = `${round(low)} to ${round(high)} that the middle half of the ${inside} other ${chart.y} values occupies`;
   const boundedRows = bounded(outside.slice(0, MAX_PER_KIND), outside.length, (row) => {
     const at = labelOf(chart.table.rows[row.index]?.[where]);
     return `${at === '' ? '' : `${at} has `}a ${chart.y} of ${row.value}, outside the ${span}`;
