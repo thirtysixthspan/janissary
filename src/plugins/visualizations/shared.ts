@@ -107,12 +107,6 @@ export type VisualizationTabPayload = {
 
 export type VisualizationsPayload = VisualizationListPayload | VisualizationTabPayload;
 
-export type CreateIntent = { message?: string };
-export type IdIntent = { id: string };
-export type SendIntent = { query: string };
-export type ChartIntent = { chartId: string };
-export type ChartRefreshIntent = { chartId: string; seconds: number };
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -141,7 +135,13 @@ function isSummary(value: unknown): value is VisualizationSummary {
 }
 
 const CHART_KINDS = new Set<string>(['bar', 'line', 'area', 'scatter', 'pie']);
-const AGGREGATES = new Set<string>(['sum', 'mean', 'count', 'min', 'max']);
+// The aggregates the payload may carry, kept in step with the grammar by a test beside this file rather
+// than by an import: this contract imports nothing, so the two lists cannot be the same list, and a copy
+// that drifts is how four aggregates reached the wire and were then refused by the guard that should have
+// allowed them.
+export const AGGREGATES = new Set<string>([
+  'sum', 'mean', 'median', 'percentile', 'variance', 'count', 'distinct', 'min', 'max',
+]);
 
 function isDataRef(value: unknown): value is VisualizationDataRef {
   if (!isRecord(value)) return false;
@@ -192,7 +192,7 @@ function isTurn(value: unknown): value is VisualizationTurn {
     && (value.streaming === undefined || typeof value.streaming === 'boolean')
     // The claim to be undoable travels; the charts to put back do not, so a label with no copy behind it is
     // a button that restores nothing and is refused here rather than shown.
-    && (value.undo === undefined || (typeof value.undo === 'string' && value.undo !== '' && value.before === undefined));
+    && (value.undo === undefined || isText(value.undo));
 }
 
 function isStringList(value: unknown): value is string[] {
@@ -233,28 +233,4 @@ export function isVisualizationsPayload(value: unknown): value is Visualizations
       && value.models.every((entry) => isModelPair(entry));
   }
   return false;
-}
-
-export function isCreateIntent(value: unknown): value is CreateIntent {
-  if (!isRecord(value)) return false;
-  const message = value.message;
-  return message === undefined || (typeof message === 'string' && message.trim() !== '');
-}
-
-export function isIdIntent(value: unknown): value is IdIntent {
-  return isRecord(value) && typeof value.id === 'string' && value.id !== '';
-}
-
-export function isSendIntent(value: unknown): value is SendIntent {
-  return isRecord(value) && typeof value.query === 'string' && value.query.trim() !== '';
-}
-
-export function isChartIntent(value: unknown): value is ChartIntent {
-  return isRecord(value) && typeof value.chartId === 'string' && value.chartId !== '';
-}
-
-export function isChartRefreshIntent(value: unknown): value is ChartRefreshIntent {
-  return isRecord(value)
-    && typeof value.chartId === 'string' && value.chartId !== ''
-    && typeof value.seconds === 'number' && Number.isFinite(value.seconds) && value.seconds >= 0;
 }

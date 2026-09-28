@@ -6,8 +6,10 @@ import type {
 } from '../../protocol.js';
 import { TAB_PLUGIN_API_VERSION } from '../api.js';
 import { tabPluginCatalog } from '../catalog.js';
+import { AGGREGATES as GRAMMAR_AGGREGATES } from '../../visualizations/chart-spec.js';
 import { visualizationsManifest } from './manifest.js';
 import {
+  AGGREGATES,
   isVisualizationsData,
   isVisualizationsPayload,
   VISUALIZATIONS_PAYLOAD_SCHEMA_VERSION,
@@ -51,6 +53,34 @@ const asPluginChart: VisualizationChart = asWireChart;
 const asWireWindow: WireWindow = WINDOW;
 const asPluginWindow: VisualizationWindow = asWireWindow;
 const asWireView: WireView = { summaries: [], windows: [asWireWindow], models: [] };
+
+// The two lists cannot be one list, because this contract imports nothing — and a copy that drifts is not a
+// theoretical hazard: four aggregates reached the wire intact and were then refused by this guard, which
+// made the tab blank the moment a chart the prompt recommends landed. So the copy is pinned to the grammar.
+describe('the aggregate list the contract accepts', () => {
+  it('is exactly the list the grammar has, in both directions', () => {
+    const byName = (one: string, other: string): number => one.localeCompare(other);
+    expect([...AGGREGATES].toSorted(byName)).toEqual([...GRAMMAR_AGGREGATES].toSorted(byName));
+  });
+
+  // The case that missed it: one aggregate, the one a long-tailed measure is drawn with.
+  it('takes every aggregate the grammar has, and the percentile beside it', () => {
+    for (const aggregate of GRAMMAR_AGGREGATES) {
+      const payload = { kind: 'visualization', window: { ...WINDOW, charts: [{ ...CHART, aggregate }] }, models: [{ harness: 'claude', model: 'm' }] };
+      if (aggregate === 'percentile') {
+        expect(isVisualizationsPayload({ ...payload, window: { ...WINDOW, charts: [{ ...CHART, aggregate, percentile: 95 }] } })).toBe(true);
+      } else {
+        expect(isVisualizationsPayload(payload)).toBe(true);
+      }
+    }
+  });
+
+  it('still refuses an aggregate the grammar has not got', () => {
+    expect(isVisualizationsPayload({
+      kind: 'visualization', window: { ...WINDOW, charts: [{ ...CHART, aggregate: 'geommedian' }] }, models: [{ harness: 'claude', model: 'm' }],
+    })).toBe(false);
+  });
+});
 
 describe('visualizations shared contract', () => {
   it('re-declares the window and the chart exactly', () => {

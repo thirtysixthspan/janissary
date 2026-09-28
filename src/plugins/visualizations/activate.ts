@@ -5,15 +5,17 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
+  isVisualizationsData,
+  isVisualizationsPayload,
+  type VisualizationsPayload,
+} from './shared.js';
+import {
   isChartIntent,
   isChartRefreshIntent,
   isCreateIntent,
   isIdIntent,
   isSendIntent,
-  isVisualizationsData,
-  isVisualizationsPayload,
-  type VisualizationsPayload,
-} from './shared.js';
+} from './intents.js';
 import { LIST_KEY, listPayload, dataFrom, VisualizationTabs } from './tabs.js';
 
 const LIST_INTENTS = new Set(['open', 'delete']);
@@ -127,7 +129,7 @@ function runIntent(
   if (intent === 'create') {
     if (tab.kind !== 'list') return capabilities.rejectRequest('invalid create payload');
     if (!isCreateIntent(value)) return capabilities.rejectRequest('invalid create payload');
-    tabs.create({ message: value.message }, capabilities);
+    tabs.create(isCreateIntent(value) ? value : {}, capabilities);
     return null;
   }
   if (LIST_INTENTS.has(intent)) {

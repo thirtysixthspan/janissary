@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Derive the plugin's aggregate list from the server's, so a chart the prompt recommends cannot blank the tab. Severity: 9/10
-
-Existing Issue: `src/plugins/visualizations/shared.ts` validates `aggregate` against its own literal `AGGREGATES` set, still `['sum','mean','count','min','max']`, while the grammar in `src/visualizations/chart-spec.ts` has carried nine since the median/percentile/variance/distinct change, and `chartViewOf` in `src/visualizations/charts.ts` passes the aggregate straight through to the wire, so a `median` chart is stored, validated and projected intact. Severity: 9/10
-
-Existing Risk: 9/10 - `activate.ts` refuses the payload, `registry.tsx` throws `invalid plugin payload`, and the tab's error boundary renders `null` — so the tab goes blank and every intent is refused the moment a median, percentile, variance or distinct chart lands, which are exactly the aggregates the prompt tells the model to prefer on a long-tailed measure. A record restored from disk holding one is dead on open, and only the console says why. The list has to be pinned against the server's rather than left to two copies, because `shared.test.ts`'s "accepts every optional field" case passes `aggregate: 'sum'` and so never noticed.
-
-Proposal Risk: 2/10 - Pinning the two lists against each other in a test changes no runtime behaviour, and the import stays one-way: the shared contract cannot import the server, but a test beside it can.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: pin the shared contract's aggregate list to the grammar's". In `src/plugins/visualizations/shared.test.ts`, import `AGGREGATES` from `src/visualizations/chart-spec.js` and assert the contract's set equals it exactly, so a grammar that gains an aggregate and a contract that does not fails the suite rather than the tab. Add a payload case carrying `aggregate: 'median'` with a `percentile` beside it, and one carrying every aggregate the grammar has, so the case that missed this cannot miss again. Verify with the payload guard's own test failing when one entry of either list is removed, and with the case in `src/plugins/visualizations/manager.test.ts` that projects a median chart asserting the window payload carries it.
-
 * Carry `percentile`, `xUnit` and `stack` through the projection, so three shipped features are not no-ops. Severity: 9/10
 
 Existing Issue: `chartViewOf` in `src/visualizations/charts.ts` copies `kind`, `x`, `y`, `title`, `series`, `aggregate`, `xLabel`, `yLabel` and `metric` by hand, and the three fields the last three feature commits added to `ChartShape` are not copied, although every one of them is optional on `VisualizationChartView` and so satisfies the type without a word from the compiler. Severity: 9/10
