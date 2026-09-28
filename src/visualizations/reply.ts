@@ -1,7 +1,7 @@
 import { isRecord } from '../value-guards.js';
 import { MAX_METRICS, metricOf } from './metrics.js';
 import { AGGREGATES, CHART_KINDS, MAX_FILTER_VALUES, MAX_TRANSFORMS, chartShapeOf, isDataRef, isTransformList } from './chart-spec.js';
-import type { ChartShape, VisualizationDataRef, VisualizationMetric, VisualizationTransform } from '../protocol/visualizations.js';
+import type { ChartShape, VisualizationClarify, VisualizationDataRef, VisualizationMetric, VisualizationTransform } from '../protocol/visualizations.js';
 
 // What a reply may say, and how it is read.
 //
@@ -49,6 +49,10 @@ export type Reply = {
   // Measures this reply defines or changes, applied before its charts are placed so a single turn can
   // introduce a measure and draw with it.
   metrics: VisualizationMetric[];
+  // A question the model could not answer on its own, with the readings it considered. A filter value it
+  // could not find, a column it read two ways, a word that named two of them: the model says so and the
+  // user picks, which is the only route out of a coin flip that neither of them can see.
+  clarify?: VisualizationClarify;
 };
 
 function strings(value: unknown, cap: number): string[] {
@@ -64,6 +68,17 @@ function strings(value: unknown, cap: number): string[] {
 // chart is refused rather than filled in with a guess.
 // Definitions a reply states, read defensively: one unreadable definition is dropped and the rest kept,
 // because refusing the whole reply over a synonym that was a number would cost the user their chart.
+// A question and up to four readings, or nothing. The bound is the same as the suggestions', because a
+// row of buttons is a row of buttons however many reasons there are for asking.
+export function clarifyOf(value: unknown): VisualizationClarify | undefined {
+  if (!isRecord(value)) return undefined;
+  const question = typeof value.question === 'string' ? value.question.trim() : '';
+  if (question === '') return undefined;
+  const options = strings(value.options, MAX_FOLLOW_UPS);
+  if (options.length === 0) return undefined;
+  return { question, options };
+}
+
 function metricsOf(value: unknown): VisualizationMetric[] {
   if (!Array.isArray(value)) return [];
   const found: VisualizationMetric[] = [];
@@ -125,6 +140,7 @@ export function parseReply(text: string): Reply | undefined {
     ...(name !== undefined && { name }),
     notices: strings(parsed.notices, MAX_NOTICES),
     metrics: metricsOf(parsed.metrics),
+    ...(clarifyOf(parsed.clarify) !== undefined && { clarify: clarifyOf(parsed.clarify) as VisualizationClarify }),
     followUps: strings(parsed.followUps, MAX_FOLLOW_UPS),
   };
 }

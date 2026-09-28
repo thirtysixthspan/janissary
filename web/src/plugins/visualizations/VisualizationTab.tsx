@@ -51,6 +51,7 @@ export function VisualizationTab({ payload, capabilities }: TabProperties) {
         turns={view.turns}
         notices={view.notices}
         instructions={view.instructions}
+        {...(view.clarify !== undefined && { clarify: view.clarify })}
         {...(view.followUps !== undefined && { followUps: view.followUps })}
         {...(view.error !== undefined && { error: view.error })}
         prompted={view.source === '' && view.turns.length === 0}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { clarifyOf } from './reply.js';
 import { chatPrompt, refreshPrompt } from './prompts.js';
 import { parseReply } from './reply.js';
 import { VISUALIZATION_SCHEMA_VERSION, type VisualizationRecord } from './store.js';
@@ -120,9 +121,51 @@ describe('the prompt', () => {
     expect(text.indexOf('## What the user has told you to keep doing')).toBeLessThan(text.indexOf('## So far'));
   });
 
+  it('reads a clarification, and refuses one with no readings to pick from', () => {
+    expect(clarifyOf({ question: 'Which region do you mean?', options: ['north', 'south'] }))
+      .toEqual({ question: 'Which region do you mean?', options: ['north', 'south'] });
+    expect(clarifyOf({ question: 'Which region?', options: [] })).toBeUndefined();
+    expect(clarifyOf({ question: '', options: ['north'] })).toBeUndefined();
+    expect(clarifyOf({ question: 'Which region?', options: ['north', 1] })).toEqual({ question: 'Which region?', options: ['north'] });
+  });
+
   it('leaves the rules out entirely when there are none', () => {
     expect(chatPrompt(record(), WORKSPACE)).not.toContain('## What the user has told you');
     expect(chatPrompt(record({ instructions: [] }), WORKSPACE)).not.toContain('## What the user has told you');
+  });
+
+  // The values each named column holds, so a filter value is a choice rather than a guess. Looker's agent
+  // calls sample data against a field's values for the same reason: "NY" could be a city or a state and
+  // eight sample rows cannot say which.
+  it('lists the values each column holds, so a filter value is a choice rather than a guess', () => {
+    const text = chatPrompt(record({
+      datasets: [{
+        key: 'source',
+        table: {
+          columns: [{ name: 'region', type: 'string' }, { name: 'revenue', type: 'number' }],
+          rows: [['north', 10], ['south', 4]],
+          total: 2,
+          truncated: false,
+        },
+        readAt: 1,
+      }],
+    }), WORKSPACE);
+    expect(text).toContain('Values each column holds');
+    expect(text).toContain('region: north, south');
+    // A measure is read off a chart, and a column of numbers is not a vocabulary.
+    expect(text).not.toContain('revenue: 10');
+  });
+
+  it('says when a column had more values than it listed', () => {
+    const rows = Array.from({ length: 30 }, (_, index) => [`v${index}`, index]);
+    const text = chatPrompt(record({
+      datasets: [{
+        key: 'source',
+        table: { columns: [{ name: 'region', type: 'string' }], rows, total: 30, truncated: false },
+        readAt: 1,
+      }],
+    }), WORKSPACE);
+    expect(text).toContain('and more not shown');
   });
 
   it('lists the measures the user has named, with their column, reduction and synonyms', () => {

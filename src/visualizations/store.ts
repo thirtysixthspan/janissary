@@ -1,18 +1,20 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { errorText } from '../error-text.js';
+import { MAX_FOLLOW_UPS } from './reply.js';
 import { isMetricList, MAX_INSTRUCTIONS } from './metrics.js';
 import type {
   ConversationModelPair,
   VisualizationChartRecord,
+  VisualizationClarify,
   VisualizationMetric,
   VisualizationDatasetView,
   VisualizationSummaryView,
   VisualizationTurnView,
 } from '../protocol.js';
-import { trustWorkspace, untrustWorkspace } from '../workspace/index.js';
+import { untrust, workspaceOf } from './store-workspace.js';
 import { isModelPair, isRecord } from '../value-guards.js';
 import { isChartList, isDatasetList } from './chart-record.js';
 
@@ -46,6 +48,7 @@ export type VisualizationRecord = {
   // and nothing else, so without this an instruction given in the first message is gone by the thirteenth
   // and neither the user nor the model can tell that from one that was never followed.
   instructions: string[];
+  clarify?: VisualizationClarify;
   turns: VisualizationTurnView[];
   followUps?: string[];
   // What the host noticed in the data behind the charts: a value outside the fences, a point outside the
@@ -57,6 +60,16 @@ export type VisualizationRecord = {
 };
 
 type StoreOptions = { home?: string; write?: typeof atomicWriteFile };
+
+// A question and at least one reading, both strings, bounded like the suggestions they are shown beside.
+function isClarify(value: unknown): value is VisualizationClarify {
+  return isRecord(value)
+    && typeof value.question === 'string'
+    && value.question !== ''
+    && isStringArray(value.options)
+    && value.options.length > 0
+    && value.options.length <= MAX_FOLLOW_UPS;
+}
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
@@ -92,6 +105,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && isChartList(value.charts)
     && (value.metrics === undefined || isMetricList(value.metrics))
     && (value.instructions === undefined || (isStringArray(value.instructions) && value.instructions.length <= MAX_INSTRUCTIONS))
+    && (value.clarify === undefined || isClarify(value.clarify))
     && Array.isArray(value.turns)
     && value.turns.every(isTurn)
     && (value.followUps === undefined || isStringArray(value.followUps))
@@ -183,23 +197,15 @@ export class VisualizationStore {
     });
   }
 
-  // The empty workspace this record's agent is confined to, and the one directory a file it acquired
-  // may be read from. Created on first use rather than at creation, so a visualization nobody ever
-  // asked anything of leaves nothing on disk.
+  // The empty workspace the record's agent is confined to, and the one directory a file it acquired may be
+  // read from. Created on first use, so a visualization nobody ever asked anything of leaves nothing on disk.
   ensure(id: string): string {
-    assertId(id);
-    const workspace = path.join(this.directory(id), 'workspace');
-    mkdirSync(workspace, { recursive: true });
-    mkdirSync(`${workspace}.tmp`, { recursive: true });
-    trustWorkspace(workspace, this.claudeJson);
-    return workspace;
+    return workspaceOf(this.root, id, this.claudeJson);
   }
 
   delete(id: string): void {
     assertId(id);
-    const workspace = path.join(this.directory(id), 'workspace');
-    untrustWorkspace(workspace, this.claudeJson);
-    rmSync(this.directory(id), { recursive: true, force: true });
+    untrust(this.root, id, this.claudeJson);
     this.summaries?.delete(id);
   }
 
@@ -212,9 +218,9 @@ export class VisualizationStore {
     return path.join(this.directory(id), 'visualization.json');
   }
 
-  // A linear parse of one document per directory, memoized until something is written. That is fine
-  // at the scale one user's visualizations reach, and the upgrade path if it ever is not is a
-  // summary index file at the top of the tree — not needed now and deliberately not built.
+  // A linear parse of one document per directory, memoized until something is written, which is fine at
+  // the scale one user's visualizations reach. A summary index file at the top of the tree is not needed
+  // and is deliberately not built.
   private scan(): Map<string, VisualizationSummaryView> {
     const summaries = new Map<string, VisualizationSummaryView>();
     if (!existsSync(this.root)) return summaries;

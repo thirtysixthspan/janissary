@@ -1,3 +1,5 @@
+import { distinctValuesOf, MAX_LISTED_VALUES } from './table.js';
+import type { Cell, Table } from './table.js';
 import { describe, expect, it } from 'vitest';
 import {
   chartable, MAX_COLUMNS, MAX_ROWS, parseDelimitedText, parseJsonText, type TableResult,
@@ -11,6 +13,42 @@ function tableOf(result: TableResult) {
 function typesOf(result: TableResult): Record<string, string> {
   return Object.fromEntries(tableOf(result).table.columns.map((c) => [c.name, c.type]));
 }
+
+describe('distinctValuesOf lists what a column holds', () => {
+  const table = (columns: { name: string; type: 'number' | 'string' | 'date' | 'boolean' }[], rows: Cell[][]) => ({ columns, rows }) as Table;
+
+  it('lists the values a text column holds, in the order they are first seen', () => {
+    const source = table([{ name: 'region', type: 'string' }], [['north'], ['south'], ['north']]);
+    expect(distinctValuesOf(source, 'region')).toEqual({ values: ['north', 'south'], more: 0 });
+  });
+
+  // An empty cell is a value of its own — "which regions have no data" is a question — and is said as
+  // such rather than as a blank that looks like a formatting accident.
+  it('says an empty cell as a value', () => {
+    const source = table([{ name: 'region', type: 'string' }], [['north'], [null]]);
+    expect(distinctValuesOf(source, 'region').values).toEqual(['north', '(empty)']);
+  });
+
+  // A measure is read off a chart, and a column of a hundred thousand numbers is not a vocabulary.
+  it('lists nothing for a numeric column', () => {
+    const source = table([{ name: 'revenue', type: 'number' }], [[1], [2], [3]]);
+    expect(distinctValuesOf(source, 'revenue')).toEqual({ values: [], more: 0 });
+  });
+
+  // A list that stops without saying so reads as the whole column, and a filter on a value that was never
+  // shown is a filter the model had no way to pick.
+  it('says when it stopped early', () => {
+    const many = Array.from({ length: 30 }, (_, index) => [`v${index}`]);
+    const source = table([{ name: 'region', type: 'string' }], many);
+    const found = distinctValuesOf(source, 'region');
+    expect(found.values).toHaveLength(MAX_LISTED_VALUES);
+    expect(found.more).toBe(1);
+  });
+
+  it('says nothing for a column it does not have', () => {
+    expect(distinctValuesOf(table([{ name: 'a', type: 'string' }], [['x']]), 'b')).toEqual({ values: [], more: 0 });
+  });
+});
 
 describe('parseJsonText', () => {
   it('reads an array of flat objects and infers each column type', () => {

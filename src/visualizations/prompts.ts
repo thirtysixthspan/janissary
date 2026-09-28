@@ -1,4 +1,5 @@
 import { COMPARES } from './chart-spec.js';
+import { distinctValuesOf } from './table.js';
 import { metricList } from './metrics.js';
 import { AGGREGATE_RULE, CONTRACT, DATA_RULE, EXAMPLE, FOLLOW_UP_RULE, KIND_RULE, MAX_TURNS_IN_PROMPT, TRANSFORM_RULE } from './reply.js';
 import type { VisualizationRecord } from './store.js';
@@ -30,6 +31,24 @@ function columnsOf(dataset: VisualizationDatasetView): string {
   return dataset.table?.columns.map((column) => `- ${column.name} (${column.type})`).join('\n') ?? '';
 }
 
+// What each of the columns a person would name a value of actually holds. Without it a filter value is a
+// guess: the model is shown eight rows and asked for the values in all five hundred, and "New York"
+// against a `state` column is a coin flip. Looker's agent calls sample data and fuzzy search against a
+// field's values for the same reason, and QuickSight answers a value it could not read with a list of the
+// interpretations it considered.
+function valuesOf(dataset: VisualizationDatasetView): string {
+  const table = dataset.table;
+  if (table === undefined) return '';
+  const lines: string[] = [];
+  for (const column of table.columns) {
+    const { values, more } = distinctValuesOf(table, column.name);
+    if (values.length === 0) continue;
+    lines.push(`  ${column.name}: ${values.join(', ')}${more === 1 ? `, and more not shown` : ''}`);
+  }
+  if (lines.length === 0) return '';
+  return ['Values each column holds (a filter value must be one of these):', ...lines].join('\n');
+}
+
 function sampleOf(dataset: VisualizationDatasetView): string {
   return JSON.stringify(dataset.table?.rows.slice(0, SAMPLE_ROWS) ?? []);
 }
@@ -48,6 +67,7 @@ function describeDataset(dataset: VisualizationDatasetView): string {
       columnsOf(dataset),
       'First rows, as JSON:',
       sampleOf(dataset),
+      valuesOf(dataset),
     ].join('\n');
   }
   if (dataset.document !== undefined) {

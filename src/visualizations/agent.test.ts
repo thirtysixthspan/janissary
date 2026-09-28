@@ -397,6 +397,24 @@ describe('a reply that draws', () => {
     expect(subject.turns[0]?.undo).toBe('changed "Revenue by region"');
   });
 
+  // A question the model could not answer on its own, kept on the record so it survives the next turn and
+  // is replaced by whichever reply comes next, the way the suggestions are.
+  it('keeps the question the model could not answer, and replaces it on the next reply', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'Which region?', charts: [], clarify: { question: 'Which region?', options: ['north', 'south'] } }));
+    end();
+    expect(subject.clarify).toEqual({ question: 'Which region?', options: ['north', 'south'] });
+
+    agent.ask(subject, 'north', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'Here it is.', charts: [] }));
+    end();
+    expect(subject.clarify).toBeUndefined();
+  });
+
   it('renames the visualization when the reply names it and nothing has named it yet', async () => {
     const { agent, chunk, end } = fixture();
     const subject = record();

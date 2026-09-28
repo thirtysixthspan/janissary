@@ -73,6 +73,7 @@ export function windowOf(
     ...(record.followUps !== undefined && { followUps: [...record.followUps] }),
     notices: [...(record.notices ?? [])],
     instructions: [...(record.instructions ?? [])],
+    ...(record.clarify !== undefined && { clarify: { ...record.clarify, options: [...record.clarify.options] } }),
     // The copy a revert restores is the host's business and does not travel: a browser holding the chart
     // list of every one of the last twelve turns is holding a record it has no use for.
     turns: record.turns.map((turn) => shownTurn(turn)),

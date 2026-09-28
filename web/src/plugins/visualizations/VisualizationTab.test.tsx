@@ -144,6 +144,19 @@ describe('a new visualization tab', () => {
   // prompt. It is set apart from the exchange because it came from neither side of it.
   // The affordance, and the case it must not appear in: a turn that only answered a question offers a
   // button that does nothing beside a label claiming something happened.
+  // The question and the readings it is answered with. It is the suggestion row with the question above it,
+  // because it is the same shape of interaction, and a reading needs nothing new to be sent.
+  it('asks the question the model could not answer, and sends a reading as an ordinary message', () => {
+    show(payload({ clarify: { question: 'Which region do you mean?', options: ['north', 'south'] } }));
+    expect(screen.getByText('Which region do you mean?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'south' }));
+    expect(CAPABILITIES.intent).toHaveBeenCalledWith('send', { query: 'south' });
+  });
+
+  it('asks nothing when there is no question outstanding', () => {
+    expect(show(payload()).container.querySelector('.visualization-clarify')).toBeNull();
+  });
+
   it('offers to take back a turn that changed the charts, and says what it changed', () => {
     show(payload({ turns: [turn({ undo: 'removed "Revenue by region"' })] }));
     const button = screen.getByRole('button', { name: /Undo — it removed/u });

@@ -83,6 +83,9 @@ export type VisualizationWindow = {
   followUps?: string[];
   notices: string[];
   instructions: string[];
+  // The question the model is waiting on, and the readings it offered. Shown above the composer as the
+  // suggestion row with the question above it, and replaced by the next reply.
+  clarify?: { question: string; options: string[] };
   turns: VisualizationTurn[];
   busy?: boolean;
   error?: string;
@@ -118,6 +121,12 @@ function isModelPair(value: unknown): value is ConversationModelPair {
   return isRecord(value)
     && (value.harness === 'claude' || value.harness === 'opencode')
     && typeof value.model === 'string';
+}
+
+function isClarify(value: unknown): boolean {
+  return isRecord(value)
+    && typeof value.question === 'string' && value.question !== ''
+    && Array.isArray(value.options) && value.options.length > 0 && value.options.every(isText);
 }
 
 function isText(value: unknown): value is string {
@@ -201,6 +210,7 @@ export function isVisualizationWindow(value: unknown): value is VisualizationWin
     && (value.followUps === undefined || isStringList(value.followUps))
     && Array.isArray(value.notices) && value.notices.every(isText)
     && Array.isArray(value.instructions) && value.instructions.every(isText)
+    && (value.clarify === undefined || isClarify(value.clarify))
     && Array.isArray(value.turns) && value.turns.every((turn) => isTurn(turn))
     && (value.busy === undefined || typeof value.busy === 'boolean')
     && (value.error === undefined || typeof value.error === 'string');

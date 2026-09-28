@@ -33,6 +33,7 @@ export type {
   VisualizationChartKind,
   VisualizationChartRecord,
   VisualizationChartView,
+  VisualizationClarify,
   VisualizationColumnType,
   VisualizationColumnView,
   VisualizationCompare,

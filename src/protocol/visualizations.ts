@@ -141,6 +141,13 @@ export type ChartShape = {
 // the logic exactly as written rather than interpreting it from natural language" - both of which are
 // about the same failure: a quantity re-derived from a column name on every turn is a quantity that
 // changes its meaning between charts.
+// A question the model could not answer on its own, and the readings it considered. There is one outstanding
+// at a time: a second reply replaces the first, the way it replaces the suggestions.
+export type VisualizationClarify = {
+  question: string;
+  options: string[];
+};
+
 export type VisualizationMetric = {
   // The name the user types, unique in a record. Case-insensitively matched, because "P95 latency" and
   // "p95 latency" in the same conversation are one metric and not two.
@@ -250,6 +257,9 @@ export type VisualizationWindowView = {
   // The rules the user asked to be kept, shown under the exchange rather than hidden in a prompt, because a
   // rule the user cannot see is a rule they cannot check.
   instructions: string[];
+  // The question the model is waiting on, and the readings it offered, shown above the composer as the
+  // suggestion row with the question above it. Replaced by the next reply, as the suggestions are.
+  clarify?: VisualizationClarify;
   turns: VisualizationTurnView[];
   // A call in flight: the read of a new source, or the model call that follows it. What it is for is
   // the tab's business — the tab renders one busy state for all of them.

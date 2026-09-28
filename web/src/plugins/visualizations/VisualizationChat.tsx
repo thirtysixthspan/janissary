@@ -36,10 +36,14 @@ export type ChatProperties = {
   // Taking back what one turn did to the charts. A turn that changed nothing offers nothing: a button that
   // does nothing beside a label claiming something happened is worse than no button.
   onUndo: (query: string) => void;
+  // A question the model could not answer on its own, with the readings it considered. It is the suggestion
+  // row with the question above it, because it is the same shape of interaction: a question and some answers
+  // you can pick rather than type. Clicking a reading sends that reading, which needs nothing new to answer it.
+  clarify?: { question: string; options: string[] };
 };
 
 export function VisualizationChat({
-  turns, notices, instructions, followUps, error, prompted, busy, disabled, active, onSend, onCancel, onUndo,
+  turns, notices, instructions, clarify, followUps, error, prompted, busy, disabled, active, onSend, onCancel, onUndo,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -117,7 +121,18 @@ export function VisualizationChat({
       {/* The interview's own suggestion markup and classes, not a second implementation of them: a row of
           suggestions is a row of suggestions, whichever reply asked for it. Hidden while a reply is in
           flight, because a button that does nothing while the model works is worse than no button. */}
-      {followUps !== undefined && followUps.length > 0 && !busy ? (
+      {clarify !== undefined && !busy ? (
+        <div className="visualization-clarify">
+          <p className="visualization-clarify-question">{clarify.question}</p>
+          <div className="visualization-suggestions visualization-follow-ups">
+            {clarify.options.map((option) => (
+              <button key={option} type="button" className="visualization-suggestion" disabled={disabled} onClick={() => { onSend(option); }}>
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : followUps !== undefined && followUps.length > 0 && !busy ? (
         <div className="visualization-suggestions visualization-follow-ups">
           {followUps.map((suggestion) => (
             <button

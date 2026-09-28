@@ -15,6 +15,32 @@ import type {
 // outside this feature.
 export const MAX_ROWS = 500;
 export const MAX_COLUMNS = 32;
+// How many distinct values a column is listed with, and what is said when there are more. The cap is
+// stated in the sentence beside the list because a list that stops without saying so reads as the whole
+// column, and a filter on a value that was never shown is a filter the model had no way to pick.
+export const MAX_LISTED_VALUES = 24;
+
+// The values a column holds, in the order they are first seen, and whether the list stopped early. Only
+// the kinds whose values a person would recognise by name are worth listing: a measure is read off a
+// chart, and a column of a hundred thousand numbers is not a vocabulary.
+export function distinctValuesOf(table: Table, column: string): { values: string[]; more: number } {
+  const at = table.columns.findIndex((one) => one.name === column);
+  if (at === -1) return { values: [], more: 0 };
+  const type = table.columns[at]?.type;
+  if (type === 'number') return { values: [], more: 0 };
+  const seen = new Set<string>();
+  for (const row of table.rows) {
+    const cell = row[at];
+    // An empty cell is a value of its own — "which regions have no data" is a question — and is said as
+    // such rather than as a blank that looks like a formatting accident.
+    seen.add(cell === null || cell === '' ? '(empty)' : String(cell));
+    if (seen.size > MAX_LISTED_VALUES) break;
+  }
+  const all = [...seen];
+  return all.length > MAX_LISTED_VALUES
+    ? { values: all.slice(0, MAX_LISTED_VALUES), more: 1 }
+    : { values: all, more: 0 };
+}
 
 export type Cell = string | number | boolean | null;
 export type Table = { columns: VisualizationColumnView[]; rows: Cell[][] };

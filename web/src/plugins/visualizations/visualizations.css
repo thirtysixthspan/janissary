@@ -94,6 +94,12 @@
 
 .visualization-undo:hover { color: var(--fg); }
 
+/* A question the model is waiting on. Set above the suggestion row it shares its shape with, and in the
+   ordinary text colour because asking is not an error. */
+.visualization-clarify { padding: 8px 12px 0; }
+
+.visualization-clarify-question { color: var(--fg); margin: 0 0 6px; font-size: 13px; }
+
 /* The chart's text alternative, closed by default so a tab opens on a chart and not on a table. It sits
    inside the chart's own card because it belongs to the chart rather than to the conversation about it,
    and the table scrolls inside its own box so a long one cannot push the exchange off the screen. */

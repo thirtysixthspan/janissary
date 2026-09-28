@@ -218,3 +218,14 @@ export function chartViewOf(chart: VisualizationChartRecord): VisualizationChart
     ...(chart.yLabel !== undefined && { yLabel: chart.yLabel }),
   };
 }
+
+// How many more charts a reply may add, having said so in `refused` when it may not add them all. A reply
+// naming fifty charts is cut rather than refused whole: the charts that fit are what was asked for, and
+// the message says how many did not.
+export function roomFor(record: VisualizationRecord, wanted: number, refused: string[]): number {
+  const room = MAX_CHARTS - record.charts.length;
+  if (wanted > room) {
+    refused.push(`A visualization may hold ${MAX_CHARTS} charts, and this reply named ${wanted}.`);
+  }
+  return room;
+}

@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
-import { datasetFor, noticed, placed, pruned } from './charts.js';
+import { datasetFor, noticed, placed, pruned, roomFor } from './charts.js';
+import { MAX_DATASETS } from './chart-record.js';
 import { remembered } from './metrics.js';
 import { keepUndoable, snapshot } from './undo.js';
 import { datasetKey } from './chart-spec.js';
-import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
 import { parseReply, type Reply } from './reply.js';
 import { isUntitled, titled, usablePair, visualizationTitle } from './view.js';
@@ -218,6 +218,10 @@ export class VisualizationAgent {
     if (isUntitled(record) && first !== undefined) record.title = visualizationTitle(first.title);
     if (reply.followUps.length > 0) record.followUps = reply.followUps;
     else delete record.followUps;
+    // One outstanding question, replaced by each reply the way the suggestions are: a second question while
+    // the first is unanswered is a conversation the user cannot follow.
+    if (reply.clarify === undefined) delete record.clarify;
+    else record.clarify = reply.clarify;
     // What a reply leaves behind: the model's own words, then any refusal, and — when it changed a
     // chart and said nothing at all — a sentence composed from the specification, so a change never
     // lands silently.
@@ -251,10 +255,7 @@ export class VisualizationAgent {
     refused: string[],
   ): VisualizationChartRecord | undefined {
     let first: VisualizationChartRecord | undefined;
-    const room = MAX_CHARTS - record.charts.length;
-    if (entries.length > room) {
-      refused.push(`A visualization may hold ${MAX_CHARTS} charts, and this reply named ${entries.length}.`);
-    }
+    const room = roomFor(record, entries.length, refused);
     for (const entry of entries.slice(0, room)) {
       if (entry.data !== undefined) {
         // A data reference the record already holds costs nothing; a new one is refused here rather than
