@@ -142,6 +142,20 @@ describe('a new visualization tab', () => {
   // that is not part of the exchange — which is why it is set apart from it and why it names its chart.
   // A rule the user cannot see is a rule they cannot check, so it is on the screen rather than only in a
   // prompt. It is set apart from the exchange because it came from neither side of it.
+  // The affordance, and the case it must not appear in: a turn that only answered a question offers a
+  // button that does nothing beside a label claiming something happened.
+  it('offers to take back a turn that changed the charts, and says what it changed', () => {
+    show(payload({ turns: [turn({ undo: 'removed "Revenue by region"' })] }));
+    const button = screen.getByRole('button', { name: /Undo — it removed/u });
+    fireEvent.click(button);
+    expect(CAPABILITIES.intent).toHaveBeenCalledWith('undo', { query: 'plot revenue by region' });
+  });
+
+  it('offers nothing to take back on a turn that changed nothing', () => {
+    const rendered = show(payload({ turns: [turn()] }));
+    expect(rendered.container.querySelector('.visualization-undo')).toBeNull();
+  });
+
   it('shows the rules the user asked to be kept', () => {
     show(payload({ instructions: ['always split by service'] }));
     const rule = screen.getByText(/always split by service/u);

@@ -68,6 +68,9 @@ export type VisualizationTurn = {
   response: string;
   pair: ConversationModelPair;
   streaming?: boolean;
+  // What this turn did to the charts, when it did something. The browser offers to take it back; the state
+  // to put back is the host's business and does not travel.
+  undo?: string;
 };
 
 export type VisualizationWindow = {
@@ -174,10 +177,13 @@ function isTurn(value: unknown): value is VisualizationTurn {
     && typeof value.query === 'string'
     && typeof value.response === 'string'
     && isModelPair(value.pair)
-    // The flag is on the wire, not merely on disk: the host records a turn before it calls the model
-    // and copies it onto the window it projects, and a tab cannot disable its composer or offer a
-    // cancel without it. A guard that refused it would refuse the host's own payload.
-    && (value.streaming === undefined || typeof value.streaming === 'boolean');
+    // The flag is on the wire, not merely on disk: the host records a turn before it calls the model and
+    // copies it onto the window it projects, and a tab cannot disable its composer or offer a cancel
+    // without it. A guard that refused it would refuse the host's own payload.
+    && (value.streaming === undefined || typeof value.streaming === 'boolean')
+    // The claim to be undoable travels; the charts to put back do not, so a label with no copy behind it is
+    // a button that restores nothing and is refused here rather than shown.
+    && (value.undo === undefined || (typeof value.undo === 'string' && value.undo !== '' && value.before === undefined));
 }
 
 function isStringList(value: unknown): value is string[] {

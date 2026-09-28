@@ -72,7 +72,11 @@ function isTurn(value: unknown): value is VisualizationTurnView {
     && typeof value.query === 'string'
     && typeof value.response === 'string'
     && isModelPair(value.pair)
-    && (value.streaming === undefined || typeof value.streaming === 'boolean');
+    && (value.streaming === undefined || typeof value.streaming === 'boolean')
+    // A turn that claims to be undoable with nothing to undo offers a button that restores nothing, and one
+    // carrying charts with no claim at all is a copy nobody will use. The two arrive together or not at all.
+    && ((value.undo === undefined && value.before === undefined)
+      || (typeof value.undo === 'string' && value.undo !== '' && isChartList(value.before)));
 }
 
 export function isVisualizationRecord(value: unknown): value is VisualizationRecord {

@@ -87,6 +87,20 @@ describe('a stored visualization', () => {
     ]);
   });
 
+  // The copy a revert restores is part of the record: a process that exits mid-reply must not leave a turn
+  // that claims to be undoable with nothing to undo.
+  it('round-trips the charts a turn left behind, and refuses a turn with half of one', () => {
+    const store = new VisualizationStore({ home });
+    const withCopy = { ...record(), turns: [{ query: 'go', response: 'done', pair: PAIR, undo: 'removed "Revenue by region"', before: record().charts as unknown as [] }] };
+    store.write(withCopy);
+    expect(store.read('one')?.turns[0]?.undo).toBe('removed "Revenue by region"');
+    expect(store.read('one')?.turns[0]?.before).toHaveLength(1);
+
+    const file = path.join(store.directory('one'), 'visualization.json');
+    writeFileSync(file, JSON.stringify({ ...record(), turns: [{ query: 'go', response: 'done', pair: PAIR, undo: 'removed it' }] }));
+    expect(store.read('one')).toBeUndefined();
+  });
+
   it('refuses to read back a record whose measures cannot be used', () => {
     const store = new VisualizationStore({ home });
     const file = path.join(store.directory('one'), 'visualization.json');

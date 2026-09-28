@@ -212,6 +212,14 @@ export type VisualizationTurnView = {
   response: string;
   pair: ConversationModelPair;
   streaming?: boolean;
+  // The charts as they stood before this turn changed them, so the change can be taken back. Deepnote's
+  // agent offers one control to undo a whole run and Hex shows a per-change diff to keep or discard; this
+  // is the same guarantee in a form that costs a copy of a list of specifications rather than a diff
+  // engine. Never leaves the server: the browser is told what changed and not what to put back.
+  before?: VisualizationChartRecord[];
+  // What the turn did to the charts, in a sentence, read from the snapshot rather than recomputed — a label
+  // that disagreed with what the turn did would be worse than no label.
+  undo?: string;
 };
 
 export type VisualizationSummaryView = {

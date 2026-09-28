@@ -73,9 +73,9 @@ function runListIntent(
   return null;
 }
 
-// The three intents a record's tab raises, and nothing else. A chat is four interactions — create, send,
-// cancel, and the two per-chart actions — and keeping them together is what lets this file stay a flat
-// list of guard-then-act pairs rather than a dispatcher with branches.
+// The intents a record's tab raises, and nothing else. A chat is create, send, cancel, undo and the two
+// per-chart actions, and keeping them together is what lets this file stay a flat list of guard-then-act
+// pairs rather than a dispatcher with branches.
 function runRecordIntent(
   intent: string,
   value: unknown,
@@ -97,6 +97,11 @@ function runRecordIntent(
   if (intent === 'refresh-chart') {
     if (!isChartIntent(value)) return capabilities.rejectRequest('invalid refresh-chart payload');
     capabilities.topicAction({ topic: 'visualizations', action: 'refreshChart', id, chartId: value.chartId });
+    return null;
+  }
+  if (intent === 'undo') {
+    if (!isSendIntent(value)) return capabilities.rejectRequest('invalid undo payload');
+    capabilities.topicAction({ topic: 'visualizations', action: 'undo', id, query: value.query });
     return null;
   }
   if (intent === 'cancel') {

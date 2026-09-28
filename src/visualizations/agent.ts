@@ -4,6 +4,7 @@ import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
 import { datasetFor, noticed, placed, pruned } from './charts.js';
 import { remembered } from './metrics.js';
+import { keepUndoable, snapshot } from './undo.js';
 import { datasetKey } from './chart-spec.js';
 import { MAX_CHARTS, MAX_DATASETS } from './chart-record.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
@@ -72,12 +73,10 @@ export class VisualizationAgent {
     return this.inFlight.has(id);
   }
 
-  // A message. The turn is created before the call so the tab can show the query while the model works
-  // on it, the way a conversation shows a query while its reply streams, and a second message is
-  // refused outright rather than queued. `prepare` is what the caller needs to do first — reading a
-  // source the message named — and it runs while the tab is already busy, so nothing can be sent in
-  // between. It returns a note for the model when there is something it should know, and `undefined`
-  // when the record went away, which abandons the call rather than prompting for nothing.
+  // A message. The turn is created before the call so the tab can show the query while the model works on
+  // it, the way a conversation shows a query while its reply streams, and a second message is refused
+  // outright rather than queued. `prepare` runs while the tab is already busy, so nothing can be sent in
+  // between, and returns a note for the model when there is something it should know.
   ask(
     record: VisualizationRecord,
     query: string,
@@ -88,7 +87,7 @@ export class VisualizationAgent {
   }
 
   // A live update re-asking the agent to re-acquire the data behind one chart. Refused while anything
-  // else is in flight, because one session per visualization means one stream at a time.
+  // else is in flight: one session per visualization means one stream at a time.
   reacquire(record: VisualizationRecord, chart: VisualizationChartRecord): boolean {
     if (this.busy(record.id)) return false;
     return this.start(record, '', ready, chart);
@@ -100,10 +99,6 @@ export class VisualizationAgent {
   cancel(id: string): boolean {
     this.options.pool.close(id);
     return this.inFlight.delete(id);
-  }
-
-  forget(id: string): void {
-    this.cancel(id);
   }
 
   dispose(): void {
@@ -206,6 +201,9 @@ export class VisualizationAgent {
   // joins the model's own words rather than replacing them, because a reply that drew three charts and
   // named one column wrongly has still said three useful things.
   private apply(record: VisualizationRecord, reply: Reply, turn?: VisualizationTurnView): void {
+    // The copy is taken before anything moves, so a reply that removes a chart can be taken back by a turn
+    // that has no other way to say so.
+    const before = snapshot(record.charts);
     const refused = this.remove(record, reply.remove);
     const named = titled(reply.name ?? '');
     if (named !== '' && isUntitled(record)) record.title = named;
@@ -216,6 +214,7 @@ export class VisualizationAgent {
     // Whatever the reply did to the charts, the notices are the data's own account of itself rather than
     // the model's, so they are rebuilt here from what the charts now say rather than asked for.
     noticed(record);
+    if (turn) keepUndoable(turn, before, record.charts);
     if (isUntitled(record) && first !== undefined) record.title = visualizationTitle(first.title);
     if (reply.followUps.length > 0) record.followUps = reply.followUps;
     else delete record.followUps;

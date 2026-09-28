@@ -111,6 +111,9 @@ export type TabPluginTopicAction =
   // A message, and the one cancellation that covers the model call it starts.
   | { topic: 'visualizations'; action: 'send'; id: string; query: string }
   | { topic: 'visualizations'; action: 'cancel'; id: string }
+  // Taking back what one turn did to the charts, named by the query the user sent in it rather than by a
+  // position, because a turn is identified by what it said and a position moves as the conversation grows.
+  | { topic: 'visualizations'; action: 'undo'; id: string; query: string }
   // One chart's live-update interval, and the one-shot re-read of one chart's data. Both name a chart
   // rather than a visualization because live update belongs to an individual graph, and on a chart
   // whose data the agent acquired the second is a model call.

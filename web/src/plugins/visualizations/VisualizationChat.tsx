@@ -33,10 +33,13 @@ export type ChatProperties = {
   active: boolean;
   onSend: (query: string) => void;
   onCancel: () => void;
+  // Taking back what one turn did to the charts. A turn that changed nothing offers nothing: a button that
+  // does nothing beside a label claiming something happened is worse than no button.
+  onUndo: (query: string) => void;
 };
 
 export function VisualizationChat({
-  turns, notices, instructions, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
+  turns, notices, instructions, followUps, error, prompted, busy, disabled, active, onSend, onCancel, onUndo,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -84,6 +87,16 @@ export function VisualizationChat({
                 // a readable sentence into the response, so a turn has one place to say what happened.
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.response) ?? '' }}
               />
+              {turn.undo === undefined ? null : (
+                <button
+                  type="button"
+                  className="visualization-undo"
+                  disabled={disabled || busy}
+                  onClick={() => { onUndo(turn.query); }}
+                >
+                  Undo — it {turn.undo}
+                </button>
+              )}
             </div>
           ))}
         </div>

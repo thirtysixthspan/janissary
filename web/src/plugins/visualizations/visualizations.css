@@ -88,6 +88,12 @@
 
 .visualization-rule { color: var(--fg); margin: 0 0 4px; font-size: 12px; font-style: italic; }
 
+/* Taking back what a turn did. It reads as a continuation of the reply rather than as a control of its
+   own, because it belongs to that reply and says what it would undo. */
+.visualization-undo { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px 0; text-align: left; }
+
+.visualization-undo:hover { color: var(--fg); }
+
 /* The chart's text alternative, closed by default so a tab opens on a chart and not on a table. It sits
    inside the chart's own card because it belongs to the chart rather than to the conversation about it,
    and the table scrolls inside its own box so a long one cannot push the exchange off the screen. */

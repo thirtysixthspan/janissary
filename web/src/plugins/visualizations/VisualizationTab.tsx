@@ -58,6 +58,7 @@ export function VisualizationTab({ payload, capabilities }: TabProperties) {
         disabled={inert}
         active={capabilities.active}
         onSend={(query) => { intent('send', { query }); }}
+        onUndo={(query) => { intent('undo', { query }); }}
         onCancel={() => { intent('cancel', {}); }}
       />
     </div>

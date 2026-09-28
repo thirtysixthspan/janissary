@@ -359,6 +359,44 @@ describe('a reply that draws', () => {
     expect(subject.turns[0]?.response).toContain('there is no measure named "p99 latency"');
   });
 
+  // The whole of an undo: a removal comes back, and the turn says what it did so the button does not have
+  // to guess.
+  it('carries a copy of the charts a turn changed, and names what it changed', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'One fewer.', charts: [], remove: ['chart-1'] }));
+    end();
+    expect(subject.charts).toHaveLength(0);
+    expect(subject.turns[0]?.undo).toBe('removed "Revenue by region"');
+    expect(subject.turns[0]?.before).toHaveLength(1);
+  });
+
+  it('carries no copy for a turn that only answered a question', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(JSON.stringify({ say: 'It is revenue by region.', charts: [] }));
+    end();
+    expect(subject.turns[0]?.undo).toBeUndefined();
+    expect(subject.turns[0]?.before).toBeUndefined();
+  });
+
+  it('names a chart it changed rather than only one it removed', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record();
+    withChart(subject);
+    agent.ask(subject, 'go', ready);
+    await settled();
+    chunk(reply({ id: 'chart-1', aggregate: 'mean' }));
+    end();
+    expect(subject.turns[0]?.undo).toBe('changed "Revenue by region"');
+  });
+
   it('renames the visualization when the reply names it and nothing has named it yet', async () => {
     const { agent, chunk, end } = fixture();
     const subject = record();

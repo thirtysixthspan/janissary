@@ -1,4 +1,5 @@
 import { datasetKey } from './chart-spec.js';
+import type { VisualizationRecord } from './store.js';
 import type { VisualizationDataRef } from '../protocol.js';
 
 // One timer for every visualization, owned here rather than by the manager so the manager's file stays
@@ -25,7 +26,7 @@ export type RefreshDeps = {
   reacquire(id: string, data: VisualizationDataRef): void;
   // The shortest interval and the last read time per dataset a record's charts name, which is the whole
   // of what this module needs to know and the reason it asks rather than being handed the record.
-  dueFor: (id: string) => readonly { data: VisualizationDataRef; seconds: number; readAt: number }[];
+  dueFor: (id: string) => readonly Due[];
 };
 
 export class VisualizationRefresh {
@@ -92,10 +93,23 @@ export class VisualizationRefresh {
 // shortest interval across the charts naming it is the one that fires. A dataset with no read yet is
 // due immediately, which is what makes a chart drawn on fresh data start keeping itself current
 // without waiting out an interval first.
+// What the poll is owed by one record, per dataset. A record that is gone is owed nothing: the timer would
+// keep re-arming for a visualization nothing can act on any more, because every read it could ask for is
+// refused through the index.
+export type Due = { data: VisualizationDataRef; seconds: number; readAt: number };
+
+export function owedBy(record: VisualizationRecord | undefined): Due[] {
+  if (record === undefined) return [];
+  return dueByDataset(
+    record.charts,
+    (data) => record.datasets.find((entry) => entry.key === datasetKey(data))?.readAt ?? 0,
+  );
+}
+
 export function dueByDataset(
   charts: readonly { data: VisualizationDataRef; refreshSeconds: number }[],
   readAt: (data: VisualizationDataRef) => number,
-): { data: VisualizationDataRef; seconds: number; readAt: number }[] {
+): Due[] {
   const soonest = new Map<string, { data: VisualizationDataRef; seconds: number }>();
   for (const chart of charts) {
     if (chart.refreshSeconds <= 0) continue;

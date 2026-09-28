@@ -1,6 +1,7 @@
 import type {
   ConversationModelPair,
   VisualizationSummaryView,
+  VisualizationTurnView,
   VisualizationWindowView,
 } from '../protocol.js';
 import { availableConversationModels, hasConversationModel } from '../conversations/view.js';
@@ -42,6 +43,15 @@ export function summaryOf(record: VisualizationRecord): VisualizationSummaryView
   return { id: record.id, title: record.title, updatedAt: record.updatedAt };
 }
 
+// A turn as the browser sees it: the copy a revert restores is the host's business and does not travel,
+// because a browser holding the chart list of every one of the last twelve turns is holding a record it
+// has no use for.
+function shownTurn(turn: VisualizationTurnView): VisualizationTurnView {
+  const shown: VisualizationTurnView = { ...turn };
+  delete shown.before;
+  return shown;
+}
+
 export function windowOf(
   record: VisualizationRecord,
   busy: boolean,
@@ -63,7 +73,9 @@ export function windowOf(
     ...(record.followUps !== undefined && { followUps: [...record.followUps] }),
     notices: [...(record.notices ?? [])],
     instructions: [...(record.instructions ?? [])],
-    turns: record.turns.map((turn) => ({ ...turn })),
+    // The copy a revert restores is the host's business and does not travel: a browser holding the chart
+    // list of every one of the last twelve turns is holding a record it has no use for.
+    turns: record.turns.map((turn) => shownTurn(turn)),
     ...(busy && { busy: true }),
     ...(failure !== undefined && { error: failure }),
   };

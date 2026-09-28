@@ -6,15 +6,16 @@ import { VisualizationAgent } from './agent.js';
 import { chartById, ensureDataset } from './charts.js';
 import { datasetKey } from './chart-spec.js';
 import { applied, readInstruction } from './instructions.js';
+import { reverted } from './undo.js';
 import { readSource } from './fetch.js';
 import { VisualizationIndex } from './index.js';
 import { acquire, reader } from './reading.js';
-import { dueByDataset, VisualizationRefresh } from './refresh.js';
+import { owedBy, VisualizationRefresh } from './refresh.js';
 import { addressIn, defaultSourceRoots, parseSource, type SourceRoots } from './source.js';
 import { VisualizationStore, freshVisualization, isEmptyRecord } from './store.js';
 import type { VisualizationRecord } from './store.js';
 import { availableVisualizationModels } from './view.js';
-import type { VisualizationChartRecord, VisualizationDataRef } from '../protocol.js';
+import type { VisualizationDataRef } from '../protocol.js';
 
 type ManagerOptions = {
   store?: VisualizationStore;
@@ -67,8 +68,8 @@ export class VisualizationsManager {
       now: this.now,
       openIds: () => this.index.openIds(this.managers.tab.tabs),
       read: (id, data) => { void this.readData(id, data); },
-      reacquire: (id, data) => { this.reacquire(id, data); },
-      dueFor: (id) => this.dueFor(id),
+      reacquire: (id, data) => { void this.reask(id, data); },
+      dueFor: (id) => owedBy(this.index.live(id)),
     });
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
       queueMicrotask(() => { this.releaseClosed(); });
@@ -162,11 +163,21 @@ export class VisualizationsManager {
     return undefined;
   }
 
+  // One turn taken back. A query the record does not hold, or one with nothing to take back, is
+  // refused rather than restoring a second time: a revert that quietly did nothing is worse than one that
+  // said it could not.
+  undo(id: string, query: string): boolean {
+    const record = this.index.live(id);
+    if (record === undefined || !reverted(record, query)) return false;
+    this.commit(record);
+    return true;
+  }
+
   // A cancelled reply leaves the question in the exchange with whatever answer had arrived — the user
   // stopping a reply is not the same as never having asked it, and dropping the turn here is how closing
-  // a tab mid-reply used to delete what someone had typed. The empty response is honest: the model
-  // stopped, and nothing pretends otherwise. The cleared state reaches the disk too, or the turn would
-  // reopen claiming to still be streaming with nothing left to finish it.
+  // a tab mid-reply used to delete what someone had typed. The empty response is honest: the model stopped,
+  // and nothing pretends otherwise. The cleared state reaches the disk too, or the turn would reopen
+  // claiming to still be streaming with nothing left to finish it.
   cancel(id: string): boolean {
     const record = this.index.find(id);
     const stopped = this.agent.cancel(id);
@@ -190,15 +201,28 @@ export class VisualizationsManager {
 
   // Read one chart's data now. On a chart the agent acquired this is a model call, because nothing else
   // knows how that data is reached — which is the one place a re-read costs more than a fetch.
+  // Re-ask for a file the agent acquired, or read a source now. Every chart drawing from a file is covered by
+  // one call, because the file is the data and they all read it.
+  private reask(id: string, data: VisualizationDataRef): boolean {
+    const record = this.index.live(id);
+    if (record === undefined) return false;
+    if (data.kind === 'source') {
+      void this.readData(id, data);
+      return true;
+    }
+    const first = record.charts.find((chart) => datasetKey(chart.data) === data.path);
+    return first === undefined ? false : this.agent.reacquire(record, first);
+  }
+
   refreshChart(id: string, chartId: string): boolean {
     const record = this.index.live(id);
     const chart = record === undefined ? undefined : chartById(record, chartId);
     if (!record || !chart) return false;
-    return chart.data.kind === 'source' ? this.readNow(id, chart.data) : this.reacquire(id, chart.data);
+    return this.reask(id, chart.data);
   }
 
   delete(id: string): void {
-    this.agent.forget(id);
+    this.agent.cancel(id);
     this.index.markDeleted(id);
     this.store.delete(id);
     this.changed();
@@ -209,34 +233,6 @@ export class VisualizationsManager {
     this.tabRemoved.unsubscribe();
     this.refresh.dispose();
     this.agent.dispose();
-  }
-
-  private readNow(id: string, data: VisualizationDataRef): boolean {
-    if (this.index.live(id) === undefined) return false;
-    void this.readData(id, data);
-    return true;
-  }
-
-  // Re-ask for a file the agent acquired. Every chart drawing from it is covered by one call, because the
-  // file is the data and they all read it; the reply carries their specifications back.
-  private reacquire(id: string, data: VisualizationDataRef): boolean {
-    const record = this.index.live(id);
-    if (!record) return false;
-    if (data.kind === 'source') return this.readNow(id, data);
-    const first: VisualizationChartRecord | undefined = record.charts.find((chart) => datasetKey(chart.data) === data.path);
-    return first === undefined ? false : this.agent.reacquire(record, first);
-  }
-
-  // What the poll is owed, per dataset. A deleted record is not among them: the timer would keep
-  // re-arming for a visualization nothing can act on any more, because every read it could ask for is
-  // refused.
-  private dueFor(id: string) {
-    const record = this.index.live(id);
-    if (record === undefined) return [];
-    return dueByDataset(
-      record.charts,
-      (data) => record.datasets.find((entry) => entry.key === datasetKey(data))?.readAt ?? 0,
-    );
   }
 
   private commit(record: VisualizationRecord, error?: string): void {
