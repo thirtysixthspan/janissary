@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Keep the measures the user named when a reply brings twelve of its own.
-
-Existing Issue: `remembered` in `src/visualizations/metrics.ts` trims the combined list with `.slice(-MAX_METRICS)`, which evicts the oldest entries — including measures the user introduced — when a reply defines enough of its own, and nothing says so. Severity: 5/10
-
-Existing Risk: 5/10 - The model can empty a user's named measures in one turn, `metricList` then stops offering them in the prompt, and every chart naming one is refused from then on, with nothing anywhere saying the measure the user asked for is gone.
-
-Proposal Risk: 3/10 - Preferring the user's measures over the model's is a judgement about whose words outrank whose, and a reply that corrects a measure the user named must still win.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: do not let a reply's measures evict the user's". In `remembered` in `src/visualizations/metrics.ts`, drop the oldest of the *incoming* definitions when the combined list is over the bound rather than the oldest overall, and say in the turn's response when a definition was refused for want of room. Verify with a case in `src/visualizations/metrics.test.ts` folding twelve definitions onto a record holding a user measure and asserting the user measure survives, and a case asserting the oldest incoming one is dropped instead.
-
 * Make the stored-chart guard hold the same four fields the grammar does, so a record cannot carry a unit or a stack the renderer would read differently.
 
 Existing Issue: `isChart` in `src/visualizations/chart-record.ts` checks `kind` and `aggregate` as bare strings and does not mention `percentile`, `xUnit`, `stack` or `metric`, while the grammar in `src/visualizations/chart-spec.ts` is strict about all four, and the header comment there claims one grammar stated in three places. Severity: 6/10

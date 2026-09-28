@@ -91,6 +91,36 @@ describe('remembered', () => {
     expect(record.metrics).toEqual([{ name: 'P95 LATENCY', y: 'latency', aggregate: 'percentile', percentile: 99 }]);
   });
 
+  // A measure the user typed is the one they will ask for again, so a reply that brings a dozen of its
+  // own cannot empty it. `slice(-MAX_METRICS)` over the combined list dropped the oldest entry overall,
+  // which is the user's, and nothing said so.
+  it('keeps the measures the user named when a reply brings twelve of its own', () => {
+    const record = { metrics: [P95] };
+    const twelve = Array.from({ length: 12 }, (_, index) => ({ name: `m${index}`, y: 'revenue', aggregate: 'sum' as const }));
+
+    const dropped = remembered(record, twelve);
+
+    expect(record.metrics.map((one) => one.name)).toContain('p95 latency');
+    expect(record.metrics).toHaveLength(12);
+    // The oldest of the incoming definitions is what goes, and which ones went is returned so the turn
+    // can say so rather than the measure disappearing without a word.
+    expect(record.metrics.map((one) => one.name)).not.toContain('m0');
+    expect(dropped).toEqual(['m0']);
+  });
+
+  // A reply that corrects a measure the user named still wins, which is the case the preference above
+  // must not swallow: the old definition is replaced, not protected.
+  it('still lets a reply correct a measure the user named', () => {
+    const record = { metrics: [P95] };
+    const twelve = Array.from({ length: 12 }, (_, index) => ({ name: `m${index}`, y: 'revenue', aggregate: 'sum' as const }));
+
+    remembered(record, [{ name: 'P95 Latency', y: 'latency', aggregate: 'percentile', percentile: 99 }, ...twelve]);
+
+    expect(record.metrics.filter((one) => one.name.toLowerCase() === 'p95 latency')).toEqual([
+      { name: 'P95 Latency', y: 'latency', aggregate: 'percentile', percentile: 99 },
+    ]);
+  });
+
   it('keeps the ones this reply said nothing about', () => {
     const record = { metrics: [P95, { name: 'errors', y: 'errors', aggregate: 'sum' }] };
     remembered(record, [{ name: 'deploys', y: 'deploys', aggregate: 'count' }]);

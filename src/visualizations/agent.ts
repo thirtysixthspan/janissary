@@ -1,13 +1,10 @@
-import { randomUUID } from 'node:crypto';
 import { isRateLimitError } from '../acp/rate-limit.js';
 import type { AcpSessionPool } from '../acp/session-pool.js';
 import { chartSummary } from './chart-spec.js';
-import { datasetFor, noticed, placed, pruned, roomFor } from './charts.js';
-import { MAX_DATASETS } from './chart-record.js';
-
-import { remembered } from './metrics.js';
+import { noticed, pruned } from './charts.js';
+import { MAX_METRICS, remembered } from './metrics.js';
 import { keepUndoable, kept } from './undo.js';
-import { datasetKey } from './chart-spec.js';
+import { place } from './place.js';
 import { chatPrompt, refreshPrompt, type PromptContext } from './prompts.js';
 import { parseReply, type Reply } from './reply.js';
 import { isUntitled, titled, usablePair, visualizationTitle } from './view.js';
@@ -205,13 +202,19 @@ export class VisualizationAgent {
     // The copy is taken before anything moves, so a reply that removes a chart can be taken back by a turn
     // that has no other way to say so.
     const before = record.charts;
-    const refused = this.remove(record, reply.remove);
     const named = titled(reply.name ?? '');
     if (named !== '' && isUntitled(record)) record.title = named;
     // Definitions are applied before the charts, so one turn can introduce a measure and draw with it, and
     // a name is matched against what this reply defined as well as against what was already there.
-    if (reply.metrics.length > 0) remembered(record, reply.metrics);
-    const first = this.place(record, reply.charts, refused);
+    const unplaced = reply.metrics.length > 0 ? remembered(record, reply.metrics) : [];
+    // One list of what this reply could not do, which `place` adds to and the response below reads, so a
+    // definition that had no room is said beneath the model's own words like a chart that could not be
+    // drawn: a measure that quietly went missing is a measure every later chart naming it is refused for.
+    const refused: string[] = [...this.remove(record, reply.remove)];
+    if (unplaced.length > 0) {
+      refused.push(`Not remembered: ${unplaced.map((one) => `"${one}"`).join(', ')} - this conversation already has ${MAX_METRICS} measures.`);
+    }
+    const first = place(record, reply.charts, refused, (held, data) => { this.options.acquire(held, data); });
     // Whatever the reply did to the charts, the notices are the data's own account of itself rather than
     // the model's, so they are rebuilt here from what the charts now say rather than asked for.
     noticed(record);
@@ -252,39 +255,6 @@ export class VisualizationAgent {
     return refused;
   }
 
-  // The first chart the reply drew, which is the one the sentence describes and the one an untitled
-  // visualization takes its name from. A chart naming a file the agent has just acquired is given that
-  // data before it is placed, because the file is the only place it can be — so the check that would
-  // refuse the chart comes first, or a reply naming fifty files would spend the dataset ceiling on
-  // charts that were about to be refused anyway.
-  private place(
-    record: VisualizationRecord,
-    entries: Reply['charts'],
-    refused: string[],
-  ): VisualizationChartRecord | undefined {
-    let first: VisualizationChartRecord | undefined;
-    const room = roomFor(record, entries.length, refused);
-    for (const entry of entries.slice(0, room)) {
-      if (entry.data !== undefined) {
-        // A data reference the record already holds costs nothing; a new one is refused here rather than
-        // after the read, because the ceiling is on what a record may carry at all and a dataset written
-        // past it would make the whole record unreadable.
-        if (datasetFor(record, datasetKey(entry.data)) === undefined
-          && record.datasets.length >= MAX_DATASETS) {
-          refused.push(`A visualization may read ${MAX_DATASETS} data sources, and this one already reads them all.`);
-          continue;
-        }
-        this.options.acquire(record, entry.data);
-      }
-      const result = placed(record, entry, randomUUID);
-      if ('error' in result) {
-        refused.push(`Not drawn: ${result.error}.`);
-        continue;
-      }
-      first ??= result.chart;
-    }
-    return first;
-  }
 
   private fail(record: VisualizationRecord, pending: InFlight, message: string): void {
     if (this.inFlight.get(record.id) !== pending) return;

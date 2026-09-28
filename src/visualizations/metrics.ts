@@ -102,10 +102,26 @@ export function metricList(metrics: readonly VisualizationMetric[], hasColumn: (
 // than duplicated, because a user who says "actually, p95 latency means the p99" is correcting the
 // measure and expects every chart of it to move with the correction - which is the whole reason a
 // definition is one thing rather than a string copied into each chart.
-export function remembered(record: { metrics: VisualizationMetric[] }, defined: readonly VisualizationMetric[]): void {
+export function remembered(record: { metrics: VisualizationMetric[] }, defined: readonly VisualizationMetric[]): string[] {
   const said = new Set(defined.map((one) => one.name.toLowerCase()));
   const kept = record.metrics.filter((one) => !said.has(one.name.toLowerCase()));
-  record.metrics = [...kept, ...defined].slice(-MAX_METRICS);
+  // The measures already in the conversation outrank the ones this reply brought: a name the user typed is
+  // the one they will ask for again, and `slice(-MAX_METRICS)` over the combined list dropped the oldest
+  // entry overall - so a reply defining twelve of its own could empty the user's measures in one turn,
+  // after which every chart naming one was refused and nothing said the measure was gone.
+  const room = Math.max(0, MAX_METRICS - kept.length);
+  // A definition that replaces a measure already here is not one of the reply's new ones, so it is never
+  // what gets trimmed: a reply correcting a measure the user asked about has to land, or the preference
+  // above would turn a correction into a loss.
+  const wasHere = new Set(record.metrics.map((one) => one.name.toLowerCase()));
+  const corrections = defined.filter((one) => wasHere.has(one.name.toLowerCase()));
+  const fresh = defined.filter((one) => !wasHere.has(one.name.toLowerCase()));
+  // Of the rest, the newest are the ones this reply is about, so the oldest of them go when there is not
+  // room, and the names that did not fit are returned for the turn to say out loud.
+  const wanted = Math.max(0, room - corrections.length);
+  const accepted = [...corrections, ...fresh.slice(Math.max(0, fresh.length - wanted))];
+  record.metrics = [...kept, ...accepted];
+  return defined.filter((one) => !accepted.includes(one)).map((one) => one.name);
 }
 
 // The same rules as a guard, for the store: a record is read back from disk by a process that may be an

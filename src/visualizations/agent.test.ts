@@ -389,6 +389,23 @@ describe('a reply that draws', () => {
     expect(subject.charts[0]?.metric).toBe('p95 latency');
   });
 
+  // A measure that did not fit is said beneath the reply's own words, like a chart that could not be
+  // drawn. Silence is what made the eviction invisible: the user asked for p95 latency, it stopped being
+  // offered, and every later chart naming it was refused for a measure that no longer existed.
+  it('says which of the measures a reply brought had no room', async () => {
+    const { agent, chunk, end } = fixture();
+    const subject = record({ metrics: [{ name: 'p95 latency', y: 'revenue', aggregate: 'percentile', percentile: 95 }] });
+    agent.ask(subject, 'go', ready);
+    await settled();
+    const twelve = Array.from({ length: 12 }, (_, index) => ({ name: `m${index}`, y: 'revenue', aggregate: 'sum' }));
+    chunk(JSON.stringify({ say: 'Here are some measures.', charts: [], metrics: twelve }));
+    end();
+
+    expect(subject.metrics.map((one) => one.name)).toContain('p95 latency');
+    expect(subject.turns[0]?.response).toContain('Not remembered: "m0"');
+    expect(subject.turns[0]?.response).toContain('already has 12 measures');
+  });
+
   it('refuses a chart naming a measure that does not exist, and names it', async () => {
     const { agent, chunk, end } = fixture();
     const subject = record();
