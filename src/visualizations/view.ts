@@ -62,6 +62,7 @@ export function windowOf(
     // shares it would mutate out from under a tab already holding the old suggestions.
     ...(record.followUps !== undefined && { followUps: [...record.followUps] }),
     notices: [...(record.notices ?? [])],
+    instructions: [...(record.instructions ?? [])],
     turns: record.turns.map((turn) => ({ ...turn })),
     ...(busy && { busy: true }),
     ...(failure !== undefined && { error: failure }),

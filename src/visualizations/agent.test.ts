@@ -30,6 +30,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     charts: [],
     metrics: [],
     notices: [],
+    instructions: [],
     turns: [],
     ...over,
   };

@@ -243,6 +243,69 @@ describe('sending a message', () => {
     expect(manager.send('v1', 'two')).toBe(false);
   });
 
+  // A rule is not a question, so nothing is asked: the message is applied to the record and answered in
+  // one line. Asking the model to acknowledge it would cost a call and put a sentence in the exchange
+  // about something the host did itself.
+  it('applies a remembered rule without calling the model, and says so in the exchange', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk(JSON.stringify({ say: 'Here is one.' }));
+    built.end();
+    await settle();
+    const before = built.prompts.length;
+
+    expect(built.manager.send('v1', 'remember: always split by service')).toBe(true);
+
+    expect(built.prompts).toHaveLength(before);
+    const view = windowOfId(built.manager, 'v1');
+    expect(view?.instructions).toEqual(['always split by service']);
+    expect(view?.turns.at(-1)?.query).toBe('remember: always split by service');
+    expect(view?.turns.at(-1)?.response).toContain('I will remember that from now on');
+  });
+
+  it('carries a remembered rule into the next prompt, and drops it when it is forgotten', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk(JSON.stringify({ say: 'Here is one.' }));
+    built.end();
+    await settle();
+    built.manager.send('v1', 'remember: always split by service');
+    built.manager.send('v1', 'and a bar chart');
+    await settle();
+    expect(built.prompts.at(-1)).toContain('always split by service');
+
+    built.chunk(JSON.stringify({ say: 'Split.' }));
+    built.end();
+    await settle();
+    // Removal is by containment, so a user forgetting a rule does not have to retype it exactly.
+    built.manager.send('v1', 'forget: split by service');
+    expect(windowOfId(built.manager, 'v1')?.instructions).toEqual([]);
+    expect(windowOfId(built.manager, 'v1')?.turns.at(-1)?.response).toContain('Still remembered: nothing');
+  });
+
+  it('sends a message that merely begins with the word as a question', async () => {
+    const built = build({ read: reading(CSV) });
+    openTab('v1');
+    built.manager.create('v1');
+    built.manager.send('v1', 'https://example.com/d.csv');
+    await settle();
+    built.chunk(JSON.stringify({ say: 'Here is one.' }));
+    built.end();
+    await settle();
+
+    built.manager.send('v1', 'remember the first deploy of the day');
+    await settle();
+
+    expect(built.prompts).toHaveLength(2);
+    expect(windowOfId(built.manager, 'v1')?.instructions).toEqual([]);
+  });
+
   it('refuses a blank message', () => {
     const { manager } = build();
     openTab('v1');

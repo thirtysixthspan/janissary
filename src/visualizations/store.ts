@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { errorText } from '../error-text.js';
-import { isMetricList } from './metrics.js';
+import { isMetricList, MAX_INSTRUCTIONS } from './metrics.js';
 import type {
   ConversationModelPair,
   VisualizationChartRecord,
@@ -42,6 +42,10 @@ export type VisualizationRecord = {
   // chart of the conversation instead of being re-derived from a column name on each turn. A definition
   // whose column has gone stays on the record: the user wrote it, and the prompt simply stops offering it.
   metrics: VisualizationMetric[];
+  // What the user has told the agent to keep doing, in their own words. The prompt carries twelve turns
+  // and nothing else, so without this an instruction given in the first message is gone by the thirteenth
+  // and neither the user nor the model can tell that from one that was never followed.
+  instructions: string[];
   turns: VisualizationTurnView[];
   followUps?: string[];
   // What the host noticed in the data behind the charts: a value outside the fences, a point outside the
@@ -83,6 +87,7 @@ export function isVisualizationRecord(value: unknown): value is VisualizationRec
     && isDatasetList(value.datasets)
     && isChartList(value.charts)
     && (value.metrics === undefined || isMetricList(value.metrics))
+    && (value.instructions === undefined || (isStringArray(value.instructions) && value.instructions.length <= MAX_INSTRUCTIONS))
     && Array.isArray(value.turns)
     && value.turns.every(isTurn)
     && (value.followUps === undefined || isStringArray(value.followUps))
@@ -116,6 +121,7 @@ export function freshVisualization(
     datasets: [],
     charts: [],
     metrics: [],
+    instructions: [],
     turns: [],
     notices: [],
   };

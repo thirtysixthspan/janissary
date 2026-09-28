@@ -19,6 +19,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     charts: [],
     metrics: [],
     notices: [],
+    instructions: [],
     turns: [],
     ...over,
   };

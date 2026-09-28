@@ -28,6 +28,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     datasets: [{ key: 'source', table: TABLE, readAt: 1 }],
     charts: [],
     metrics: [],
+    instructions: [],
     turns: [],
     ...over,
   };
@@ -108,6 +109,22 @@ describe('the prompt', () => {
   // two opinions.
   // The measures the user has already named, with the column and the reduction behind each: a model told
   // a name once and shown the column behind it stops inventing a third name for the same quantity.
+  // The rules are ahead of the conversation and labelled, because a model told them in the first message
+  // and then shown twelve turns that do not contain them has been given two sources of truth and no way
+  // to tell which is current.
+  it('carries the rules the user gave, ahead of the conversation', () => {
+    const withRule = record({ instructions: ['always split by service'] });
+    const text = chatPrompt(withRule, WORKSPACE);
+    expect(text).toContain('## What the user has told you to keep doing');
+    expect(text).toContain('- always split by service');
+    expect(text.indexOf('## What the user has told you to keep doing')).toBeLessThan(text.indexOf('## So far'));
+  });
+
+  it('leaves the rules out entirely when there are none', () => {
+    expect(chatPrompt(record(), WORKSPACE)).not.toContain('## What the user has told you');
+    expect(chatPrompt(record({ instructions: [] }), WORKSPACE)).not.toContain('## What the user has told you');
+  });
+
   it('lists the measures the user has named, with their column, reduction and synonyms', () => {
     const withMeasure = record({
       metrics: [{ name: 'p95 latency', y: 'revenue', aggregate: 'percentile', percentile: 95, synonyms: ['p95'] }],

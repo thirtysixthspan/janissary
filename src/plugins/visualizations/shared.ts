@@ -79,6 +79,7 @@ export type VisualizationWindow = {
   charts: VisualizationChart[];
   followUps?: string[];
   notices: string[];
+  instructions: string[];
   turns: VisualizationTurn[];
   busy?: boolean;
   error?: string;
@@ -193,6 +194,7 @@ export function isVisualizationWindow(value: unknown): value is VisualizationWin
     && Array.isArray(value.charts) && value.charts.every((chart) => isChart(chart))
     && (value.followUps === undefined || isStringList(value.followUps))
     && Array.isArray(value.notices) && value.notices.every(isText)
+    && Array.isArray(value.instructions) && value.instructions.every(isText)
     && Array.isArray(value.turns) && value.turns.every((turn) => isTurn(turn))
     && (value.busy === undefined || typeof value.busy === 'boolean')
     && (value.error === undefined || typeof value.error === 'string');

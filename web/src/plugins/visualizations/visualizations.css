@@ -81,6 +81,13 @@
 
 .visualization-notice { color: var(--fg); margin: 0 0 4px; font-size: 12px; }
 
+/* A remembered rule, shown above the exchange because it came from neither side of it. Styled like the
+   notices and for the same reason: a standing instruction is a fact about the conversation, not something
+   having gone wrong. */
+.visualization-rules { border-left: 2px solid var(--accent); margin: 8px 12px 0; padding-left: 10px; }
+
+.visualization-rule { color: var(--fg); margin: 0 0 4px; font-size: 12px; font-style: italic; }
+
 /* The chart's text alternative, closed by default so a tab opens on a chart and not on a table. It sits
    inside the chart's own card because it belongs to the chart rather than to the conversation about it,
    and the table scrolls inside its own box so a long one cannot push the exchange off the screen. */

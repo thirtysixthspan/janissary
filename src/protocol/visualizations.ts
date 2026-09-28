@@ -239,6 +239,9 @@ export type VisualizationWindowView = {
   // about it, which is the division that keeps a spike from being described in a different voice each
   // time it is asked about.
   notices: string[];
+  // The rules the user asked to be kept, shown under the exchange rather than hidden in a prompt, because a
+  // rule the user cannot see is a rule they cannot check.
+  instructions: string[];
   turns: VisualizationTurnView[];
   // A call in flight: the read of a new source, or the model call that follows it. What it is for is
   // the tab's business — the tab renders one busy state for all of them.

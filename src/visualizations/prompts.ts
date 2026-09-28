@@ -98,18 +98,29 @@ export function chatPrompt(record: VisualizationRecord, context: PromptContext):
     record.datasets.some((dataset) => dataset.table?.columns.some((one) => one.name === column) === true));
   const measures = known.length === 0 ? '' : ['## The measures you know', ...known].join('\n');
   const data = [context.sourceNote, datasets, measures].filter((part) => part !== undefined && part !== '').join('\n\n');
-  const notices = noticesSectionOf(context.notices);
+  // The rules, ahead of the conversation and labelled, because a model told them in the first message and
+  // then shown twelve turns that do not contain them has been given two sources of truth and no way to
+  // tell which is current. A rule the user later contradicted in a message is answered by the message:
+  // they are the user, and they are here now.
+  const said = record.instructions.filter((rule) => rule !== '');
+  const rules = said.length === 0 ? '' : [
+    '## What the user has told you to keep doing',
+    "These are the user's own standing instructions for this visualization. They outrank your defaults and they apply to every reply from now on, including the ones where the conversation does not mention them. If the user later asks for something different in a message, the message is newer and the message wins.",
+    ...said.map((rule) => `- ${rule}`),
+  ].join('\n');
   return [
     'You are helping someone chart data. They name a source, you work out how to reach the data behind it, you ask what they want to see, you draw it, and then you keep answering their questions about it and the chart.',
     '',
     `Their workspace is ${context.workspace}. Write anything you acquire there and nowhere else.`,
     '',
+    rules,
+    rules === '' ? '' : '',
     '## The data',
     data,
     '',
     '## The charts',
     charts,
-    notices,
+    noticesSectionOf(context.notices),
     '',
     '## So far',
     exchangeOf(record.turns) || 'This is the beginning of the conversation.',

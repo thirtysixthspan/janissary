@@ -32,6 +32,7 @@ function record(over: Partial<VisualizationRecord> = {}): VisualizationRecord {
     datasets: [{ key: 'source' }],
     charts: [],
     metrics: [],
+    instructions: [],
     turns: [],
     ...over,
   };

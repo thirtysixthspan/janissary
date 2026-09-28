@@ -24,6 +24,9 @@ export type ChatProperties = {
   // measurements rather than the model's words, which is why they are plain sentences with no markdown
   // and no reply around them: a reader should be able to see that a number came from a rule.
   notices: string[];
+  // The rules the user asked to be kept. Shown because a rule they cannot see is a rule they cannot check,
+  // and set apart from the exchange because it did not come from either side of it.
+  instructions: string[];
   prompted: boolean;
   busy: boolean;
   disabled: boolean;
@@ -33,7 +36,7 @@ export type ChatProperties = {
 };
 
 export function VisualizationChat({
-  turns, notices, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
+  turns, notices, instructions, followUps, error, prompted, busy, disabled, active, onSend, onCancel,
 }: ChatProperties) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -82,6 +85,13 @@ export function VisualizationChat({
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(turn.response) ?? '' }}
               />
             </div>
+          ))}
+        </div>
+      )}
+      {instructions.length === 0 ? null : (
+        <div className="visualization-rules">
+          {instructions.map((rule) => (
+            <p key={rule} className="visualization-rule">Always: {rule}</p>
           ))}
         </div>
       )}

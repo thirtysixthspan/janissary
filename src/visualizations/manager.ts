@@ -5,6 +5,7 @@ import { AcpSessionPool } from '../acp/session-pool.js';
 import { VisualizationAgent } from './agent.js';
 import { chartById, ensureDataset } from './charts.js';
 import { datasetKey } from './chart-spec.js';
+import { applied, readInstruction } from './instructions.js';
 import { readSource } from './fetch.js';
 import { VisualizationIndex } from './index.js';
 import { acquire, reader } from './reading.js';
@@ -93,8 +94,7 @@ export class VisualizationsManager {
     if (this.index.find(id)) return false;
     const pair = availableVisualizationModels()[0];
     if (!pair) throw new Error('No ACP conversation models configured.');
-    const record = freshVisualization(id, pair, this.now());
-    this.index.remember(record);
+    this.index.remember(freshVisualization(id, pair, this.now()));
     this.index.expectTab(id);
     this.changed();
     if (message !== undefined && message.trim() !== '') void this.send(id, message);
@@ -115,6 +115,15 @@ export class VisualizationsManager {
   send(id: string, query: string): boolean {
     const record = this.index.live(id);
     if (!record) return false;
+    // A rule the user asked to be remembered is not a question, so nothing is asked: the message is applied
+    // to the record and answered in one line. Asking the model to acknowledge it would cost a call and put
+    // a sentence in the exchange about something the host did itself.
+    const instruction = readInstruction(query);
+    if (instruction.kind !== 'message') {
+      applied(record, instruction);
+      this.commit(record);
+      return true;
+    }
     // The suggestion this message came from goes the moment it is used, not when the reply that replaces
     // the row lands. The row was replaced only on the reply before, so for the whole of a reply — which
     // can be a long one — the button was still there offering the same question again, and asking it

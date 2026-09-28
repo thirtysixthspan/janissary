@@ -18,6 +18,9 @@ import type { VisualizationMetric } from '../protocol.js';
 // own bound can be stated. Twelve is more than a conversation about one data source will ever need.
 export const MAX_METRICS = 12;
 export const MAX_SYNONYMS = 6;
+// Instructions are prompt text on every turn, so the bound is on how much a conversation can accumulate
+// rather than on how much one message can say.
+export const MAX_INSTRUCTIONS = 10;
 
 const NAME = /^[A-Za-z0-9][\w .%/-]{0,47}$/u;
 

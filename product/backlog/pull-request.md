@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Carry what the user taught the agent beyond the last twelve turns, so a correction made in the first message is still true in the twentieth.
-
-Existing Issue: `MAX_TURNS_IN_PROMPT` in `src/visualizations/reply.ts` keeps the most recent twelve turns and nothing else, so every instruction the user has given the model is forgotten, where Power BI stores AI instructions on the model and injects them into every prompt (https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-prepare-data-ai-instructions), Databricks Genie supports per-agent general instructions plus a reserved trailing block for summary behaviour (https://docs.databricks.com/aws/en/genie-agents/tune-quality), and Hex's workspace context file exists for the same reason (https://learn.hex.tech/tutorials/ai-best-practices/setup-for-ai-agents). Severity: 7/10
-
-Existing Risk: 7/10 - "Use median, not mean" or "always show region before service" is given once, works, and is silently dropped later in the same conversation, and neither the user nor the model can tell the difference between a forgotten instruction and one that was never followed.
-
-Proposal Risk: 3/10 - Stored instructions are prompt text a model will obey, so an instruction that contradicts the user's later message is a new source of a wrong chart; the turn order has to settle it, and the record has to survive a rule that is later removed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: remember instructions the user gives, and carry them in every prompt". Add an `instructions: string[]` to the record in `src/visualizations/store.ts` with its guard, recognise `remember …` and `forget …` as a leading clause of a message in `src/visualizations/manager.ts` — a message that is only a remembered rule asks nothing of the model, so it needs a turn of its own or no turn at all — and prepend the current list to the chat prompt in `src/visualizations/prompts.ts` ahead of the exchange, labelled so the model can tell them from the conversation. Show what is remembered as a plain line under the transcript in `web/src/plugins/visualizations/VisualizationChat.tsx` so it is visible rather than implicit, and bound the list the way the transformations and datasets are bounded. Verify with store cases in `src/visualizations/store.test.ts`, manager cases in `src/visualizations/manager.test.ts` for a remembered rule reaching the next prompt and a forgotten one no longer reaching it, a prompt case in `src/visualizations/prompts.test.ts` asserting the list is present and ordered before the exchange, and a web case in `web/src/plugins/visualizations/VisualizationTab.test.tsx` asserting the line is shown.
-
 * Let a run of the agent be undone, so a reply that removes the wrong chart is recoverable without re-prompting into a worse state.
 
 Existing Issue: a reply's `remove` is applied immediately in `remove` in `src/visualizations/agent.ts` and there is no history of any kind, where Deepnote's agent shows a before-and-after diff when a run finishes and offers a single control to undo all changes from that run (https://deepnote.com/docs/deepnote-agent) and Hex's notebook agent shows a per-change diff to keep or discard (https://learn.hex.tech/tutorials/ai-best-practices/notebook-agent-best-practices). Severity: 6/10

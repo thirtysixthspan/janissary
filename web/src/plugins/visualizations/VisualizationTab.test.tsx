@@ -58,6 +58,7 @@ function windowOf(over: Partial<VisualizationWindow> = {}): VisualizationWindow 
     pair: { harness: 'claude', model: 'opus' },
     charts: [],
     notices: [],
+    instructions: [],
     turns: [],
     ...over,
   };
@@ -139,6 +140,19 @@ describe('a new visualization tab', () => {
   // rather than recalled as an empty string.
   // A notice is a measurement rather than something the model said, and it is the only text in the tab
   // that is not part of the exchange — which is why it is set apart from it and why it names its chart.
+  // A rule the user cannot see is a rule they cannot check, so it is on the screen rather than only in a
+  // prompt. It is set apart from the exchange because it came from neither side of it.
+  it('shows the rules the user asked to be kept', () => {
+    show(payload({ instructions: ['always split by service'] }));
+    const rule = screen.getByText(/always split by service/u);
+    expect(rule.className).toBe('visualization-rule');
+    expect(rule.textContent).toContain('Always:');
+  });
+
+  it('shows no rules at all when there are none', () => {
+    expect(show(payload()).container.querySelector('.visualization-rules')).toBeNull();
+  });
+
   it('shows what the host noticed in the data, above the exchange', () => {
     show(payload({
       notices: ['In "Latency", north has a latency of 4200, outside the 98 to 103 that the middle half of the other 9 latency values occupies.'],

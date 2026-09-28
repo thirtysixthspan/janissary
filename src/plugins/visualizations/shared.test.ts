@@ -39,6 +39,7 @@ const WINDOW: VisualizationWindow = {
   pair: { harness: 'opencode', model: 'model' },
   charts: [CHART],
   notices: [],
+  instructions: [],
   turns: [],
 };
 
@@ -98,6 +99,7 @@ describe('visualizations shared contract', () => {
         error: 'boom',
         followUps: ['make it a line chart'],
         notices: [],
+    instructions: [],
         turns: [{ query: 'q', response: 'a', pair: { harness: 'claude', model: 'm' } }],
         charts: [{
           ...CHART,
