@@ -82,7 +82,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     visualizations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
       create: vi.fn(), load: vi.fn(), delete: vi.fn(), send: vi.fn(),
-      cancel: vi.fn(), setChartRefresh: vi.fn(), refreshChart: vi.fn(),
+      cancel: vi.fn(), setChartRefresh: vi.fn(), refreshChart: vi.fn(), undo: vi.fn(),
     },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
@@ -165,6 +165,7 @@ describe('the visualizations topic source', () => {
       { topic: 'visualizations', action: 'delete', id: 'one' },
       { topic: 'visualizations', action: 'send', id: 'one', query: 'make it a line' },
       { topic: 'visualizations', action: 'cancel', id: 'one' },
+      { topic: 'visualizations', action: 'undo', id: 'one', index: 1 },
       { topic: 'visualizations', action: 'setChartRefresh', id: 'one', chartId: 'c1', seconds: 30 },
       { topic: 'visualizations', action: 'refreshChart', id: 'one', chartId: 'c1' },
     ];
@@ -176,6 +177,7 @@ describe('the visualizations topic source', () => {
     expect(viz.delete).toHaveBeenCalledWith('one');
     expect(viz.send).toHaveBeenCalledWith('one', 'make it a line');
     expect(viz.cancel).toHaveBeenCalledWith('one');
+    expect(viz.undo).toHaveBeenCalledWith('one', 1);
     expect(viz.setChartRefresh).toHaveBeenCalledWith('one', 'c1', 30);
     expect(viz.refreshChart).toHaveBeenCalledWith('one', 'c1');
   });

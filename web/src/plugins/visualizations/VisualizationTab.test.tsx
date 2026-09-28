@@ -161,7 +161,18 @@ describe('a new visualization tab', () => {
     show(payload({ turns: [turn({ undo: 'removed "Revenue by region"' })] }));
     const button = screen.getByRole('button', { name: /Undo — it removed/u });
     fireEvent.click(button);
-    expect(CAPABILITIES.intent).toHaveBeenCalledWith('undo', { query: 'plot revenue by region' });
+    expect(CAPABILITIES.intent).toHaveBeenCalledWith('undo', { index: 0 });
+  });
+
+  // Two turns can say the same sentence - re-sent, or clicked twice from a re-offered row - and a position
+  // is the only thing that tells them apart. Naming the turn by what it said would send the second button
+  // back to the first, taking back two changes where the reader asked for one.
+  it('takes back the turn whose button was clicked, not the first that said the same thing', () => {
+    const said = { query: 'plot revenue by region', response: 'done', undo: 'removed "Revenue by region"' };
+    show(payload({ turns: [turn(said), turn({ ...said, undo: 'removed "Cost by region"' })] }));
+    const [, second] = screen.getAllByRole('button', { name: /Undo — it removed/u });
+    fireEvent.click(second);
+    expect(CAPABILITIES.intent).toHaveBeenCalledWith('undo', { index: 1 });
   });
 
   it('offers nothing to take back on a turn that changed nothing', () => {

@@ -8,6 +8,9 @@
 export type CreateIntent = { message?: string };
 export type IdIntent = { id: string };
 export type SendIntent = { query: string };
+// A turn by where it sits in the conversation, not by what it said: two turns can carry the same sentence,
+// and a position is the one thing that tells them apart.
+export type UndoIntent = { index: number };
 export type ChartIntent = { chartId: string };
 export type ChartRefreshIntent = { chartId: string; seconds: number };
 
@@ -21,6 +24,9 @@ export function isIdIntent(value: unknown): value is IdIntent {
 }
 export function isSendIntent(value: unknown): value is SendIntent {
   return isRecord(value) && typeof value.query === 'string' && value.query.trim() !== '';
+}
+export function isUndoIntent(value: unknown): value is UndoIntent {
+  return isRecord(value) && typeof value.index === 'number' && Number.isSafeInteger(value.index) && value.index >= 0;
 }
 export function isChartIntent(value: unknown): value is ChartIntent {
   return isRecord(value) && typeof value.chartId === 'string' && value.chartId !== '';

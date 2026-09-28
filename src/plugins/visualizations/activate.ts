@@ -15,6 +15,7 @@ import {
   isCreateIntent,
   isIdIntent,
   isSendIntent,
+  isUndoIntent,
 } from './intents.js';
 import { LIST_KEY, listPayload, dataFrom, VisualizationTabs } from './tabs.js';
 
@@ -102,8 +103,8 @@ function runRecordIntent(
     return null;
   }
   if (intent === 'undo') {
-    if (!isSendIntent(value)) return capabilities.rejectRequest('invalid undo payload');
-    capabilities.topicAction({ topic: 'visualizations', action: 'undo', id, query: value.query });
+    if (!isUndoIntent(value)) return capabilities.rejectRequest('invalid undo payload');
+    capabilities.topicAction({ topic: 'visualizations', action: 'undo', id, index: value.index });
     return null;
   }
   if (intent === 'cancel') {

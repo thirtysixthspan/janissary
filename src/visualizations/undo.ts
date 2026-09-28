@@ -104,12 +104,15 @@ export function keepUndoable(
   turn.before = snapshot(before);
 }
 
-// One turn taken back, and whether it was. The turn is named by the query the user sent in it rather than
-// by a position, because a position moves as the conversation grows and the user is looking at a sentence.
-// A query the record does not hold, or one already taken back, changes nothing and says so by returning
+// One turn taken back, and whether it was. The turn is named by where it sits rather than by what it
+// said: two turns can carry the same sentence, whether re-sent or clicked twice from a re-offered row, and
+// undoing under the second of two identical turns must not restore the state before the first - which would
+// take back both charts, consume the first turn's undo and leave the second button lit over a state that
+// was never on screen. A position is the one thing that tells two identical turns apart.
+// An index the record does not hold, or a turn already taken back, changes nothing and says so by returning
 // false: a revert that quietly did nothing is worse than one that said it could not.
-export function reverted(record: VisualizationRecord, query: string): boolean {
-  const turn = record.turns.find((one) => one.query === query);
+export function reverted(record: VisualizationRecord, index: number): boolean {
+  const turn = record.turns[index];
   if (!restorable(turn)) return false;
   // Re-resolved rather than restored verbatim, so a restored chart is drawn from the data its own
   // specification names rather than from a copy of a table that has been re-read since.

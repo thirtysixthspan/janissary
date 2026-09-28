@@ -33,9 +33,11 @@ export type ChatProperties = {
   active: boolean;
   onSend: (query: string) => void;
   onCancel: () => void;
-  // Taking back what one turn did to the charts. A turn that changed nothing offers nothing: a button that
-  // does nothing beside a label claiming something happened is worse than no button.
-  onUndo: (query: string) => void;
+  // Taking back what one turn did to the charts, named by where the turn sits rather than by what it
+  // said, because two turns can carry the same sentence and a position is the only thing that tells them
+  // apart. A turn that changed nothing offers nothing: a button that does nothing beside a label claiming
+  // something happened is worse than no button.
+  onUndo: (index: number) => void;
   // A question the model could not answer on its own, with the readings it considered. It is the suggestion
   // row with the question above it, because it is the same shape of interaction: a question and some answers
   // you can pick rather than type. Clicking a reading sends that reading, which needs nothing new to answer it.
@@ -96,7 +98,7 @@ export function VisualizationChat({
                   type="button"
                   className="visualization-undo"
                   disabled={disabled || busy}
-                  onClick={() => { onUndo(turn.query); }}
+                  onClick={() => { onUndo(index); }}
                 >
                   Undo — it {turn.undo}
                 </button>

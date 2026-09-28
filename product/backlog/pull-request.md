@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Take back the turn whose button was clicked, not the first one that says the same thing. Severity: 7/10
-
-Existing Issue: `reverted` in `src/visualizations/undo.ts` finds its turn with `record.turns.find((one) => one.query === query)`, and the client sends only the query text, which is not unique — two turns can carry the same sentence, whether re-sent or clicked twice from a re-offered suggestion row. Severity: 7/10
-
-Existing Risk: 7/10 - Clicking undo under the second of two identical turns restores the state before the *first*, so both charts vanish rather than one, the first turn's undo is consumed while the second's button stays lit, and clicking it again restores a state that was never on screen. The comment justifies naming a turn by its query over its position, but a position is exactly what disambiguates this.
-
-Proposal Risk: 3/10 - A turn index is stable for the turns that carry a snapshot, and the client has to be told which one it is clicking, so the two ends move together.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1440: identify the turn an undo names by its index". Add the turn's index to the `undo` action in `src/plugins/api-topics.ts` and to the button in `web/src/plugins/visualizations/VisualizationChat.tsx`, and have `reverted` in `src/visualizations/undo.ts` look the turn up by it, refusing an index the record does not hold or a turn with nothing to take back. Verify with a manager case in `src/visualizations/manager.test.ts` sending the same query twice, undoing the second, and asserting the first turn's chart is still there; a refusal case for an index not held; and a web case in `web/src/plugins/visualizations/VisualizationTab.test.tsx` asserting the button sends the turn it belongs to.
-
 * Give the raster exports a background, which the code says they already have. Severity: 7/10
 
 Existing Issue: `pixelsOf` in `web/src/plugins/visualizations/export/download.ts` sets the canvas background from `getComputedStyle(svg).backgroundColor || '#ffffff'`, but nothing gives an `svg` a background, so the computed value is `rgba(0, 0, 0, 0)` — truthy — and the `||` fallback never fires, so the fill paints nothing. Severity: 7/10

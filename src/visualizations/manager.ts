@@ -163,12 +163,12 @@ export class VisualizationsManager {
     return undefined;
   }
 
-  // One turn taken back. A query the record does not hold, or one with nothing to take back, is
+  // One turn taken back. A position the record does not hold, or a turn with nothing to take back, is
   // refused rather than restoring a second time: a revert that quietly did nothing is worse than one that
   // said it could not.
-  undo(id: string, query: string): boolean {
+  undo(id: string, index: number): boolean {
     const record = this.index.live(id);
-    if (record === undefined || !reverted(record, query)) return false;
+    if (record === undefined || !reverted(record, index)) return false;
     this.commit(record);
     return true;
   }

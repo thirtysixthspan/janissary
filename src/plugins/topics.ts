@@ -122,6 +122,7 @@ function actOnVisualizations(managers: Managers, action: TabPluginTopicAction): 
     case 'delete': { viz.delete(action.id); return; }
     case 'send': { viz.send(action.id, action.query); return; }
     case 'cancel': { viz.cancel(action.id); return; }
+    case 'undo': { viz.undo(action.id, action.index); return; }
     case 'setChartRefresh': { viz.setChartRefresh(action.id, action.chartId, action.seconds); return; }
     case 'refreshChart': { viz.refreshChart(action.id, action.chartId); return; }
   }
