@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reject an insert that names an object other than the one the tab is showing, so the write guard covers the write it is guarding.
-
-Existing Issue: the `insert-row` intent in `src/plugins/sql/intents.ts` calls `requireWritable(payload, capabilities, 'added to')`, which looks the object up as `payload.object` — the table the grid is displaying — and then sends `object: value.object` in the topic action, so the table the guard checked and the table the server writes to are only the same when the client is honest. `update-cell` and `delete-row` do not have this shape, because they name a row key rather than a table. Severity: 6/10
-
-Existing Risk: 5/10 - A client that names a different writable table inserts into a table the view never showed and never re-reads, so the insert succeeds and the grid does not change, which reads as the browser losing a write.
-
-Proposal Risk: 2/10 - The guard is now a check the client cannot route around, but the server still takes the table name from the action rather than from the row key the other two writes use, so the two shapes remain easy to confuse when a third is added.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: guard an insert against the object the tab is showing". Give `requireWritable` in `src/plugins/sql/intents.ts` an `object` parameter and pass `value.object` from the `insert-row` entry, so the name that is checked is the name that is sent. Have it reject with `invalid insert-row object` when `value.object` is not the payload's selected object, rather than silently accepting a different one, and add the same equality check to the `select-object` path so the two cannot disagree about which object a tab is on. `src/plugins/sql/activate.test.ts` already covers a read-only refusal; add a case that an insert naming a different object is rejected without issuing the action, and one that an insert naming the shown writable object still issues `insertRow`. `src/database/write.test.ts` is unaffected — it exercises the write layer directly, which is correct, since the layer cannot know what a tab is showing.
-
-
 * Make the generated SQL drawer's Run button fill in the values it shows, so running a filtered grid's statement runs that query instead of an empty one.
 
 Existing Issue: `SqlDrawer.tsx` renders `payload.grid.sql`, which carries `?` where a value was bound, and its `Run` control sends exactly that text to the `run` intent; `DatabaseBrowser.run` in `src/database/browser-service.ts` prepares the statement with no parameters, and `node:sqlite` binds each unbound `?` as NULL, so a filtered statement runs as `WHERE "status" = NULL` and returns nothing. The drawer already has the bound values in `payload.grid.parameters`, so nothing is missing to render a runnable statement. Severity: 6/10

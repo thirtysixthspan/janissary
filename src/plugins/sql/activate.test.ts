@@ -298,6 +298,24 @@ describe('sql plugin intents', () => {
     expect(fixture.actions).toEqual([]);
   });
 
+  // The payload is writable, so only the mismatch can refuse it — which is the whole point of the
+  // case: an insert naming a different table would otherwise succeed into a table the view never
+  // showed and never re-reads.
+  it('refuses an insert naming a table the tab is not showing, even though the shown one is writable', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent('insert-row', {
+      object: 'other', cells: [{ column: 'id', value: null }],
+    }, fixture, basePayload()))
+      .toThrow(new TabPluginRejection('invalid insert-row object "other"'));
+    expect(fixture.actions).toEqual([]);
+  });
+
+  it('accepts an insert naming the table the tab is showing', () => {
+    const fixture = fakeCapabilities();
+    intent('insert-row', { object: 'orders', cells: [{ column: 'id', value: null }] }, fixture, basePayload());
+    expect(fixture.actions[0]).toMatchObject({ action: 'insertRow', object: 'orders' });
+  });
+
   it('opens another database from the header switcher', () => {
     const fixture = fakeCapabilities();
     intent('open', { name: 'blog' }, fixture);

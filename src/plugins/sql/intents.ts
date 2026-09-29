@@ -60,15 +60,26 @@ function withFilter(payload: SqlPayload, column: string, op: SqlFilterOperator, 
 }
 
 /**
- * Refuse a write to something the view already calls read-only. The host refuses it too, but the
- * host's refusal arrives as an error band after a round trip; this one is immediate and names the
- * reason, and it is what stops a hand-sent intent writing to a table the tab shows as read-only.
+ * Refuse a write to something the view already calls read-only, and to a table the tab is not
+ * showing. The host refuses a read-only write too, but its refusal arrives as an error band after a
+ * round trip; this one is immediate and names the reason.
+ *
+ * `object` is the name the action is about to carry, which is not always the name the payload is
+ * showing — `insert-row` takes a table name from the client, because a row key cannot name a row that
+ * does not exist yet. Checking the action's own name against the payload's selection is what stops
+ * that from being a way to write to a table the view never showed and never re-reads.
  */
-function requireWritable(payload: SqlPayload, capabilities: TabPluginServerCapabilities, verb: string): void {
-  const object = payload.objects.find((entry) => entry.name === payload.object);
-  if (object?.writable) return;
-  const what = object?.kind === 'view' ? 'A view' : 'This table';
-  const why = object?.kind === 'view' ? 'it is a view' : 'it has no primary key';
+function requireWritable(
+  payload: SqlPayload,
+  object: string,
+  capabilities: TabPluginServerCapabilities,
+  verb: string,
+): void {
+  if (object !== payload.object) capabilities.rejectRequest(`invalid insert-row object "${object}"`);
+  const entry = payload.objects.find((candidate) => candidate.name === object);
+  if (entry?.writable) return;
+  const what = entry?.kind === 'view' ? 'A view' : 'This table';
+  const why = entry?.kind === 'view' ? 'it is a view' : 'it has no primary key';
   capabilities.rejectRequest(`${what} cannot be ${verb}: ${why}.`);
 }
 
@@ -159,7 +170,7 @@ export function intentsFor(tabs: SqlTabs) {
     'update-cell': {
       payload: isUpdateCellIntent,
       run: (payload, value: { row: string; column: string; value: string | null }, capabilities): null => {
-        requireWritable(payload, capabilities, 'edited');
+        requireWritable(payload, payload.object, capabilities, 'edited');
         const id = newRequestId();
         capabilities.topicAction({
           topic: 'databases', action: 'updateCell', database: payload.database,
@@ -171,7 +182,7 @@ export function intentsFor(tabs: SqlTabs) {
     'insert-row': {
       payload: isInsertRowIntent,
       run: (payload, value: { object: string; cells: { column: string; value: string | null }[] }, capabilities): null => {
-        requireWritable(payload, capabilities, 'added to');
+        requireWritable(payload, value.object, capabilities, 'added to');
         const id = newRequestId();
         capabilities.topicAction({
           topic: 'databases', action: 'insertRow', database: payload.database,
@@ -183,7 +194,7 @@ export function intentsFor(tabs: SqlTabs) {
     'delete-row': {
       payload: isDeleteRowIntent,
       run: (payload, value: { row: string }, capabilities): null => {
-        requireWritable(payload, capabilities, 'deleted from');
+        requireWritable(payload, payload.object, capabilities, 'deleted from');
         const id = newRequestId();
         capabilities.topicAction({
           topic: 'databases', action: 'deleteRow', database: payload.database, requestId: id, row: value.row,
