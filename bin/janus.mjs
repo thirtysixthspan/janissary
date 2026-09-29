@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { existsSync, mkdirSync, openSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, fstatSync, mkdirSync, openSync, statSync } from 'node:fs';
+import { readLogSince } from './read-log-since.mjs';
 
 // Janissary runs as a local web app: this launcher boots the Node server (which opens the
 // browser to a token-gated localhost URL). `stop`/`init`/`--help`/`--version` run attached,
@@ -74,16 +75,16 @@ function tail(text) {
 }
 
 // Poll the log file (the child's stdout/stderr are redirected to it, not piped to us) for the
-// readiness marker, resolving with the parsed URL. Rejects with `{ type: 'exit', code }` if the
-// child exits first, or `{ type: 'timeout' }` if neither happens in time.
-function awaitReady(logPath, child) {
+// readiness marker written after `offset`, resolving with the parsed URL. Rejects with
+// `{ type: 'exit', code }` if the child exits first, or `{ type: 'timeout' }` if neither happens in
+// time.
+function awaitReady(logPath, offset, child) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const finish = (fn) => { if (settled) return; settled = true; clearTimeout(timer); clearInterval(poll); fn(); };
     const timer = setTimeout(() => finish(() => reject({ type: 'timeout' })), URL_TIMEOUT_MS);
     const poll = setInterval(() => {
-      let content = '';
-      try { content = readFileSync(logPath, 'utf8'); } catch { /* not created yet */ }
+      const content = readLogSince(logPath, offset);
       const line = content.split('\n').find((candidate) => candidate.startsWith(URL_MARKER));
       if (line !== undefined) finish(() => resolve(line.slice(URL_MARKER.length).trim()));
     }, 100);
@@ -102,17 +103,18 @@ const logDir = path.join(projectDir, '.janissary', 'log');
 mkdirSync(logDir, { recursive: true });
 const logPath = path.join(logDir, 'server.log');
 const logFd = openSync(logPath, arguments_.includes('--relaunch') ? 'a' : 'w');
+const logStart = fstatSync(logFd).size;
 
 const child = spawn(command, commandArguments, { detached: true, stdio: ['ignore', logFd, logFd] });
 
 try {
-  const url = await awaitReady(logPath, child);
+  const url = await awaitReady(logPath, logStart, child);
   child.unref();
   if (arguments_.includes('--no-open')) process.stdout.write(`${url}\n`);
   process.exit(0);
 } catch (error) {
   if (error.type === 'exit') {
-    process.stderr.write(tail(readFileSync(logPath, 'utf8')));
+    process.stderr.write(tail(readLogSince(logPath, logStart)));
     process.exit(error.code ?? 1);
   }
   try { process.kill(-child.pid, 'SIGKILL'); } catch { try { child.kill('SIGKILL'); } catch { /* already gone */ } }

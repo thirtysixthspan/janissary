@@ -80,7 +80,7 @@ A relaunch comes back in one pane. A split you left open collapses to a single t
 
 ## Troubleshooting
 
-Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`. A launch that fails outright is the exception: the tail of that same log, the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
+Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it. Under `--relaunch` that is only the new launch's output, never an earlier run's.
 
 If saving an agent's relaunch state fails, Janissary keeps the last valid state file and writes one warning for that agent to the server log. It suppresses repeated warnings while the same failure continues, then reports again if persistence recovers and later fails anew.
 
