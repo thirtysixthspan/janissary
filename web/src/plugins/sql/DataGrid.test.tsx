@@ -260,6 +260,30 @@ describe('DataGrid editing', () => {
     expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: null });
   });
 
+  // A browser blurs the field on the way to the box, and the field commits on blur — so the toggle
+  // used to write the text as it stood and unmount before the null was read. jsdom moves no focus on
+  // a click, which is why the case above passed while the browser wrote the wrong value.
+  it('takes no focus when the NULL toggle is pressed, so the field cannot commit on the way', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    // `fireEvent` returns false when the event's default was prevented, which is the whole contract —
+    // on the box and on the word beside it, which share one label.
+    expect(fireEvent.mouseDown(screen.getByLabelText('Set NULL'))).toBe(false);
+    expect(fireEvent.mouseDown(container.querySelector('.sql-cell-null') as HTMLElement)).toBe(false);
+  });
+
+  it('carries the null alone when the toggle is pressed and the editor commits', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.mouseDown(screen.getByLabelText('Set NULL'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: null });
+  });
+
   // The toggle is part of the value being edited, not a write of its own — otherwise reaching for it
   // and changing your mind would already have overwritten the cell.
   it('asks for nothing when the NULL toggle is used and the editor is then cancelled', () => {

@@ -11,7 +11,10 @@ import { InlineEditInput } from '../api';
 // inline field's own commit carries the null, so Enter and blur write and Escape does not. Committing
 // on the click was worse than it looked — the field commits on blur too, so ticking the toggle fired
 // two writes, the unchanged text and then the null, on a surface where the user believes nothing
-// happens until they say so.
+// happens until they say so. Stopping the press from moving the caret closes the other half of that
+// trap: a browser blurs the field on the way to the box, the blur committed the text as it stood, and
+// the editor unmounted before the toggle was read. Preventing the press's default keeps the caret
+// where the user left it, so the null is what Enter carries.
 export function CellEditor({
   cell, onCommit, onCancel,
 }: {
@@ -30,7 +33,7 @@ export function CellEditor({
         onCommit={() => onCommit(isNull ? null : text)}
         onCancel={onCancel}
       />
-      <label className="sql-cell-null">
+      <label className="sql-cell-null" onMouseDown={(event) => event.preventDefault()}>
         <input
           type="checkbox"
           checked={isNull}
