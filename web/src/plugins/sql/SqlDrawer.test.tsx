@@ -38,11 +38,17 @@ describe('SqlDrawer', () => {
     expect(write).toHaveBeenCalledWith(expect.stringContaining('-- Parameters:'));
   });
 
-  it('asks to run the statement, which is the console sending it', () => {
+  it('asks to run the statement with its values filled in, while still showing the placeholder', () => {
     const { capabilities, intent } = makeCapabilities();
-    render(<SqlDrawer payload={payload()} capabilities={capabilities} />);
+    const sql = 'SELECT "id" FROM "orders" WHERE "status" = ? LIMIT ? OFFSET ?';
+    const filtered = payload({ grid: { ...payload().grid!, sql, parameters: ['paid', 100, 0] } });
+    render(<SqlDrawer payload={filtered} capabilities={capabilities} />);
     fireEvent.click(screen.getByText('Run'));
-    expect(intent).toHaveBeenCalledWith('run', { sql: payload().grid?.sql });
+    expect(intent).toHaveBeenCalledWith('run', {
+      sql: `SELECT "id" FROM "orders" WHERE "status" = 'paid' LIMIT 100 OFFSET 0`,
+    });
+    // The panel still shows what executed, placeholders and all — the two are different on purpose.
+    expect(screen.getByTestId('sql-statement').textContent).toContain('= ?');
   });
 
   it('draws nothing without a statement to show', () => {

@@ -13,6 +13,7 @@ import {
   pageLabel,
   previousOffset,
   readOnlyReason,
+  renderRunnableSql,
 } from './grid-view';
 
 const GRID: SqlGrid = {
@@ -153,6 +154,30 @@ describe('barScale', () => {
   it('is the largest count, so every bar scales against a real maximum', () => {
     expect(barScale(column([{ label: 'x', count: 4 }, { label: 'y', count: 17 }]))).toBe(17);
     expect(barScale(column([]))).toBe(0);
+  });
+});
+
+describe('renderRunnableSql', () => {
+  it('writes a text value as a quoted literal and a number bare', () => {
+    expect(renderRunnableSql('SELECT * FROM t WHERE a = ? AND b > ?', ['paid', 10]))
+      .toBe("SELECT * FROM t WHERE a = 'paid' AND b > 10");
+  });
+
+  it('doubles an interior quote rather than truncating the statement', () => {
+    expect(renderRunnableSql('SELECT * FROM t WHERE a = ?', ["it's"]))
+      .toBe("SELECT * FROM t WHERE a = 'it''s'");
+  });
+
+  it('leaves a statement with no placeholder alone', () => {
+    expect(renderRunnableSql('SELECT 1', ['x'])).toBe('SELECT 1');
+    expect(renderRunnableSql('SELECT 1', [])).toBe('SELECT 1');
+  });
+
+  it('degrades visibly when the counts do not match, rather than quietly guessing', () => {
+    expect(renderRunnableSql('SELECT * FROM t WHERE a = ? AND b = ?', ['only-one']))
+      .toBe("SELECT * FROM t WHERE a = 'only-one' AND b = ?");
+    expect(renderRunnableSql('SELECT * FROM t WHERE a = ?', ['one', 'two']))
+      .toBe("SELECT * FROM t WHERE a = 'one'");
   });
 });
 

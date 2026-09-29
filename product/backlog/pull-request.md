@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the generated SQL drawer's Run button fill in the values it shows, so running a filtered grid's statement runs that query instead of an empty one.
-
-Existing Issue: `SqlDrawer.tsx` renders `payload.grid.sql`, which carries `?` where a value was bound, and its `Run` control sends exactly that text to the `run` intent; `DatabaseBrowser.run` in `src/database/browser-service.ts` prepares the statement with no parameters, and `node:sqlite` binds each unbound `?` as NULL, so a filtered statement runs as `WHERE "status" = NULL` and returns nothing. The drawer already has the bound values in `payload.grid.parameters`, so nothing is missing to render a runnable statement. Severity: 6/10
-
-Existing Risk: 6/10 - A user who filters a table, opens the SQL drawer to work from the statement, and presses Run gets an empty grid and no error, and concludes the filter matched nothing rather than that the value never reached the statement.
-
-Proposal Risk: 2/10 - Inlining the values into a statement that gets run reintroduces quoting into SQL, so the rendering has to escape correctly and the two statements — the one shown and the one run — can still differ in whitespace or case.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: make the drawer's Run send the values it shows". In `web/src/plugins/sql/SqlDrawer.tsx` add a pure `renderRunnableSql(sql, parameters)` helper, colocated with the drawer or in `web/src/plugins/sql/grid-view.ts` so it is testable without a render, that substitutes each `?` in order with a correctly quoted SQL literal — a string is wrapped in single quotes with interior quotes doubled, a number is written bare, and a null is written as `NULL` — and leaves the statement otherwise untouched. Send that rendering from the `Run` control rather than `payload.grid.sql`, and say so in the control's tooltip, so the copy that runs is visibly the same text the drawer shows. The placeholders and the `Parameters` list stay as they are: the drawer is still showing the statement that actually ran. Cover the helper in `web/src/plugins/sql/grid-view.test.ts` with a text value, a numeric value, a null, and a value containing a single quote, and add a case to `SqlDrawer.test.tsx` that `Run` emits a statement carrying the value rather than the placeholder. `src/database/grid-sql.ts` and the bound-parameter path are untouched — the server must keep binding and never receive an interpolated statement from this control.
-
-
 * Make `sql <name>` create a database only when the user asked for one, so a mistyped name does not leave an empty database behind.
 
 Existing Issue: `runCommand` in `src/plugins/sql/activate.ts` validates that a name matches the registry's character rule and then hands it to `openDatabase`, whose first action is a schema read; `DatabaseBrowser.schema` in `src/database/browser-service.ts` opens the connection with `getConnection`, and `getConnection` in `src/connections.ts` creates the file. So `sql shpo` against a project whose database is `shop` silently creates `shpo.sqlite`, and the tab it opens reads `No tables.` Severity: 6/10

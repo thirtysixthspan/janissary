@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy, faPlay } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import { renderRunnableSql } from './grid-view';
 
 // The generated SQL: the exact statement that produced the grid, and the values bound into it, shown
 // as `?` placeholders rather than inlined. Inlining would need to escape a value, and a copy of the
@@ -47,8 +48,8 @@ export function SqlDrawer({
         </button>
         <button
           type="button"
-          title="Run this statement in the console"
-          onClick={() => { void capabilities.intent('run', { sql: statement }); }}
+          title="Run this statement with the parameters above filled in"
+          onClick={() => { void capabilities.intent('run', { sql: renderRunnableSql(statement, parameters) }); }}
         >
           <FontAwesomeIcon icon={faPlay} /> Run
         </button>

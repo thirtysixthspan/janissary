@@ -92,8 +92,11 @@ delete control at all. Its grid is otherwise ordinary, and the console still wri
 A **SQL** control opens a panel showing the exact statement that produced the grid, with `?` where a
 value was bound, and the bound values listed beside it. It is deliberately not an inlined rendering:
 a value containing a quote cannot be shown inside a statement safely, and a copy that quietly means
-something else is worse than one that needs filling in. **Copy** puts both on the clipboard; **Run**
-sends the statement through the console.
+something else is worse than one that needs filling in. **Copy** puts both on the clipboard.
+
+**Run** sends the statement *with those values written in* — a text value quoted, a number bare — so
+running a filtered grid's statement runs that query rather than one comparing against nulls. The
+panel keeps showing the placeholder form, because that is the statement that actually ran.
 
 The order shown is the order actually used, including the primary-key fallback, so what the grid did
 is never a surprise.
