@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let the pager jump to a row the user names, so a table far larger than a page is reachable without counting.
-
-Existing Issue: the pager offers only Previous and Next, and `pageLabel` in `web/src/plugins/sql/grid-view.ts` reports the range already on screen, so reaching row 40,000 of a 51,882-row table takes 408 clicks; DB Browser for SQLite's table browser carries a navigate-to-row control beside its first/previous/next/last pair for the same reason. Severity: 5/10
-
-Existing Risk: 5/10 - A user inspecting a specific record near the end of a large table gives up on the browser and falls back to a hand-written `LIMIT`/`OFFSET` in the console, which is the work this feature exists to remove.
-
-Proposal Risk: 2/10 - A typed row number is an offset the user can get wrong, so the pager has to show where it landed rather than trust the number.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let the pager jump to a row number". Add a `goToRow(value: string)` helper to `web/src/plugins/sql/grid-view.ts` that turns a typed row number into a whole-page offset — clamping to the last page rather than rounding up past the end, and refusing anything that is not a positive integer — beside the existing `previousOffset` and `nextOffset`. Render a field and a Go control in `Pager.tsx` between the range label and the page-size selector, so it is in the same row as the navigation it augments rather than in the grid header. Have it emit the existing `set-page` intent with the computed offset, so no server change is needed: the offset arithmetic is the whole of the feature. Add the first, middle, last, past-the-end, and non-numeric cases to `web/src/plugins/sql/grid-view.test.ts`, and a case to `Pager.test.tsx` — which does not exist yet, so create it — that a typed row number emits `set-page` with the offset the helper computed. The `Rows 1–100 of 4,213 rows` label stays as it is, so the user can see where they landed.
-
-
 * Let a wide table's columns be hidden, so a table with forty columns is readable at the width a sidebar or a split pane allows.
 
 Existing Issue: the grid renders every declared column in every layout, so a table with a few dozen columns is only usable by horizontal scrolling, while DB Browser for SQLite's table browser header menu offers hide column, show all columns, select column, and freeze column as one group of actions. Severity: 5/10

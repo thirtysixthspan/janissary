@@ -79,6 +79,8 @@
 .sql-pager button:disabled { opacity: 0.4; cursor: default; }
 .sql-pager button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
 .sql-pager-label { color: var(--muted); }
+.sql-goto { display: flex; align-items: center; gap: 4px; }
+.sql-goto input { width: 90px; }
 .sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
 .sql-page-size select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
 

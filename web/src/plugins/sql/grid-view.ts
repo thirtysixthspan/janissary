@@ -37,6 +37,23 @@ export function nextOffset(grid: SqlGrid | null): number {
   return (grid?.offset ?? 0) + (grid?.limit ?? 100);
 }
 
+/**
+ * The offset that starts a page at the row the user named, or null when they named no row.
+ *
+ * Rows are numbered from 1 because that is how the page label numbers them, so the offset is one page
+ * short of the row. Past the end it clamps to the last page rather than rounding up past it — a
+ * typed number the user got wrong should land them at the end and show them that, not show nothing.
+ * A row that is not a whole number above zero is refused rather than guessed at: `null` asks for no
+ * page at all, so the control can sit there unchanged until the number makes sense.
+ */
+export function goToRow(value: string, grid: SqlGrid | null): number | null {
+  const row = Number(value.trim());
+  if (!Number.isSafeInteger(row) || row < 1) return null;
+  const limit = grid?.limit ?? 100;
+  const startOf = (rowNumber: number) => Math.floor((rowNumber - 1) / limit) * limit;
+  return Math.min(startOf(row), Math.max(0, startOf(Math.max(1, grid?.total ?? 1))));
+}
+
 const OPERATOR_TEXT: Record<SqlFilter['op'], string> = {
   contains: 'contains',
   eq: '=',
