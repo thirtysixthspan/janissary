@@ -607,6 +607,34 @@ describe('sql plugin intents', () => {
     expect(fixture.actions[0]).toMatchObject({ query: { object: 'elsewhere', filters: [{ column: 'status', op: 'eq', value: 'paid' }] } });
   });
 
+  it('drops an order naming a column the newly selected object does not have', () => {
+    const fixture = fakeCapabilities();
+    // `ORDER BY "total"` against an object with no `total` is the statement SQLite refuses, and a
+    // failed read leaves the previous object's rows on screen under the new object's name.
+    intent('select-object', { object: 'paid' }, fixture, basePayload({
+      object: 'orders',
+      order: [{ column: 'total', desc: true }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ action: 'query', query: { object: 'paid', order: [] } });
+  });
+
+  it('keeps an order the newly selected object does have', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'orders' }, fixture, basePayload({
+      object: 'paid',
+      order: [{ column: 'id', desc: true }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ query: { object: 'orders', order: [{ column: 'id', desc: true }] } });
+  });
+
+  it('keeps the order when the target object is not one the tab has listed', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'elsewhere' }, fixture, basePayload({
+      order: [{ column: 'status', desc: true }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ query: { object: 'elsewhere', order: [{ column: 'status', desc: true }] } });
+  });
+
   it('puts a global term in the query and replaces the one before it', () => {
     const fixture = fakeCapabilities();
     intent('set-global-filter', { value: 'ada' }, fixture, basePayload({ global: 'bo' }));

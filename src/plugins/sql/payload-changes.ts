@@ -39,11 +39,12 @@ export function withFilter(
 /**
  * The payload as it should read once another object has been selected.
  *
- * A filter and a hidden column are both facts about a column of *one* object, not facts that follow
- * the user around: keeping `status = 'paid'` while looking at a table with no `status` column builds
- * a statement SQLite rejects outright, so the ones the new object does not have are dropped here
- * rather than at the query. An object the tab has never listed has no known columns, and knowing
- * nothing is no reason to drop anything — only a column this object demonstrably lacks goes.
+ * A filter, a hidden column and a sort order are all facts about a column of *one* object, not facts
+ * that follow the user around: keeping `status = 'paid'` — or `ORDER BY "total"` — while looking at a
+ * table with no such column builds a statement SQLite rejects outright, so the ones the new object
+ * does not have are dropped here rather than at the query. An object the tab has never listed has no
+ * known columns, and knowing nothing is no reason to drop anything — only a column this object
+ * demonstrably lacks goes.
  */
 export function selected(
   payload: SqlPayload,
@@ -62,6 +63,7 @@ export function selected(
     ...payload,
     filters: merged.filter((filter) => present(filter.column)),
     hidden: payload.hidden.filter((name) => present(name)),
+    order: payload.order.filter((entry) => present(entry.column)),
   };
 }
 

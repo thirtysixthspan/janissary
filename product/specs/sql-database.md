@@ -83,7 +83,9 @@ one object, so selecting another object drops the ones it does not have.
 
 A column header toggles the order: ascending, then descending, then none. With no order chosen the
 grid orders by the object's primary key, or by its first column when it has none — a page needs a
-total order, or paging skips and repeats rows.
+total order, or paging skips and repeats rows. The order is a fact about a column of one object, as
+a filter is, so selecting a different object drops an order naming a column it does not have and
+the new object is ordered by its own key instead.
 
 A column declared as a foreign key shows its value as a control rather than as text, titled with the
 table and column it points at. Activating it selects that table filtered to the value, replacing any

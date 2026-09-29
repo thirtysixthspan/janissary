@@ -103,9 +103,16 @@ export function whereClause(query: DatabaseGridQuery, columns: readonly Database
 /**
  * The order actually used: the user's, or the object's primary key ascending, or its first column.
  * A page needs a total order, and `LIMIT ? OFFSET ?` over an unordered query skips and repeats rows.
+ *
+ * A requested column this object does not declare is dropped, for the same reason the `WHERE` is
+ * built from the columns the server read rather than from the client's word: an order left in place
+ * would name a column that is not there, and the statement would fail for a user who only asked to
+ * look at another table. What is left falls back exactly as an orderless query does.
  */
 export function resolveOrder(requested: readonly DatabaseOrderView[], columns: DatabaseColumnView[]): DatabaseOrderView[] {
-  if (requested.length > 0) return [...requested];
+  const names = new Set(columns.map((column) => column.name));
+  const usable = requested.filter((entry) => names.has(entry.column));
+  if (usable.length > 0) return [...usable];
   const key = columns.filter((column) => column.pk > 0).toSorted((a, b) => a.pk - b.pk);
   if (key.length > 0) return key.map((column) => ({ column: column.name, desc: false }));
   const first = columns[0];

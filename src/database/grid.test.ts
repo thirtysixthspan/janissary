@@ -167,6 +167,20 @@ describe('resolveOrder', () => {
     const keyedless = [{ name: 'at', type: 'TEXT', notNull: false, pk: 0 }];
     expect(resolveOrder([], keyedless)).toEqual([{ column: 'at', desc: false }]);
   });
+
+  it('drops an order naming a column the object does not have', () => {
+    expect(resolveOrder([{ column: 'total', desc: true }], COLUMNS)).toEqual([{ column: 'id', desc: false }]);
+  });
+
+  it('keeps the part of a two-column order the object does have', () => {
+    expect(resolveOrder([{ column: 'gone', desc: true }, { column: 'status', desc: false }], COLUMNS))
+      .toEqual([{ column: 'status', desc: false }]);
+  });
+
+  it('builds no statement naming an absent column, so the query cannot fail on it', () => {
+    expect(selectStatement(query({ order: [{ column: 'total', desc: true }] }), COLUMNS).sql)
+      .toContain('ORDER BY "id" ASC');
+  });
 });
 
 describe('orderClause', () => {
