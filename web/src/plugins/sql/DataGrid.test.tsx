@@ -4,6 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { DataGrid } from './DataGrid';
 import { CUSTOMERS, KEYED, grid, makeCapabilities, payload } from './fixture';
 
+// The cell editor's field, which has no accessible name and is empty whenever the NULL toggle is on
+// — so the search and the page filter fields are not distinguishable by what they hold.
+function cellInput(container: HTMLElement): HTMLElement {
+  return container.querySelector('.sql-cell-input') as HTMLElement;
+}
+
 describe('DataGrid headers and rows', () => {
   it('renders every column in order, and the row numbers beside them', () => {
     const { capabilities } = makeCapabilities();
@@ -201,10 +207,23 @@ describe('DataGrid editing', () => {
 
   it('asks for a null value rather than the four characters when the NULL toggle is used', () => {
     const { capabilities, intent } = makeCapabilities();
-    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
     fireEvent.doubleClick(screen.getByText('paid'));
     fireEvent.click(screen.getByLabelText('Set NULL'));
+    expect(intent).not.toHaveBeenCalled();
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: null });
+  });
+
+  // The toggle is part of the value being edited, not a write of its own — otherwise reaching for it
+  // and changing your mind would already have overwritten the cell.
+  it('asks for nothing when the NULL toggle is used and the editor is then cancelled', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    fireEvent.keyDown(cellInput(container), { key: 'Escape' });
+    expect(intent).not.toHaveBeenCalled();
   });
 
   it('asks for nothing when the editor is cancelled', () => {

@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Stop the cell editor's null toggle from writing to the database before the user commits.
-
-Existing Issue: The cell editor's null checkbox calls the commit handler the moment it is ticked, so a null is written on the click while the editor around it still offers Escape as though nothing had been sent. Severity: 5/10
-
-Existing Risk: 5/10 - A user who ticks null, changes their mind and presses Escape has already overwritten the cell, and one who merely reaches for the toggle to see what it does has destroyed the value — on the one surface in the application where a user believes nothing happens until they commit.
-
-Proposal Risk: 2/10 - The toggle still separates a null from a blank string and now commits on the same Enter and blur the text commits on, so the editor's contract is uniform rather than having one control that writes early.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: stop the cell editor's null toggle from writing before the user commits". In `web/src/plugins/sql/CellEditor.tsx`, drop the `onCommit` call from the checkbox's `onChange` and let it set local state only, so the existing `onCommit` on the inline-edit field carries the null the same way it already carries the text, and Enter and blur still write while Escape still writes nothing. `web/src/plugins/sql/DataGrid.test.tsx` has a case asserting the toggle emits `update-cell` on the click; change it to commit through Enter instead, and add a case that opens the editor, ticks null and presses Escape, asserting no intent is sent. `product/specs/sql-database.md` says the editor has a null toggle without saying when it commits; add a sentence saying the toggle commits the way the text does, so the two are pinned in the spec rather than only in the component.
-
 * Deliver the grid's keyboard navigation the plan settled on and the diff does not contain.
 
 Existing Issue: The plan decided that the grid's arrows move the cell selection, Enter opens the editor on the selected cell, and Escape leaves the editor and then the grid, and named a keyboard module to hold it, and the diff carries no arrow or Enter handling and no such module. Severity: 5/10

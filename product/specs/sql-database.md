@@ -112,7 +112,9 @@ Double-clicking a cell opens an editor; Enter commits it and Escape leaves it wi
 anything. A cell holds either text or null, and they are drawn differently: a null reads `NULL` in a
 muted style rather than as a blank cell, so an empty string and a null are never confused. The
 editor has a **NULL** toggle, so writing a null and writing the four characters `NULL` are two
-different acts.
+different acts. The toggle is part of the value being edited rather than a write of its own — it
+takes effect when the editor commits, the same way the typed text does, and leaving it with Escape
+changes nothing.
 
 A write addresses one row by an identity the server issued when it returned the page. A client cannot
 name a row it was not handed, cannot write its own `WHERE`, and a write naming a row whose page has
