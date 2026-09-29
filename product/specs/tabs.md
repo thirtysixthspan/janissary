@@ -151,15 +151,18 @@ They appear in that order, so the browser icon sits to the right of the other tw
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
 same kind are expected in the future.
 
-The browser flag reports the tab's launch, not a browser running behind it. It is lit from the moment a
-`-b` tab opens, whether or not a browser has been started yet, and it drops on the same update that
-brings the gone-browser band described in `harness.md` — that is, when a browser is reported gone. It
-does not come back: a later connect starts a fresh browser behind the same endpoint, and the row stays
-dark because a browser that died is reported through the band and the notifications line, which are
-where that report lives. A flag that tracked a live browser would need janissary to publish a
-browser-started event beside the browser-gone one, on the tab and across a remote connection; the
-behavior the browser flag describes is decided in the plan behind the connect-triggered browser, not
-by the icon.
+The browser flag has two looks. Before any browser has been started behind a `-b` tab's endpoint, it
+is the plain globe with the "E2E browser" tooltip: it reports the tab's launch, and it is lit from the
+moment the tab opens. Once a browser comes up and is listening, the globe turns green and its tooltip
+reads "E2E browser in use". It stays green while that browser runs, for a local tab and for a remote
+one alike. When a browser is reported gone, the flag drops on the same update that brings the
+gone-browser band described in `harness.md`. A later connect that starts a fresh browser behind the
+same endpoint brings it back, green, because a browser is in use again; the band stays up as the
+record of the earlier death. The flag does not return in its plain form after a death.
+
+A remote tab rebuilt by attaching from a new local session learns of a browser only when one starts,
+so a browser already running on the far side before that attach leaves the flag plain until the next
+start.
 
 Agent tabs and harness tabs also show a file-navigator button (a folder icon) in an action group at
 the right edge of the metadata row. Its tooltip is "Open file navigator in this workspace" when the

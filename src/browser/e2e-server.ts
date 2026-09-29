@@ -51,6 +51,10 @@ export type E2EBrowserOptions = {
   // account with the browser's output kept whole, for a caller that persists it; it is undefined
   // when the browser said nothing at all, and so is nothing to keep.
   onGone: (message: string, log?: string) => void;
+  // Invoked each time a browser behind the guard comes up and is listening — the first connect's,
+  // and every fresh one a later connect starts after a death. Paired with `onGone`, it is what lets
+  // a tab tell a browser in use from an endpoint that has not been asked for one yet.
+  onStarted?: () => void;
 };
 
 // The one failure that happens before anything is acquired: the browser port band is full, so this
@@ -144,6 +148,7 @@ type LazyBrowser = {
   // undefined while it has not. Not when it was spawned: a launch that hangs until the probe gives up
   // is as old as a browser that ran by the time it is judged, and it never ran at all.
   listeningAt: number | undefined;
+  onStarted: (() => void) | undefined;
 };
 
 // How many starts may end in a report before a tab stops being given a browser at all, and how long
@@ -181,6 +186,7 @@ function buildE2EBrowserServer(options: E2EBrowserOptions, kick?: (lazy: LazyBro
   const lazy: LazyBrowser = {
     session, ports, internalPath, label: options.label,
     generation: undefined, starting: undefined, failures: 0, reported: false, listeningAt: undefined,
+    onStarted: options.onStarted,
   };
   // Everything a tab owns, released in one order whatever asked. The guard first, so nothing can ask
   // for a browser while this is tearing one down, and the ports with it — a port still reserved for a
@@ -282,5 +288,8 @@ async function startBrowser(lazy: LazyBrowser): Promise<string> {
     stopSession(generation, `e2e browser failed to start: ${errorText(error)}`);
     throw error;
   }
+  // Announced only once the browser is listening, so a launch that never comes up is never reported
+  // as a browser in use.
+  lazy.onStarted?.();
   return upstreamOf(lazy);
 }

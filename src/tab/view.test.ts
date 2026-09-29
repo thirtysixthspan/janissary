@@ -148,9 +148,9 @@ describe('buildTabView', () => {
     expect(view.flags).toContain('browser');
   });
 
-  // The flag is lit from the launch flag, so it stands for the tab's `-b` launch rather than for a
-  // browser behind it — and the one thing that darkens it is the gone-browser report the band carries.
-  // A later connect's fresh browser does not bring it back; see the Metadata row in `tabs.md`.
+  // Before any browser has started, the flag is lit from the launch flag, so it stands for the tab's
+  // `-b` launch — and the gone-browser report the band carries darkens it. See the Metadata row in
+  // `tabs.md`.
   it('drops \'browser\' from flags once the harness reports a browser gone', () => {
     const tab = makeTab('claude', '#fff');
     tab.browser = true;
@@ -158,6 +158,54 @@ describe('buildTabView', () => {
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toContain('browser');
     tab.harness.browserError = 'e2e browser exited';
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).not.toContain('browser');
+  });
+
+  describe('while a browser is in use', () => {
+    const flagsOf = (tab: ReturnType<typeof makeTab>) => buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags;
+
+    function browserTab() {
+      const tab = makeTab('claude', '#fff');
+      tab.browser = true;
+      tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' };
+      return tab;
+    }
+
+    it('reports \'browserInUse\' in place of \'browser\' once a browser has started', () => {
+      const tab = browserTab();
+      tab.harness!.browserRunning = true;
+      expect(flagsOf(tab)).toEqual(['browserInUse']);
+    });
+
+    it('drops it again when that browser is reported gone', () => {
+      const tab = browserTab();
+      tab.harness!.browserRunning = true;
+      tab.harness!.browserError = 'e2e browser exited';
+      delete tab.harness!.browserRunning;
+      expect(flagsOf(tab)).toEqual([]);
+    });
+
+    // The band keeps the earlier death on record, but a browser is in use again.
+    it('reports \'browserInUse\' for a fresh browser a later connect started after a death', () => {
+      const tab = browserTab();
+      tab.harness!.browserError = 'e2e browser exited';
+      tab.harness!.browserRunning = true;
+      expect(flagsOf(tab)).toEqual(['browserInUse']);
+    });
+
+    it('keeps its place after the workspaced and auto-permitting flags', () => {
+      const tab = browserTab();
+      tab.workspaceDir = '/tmp/clone';
+      tab.autoApprove = true;
+      tab.harness!.browserRunning = true;
+      expect(flagsOf(tab)).toEqual(['workspaced', 'autoApprove', 'browserInUse']);
+    });
+
+    it('is never reported for a tab not launched with -b', () => {
+      const tab = browserTab();
+      tab.browser = false;
+      tab.harness!.browserRunning = true;
+      expect(flagsOf(tab)).toEqual([]);
+    });
   });
 
   it('produces an empty flags array when neither workspaceDir nor autoApprove is set', () => {

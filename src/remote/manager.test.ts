@@ -415,6 +415,7 @@ function browserHarness(tabs: Tab[]) {
     send: (id: string, message?: string) => transport?.onData(
       `${encodeFrame({ type: 'browser-exited', id, ...(message !== undefined && { message }) })}\n`,
     ),
+    start: (id: string) => transport?.onData(`${encodeFrame({ type: 'browser-started', id })}\n`),
   };
 }
 
@@ -482,6 +483,41 @@ describe('RemoteManager browser-exited frames', () => {
     const tab = harnessTab('creator', 'rpty1');
     browserHarness([tab]).send('gone-session', 'e2e browser exited');
     expect(tab.harness?.browserError).toBeUndefined();
+  });
+
+  it('clears the browser-in-use mark a started browser left', () => {
+    const tab = harnessTab('creator', 'rpty1');
+    const h = browserHarness([tab]);
+    h.start('rpty1');
+    h.send('rpty1');
+    expect(tab.harness?.browserRunning).toBeUndefined();
+  });
+});
+
+// The far side's browser coming up lights the tab's browser flag as in use. It is resolved by
+// session id for the same reason the gone report is, and it is not news for the notifications feed.
+describe('RemoteManager browser-started frames', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('marks the browser running on the joined tab that owns the session', () => {
+    const creator = harnessTab('creator', 'rpty1');
+    const joined = harnessTab('joined', 'rpty2');
+    browserHarness([creator, joined]).start('rpty2');
+    expect(joined.harness?.browserRunning).toBe(true);
+    expect(creator.harness?.browserRunning).toBeUndefined();
+  });
+
+  it('notifies nothing and keeps the channel open', () => {
+    const h = browserHarness([harnessTab('creator', 'rpty1')]);
+    h.start('rpty1');
+    expect(notify).not.toHaveBeenCalled();
+    expect(h.closeTab).not.toHaveBeenCalled();
+  });
+
+  it('drops a frame for an already-closed tab', () => {
+    const tab = harnessTab('creator', 'rpty1');
+    browserHarness([tab]).start('gone-session');
+    expect(tab.harness?.browserRunning).toBeUndefined();
   });
 });
 

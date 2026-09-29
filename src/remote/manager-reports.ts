@@ -22,6 +22,19 @@ export function notifyBrowserGone(managers: Managers, sessionId: string, message
   const text = message ?? 'e2e browser stopped on the remote host';
   notify(managers, 'e2e-browser-gone', tab.label, text);
   tab.harness.browserError = text;
+  delete tab.harness.browserRunning;
+  messageBus.emit('state', { type: 'dirty' });
+}
+
+/**
+ * A remote `-b` tab's browser has come up on the far side. Resolved by session id for the same
+ * reason `notifyBrowserGone` is, and like the local report it notifies nothing: it only lights the
+ * tab's browser flag as in use until a browser is reported gone.
+ */
+export function notifyBrowserStarted(managers: Managers, sessionId: string): void {
+  const tab = managers.tab.harnessTabByPtyId(sessionId);
+  if (!tab?.harness) return;
+  tab.harness.browserRunning = true;
   messageBus.emit('state', { type: 'dirty' });
 }
 

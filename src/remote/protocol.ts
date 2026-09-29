@@ -141,7 +141,12 @@
 // and the codec used to wrap them in a second layer, sniffing any reply result with a string
 // `content` field to decide. A version-21 peer would read the single layer as double-encoded and
 // hand the navigator base64 text as file contents, so it is refused here instead.
-export const REMOTE_PROTOCOL_VERSION = 22;
+//
+// Version 23 adds `browser-started`, sent when a session's e2e browser comes up and is listening, so
+// the local tab's browser flag can show a browser in use rather than only an endpoint. A version-22
+// remote never sends it, so the flag would never light, and a version-22 local side would refuse the
+// frame as unknown.
+export const REMOTE_PROTOCOL_VERSION = 23;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

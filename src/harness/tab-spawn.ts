@@ -2,6 +2,7 @@ import { makeHarnessTab } from '../tab/index.js';
 import { HARNESS_COMMANDS, buildHarnessCommand } from './index.js';
 import { harnessSpawnEnv } from './scratch-dir.js';
 import { reportBrowserGone } from './browser-gone.js';
+import { reportBrowserStarted } from './browser-started.js';
 import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { harnessRuntime } from './observers.js';
 import { HarnessRuntimes } from './runtime-registry.js';
@@ -88,6 +89,7 @@ export class HarnessTabSpawn {
       : harnessSpawnEnv({
         name, cwd, label, browser,
         onBrowserGone: (message, log) => reportBrowserGone(this.managers, label, message, log),
+        onBrowserStarted: () => reportBrowserStarted(this.managers, label),
       });
     // Until the runtime owns the handle, nothing else will ever close it: a throw from the PTY
     // spawn or the runtime construction would otherwise strand a fully started browser.

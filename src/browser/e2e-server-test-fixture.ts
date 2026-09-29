@@ -148,8 +148,8 @@ export async function start(onGone = vi.fn()) {
   return server;
 }
 
-export function startLazy(onGone = vi.fn()) {
-  return { onGone, ...startLazyE2EBrowserServer({ label: 'bot', onGone }) };
+export function startLazy(onGone = vi.fn(), onStarted = vi.fn()) {
+  return { onGone, onStarted, ...startLazyE2EBrowserServer({ label: 'bot', onGone, onStarted }) };
 }
 
 // The stubbed child has not bound its port yet, so the next connect is held where it is until

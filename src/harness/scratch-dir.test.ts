@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 function spawnEnv(name: string, browser: boolean) {
-  return harnessSpawnEnv({ name, cwd: '/ws/proj', label: 'bot', browser, onBrowserGone: vi.fn() });
+  return harnessSpawnEnv({ name, cwd: '/ws/proj', label: 'bot', browser, onBrowserGone: vi.fn(), onBrowserStarted: vi.fn() });
 }
 
 describe('harnessSpawnEnv without a browser', () => {
@@ -91,9 +91,17 @@ describe('harnessSpawnEnv with a browser', () => {
 
   it('passes the caller\'s onGone through untouched', () => {
     const onBrowserGone = vi.fn();
-    harnessSpawnEnv({ name: 'claude', cwd: '/ws/proj', label: 'bot', browser: true, onBrowserGone });
+    harnessSpawnEnv({ name: 'claude', cwd: '/ws/proj', label: 'bot', browser: true, onBrowserGone, onBrowserStarted: vi.fn() });
     const passed = startLazyE2EBrowserServer.mock.calls[0][0] as { onGone: (m: string) => void };
     passed.onGone('e2e browser exited');
     expect(onBrowserGone).toHaveBeenCalledWith('e2e browser exited');
+  });
+
+  it('passes the caller\'s onBrowserStarted through as onStarted', () => {
+    const onBrowserStarted = vi.fn();
+    harnessSpawnEnv({ name: 'claude', cwd: '/ws/proj', label: 'bot', browser: true, onBrowserGone: vi.fn(), onBrowserStarted });
+    const passed = startLazyE2EBrowserServer.mock.calls[0][0] as { onStarted: () => void };
+    passed.onStarted();
+    expect(onBrowserStarted).toHaveBeenCalledTimes(1);
   });
 });

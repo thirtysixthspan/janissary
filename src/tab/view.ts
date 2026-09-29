@@ -57,14 +57,10 @@ export function buildTabView(
     cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone.
-    // The browser flag reports the tab's launch: `tab.browser` is set from `-b` at spawn and is left
-    // set afterwards (`profile save` reads it), so a `-b` tab is lit before any browser exists and the
-    // only thing that darkens it is the gone-browser report, which the band carries. See the Metadata
-    // row in `product/specs/tabs.md` for why it is not a live-browser indicator.
     flags: [
       ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
       ...(tab.autoApprove ? ['autoApprove'] : []),
-      ...(tab.browser && !tab.harness?.browserError ? ['browser'] : []),
+      ...browserFlag(tab),
     ],
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
     remote: tab.remote && {
@@ -108,6 +104,17 @@ export function buildTabView(
     dock: tab.dock,
     pane: tab.pane,
   };
+}
+
+// The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's
+// endpoint, whichever start brought it up — a fresh one after a death included. Otherwise it reports
+// the tab's launch: `tab.browser` is set from `-b` at spawn and left set afterwards (`profile save`
+// reads it), so a `-b` tab shows `browser` before any browser exists, and the gone-browser report,
+// which the band carries, drops it. See the Metadata row in `product/specs/tabs.md`.
+function browserFlag(tab: Tab): string[] {
+  if (!tab.browser) return [];
+  if (tab.harness?.browserRunning) return ['browserInUse'];
+  return tab.harness?.browserError ? [] : ['browser'];
 }
 
 // The metadata row's display symbol for a workspaced tab's working directory: the clone's own name

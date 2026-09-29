@@ -20,6 +20,9 @@ export function reportBrowserGone(managers: Managers, label: string, message: st
   const logFile = log ? writeBrowserLog(label, Date.now(), log) : undefined;
   notify(managers, 'e2e-browser-gone', label, message, { openFile: logFile });
   const tab = managers.tab.harnessTab(label);
-  if (tab) tab.harness.browserError = message;
+  if (tab) {
+    tab.harness.browserError = message;
+    delete tab.harness.browserRunning;
+  }
   messageBus.emit('state', { type: 'dirty' });
 }

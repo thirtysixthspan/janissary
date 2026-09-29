@@ -169,7 +169,7 @@ There's no test runner here and no pass/fail reporting. The two variables are th
 
 The browser is always headless, each tab gets its own, and it works for every harness, with or without a workspace. Combine the flags with the other options in any order.
 
-A harness launched with its browser shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". The flag is lit from launch, whether or not a browser has been started yet.
+A harness launched with its browser shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". The flag is lit from launch, whether or not a browser has been started yet. Once your harness connects and a browser is running, the flag turns green and its tooltip reads "E2E browser in use", so you can tell at a glance which tabs are actually driving a browser.
 
 ::: warning A browser endpoint is powerful, so this one is contained
 Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. It also refuses a request to close the browser itself. The browser belongs to the tab, not to the script driving it, so a script can't close it out from under the tab — asking just ends that script's own connection. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.

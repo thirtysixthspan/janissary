@@ -14,7 +14,7 @@ import {
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
-  decodeAddressedData, decodeAttach, decodeBrowserExited, decodeExit, decodeKill, decodeNameInUse,
+  decodeAddressedData, decodeAttach, decodeBrowserExited, decodeBrowserStarted, decodeExit, decodeKill, decodeNameInUse,
   decodeResize, decodeSpawn, decodeTranscript, decodeWorkspaceFailed, decodeWorkspaceReady,
 } from './decode-lifecycle.js';
 
@@ -60,6 +60,7 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'output': { return decodeAddressedData(type, record); }
   case 'exit': { return decodeExit(record); }
   case 'browser-exited': { return decodeBrowserExited(record); }
+  case 'browser-started': { return decodeBrowserStarted(record); }
   case 'transcript': { return decodeTranscript(record); }
   case 'shell-history': { return decodeShellHistory(record); }
   case 'filesystem-open':

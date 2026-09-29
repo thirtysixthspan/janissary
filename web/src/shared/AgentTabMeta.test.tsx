@@ -142,6 +142,16 @@ describe('AgentTabMeta', () => {
     const flag = getByRole('img', { name: 'E2E browser' });
     expect(flag).toHaveAttribute('title', 'E2E browser');
     expect(flag.querySelector('svg[data-icon="globe"]')).not.toBeNull();
+    expect(flag).toHaveClass('tab-flag');
+    expect(flag).not.toHaveClass('tab-flag--active');
+  });
+
+  it('renders the browser-in-use flag as the same globe, marked active for its green highlight', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['browserInUse']} />);
+    const flag = getByRole('img', { name: 'E2E browser in use' });
+    expect(flag).toHaveAttribute('title', 'E2E browser in use');
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
+    expect(flag.querySelector('svg[data-icon="globe"]')).not.toBeNull();
   });
 
   it('renders all three flag icons together in the order the server sent them', () => {

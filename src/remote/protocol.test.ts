@@ -212,6 +212,8 @@ describe('frame codec', () => {
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
     ['browser-exited with a non-string message', { type: 'browser-exited', id: 'r1', message: 7 }],
+    ['browser-started without an id', { type: 'browser-started' }],
+    ['browser-started with an empty id', { type: 'browser-started', id: '' }],
     ['input without string data', { type: 'input', id: 'r1', data: 1 }],
     ['resize with a zero column count', { type: 'resize', id: 'r1', cols: 0, rows: 24 }],
     ['resize with a fractional row count', { type: 'resize', id: 'r1', cols: 80, rows: 2.5 }],
@@ -287,6 +289,15 @@ describe('frame codec', () => {
   it('round-trips a browser-exited frame', () => {
     expect(decodeFrame(encodeFrame({ type: 'browser-exited', id: 'r1' }))).toEqual({
       type: 'browser-exited', id: 'r1',
+    });
+  });
+
+  it('round-trips a browser-started frame, dropping anything beyond its id', () => {
+    expect(decodeFrame(encodeFrame({ type: 'browser-started', id: 'r1' }))).toEqual({
+      type: 'browser-started', id: 'r1',
+    });
+    expect(decodeFrame(JSON.stringify({ type: 'browser-started', id: 'r1', message: 'up' }))).toEqual({
+      type: 'browser-started', id: 'r1',
     });
   });
 
@@ -441,6 +452,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'output': { type: 'output', id: 'r1', data: 'done' },
   'exit': { type: 'exit', id: 'r1', exitCode: 1 },
   'browser-exited': { type: 'browser-exited', id: 'r1', message: 'e2e browser exited' },
+  'browser-started': { type: 'browser-started', id: 'r1' },
   'transcript': { type: 'transcript', blocks: ['first'] },
   'shell-history': { type: 'shell-history', id: 'agent', runs: [{ source: 'input', text: 'ls\n' }] },
   'gate-event': { type: 'gate-event', id: 'r1', message: 'Auto-approved', capturedAt: 1_700_000_000_000, capture: 'screen' },
@@ -554,8 +566,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 22', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(22);
+  it('is 23', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(23);
   });
 });
 
@@ -573,7 +585,7 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited',
+      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
       'output', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
     ]);
