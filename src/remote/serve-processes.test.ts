@@ -300,6 +300,26 @@ describe('RemoteProcesses harness detection', () => {
     }));
   });
 
+  it('does not stand down when the screen goes quiet after an approved gate (the settle re-read skips the approver)', async () => {
+    const { feed } = spawnClaude(true);
+    await feed(GATE_TEXT);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(write).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Auto-approve could not clear the permission prompt; standing down',
+    }));
+  });
+
+  it('commits ready through the settle re-read when the harness goes quiet at its prompt', async () => {
+    const { feed } = spawnClaude(false);
+    await feed(BUSY_TEXT);
+    send.mockClear();
+    await feed(READY_TEXT);
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'busy-transition' }));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(send).toHaveBeenCalledWith({ type: 'busy-transition', id: 'r1', busy: false, unread: true });
+  });
+
   it('injects nothing when auto-approve is off, but still reports busy/ready', async () => {
     const { feed } = spawnClaude(false);
     await feed(GATE_TEXT);

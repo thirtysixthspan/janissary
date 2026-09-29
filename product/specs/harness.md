@@ -619,7 +619,9 @@ taken for [screen capture](#screen-capture), plus the terminal title the harness
 harness has its own signal:
 
 - **claude and codex** set an animated spinner glyph at the start of the terminal title while
-  working; any other title means idle. When claude has set no title yet, its rendered screen is
+  working; any other title means idle. A spinner glyph is a Braille pattern (codex, and claude
+  through 2.1.210) or one of the half-circles `◐◑◒◓` (claude 2.1.282 alternates `◐` and `◑`);
+  claude's idle title leads with `✳`. When claude has set no title yet, its rendered screen is
   read instead: an `esc to interrupt` footer means working, a live input prompt means idle.
 - **opencode** never signals through its title, so only its rendered screen is read: a progress
   bar or an interrupt hint (`esc interrupt`) means working; the absence of both means idle.
@@ -632,7 +634,12 @@ far-side detection.
 A newly launched harness tab starts busy, exactly as before, until its first capture is
 classified. A working→idle transition is committed only after the idle reading holds across two
 consecutive captures, so a brief mid-generation pause never flickers the dot off; a return to
-working takes effect immediately.
+working takes effect immediately. A harness can go silent the moment it returns to its prompt
+(claude 2.1.282 writes one burst and then nothing), so the screen is re-read once more about a
+second after output stops. That settle capture supplies the confirming idle reading. The dot
+therefore stops about two seconds after the harness's last output, never waiting for its next.
+The settle capture reaches busy tracking only; auto-approve never sees it, so it cannot make an
+answered permission prompt look stuck.
 
 Status changes show in the tab strip the moment they are recognized, whether or not the harness
 tab is the active one — a backgrounded harness's dot starts and stops blinking live, without
@@ -705,10 +712,11 @@ case-sensitively) — not a harness type — so `harness capture claude` capture
 
 Captures are taken automatically while a harness produces output: about one second after output
 resumes, the current screen contents (the visible rows only, at the terminal's real dimensions,
-with trailing blank rows dropped) are recorded in memory, replacing the previous capture. A
-harness that goes quiet is simply not re-captured — an idle, unchanged screen never produces new
-captures — so the latest capture reflects the screen as of roughly one second after its last
-burst of output.
+with trailing blank rows dropped) are recorded in memory, replacing the previous capture. When a
+harness goes quiet, its unchanged screen is re-read exactly once more about a second later (the
+settle capture that [busy/ready status](#busyready-status) relies on). After that, an idle screen
+produces no new captures, so the latest capture reflects the screen as of roughly two seconds
+after its last burst of output.
 
 Running the command writes that latest capture to `.janissary/captures/<label>-<timestamp>.txt`
 in the project directory and opens it as a regular editor tab — each invocation writes a file and

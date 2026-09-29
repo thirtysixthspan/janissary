@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { busyStatusHandler, BusyTracker } from './busy-status.js';
 import { endsWithRecap, classifyBusy } from './busy-classify.js';
-import type { ScreenCapture } from './screen.js';
+import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';
 
@@ -10,6 +10,8 @@ const CLAUDE_BUSY_TITLE = '⠂ Write a haiku about the sea';
 const CLAUDE_IDLE_TITLE = '✳ Claude Code';
 const CODEX_SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 const CODEX_IDLE_TITLE = 'scratchpad';
+// claude 2.1.282 alternates two half-circle glyphs while working instead of a Braille spinner.
+const CLAUDE_2_1_282_BUSY_TITLES = ['◐ Claude Code', '◑ Claude Code'];
 
 const CLAUDE_PROMPT_BOX = [
   ' Some earlier output',
@@ -44,6 +46,12 @@ describe('classifyBusy — claude', () => {
     expect(classifyBusy(capture('anything', CLAUDE_BUSY_TITLE), 'claude')).toBe('busy');
   });
 
+  for (const title of CLAUDE_2_1_282_BUSY_TITLES) {
+    it(`is busy when the title leads with claude 2.1.282's ${title.slice(0, 1)} spinner glyph`, () => {
+      expect(classifyBusy(capture('anything', title), 'claude')).toBe('busy');
+    });
+  }
+
   it('is ready when the title leads with the ✳ idle marker', () => {
     expect(classifyBusy(capture('anything', CLAUDE_IDLE_TITLE), 'claude')).toBe('ready');
   });
@@ -77,8 +85,8 @@ describe('classifyBusy — codex', () => {
     expect(classifyBusy(capture('anything'), 'codex')).toBe('busy');
   });
 
-  it('agrees with claude on the shared leading-Braille title rule', () => {
-    for (const title of [CLAUDE_BUSY_TITLE, `${CODEX_SPINNER_FRAMES[0]} scratchpad`, CLAUDE_IDLE_TITLE, CODEX_IDLE_TITLE]) {
+  it('agrees with claude on the shared leading-spinner title rule', () => {
+    for (const title of [CLAUDE_BUSY_TITLE, ...CLAUDE_2_1_282_BUSY_TITLES, `${CODEX_SPINNER_FRAMES[0]} scratchpad`, CLAUDE_IDLE_TITLE, CODEX_IDLE_TITLE]) {
       expect(classifyBusy(capture('anything', title), 'codex')).toBe(classifyBusy(capture('anything', title), 'claude'));
     }
   });
@@ -247,6 +255,40 @@ describe('busyStatusHandler debounce', () => {
       expect(tab.markUnread).toHaveBeenCalledTimes(1);
     });
   }
+
+  it('claude 2.1.282: an idle tab starts blinking again when the title spinner resumes', () => {
+    const { tab, handler } = make('claude');
+    handler(capture(CLAUDE_PROMPT_BOX, CLAUDE_IDLE_TITLE));
+    handler(capture(CLAUDE_PROMPT_BOX, CLAUDE_IDLE_TITLE));
+    expect(tab.isBusy('claude')).toBe(false);
+    handler(capture(CLAUDE_GENERATING, CLAUDE_2_1_282_BUSY_TITLES[0]));
+    expect(tab.isBusy('claude')).toBe(true);
+    handler(capture(CLAUDE_GENERATING, CLAUDE_2_1_282_BUSY_TITLES[1]));
+    expect(tab.isBusy('claude')).toBe(true);
+  });
+
+  it('claude 2.1.282: a turn that ends in one burst and then goes quiet commits idle through the settle capture', async () => {
+    vi.useFakeTimers();
+    try {
+      const { tab, handler } = make('claude');
+      const reader = new HarnessScreenReader('pty-claude-quiet', 120, 10, handler);
+      const emit = (data: string) => { messageBus.emit('pty', { type: 'data', id: 'pty-claude-quiet', data }); };
+      emit(`\u{1B}]0;${CLAUDE_2_1_282_BUSY_TITLES[0]}\u{7}${CLAUDE_GENERATING.replaceAll('\n', '\r\n')}`);
+      await vi.advanceTimersByTimeAsync(900);
+      emit(`\u{1B}]0;${CLAUDE_2_1_282_BUSY_TITLES[1]}\u{7}`);
+      await vi.advanceTimersByTimeAsync(900);
+      expect(tab.isBusy('claude')).toBe(true);
+      emit(`\u{1B}]0;${CLAUDE_IDLE_TITLE}\u{7}\u{1B}[2J\u{1B}[H${CLAUDE_PROMPT_BOX.replaceAll('\n', '\r\n')}`);
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(tab.isBusy('claude')).toBe(true);
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(tab.isBusy('claude')).toBe(false);
+      expect(tab.deleteBusy).toHaveBeenCalledTimes(1);
+      reader.dispose();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('returns undefined for a harness with no table entry', () => {
     const tab = { addBusy: vi.fn(), deleteBusy: vi.fn(), markUnread: vi.fn() };
