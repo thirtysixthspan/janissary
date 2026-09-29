@@ -26,7 +26,11 @@ function boundValue(value: string): string | number {
 }
 
 // `%` and `_` are LIKE wildcards, so a value containing one is escaped — otherwise searching for
-// "50%" would match every value starting with "50".
+// "50%" would match every value starting with "50". The escape character has to be named in the
+// statement that carries the pattern: SQLite's `LIKE` has no default escape, so a lone backslash
+// would be matched as itself and the search would find nothing at all.
+const LIKE_ESCAPE = String.raw` ESCAPE '\'`;
+
 function likeValue(value: string): string {
   const escaped = value.replaceAll('\\', '\\\\').replaceAll('%', String.raw`\%`).replaceAll('_', String.raw`\_`);
   return `%${escaped}%`;
@@ -45,7 +49,7 @@ function fragmentFor(filter: DatabaseFilterView): Fragment {
       return { text: `${column} IS NOT NULL`, values: [] };
     }
     case 'contains': {
-      return { text: `${column} LIKE ?`, values: [likeValue(value)] };
+      return { text: `${column} LIKE ?${LIKE_ESCAPE}`, values: [likeValue(value)] };
     }
     case 'eq':
     case 'ne':
@@ -72,7 +76,9 @@ function fragmentFor(filter: DatabaseFilterView): Fragment {
 function globalFragment(term: string, columns: readonly DatabaseColumnView[]): Fragment {
   if (term === '' || columns.length === 0) return { text: '', values: [] };
   const value = likeValue(term);
-  const text = columns.map((column) => `COALESCE(CAST(${quoteIdentifier(column.name)} AS TEXT), '') LIKE ?`).join(' OR ');
+  const text = columns
+    .map((column) => `COALESCE(CAST(${quoteIdentifier(column.name)} AS TEXT), '') LIKE ?${LIKE_ESCAPE}`)
+    .join(' OR ');
   return { text: `(${text})`, values: columns.map(() => value) };
 }
 

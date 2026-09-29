@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Make a contains filter and the all-column search actually match terms holding a percent or an underscore.
-
-Existing Issue: Both the per-column contains filter and the all-column term wrap the user's value in LIKE wildcards and backslash-escape any wildcard inside it, but the LIKE they build names no escape character, and SQLite treats that backslash as an ordinary character, so any term holding a percent or an underscore matches nothing at all. Severity: 7/10
-
-Existing Risk: 6/10 - A user searching a discount column for `50%` or an identifier for `a_b` gets an empty grid and concludes the data is not there, and the one test covering the escaping asserts the bound string rather than the rows the statement returns, so nothing in CI would ever notice.
-
-Proposal Risk: 2/10 - The escaping then behaves as the specification describes, leaving only the ordinary case of a value holding a backslash itself, which the doubling already handles.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: make a contains filter and the all-column search match terms holding a percent or an underscore". In `src/database/grid-sql.ts`, add an `ESCAPE '\'` clause to the `LIKE` that `fragmentFor` emits for the `contains` operator and to every `LIKE` that `globalFragment` emits, so the backslashes `likeValue` already inserts are read as escapes rather than as literal characters. Keep `likeValue` as it is, since the escaping it performs becomes meaningful the moment the clause names the character. In `src/database/grid.test.ts`, keep the existing case that asserts the escaped bound value and add one that prepares the clause `whereClause` produces against a `node:sqlite` database holding a `50%_off` row and asserts that row comes back, which is the assertion the suite is missing; the `whereClause` and `runGrid` cases already open a real database, so follow that style. `product/specs/sql-database.md` already states that `contains` escapes a percent or underscore the value contains, so it needs no change — the fix makes the code match it.
-
 * Use one row index space for the cell selection and the page the copy reads from.
 
 Existing Issue: The grid hands each row its absolute number in the whole table to the selection and the selection stores that as its row, while the routine that renders a selection as text indexes the page's own row array with the same number, so from the second page onwards every selected position falls past the end of the array and the copy comes back empty. Severity: 6/10

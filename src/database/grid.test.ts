@@ -25,6 +25,21 @@ function where(filters: DatabaseFilterView[] = [], global = '') {
   return whereClause(query({ filters, global }), COLUMNS);
 }
 
+/** The clause one column contributes to the all-column term, escape character and all. */
+const ESCAPE = String.raw` ESCAPE '\'`;
+const column = (at: number) => `COALESCE(CAST("${COLUMNS[at]?.name}" AS TEXT), '')`;
+
+/** A real in-memory database, so a clause can be run rather than only read. */
+function withDb<T>(sql: string, run: (database: DatabaseSync) => T): T {
+  const database = new DatabaseSync(':memory:');
+  try {
+    database.exec(sql);
+    return run(database);
+  } finally {
+    database.close();
+  }
+}
+
 describe('whereClause', () => {
   it('emits each operator as the clause it should', () => {
     const cases: [DatabaseFilterView, string, (string | number)[]][] = [
@@ -34,7 +49,7 @@ describe('whereClause', () => {
       [filter({ op: 'gte' }), ' WHERE "status" >= ?', ['paid']],
       [filter({ op: 'lt' }), ' WHERE "status" < ?', ['paid']],
       [filter({ op: 'lte' }), ' WHERE "status" <= ?', ['paid']],
-      [filter({ op: 'contains' }), ' WHERE "status" LIKE ?', ['%paid%']],
+      [filter({ op: 'contains' }), String.raw` WHERE "status" LIKE ? ESCAPE '\'`, ['%paid%']],
       [filter({ op: 'isNull' }), ' WHERE "status" IS NULL', []],
       [filter({ op: 'notNull' }), ' WHERE "status" IS NOT NULL', []],
     ];
@@ -60,6 +75,43 @@ describe('whereClause', () => {
     expect(where([filter({ op: 'contains', value: '50%_off' })]).values).toEqual([String.raw`%50\%\_off%`]);
   });
 
+  // SQLite's LIKE has no default escape character, so a lone backslash is matched as itself and a
+  // term holding a wildcard would find nothing. These run the statement rather than read the bound
+  // value, which is the only way the clause and the value can be seen agreeing.
+  it('matches a value holding a wildcard literally, and not one that merely starts the same way', () => {
+    withDb(`
+      CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT, status TEXT, total REAL);
+      INSERT INTO orders (customer, status) VALUES ('50%_off', 'open'), ('50x_off', 'open');
+    `, (database) => {
+      const clause = where([filter({ column: 'customer', op: 'contains', value: '50%_off' })]);
+      const rows = database.prepare(`SELECT customer FROM orders${clause.text}`).all(...clause.values);
+      expect(rows.map((row) => row.customer)).toEqual(['50%_off']);
+    });
+  });
+
+  it('matches a wildcard-holding term against every column, for the same reason', () => {
+    withDb(`
+      CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT, status TEXT, total REAL);
+      INSERT INTO orders (customer, status) VALUES ('ada', '50%_off'), ('bo', '50x_off');
+    `, (database) => {
+      const clause = where([], '50%_off');
+      const rows = database.prepare(`SELECT customer FROM orders${clause.text}`).all(...clause.values);
+      expect(rows.map((row) => row.customer)).toEqual(['ada']);
+    });
+  });
+
+  it('matches a value holding a backslash, which the escape has to survive', () => {
+    const value = String.raw`a\b`;
+    withDb(`
+      CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT, status TEXT, total REAL);
+      INSERT INTO orders (customer, status) VALUES ('${value}', 'open'), ('axb', 'open');
+    `, (database) => {
+      const clause = where([filter({ column: 'customer', op: 'contains', value })]);
+      const rows = database.prepare(`SELECT customer FROM orders${clause.text}`).all(...clause.values);
+      expect(rows.map((row) => row.customer)).toEqual([value]);
+    });
+  });
+
   it('binds a value that is SQL rather than interpolating any of it', () => {
     const injection = "x'; DROP TABLE orders; --";
     const clause = where([filter({ value: injection })]);
@@ -74,7 +126,7 @@ describe('whereClause', () => {
 
   it('matches the term against every column at once, joined with OR', () => {
     expect(where([], 'cy')).toEqual({
-      text: ' WHERE (COALESCE(CAST("id" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("customer" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("status" AS TEXT), \'\') LIKE ?)',
+      text: ` WHERE (${column(0)} LIKE ?${ESCAPE} OR ${column(1)} LIKE ?${ESCAPE} OR ${column(2)} LIKE ?${ESCAPE})`,
       values: ['%cy%', '%cy%', '%cy%'],
     });
   });
@@ -84,7 +136,7 @@ describe('whereClause', () => {
   // alternative to the term.
   it('requires the term and the per-column filters together', () => {
     const clause = where([filter({ op: 'eq', value: 'paid' })], 'ada');
-    expect(clause.text).toBe(' WHERE (COALESCE(CAST("id" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("customer" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("status" AS TEXT), \'\') LIKE ?) AND "status" = ?');
+    expect(clause.text).toBe(` WHERE (${column(0)} LIKE ?${ESCAPE} OR ${column(1)} LIKE ?${ESCAPE} OR ${column(2)} LIKE ?${ESCAPE}) AND "status" = ?`);
     expect(clause.values).toEqual(['%ada%', '%ada%', '%ada%', 'paid']);
   });
 
@@ -148,7 +200,7 @@ describe('selectStatement', () => {
 
 describe('countStatement', () => {
   it('counts with the same filter and binds the same values', () => {
-    expect(countStatement(query({ filters: [filter()] }))).toEqual({
+    expect(countStatement(query({ filters: [filter()] }), COLUMNS)).toEqual({
       sql: 'SELECT COUNT(*) AS n FROM "orders" WHERE "status" = ?',
       parameters: ['paid'],
     });
@@ -160,16 +212,6 @@ const SHOP = `
   INSERT INTO orders (customer, status, total) VALUES
     ('ada', 'paid', 10), ('bo', 'open', 20), ('cy', 'paid', 30), ('di', 'open', 40), ('ed', 'paid', 50);
 `;
-
-function withDb<T>(sql: string, run: (database: DatabaseSync) => T): T {
-  const database = new DatabaseSync(':memory:');
-  try {
-    database.exec(sql);
-    return run(database);
-  } finally {
-    database.close();
-  }
-}
 
 describe('runGrid', () => {
   it('returns one page of cells, the filtered total, and the unfiltered total', () => {
