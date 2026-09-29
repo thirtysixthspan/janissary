@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import {
   type DatabasesView,
   type DatabaseResultView,
@@ -11,7 +10,6 @@ import type {
   SqlExport,
   SqlObject,
   SqlPayload,
-  SqlPending,
 } from './shared.js';
 
 export const DEFAULT_PAGE_SIZE = 100;
@@ -84,71 +82,6 @@ export function instanceKeyFor(database: string): string {
 export function firstObject(entries: readonly SqlObject[], selected: string): string {
   if (selected && entries.some((entry) => entry.name === selected)) return selected;
   return entries.find((entry) => entry.kind === 'table')?.name ?? entries[0]?.name ?? '';
-}
-
-/** A fresh request id, minted here because the host echoes one back rather than issuing it. */
-export function newRequestId(): string {
-  return randomUUID();
-}
-
-export function gridQueryOf(payload: SqlPayload) {
-  return {
-    object: payload.object,
-    filters: payload.filters.map((filter) => ({ ...filter })),
-    global: payload.global,
-    order: payload.order.map((entry) => ({ ...entry })),
-    limit: payload.limit,
-    offset: payload.offset,
-  };
-}
-
-/**
- * Ask the host for one thing and say what the tab should do once the answer lands. `then` is what
- * makes a follow-up part of the request rather than a guess in the notification: a write re-runs the
- * grid, a schema read picks an object, a statistics read only fills the panel.
- */
-export function issue(
-  action: 'schema' | 'query' | 'stats' | 'export' | 'create',
-  payload: SqlPayload,
-  capabilities: TabPluginServerCapabilities,
-  options: { format?: 'csv' | 'json' } = {},
-): SqlPending {
-  const id = newRequestId();
-  switch (action) {
-    case 'create':
-    case 'schema': {
-      capabilities.topicAction({ topic: 'databases', action, database: payload.database, requestId: id });
-      break;
-    }
-    case 'query': {
-      capabilities.topicAction({ topic: 'databases', action, database: payload.database, requestId: id, query: gridQueryOf(payload) });
-      break;
-    }
-    case 'stats': {
-      capabilities.topicAction({ topic: 'databases', action, database: payload.database, requestId: id, object: payload.object });
-      break;
-    }
-    case 'export': {
-      capabilities.topicAction({
-        topic: 'databases', action, database: payload.database, requestId: id,
-        query: gridQueryOf(payload), format: options.format ?? 'csv',
-      });
-      break;
-    }
-  }
-  return { id, followUp: action === 'create' ? 'schema' : action };
-}
-
-/** The same, for a statement the user typed: its answer either fills the grid or is the console's. */
-export function issueRun(
-  payload: SqlPayload,
-  sql: string,
-  returnsRows: boolean,
-  capabilities: TabPluginServerCapabilities,
-): SqlPending {
-  const id = newRequestId();
-  capabilities.topicAction({ topic: 'databases', action: 'run', database: payload.database, requestId: id, sql, returnsRows });
-  return { id, followUp: returnsRows ? 'query' : 'console' };
 }
 
 export function addExport(exports: readonly SqlExport[], entry: SqlExport): SqlExport[] {

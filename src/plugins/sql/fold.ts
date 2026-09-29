@@ -1,60 +1,70 @@
-import type { DatabaseResultView, TabPluginResources, TabPluginServerCapabilities } from '../api.js';
+import type { DatabaseResultView, TabPluginResources } from '../api.js';
 import type { SqlExport, SqlObject, SqlPayload } from './shared.js';
-import { addExport, addToLog, firstObject, issue, type SqlTabs } from './tabs.js';
+import { planRequest, type SqlRequest } from './request.js';
+import { addExport, addToLog, firstObject, type SqlTabs } from './tabs.js';
+
+// What folding an answer produced: the tab's new state, and the request that state is now waiting on
+// — planned but deliberately not sent, so the caller can record it in the mirror first. `null` means
+// the answer is the end of the exchange.
+export type SqlFold = { payload: SqlPayload; followUp: SqlRequest | null };
 
 // How an answer changes the tab. Every branch is total: a failed read keeps whatever was already
 // there and records the message, because a wrong column name in a grid is an ordinary outcome and
 // blanking the page a user was reading would be a worse answer than the error is.
+//
+// Nothing here sends anything. Folding is the part of the exchange that decides what to ask next,
+// and the ask has to reach the host only after the tab's own copy of it exists — see `dispatch`.
 export function fold(
   key: string,
   payload: SqlPayload,
   answer: DatabaseResultView,
-  capabilities: TabPluginServerCapabilities,
   tabs: SqlTabs,
-): SqlPayload {
+): SqlFold {
   const base: SqlPayload = { ...payload, pending: null };
   switch (answer.kind) {
-    case 'schema': { return foldSchema(base, answer.objects, answer.error, capabilities);
+    case 'schema': { return foldSchema(base, answer.objects, answer.error);
     }
     case 'query': {
-      return answer.error
+      return settled(answer.error
         ? { ...base, ...missing(answer.error) }
-        : { ...base, grid: answer.grid, error: null };
+        : { ...base, grid: answer.grid, error: null });
     }
     case 'write': {
       // A statement that failed is still a statement the user ran, so it is logged too: a log that
       // only kept successes would not say what happened.
-      if (answer.error) return { ...base, ...missing(answer.error), log: addToLog(base.log, { sql: answer.sql, changed: 0, error: answer.error }) };
+      if (answer.error) {
+        return settled({ ...base, ...missing(answer.error), log: addToLog(base.log, { sql: answer.sql, changed: 0, error: answer.error }) });
+      }
       // A write invalidates the page it changed, so the grid is re-read rather than patched. The
       // statement and its values go on the log, which is what the user just did.
-      return {
+      const written: SqlPayload = {
         ...base,
         error: null,
         log: answer.sql ? addToLog(base.log, { sql: answer.sql, changed: answer.changed }) : base.log,
-        pending: issue('query', base, capabilities),
       };
+      return { payload: written, followUp: planRequest('query', written) };
     }
     case 'stats': {
-      return answer.error
+      return settled(answer.error
         ? { ...base, stats: null, ...missing(answer.error) }
-        : { ...base, stats: answer.columns, error: null };
+        : { ...base, stats: answer.columns, error: null });
     }
     case 'export': { return foldExport(key, base, answer, tabs);
     }
   }
 }
 
-function foldSchema(
-  base: SqlPayload,
-  objects: readonly SqlObject[],
-  error: string | undefined,
-  capabilities: TabPluginServerCapabilities,
-): SqlPayload {
-  if (error) return { ...base, objects: [...objects], ...missing(error) };
+/** An answer that asks for nothing further, which is most of them. */
+function settled(payload: SqlPayload): SqlFold {
+  return { payload, followUp: null };
+}
+
+function foldSchema(base: SqlPayload, objects: readonly SqlObject[], error: string | undefined): SqlFold {
+  if (error) return settled({ ...base, objects: [...objects], ...missing(error) });
   const object = firstObject(objects, base.object);
-  if (!object) return { ...base, objects: [...objects], object, grid: null, error: null };
+  if (!object) return settled({ ...base, objects: [...objects], object, grid: null, error: null });
   const selected: SqlPayload = { ...base, objects: [...objects], object, error: null };
-  return { ...selected, pending: issue('query', selected, capabilities) };
+  return { payload: selected, followUp: planRequest('query', selected) };
 }
 
 // A database that is no longer there is not an ordinary read failure: the rows the tab is showing
@@ -71,11 +81,11 @@ function foldExport(
   base: SqlPayload,
   answer: Extract<DatabaseResultView, { kind: 'export' }>,
   tabs: SqlTabs,
-): SqlPayload {
-  if (answer.error) return { ...base, ...missing(answer.error) };
+): SqlFold {
+  if (answer.error) return settled({ ...base, ...missing(answer.error) });
   tabs.rememberPath(key, answer.name, answer.path);
   const entry: SqlExport = { name: answer.name, size: answer.size, rows: answer.rows, ref: '' };
-  return { ...base, error: null, exports: addExport(base.exports, entry) };
+  return settled({ ...base, error: null, exports: addExport(base.exports, entry) });
 }
 
 /**

@@ -1,7 +1,8 @@
 import type { TabPluginServerCapabilities } from '../api.js';
 import type { SqlPayload } from './shared.js';
 import type { SqlTabs } from './tabs.js';
-import { databasesFrom, emptyPayload, instanceKeyFor, issue, refs } from './tabs.js';
+import { databasesFrom, emptyPayload, instanceKeyFor, refs } from './tabs.js';
+import { dispatch, planRequest } from './request.js';
 
 export type Dock = 'left' | 'right' | null | undefined;
 
@@ -39,9 +40,11 @@ export function openDatabase(
     return;
   }
   const seed: SqlPayload = emptyPayload(database, refs(databasesFrom(capabilities).databases));
-  const pending = issue('schema', seed, capabilities);
-  const payload: SqlPayload = { ...seed, pending };
-  tabs.write(key, payload);
-  capabilities.openOrFocusTab(key, () => ({ title: database, payload }));
-  if (dock !== undefined) capabilities.dockTab(key, dock);
+  // The tab is opened and recorded before the schema is asked for: the host delivers the answer
+  // synchronously, and a notification for a plugin with no open tab is dropped rather than queued,
+  // so asking first loses the answer outright and leaves the tab on `Loading…` forever.
+  dispatch(key, seed, planRequest('schema', seed), capabilities, tabs, (payload) => {
+    capabilities.openOrFocusTab(key, () => ({ title: database, payload }));
+    if (dock !== undefined) capabilities.dockTab(key, dock);
+  });
 }

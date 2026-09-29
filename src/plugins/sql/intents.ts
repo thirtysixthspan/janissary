@@ -24,13 +24,17 @@ import {
   isStatsIntent,
   isUpdateCellIntent,
 } from './shared-intents.js';
-import { instanceKeyFor, issue, issueRun, newRequestId, type SqlTabs } from './tabs.js';
+import { instanceKeyFor, type SqlTabs } from './tabs.js';
+import { newRequestId, planFor, planRequest, planRun, dispatch, type SqlRequest } from './request.js';
 import { openDatabase } from './open-tab.js';
 
 // One client intent to one topic action, each behind the payload guard that decides whether the
 // request is well formed. Every branch returns null — the answer arrives later on the topic — or
 // throws through `rejectRequest`. Nothing here reports a failure: a filter the host will not accept
 // is a user mistake, not a broken plugin.
+
+/** A tab's new state, and the request that state is waiting on once recorded. */
+type SqlChange = { payload: SqlPayload; request?: SqlRequest };
 
 /**
  * A view change re-reads the same grid query from the first page, because an offset is page-relative.
@@ -40,9 +44,9 @@ import { openDatabase } from './open-tab.js';
  * query the host runs and the state the tab records are then the same state by construction, which is
  * the only way a filter chip, a page number, and the rows on screen cannot disagree.
  */
-function reread(payload: SqlPayload, capabilities: TabPluginServerCapabilities): SqlPayload {
+function reread(payload: SqlPayload): SqlChange {
   const next = { ...payload, offset: 0 };
-  return { ...next, pending: issue('query', next, capabilities) };
+  return { payload: next, request: planRequest('query', next) };
 }
 
 /**
@@ -69,11 +73,21 @@ function requireWritable(
   capabilities.rejectRequest(`${what} cannot be ${verb}: ${why}.`);
 }
 
-/** Record the new payload and redraw the tab it belongs to. The only way this plugin changes a tab. */
-function apply(payload: SqlPayload, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): null {
-  const key = instanceKeyFor(payload.database);
-  tabs.write(key, payload);
-  capabilities.updateTab(key, () => ({ payload }));
+/**
+ * Record the new payload and redraw the tab it belongs to, then send the request it is waiting on.
+ * The only way this plugin changes a tab. The send comes last and `dispatch` is what guarantees it,
+ * so no intent can send a request the tab has not yet recorded as outstanding.
+ */
+function apply(change: SqlChange, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): null {
+  const key = instanceKeyFor(change.payload.database);
+  if (change.request) {
+    dispatch(key, change.payload, change.request, capabilities, tabs, (payload) => {
+      capabilities.updateTab(key, () => ({ payload }));
+    });
+    return null;
+  }
+  tabs.write(key, change.payload);
+  capabilities.updateTab(key, () => ({ payload: change.payload }));
   return null;
 }
 
@@ -95,7 +109,7 @@ export function intentsFor(tabs: SqlTabs) {
         // A filter carried with the selection is applied before the query is issued, so the action
         // is built from the state the tab will hold — see SelectObjectIntent.
         return apply(
-          reread({ ...selected(payload, value), object: value.object, stats: null, error: null }, capabilities),
+          reread({ ...selected(payload, value), object: value.object, stats: null, error: null }),
           capabilities,
           tabs,
         );
@@ -105,7 +119,7 @@ export function intentsFor(tabs: SqlTabs) {
       payload: isSetFilterIntent,
       run: (payload, value: { column: string; op: SqlFilterOperator; value?: string }, capabilities): null => {
         return apply(
-          reread({ ...payload, filters: withFilter(payload, value.column, value.op, value.value) }, capabilities),
+          reread({ ...payload, filters: withFilter(payload, value.column, value.op, value.value) }),
           capabilities,
           tabs,
         );
@@ -116,7 +130,7 @@ export function intentsFor(tabs: SqlTabs) {
       run: (payload, _value: Record<string, never>, capabilities): null => {
         // The global term goes with them: it is another thing narrowing the view, and leaving it
         // behind would make "Clear filters" clear only half of what the user can see.
-        return apply(reread({ ...payload, filters: [], global: '' }, capabilities), capabilities, tabs);
+        return apply(reread({ ...payload, filters: [], global: '' }), capabilities, tabs);
       },
     },
     'clear-log': {
@@ -124,53 +138,46 @@ export function intentsFor(tabs: SqlTabs) {
       run: (payload, _value: Record<string, never>, capabilities): null => {
         // No re-read: a log is a record of what already ran, so clearing it changes nothing about
         // what the grid shows and the rows on screen are still the ones that were fetched.
-        return apply({ ...payload, log: [] }, capabilities, tabs);
+        return apply({ payload: { ...payload, log: [] } }, capabilities, tabs);
       },
     },
     'set-columns': {
       payload: isSetColumnsIntent,
       run: (payload, value: { hidden: string[] }, capabilities): null => {
-        return apply(
-          reread(withHidden(payload, value.hidden), capabilities),
-          capabilities,
-          tabs,
-        );
+        return apply(reread(withHidden(payload, value.hidden)), capabilities, tabs);
       },
     },
     'set-global-filter': {
       payload: isSetGlobalFilterIntent,
       run: (payload, value: { value: string }, capabilities): null => {
-        return apply(reread({ ...payload, global: value.value }, capabilities), capabilities, tabs);
+        return apply(reread({ ...payload, global: value.value }), capabilities, tabs);
       },
     },
     'set-order': {
       payload: isSetOrderIntent,
       run: (payload, value: { column: string }, capabilities): null => {
-        return apply(
-          reread({ ...payload, order: toggledOrder(payload, value.column) }, capabilities),
-          capabilities,
-          tabs,
-        );
+        return apply(reread({ ...payload, order: toggledOrder(payload, value.column) }), capabilities, tabs);
       },
     },
     'set-page': {
       payload: isSetPageIntent,
       run: (payload, value: { offset: number }, capabilities): null => {
+        // A page change is the one re-read that keeps its offset: the pager is asking for that page,
+        // not for the first one again.
         const next = { ...payload, offset: value.offset };
-        return apply({ ...next, pending: issue('query', next, capabilities) }, capabilities, tabs);
+        return apply({ payload: next, request: planRequest('query', next) }, capabilities, tabs);
       },
     },
     'set-page-size': {
       payload: isSetPageSizeIntent,
       run: (payload, value: { limit: number }, capabilities): null => {
-        return apply(reread({ ...payload, limit: value.limit }, capabilities), capabilities, tabs);
+        return apply(reread({ ...payload, limit: value.limit }), capabilities, tabs);
       },
     },
     refresh: {
       payload: isRefreshIntent,
       run: (payload, _value: Record<string, never>, capabilities): null => {
-        const next = { ...payload };
-        return apply({ ...next, pending: issue('schema', next, capabilities) }, capabilities, tabs);
+        return apply({ payload, request: planRequest('schema', payload) }, capabilities, tabs);
       },
     },
     run: {
@@ -179,56 +186,58 @@ export function intentsFor(tabs: SqlTabs) {
         // The same read/write split `db sqlite query` uses, from the same constant, so the console
         // and the command bar cannot disagree about what counts as a read.
         const next = { ...payload, error: null };
-        return apply({ ...next, pending: issueRun(next, value.sql, READ_QUERY.test(value.sql), capabilities) }, capabilities, tabs);
+        return apply(
+          { payload: next, request: planRun(next, value.sql, READ_QUERY.test(value.sql)) },
+          capabilities,
+          tabs,
+        );
       },
     },
     'update-cell': {
       payload: isUpdateCellIntent,
       run: (payload, value: { row: string; column: string; value: string | null }, capabilities): null => {
         requireWritable(payload, payload.object, capabilities, 'edited');
-        const id = newRequestId();
-        capabilities.topicAction({
+        const request = planFor({
           topic: 'databases', action: 'updateCell', database: payload.database,
-          requestId: id, row: value.row, column: value.column, value: value.value,
+          requestId: newRequestId(), row: value.row, column: value.column, value: value.value,
         });
-        return apply({ ...payload, pending: { id, followUp: 'query' } }, capabilities, tabs);
+        return apply({ payload, request }, capabilities, tabs);
       },
     },
     'insert-row': {
       payload: isInsertRowIntent,
       run: (payload, value: { object: string; cells: { column: string; value: string | null }[] }, capabilities): null => {
         requireWritable(payload, value.object, capabilities, 'added to');
-        const id = newRequestId();
-        capabilities.topicAction({
+        const request = planFor({
           topic: 'databases', action: 'insertRow', database: payload.database,
-          requestId: id, object: value.object, cells: value.cells,
+          requestId: newRequestId(), object: value.object, cells: value.cells,
         });
-        return apply({ ...payload, pending: { id, followUp: 'query' } }, capabilities, tabs);
+        return apply({ payload, request }, capabilities, tabs);
       },
     },
     'delete-row': {
       payload: isDeleteRowIntent,
       run: (payload, value: { row: string }, capabilities): null => {
         requireWritable(payload, payload.object, capabilities, 'deleted from');
-        const id = newRequestId();
-        capabilities.topicAction({
-          topic: 'databases', action: 'deleteRow', database: payload.database, requestId: id, row: value.row,
+        const request = planFor({
+          topic: 'databases', action: 'deleteRow', database: payload.database,
+          requestId: newRequestId(), row: value.row,
         });
-        return apply({ ...payload, pending: { id, followUp: 'query' } }, capabilities, tabs);
+        return apply({ payload, request }, capabilities, tabs);
       },
     },
     stats: {
       payload: isStatsIntent,
       run: (payload, value: { object: string }, capabilities): null => {
         const next = { ...payload, object: value.object, stats: null };
-        return apply({ ...next, pending: issue('stats', next, capabilities) }, capabilities, tabs);
+        return apply({ payload: next, request: planRequest('stats', next) }, capabilities, tabs);
       },
     },
     export: {
       payload: isExportIntent,
       run: (payload, value: { format: 'csv' | 'json' }, capabilities): null => {
-        const next = { ...payload };
-        return apply({ ...next, pending: issue('export', next, capabilities, { format: value.format }) }, capabilities, tabs);
+        const request = planRequest('export', payload, { format: value.format });
+        return apply({ payload, request }, capabilities, tabs);
       },
     },
   });

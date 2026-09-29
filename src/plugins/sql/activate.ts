@@ -4,7 +4,8 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import { isSqlPayload, type SqlPayload } from './shared.js';
-import { databasesFrom, issue, NO_DATABASES, resultFor, SqlTabs, USAGE } from './tabs.js';
+import { databasesFrom, NO_DATABASES, resultFor, SqlTabs, USAGE } from './tabs.js';
+import { dispatch, planRequest } from './request.js';
 import { openDatabase } from './open-tab.js';
 import { isValidDatabaseName, parseOpenCommand } from './shared-intents.js';
 import { fold, registerExports } from './fold.js';
@@ -63,7 +64,15 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
   openDatabase(current, dock, capabilities, tabs, false);
 }
 
-/** Fold the answer a tab was waiting for, then issue whatever that answer implies. */
+/**
+ * Fold the answer a tab was waiting for, then send whatever that answer implies.
+ *
+ * The two are separate steps and the order is fixed: the payload is published and recorded in the
+ * mirror before the follow-up leaves for the host, because the host answers `topicAction`
+ * synchronously and the answer is delivered back into this plugin before the call returns. Sending
+ * first is what made the tab wait forever on a request nobody would answer, and what made folding a
+ * schema answer recurse into itself.
+ */
 function deliver(
   key: string,
   payload: SqlPayload,
@@ -72,14 +81,22 @@ function deliver(
   tabs: SqlTabs,
 ): void {
   const refreshed = { ...payload, databases: data.databases.map((entry) => ({ ...entry })) };
-  const pending = refreshed.pending;
-  if (!pending) {
+  const publish = (next: SqlPayload): void => {
+    // The export references are minted inside the update factory, because that is the only place a
+    // payload factory may register a file. `updateTab` runs that factory synchronously, so what it
+    // produced is captured and written back to the mirror — otherwise the plugin's own copy of this
+    // tab would keep the pre-registration payload and a later update would send a download link with
+    // no reference in it.
     let sent: SqlPayload | undefined;
     capabilities.updateTab(key, (resources) => {
-      sent = { ...refreshed, exports: registerExports(key, refreshed, resources, tabs) };
+      sent = { ...next, exports: registerExports(key, next, resources, tabs) };
       return { payload: sent };
     });
-    tabs.write(key, sent ?? refreshed);
+    tabs.write(key, sent ?? next);
+  };
+  const pending = refreshed.pending;
+  if (!pending) {
+    publish(refreshed);
     return;
   }
   const answer = resultFor(data, pending.id, refreshed.database);
@@ -87,20 +104,14 @@ function deliver(
     // The answer was evicted before it arrived, or the delivery predates the request. Either way it
     // is not coming, and a tab waiting forever on a request nobody will answer is the one failure
     // mode a fire-and-forget topic has — so re-issue rather than wait.
-    const reissued = { ...refreshed, pending: issue(pending.followUp === 'query' ? 'query' : 'schema', refreshed, capabilities) };
-    tabs.write(key, reissued);
+    const action = pending.followUp === 'query' ? 'query' : 'schema';
+    dispatch(key, refreshed, planRequest(action, refreshed), capabilities, tabs, publish);
     return;
   }
-  const folded = fold(key, refreshed, answer, capabilities, tabs);
-  // The export references are minted inside the update factory, because that is the only place a
-  // payload factory may register a file. `updateTab` runs that factory synchronously, so what it
-  // produced is captured and written back to the mirror — otherwise the plugin's own copy of this
-  // tab would keep the pre-registration payload and a later update would send a download link with
-  // no reference in it.
-  let sent: SqlPayload | undefined;
-  capabilities.updateTab(key, (resources) => {
-    sent = { ...folded, exports: registerExports(key, folded, resources, tabs) };
-    return { payload: sent };
-  });
-  tabs.write(key, sent ?? folded);
+  const folded = fold(key, refreshed, answer, tabs);
+  if (folded.followUp) {
+    dispatch(key, folded.payload, folded.followUp, capabilities, tabs, publish);
+    return;
+  }
+  publish(folded.payload);
 }

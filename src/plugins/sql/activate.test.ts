@@ -25,30 +25,61 @@ function emptyView(results: DatabaseResultView[] = []): DatabasesView {
   return { databases: REFS, results, lastOpened: 'shop' };
 }
 
-function fakeCapabilities(initial: DatabasesView = emptyView()) {
+/** What a host records for one action, or `undefined` when it answers nothing. */
+type Respond = (action: TabPluginTopicAction) => DatabaseResultView | undefined;
+
+function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respond) {
   const state = { view: initial };
+  const activation = activate();
   const opened: { key: string; value: TabPluginPayload }[] = [];
   const updated: { key: string; value: TabPluginTabUpdate }[] = [];
   const docks: { key: string; dock: 'left' | 'right' | null }[] = [];
   const actions: TabPluginTopicAction[] = [];
   const registered: string[] = [];
+  // Every payload published to a tab, in order — which is what the tab was last told, and when.
+  const shown: unknown[] = [];
   // `registerFile` mints a fresh id on every call, so recording what was asked for is how a test can
   // tell a reference registered once from one registered again on every update.
   const resources = { registerFile: (file: string) => { registered.push(file); return `/open/${registered.length}`; } };
   const capabilities = {
     note: vi.fn(),
-    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); },
-    updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory(resources) }); },
+    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); shown.push(opened.at(-1)!.value.payload); },
+    updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory(resources) }); shown.push(updated.at(-1)!.value.payload); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     openClaimedFiles: vi.fn(),
     topicData: () => state.view,
-    topicAction: (action: TabPluginTopicAction) => { actions.push(action); },
+    topicAction: (action: TabPluginTopicAction) => { actions.push(action); respondFrom(action); },
     configuredViewer: () => '',
     openExternally: () => false,
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { actions, activation: activate(), capabilities, docks, opened, registered, state, updated };
+
+  // The real host answers inside the call: `topicAction` runs the topic's action, which records the
+  // result, and the change it then announces reaches this plugin's `notify` before `topicAction`
+  // returns. A fixture that only recorded the action cannot see that at all, which is why the
+  // ordering this one pins is invisible without it.
+  function respondFrom(action: TabPluginTopicAction): void {
+    const answer = respond?.(action);
+    if (!answer) return;
+    state.view = { ...state.view, results: [answer, ...state.view.results] };
+    // And the host tells a plugin only about tabs it owns, so a request sent before the tab was
+    // opened is answered into nothing rather than held for later.
+    const owned = opened.map((entry) => entry.key);
+    if (owned.length === 0) return;
+    activation.notify?.({ topic: 'databases', data: state.view, tabs: owned }, capabilities);
+  }
+
+  return { actions, activation, capabilities, docks, opened, registered, shown, state, updated };
+}
+
+/** A host that answers a schema read with the fixture's objects and a query with its grid. */
+function answering(objects: DatabaseResultView[] = ORDERS): Respond {
+  return (action) => {
+    const { requestId } = action as { requestId: string };
+    if (action.action === 'schema') return { kind: 'schema', requestId, database: 'shop', objects };
+    if (action.action === 'query') return { kind: 'query', requestId, database: 'shop', grid: grid() };
+  };
 }
 
 function grid(over: Partial<SqlPayload['grid']> = {}) {
@@ -352,6 +383,94 @@ describe('sql plugin notifications', () => {
     deliver(fixture, [answer]);
     expect(lastPayload(fixture).exports[0]?.ref).toBe('/open/1');
     expect(fixture.registered).toEqual(['/tmp/shop-orders-1.csv']);
+  });
+});
+
+/**
+ * The host answers a topic action before the call returns, so every request this plugin makes is
+ * answered while that request is still on its own stack. These cases pin the ordering that makes
+ * that survivable: the tab records a request in its own mirror before the request leaves for the
+ * host, so the delivery that answers it finds a tab that is already waiting for exactly that id.
+ */
+describe('sql plugin answering a request before it returns', () => {
+  it('leaves the tab on the first table of the database with its first page', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    const payload = lastPayload(fixture);
+    expect(payload.object).toBe('orders');
+    expect(payload.objects.map((object) => object.name)).toEqual(['orders', 'paid']);
+    expect(payload.grid?.rows).toHaveLength(1);
+    expect(payload.pending).toBeNull();
+    // Exactly two, and no more: the schema answer issued one query and that query's answer issued
+    // none. A third would be the schema answer folded a second time off a stale mirror.
+    expect(fixture.actions.map((action) => action.action)).toEqual(['schema', 'query']);
+  });
+
+  it('leaves a tab with no tables settled rather than waiting on a request nothing answered', () => {
+    const fixture = fakeCapabilities(emptyView(), answering([]));
+    openTab(fixture);
+    const payload = lastPayload(fixture);
+    expect(payload.objects).toEqual([]);
+    expect(payload.grid).toBeNull();
+    expect(payload.pending).toBeNull();
+    expect(fixture.actions.map((action) => action.action)).toEqual(['schema']);
+  });
+
+  it('answers a refresh with a page again, rather than folding the answer into itself', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    const before = fixture.actions.length;
+
+    fixture.activation.intent(
+      {
+        tab: 'sqlite:shop', intent: 'refresh', payload: {},
+        tabPayload: fixture.shown.at(-1) as SqlPayload,
+      },
+      fixture.capabilities,
+    );
+
+    expect(fixture.actions.slice(before).map((action) => action.action)).toEqual(['schema', 'query']);
+    expect(lastPayload(fixture).pending).toBeNull();
+    expect(lastPayload(fixture).grid?.rows).toHaveLength(1);
+  });
+
+  it('re-reads the grid a write disturbed, and records the statement that disturbed it', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    fixture.activation.intent(
+      {
+        tab: 'sqlite:shop', intent: 'update-cell',
+        payload: { row: 'r1', column: 'status', value: 'paid' }, tabPayload: lastPayload(fixture),
+      },
+      fixture.capabilities,
+    );
+    const writeId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{ kind: 'write', requestId: writeId, database: 'shop', sql: 'UPDATE orders SET status = ?', parameters: ['paid'], changed: 1 }]);
+    const payload = lastPayload(fixture);
+    expect(payload.log.map((entry) => entry.sql)).toEqual(['UPDATE orders SET status = ?']);
+    expect(payload.pending).toBeNull();
+    expect(payload.grid?.rows).toHaveLength(1);
+  });
+
+  it('has every request recorded on the tab before it leaves for the host', () => {
+    // What the tab was showing at the instant each request was sent, which is the ordering the whole
+    // exchange rests on: an answer delivered before the tab named its request is an answer to a
+    // question the tab is not asking.
+    const waitingWhenSent: (string | undefined)[] = [];
+    const fixture = fakeCapabilities(emptyView(), () => {
+      waitingWhenSent.push((fixture.shown.at(-1) as SqlPayload | undefined)?.pending?.id);
+    });
+    openTab(fixture);
+    fixture.activation.intent(
+      {
+        tab: 'sqlite:shop', intent: 'refresh', payload: {},
+        tabPayload: fixture.shown.at(-1) as SqlPayload,
+      },
+      fixture.capabilities,
+    );
+    deliver(fixture, []);
+    expect(fixture.actions.map((action) => action.action)).toEqual(['schema', 'schema', 'schema']);
+    expect(waitingWhenSent).toEqual(fixture.actions.map((action) => (action as { requestId: string }).requestId));
   });
 });
 

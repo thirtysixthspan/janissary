@@ -41,6 +41,12 @@ The navigator lists every table, view, index, and trigger in the database, group
 with each object's column count. A trigger is listed but not browsable, and its row says so rather
 than doing nothing when pressed. An empty database reads `No tables.`
 
+Every read the tab makes is answered before the next one starts, so a tab that has just opened fills
+in on its own: the navigator gains its objects and the grid its first page without anything being
+asked of it twice, and a tab never rests in the state it was in before an answer. While a read is
+still outstanding the grid header reads `Loading…`, and once the answer lands `No tables.` means the
+database is empty rather than that nothing has been read yet.
+
 The grid's header names the object, reports how much of it is on screen, and carries the write
 affordances. Below it, a filter chip row lists the filters in force; above the table, an error band
 carries the last failure. Below the table, a pager steps a page at a time, offers a page size, and
