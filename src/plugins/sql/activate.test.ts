@@ -183,6 +183,54 @@ describe('sql plugin notifications', () => {
     expect(fixture.actions[1]).toMatchObject({ action: 'schema' });
   });
 
+  // A database that is gone is not an ordinary read failure: the rows on screen describe a file that
+  // no longer exists, so keeping them would be showing something untrue.
+  it('drops the grid and says so when the database has been deleted', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    const schemaId = (fixture.actions[0] as { requestId: string }).requestId;
+    deliver(fixture, [schemaAnswer(schemaId)]);
+    const queryId = (fixture.actions[1] as { requestId: string }).requestId;
+    deliver(fixture, [schemaAnswer(schemaId), { kind: 'query', requestId: queryId, database: 'shop', grid: grid() }]);
+    expect(lastPayload(fixture).grid?.rows).toHaveLength(1);
+
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'refresh', payload: {}, tabPayload: lastPayload(fixture) },
+      fixture.capabilities,
+    );
+    const goneId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{
+      kind: 'schema', requestId: goneId, database: 'shop', objects: [],
+      error: 'Database "shop" does not exist. Create it to start.',
+    }]);
+    const after = lastPayload(fixture);
+    expect(after.error).toBe('Database "shop" does not exist. Create it to start.');
+    expect(after.grid).toBeNull();
+    expect(after.pending).toBeNull();
+  });
+
+  // A failed read for any other reason keeps the page, which is the whole difference between the two.
+  it('keeps the page on a read that failed for some other reason', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    const schemaId = (fixture.actions[0] as { requestId: string }).requestId;
+    deliver(fixture, [schemaAnswer(schemaId)]);
+    const queryId = (fixture.actions[1] as { requestId: string }).requestId;
+    deliver(fixture, [schemaAnswer(schemaId), { kind: 'query', requestId: queryId, database: 'shop', grid: grid() }]);
+
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'refresh', payload: {}, tabPayload: lastPayload(fixture) },
+      fixture.capabilities,
+    );
+    const failedId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{
+      kind: 'query', requestId: failedId, database: 'shop', grid: grid(), error: 'Query error: locked',
+    }]);
+    const after = lastPayload(fixture);
+    expect(after.error).toBe('Query error: locked');
+    expect(after.grid?.rows).toHaveLength(1);
+  });
+
   it('registers an export exactly once and keeps the reference across later updates', () => {
     const fixture = fakeCapabilities();
     openTab(fixture);

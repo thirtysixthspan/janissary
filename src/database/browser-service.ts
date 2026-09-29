@@ -9,7 +9,7 @@ import type {
   DatabaseRowView,
   DatabasesView,
 } from '../protocol.js';
-import { databaseFileExists, getConnection } from '../connections.js';
+import { databaseFileExists, getConnection, isConnectionOpen } from '../connections.js';
 import { errorText } from '../error-text.js';
 import { DatabaseBrowserState, databaseRefs } from './browser.js';
 import { exportRows } from './export.js';
@@ -72,8 +72,22 @@ export class DatabaseBrowser {
     return { databases: databaseRefs(), results: this.state.results() };
   }
 
-  /** Open a database's handle, and the message to report when it or the object is not there. */
-  private open(database: string): { handle: DatabaseSync } | { error: string } {
+  /**
+   * The database's handle, or the message to report when it is not there.
+   *
+   * The existence check runs *before* `getConnection` because opening is what creates: a browser
+   * that refreshed a deleted database would otherwise bring the empty file straight back. This is
+   * the same guard `queryDatabase` makes for the `db` surface, and the `isConnectionOpen` half lets a
+   * database with no file but a live handle still be read.
+   *
+   * `allowCreate` is the one way past it, and only `create` passes it — an explicit wish for a
+   * database to exist. Every other read refuses, because a read that materializes a database is a
+   * read with a side effect.
+   */
+  private open(database: string, allowCreate = false): { handle: DatabaseSync } | { error: string } {
+    if (!allowCreate && !databaseFileExists(database) && !isConnectionOpen(database)) {
+      return { error: `Database "${database}" does not exist. Create it to start.` };
+    }
     try {
       return { handle: getConnection(database) };
     } catch (error) {
@@ -100,11 +114,9 @@ export class DatabaseBrowser {
 
   /** Create the database if it is absent, then answer with its (possibly empty) object list. */
   create(database: string, requestId: string): void {
-    if (!databaseFileExists(database)) {
-      const opened = this.open(database);
-      if ('error' in opened) { this.record(this.schemaResult(requestId, database, [], opened.error)); return; }
-    }
-    this.schema(database, requestId);
+    const opened = this.open(database, true);
+    if ('error' in opened) { this.record(this.schemaResult(requestId, database, [], opened.error)); return; }
+    this.record(this.schemaResult(requestId, database, schemaObjects(opened.handle)));
   }
 
   schema(database: string, requestId: string): void {

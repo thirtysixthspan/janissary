@@ -136,6 +136,11 @@ Enter's own history is the last fifty statements in this tab.
 A statement that fails shows its message and leaves the grid as it was. Nothing a grid or a console
 does disables the plugin, and nothing is written to a transcript.
 
+A database deleted by `db sqlite delete` while its tab is open is not an ordinary read failure. The
+tab drops the grid and reads `Database "<name>" does not exist. Create it to start.` rather than
+keeping rows that describe a file which is gone, and pressing **Refresh** says the same thing instead
+of bringing the empty database back.
+
 ### What it does not do
 
 - It browses only the project's own databases, by name. A `.sqlite` file anywhere else on disk is

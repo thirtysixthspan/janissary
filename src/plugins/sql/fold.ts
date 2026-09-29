@@ -17,10 +17,12 @@ export function fold(
     case 'schema': { return foldSchema(base, answer.objects, answer.error, capabilities);
     }
     case 'query': {
-      return answer.error ? { ...base, error: answer.error } : { ...base, grid: answer.grid, error: null };
+      return answer.error
+        ? { ...base, ...missing(answer.error) }
+        : { ...base, grid: answer.grid, error: null };
     }
     case 'write': {
-      if (answer.error) return { ...base, error: answer.error };
+      if (answer.error) return { ...base, ...missing(answer.error) };
       // A write invalidates the page it changed, so the grid is re-read rather than patched. The
       // statement and its values stay in the console line, which is what the user just did.
       return {
@@ -31,7 +33,9 @@ export function fold(
       };
     }
     case 'stats': {
-      return answer.error ? { ...base, stats: null, error: answer.error } : { ...base, stats: answer.columns, error: null };
+      return answer.error
+        ? { ...base, stats: null, ...missing(answer.error) }
+        : { ...base, stats: answer.columns, error: null };
     }
     case 'export': { return foldExport(key, base, answer, tabs);
     }
@@ -44,11 +48,20 @@ function foldSchema(
   error: string | undefined,
   capabilities: TabPluginServerCapabilities,
 ): SqlPayload {
-  if (error) return { ...base, objects: [...objects], error };
+  if (error) return { ...base, objects: [...objects], ...missing(error) };
   const object = firstObject(objects, base.object);
   if (!object) return { ...base, objects: [...objects], object, grid: null, error: null };
   const selected: SqlPayload = { ...base, objects: [...objects], object, error: null };
   return { ...selected, pending: issue('query', selected, capabilities) };
+}
+
+// A database that is no longer there is not an ordinary read failure: the rows the tab is showing
+// describe a file that has been deleted, so keeping them would be showing something that is not true.
+// Drop the grid, say so, and let a re-create clear it.
+const MISSING_DATABASE = /^Database "[^"]*" does not exist\./u;
+
+function missing(error: string): { grid?: null; error: string } {
+  return MISSING_DATABASE.test(error) ? { grid: null, error } : { error };
 }
 
 function foldExport(
@@ -57,7 +70,7 @@ function foldExport(
   answer: Extract<DatabaseResultView, { kind: 'export' }>,
   tabs: SqlTabs,
 ): SqlPayload {
-  if (answer.error) return { ...base, error: answer.error };
+  if (answer.error) return { ...base, ...missing(answer.error) };
   tabs.rememberPath(key, answer.name, answer.path);
   const entry: SqlExport = { name: answer.name, size: answer.size, rows: answer.rows, ref: '' };
   return { ...base, error: null, exports: addExport(base.exports, entry) };

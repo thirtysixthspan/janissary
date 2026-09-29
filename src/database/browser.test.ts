@@ -1,9 +1,10 @@
-import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { initDbDir, closeAllConnections } from '../connections.js';
+import { DatabaseSync } from 'node:sqlite';
+import { initDbDir, closeAllConnections, removeDatabaseFile } from '../connections.js';
+import { runDatabaseCommand } from './index.js';
 import { DatabaseBrowser } from './browser-service.js';
 import { DatabaseBrowserState, RESULT_LIMIT } from './browser.js';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -19,17 +20,18 @@ afterEach(() => {
   rmSync(project, { recursive: true, force: true });
 });
 
-function seed(sql: string): DatabaseSync {
-  const database = new DatabaseSync(':memory:');
-  database.exec(sql);
-  return database;
-}
-
 const SHOP = `
   CREATE TABLE orders (id INTEGER PRIMARY KEY, status TEXT);
   INSERT INTO orders (status) VALUES ('paid'), ('open');
   CREATE TABLE logs (line TEXT);
 `;
+
+// A read no longer materializes a database, so a test that wants a schema creates one first — which
+// is the order a user is in, and the only one `db sqlite query` ever allowed either.
+function seeded(browser: DatabaseBrowser, sql = SHOP): void {
+  browser.create('shop', browser.requestId());
+  browser.run('shop', browser.requestId(), sql, false);
+}
 
 describe('DatabaseBrowserState', () => {
   it('mints a request id no answer already carries', () => {
@@ -74,7 +76,7 @@ describe('DatabaseBrowser', () => {
   it('answers a schema read with every object, tables first', () => {
     const browser = new DatabaseBrowser();
     browser.create('shop');
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.schema('shop', requestId);
     const answer = browser.view().results.find((result) => result.requestId === requestId);
@@ -98,7 +100,7 @@ describe('DatabaseBrowser', () => {
 
   it('answers a grid query with a page, its totals, and a key per row', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.query('shop', requestId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === requestId);
@@ -112,7 +114,7 @@ describe('DatabaseBrowser', () => {
 
   it('applies a filter and reports both totals', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const first = browser.requestId();
     browser.query('shop', first, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const second = browser.requestId();
@@ -126,7 +128,7 @@ describe('DatabaseBrowser', () => {
 
   it('records a query for an object the database does not have as an error, not an empty page', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.query('shop', requestId, { object: 'nope', filters: [], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === requestId);
@@ -138,7 +140,7 @@ describe('DatabaseBrowser', () => {
 
   it('routes a read statement to the grid and a write statement through exec', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const read = browser.requestId();
     browser.run('shop', read, 'SELECT status FROM orders', true);
     const write = browser.requestId();
@@ -155,7 +157,7 @@ describe('DatabaseBrowser', () => {
 
   it('updates, inserts, and deletes through a row key, and reports the change', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const queryId = browser.requestId();
     browser.query('shop', queryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const page = browser.view().results.find((result) => result.requestId === queryId);
@@ -181,7 +183,7 @@ describe('DatabaseBrowser', () => {
 
   it('refuses a write to a table with no primary key, and says why', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.insertRow('shop', requestId, 'logs', [{ column: 'line', value: 'x' }]);
     expect(browser.view().results.find((result) => result.requestId === requestId))
@@ -191,7 +193,7 @@ describe('DatabaseBrowser', () => {
 
   it('answers a statistics read with one entry per column', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.stats('shop', requestId, 'orders');
     const answer = browser.view().results.find((result) => result.requestId === requestId);
@@ -203,7 +205,7 @@ describe('DatabaseBrowser', () => {
 
   it('reports a statistics read for an object the database does not have as an error', () => {
     const browser = new DatabaseBrowser();
-    browser.run('shop', browser.requestId(), SHOP, false);
+    seeded(browser, SHOP);
     const requestId = browser.requestId();
     browser.stats('shop', requestId, 'nope');
     expect(browser.view().results.find((result) => result.requestId === requestId))
@@ -221,6 +223,40 @@ describe('DatabaseBrowser', () => {
     ]);
     browser.dispose();
   });
-});
+  it('refuses a read for a database that was deleted, and does not bring the file back', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser);
+    const requestId = browser.requestId();
+    browser.schema('shop', requestId);
+    runDatabaseCommand('db sqlite delete shop');
+    const after = browser.requestId();
+    browser.schema('shop', after);
+    expect(browser.view().results.find((result) => result.requestId === after))
+      .toMatchObject({ error: 'Database "shop" does not exist. Create it to start.' });
+    expect(existsSync(path.join(project, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
+    browser.dispose();
+  });
 
-void seed;
+  it('refuses a grid query for a deleted database rather than answering from a fresh empty one', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser);
+    runDatabaseCommand('db sqlite delete shop');
+    const requestId = browser.requestId();
+    browser.query('shop', requestId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === requestId);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.error).toContain('does not exist');
+    expect(answer.grid.rows).toEqual([]);
+    browser.dispose();
+  });
+
+  it('reads a database that has no file but an open connection, so a delete racing an open still works', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser);
+    removeDatabaseFile('shop');
+    const requestId = browser.requestId();
+    browser.schema('shop', requestId);
+    expect(browser.view().results.find((result) => result.requestId === requestId)).not.toMatchObject({ error: expect.anything() });
+    browser.dispose();
+  });
+});

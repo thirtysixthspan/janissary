@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle a database deleted by `db sqlite delete` while its browser tab is open, instead of letting the next refresh silently bring the file back.
-
-Existing Issue: `runDatabaseCommand`'s delete arm in `src/database/index.ts` closes the connection and removes the file, and `DatabaseManager.forgetConn` drops the name from every tab's attribution, but nothing tells a `sql` tab that its database went away; the tab keeps the grid it last read, and its `Refresh` issues a schema read, which reaches `getConnection` and recreates the empty file. Severity: 5/10
-
-Existing Risk: 5/10 - A user deletes a database they have finished with, presses Refresh in a tab they left open, and gets a new empty database back under the same name with no indication that anything was deleted.
-
-Proposal Risk: 3/10 - Telling the tab is a cross-tab signal the plugin has to subscribe to, so a tab closed or never opened still has to behave, and a missed signal leaves the original staleness in place.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: tell an open browser tab when its database is deleted". Raise one more bus event from `deleteDatabase` in `src/database/index.ts` on a channel the database manager owns, and have `DatabaseManager` record the deletion in the browser state so `readView` reports the name as neither existing nor open. In `src/plugins/sql/fold.ts` and `src/plugins/sql/activate.ts`, drop the tab's grid when the database it names has stopped existing, and put `Database "<name>" does not exist.` in its error band, and make the tab's `Refresh` show that rather than issue a read that would recreate the file — which means the schema read must check existence before opening a connection, the same check `queryDatabase` already makes. Cover the signal in `src/plugins/topics.test.ts` if the deletion reuses a topic, or in `src/database/browser.test.ts` at the state layer, and add a case to `src/plugins/sql/activate.test.ts` that a tab whose database has gone reads the message and keeps no grid. `deleteDatabase`'s own return text and `db sqlite delete` behaviour are unchanged.
-
-
 * Remove the dead `rowLabel` helper and the two unused exports the plugin module accumulated, and give the page-size list one owner instead of three.
 
 Existing Issue: `rowLabel` in `web/src/plugins/sql/grid-view.ts` is exported and called by nothing, `databaseFromKey` in `src/plugins/sql/tabs.ts` is exported and called by nothing, and the page-size list `[50, 100, 500]` is written out three times — in `src/plugins/sql/tabs.ts`, in `src/plugins/sql/shared-intents.ts`, and in `web/src/plugins/sql/grid-view.ts` — so the guard that accepts a page size and the control that offers them are two independent copies that can drift. Severity: 3/10
