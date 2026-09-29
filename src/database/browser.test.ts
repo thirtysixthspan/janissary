@@ -148,6 +148,27 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
+  it('counts an object whole the first time an all-column term asks about it', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    // The term narrows a query the same way a per-column filter does, and it survives a switch of
+    // object — so it is the shape a first query for an unvisited table arrives in, and without the
+    // count the one matching row would be cached as the table's size for the rest of the session.
+    const requestId = nextId();
+    browser.query('shop', requestId, { object: 'orders', filters: [], global: 'paid', order: [], limit: 10, offset: 0 });
+    const first = browser.view().results.find((result) => result.requestId === requestId);
+    if (first?.kind !== 'query') throw new Error('expected a query answer');
+    expect(first.grid.total).toBe(1);
+    expect(first.grid.unfilteredTotal).toBe(2);
+    const second = nextId();
+    browser.query('shop', second, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === second);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.total).toBe(2);
+    expect(answer.grid.unfilteredTotal).toBe(2);
+    browser.dispose();
+  });
+
   it('records a query for an object the database does not have as an error, not an empty page', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);

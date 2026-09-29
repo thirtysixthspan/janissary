@@ -126,12 +126,15 @@ export class DatabaseBrowser {
    *
    * A filtered query whose object has never been counted cannot seed the cache from its own count:
    * that number is the filtered one, and it would go on being reported as the object's size. So the
-   * first time an object is asked about with filters on, it is counted without them.
+   * first time an object is asked about with filters on, it is counted without them. The all-column
+   * term narrows a query the same way a per-column filter does and is answered the same way, so
+   * arriving at an unvisited table with a term in force costs the same one count rather than a size
+   * that is wrong for the rest of the session.
    */
   private rememberedTotal(handle: DatabaseSync, query: DatabaseGridQuery, cacheKey: string): number | undefined {
     const remembered = this.unfiltered.get(cacheKey);
     if (remembered !== undefined) return remembered;
-    if (query.filters.length === 0) return undefined;
+    if (query.filters.length === 0 && !query.global) return undefined;
     return unfilteredTotal(handle, query);
   }
 

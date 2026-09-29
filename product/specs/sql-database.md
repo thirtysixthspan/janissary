@@ -98,7 +98,8 @@ resolved to a single column — following an unresolved key would filter on noth
 Pages hold 50, 100 (the default), or 500 rows. The pager reads `Rows 1–100 of 4,213 rows`, or
 `Rows 1–2 of 3 of 51,882 rows` once a filter is narrowing something — a filtered view that reported
 only the filtered total would read as though the table were that small. The second figure counts the
-object with no filters at all, so it is right even when the first query for an object arrives
+object with no filters at all — and an **Search every column** term narrows a query as much as a
+per-column filter does — so it is right even when the first query for an object arrives
 already filtered, as following a key into an unvisited table does. Changing the page size
 returns to the first page. **Refresh** re-reads the schema and the current query.
 

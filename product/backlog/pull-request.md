@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Report an object's real size in the pager when the first query for it arrives carrying an all-column search term
-
-Existing Issue: An all-column search term in force when an object is first queried is cached as that object's size, so the pager reads figures like `Rows 1–6 of 6 of 1 rows` — a filtered total larger than the whole table it claims. Severity: 5/10
-
-Existing Risk: 5/10 - A user reading a filtered grid believes the table is smaller than it is, and a range label whose second figure is below its own total cannot be trusted for any decision made from it.
-
-Proposal Risk: 2/10 - Seeding the count when a global term is in force is the one extra `COUNT(*)` the existing filter rule already pays for, and the cap keeps it to once per object.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: count an object without its all-column search term before reporting its size in the pager". Step: G24 (generated) — "Select an object the tab has never queried while an all-column search term is in force, then clear the term, and confirm the pager's \"of N rows\" figure is the object's real size." Fixture: `db sqlite create shop`; `db sqlite query shop "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT NOT NULL, status TEXT, total REAL)"` with four rows; `db sqlite query shop "CREATE TABLE sizes (id INTEGER PRIMARY KEY, label TEXT)"` with `INSERT INTO sizes (label) VALUES ('10%')`, `('20%')`, `('plain')`, `('x')`, `('y')`, `('z')`; then `sql shop`, and **Refresh**. Type `plain` into **Search every column** on `orders` and press Enter, then select `sizes` in the navigator — the term names no column, so it survives the switch, and this is the tab's first query for `sizes`. Expected, from `product/specs/sql-database.md` — "The second figure counts the object with no filters at all, so it is right even when the first query for an object arrives already filtered, as following a key into an unvisited table does" — the filtered page reads `Rows 1–1 of 1 row` and, after **Clear filters**, the whole table reads `Rows 1–6 of 6 rows`. Observed on 8abf512: `Rows 1–1 of 1 row` while the term was in force, then `Rows 1–6 of 6 of 1 rows` after clearing it, with the drawer showing `SELECT "id", "label" FROM "sizes" ORDER BY "id" ASC LIMIT ? OFFSET ?` — the unfiltered figure stayed at the one row the term had matched. The same defect showed earlier in the run as `Rows 201–250 of 250 of 13 rows` for `bulk`, whose first query carried a leftover term. Root cause: `DatabaseBrowser.rememberedTotal` in `src/database/browser.ts` decides a query is unfiltered by `query.filters.length === 0` alone, so a query whose only narrowing is the all-column term takes the `unfilteredTotal: unfiltered ?? total` path in `totals`, caching the filtered count as the object's size. Fix: treat a non-empty `query.global` as narrowing, and take the extra unfiltered `COUNT(*)` on an object's first filtered query exactly as the per-column filter case already does. A regression test should query an object for the first time with `global` set and then again with nothing set, and assert the second answer's `unfilteredTotal` is the object's real count.
-
-
 * List the newest statement in the SQL drawer, so one run statement is a record before the next one runs
 
 Existing Issue: The SQL drawer renders `payload.log.slice(1)` and the console's line under the prompt reports only the newest entry's outcome, so the statement that was just run appears nowhere and cannot be copied until a second statement runs. Severity: 4/10
