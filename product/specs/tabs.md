@@ -83,7 +83,7 @@ When an **inactive** tab receives new transcript content — a message from anot
 
 **Docked tabs never badge.** A tab docked into a sidebar (see `sidebars.md`) is permanently visible chrome and can never become the active tab, so it is never eligible for the unread badge either — new content delivered to a docked tab (for example the notifications tab) never sets `hasUnread`.
 
-**Clearing.** Focusing a tab always clears its badge, regardless of the activation path: click, `next`, Shift+←/→, or any other route through `setActiveTab`. Paths that set `activeTab` directly (`reorderTab`, `closeTab`) clear the badge explicitly as well, so the invariant "the focused tab never shows the sparkle" holds without exception.
+**Clearing.** Focusing a tab always clears its badge, regardless of the activation path: click, `next`, Shift+←/→, or any other route through `setActiveTab`. Paths that set `activeTab` directly (`reorderTab`, `closeTab`) clear the badge explicitly as well, so the invariant "the focused tab never shows the sparkle" holds without exception. A harness tab's badge also clears without focus when its harness goes back to work, since for a harness the badge means it is waiting (see [[harness]]).
 
 **Persistence.** `hasUnread` is in-memory only — not persisted to agent state — so tabs rehydrate with no badge on `--relaunch` (same policy as `scrollOffset` and `toolStepsExpanded`).
 

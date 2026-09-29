@@ -395,6 +395,17 @@ describe('TabManager markUnread', () => {
 
     expect(tm.tabs.find((t) => t.label === 'second')?.hasUnread).toBe(true);
   });
+
+  it('clearUnread drops a hidden tab\'s badge and ignores an unknown label', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+    tm.markUnread('second');
+
+    tm.clearUnread('second');
+    tm.clearUnread('ghost');
+
+    expect(tm.tabs.find((t) => t.label === 'second')?.hasUnread).toBe(false);
+  });
 });
 
 describe('TabManager split panes', () => {

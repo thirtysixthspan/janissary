@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
+import { applyBusyTransition } from '../harness/busy-status.js';
 import type { PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';
 import type { RemoteChannel } from './channel/index.js';
@@ -66,12 +67,7 @@ export function createRemotePtySession(
       });
     }),
     onBusyTransition: (busy, unread) => deliver(() => {
-      const label = agentName ?? '';
-      if (busy) managers.tab.addBusy(label);
-      else {
-        managers.tab.deleteBusy(label);
-        if (unread) managers.tab.markUnread(label);
-      }
+      applyBusyTransition(managers, agentName ?? '', { busy, unread });
       messageBus.emit('state', { type: 'dirty' });
     }),
   });
