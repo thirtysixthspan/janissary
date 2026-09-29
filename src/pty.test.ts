@@ -38,6 +38,9 @@ vi.mock('node-pty', () => ({ spawn: mockPtySpawn }));
 vi.mock('./sandbox/index.js', () => ({
   sandboxSpawn: vi.fn((_options, command, args, env) => ({ command, args, env })),
 }));
+// Mocked so the fake proc's pid is never turned into a real signal to some unrelated group.
+const reapProcessGroup = vi.hoisted(() => vi.fn());
+vi.mock('./pty-reap.js', () => ({ reapProcessGroup }));
 
 import { spawnPty } from './pty.js';
 
@@ -216,6 +219,36 @@ describe('spawnPty', () => {
     session.kill();
     const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
     expect(proc.kill).toHaveBeenCalledOnce();
+  });
+
+  it('kill reaps the rest of the PTY\'s process group', () => {
+    const session = spawnPty('codex', 'codex', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+    session.kill();
+    expect(reapProcessGroup).toHaveBeenCalledExactlyOnceWith(12_345);
+  });
+
+  it('reaps the process group when the program exits on its own', () => {
+    spawnPty('codex', 'codex', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+    const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
+    proc.emitExit(0);
+    expect(reapProcessGroup).toHaveBeenCalledExactlyOnceWith(12_345);
+  });
+
+  it('reaps once when a kill is followed by the exit it causes', () => {
+    const session = spawnPty('codex', 'codex', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+    const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
+    session.kill();
+    proc.emitExit(0);
+    session.kill();
+    expect(reapProcessGroup).toHaveBeenCalledOnce();
+  });
+
+  it('still reaps when proc.kill throws', () => {
+    const session = spawnPty('codex', 'codex', '/tmp', { onData: vi.fn(), onExit: vi.fn() });
+    const proc = mockPtySpawn.mock.results[0].value as ReturnType<typeof mockPtyProc>;
+    proc.kill.mockImplementationOnce(() => { throw new Error('already dead'); });
+    session.kill();
+    expect(reapProcessGroup).toHaveBeenCalledOnce();
   });
 
   it('kill does not throw when proc already exited', () => {

@@ -1,6 +1,7 @@
 import * as pty from 'node-pty';
 import { sandboxSpawn, type SandboxOptions } from './sandbox/index.js';
 import { shellCommandArgs } from './shell/startup.js';
+import { reapProcessGroup } from './pty-reap.js';
 
 // A live pseudo-terminal backing an inline xterm.js card (an interactive program like vim/less
 // or an AI harness like claude/codex). Bytes flow out through the manager's `onData`; keystrokes
@@ -57,9 +58,18 @@ export function spawnPty(
   });
 
   let writable = true;
+  // Whichever ends the PTY first — a kill or the program exiting on its own — takes the rest of its
+  // process group with it (see `pty-reap.ts`); the other finds nothing left to do.
+  let reaped = false;
+  const reap = () => {
+    if (reaped) return;
+    reaped = true;
+    reapProcessGroup(proc.pid);
+  };
   proc.onData((d) => handlers.onData(id, d));
   proc.onExit(({ exitCode }) => {
     writable = false;
+    reap();
     handlers.onExit(id, exitCode);
   });
 
@@ -76,6 +86,7 @@ export function spawnPty(
     kill: () => {
       writable = false;
       try { proc.kill(); } catch { /* already gone */ }
+      reap();
     },
   };
 }
