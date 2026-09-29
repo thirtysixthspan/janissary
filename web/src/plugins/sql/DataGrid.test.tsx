@@ -1,0 +1,163 @@
+import React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { DataGrid } from './DataGrid';
+import { grid, makeCapabilities, payload } from './fixture';
+
+describe('DataGrid headers and rows', () => {
+  it('renders every column in order, and the row numbers beside them', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
+    expect(headers[1]).toContain('id');
+    expect(headers[2]).toContain('status');
+    expect(screen.getByText('paid')).toBeTruthy();
+  });
+
+  it('renders the header for an object whose page is empty', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload({ grid: grid({ rows: [], total: 0 }) })} capabilities={capabilities} />);
+    expect(screen.getByText('id')).toBeTruthy();
+    expect(screen.getAllByText('No rows.').length).toBeGreaterThan(0);
+  });
+
+  it('shows a null cell in its own style and an empty string in another', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    expect(screen.getByText('NULL').className).toContain('null');
+    expect(screen.getByText('paid').className).not.toContain('null');
+  });
+});
+
+describe('DataGrid ordering and paging', () => {
+  it('asks for a new order when a column header is pressed', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByTitle('Order by status'));
+    expect(intent).toHaveBeenCalledWith('set-order', { column: 'status' });
+  });
+
+  it('asks for the next and previous pages, and disables the one there is no room for', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { rerender } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByText('Next'));
+    expect(intent).toHaveBeenCalledWith('set-page', { offset: 100 });
+    expect(screen.getByText('Previous').closest('button')?.disabled).toBe(true);
+
+    const last = grid({ offset: 200, total: 200, rows: [] });
+    rerender(<DataGrid payload={payload({ grid: last })} capabilities={capabilities} />);
+    expect(screen.getByText('Next').closest('button')?.disabled).toBe(true);
+  });
+
+  it('asks for a new page size and a refresh', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.change(screen.getByLabelText('Rows per page'), { target: { value: '500' } });
+    expect(intent).toHaveBeenCalledWith('set-page-size', { limit: 500 });
+    fireEvent.click(screen.getByText('Refresh'));
+    expect(intent).toHaveBeenCalledWith('refresh', {});
+  });
+});
+
+describe('DataGrid filtering', () => {
+  it('asks for a filter when one is applied, and shows the chip it produced', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Filter status'));
+    fireEvent.change(screen.getByLabelText('status operator'), { target: { value: 'eq' } });
+    fireEvent.change(screen.getByLabelText('status value'), { target: { value: 'paid' } });
+    fireEvent.click(screen.getByText('Apply'));
+    expect(intent).toHaveBeenCalledWith('set-filter', { column: 'status', op: 'eq', value: 'paid' });
+  });
+
+  it('offers no value field for an operator that binds nothing', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Filter status'));
+    fireEvent.change(screen.getByLabelText('status operator'), { target: { value: 'isNull' } });
+    expect(screen.queryByLabelText('status value')).toBeNull();
+  });
+
+  it('shows the filters a payload carries and offers to clear them', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid
+      payload={payload({ filters: [{ column: 'status', op: 'eq', value: 'paid' }] })}
+      capabilities={capabilities}
+    />);
+    expect(screen.getByText('status = paid')).toBeTruthy();
+    fireEvent.click(screen.getByText(/Clear filters/));
+    expect(intent).toHaveBeenCalledWith('clear-filters', {});
+  });
+});
+
+describe('DataGrid editing', () => {
+  it('asks to insert a row with every column, defaulting to null', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Insert row'));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }, { column: 'status', value: null }],
+    });
+  });
+
+  it('opens the editor on a double click and asks to update that cell on commit', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    const input = screen.getByDisplayValue('paid');
+    fireEvent.change(input, { target: { value: 'shipped' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: 'shipped' });
+  });
+
+  it('asks for a null value rather than the four characters when the NULL toggle is used', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: null });
+  });
+
+  it('asks for nothing when the editor is cancelled', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.keyDown(screen.getByDisplayValue('paid'), { key: 'Escape' });
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('confirms a delete before it asks for it, and only the confirmed path asks', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getAllByLabelText('Delete row')[0]!);
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.getByText('Delete row from "orders"?')).toBeTruthy();
+    fireEvent.click(screen.getByText('Delete'));
+    expect(intent).toHaveBeenCalledWith('delete-row', { row: 'r1' });
+  });
+});
+
+describe('DataGrid read-only objects', () => {
+  it('says why a view cannot be edited and offers no write control', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload({ object: 'paid' })} capabilities={capabilities} />);
+    expect(screen.getByText('Read-only: "paid" is a view.')).toBeTruthy();
+    expect(screen.getByText('paid', { selector: '.sql-grid-object' })).toBeTruthy();
+    expect(screen.queryByLabelText('Insert row')).toBeNull();
+    expect(screen.queryByLabelText('Delete row')).toBeNull();
+    const cell = container.querySelector('.sql-cell');
+    fireEvent.doubleClick(cell!);
+    expect(container.querySelector('.sql-cell-editor')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+  });
+});
+
+describe('DataGrid errors', () => {
+  it('shows a failed read in an error band above the grid', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload({ error: 'Query error: no such table' })} capabilities={capabilities} />);
+    expect(screen.getByRole('alert').textContent).toBe('Query error: no such table');
+    expect(screen.getByText('paid')).toBeTruthy();
+  });
+});

@@ -199,6 +199,11 @@ export { defineDockableList, type DockableListOptions } from './define-list-tab.
 // wording a user sees has one owner rather than a copy per plugin.
 export { parseDockArgument } from './dock-argument.js';
 export { noFileOpener } from './no-file-opener.js';
+// Which SQL statements come back as rows, published for the same reason the numbered-sibling writer
+// is: the test itself is pure data, it already has two callers that must agree (`db sqlite query` and
+// the database browser's console), and the import boundary would otherwise force one of them to
+// re-derive it. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { READ_QUERY } from '../database/query.js';
 
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
@@ -221,6 +226,24 @@ export type {
   RemoteSessionKind,
   RemoteSessionState,
   RemoteSessionView,
+} from '../protocol.js';
+// The database-browser slice, re-exported for the same reason: a plugin reaches the SQLite registry
+// only through the `databases` topic, and typing that topic's data and actions needs these.
+export type {
+  DatabaseCellView,
+  DatabaseColumnStatsView,
+  DatabaseColumnView,
+  DatabaseFilterOperator,
+  DatabaseFilterView,
+  DatabaseGridQuery,
+  DatabaseGridView,
+  DatabaseObjectKind,
+  DatabaseObjectView,
+  DatabaseOrderView,
+  DatabaseRefView,
+  DatabaseResultView,
+  DatabaseRowView,
+  DatabasesView,
 } from '../protocol.js';
 
 // Resolution: core openers and commands resolve first, then one plugin contribution by exact

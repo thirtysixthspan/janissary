@@ -1,0 +1,157 @@
+// Database-browser wire types, composed into the shared contract by ../protocol.ts.
+//
+// The browser reaches the SQLite registry only through the `databases` plugin topic, so everything
+// here is data a client reads and intent payloads it sends — never a statement. Filter values cross
+// as text and are bound on the server; a row crosses as an opaque `key` the server minted and the
+// client cannot construct, which is what makes a write address exactly one row it was handed.
+
+export type DatabaseRefView = {
+  name: string;
+  // Whether a `<name>.sqlite` file exists, and whether a connection is currently open. A database
+  // on disk but never opened is the case every surface has missed until now.
+  exists: boolean;
+  open: boolean;
+};
+
+export type DatabaseObjectKind = 'table' | 'view' | 'index' | 'trigger';
+
+export type DatabaseColumnView = {
+  name: string;
+  // The declared type as written in the schema, which SQLite treats as a hint rather than a type.
+  type: string;
+  notNull: boolean;
+  // `PRAGMA table_info`'s per-column ordinal: 0 for a non-key column, 1..n across a composite key.
+  pk: number;
+};
+
+export type DatabaseObjectView = {
+  name: string;
+  kind: DatabaseObjectKind;
+  columns: DatabaseColumnView[];
+  // A view is always read-only and a table is read-only without a primary key, so the grid offers no
+  // write control rather than offering one that would be refused.
+  writable: boolean;
+};
+
+export type DatabaseCellView = {
+  text: string;
+  // A null and an empty string are different values, and a grid that draws both as a blank cell has
+  // lost one of them.
+  isNull: boolean;
+};
+
+export type DatabaseRowView = {
+  // Opaque and server-minted. It resolves to a primary key only on the server, and only for a page
+  // the server still holds.
+  key: string;
+  cells: DatabaseCellView[];
+};
+
+export type DatabaseFilterOperator =
+  | 'contains' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'isNull' | 'notNull';
+
+export type DatabaseFilterView = {
+  // A column of the selected object, as the server's own schema read it.
+  column: string;
+  op: DatabaseFilterOperator;
+  // Absent for `isNull` and `notNull`, which bind nothing.
+  value?: string;
+};
+
+export type DatabaseOrderView = {
+  column: string;
+  desc: boolean;
+};
+
+export type DatabaseGridQuery = {
+  object: string;
+  filters: DatabaseFilterView[];
+  order: DatabaseOrderView[];
+  limit: number;
+  offset: number;
+};
+
+export type DatabaseGridView = {
+  // The exact statement that ran, with `?` where a value was bound, and those values in order.
+  // Never an inlined rendering: a value containing a quote cannot be shown inside one safely.
+  sql: string;
+  parameters: (string | number)[];
+  columns: string[];
+  rows: DatabaseRowView[];
+  // Rows matching the filters, and rows in the object regardless of them. The second is what tells a
+  // user their filter is narrowing something, rather than that the table is small.
+  total: number;
+  unfilteredTotal: number;
+  offset: number;
+  limit: number;
+  // The order actually used, including the primary-key fallback applied when none was chosen.
+  order: DatabaseOrderView[];
+};
+
+export type DatabaseColumnStatsView = {
+  name: string;
+  type: string;
+  // Nulls, distinct values, and the total, over the whole object.
+  nulls: number;
+  distinct: number;
+  total: number;
+  // Present for a column SQLite stores numerically, and only when it holds at least one.
+  min?: string;
+  max?: string;
+  // The full value distribution when the column is low-cardinality (twenty or fewer distinct
+  // values); empty otherwise, and the client draws a count instead of bars.
+  values: { label: string; count: number }[];
+};
+
+export type DatabaseResultView =
+  | {
+    kind: 'schema';
+    requestId: string;
+    database: string;
+    objects: DatabaseObjectView[];
+    error?: string;
+  }
+  | {
+    kind: 'query';
+    requestId: string;
+    database: string;
+    grid: DatabaseGridView;
+    error?: string;
+  }
+  | {
+    kind: 'write';
+    requestId: string;
+    database: string;
+    sql: string;
+    // A cell set to SQL NULL binds one, which is why a write's parameters may hold one and a grid
+    // query's may not: no filter operator binds null.
+    parameters: (string | number | null)[];
+    changed: number;
+    error?: string;
+  }
+  | {
+    kind: 'stats';
+    requestId: string;
+    database: string;
+    object: string;
+    columns: DatabaseColumnStatsView[];
+    error?: string;
+  }
+  | {
+    kind: 'export';
+    requestId: string;
+    database: string;
+    path: string;
+    name: string;
+    size: string;
+    rows: number;
+    error?: string;
+  };
+
+// Everything the host publishes about databases: which ones exist, and the recent answers to the
+// requests a plugin has issued against them.
+export type DatabasesView = {
+  databases: DatabaseRefView[];
+  // Most recent first, capped. The cap is what bounds this on the state-broadcast path.
+  results: DatabaseResultView[];
+};

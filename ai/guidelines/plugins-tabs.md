@@ -32,7 +32,7 @@ Declarations contain data, never executable predicates or top-level side effects
 
 ## Server contract
 
-`activate()` returns a `TabPluginActivation` with `isPayload`, `opener.inline`, `opener.external`, `intent`, an optional `command`, and optional idempotent `dispose`. A declaration that claims a command name must supply `command`; it receives everything after the first token. It does not receive `Managers`. Each opener, command, intent, and notification receives a `TabPluginServerCapabilities` object with exactly eight functions:
+`activate()` returns a `TabPluginActivation` with `isPayload`, `opener.inline`, `opener.external`, `intent`, an optional `command`, and optional idempotent `dispose`. A declaration that claims a command name must supply `command`; it receives everything after the first token. It does not receive `Managers`. Each opener, command, intent, and notification receives a `TabPluginServerCapabilities` object — the capability names are data in `api-capabilities.ts`, keyed by their union so a missing one is a compile error:
 
 - `note(text)` appends to the originating transcript if it is still open.
 - `openOrFocusTab(instanceKey, factory)` focuses an existing tab or creates one.
@@ -79,7 +79,9 @@ A plugin tab docks into either sidebar through the same mechanism the built-in d
 
 ## Host notifications
 
-A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v1 defines one topic, `schedules`, carrying the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
+A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v1 defines four topics — `schedules`, `conversations`, `sessions`, and `databases` — each carrying a named slice the host already computes. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
+
+A topic action returns nothing, so an action that needs a round trip carries a request id the plugin mints and the answer comes back on the next delivery carrying the same one. Keep that id and its follow-up together in the tab payload, mint it with `randomUUID()` rather than a counter (the host echoes it, so two plugins on one topic must not collide on `q1`), and re-issue rather than wait when an answer does not arrive. See `documentation/developer-documentation/tab-plugins.md` for the worked shape.
 
 Delivery reaches only a plugin that is already active and already owns at least one tab, so a notification never activates anything and a plugin with nothing on screen is never called. The event carries the topic, its data, and the instance keys of that plugin's own open tabs. Handlers are guarded at 1000 ms — tighter than the 5000 ms a user-initiated call gets — fan out concurrently with no ordering guarantee, and have their return value ignored: a notification cannot influence a host outcome, and a plugin acts on one by calling `updateTab`. `note` writes nowhere during a notification. A throw or timeout disables that plugin alone. The host owns the single subscription and releases it on dispose; no plugin holds a handle to revoke.
 

@@ -1,0 +1,220 @@
+import type { DatabaseSync } from 'node:sqlite';
+import type {
+  DatabaseCellView,
+  DatabaseColumnView,
+  DatabaseGridQuery,
+  DatabaseGridView,
+  DatabaseObjectView,
+  DatabaseResultView,
+  DatabaseRowView,
+  DatabasesView,
+} from '../protocol.js';
+import { databaseFileExists, getConnection } from '../connections.js';
+import { errorText } from '../error-text.js';
+import { DatabaseBrowserState, databaseRefs } from './browser.js';
+import { exportRows } from './export.js';
+import { runGrid, totals } from './grid.js';
+import { coerce, RowKeyStore } from './row-keys.js';
+import { objectColumns, hasObject, schemaObjects } from './schema.js';
+import { columnStats } from './stats.js';
+import { deleteRow, insertRow, updateCell, type WriteOutcome } from './write.js';
+
+// The browser's half of the database manager: everything the `sql` plugin reaches through the
+// `databases` topic. It owns the request bookkeeping, the row-key store, and the unfiltered row
+// count cache, and delegates the SQL to the modules beside it. Nothing here is reachable from a `db`
+// command, and nothing in the `db` path comes here.
+
+/** How many rows a statement the user typed may fill the grid with. */
+export const CONSOLE_ROW_LIMIT = 200;
+
+function emptyGrid(query: DatabaseGridQuery): DatabaseGridView {
+  return {
+    sql: '', parameters: [], columns: [], rows: [], total: 0, unfilteredTotal: 0,
+    offset: query.offset, limit: query.limit, order: [],
+  };
+}
+
+function toCell(value: unknown): DatabaseCellView {
+  const isNull = value === null || value === undefined;
+  return { text: isNull ? '' : String(coerce(value)), isNull };
+}
+
+// A statement the user typed, whose columns come from the statement rather than from row 0 — so an
+// empty result still renders a header — and which is paged like any other grid.
+function consoleGrid(sql: string, rows: Record<string, unknown>[], names: string[]): DatabaseGridView {
+  const page: DatabaseRowView[] = rows.slice(0, CONSOLE_ROW_LIMIT).map((row) => ({
+    key: '',
+    cells: names.map((name) => toCell(row[name])),
+  }));
+  return {
+    sql,
+    parameters: [],
+    columns: names,
+    rows: page,
+    total: rows.length,
+    unfilteredTotal: rows.length,
+    offset: 0,
+    limit: CONSOLE_ROW_LIMIT,
+    order: [],
+  };
+}
+
+export class DatabaseBrowser {
+  private readonly state = new DatabaseBrowserState();
+  private readonly keys = new RowKeyStore();
+  private readonly unfiltered = new Map<string, number>();
+
+  requestId(): string {
+    return this.state.requestId();
+  }
+
+  view(): DatabasesView {
+    return { databases: databaseRefs(), results: this.state.results() };
+  }
+
+  /** Open a database's handle, and the message to report when it or the object is not there. */
+  private open(database: string): { handle: DatabaseSync } | { error: string } {
+    try {
+      return { handle: getConnection(database) };
+    } catch (error) {
+      return { error: errorText(error) };
+    }
+  }
+
+  private handleFor(database: string, object: string): { handle: DatabaseSync; columns: DatabaseColumnView[] } | { error: string } {
+    const opened = this.open(database);
+    if ('error' in opened) return opened;
+    if (!hasObject(opened.handle, object)) {
+      return { error: `"${object}" is not in "${database}".` };
+    }
+    return { handle: opened.handle, columns: objectColumns(opened.handle, object) };
+  }
+
+  private record(result: DatabaseResultView): void {
+    this.state.record(result);
+  }
+
+  private schemaResult(requestId: string, database: string, objects: DatabaseObjectView[], error?: string): DatabaseResultView {
+    return { kind: 'schema', requestId, database, objects, ...(error && { error }) };
+  }
+
+  /** Create the database if it is absent, then answer with its (possibly empty) object list. */
+  create(database: string, requestId: string): void {
+    if (!databaseFileExists(database)) {
+      const opened = this.open(database);
+      if ('error' in opened) { this.record(this.schemaResult(requestId, database, [], opened.error)); return; }
+    }
+    this.schema(database, requestId);
+  }
+
+  schema(database: string, requestId: string): void {
+    const opened = this.open(database);
+    this.record('error' in opened
+      ? this.schemaResult(requestId, database, [], opened.error)
+      : this.schemaResult(requestId, database, schemaObjects(opened.handle)));
+  }
+
+  query(database: string, requestId: string, query: DatabaseGridQuery): void {
+    const opened = this.handleFor(database, query.object);
+    if ('error' in opened) {
+      this.record({ kind: 'query', requestId, database, grid: emptyGrid(query), error: opened.error });
+      return;
+    }
+    try {
+      const cacheKey = `${database} ${query.object}`;
+      const grid = runGrid(opened.handle, database, query, opened.columns, this.keys, this.unfiltered.get(cacheKey));
+      this.unfiltered.set(cacheKey, grid.unfilteredTotal);
+      this.record({ kind: 'query', requestId, database, grid });
+    } catch (error) {
+      this.record({ kind: 'query', requestId, database, grid: emptyGrid(query), error: errorText(error) });
+    }
+  }
+
+  /**
+   * A statement the user typed. The read/write split is the host's, not the plugin's, and a write
+   * goes through `exec` for the same reason `db sqlite query` does — a console is where a
+   * semicolon-separated script gets typed, and `exec` is what runs one. `exec` reports no change
+   * count, so a write answers `0` and the console says `OK.`, exactly as the command-bar surface
+   * does; the changed count is meaningful only for the grid's own single statements.
+   */
+  run(database: string, requestId: string, sql: string, returnsRows: boolean): void {
+    const opened = this.open(database);
+    if ('error' in opened) {
+      this.record({ kind: 'write', requestId, database, sql, parameters: [], changed: 0, error: opened.error });
+      return;
+    }
+    try {
+      if (returnsRows) {
+        const statement = opened.handle.prepare(sql);
+        const rows = statement.all();
+        const names = statement.columns().map((column) => column.name);
+        this.record({ kind: 'query', requestId, database, grid: consoleGrid(sql, rows, names) });
+        return;
+      }
+      opened.handle.exec(sql);
+      this.record({ kind: 'write', requestId, database, sql, parameters: [], changed: 0 });
+    } catch (error) {
+      this.record({ kind: 'write', requestId, database, sql, parameters: [], changed: 0, error: errorText(error) });
+    }
+  }
+
+  private write(database: string, requestId: string, outcome: WriteOutcome): void {
+    this.record(outcome.ok
+      ? { kind: 'write', requestId, database, sql: outcome.sql, parameters: outcome.parameters, changed: outcome.changed }
+      : { kind: 'write', requestId, database, sql: '', parameters: [], changed: 0, error: outcome.error });
+  }
+
+  private columnsOf(database: string) {
+    return (object: string): DatabaseColumnView[] => objectColumns(getConnection(database), object);
+  }
+
+  private connectionOf() {
+    return (name: string): DatabaseSync => getConnection(name);
+  }
+
+  updateCell(database: string, requestId: string, row: string, column: string, value: string | null): void {
+    this.write(database, requestId, updateCell(this.keys, row, column, value, this.columnsOf(database), this.connectionOf()));
+  }
+
+  insertRow(database: string, requestId: string, object: string, cells: { column: string; value: string | null }[]): void {
+    const opened = this.open(database);
+    if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
+    this.write(database, requestId, insertRow(object, cells, objectColumns(opened.handle, object), opened.handle));
+  }
+
+  deleteRow(database: string, requestId: string, row: string): void {
+    this.write(database, requestId, deleteRow(this.keys, row, this.columnsOf(database), this.connectionOf()));
+  }
+
+  stats(database: string, requestId: string, object: string): void {
+    const opened = this.handleFor(database, object);
+    if ('error' in opened) { this.record({ kind: 'stats', requestId, database, object, columns: [], error: opened.error }); return; }
+    try {
+      const columns = opened.columns.map((column) => columnStats(opened.handle, object, column));
+      this.record({ kind: 'stats', requestId, database, object, columns });
+    } catch (error) {
+      this.record({ kind: 'stats', requestId, database, object, columns: [], error: errorText(error) });
+    }
+  }
+
+  exportObject(database: string, requestId: string, query: DatabaseGridQuery, format: 'csv' | 'json'): void {
+    const opened = this.handleFor(database, query.object);
+    const fail = (error: string) => this.record({ kind: 'export', requestId, database, path: '', name: '', size: '', rows: 0, error });
+    if ('error' in opened) { fail(opened.error); return; }
+    try {
+      const outcome = exportRows(opened.handle, database, query, opened.columns, format, totals(opened.handle, query).total);
+      if (!outcome.ok) { fail(outcome.error); return; }
+      this.record({
+        kind: 'export', requestId, database,
+        path: outcome.path, name: outcome.name, size: outcome.size, rows: outcome.rows,
+      });
+    } catch (error) {
+      fail(errorText(error));
+    }
+  }
+
+  dispose(): void {
+    this.state.clear();
+    this.unfiltered.clear();
+  }
+}

@@ -1,0 +1,107 @@
+/* The sql plugin's own rules. It reuses the shared plugin frame from ../shared.css, and a grid is
+   its own layout rather than a metadata header over a stage, so nothing here leans on that. */
+
+.sql-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
+
+.sql-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); }
+.sql-header-icon { color: var(--fg); }
+.sql-database { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font: inherit; }
+.sql-header-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.sql-exports { display: flex; align-items: center; gap: 8px; }
+.sql-export { color: var(--accent); font-size: 12px; text-decoration: none; white-space: nowrap; }
+.sql-export:hover { text-decoration: underline; }
+.sql-icon { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.sql-icon:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
+.sql-icon[aria-pressed='true'] { color: var(--fg); }
+.sql-icon:disabled { opacity: 0.4; cursor: default; }
+
+.sql-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.sql-switch button { background: none; border: none; color: var(--muted); font: inherit; padding: 2px 10px; cursor: pointer; }
+.sql-switch button.active { background: var(--bg-hover); color: var(--fg); }
+
+.sql-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
+.sql-nav-pane { width: 220px; flex-shrink: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--border); }
+.sql-docked .sql-nav-pane, .sql-docked .sql-grid-area { width: 100%; border-right: none; }
+
+.sql-nav { display: flex; flex-direction: column; gap: 8px; padding-right: 8px; }
+.sql-nav-empty { color: var(--muted); padding: 8px 4px; }
+.sql-nav-group-label { display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.sql-nav-row { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+.sql-nav-row:hover { background: var(--bg-hover); }
+.sql-nav-row.selected { background: var(--bg-hover); color: var(--fg); font-weight: 600; }
+.sql-nav-row.inert { opacity: 0.5; cursor: default; }
+.sql-nav-row.inert:hover { background: none; }
+.sql-nav-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sql-nav-count { margin-left: auto; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+
+.sql-grid-area { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.sql-grid-bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sql-grid-object { color: var(--fg); font-weight: 600; }
+.sql-grid-count { font-size: 12px; }
+.sql-readonly { font-size: 12px; color: var(--muted); font-style: italic; }
+.sql-grid-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+
+.sql-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sql-filter-chip { padding: 1px 8px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
+.sql-clear-filters { background: none; border: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
+.sql-clear-filters:hover { color: var(--fg); }
+
+.sql-error { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+
+.sql-grid-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 4px; }
+.sql-grid { border-collapse: collapse; width: 100%; font-size: 12px; }
+.sql-grid th, .sql-grid td { border-bottom: 1px solid var(--border); padding: 3px 8px; text-align: left; white-space: nowrap; }
+.sql-grid thead th { position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.sql-grid tbody tr:hover { background: var(--bg-hover); }
+.sql-grid .sql-gutter { width: 1%; color: var(--muted); text-align: right; user-select: none; }
+.sql-cell.null { color: var(--muted); font-style: italic; }
+.sql-empty { color: var(--muted); padding: 12px; text-align: center; }
+
+.sql-head { display: inline-flex; align-items: center; gap: 4px; }
+.sql-head-name { background: none; border: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+.sql-head-filter { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0 2px; }
+.sql-sort { opacity: 0.35; font-size: 10px; }
+.sql-sort.active { opacity: 1; color: var(--accent); }
+
+.sql-filter-row td { background: var(--bg-hover); white-space: normal; }
+.sql-filter-editor { display: flex; align-items: center; gap: 6px; }
+.sql-filter-editor input { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; padding: 2px 6px; min-width: 160px; }
+.sql-filter-editor select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
+
+.sql-cell-editor { display: inline-flex; align-items: center; gap: 6px; }
+.sql-cell-input { background: var(--bg); color: var(--fg); border: 1px solid var(--accent); border-radius: 3px; font: inherit; font-size: 12px; padding: 1px 4px; min-width: 120px; }
+.sql-cell-null { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); }
+
+.sql-pager { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+.sql-pager button, .sql-drawer-actions button { background: none; border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: 12px; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.sql-pager button:disabled { opacity: 0.4; cursor: default; }
+.sql-pager button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
+.sql-pager-label { color: var(--muted); }
+.sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.sql-page-size select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
+
+.sql-drawer { border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-height: 30%; overflow: auto; }
+.sql-drawer-statement { margin: 0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.sql-drawer-parameters { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.sql-drawer-label { color: var(--muted); }
+.sql-drawer-actions { display: flex; gap: 6px; }
+
+.sql-stats { border: 1px solid var(--border); border-radius: 4px; padding: 8px; max-height: 30%; overflow: auto; }
+.sql-stats-empty { color: var(--muted); }
+.sql-stats-column + .sql-stats-column { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+.sql-stats-head { display: flex; align-items: baseline; gap: 8px; }
+.sql-stats-name { color: var(--fg); font-weight: 600; font-size: 12px; }
+.sql-stats-type { font-size: 11px; color: var(--muted); }
+.sql-stats-figures { display: flex; gap: 10px; font-size: 11px; color: var(--muted); margin: 2px 0 4px; }
+.sql-stats-toomany { font-size: 11px; color: var(--muted); margin: 0; }
+
+.sql-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sql-bar { display: grid; grid-template-columns: minmax(80px, 1fr) 3fr auto; align-items: center; gap: 8px; font-size: 11px; }
+.sql-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.sql-bar-track { background: var(--bg-hover); border-radius: 3px; height: 8px; overflow: hidden; }
+.sql-bar-fill { display: block; height: 100%; background: var(--accent); }
+.sql-bar-count { color: var(--muted); }
+
+.sql-console { flex-shrink: 0; }
+.sql-console-result { font-size: 12px; color: var(--muted); padding: 2px 4px; }
+.sql-console-result.error { color: var(--danger); }

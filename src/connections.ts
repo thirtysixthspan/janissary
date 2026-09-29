@@ -5,9 +5,20 @@ import path from 'node:path';
 // SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
 // agent state and workspaces, persist across launches — that is the whole point.
 let dbDir = '';
+let exportDir = '';
 
 export function initDbDir(projectDir: string): void {
   dbDir = path.join(projectDir, '.janissary', 'db', 'sqlite');
+  exportDir = path.join(projectDir, '.janissary', 'db', 'exports');
+}
+
+/**
+ * Where a browser export is written: a sibling of the databases it came from. Derived here rather
+ * than passed in, so nothing outside this module can name a path under the project's database
+ * directory — the browser's export action carries a database name and a format, and nothing else.
+ */
+export function dbExportDir(): string {
+  return exportDir;
 }
 
 const VALID_DB_NAME = /^[\w-]+$/;

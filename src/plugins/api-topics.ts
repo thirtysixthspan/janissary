@@ -1,4 +1,10 @@
-import type { AggregatedScheduleView, ConversationsView, RemoteSessionView } from '../protocol.js';
+import type {
+  AggregatedScheduleView,
+  ConversationsView,
+  DatabasesView,
+  DatabaseGridQuery,
+  RemoteSessionView,
+} from '../protocol.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -8,7 +14,7 @@ import type { AggregatedScheduleView, ConversationsView, RemoteSessionView } fro
 // Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
 // — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
 // shell output. Adding one is additive; each needs its own justification and its own data slice.
-export type TabPluginNotificationTopic = 'schedules' | 'conversations' | 'sessions';
+export type TabPluginNotificationTopic = 'schedules' | 'conversations' | 'sessions' | 'databases';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -16,6 +22,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   schedules: true,
   conversations: true,
   sessions: true,
+  databases: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -42,6 +49,15 @@ export type TabPluginNotification =
   | {
     topic: 'sessions';
     data: readonly RemoteSessionView[];
+    tabs: readonly string[];
+  }
+  // The databases a plugin may browse, and the recent answers to the requests it has issued against
+  // them. The answers are what a topic action cannot return, since `topicAction` is fire-and-forget:
+  // each one carries the `requestId` the plugin minted with its action, and the plugin folds the
+  // matching one into its tab when this arrives.
+  | {
+    topic: 'databases';
+    data: DatabasesView;
     tabs: readonly string[];
   };
 
@@ -87,4 +103,40 @@ export type TabPluginTopicAction =
   | { topic: 'sessions'; action: 'attach' | 'terminate' | 'forget'; session: string }
   // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
   // only by pressing attach or terminate.
-  | { topic: 'sessions'; action: 'refresh' };
+  | { topic: 'sessions'; action: 'refresh' }
+  // The nine verbs the database browser may ask the host for. Each names a database and the
+  // `requestId` its answer will arrive under; the four write-shaped ones carry an opaque row key and
+  // column/value pairs, never SQL, so a plugin cannot compose a statement of its own. `run` is the
+  // one exception and is deliberately so — it is the SQL console, whose whole purpose is to run
+  // what the user typed.
+  | { topic: 'databases'; action: 'create'; database: string; requestId: string }
+  | { topic: 'databases'; action: 'schema'; database: string; requestId: string }
+  | { topic: 'databases'; action: 'query'; database: string; requestId: string; query: DatabaseGridQuery }
+  | { topic: 'databases'; action: 'run'; database: string; requestId: string; sql: string; returnsRows: boolean }
+  | {
+    topic: 'databases';
+    action: 'updateCell';
+    database: string;
+    requestId: string;
+    row: string;
+    column: string;
+    value: string | null;
+  }
+  | {
+    topic: 'databases';
+    action: 'insertRow';
+    database: string;
+    requestId: string;
+    object: string;
+    cells: { column: string; value: string | null }[];
+  }
+  | { topic: 'databases'; action: 'deleteRow'; database: string; requestId: string; row: string }
+  | { topic: 'databases'; action: 'stats'; database: string; requestId: string; object: string }
+  | {
+    topic: 'databases';
+    action: 'export';
+    database: string;
+    requestId: string;
+    query: DatabaseGridQuery;
+    format: 'csv' | 'json';
+  };

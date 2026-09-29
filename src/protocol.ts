@@ -54,6 +54,22 @@ export type ConversationsView = {
   models: ConversationModelPair[];
 };
 
+export type {
+  DatabaseCellView,
+  DatabaseColumnStatsView,
+  DatabaseColumnView,
+  DatabaseFilterOperator,
+  DatabaseFilterView,
+  DatabaseGridQuery,
+  DatabaseGridView,
+  DatabaseObjectKind,
+  DatabaseObjectView,
+  DatabaseOrderView,
+  DatabaseRefView,
+  DatabaseResultView,
+  DatabaseRowView,
+  DatabasesView,
+} from './protocol/database.js';
 export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
 export type {

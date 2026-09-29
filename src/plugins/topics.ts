@@ -109,6 +109,27 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
   }
 }
 
+// Every database-browser verb, each one delegated to the manager method that owns it. The manager
+// mints the request id itself and records the answer; the emit is what carries that answer back to
+// the plugin, since `topicAction` returns nothing. One emit per action, whatever the action was —
+// the rate is bounded by what a person did, not by how much data came back.
+function actOnDatabases(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'databases') return;
+  const database = managers.database;
+  switch (action.action) {
+    case 'create': { database.browseCreate(action.database); break; }
+    case 'schema': { database.browseSchema(action.database); break; }
+    case 'query': { database.browseQuery(action.database, action.query); break; }
+    case 'run': { database.browseRun(action.database, action.sql, action.returnsRows); break; }
+    case 'updateCell': { database.browseUpdateCell(action.database, action.row, action.column, action.value); break; }
+    case 'insertRow': { database.browseInsertRow(action.database, action.object, action.cells); break; }
+    case 'deleteRow': { database.browseDeleteRow(action.database, action.row); break; }
+    case 'stats': { database.browseStats(action.database, action.object); break; }
+    case 'export': { database.browseExport(action.database, action.query, action.format); break; }
+  }
+  messageBus.emit('databases', { type: 'changed' });
+}
+
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
@@ -127,6 +148,12 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => managers.sessions.view(),
     act: actOnSessions,
     empty: [],
+  },
+  databases: {
+    subscribe: (fire) => messageBus.on('databases', 'changed', fire),
+    read: (managers) => managers.database.readView(),
+    act: actOnDatabases,
+    empty: { databases: [], results: [] },
   },
 };
 
