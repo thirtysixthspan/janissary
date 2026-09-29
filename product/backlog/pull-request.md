@@ -1,3 +1,103 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Deliver the request-id round trip the plan and both documents describe, so a browser tab can match the answers it asked for.
+
+Existing Issue: The plugin mints a random UUID with every database request and waits for an answer carrying that id, while the host throws the id it was sent away and stamps each answer with a counter of its own, so no answer a tab is waiting for can ever arrive. Severity: 10/10
+
+Existing Risk: 9/10 - The whole feature is dead on arrival: a tab opens, shows nothing, and re-issues forever, so a reviewer approving this branch on the strength of its green tests ships a browser that never renders a row, a schema, or a statistics panel.
+
+Proposal Risk: 3/10 - The addressing becomes sound, but a lost answer still leaves a tab silently re-issuing rather than saying anything, and the host-side counter being removed was the one thing that made a duplicate id impossible.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: make the databases topic echo the plugin's request id back on the answer". `src/plugins/topics.ts` `actOnDatabases` reads every `browse*` call and currently passes no id, so pass `action.requestId` to each of the nine; `src/database/manager.ts` gives each `browse*` method a `requestId` parameter and drops its private `requestId()` helper; `src/database/browser.ts` threads the id it is handed into each recorded result instead of calling `this.requestId()`, and `src/database/browser-state.ts` loses `DatabaseBrowserState.requestId()` with nothing left calling it. `src/plugins/topics.test.ts` pins the defect today — the cases assert `browseQuery` is called with `('shop', query)` and no id — so change those assertions to carry the id each action was sent with, and add a case that runs a real `DatabaseManager` through `runTopicAction` and asserts the recorded result carries the id that was sent, which is the round trip neither suite currently covers end to end. `src/database/browser.test.ts` mints every id with `browser.requestId()` and needs those calls replaced by literal ids. `ai/guidelines/plugins-tabs.md` and `documentation/developer-documentation/tab-plugins.md` already state that the host echoes the id rather than issuing it, so once this lands they become true; read them again afterwards and leave them unchanged unless the chosen shape differs from what they describe.
+
+* Make a contains filter and the all-column search actually match terms holding a percent or an underscore.
+
+Existing Issue: Both the per-column contains filter and the all-column term wrap the user's value in LIKE wildcards and backslash-escape any wildcard inside it, but the LIKE they build names no escape character, and SQLite treats that backslash as an ordinary character, so any term holding a percent or an underscore matches nothing at all. Severity: 7/10
+
+Existing Risk: 6/10 - A user searching a discount column for `50%` or an identifier for `a_b` gets an empty grid and concludes the data is not there, and the one test covering the escaping asserts the bound string rather than the rows the statement returns, so nothing in CI would ever notice.
+
+Proposal Risk: 2/10 - The escaping then behaves as the specification describes, leaving only the ordinary case of a value holding a backslash itself, which the doubling already handles.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: make a contains filter and the all-column search match terms holding a percent or an underscore". In `src/database/grid-sql.ts`, add an `ESCAPE '\'` clause to the `LIKE` that `fragmentFor` emits for the `contains` operator and to every `LIKE` that `globalFragment` emits, so the backslashes `likeValue` already inserts are read as escapes rather than as literal characters. Keep `likeValue` as it is, since the escaping it performs becomes meaningful the moment the clause names the character. In `src/database/grid.test.ts`, keep the existing case that asserts the escaped bound value and add one that prepares the clause `whereClause` produces against a `node:sqlite` database holding a `50%_off` row and asserts that row comes back, which is the assertion the suite is missing; the `whereClause` and `runGrid` cases already open a real database, so follow that style. `product/specs/sql-database.md` already states that `contains` escapes a percent or underscore the value contains, so it needs no change — the fix makes the code match it.
+
+* Use one row index space for the cell selection and the page the copy reads from.
+
+Existing Issue: The grid hands each row its absolute number in the whole table to the selection and the selection stores that as its row, while the routine that renders a selection as text indexes the page's own row array with the same number, so from the second page onwards every selected position falls past the end of the array and the copy comes back empty. Severity: 6/10
+
+Existing Risk: 5/10 - Copying a selection silently does nothing on any page but the first — the cells highlight, the control stays enabled, and pressing Copy or the platform's copy key leaves the clipboard untouched — so a user assembling data from a long table gets the first page and silently nothing after it.
+
+Proposal Risk: 2/10 - The two index spaces stop disagreeing, and the only case left uncovered is a page that changes while a selection is open, which the existing reset on a new grid already handles.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: use one row index space for the cell selection and the page it copies from". In `web/src/plugins/sql/DataGrid.tsx`, pass the page-relative index to `GridRow` for the selection and keep the absolute one for the gutter's row number; in `web/src/plugins/sql/GridRow.tsx`, take the two as separate props so the cell's `selection.select` and `selection.selected` calls use the page-relative one while the gutter's `{index + 1}` keeps the absolute one. In `web/src/plugins/sql/Selection.test.tsx`, add a case beside the existing copy cases that renders the grid with `payload({ offset: 100 })`, makes the same run over the first two cells, and expects the same tab-separated text the offset-zero case produces — every copy case in that file today uses the offset-zero payload, which is why this is invisible. `web/src/plugins/sql/grid-view.ts` and its tests need no change, since the helper is right for a page-relative index and is being handed one.
+
+* Refuse a cell edit or a row delete before opening a connection, so a refused write cannot bring a deleted database back.
+
+Existing Issue: The browser's existence check guards the read paths only, while `updateCell` and `deleteRow` reach the connection registry through their own helper, and opening a connection is what creates the file, so a write against a database deleted in another tab re-materialises it as an empty file before the write is refused. Severity: 7/10
+
+Existing Risk: 7/10 - A user who deletes a database with `db sqlite delete` and then clicks a delete button in the tab they left open gets the file back and empty, which the browser then shows as a real empty database — a destructive act silently undone and a name the user believed was free taken again.
+
+Proposal Risk: 2/10 - The write paths inherit the guard the reads already carry, leaving the explicit create action as the only thing that can materialise a database, which is what it exists for.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: refuse a cell edit or a row delete before opening a connection". In `src/database/browser.ts`, route `updateCell` and `deleteRow` through the same private `open()` helper `schema`, `query`, `stats`, and `exportObject` already use, so a database that is neither on disk nor open answers the missing-database refusal rather than reaching `getConnection`; change `columnsOf` and `connectionOf` to take the handle `open()` returned rather than a name, so nothing in the write path can open a connection on its own. `src/database/browser.test.ts` already proves the read path does not recreate a deleted file and covers the case of a database whose file is gone but whose connection is still open; add the same two cases for a write, using a row key minted before the delete, and assert both the refusal and that the file is still absent afterwards. The plan recorded in `product/plans/complete/deleted-database-tells-its-tab.md` states that checking before opening is the whole difference and that the guard belongs on every path reaching `getConnection`; that is the rule this restores.
+
+* Bound what a statement typed into the console materialises, rather than slicing the result after it has been built.
+
+Existing Issue: A read typed into the console is prepared and run with `.all()`, which materialises every matching row before the two-hundred-row ceiling is applied by slicing the array that comes back, so one `SELECT * FROM large` is held in the server's memory in full. Severity: 6/10
+
+Existing Risk: 6/10 - A single statement typed against a table of a few million rows blocks the event loop and allocates the entire result, taking the application down for every user rather than for the one who asked, and the export module beside it names this exact hazard as the reason export streams its rows.
+
+Proposal Risk: 3/10 - The statement still runs to completion inside SQLite and a very large read stays slow rather than fatal, but the rows crossing into the server are bounded by the ceiling the constant already names.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: bound what a statement typed into the console materialises". In `src/database/browser.ts`, replace the `.all()` in `run` with `StatementSync.iterate()`, taking at most `CONSOLE_ROW_LIMIT` rows from the iterator and stopping there, and hand `consoleGrid` the number actually read plus whether the iterator had more, so the grid's total reports the ceiling honestly rather than claiming a table of 200. The column names still come from `statement.columns()`, which is unchanged. `src/database/export.ts` already streams its rows this way and is the precedent to follow. In `src/database/browser.test.ts`, add a case that runs a read producing more than `CONSOLE_ROW_LIMIT` rows and asserts the recorded result carries the capped count, and keep every existing console case passing. `product/specs/sql-database.md` currently says only that a statement returning rows fills the grid; add a sentence saying the console shows the first two hundred rows of a read rather than the whole result, since that is user-visible and the spec is where it belongs.
+
+* Stop the cell editor's null toggle from writing to the database before the user commits.
+
+Existing Issue: The cell editor's null checkbox calls the commit handler the moment it is ticked, so a null is written on the click while the editor around it still offers Escape as though nothing had been sent. Severity: 5/10
+
+Existing Risk: 5/10 - A user who ticks null, changes their mind and presses Escape has already overwritten the cell, and one who merely reaches for the toggle to see what it does has destroyed the value — on the one surface in the application where a user believes nothing happens until they commit.
+
+Proposal Risk: 2/10 - The toggle still separates a null from a blank string and now commits on the same Enter and blur the text commits on, so the editor's contract is uniform rather than having one control that writes early.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: stop the cell editor's null toggle from writing before the user commits". In `web/src/plugins/sql/CellEditor.tsx`, drop the `onCommit` call from the checkbox's `onChange` and let it set local state only, so the existing `onCommit` on the inline-edit field carries the null the same way it already carries the text, and Enter and blur still write while Escape still writes nothing. `web/src/plugins/sql/DataGrid.test.tsx` has a case asserting the toggle emits `update-cell` on the click; change it to commit through Enter instead, and add a case that opens the editor, ticks null and presses Escape, asserting no intent is sent. `product/specs/sql-database.md` says the editor has a null toggle without saying when it commits; add a sentence saying the toggle commits the way the text does, so the two are pinned in the spec rather than only in the component.
+
+* Deliver the grid's keyboard navigation the plan settled on and the diff does not contain.
+
+Existing Issue: The plan decided that the grid's arrows move the cell selection, Enter opens the editor on the selected cell, and Escape leaves the editor and then the grid, and named a keyboard module to hold it, and the diff carries no arrow or Enter handling and no such module. Severity: 5/10
+
+Existing Risk: 5/10 - A grid that can only be driven with a pointer is unusable for a user who navigates by keyboard or by screen reader, and a plan that records a decision as settled and then ships neither it nor a note that it moved is a decision the next reader will believe was made.
+
+Proposal Risk: 2/10 - The keys land as a contained addition to one component and its view helpers, with the copy shortcut and the command bar's own keymap left exactly as they are.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: deliver the grid's keyboard navigation". Add `web/src/plugins/sql/sql-keys.ts` for the pure part — the position a key moves a selection to, and which key a given one is — modelled on `web/src/plugins/schedules/schedules-keys.ts` as the plan named, and wire it in `web/src/plugins/sql/DataGrid.tsx` and `web/src/plugins/sql/GridRow.tsx` so the arrows move the cell selection, Enter opens the editor on the selected cell, and Escape leaves the editor and then the grid, leaving Tab to the host as the plan decided. Reuse the existing `visibleColumns` ordering in `web/src/plugins/sql/grid-view.ts` so a hidden column is not something the keys land on, and gate the window-level listener on `capabilities.active` the way `web/src/plugins/sql/selection.tsx` already does, since a plugin tab stays mounted while covered. Add `web/src/plugins/sql/sql-keys.test.ts` for the pure half beside `web/src/plugins/sql/grid-view.test.ts`, and note the shipped behaviour in `product/specs/sql-database.md`, whose Editing section currently describes only the double-click route into the editor.
+
+* Add the test files and cases the plan listed and the diff does not contain.
+
+Existing Issue: The plan's test section names a statistics-panel test file, a topic-union case asserting the databases topic is in the keyed record, and three manager cases for the new delegation, and none of the three appears anywhere in the diff. Severity: 4/10
+
+Existing Risk: 4/10 - The statistics panel, the keyed topic record, and the manager's new methods ship untested, so a later change to any of them is unconstrained — and the plan sitting in `complete/` claiming coverage that does not exist makes the next reader believe those areas are held in place.
+
+Proposal Risk: 1/10 - Adding the missing coverage constrains future edits without changing what the feature does, which is the whole of the change.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: add the test files and cases the plan listed and the diff does not contain". Add `web/src/plugins/sql/StatsPanel.test.tsx` covering the three things the plan named: a column of twenty or fewer distinct values rendering one bar per value scaled to the largest, a column of more rendering its distinct count and no bars, a numeric column rendering its minimum and maximum, and a null count of zero rendering no null row — mirror the style of `web/src/plugins/sql/SqlDrawer.test.tsx`, and drive it through `SqlTab` with the drawer open as `SqlTab.test.tsx` does for the rest of the panel. Add `src/plugins/api-topics.test.ts` if it does not already exist, asserting `isTabPluginNotificationTopic('databases')` is true and that the exported `TAB_PLUGIN_NOTIFICATION_TOPICS` carries it, so the keyed record cannot drift from the union as the comment on that record says it is there to prevent. Extend `src/database/manager.test.ts` with the three cases the plan listed: `listFiles()` returning the databases on disk, a browser `create` landing the database in the same registry `db sqlite create` does, and `readView()` answering the topic's read. Every existing case in that file keeps passing unchanged, which is the point it is there to prove.
+
+* Correct the specification's claim about which database a bare command opens.
+
+Existing Issue: The specification says a bare `sql` opens or focuses the tab for the most recently used database, and the implementation picks the first open entry in the registry's alphabetical list, which is a different choice as soon as a second database is open. Severity: 4/10
+
+Existing Risk: 4/10 - With two databases open, the command lands on whichever sorts first rather than the one the user was last looking at, and the specification's sentence is the only place a reader would learn that, so the behaviour looks like a bug to everyone it surprises.
+
+Proposal Risk: 2/10 - Whichever way it is settled, the sentence and the code finally agree; the unresolved half is what "most recently used" means for a registry that does not currently record the order, and that half stays a decision rather than a mismatch.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: correct the specification's claim about which database a bare command opens". Decide which of the two is right, then make the other match: either record open order in the browser slice and have `runCommand` in `src/plugins/sql/activate.ts` take the most recently opened name, or change the sentence in `product/specs/sql-database.md` and the `sql` command paragraph of `product/plans/complete/sql-database-browser.md` to say the first open database in name order. The topic's data slice is the natural place for an ordering, so if you take the first route add it to `DatabasesView` in `src/protocol/database.ts` and populate it in `databaseRefs` in `src/database/browser-state.ts`, then pin both with a case in `src/plugins/sql/activate.test.ts` covering two open databases in the reverse of alphabetical order. Whichever way it goes, `src/database/browser-state.ts` and `src/protocol/database.ts` must not both carry a field nothing reads.
+
+* Say a column with no values has too many to chart only when that is the reason.
+
+Existing Issue: The statistics panel prints its too-many-to-chart line for any column with no bars, and a column holding nothing but nulls has no bars because it has no distinct values at all, so the panel states a figure directly above it that contradicts the line beneath. Severity: 3/10
+
+Existing Risk: 3/10 - A user reading a column that is entirely null is told it holds too many values to chart, which sends them looking for a cardinality problem that does not exist and away from the null count printed in the same panel.
+
+Proposal Risk: 1/10 - The line becomes conditional on the reason it exists, and a high-cardinality column still reads exactly as it does today.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: say a column with no values has too many to chart only when that is the reason". In `web/src/plugins/sql/StatsPanel.tsx`, render the too-many line only when the column has a distinct count above the server's `DISTINCT_LIMIT` and no values, and render the bars whenever there are values, so a column with no distinct values at all shows neither. `src/database/stats.ts` already returns an empty value list for a column with zero distinct values, so no server change is needed. Cover it in the new `web/src/plugins/sql/StatsPanel.test.tsx` named in the plan-fidelity entry on this branch, with a case for an all-null column asserting the too-many line is absent. `product/specs/sql-database.md` already constrains that line to a column with more distinct values than the threshold, so it needs no change.
