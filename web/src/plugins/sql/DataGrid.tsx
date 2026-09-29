@@ -5,6 +5,7 @@ import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { pageLabel, readOnlyReason, toggleColumn, visibleColumns } from './grid-view';
 import { GridRow } from './GridRow';
+import { InsertForm } from './InsertForm';
 import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
 import { CopySelectionButton, useGridSelection } from './selection';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
@@ -26,6 +27,7 @@ export function DataGrid({
   const [filtering, setFiltering] = useState<string | null>(null);
   const [choosingColumns, setChoosingColumns] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
+  const [inserting, setInserting] = useState(false);
   const grid = payload.grid;
   const readOnly = readOnlyReason(object);
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
@@ -49,10 +51,7 @@ export function DataGrid({
               className="sql-icon"
               title="Insert row"
               aria-label="Insert row"
-              onClick={() => send('insert-row', {
-                object: payload.object,
-                cells: object.columns.map((column) => ({ column: column.name, value: null })),
-              })}
+              onClick={() => setInserting(true)}
             >
               <FontAwesomeIcon icon={faPlus} />
             </button>
@@ -70,6 +69,18 @@ export function DataGrid({
           onClose={() => setChoosingColumns(false)}
           onToggle={(name) => setHidden(toggleColumn(grid?.columns ?? [], payload.hidden, name))}
           onShowAll={() => setHidden([])}
+        />
+      )}
+
+      {inserting && object && (
+        <InsertForm
+          object={object.name}
+          columns={object.columns}
+          onSave={(cells) => {
+            setInserting(false);
+            send('insert-row', { object: payload.object, cells });
+          }}
+          onCancel={() => setInserting(false)}
         />
       )}
 

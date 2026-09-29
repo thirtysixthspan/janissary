@@ -552,6 +552,15 @@ describe('sql plugin intents', () => {
     expect(fixture.actions[0]).toMatchObject({ action: 'insertRow', object: 'orders' });
   });
 
+  it('passes a cell naming a column the object lacks through to the host, which refuses it', () => {
+    // The intent guard checks the object, not the cells: the write layer already refuses a column the
+    // table does not have, with a message naming it, and duplicating that here would give the user
+    // two sources for one rule.
+    const fixture = fakeCapabilities();
+    intent('insert-row', { object: 'orders', cells: [{ column: 'nope', value: 'x' }] }, fixture, basePayload());
+    expect(fixture.actions[0]).toMatchObject({ action: 'insertRow', object: 'orders' });
+  });
+
   it('opens another database from the header switcher', () => {
     const fixture = fakeCapabilities();
     intent('open', { name: 'blog' }, fixture);

@@ -28,6 +28,34 @@ export type SqlObject = {
 export type SqlCell = { text: string; isNull: boolean };
 export type SqlRow = { key: string; cells: SqlCell[] };
 
+/** One column and the value a form is holding for it. `null` is a value here, not the absence of one. */
+export type SqlInsertCell = { column: string; value: string | null };
+
+/** A name wrapped and an interior `"` doubled, the way every statement in this plugin spells it. */
+function quoteName(name: string): string {
+  return `"${name.replaceAll('"', '""')}"`;
+}
+
+/**
+ * The statement inserting these cells would run, as a preview.
+ *
+ * Deliberately the same shape `insertRow` builds in `src/database/write.ts`: the columns are the
+ * named ones in the order the object declares them, each value is a placeholder, and the whole thing
+ * is a rendering rather than something to execute. The preview exists so the user sees the write
+ * before making it, which only helps if what they see is what will run — so this and the write layer
+ * are kept in step deliberately, and a test in each pins the shape.
+ *
+ * A cell naming a column the object does not have is skipped rather than included: a preview that
+ * named a column the statement would refuse would be showing the user something that cannot happen.
+ */
+export function insertStatement(object: string, cells: readonly SqlInsertCell[], columns: readonly SqlColumn[]): string {
+  const named = new Map(cells.map((cell) => [cell.column, cell.value]));
+  const used = columns.filter((column) => named.has(column.name));
+  const names = used.map((column) => quoteName(column.name)).join(', ');
+  const placeholders = used.map(() => '?').join(', ');
+  return `INSERT INTO ${quoteName(object)} (${names}) VALUES (${placeholders})`;
+}
+
 export type SqlFilterOperator =
   | 'contains' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'isNull' | 'notNull';
 

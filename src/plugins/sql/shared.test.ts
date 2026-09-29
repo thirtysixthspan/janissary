@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSqlPayload, type SqlPayload } from './shared.js';
+import { insertStatement, isSqlPayload, type SqlColumn, type SqlPayload } from './shared.js';
 import {
   isExportIntent,
   isInsertRowIntent,
@@ -164,6 +164,44 @@ describe('intent payload guards', () => {
     expect(isSqlPayload({ ...payload(), log: [{ sql: 'UPDATE t', changed: 1, error: 'no such table' }] })).toBe(true);
     expect(isSqlPayload({ ...payload(), log: [{ sql: 7, changed: 1 }] })).toBe(false);
     expect(isSqlPayload({ ...payload(), log: { sql: 'x', changed: 0 } })).toBe(false);
+  });
+
+  it('previews the insert it would run, with every value a placeholder', () => {
+    const columns: SqlColumn[] = [
+      { name: 'id', type: 'INTEGER', notNull: false, pk: 1 },
+      { name: 'customer', type: 'TEXT', notNull: true, pk: 0 },
+    ];
+    expect(insertStatement('orders', [{ column: 'customer', value: 'ada' }], columns))
+      .toBe('INSERT INTO "orders" ("customer") VALUES (?)');
+  });
+
+  it('previews a whole row in the order the object declares its columns, not the order typed', () => {
+    const columns: SqlColumn[] = [
+      { name: 'id', type: 'INTEGER', notNull: false, pk: 1 },
+      { name: 'status', type: 'TEXT', notNull: false, pk: 0 },
+    ];
+    expect(insertStatement('orders', [{ column: 'status', value: 'paid' }, { column: 'id', value: '7' }], columns))
+      .toBe('INSERT INTO "orders" ("id", "status") VALUES (?, ?)');
+  });
+
+  it('previews a null as a placeholder, because that is what the write binds', () => {
+    const columns: SqlColumn[] = [{ name: 'note', type: 'TEXT', notNull: false, pk: 0 }];
+    expect(insertStatement('orders', [{ column: 'note', value: null }], columns))
+      .toBe('INSERT INTO "orders" ("note") VALUES (?)');
+  });
+
+  it('doubles an interior quote in a name, as every statement here does', () => {
+    const columns: SqlColumn[] = [{ name: 'we"ird', type: 'TEXT', notNull: false, pk: 0 }];
+    expect(insertStatement('ta"ble', [{ column: 'we"ird', value: 'x' }], columns))
+      .toBe('INSERT INTO "ta""ble" ("we""ird") VALUES (?)');
+  });
+
+  it('previews nothing for a cell naming a column the object does not have', () => {
+    // The write layer refuses such a cell, so showing it in a preview would be showing something
+    // that cannot happen.
+    const columns: SqlColumn[] = [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }];
+    expect(insertStatement('orders', [{ column: 'nope', value: 'x' }], columns))
+      .toBe('INSERT INTO "orders" () VALUES ()');
   });
 
   it('accepts a page offset and a page size the grid offers', () => {

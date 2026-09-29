@@ -92,6 +92,18 @@
 .sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
 .sql-page-size select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
 
+.sql-insert { border: 1px solid var(--border); border-radius: 4px; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.sql-insert-head { display: flex; align-items: baseline; gap: 8px; }
+.sql-insert-head button { margin-left: auto; }
+.sql-insert-fields { display: flex; flex-direction: column; gap: 4px; }
+.sql-insert-field { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.sql-insert-name { min-width: 140px; }
+.sql-insert-key { color: var(--muted); font-size: 11px; }
+.sql-insert-field input[type='text'], .sql-insert-field input:not([type]) { flex: 1; }
+.sql-insert-null { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.sql-insert-statement { margin: 0; padding: 6px 8px; background: var(--panel, rgb(0 0 0 / 4%)); border-radius: 4px; font-size: 12px; overflow: auto; }
+.sql-insert-actions { display: flex; gap: 6px; }
+
 .sql-cell { white-space: nowrap; }
 
 /* A cell holding a foreign key: the value reads as a link because activating it is one, and its

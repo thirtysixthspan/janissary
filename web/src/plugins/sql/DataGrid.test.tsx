@@ -115,16 +115,79 @@ describe('DataGrid filtering', () => {
   });
 });
 
-describe('DataGrid editing', () => {
-  it('asks to insert a row with every column, defaulting to null', () => {
+describe('the insert form', () => {
+  function opened(over = {}) {
     const { capabilities, intent } = makeCapabilities();
-    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    render(<DataGrid payload={payload(over)} capabilities={capabilities} />);
     fireEvent.click(screen.getByLabelText('Insert row'));
+    return intent;
+  }
+
+  it('writes nothing at all when the control is pressed, which is the whole point of it', () => {
+    // A row used to land in the database on this click, before a value was typed.
+    expect(opened()).not.toHaveBeenCalled();
+  });
+
+  it('offers an input for every column, so the form is a picture of the row', () => {
+    opened();
+    expect(screen.getByLabelText('New id')).toBeTruthy();
+    expect(screen.getByLabelText('New status')).toBeTruthy();
+  });
+
+  it('previews the statement the save will run', () => {
+    opened();
+    expect(screen.getByTestId('sql-insert-statement').textContent)
+      .toBe('INSERT INTO "orders" ("id", "status") VALUES (?, ?)');
+  });
+
+  it('sends the collected cells on Save, and an untouched column as null', () => {
+    const intent = opened();
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }, { column: 'status', value: 'open' }],
+    });
+  });
+
+  // An untouched column is null rather than an empty string, so a column the user is not thinking
+  // about gets the database's own default instead of a value they never typed.
+  it('treats an untouched column as null, not as an empty string', () => {
+    const intent = opened();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(intent).toHaveBeenCalledWith('insert-row', {
       object: 'orders',
       cells: [{ column: 'id', value: null }, { column: 'status', value: null }],
     });
   });
+
+  it('lets the NULL toggle be turned off, which is the empty string the user typed', () => {
+    const intent = opened();
+    fireEvent.click(screen.getByLabelText('status is null'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }, { column: 'status', value: '' }],
+    });
+  });
+
+  it('disables a field whose column is null, so a typed value cannot be a silent contradiction', () => {
+    opened();
+    expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('status is null'));
+    expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('closes without writing on Cancel', () => {
+    const intent = opened();
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0] as HTMLElement);
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('New status')).toBeNull();
+  });
+});
+
+describe('DataGrid editing', () => {
 
   it('opens the editor on a double click and asks to update that cell on commit', () => {
     const { capabilities, intent } = makeCapabilities();

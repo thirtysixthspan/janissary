@@ -119,8 +119,14 @@ name a row it was not handed, cannot write its own `WHERE`, and a write naming a
 been superseded is refused with `That row is no longer loaded. Refresh and try again.` rather than
 reaching a different row.
 
-**Insert row** adds a row whose columns are all null, for the user to fill in and commit. **Delete
-row** is on every row and asks first, through the application's own confirmation, naming the table.
+**Insert row** opens a form with one input per column, the statement the save will run shown above the
+controls, and a Save and a Cancel. Nothing is written until Save, and a column the user leaves alone
+is sent as null rather than as an empty string, so it takes the database's own default. Each input
+carries a **NULL** toggle matching the cell editor's, and it is on until the user turns it off — a
+blank string and an explicit null are different values, so the distinction is a control rather than a
+convention about typing nothing. A field whose column is null is disabled, so a typed value cannot
+silently contradict the toggle beside it. **Delete row** is on every row and asks first, through the
+application's own confirmation, naming the table.
 
 A run of cells is copied as tab-separated text, one line per row, from **Copy selection** or from
 the platform's own copy key. A spreadsheet pastes it as a table with no quoting rules to disagree
