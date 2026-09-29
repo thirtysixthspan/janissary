@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Deliver the request-id round trip the plan and both documents describe, so a browser tab can match the answers it asked for.
-
-Existing Issue: The plugin mints a random UUID with every database request and waits for an answer carrying that id, while the host throws the id it was sent away and stamps each answer with a counter of its own, so no answer a tab is waiting for can ever arrive. Severity: 10/10
-
-Existing Risk: 9/10 - The whole feature is dead on arrival: a tab opens, shows nothing, and re-issues forever, so a reviewer approving this branch on the strength of its green tests ships a browser that never renders a row, a schema, or a statistics panel.
-
-Proposal Risk: 3/10 - The addressing becomes sound, but a lost answer still leaves a tab silently re-issuing rather than saying anything, and the host-side counter being removed was the one thing that made a duplicate id impossible.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: make the databases topic echo the plugin's request id back on the answer". `src/plugins/topics.ts` `actOnDatabases` reads every `browse*` call and currently passes no id, so pass `action.requestId` to each of the nine; `src/database/manager.ts` gives each `browse*` method a `requestId` parameter and drops its private `requestId()` helper; `src/database/browser.ts` threads the id it is handed into each recorded result instead of calling `this.requestId()`, and `src/database/browser-state.ts` loses `DatabaseBrowserState.requestId()` with nothing left calling it. `src/plugins/topics.test.ts` pins the defect today — the cases assert `browseQuery` is called with `('shop', query)` and no id — so change those assertions to carry the id each action was sent with, and add a case that runs a real `DatabaseManager` through `runTopicAction` and asserts the recorded result carries the id that was sent, which is the round trip neither suite currently covers end to end. `src/database/browser.test.ts` mints every id with `browser.requestId()` and needs those calls replaced by literal ids. `ai/guidelines/plugins-tabs.md` and `documentation/developer-documentation/tab-plugins.md` already state that the host echoes the id rather than issuing it, so once this lands they become true; read them again afterwards and leave them unchanged unless the chosen shape differs from what they describe.
-
 * Make a contains filter and the all-column search actually match terms holding a percent or an underscore.
 
 Existing Issue: Both the per-column contains filter and the all-column term wrap the user's value in LIKE wildcards and backslash-escape any wildcard inside it, but the LIKE they build names no escape character, and SQLite treats that backslash as an ordinary character, so any term holding a percent or an underscore matches nothing at all. Severity: 7/10

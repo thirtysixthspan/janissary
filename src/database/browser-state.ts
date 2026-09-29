@@ -5,23 +5,17 @@ import { databaseFileExists, listDatabaseFiles, listOpenConnections } from '../c
 // its tab payload, and the database list beside it.
 //
 // `topicAction` is fire-and-forget, so an answer can only arrive on the next topic delivery. The
-// request id a plugin minted rides out with the action and comes back on the result, which is the
-// whole addressing scheme. The cap is what bounds this on the state-broadcast path: a browsing
-// session that has issued a thousand queries publishes thirty-two answers, not a thousand.
+// request id is minted by the plugin, rides out with its action and comes back on the result, which
+// is the whole addressing scheme; the host echoes it rather than issuing one, so two plugins on the
+// same topic cannot collide on an id. The cap is what bounds this on the state-broadcast path: a
+// browsing session that has issued a thousand queries publishes thirty-two answers, not a thousand.
 
 // How many answers stay published. A request whose answer was evicted before the plugin folded it
 // in is a lost answer, and the plugin recovers by re-issuing — the control it already has.
 export const RESULT_LIMIT = 32;
 
 export class DatabaseBrowserState {
-  private next = 0;
   private answers: DatabaseResultView[] = [];
-
-  /** A request id no answer can already carry. */
-  requestId(): string {
-    this.next += 1;
-    return `q${this.next}`;
-  }
 
   record(result: DatabaseResultView): void {
     this.answers = [result, ...this.answers].slice(0, RESULT_LIMIT);

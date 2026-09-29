@@ -63,50 +63,46 @@ export class DatabaseManager {
   }
 
   // The `databases` topic's data slice: which databases exist, and the recent answers to the
-  // browser's requests. Each browse method mints its own request id, so a caller passing only a
-  // database name and a query is still addressed correctly.
+  // browser's requests. The request id on each answer is the one the plugin minted with its action,
+  // so a caller that only has a database name and a query is still addressed correctly.
   readView(): DatabasesView {
     return this.browser.view();
   }
 
-  browseCreate(database: string): void {
-    this.browser.create(database, this.requestId());
+  browseCreate(database: string, requestId: string): void {
+    this.browser.create(database, requestId);
   }
 
-  browseSchema(database: string): void {
-    this.browser.schema(database, this.requestId());
+  browseSchema(database: string, requestId: string): void {
+    this.browser.schema(database, requestId);
   }
 
-  browseQuery(database: string, query: DatabaseGridQuery): void {
-    this.browser.query(database, this.requestId(), query);
+  browseQuery(database: string, requestId: string, query: DatabaseGridQuery): void {
+    this.browser.query(database, requestId, query);
   }
 
-  browseRun(database: string, sql: string, returnsRows: boolean): void {
-    this.browser.run(database, this.requestId(), sql, returnsRows);
+  browseRun(database: string, requestId: string, sql: string, returnsRows: boolean): void {
+    this.browser.run(database, requestId, sql, returnsRows);
   }
 
-  browseUpdateCell(database: string, row: string, column: string, value: string | null): void {
-    this.browser.updateCell(database, this.requestId(), row, column, value);
+  browseUpdateCell(database: string, requestId: string, row: string, column: string, value: string | null): void {
+    this.browser.updateCell(database, requestId, row, column, value);
   }
 
-  browseInsertRow(database: string, object: string, cells: { column: string; value: string | null }[]): void {
-    this.browser.insertRow(database, this.requestId(), object, cells);
+  browseInsertRow(database: string, requestId: string, object: string, cells: { column: string; value: string | null }[]): void {
+    this.browser.insertRow(database, requestId, object, cells);
   }
 
-  browseDeleteRow(database: string, row: string): void {
-    this.browser.deleteRow(database, this.requestId(), row);
+  browseDeleteRow(database: string, requestId: string, row: string): void {
+    this.browser.deleteRow(database, requestId, row);
   }
 
-  browseStats(database: string, object: string): void {
-    this.browser.stats(database, this.requestId(), object);
+  browseStats(database: string, requestId: string, object: string): void {
+    this.browser.stats(database, requestId, object);
   }
 
-  browseExport(database: string, query: DatabaseGridQuery, format: 'csv' | 'json'): void {
-    this.browser.exportObject(database, this.requestId(), query, format);
-  }
-
-  private requestId(): string {
-    return this.browser.requestId();
+  browseExport(database: string, requestId: string, query: DatabaseGridQuery, format: 'csv' | 'json'): void {
+    this.browser.exportObject(database, requestId, query, format);
   }
 
   // Close one globally open SQLite connection by name; returns whether one was open (drives the

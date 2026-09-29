@@ -9,11 +9,20 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 let project: string;
+let minted: number;
 
 beforeEach(() => {
   project = mkdtempSync(path.join(tmpdir(), 'janus-browser-'));
   initDbDir(project);
+  minted = 0;
 });
+
+// The request id is minted by the plugin and echoed back, so nothing on this side issues one any
+// more — a test that wants a fresh address takes the next of its own, standing in for the plugin.
+function nextId(): string {
+  minted += 1;
+  return `t${minted}`;
+}
 
 afterEach(() => {
   closeAllConnections();
@@ -29,17 +38,11 @@ const SHOP = `
 // A read no longer materializes a database, so a test that wants a schema creates one first — which
 // is the order a user is in, and the only one `db sqlite query` ever allowed either.
 function seeded(browser: DatabaseBrowser, sql = SHOP): void {
-  browser.create('shop', browser.requestId());
-  browser.run('shop', browser.requestId(), sql, false);
+  browser.create('shop', nextId());
+  browser.run('shop', nextId(), sql, false);
 }
 
 describe('DatabaseBrowserState', () => {
-  it('mints a request id no answer already carries', () => {
-    const state = new DatabaseBrowserState();
-    const ids = [state.requestId(), state.requestId(), state.requestId()];
-    expect(new Set(ids).size).toBe(3);
-  });
-
   it('records an answer and publishes it newest first', () => {
     const state = new DatabaseBrowserState();
     state.record({ kind: 'schema', requestId: 'q1', database: 'a', objects: [] });
@@ -75,9 +78,8 @@ describe('DatabaseBrowserState', () => {
 describe('DatabaseBrowser', () => {
   it('answers a schema read with every object, tables first', () => {
     const browser = new DatabaseBrowser();
-    browser.create('shop');
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.schema('shop', requestId);
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     expect(answer?.kind).toBe('schema');
@@ -90,7 +92,7 @@ describe('DatabaseBrowser', () => {
 
   it('creates a database that does not exist and answers with its empty object list', () => {
     const browser = new DatabaseBrowser();
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.create('fresh', requestId);
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     expect(answer).toEqual({ kind: 'schema', requestId, database: 'fresh', objects: [] });
@@ -101,7 +103,7 @@ describe('DatabaseBrowser', () => {
   it('answers a grid query with a page, its totals, and a key per row', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.query('shop', requestId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
@@ -115,9 +117,9 @@ describe('DatabaseBrowser', () => {
   it('applies a filter and reports both totals', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const first = browser.requestId();
+    const first = nextId();
     browser.query('shop', first, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
-    const second = browser.requestId();
+    const second = nextId();
     browser.query('shop', second, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === second);
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
@@ -131,13 +133,13 @@ describe('DatabaseBrowser', () => {
     seeded(browser, SHOP);
     // Jumping into a table the tab has never shown issues a filtered query as that table's first,
     // and the cache would otherwise keep that filtered count as the object's size for good.
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.query('shop', requestId, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
     const first = browser.view().results.find((result) => result.requestId === requestId);
     if (first?.kind !== 'query') throw new Error('expected a query answer');
     expect(first.grid.total).toBe(1);
     expect(first.grid.unfilteredTotal).toBe(2);
-    const second = browser.requestId();
+    const second = nextId();
     browser.query('shop', second, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'open' }], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === second);
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
@@ -148,7 +150,7 @@ describe('DatabaseBrowser', () => {
   it('records a query for an object the database does not have as an error, not an empty page', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.query('shop', requestId, { object: 'nope', filters: [], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
@@ -160,9 +162,9 @@ describe('DatabaseBrowser', () => {
   it('routes a read statement to the grid and a write statement through exec', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const read = browser.requestId();
+    const read = nextId();
     browser.run('shop', read, 'SELECT status FROM orders', true);
-    const write = browser.requestId();
+    const write = nextId();
     browser.run('shop', write, "UPDATE orders SET status = 'x'; UPDATE orders SET status = 'y';", false);
     const results = browser.view().results;
     const readAnswer = results.find((result) => result.requestId === read);
@@ -177,23 +179,23 @@ describe('DatabaseBrowser', () => {
   it('updates, inserts, and deletes through a row key, and reports the change', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const queryId = browser.requestId();
+    const queryId = nextId();
     browser.query('shop', queryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const page = browser.view().results.find((result) => result.requestId === queryId);
     if (page?.kind !== 'query') throw new Error('expected a query answer');
     const first = page.grid.rows[0]?.key ?? '';
 
-    const updateId = browser.requestId();
+    const updateId = nextId();
     browser.updateCell('shop', updateId, first, 'status', 'shipped');
     expect(browser.view().results.find((result) => result.requestId === updateId))
       .toMatchObject({ kind: 'write', changed: 1 });
 
-    const insertId = browser.requestId();
+    const insertId = nextId();
     browser.insertRow('shop', insertId, 'orders', [{ column: 'id', value: null }, { column: 'status', value: 'new' }]);
     expect(browser.view().results.find((result) => result.requestId === insertId))
       .toMatchObject({ kind: 'write', changed: 1 });
 
-    const deleteId = browser.requestId();
+    const deleteId = nextId();
     browser.deleteRow('shop', deleteId, first);
     expect(browser.view().results.find((result) => result.requestId === deleteId))
       .toMatchObject({ kind: 'write', changed: 1 });
@@ -203,7 +205,7 @@ describe('DatabaseBrowser', () => {
   it('refuses a write to a table with no primary key, and says why', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.insertRow('shop', requestId, 'logs', [{ column: 'line', value: 'x' }]);
     expect(browser.view().results.find((result) => result.requestId === requestId))
       .toMatchObject({ error: 'This table has no primary key, so its rows cannot be addressed.' });
@@ -213,7 +215,7 @@ describe('DatabaseBrowser', () => {
   it('answers a statistics read with one entry per column', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.stats('shop', requestId, 'orders');
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     if (answer?.kind !== 'stats') throw new Error('expected a stats answer');
@@ -225,7 +227,7 @@ describe('DatabaseBrowser', () => {
   it('reports a statistics read for an object the database does not have as an error', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.stats('shop', requestId, 'nope');
     expect(browser.view().results.find((result) => result.requestId === requestId))
       .toMatchObject({ kind: 'stats', columns: [], error: '"nope" is not in "shop".' });
@@ -245,10 +247,10 @@ describe('DatabaseBrowser', () => {
   it('refuses a read for a database that was deleted, and does not bring the file back', () => {
     const browser = new DatabaseBrowser();
     seeded(browser);
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.schema('shop', requestId);
     runDatabaseCommand('db sqlite delete shop');
-    const after = browser.requestId();
+    const after = nextId();
     browser.schema('shop', after);
     expect(browser.view().results.find((result) => result.requestId === after))
       .toMatchObject({ error: 'Database "shop" does not exist. Create it to start.' });
@@ -260,7 +262,7 @@ describe('DatabaseBrowser', () => {
     const browser = new DatabaseBrowser();
     seeded(browser);
     runDatabaseCommand('db sqlite delete shop');
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.query('shop', requestId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
     const answer = browser.view().results.find((result) => result.requestId === requestId);
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
@@ -273,7 +275,7 @@ describe('DatabaseBrowser', () => {
     const browser = new DatabaseBrowser();
     seeded(browser);
     removeDatabaseFile('shop');
-    const requestId = browser.requestId();
+    const requestId = nextId();
     browser.schema('shop', requestId);
     expect(browser.view().results.find((result) => result.requestId === requestId)).not.toMatchObject({ error: expect.anything() });
     browser.dispose();

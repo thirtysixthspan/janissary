@@ -64,10 +64,6 @@ export class DatabaseBrowser {
   private readonly keys = new RowKeyStore();
   private readonly unfiltered = new Map<string, number>();
 
-  requestId(): string {
-    return this.state.requestId();
-  }
-
   view(): DatabasesView {
     return { databases: databaseRefs(), results: this.state.results() };
   }

@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { AggregatedScheduleView, RemoteSessionView } from '../protocol.js';
+import { initDbDir } from '../connections.js';
+import { DatabaseManager } from '../database/manager.js';
 import {
   TAB_PLUGIN_API_VERSION,
   type TabPluginCapabilityName,
@@ -174,15 +179,35 @@ describe('the databases topic source', () => {
       { topic: 'databases', action: 'export', database: 'shop', requestId: 'i', query, format: 'json' },
     ];
     for (const action of actions) runTopicAction(managers, action);
-    expect(managers.database.browseCreate).toHaveBeenCalledWith('shop');
-    expect(managers.database.browseSchema).toHaveBeenCalledWith('shop');
-    expect(managers.database.browseQuery).toHaveBeenCalledWith('shop', query);
-    expect(managers.database.browseRun).toHaveBeenCalledWith('shop', 'SELECT 1', true);
-    expect(managers.database.browseUpdateCell).toHaveBeenCalledWith('shop', 'r1', 'status', null);
-    expect(managers.database.browseInsertRow).toHaveBeenCalledWith('shop', 'orders', [{ column: 'id', value: null }]);
-    expect(managers.database.browseDeleteRow).toHaveBeenCalledWith('shop', 'r1');
-    expect(managers.database.browseStats).toHaveBeenCalledWith('shop', 'orders');
-    expect(managers.database.browseExport).toHaveBeenCalledWith('shop', query, 'json');
+    expect(managers.database.browseCreate).toHaveBeenCalledWith('shop', 'a');
+    expect(managers.database.browseSchema).toHaveBeenCalledWith('shop', 'b');
+    expect(managers.database.browseQuery).toHaveBeenCalledWith('shop', 'c', query);
+    expect(managers.database.browseRun).toHaveBeenCalledWith('shop', 'd', 'SELECT 1', true);
+    expect(managers.database.browseUpdateCell).toHaveBeenCalledWith('shop', 'e', 'r1', 'status', null);
+    expect(managers.database.browseInsertRow).toHaveBeenCalledWith('shop', 'f', 'orders', [{ column: 'id', value: null }]);
+    expect(managers.database.browseDeleteRow).toHaveBeenCalledWith('shop', 'g', 'r1');
+    expect(managers.database.browseStats).toHaveBeenCalledWith('shop', 'h', 'orders');
+    expect(managers.database.browseExport).toHaveBeenCalledWith('shop', 'i', query, 'json');
+  });
+
+  // The request id is minted by the plugin and echoed by the host, and that round trip is the whole
+  // addressing scheme: an answer stamped with an id of the host's own devising can never be matched
+  // to the request that asked for it. Routing above proves each id reaches the manager; this proves
+  // it survives the manager and comes back out on the answer.
+  it('echoes the id the plugin minted back on the answer it produces', () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'janus-topics-'));
+    initDbDir(project);
+    const managers = { database: new DatabaseManager() } as unknown as Managers;
+    try {
+      runTopicAction(managers, { topic: 'databases', action: 'create', database: 'shop', requestId: 'plugin-1' });
+      runTopicAction(managers, { topic: 'databases', action: 'schema', database: 'shop', requestId: 'plugin-2' });
+      const results = managers.database.readView().results;
+      expect(results.map((result) => result.requestId)).toEqual(['plugin-2', 'plugin-1']);
+      expect(results[1]?.kind).toBe('schema');
+    } finally {
+      managers.database.closeAll();
+      rmSync(project, { recursive: true, force: true });
+    }
   });
 
   it('subscribes to the databases change signal rather than the state broadcast', () => {
