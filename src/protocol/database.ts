@@ -168,4 +168,8 @@ export type DatabasesView = {
   databases: DatabaseRefView[];
   // Most recent first, capped. The cap is what bounds this on the state-broadcast path.
   results: DatabaseResultView[];
+  // The open database most recently reached, or null when none is open. Published beside the list
+  // rather than by reordering it: the list is what a user picks from and is sorted by name, while
+  // this is what a bare `sql` opens, and those are two different questions.
+  lastOpened: string | null;
 };

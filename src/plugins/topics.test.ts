@@ -85,7 +85,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       focus: vi.fn(), close: vi.fn(),
     },
     database: {
-      readView: vi.fn(() => ({ databases: [{ name: 'shop', exists: true, open: true }], results: [] })),
+      readView: vi.fn(() => ({ databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop' })),
       browseCreate: vi.fn(), browseSchema: vi.fn(), browseQuery: vi.fn(), browseRun: vi.fn(),
       browseUpdateCell: vi.fn(), browseInsertRow: vi.fn(), browseDeleteRow: vi.fn(),
       browseStats: vi.fn(), browseExport: vi.fn(),
@@ -164,7 +164,7 @@ describe('the databases topic source', () => {
   it('reads the browser view and routes every one of the nine actions', () => {
     const { managers } = makeManagers();
     expect(readTopicData(managers, 'databases')).toEqual({
-      databases: [{ name: 'shop', exists: true, open: true }], results: [],
+      databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop',
     });
     const query = { object: 'orders', filters: [], order: [], limit: 100, offset: 0 };
     const actions: TabPluginTopicAction[] = [
@@ -251,7 +251,7 @@ describe('the databases topic source', () => {
       origin,
       () => false,
     );
-    expect(capabilities.topicData('databases')).toEqual({ databases: [], results: [] });
+    expect(capabilities.topicData('databases')).toEqual({ databases: [], results: [], lastOpened: null });
   });
 });
 

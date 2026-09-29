@@ -275,6 +275,26 @@ describe('DatabaseBrowser', () => {
     ]);
     browser.dispose();
   });
+
+  // The list is sorted because a user picks from it; the shortcut opens the one the user was last
+  // in, which is a different question and cannot be read off a sorted list.
+  it('names the database most recently reached, whichever way the list is sorted', () => {
+    const browser = new DatabaseBrowser();
+    browser.create('alpha', nextId());
+    browser.create('beta', nextId());
+    expect(browser.view().databases.map((entry) => entry.name)).toEqual(['alpha', 'beta']);
+    expect(browser.view().lastOpened).toBe('beta');
+    browser.create('alpha', nextId());
+    expect(browser.view().lastOpened).toBe('beta');
+    browser.dispose();
+  });
+
+  it('names nothing as last reached when no database is open', () => {
+    const browser = new DatabaseBrowser();
+    expect(browser.view().lastOpened).toBeNull();
+    browser.dispose();
+  });
+
   it('refuses a read for a database that was deleted, and does not bring the file back', () => {
     const browser = new DatabaseBrowser();
     seeded(browser);

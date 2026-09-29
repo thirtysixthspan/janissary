@@ -154,7 +154,7 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     subscribe: (fire) => messageBus.on('databases', 'changed', fire),
     read: (managers) => managers.database.readView(),
     act: actOnDatabases,
-    empty: { databases: [], results: [] },
+    empty: { databases: [], results: [], lastOpened: null },
   },
 };
 

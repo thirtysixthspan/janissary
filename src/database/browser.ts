@@ -9,7 +9,7 @@ import type {
 } from '../protocol.js';
 import { databaseFileExists, getConnection, isConnectionOpen } from '../connections.js';
 import { errorText } from '../error-text.js';
-import { DatabaseBrowserState, databaseRefs } from './browser-state.js';
+import { DatabaseBrowserState, databaseRefs, lastOpenedDatabase } from './browser-state.js';
 import { readStatement } from './console-read.js';
 import { exportRows } from './export.js';
 import { runGrid, totals, unfilteredTotal } from './grid.js';
@@ -47,7 +47,7 @@ export class DatabaseBrowser {
   }
 
   view(): DatabasesView {
-    return { databases: databaseRefs(), results: this.state.results() };
+    return { databases: databaseRefs(), results: this.state.results(), lastOpened: lastOpenedDatabase() };
   }
 
   /**

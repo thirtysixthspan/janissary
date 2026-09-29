@@ -88,4 +88,16 @@ export function listOpenConnections(): string[] {
   return [...connections.keys()].toSorted((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Names of databases with an open connection, most recently opened first.
+ *
+ * The registry is a `Map`, so its key order is the order they were opened in, and a caller that means
+ * "where the user was" wants that rather than the alphabetical one above. Re-opening a database
+ * already in the map does not move it: this is the order they were first reached, which is the thing
+ * a shortcut should land on.
+ */
+export function listOpenConnectionsInRecency(): string[] {
+  return [...connections.keys()].toReversed();
+}
+
 

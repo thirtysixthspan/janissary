@@ -1,5 +1,5 @@
 import type { DatabaseRefView, DatabaseResultView } from '../protocol.js';
-import { databaseFileExists, listDatabaseFiles, listOpenConnections } from '../connections.js';
+import { databaseFileExists, listDatabaseFiles, listOpenConnections, listOpenConnectionsInRecency } from '../connections.js';
 
 // The stateful half of the browser: the capped, most-recent-first answer list a plugin folds into
 // its tab payload, and the database list beside it.
@@ -37,4 +37,9 @@ export function databaseRefs(): DatabaseRefView[] {
   const names = [...new Set([...listDatabaseFiles(), ...open])]
     .toSorted((a, b) => a.localeCompare(b));
   return names.map((name) => ({ name, exists: databaseFileExists(name), open: open.includes(name) }));
+}
+
+/** The open database most recently reached, or null when none is open. */
+export function lastOpenedDatabase(): string | null {
+  return listOpenConnectionsInRecency()[0] ?? null;
 }

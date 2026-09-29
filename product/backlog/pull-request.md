@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Add the test files and cases the plan listed and the diff does not contain.
-
-Existing Issue: The plan's test section names a statistics-panel test file, a topic-union case asserting the databases topic is in the keyed record, and three manager cases for the new delegation, and none of the three appears anywhere in the diff. Severity: 4/10
-
-Existing Risk: 4/10 - The statistics panel, the keyed topic record, and the manager's new methods ship untested, so a later change to any of them is unconstrained — and the plan sitting in `complete/` claiming coverage that does not exist makes the next reader believe those areas are held in place.
-
-Proposal Risk: 1/10 - Adding the missing coverage constrains future edits without changing what the feature does, which is the whole of the change.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: add the test files and cases the plan listed and the diff does not contain". Add `web/src/plugins/sql/StatsPanel.test.tsx` covering the three things the plan named: a column of twenty or fewer distinct values rendering one bar per value scaled to the largest, a column of more rendering its distinct count and no bars, a numeric column rendering its minimum and maximum, and a null count of zero rendering no null row — mirror the style of `web/src/plugins/sql/SqlDrawer.test.tsx`, and drive it through `SqlTab` with the drawer open as `SqlTab.test.tsx` does for the rest of the panel. Add `src/plugins/api-topics.test.ts` if it does not already exist, asserting `isTabPluginNotificationTopic('databases')` is true and that the exported `TAB_PLUGIN_NOTIFICATION_TOPICS` carries it, so the keyed record cannot drift from the union as the comment on that record says it is there to prevent. Extend `src/database/manager.test.ts` with the three cases the plan listed: `listFiles()` returning the databases on disk, a browser `create` landing the database in the same registry `db sqlite create` does, and `readView()` answering the topic's read. Every existing case in that file keeps passing unchanged, which is the point it is there to prove.
-
 * Correct the specification's claim about which database a bare command opens.
 
 Existing Issue: The specification says a bare `sql` opens or focuses the tab for the most recently used database, and the implementation picks the first open entry in the registry's alphabetical list, which is a different choice as soon as a second database is open. Severity: 4/10

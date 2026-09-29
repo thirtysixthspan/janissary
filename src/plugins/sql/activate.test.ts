@@ -22,7 +22,7 @@ const ORDERS = [{
 }];
 
 function emptyView(results: DatabaseResultView[] = []): DatabasesView {
-  return { databases: REFS, results };
+  return { databases: REFS, results, lastOpened: 'shop' };
 }
 
 function fakeCapabilities(initial: DatabasesView = emptyView()) {
@@ -121,8 +121,34 @@ describe('sql plugin command', () => {
     expect(fixture.opened[0]?.key).toBe('sqlite:shop');
   });
 
+  // The list a user picks from is sorted by name; the shortcut opens the one they were last in. Those
+  // are two questions, so the second is answered by the slice naming it rather than by reading the
+  // first open entry off the first.
+  it('opens the database most recently reached, not the first by name', () => {
+    const fixture = fakeCapabilities({
+      databases: [
+        { name: 'alpha', exists: true, open: true },
+        { name: 'zulu', exists: true, open: true },
+      ],
+      results: [],
+      lastOpened: 'zulu',
+    });
+    fixture.activation.command?.('', fixture.capabilities);
+    expect(fixture.opened[0]?.key).toBe('sqlite:zulu');
+  });
+
+  it('falls back to the first database by name when none is open', () => {
+    const fixture = fakeCapabilities({
+      databases: [{ name: 'alpha', exists: true, open: false }],
+      results: [],
+      lastOpened: null,
+    });
+    fixture.activation.command?.('', fixture.capabilities);
+    expect(fixture.opened[0]?.key).toBe('sqlite:alpha');
+  });
+
   it('refuses with guidance when there is no database at all', () => {
-    const fixture = fakeCapabilities({ databases: [], results: [] });
+    const fixture = fakeCapabilities({ databases: [], results: [], lastOpened: null });
     expect(() => fixture.activation.command?.('', fixture.capabilities))
       .toThrow(new TabPluginRejection('No databases. Create one with: db sqlite create <name>'));
   });

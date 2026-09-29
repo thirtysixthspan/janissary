@@ -56,7 +56,9 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
     openDatabase(name, dock, capabilities, tabs, false);
     return;
   }
-  const current = data.databases.find((entry) => entry.open)?.name ?? data.databases[0]?.name;
+  // The most recently reached open database, which is what a bare `sql` means by "the one I was in".
+  // With none open the first by name is the only answer there is.
+  const current = data.lastOpened ?? data.databases[0]?.name;
   if (!current) return capabilities.rejectRequest(NO_DATABASES);
   openDatabase(current, dock, capabilities, tabs, false);
 }

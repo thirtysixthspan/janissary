@@ -12,7 +12,8 @@ unchanged. See [[database]] for the registry, the name rules, and the file layou
 
 ### The `sql` command
 
-`sql` opens or focuses the tab for the most recently used database. `sql <name>` opens or focuses that
+`sql` opens or focuses the tab for the database it most recently opened a connection to, which is the
+one the command was last pointed at. `sql <name>` opens or focuses that
 database's tab, and refuses a name the registry has never heard of with
 `No database named "<name>". Create it with: db sqlite create <name>` — a typed command is far more
 likely to carry a typo than a wish for a new database, so it does not create one. A database is made
