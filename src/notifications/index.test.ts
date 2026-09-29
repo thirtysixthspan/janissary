@@ -436,6 +436,20 @@ describe('notify — surface routing', () => {
     } finally { fixture.dispose(); }
   });
 
+  it('folds a sequential repeat into the feed\'s newest line and still toasts it', () => {
+    const fixture = setup();
+    try {
+      const feed = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] as unknown[], dock: 'right' as const };
+      fixture.tabs.push(feed);
+      fixture.append.mockImplementation((_label: string, entry: unknown) => { feed.log.push(entry); });
+      notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
+      notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
+      expect(feed.log).toEqual([expect.objectContaining({ output: 'Dropped a.mp3. (2 times)' })]);
+      expect(fixture.managers.notifications.all).toHaveLength(1);
+      expect(fixture.toasts.map((t) => t.message)).toEqual(['Dropped a.mp3.', 'Dropped a.mp3.']);
+    } finally { fixture.dispose(); }
+  });
+
   // A toast carries no time, so it cannot honestly represent something detected hours ago.
   it('raises no toast for a replayed notification', () => {
     const fixture = setup();

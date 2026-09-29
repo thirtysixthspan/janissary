@@ -1,5 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { formatTimestamp, provenanceTimestamp, notificationText } from './format.js';
+import { formatTimestamp, provenanceTimestamp, notificationText, withRepeatCount } from './format.js';
+
+describe('withRepeatCount', () => {
+  it('leaves a single occurrence unchanged', () => {
+    expect(withRepeatCount('Could not pull', 1)).toBe('Could not pull');
+  });
+
+  it('suffixes the count once the message has repeated', () => {
+    expect(withRepeatCount('Could not pull', 3)).toBe('Could not pull (3 times)');
+  });
+});
 
 describe('formatTimestamp', () => {
   it('renders afternoon times in 12-hour form with pm', () => {

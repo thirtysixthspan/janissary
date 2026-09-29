@@ -36,10 +36,22 @@ describe('HarnessManager e2e browser', () => {
     );
   });
 
-  it('sets neither browser variable without -b', () => {
+  it('sets both browser variables by default, with no flag', () => {
     const { managers } = makeBrowserManagers();
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
+    const spawnArgs = (managers.pty.spawn as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
+    expect(spawnArgs[6]).toMatchObject({
+      JANISSARY_BROWSER_WS_ENDPOINT: 'ws://127.0.0.1:50000/tok',
+      JANISSARY_PLAYWRIGHT: '/pw/index.js',
+    });
+    expect(browserMock.handles).toHaveLength(1);
+  });
+
+  it('sets neither browser variable with --no-browser', () => {
+    const { managers } = makeBrowserManagers();
+    const manager = createHarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace --no-auto-approve --no-browser')).toBeUndefined();
     const spawnArgs = (managers.pty.spawn as unknown as { mock: { calls: unknown[][] } }).mock.calls[0];
     expect(spawnArgs[6]).toEqual({ CLAUDE_CODE_TMPDIR: '/project/.janissary/temp', DISABLE_AUTOUPDATER: '1' });
     expect(browserMock.handles).toHaveLength(0);

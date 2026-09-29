@@ -45,7 +45,7 @@ Three things are denied that surprise people, because each is something a normal
 
 One consequence of the reading rules above is worth knowing before it puzzles you: a harness inside a workspace **cannot launch a browser**. Playwright keeps its Chromium under your home directory, which the workspace can't read, so any attempt to start one fails on a permission error. That isn't a bug to work around — it's the boundary doing its job.
 
-If you want a workspaced harness to check its work in a real browser, launch it with `-b`/`--browser` and Janissary provides one from outside the workspace. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser).
+A workspaced harness can check its work in a real browser: Janissary provides one from outside the workspace by default, and `--no-browser` leaves it out. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser).
 
 That browser is contained in its own right, since handing an AI a browser would otherwise be a way straight back out through `file://` URLs. Two things stop it: the address the harness gets belongs to a guard that refuses `file:` URLs and drops the connection, and the browser itself runs in an empty scratch directory rather than anywhere near your files. On macOS the browser is sandboxed to that directory as well, so even a `file:` read that slipped past the guard finds nothing worth having.
 

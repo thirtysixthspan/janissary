@@ -68,7 +68,7 @@ Isolation belongs to the remote too. It needs macOS, so a Linux host runs withou
 
 ## Browsers on a remote host
 
-`-b`/`--browser` on a remote tab starts the confined browser on the remote host instead of on yours, since that host is where the workspace it navigates lives. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser) for what the flag does and what it hands the harness. If that browser dies, you get the same notification and band on the tab a local browser's death gives you, but since only the remote saw what happened, a death with nothing else to report reads `e2e browser stopped on the remote host` instead of `e2e browser exited`.
+A remote harness tab's browser, on by default like a local one's, starts on the remote host instead of on yours, since that host is where the workspace it navigates lives. See [Giving a harness a browser](/user-documentation/advanced-agents/harness#giving-a-harness-a-browser) for what the browser does, what it hands the harness, and how `--no-browser` turns it off. If that browser dies, you get the same notification and band on the tab a local browser's death gives you, but since only the remote saw what happened, a death with nothing else to report reads `e2e browser stopped on the remote host` instead of `e2e browser exited`.
 
 ## Push from a remote workspace
 

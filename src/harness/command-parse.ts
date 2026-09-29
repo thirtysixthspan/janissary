@@ -53,8 +53,8 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
   return { left: rest.slice(0, withMatch.index).trim(), prompt };
 }
 
-// Parse the option flags following the harness name: workspace and auto-approve opt-ins/outs, --offline,
-// -b/--browser, --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split
+// Parse the option flags following the harness name: workspace, auto-approve, and browser
+// opt-ins/outs, --offline, --model <name>, --effort <level>, `on <address>`, and a trailing `as <label>`. Split
 // out of `parseHarnessCommand` so that function's own branching stays under the complexity limit.
 // A present `on` forces `workspace` true, so no caller has to remember the implication: the remote
 // server does nothing but workspaced launches, so a remote launch without one has no meaning.
@@ -70,7 +70,7 @@ function parseHarnessFlags(
   const noWorkspace = tokens.some((t) => t.toLowerCase() === '--no-workspace');
   const workspace = remote !== undefined || !noWorkspace;
   const offline = tokens.some((t) => t.toLowerCase() === '--offline');
-  const browser = tokens.some((t) => t === '-b' || t.toLowerCase() === '--browser');
+  const browser = tokens.every((t) => t.toLowerCase() !== '--no-browser');
   const noAutoApprove = tokens.some((t) => t.toLowerCase() === '--no-auto-approve');
   const requestedAutoApprove = tokens.some((t) => t === '-y' || t === '--yes');
   const autoApprove = supportsHarnessAutoApprove(name) && !noAutoApprove;
@@ -104,7 +104,7 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
 
 /**
  * Parse a `harness <name> [as <label>] [on <address>] [-w|--workspace] [--offline] [-y|--yes]
- * [-b|--browser] [--model <name>] [--effort <level>]` command, validating the harness name against
+ * [-b|--browser|--no-browser] [--model <name>] [--effort <level>]` command, validating the harness name against
  * the known set.
  * `on <address>` runs the harness on another host over one ssh session and implies `-w`, since the
  * remote server does nothing but workspaced launches (see `product/specs/remote-server.md`).
@@ -115,10 +115,12 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  * prompts; it is supported for claude and codex (a hard error otherwise) and works with or without `-w`/`--workspace` —
  * without a workspace, the new tab's terminal shows a security warning since prompts are then
  * approved unattended against the real working directory, with no sandbox.
- * `-b`/`--browser` starts a headless Chromium for the tab and injects the two variables a sandboxed
- * AI drives it through (see `product/specs/harness.md`). It is accepted for every harness, with or
- * without a workspace, and is deliberately not rejected alongside `--offline`: both apply, and the
- * offline profile then denies the harness the network route to its own browser.
+ * Every harness gets a headless Chromium by default, with the two variables a sandboxed AI drives it
+ * through injected (see `product/specs/harness.md`). `-b`/`--browser` confirms that default and
+ * `--no-browser` opts out, winning if both are present — the same shape as `--no-workspace` and
+ * `--no-auto-approve`. It applies to every harness, with or without a workspace, and is deliberately
+ * not turned off by `--offline`: both apply, and the offline profile then denies the harness the
+ * network route to its own browser.
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.
  * `--effort <level>` selects an effort level, passed through verbatim with no validation.
  * A trailing `with <prompt>` clause (after all options) carries free-text to inject into the new

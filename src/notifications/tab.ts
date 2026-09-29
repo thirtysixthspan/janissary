@@ -95,6 +95,19 @@ export function appendNotification(managers: Managers, entry: LogEntry): void {
   managers.tab.append(NOTIFICATIONS_LABEL, entry, NOTIFICATION_QUEUE_LIMIT);
 }
 
+// Rewrite the open feed's newest line in place, for a notification the queue folded into the one
+// before it (see `NotificationQueue.append`). A direct assignment rather than an append, which
+// would add a second line; the feed is marked unread and refreshed as an append would. An empty
+// feed has no line to rewrite, so the entry is appended instead.
+export function replaceLatestNotification(managers: Managers, entry: LogEntry): void {
+  const tab = notificationsTab(managers);
+  if (!tab) return;
+  if (tab.log.length === 0) { appendNotification(managers, entry); return; }
+  tab.log = [...tab.log.slice(0, -1), entry];
+  managers.tab.markUnread(NOTIFICATIONS_LABEL);
+  messageBus.emit('state', { type: 'dirty' });
+}
+
 // Clearing notifications changes the feed's existing transcript without replaying appends or
 // disturbing the user's tab selection. The state signal refreshes the client's bufferLines.
 export function clearNotificationsFeed(managers: Managers): void {

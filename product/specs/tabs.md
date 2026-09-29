@@ -145,7 +145,8 @@ tab's name behaves like clicking any other UI control rather than highlighting t
 Today there are three possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`), and **E2E browser** (a globe icon), shown for a tab
-launched with `-b` (harness tabs only — see End-to-end browser in `harness.md`).
+launched with the e2e browser, which is every harness tab not launched with `--no-browser` (harness
+tabs only — see End-to-end browser in `harness.md`).
 They appear in that order, so the browser icon sits to the right of the other two. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
 same kind are expected in the future.

@@ -62,6 +62,8 @@ file that has stopped growing has no symptom to explain it.
 
 The newest notification appears at the top. Each entry starts with the originating tab's colored dot, a compact 12-hour time such as `8:32pm`, and the tab label. The message follows that header. A notification detected on an earlier calendar day than today — for example, one queued while a remote harness sat detached over a weekend — carries a short date ahead of the time, such as `Sep 20 8:32pm`, so it doesn't read as having just happened.
 
+When the same tab reports the same message several times in a row, the feed shows it once with a count after the message, such as `Could not pull: network unreachable (3 times)`. That line shows the time of the latest repeat. Anything else arriving in between starts a fresh line. Each repeat still toasts on its own and still gets its own line in the record file.
+
 Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` scroll by a line, and `Page Up` and `Page Down` scroll by a page. These keys scroll the content without selecting rows. A docked feed doesn't respond to arrows while another tab has focus. You can also use the mouse wheel. A docked feed that has more lines than fit scrolls inside its own area; the sidebar beside it and the app around it never grow or shift.
 
 ## What it reports

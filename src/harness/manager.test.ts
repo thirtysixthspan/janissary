@@ -616,6 +616,21 @@ describe('HarnessManager auto-approve', () => {
     expect(tabs.at(-1)?.offline).toBe(true);
   });
 
+  // The same default as the `harness` command: an entry that says nothing gets a browser, and only
+  // an explicit `browser: false` — which `profile save` always writes for a `--no-browser` tab — opts out.
+  it.each([
+    [undefined, true],
+    [true, true],
+    [false, false],
+  ])('opens a profile entry with browser %s as a tab with browser %s', (browser, expected) => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile(
+      { name: 'claude', tool: 'claude', workspace: true, ...(browser !== undefined && { browser }) }, 'claude', 2, '#fff', 'janus',
+    );
+    expect(tabs.at(-1)?.browser).toBe(expected);
+  });
+
   it('sets tab.autoApprove to match the autoApprove argument it was opened with', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);

@@ -158,7 +158,7 @@ export class HarnessManager extends HarnessTabSpawn {
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
       group, groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
-      browser: entry.browser ?? false, model: entry.model, effort: entry.effort, ready, remote,
+      browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, remote,
       ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),
     });
     return undefined;

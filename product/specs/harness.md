@@ -9,7 +9,7 @@ row, and the one place its behavior differs (the connections panel is shown, not
 ## Command
 
 ```
-harness <name> [as <label>] [on <address>] [-w] [-y] [-b] [--model <name>] [--effort <level>] [with <prompt>]
+harness <name> [as <label>] [on <address>] [-w] [-y] [-b|--no-browser] [--model <name>] [--effort <level>] [with <prompt>]
 ```
 
 Valid names: `claude`, `opencode`, `codex`. The binary must be on `PATH`; if it is not found, the
@@ -66,7 +66,8 @@ disabled unless the selected harness is claude or codex — switching between th
 checked state, while switching to opencode clears and disables it. The dialog offers Auto-approve
 for exactly the harnesses the `harness` command accepts `-y` for, so the two can never disagree about
 which harnesses support it. **E2E browser** stays
-enabled for every harness, since none rejects it. The **Model** dropdown lists
+enabled for every harness, since none rejects it. It starts checked, matching the command's default,
+and unchecking it adds `--no-browser` to the built command. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
 **Effort** dropdown offers a default (no `--effort` flag) plus the fixed levels `low`, `medium`,
 `high`, `xhigh`, and `max`. Opening the dialog records no line in the transcript.
@@ -225,12 +226,17 @@ selected-row Enter contract as claude, not a literal `y` — and records the sam
 permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
 codex's live input composer is treated as stale and not answered.
 
-### End-to-end browser (`-b` / `--browser`)
+### End-to-end browser (`-b` / `--no-browser`)
 
 A sandboxed harness cannot launch a browser of its own — the sandbox denies reads of the directory
 Playwright keeps its Chromium in — so an AI working in a workspace has no way to see what a user
-would see. `-b`/`--browser` closes that gap: Janissary starts a headless Chromium for the tab, on
-whichever host the harness runs on, and gives the harness two environment variables:
+would see. Every harness tab closes that gap by default: Janissary starts a headless Chromium for the
+tab, on whichever host the harness runs on, and gives the harness two environment variables.
+`-b`/`--browser` explicitly confirms this default, and `--no-browser` opts out and wins if both forms
+are present, the same shape as `--no-workspace` and `--no-auto-approve`. A profile harness entry that
+omits `browser` gets the same default; `profile save` always records the field, so a saved
+`--no-browser` tab reopens without one. The rest of this spec calls a tab launched with the browser a
+`-b` tab, whether or not the flag was typed. The two variables are:
 
 - `JANISSARY_BROWSER_WS_ENDPOINT` — the endpoint to connect a Playwright client to.
 - `JANISSARY_PLAYWRIGHT` — the path to Janissary's own Playwright client, so the client and server
@@ -249,8 +255,8 @@ apply." The intended target remains the server built from the harness's own work
 test runner and no pass/fail reporting — the two variables are the whole surface.
 
 The browser is always headless, since the AI never needs to look at a window. Each `-b` tab gets its
-own browser; browsers are never shared or pooled between tabs. The flag is accepted for every
-harness, with or without a workspace, and combines with the other options in any order.
+own browser; browsers are never shared or pooled between tabs. The browser applies to every
+harness, with or without a workspace, and the flags combine with the other options in any order.
 
 Launching the tab does not launch a browser. The endpoint is published at launch and a guard is
 already listening behind it, but the Chromium itself starts the first time the AI connects to that
@@ -259,7 +265,8 @@ than refusing it, so the connect takes noticeably longer than an ordinary handsh
 (or is closed with a reason saying the browser did not start, with the account of which failure it was
 left to the user's notifications and the band rather than to a client inside the sandbox). A `-b` tab
 whose AI never drives a browser therefore never starts
-one. A tab launched without `-b` has no endpoint at all, so the request has nowhere to arrive.
+one, which is what makes the browser cheap enough to be on by default. A tab launched with
+`--no-browser` has no endpoint at all, so the request has nowhere to arrive.
 
 The held connect is answered only once the browser behind it is actually accepting connections, so a
 launch is never called finished on the strength of having been started. A browser that has not come
@@ -299,9 +306,10 @@ past the guard finds nothing worth having. On a host without macOS sandboxing, o
 isolation switched off, the guard is the only layer that applies. See Sandbox for what each layer
 allows.
 
-`-b` with `--offline` is left contradictory on purpose: both flags apply, so the variables are set
+The browser with `--offline` is left contradictory on purpose: both apply, so the variables are set
 and the offline profile then denies the harness any network route to reach its own browser. Neither
-flag is rejected.
+is rejected, and `--offline` does not turn the browser off. Because the browser is on by default, a
+bare `--offline` launch gets this combination; `--offline --no-browser` leaves the browser out.
 
 When the browser is gone — a launch that failed, a browser that exited, or a guard that died — the
 report is delivered twice: a line in the notifications tab naming the tab it belonged to, and the
