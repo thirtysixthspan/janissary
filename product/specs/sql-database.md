@@ -17,7 +17,10 @@ one the command was last pointed at. `sql <name>` opens or focuses that
 database's tab, and refuses a name the registry has never heard of with
 `No database named "<name>". Create it with: db sqlite create <name>` — a typed command is far more
 likely to carry a typo than a wish for a new database, so it does not create one. A database is made
-with `db sqlite create <name>`, or from the tab's own database switcher, which does create it.
+with `db sqlite create <name>`, or from the tab's own database switcher, which ends in a
+`New database…` entry: choosing it asks for a name, and Enter or **Create** makes the database and
+opens its tab. A name the registry's rule refuses is refused here as it is there, with
+`Invalid database name "<name>".`
 `sql <name> left` and `sql <name> right` dock that tab into that sidebar, and a bare `sql` on a docked
 tab undocks it back to the centre. These are the `schedules [left|right]` grammar, so a database
 actually named `left` or `right` is unreachable by name.

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Offer a way to name a new database in the tab's own switcher, so the database a user needs can be made from the tab
-
-Existing Issue: The database switcher in the tab header is a `<select>` of the databases the registry already knows, so the spec's promise that it creates a database has no control behind it and the `open` intent's create branch is unreachable from the client. Severity: 4/10
-
-Existing Risk: 3/10 - A user with no database cannot make one from the tab they are looking at, and the `create` capability and the intent handler behind it are dead weight with no path to a user.
-
-Proposal Risk: 1/10 - The server side already creates on `open`, so the change is a control in the header and a test beside the existing ones.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let the tab's database switcher create a database". Step: G21 (generated) — "With a database open, name a database that does not exist in the tab's own database switcher and confirm it can be created from there." Fixture: `db sqlite create shop`; `db sqlite query shop "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT NOT NULL, status TEXT, total REAL)"`; then `sql shop`, with `shop` the only database in the registry. Expected, from `product/specs/sql-database.md` — "A database is made with `db sqlite create <name>`, or from the tab's own database switcher, which does create it" — the switcher offers a way to type a name the registry has not heard of, and choosing it creates that database. Observed on 8abf512: the control is a `SELECT` element whose options are exactly `["shop"]`, and no control for a new name exists anywhere in the tab — the only way to make a database is the command bar. Root cause: the header in `web/src/plugins/sql/SqlTab.tsx` renders `<select className="sql-database">` over `payload.databases` and sends `open` with `event.target.value`, which can only ever be a name already listed, so the `create: true` branch of `openDatabase` in `src/plugins/sql/open-tab.ts` — reached only by the `open` intent — is unreachable from the client, and the intent table's comment saying "The switcher and the empty state's control send this, which is an explicit wish for a database to exist" describes a control that is not there. Fix: add a `New database…` option, or a text field beside the switcher, that emits `open` with the typed name; the server already creates it. A regression test should render the tab with a database open, choose the new-name control, and assert `open` is emitted with that name.
-
-
 * Correct the pull request's second testing step, which cannot pass in the order the steps are written
 
 Existing Issue: The second testing step expects bare `sql` to list the table seeded in another tab, but the spec says the schema is re-read only on **Refresh**, so a tab already open keeps the empty schema it was opened with and the navigator still reads `No tables.`. Severity: 3/10

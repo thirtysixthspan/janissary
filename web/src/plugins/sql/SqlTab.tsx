@@ -4,6 +4,7 @@ import { faChartBar, faCode, faDatabase, faDownload } from '@fortawesome/free-so
 import type { SqlPayload } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { DataGrid } from './DataGrid';
+import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { SchemaNavigator } from './SchemaNavigator';
 import { SqlConsole } from './SqlConsole';
 import { SqlDrawer } from './SqlDrawer';
@@ -43,19 +44,7 @@ export function SqlTab({
     >
       <div className="sql-header">
         <FontAwesomeIcon icon={faDatabase} className="sql-header-icon" />
-        <select
-          className="sql-database"
-          value={payload.database}
-          onChange={(event) => send('open', { name: event.target.value })}
-          aria-label="Database"
-        >
-          {payload.databases.length === 0 && <option value={payload.database}>{payload.database}</option>}
-          {payload.databases.map((entry) => (
-            <option key={entry.name} value={entry.name}>
-              {entry.name}{entry.open ? ' •' : ''}
-            </option>
-          ))}
-        </select>
+        <DatabaseSwitcher payload={payload} onOpen={(name) => send('open', { name })} />
         {docked && (
           <span className="sql-switch" role="group" aria-label="View">
             <button
