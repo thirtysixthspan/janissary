@@ -145,7 +145,9 @@ describe('openAgentEntry for a remote entry', () => {
     const tabs: { label: string }[] = [];
     const cur = vi.fn(() => ({ label: 'alpha' }));
     const notifications = {
-      append: vi.fn(), isBurst: vi.fn(() => false), view: vi.fn(() => []),
+      append: vi.fn((held: unknown) => ({ held, repeated: false })),
+      isBurst: vi.fn(() => false),
+      view: vi.fn(() => []),
     };
     const managers = {
       tab: {

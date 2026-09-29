@@ -27,6 +27,12 @@ export function provenanceTimestamp(detectedAt: Date, now: Date = new Date()): s
   return `${SHORT_MONTHS[detectedAt.getMonth()]} ${detectedAt.getDate()} ${formatTimestamp(detectedAt)}`;
 }
 
+// A feed line's message once it has repeated: the bare message for a single occurrence, and a
+// `(N times)` suffix once sequential repeats from the same tab have folded into it.
+export function withRepeatCount(message: string, count: number): string {
+  return count > 1 ? `${message} (${count} times)` : message;
+}
+
 // The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
 // the event-specific extra: the command for `schedule-fire`, the sender label for
 // `incoming-message`, the user's message for `manual`, the approver's message for `auto-approve`,
