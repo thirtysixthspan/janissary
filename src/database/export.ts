@@ -24,6 +24,24 @@ export type ExportOutcome =
   | { ok: true; path: string; name: string; size: string; rows: number }
   | { ok: false; error: string };
 
+/**
+ * An object name reduced to what a filename can carry.
+ *
+ * A SQLite object may be called anything, including something holding `../`, and the name arrives
+ * from `sqlite_schema` rather than from anything validated — so the name that reaches a path has to
+ * be reduced before it is used, not checked after. Every character outside `[A-Za-z0-9._-]` becomes
+ * a dash, and a name left with no alphanumeric character is refused rather than written: `..` and
+ * `.` have no stem to number and would produce a candidate that is a directory reference.
+ *
+ * This is not a check that the object exists — `hasObject` answers that, and the two questions
+ * diverge (an index is a real object whose name is not a browsable grid, and a safe-looking name may
+ * still name nothing).
+ */
+export function safeFileName(name: string): string | null {
+  const safe = name.replaceAll(/[^A-Za-z0-9._-]/gu, '-');
+  return /[A-Za-z0-9]/u.test(safe) ? safe : null;
+}
+
 // The same shape as `nextNumberedSibling` (`src/openers/numbered-sibling.ts`) — always numbered,
 // `-n` before the extension, first free wins — but not that function, which appends `.png` to every
 // name it builds and is about a captured frame beside a video.
@@ -90,6 +108,10 @@ export function exportRows(
 ): ExportOutcome {
   const names = columns.map((column) => column.name);
   if (names.length === 0) return { ok: false, error: `"${query.object}" has no columns.` };
+  const object = safeFileName(query.object);
+  if (!object) {
+    return { ok: false, error: `Cannot export "${query.object}": its name has no characters a file can carry.` };
+  }
   if (total > EXPORT_ROW_LIMIT) {
     return {
       ok: false,
@@ -100,7 +122,7 @@ export function exportRows(
   const dir = exportDir();
   try {
     mkdirSync(dir, { recursive: true });
-    const name = nextExportName(dir, `${databaseName}-${query.object}`, format);
+    const name = nextExportName(dir, `${databaseName}-${object}`, format);
     const file = path.join(dir, name);
     const written = writeRows(database, statement.sql, statement.parameters, names, file, format);
     return { ok: true, path: file, name, size: humanSize(statSync(file).size), rows: written };

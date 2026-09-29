@@ -1,10 +1,10 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { initDbDir } from '../connections.js';
-import { csvField, exportDir, exportRows, EXPORT_ROW_LIMIT } from './export.js';
+import { csvField, exportDir, exportRows, safeFileName, EXPORT_ROW_LIMIT } from './export.js';
 import { objectColumns } from './schema.js';
 import type { DatabaseGridQuery } from '../protocol.js';
 
@@ -47,6 +47,24 @@ describe('csvField', () => {
     expect(csvField('a,b')).toBe('"a,b"');
     expect(csvField('say "hi"')).toBe('"say ""hi"""');
     expect(csvField('two\nlines')).toBe('"two\nlines"');
+  });
+});
+
+describe('safeFileName', () => {
+  it('leaves a name a filename can already carry alone', () => {
+    expect(safeFileName('orders')).toBe('orders');
+    expect(safeFileName('orders_2-v1.3')).toBe('orders_2-v1.3');
+  });
+
+  it('reduces a traversal and a separator to dashes rather than passing them through', () => {
+    // Dots survive — a traversal needs a separator, not a dot, so `..-..-escape` is one path
+    // component and cannot leave the directory. What must not survive is the separator.
+    expect(safeFileName('../../escape')).toBe('..-..-escape');
+    expect(safeFileName('a/b')).toBe('a-b');
+    expect(safeFileName('..')).toBeNull();
+    expect(safeFileName('.')).toBeNull();
+    expect(safeFileName('')).toBeNull();
+    expect(safeFileName('---')).toBeNull();
   });
 });
 
@@ -109,5 +127,39 @@ describe('exportRows', () => {
     expect(outcome.ok).toBe(false);
     if (outcome.ok) return;
     expect(outcome.error).toBe(`Export too large: ${(EXPORT_ROW_LIMIT + 1).toLocaleString('en-US')} rows (limit ${EXPORT_ROW_LIMIT.toLocaleString('en-US')}). Add a filter and try again.`);
+  });
+});
+
+describe('an object whose name is not a filename', () => {
+  const AWKWARD = 'CREATE TABLE "../../escape" (a TEXT); INSERT INTO "../../escape" VALUES (\'x\');';
+
+  beforeEach(() => { database.exec(AWKWARD); });
+
+  it('writes the export inside the export directory rather than following the name out of it', () => {
+    const outcome = exportRows(database, 'shop', query({ object: '../../escape' }), objectColumns(database, '../../escape'), 'csv', 1);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(path.dirname(outcome.path)).toBe(exportDir());
+    expect(outcome.name).toBe('shop-..-..-escape-1.csv');
+    expect(existsSync(outcome.path)).toBe(true);
+  });
+
+  it('numbers two exports of it distinctly rather than overwriting the first', () => {
+    const first = exportRows(database, 'shop', query({ object: '../../escape' }), objectColumns(database, '../../escape'), 'csv', 1);
+    const second = exportRows(database, 'shop', query({ object: '../../escape' }), objectColumns(database, '../../escape'), 'csv', 1);
+    expect(first.ok && second.ok && first.name !== second.name).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(existsSync(first.path) && existsSync(second.path)).toBe(true);
+  });
+
+  it('refuses a name with nothing a file could carry, rather than writing a bare numbered name', () => {
+    const odd = new DatabaseSync(':memory:');
+    try {
+      odd.exec('CREATE TABLE ".." (a TEXT)');
+      const outcome = exportRows(odd, 'shop', query({ object: '..' }), objectColumns(odd, '..'), 'csv', 0);
+      expect(outcome).toEqual({ ok: false, error: 'Cannot export "..": its name has no characters a file can carry.' });
+    } finally {
+      odd.close();
+    }
   });
 });

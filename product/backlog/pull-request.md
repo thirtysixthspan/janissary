@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop a table's name from reaching the export filename unsanitised, so a table named `../../../../tmp/pwned` writes its export outside the export directory.
-
-Existing Issue: `nextExportName` in `src/database/export.ts` builds a candidate name as `` `${databaseName}-${object}-${n}.${format}` `` from the selected object's name, and that name is read straight out of `sqlite_schema` and validated only by `hasObject`, which checks that the object exists rather than that its name is safe in a path — a table called `../../../../tmp/pwned` exists, so `path.join` in `exportRows` resolves the export to `/project/.janissary/tmp/pwned-1.csv` rather than anything under `.janissary/db/exports/`. Severity: 7/10
-
-Existing Risk: 7/10 - A user opens a database that arrived from somewhere else, browses it, and presses Export, and the server writes a file at a path the user never chose and cannot see, using the application's own privileges; the same gap also lets a name containing a separator produce an `ENOENT` failure that reads as an unrelated bug.
-
-Proposal Risk: 3/10 - The name is still interpolated into a path, so the safety now rests on a rejection rule rather than on a guarantee; a future export format or a second caller that builds a name differently could reintroduce it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: sanitise the object name in the export filename". Add a `safeFileName(name)` helper in `src/database/export.ts` that replaces every character outside `[A-Za-z0-9._-]` with `-` and refuses a name that reduces to nothing, and build the candidate from it in `nextExportName` so the file always lands in `exportDir()`. Keep the file's own name in the result and in the tab payload, so the download link and the `name` the user sees are the real, sanitised name rather than the raw table name. `hasObject` stays as the check that the object exists; do not fold the filename rule into it, because existence and path-safety are different questions. Extend `src/database/export.test.ts`: a table whose name contains `..` and a separator exports to a file inside the export directory, two such exports still get distinct numbers, and the reported name matches the file on disk. Nothing else in `exportRows` changes, and the streaming writer and the row ceiling are unaffected.
-
-
 * Reject an insert that names an object other than the one the tab is showing, so the write guard covers the write it is guarding.
 
 Existing Issue: the `insert-row` intent in `src/plugins/sql/intents.ts` calls `requireWritable(payload, capabilities, 'added to')`, which looks the object up as `payload.object` — the table the grid is displaying — and then sends `object: value.object` in the topic action, so the table the guard checked and the table the server writes to are only the same when the client is honest. `update-cell` and `delete-row` do not have this shape, because they name a row key rather than a table. Severity: 6/10

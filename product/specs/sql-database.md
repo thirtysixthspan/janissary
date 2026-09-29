@@ -105,6 +105,11 @@ Exporting writes the whole filtered, ordered query — not one page — as CSV o
 second export of the same object gets the next number rather than overwriting the first. A CSV field
 containing a comma, a quote, or a line break is quoted, and an interior quote is doubled.
 
+An object whose name is not usable in a filename — anything holding a path separator, and a name left
+with nothing a file could carry — is exported under a reduced name, and one left with nothing at all
+is refused with `Cannot export "<name>": its name has no characters a file can carry.` The file
+always lands inside the export directory, whatever the object is called.
+
 An export over 1,000,000 rows is refused with `Export too large: <n> rows (limit 1,000,000). Add a
 filter and try again.` rather than blocking the whole application while it is written.
 
