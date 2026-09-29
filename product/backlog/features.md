@@ -2,8 +2,9 @@
 
 ## ready
 
-* Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
+* sql database plugin that offers table, visualization, crud and query on sql databases including local sqllite databases. The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, and generated SQL actions. 
 
+* Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
 
 ## development
 
@@ -11,37 +12,15 @@
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
+* Supervisor/manager agent - a supervisor persona that receives a goal, fans work out, and aggregates the responses, decides next action, in a OODA loop. 
+
 ## deferred
-
-* Split the app-shell orchestration in `web/src/App.tsx` into cohesive feature controllers: the component exceeds the project's 200-line limit while owning nearly every picker, layout, quit guard, tab handle, search path, window-key snapshot, server-state subscription, and the correspondingly oversized `AppMain` prop handoff, so adding a client feature expands one high-churn integration point and its tests. Extract related state and callbacks behind small hooks or controller objects and pass grouped feature interfaces into `AppMain`. Severity: **medium**. — deferred: complexity 8/10, requires designing multiple controller boundaries, reshaping the AppMain interface, and coordinating broad app-shell integration coverage.
-
-* The Markdown view (`product/specs/markdown-tab.md`, `product/specs/markdown-rendering.md`) is a read-only snapshot that must be reopened after a file changes, while Obsidian offers an editable Live Preview/Source mode toggle for the same Markdown note. Closing this gap would turn the Markdown tab into an editable note view with source/live-preview switching, debounced saves, dirty-file protection, and external-change handling while retaining the existing sanitized renderer. Complexity: medium-high.
 
 * long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
 
 * centralized model selection and usage statistics
 
-* Supervisor/manager agent - a supervisor persona that receives a goal, fans work out, and aggregates the responses, decides next action, in a OODA loop. 
-
 * Durable flows across relaunch - capture exit information from a harness and be able to use it to restart a session. a relaunch harness picker. workspace dir would need saved and re-created.
-
-* support monitor -> trigger -> action workflows. monitors are agent tasks that interact with web, files, databases to capture and summarize data. triggers are agent tasks that take monitor data and evaluate if the data meets some criteria. actions take data and affect some outcome. requires a way to encode and visualize entities and workflows, dataflows and outcomes. could be OODA loop instead Observers - Orienters - Deciders - Actors.
-
-* integration plugin api to support data access and triggers from sources like chat, github. should be tooling around api calls not MCP protocal support. 
-
-* The SSH tab (`product/specs/ssh-tab.md`) passes flags through to a raw ssh PTY but has no first-class management for auxiliary remote-session workflows, while Termius exposes port forwarding and file transfer alongside the terminal. Closing this gap would add an SSH session panel for creating, inspecting, stopping, and restoring local/remote forwards plus an SFTP-style file transfer view tied to the active connection, without conflating it with the separate saved-host backlog item. Complexity: high. Determination: possibly valuable in the future when ssh become more used.
-
-* The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, whereas DBeaver provides a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. Closing this gap would add a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, CSV export, and generated SQL actions. Complexity: high. Determination: database interactions would make a nice tab plugin.
-
-* The `schedules` tab (`product/specs/scheduling.md`) has no calendar/timeline view or failure-retry handling, the way Cronicle's web UI shows a visual multi-select calendar widget for authoring a schedule and a run-history timeline with automatic retries and alerts on failure. Janissary's schedules tab is a flat table sorted by next-run time, and a fired command that errors is recorded like any other output with no distinct failure marker, no retry, and no alert. A "last run failed" indicator on each row (reusing the notification system's existing rate-limited/error detection patterns) would be a smaller first step than a full calendar authoring UI. Complexity: medium. Determination: UI improvement 
-
-* Jump-to-previous/next-prompt transcript navigation, the way iTerm2's Shift+Cmd+Up/Down moves between shell prompts rather than scrolling line-by-line. Janissary's transcript scrolling (`product/specs/keyboard-navigation.md`) only scrolls by line, page, or with acceleration — there is no chord that jumps directly to the previous or next command boundary in a tab's transcript, which would be a lighter addition on top of the existing scroll model (each `LogEntry`'s prompt line is already a natural jump target). Determination: neat but scrolling works fine for now and isn't a front line feature.
-
-* AI-generated, descriptive workspace names for `agent -w`/`harness -w` launches, the way amux auto-generates branch names and commit messages via an LLM call so parallel worktrees are self-describing without the user picking a name. Today a workspaced agent's directory is named after its tab label — either a random pool name (`product/specs/agents.md`) or a user-chosen `as <label>` — with no connection to the task it's actually doing. Optionally deriving the workspace/branch name from the agent's first prompt would make a long tab strip of parallel workspaced agents easier to tell apart at a glance. Determination: LLM in the application is difficult, now we just wrap LLM.
-
-* Git-worktree-based workspace provisioning, the way amux, Claude Squad, and Conductor isolate parallel coding agents. Today `agent -w`/`harness -w` does a full `git clone` of `origin` into `.janissary/workspace/<name>/` (see `product/specs/workspaced-agent.md`), which is slower to provision and heavier on disk than a `git worktree add`, which shares the same object store and is near-instant to create. Adopting worktrees for the disposable clone step would speed up launching parallel workspaced agents/harnesses and reduce their footprint, while keeping the existing sandbox/isolation model unchanged. Determination: maybe when cloning gets slow there could be a worktree option but this makes sandboxing harder.
-
-* A kanban-style board summarizing all currently-open workspaced agents and harnesses, the way Vibe Kanban and amux's built-in kanban board let a user managing many parallel AI coding sessions see task/status at a glance instead of checking each session individually. Janissary's tab strip and fuzzy tab navigator (`product/specs/tab-navigator.md`) let a user jump to any tab, but there is no aggregate view of what each workspaced tab is working on and whether it's idle, busy, or blocked on a permission prompt. A new dockable tab (alongside the existing `notifications`/`schedules` dockable tabs) could list every workspaced agent/harness tab with its busy state and last activity. do this as a tab plugin with a new plugin architecture. 
 
 ## declined
 
