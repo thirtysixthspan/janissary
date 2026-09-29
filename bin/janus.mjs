@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
-import { existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, openSync, readFileSync, statSync } from 'node:fs';
 
 // Janissary runs as a local web app: this launcher boots the Node server (which opens the
 // browser to a token-gated localhost URL). `stop`/`init`/`--help`/`--version` run attached,
@@ -32,10 +32,12 @@ if (existsSync(compiled)) {
 const foregroundCommands = new Set(['stop', 'init', 'remote-serve']);
 const isForeground = foregroundCommands.has(arguments_[0]) || arguments_.includes('--help') || arguments_.includes('--version');
 
-if (isForeground) {
+function runAttached() {
   const result = spawnSync(command, commandArguments, { stdio: 'inherit' });
   process.exit(result.status ?? 1);
 }
+
+if (isForeground) runAttached();
 
 // Duplicated from src/main.ts's `__JANUS_URL__` line and scripts/docs-screenshots/janus.mjs's
 // `URL_MARKER` — cannot share a constant across the .mjs/.ts boundary.
@@ -56,6 +58,14 @@ function resolveProjectDir(argv) {
     return path.resolve(arg);
   }
   return process.cwd();
+}
+
+function isDirectory(dir) {
+  try {
+    return statSync(dir).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 function tail(text) {
@@ -82,6 +92,12 @@ function awaitReady(logPath, child) {
 }
 
 const projectDir = resolveProjectDir(arguments_);
+// The log directory below cannot go in a project directory that is missing or is not a directory:
+// `mkdirSync` throws on a file, and would create a missing path and start a server in it. The
+// server rejects both as a usage error (`parseProjectDir` in src/cli-args.ts, exit 2) before it
+// touches any state, so run it attached, where that message reaches the terminal, rather than
+// restating the check and its wording here.
+if (!isDirectory(projectDir)) runAttached();
 const logDir = path.join(projectDir, '.janissary', 'log');
 mkdirSync(logDir, { recursive: true });
 const logPath = path.join(logDir, 'server.log');
