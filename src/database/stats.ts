@@ -62,6 +62,10 @@ export function columnStats(
     distinct,
     total,
     ...(isNumeric(column) && range(database, from, quoted)),
+    // Travels with the figures so the client can tell a column with more distinct values than the
+    // threshold from one with none at all — both arrive with no values, and only one of them is
+    // "too many".
+    distinctLimit: DISTINCT_LIMIT,
     values: distinct > 0 && distinct <= DISTINCT_LIMIT ? distribution(database, from, quoted) : [],
   };
 }

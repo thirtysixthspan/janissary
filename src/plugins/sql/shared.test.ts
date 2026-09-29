@@ -78,7 +78,7 @@ describe('isSqlPayload', () => {
         rows: [{ key: 'r1', cells: [{ text: 'x', isNull: false }] }],
         total: 1, unfilteredTotal: 4, offset: 0, limit: 100, order: [{ column: 'a', desc: false }],
       },
-      stats: [{ name: 'a', type: 'TEXT', nulls: 0, distinct: 1, total: 4, values: [{ label: 'x', count: 4 }] }],
+      stats: [{ name: 'a', type: 'TEXT', nulls: 0, distinct: 1, total: 4, distinctLimit: 20, values: [{ label: 'x', count: 4 }] }],
       log: [{ sql: 'UPDATE t', changed: 1 }],
       exports: [{ name: 'shop-orders-1.csv', size: '1.2 kB', rows: 4, ref: '/open/7' }],
       error: 'Query error: nope',

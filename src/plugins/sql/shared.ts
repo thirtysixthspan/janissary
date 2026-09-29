@@ -88,6 +88,10 @@ export type SqlStatsColumn = {
   total: number;
   min?: string;
   max?: string;
+  // The host's own threshold, so "too many to chart" is a statement about the data rather than
+  // about a constant the client re-declared. A column with no distinct values also has no bars, and
+  // without this the panel could not tell those two apart.
+  distinctLimit: number;
   values: { label: string; count: number }[];
 };
 
@@ -238,6 +242,7 @@ function isStatsColumn(value: unknown): value is SqlStatsColumn {
     && typeof value.nulls === 'number'
     && typeof value.distinct === 'number'
     && typeof value.total === 'number'
+    && typeof value.distinctLimit === 'number'
     && Array.isArray(value.values)
     && value.values.every((entry) => isRecord(entry) && isString(entry.label) && typeof entry.count === 'number');
 }

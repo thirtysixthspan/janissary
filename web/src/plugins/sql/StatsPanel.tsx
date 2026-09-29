@@ -44,9 +44,11 @@ function ColumnStats({ column }: { column: SqlStatsColumn }) {
             </li>
           ))}
         </ul>
-      ) : (
+      ) : column.distinct > column.distinctLimit ? (
+        // The threshold is the host's, and it is what separates a column with more values than are
+        // worth drawing from one that simply holds none — both arrive here without bars.
         <p className="sql-stats-toomany">Too many distinct values to chart.</p>
-      )}
+      ) : null}
     </section>
   );
 }

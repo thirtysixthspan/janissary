@@ -184,7 +184,7 @@ describe('columnCount', () => {
 
 describe('barScale', () => {
   const column = (values: { label: string; count: number }[]): SqlStatsColumn => ({
-    name: 'a', type: 'TEXT', nulls: 0, distinct: values.length, total: 0, values,
+    name: 'a', type: 'TEXT', nulls: 0, distinct: values.length, total: 0, distinctLimit: 20, values,
   });
 
   it('is the largest count, so every bar scales against a real maximum', () => {

@@ -2,7 +2,6 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SqlDrawer } from './SqlDrawer';
-import { StatsPanel } from './StatsPanel';
 import { makeCapabilities, payload } from './fixture';
 
 describe('SqlDrawer', () => {
@@ -117,47 +116,5 @@ describe('the statement log', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlDrawer payload={payload({ grid: null, log })} capabilities={capabilities} />);
     expect(screen.getByText('DELETE FROM logs')).toBeTruthy();
-  });
-});
-
-describe('StatsPanel', () => {
-  it('draws one bar per value, scaled to the largest count', () => {
-    render(<StatsPanel columns={[{
-      name: 'status', type: 'TEXT', nulls: 0, distinct: 2, total: 30,
-      values: [{ label: 'paid', count: 20 }, { label: 'open', count: 10 }],
-    }]} />);
-    const widths = [...document.querySelectorAll<HTMLElement>('.sql-bar-fill')].map((node) => node.style.width);
-    expect(widths).toEqual(['100%', '50%']);
-  });
-
-  it('draws a count instead of bars for a column with too many values to chart', () => {
-    render(<StatsPanel columns={[{
-      name: 'id', type: 'INTEGER', nulls: 0, distinct: 900, total: 900, values: [],
-    }]} />);
-    expect(screen.getByText('900 distinct')).toBeTruthy();
-    expect(screen.getByText('Too many distinct values to chart.')).toBeTruthy();
-    expect(document.querySelectorAll('.sql-bar')).toHaveLength(0);
-  });
-
-  it('reports the null count, and min and max for a numeric column', () => {
-    render(<StatsPanel columns={[{
-      name: 'total', type: 'REAL', nulls: 3, distinct: 4, total: 100,
-      min: '1.5', max: '99', values: [{ label: '1.5', count: 97 }],
-    }]} />);
-    expect(screen.getByText('3 null')).toBeTruthy();
-    expect(screen.getByText('min 1.5')).toBeTruthy();
-    expect(screen.getByText('max 99')).toBeTruthy();
-  });
-
-  it('omits a null count of zero rather than drawing an empty row', () => {
-    render(<StatsPanel columns={[{
-      name: 'a', type: 'TEXT', nulls: 0, distinct: 1, total: 1, values: [{ label: 'x', count: 1 }],
-    }]} />);
-    expect(screen.queryByText(/null/)).toBeNull();
-  });
-
-  it('says so when there is nothing to report yet', () => {
-    render(<StatsPanel columns={[]} />);
-    expect(screen.getByText('No statistics yet.')).toBeTruthy();
   });
 });

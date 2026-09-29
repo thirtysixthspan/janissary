@@ -113,7 +113,10 @@ export type DatabaseColumnStatsView = {
   min?: string;
   max?: string;
   // The full value distribution when the column is low-cardinality (twenty or fewer distinct
-  // values); empty otherwise, and the client draws a count instead of bars.
+  // values); empty otherwise, and the client draws a count instead of bars. A column with no
+  // distinct values at all is also empty, which is why the threshold travels with the figures: the
+  // client cannot tell the two cases apart without it, and must not say "too many" about the first.
+  distinctLimit: number;
   values: { label: string; count: number }[];
 };
 

@@ -10,7 +10,7 @@ import { StatsPanel } from './StatsPanel';
 
 function column(over: Partial<SqlStatsColumn> = {}): SqlStatsColumn {
   return {
-    name: 'status', type: 'TEXT', nulls: 0, distinct: 2, total: 4,
+    name: 'status', type: 'TEXT', nulls: 0, distinct: 2, total: 4, distinctLimit: 20,
     values: [{ label: 'open', count: 3 }, { label: 'paid', count: 1 }], ...over,
   };
 }
@@ -35,6 +35,23 @@ describe('StatsPanel', () => {
     const { container } = render(<StatsPanel columns={[wide]} />);
     expect(screen.getByText('Too many distinct values to chart.')).toBeTruthy();
     expect(container.querySelectorAll('.sql-bar')).toHaveLength(0);
+  });
+
+  // A column holding nothing but nulls also arrives with no bars, and used to be told it had too
+  // many values to chart — directly under a distinct count of zero.
+  it('says nothing about charting a column that has no distinct values at all', () => {
+    const allNull = column({ nulls: 4, distinct: 0, total: 4, values: [] });
+    const { container } = render(<StatsPanel columns={[allNull]} />);
+    expect(screen.queryByText('Too many distinct values to chart.')).toBeNull();
+    expect(container.querySelectorAll('.sql-bar')).toHaveLength(0);
+    expect(screen.getByText('0 distinct')).toBeTruthy();
+    expect(screen.getByText('4 null')).toBeTruthy();
+  });
+
+  it('judges "too many" by the host\'s threshold rather than a number of its own', () => {
+    const generous = column({ distinct: 30, distinctLimit: 50, values: [] });
+    render(<StatsPanel columns={[generous]} />);
+    expect(screen.queryByText('Too many distinct values to chart.')).toBeNull();
   });
 
   it('renders the minimum and maximum of a numeric column', () => {
