@@ -21,7 +21,7 @@ import type { CellPosition } from './grid-view';
  * by index rather than by whatever happens to be left in the list.
  */
 export function GridRow({
-  row, index, position, shown, object, editingColumn, deleting, selection, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, index, position, shown, object, editingColumn, deleting, selected, onSelect, onEdit, onCommit, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
   index: number;
@@ -32,10 +32,10 @@ export function GridRow({
   // cell opens that cell only, and a click on another closes it.
   editingColumn: string | null;
   deleting: boolean;
-  selection: {
-    selected(at: CellPosition): boolean;
-    select(at: CellPosition, extend: boolean): void;
-  };
+  /** Whether this cell is the one the run or the keyboard cursor is on. */
+  selected(at: CellPosition): boolean;
+  /** Start a run at a cell, or extend the one in progress when `extend` is held. */
+  onSelect(at: CellPosition, extend: boolean): void;
   onEdit(column: string): void;
   onCommit(column: string, value: string | null): void;
   onCancel(): void;
@@ -50,12 +50,12 @@ export function GridRow({
           key={column}
           className={[
             row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell',
-            selection.selected({ row: position, cell }) ? 'selected' : '',
+            selected({ row: position, cell }) ? 'selected' : '',
           ].join(' ')}
           // A run starts at this cell, or extends the one in progress when shift is held. The enter
           // handler is the drag case: the mouse button is already down from the mousedown above.
-          onMouseDown={(event) => selection.select({ row: position, cell }, event.shiftKey)}
-          onMouseEnter={(event) => { if (event.shiftKey) selection.select({ row: position, cell }, true); }}
+          onMouseDown={(event) => onSelect({ row: position, cell }, event.shiftKey)}
+          onMouseEnter={(event) => { if (event.shiftKey) onSelect({ row: position, cell }, true); }}
           onDoubleClick={() => onEdit(column)}
         >
           {editingColumn === column ? (

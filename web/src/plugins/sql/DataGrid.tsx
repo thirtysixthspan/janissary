@@ -3,11 +3,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { pageLabel, readOnlyReason, toggleColumn, visibleColumns } from './grid-view';
+import { pageLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
 import { CopySelectionButton, useGridSelection } from './selection';
+import { useGridKeys } from './sql-keys';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
@@ -37,6 +38,21 @@ export function DataGrid({
   const shown = visibleColumns(grid?.columns ?? [], payload.hidden);
   const setHidden = (hidden: string[]) => send('set-columns', { hidden });
   const selection = useGridSelection(grid, capabilities, setCopyError);
+  // The keyboard cursor, which reads as the selection when no mouse run is in progress — otherwise a
+  // user moving by arrow keys would have nothing to see and the cells Enter would open invisible.
+  const keys = useGridKeys({
+    active: capabilities.active,
+    rows: grid?.rows.length ?? 0,
+    columns: shown.map((entry) => entry.name),
+    onEdit: (at) => {
+      const row = grid?.rows[at.row];
+      const column = shown[at.cell]?.name;
+      if (row && column && object?.writable) setEditing({ row: row.key, column });
+    },
+  });
+  const selected = (at: CellPosition) => (selection.range
+    ? selection.selected(at)
+    : keys.cursor?.row === at.row && keys.cursor?.cell === at.cell);
 
   return (
     <div className="sql-grid-area">
@@ -151,7 +167,8 @@ export function DataGrid({
                 object={object}
                 editingColumn={editing?.row === row.key ? editing.column : null}
                 deleting={object?.writable === true}
-                selection={selection}
+                selected={selected}
+                onSelect={selection.select}
                 onEdit={(column) => {
                   if (object?.writable) setEditing({ row: row.key, column });
                 }}

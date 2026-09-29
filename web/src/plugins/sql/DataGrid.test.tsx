@@ -193,6 +193,51 @@ describe('the insert form', () => {
   });
 });
 
+describe('DataGrid keyboard', () => {
+  // The listener is on the window, so the event goes to the document and bubbles up — dispatched
+  // through fireEvent rather than raw so React flushes the cursor the key moves.
+  const press = (key: string) => { fireEvent.keyDown(document.body, { key }); };
+  const marked = () => screen.getAllByRole('cell')
+    .filter((cell) => cell.className.includes('selected')) as HTMLElement[];
+
+  it('moves a visible cursor with the arrows', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    // No cursor yet, so the first arrow starts at the first cell and steps right from it.
+    press('ArrowRight');
+    expect(marked().map((cell) => cell.textContent)).toEqual(['paid']);
+    press('ArrowDown');
+    expect(marked().map((cell) => cell.textContent)).toEqual(['NULL']);
+  });
+
+  it('opens the editor on the cursor\'s cell with Enter, and writes that cell', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    press('ArrowRight');
+    press('Enter');
+    fireEvent.change(cellInput(container), { target: { value: 'shipped' } });
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: 'shipped' });
+  });
+
+  it('leaves the grid with Escape rather than moving focus', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    press('ArrowRight');
+    expect(marked()).toHaveLength(1);
+    press('Escape');
+    expect(marked()).toHaveLength(0);
+  });
+
+  it('does nothing at all while another tab is in front', () => {
+    const { capabilities } = makeCapabilities();
+    capabilities.active = false;
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    press('ArrowRight');
+    expect(marked()).toHaveLength(0);
+  });
+});
+
 describe('DataGrid editing', () => {
 
   it('opens the editor on a double click and asks to update that cell on commit', () => {

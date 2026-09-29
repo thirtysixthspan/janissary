@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Deliver the grid's keyboard navigation the plan settled on and the diff does not contain.
-
-Existing Issue: The plan decided that the grid's arrows move the cell selection, Enter opens the editor on the selected cell, and Escape leaves the editor and then the grid, and named a keyboard module to hold it, and the diff carries no arrow or Enter handling and no such module. Severity: 5/10
-
-Existing Risk: 5/10 - A grid that can only be driven with a pointer is unusable for a user who navigates by keyboard or by screen reader, and a plan that records a decision as settled and then ships neither it nor a note that it moved is a decision the next reader will believe was made.
-
-Proposal Risk: 2/10 - The keys land as a contained addition to one component and its view helpers, with the copy shortcut and the command bar's own keymap left exactly as they are.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: deliver the grid's keyboard navigation". Add `web/src/plugins/sql/sql-keys.ts` for the pure part — the position a key moves a selection to, and which key a given one is — modelled on `web/src/plugins/schedules/schedules-keys.ts` as the plan named, and wire it in `web/src/plugins/sql/DataGrid.tsx` and `web/src/plugins/sql/GridRow.tsx` so the arrows move the cell selection, Enter opens the editor on the selected cell, and Escape leaves the editor and then the grid, leaving Tab to the host as the plan decided. Reuse the existing `visibleColumns` ordering in `web/src/plugins/sql/grid-view.ts` so a hidden column is not something the keys land on, and gate the window-level listener on `capabilities.active` the way `web/src/plugins/sql/selection.tsx` already does, since a plugin tab stays mounted while covered. Add `web/src/plugins/sql/sql-keys.test.ts` for the pure half beside `web/src/plugins/sql/grid-view.test.ts`, and note the shipped behaviour in `product/specs/sql-database.md`, whose Editing section currently describes only the double-click route into the editor.
-
 * Add the test files and cases the plan listed and the diff does not contain.
 
 Existing Issue: The plan's test section names a statistics-panel test file, a topic-union case asserting the databases topic is in the keyed record, and three manager cases for the new delegation, and none of the three appears anywhere in the diff. Severity: 4/10
