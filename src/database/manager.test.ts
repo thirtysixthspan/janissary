@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseManager } from './manager.js';
+import { runDatabaseCommand } from './index.js';
 import { initDbDir, closeAllConnections, listOpenConnections } from '../connections.js';
 import { DB_PRIMER } from './primer.js';
 
@@ -117,5 +118,45 @@ describe('DatabaseManager', () => {
     expect(listOpenConnections()).toEqual([]);
     expect(manager.openDbs('main')).toEqual([]);
     expect(manager.openDbs('other')).toEqual([]);
+  });
+});
+
+describe('the browser side of DatabaseManager', () => {
+  let dir = '';
+  beforeAll(() => {
+    dir = mkdtempSync(path.join(tmpdir(), 'janus-dbbrowser-'));
+    initDbDir(dir);
+  });
+  afterAll(() => {
+    closeAllConnections();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  afterEach(() => {
+    closeAllConnections();
+  });
+
+  it('lists the databases on disk, whether or not one is open', () => {
+    const manager = new DatabaseManager();
+    runDatabaseCommand('db sqlite create ondisk');
+    expect(manager.listFiles()).toContain('ondisk');
+  });
+
+  it('puts a browser-created database in the same registry db sqlite create does', () => {
+    const manager = new DatabaseManager();
+    manager.browseCreate('browsed', 'r1');
+    const result = manager.readView().results.find((entry) => entry.requestId === 'r1');
+    if (result?.kind !== 'schema') throw new Error('expected a schema answer');
+    expect(result.database).toBe('browsed');
+    expect(manager.listFiles()).toContain('browsed');
+    expect(manager.listOpen()).toContain('browsed');
+    expect(manager.close('browsed')).toBe(true);
+  });
+
+  it('answers the topic read with the databases and the recent answers', () => {
+    const manager = new DatabaseManager();
+    manager.browseCreate('readme', 'r2');
+    const view = manager.readView();
+    expect(view.databases.map((entry) => entry.name)).toContain('readme');
+    expect(view.results.map((entry) => entry.requestId)).toContain('r2');
   });
 });
