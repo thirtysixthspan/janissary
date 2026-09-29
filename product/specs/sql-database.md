@@ -122,6 +122,17 @@ reaching a different row.
 **Insert row** adds a row whose columns are all null, for the user to fill in and commit. **Delete
 row** is on every row and asks first, through the application's own confirmation, naming the table.
 
+A run of cells is copied as tab-separated text, one line per row, from **Copy selection** or from
+the platform's own copy key. A spreadsheet pastes it as a table with no quoting rules to disagree
+about, so a value holding a comma cannot change the shape of what lands. A null copies as the `NULL`
+the grid shows rather than as an empty cell the paste would turn back into a string, and a range that
+runs off the end of the page copies only what was on screen. Selection is a rectangle: a click starts
+one and a shift-click or a drag extends it, and dragging back over the start selects the same cells
+as dragging away from it. A new page forgets the selection, so cells are never marked that now hold
+other values. A text selection the browser has made inside a cell is left alone, so copy still gets
+the word. If the system clipboard is unavailable, the text is shown in the error band rather than
+being dropped.
+
 A **view** is always read-only, and so is a **table with no primary key**: there is no statement
 that can address one row of it rather than several, and `rowid` is not a safe answer because a
 `VACUUM` reassigns it and a `WITHOUT ROWID` table has none. Such a table's header reads `Read-only:

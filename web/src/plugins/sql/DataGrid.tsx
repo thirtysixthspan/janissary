@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faSortUp, faSortDown, faTrash, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
-import type { SqlCell, SqlColumn, SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
+import { faSort, faSortUp, faSortDown, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
+import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { cellText, pageLabel, readOnlyReason, toggleColumn, visibleColumns } from './grid-view';
-import { CellEditor } from './CellEditor';
+import { pageLabel, readOnlyReason, toggleColumn, visibleColumns } from './grid-view';
+import { GridRow } from './GridRow';
 import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
+import { CopySelectionButton, useGridSelection } from './selection';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
@@ -24,6 +25,7 @@ export function DataGrid({
   const [deleting, setDeleting] = useState<SqlRow | null>(null);
   const [filtering, setFiltering] = useState<string | null>(null);
   const [choosingColumns, setChoosingColumns] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const grid = payload.grid;
   const readOnly = readOnlyReason(object);
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
@@ -32,6 +34,7 @@ export function DataGrid({
   // row, so what is rendered is a list of names and the position each one holds in the cells.
   const shown = visibleColumns(grid?.columns ?? [], payload.hidden);
   const setHidden = (hidden: string[]) => send('set-columns', { hidden });
+  const selection = useGridSelection(grid, capabilities, setCopyError);
 
   return (
     <div className="sql-grid-area">
@@ -54,6 +57,7 @@ export function DataGrid({
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
+          <CopySelectionButton onCopy={selection.copy} enabled={selection.range !== null} />
           <ColumnChooserButton hiddenCount={payload.hidden.length} onClick={() => setChoosingColumns(!choosingColumns)} />
           {capabilities.splitAction}
         </span>
@@ -74,6 +78,13 @@ export function DataGrid({
       <FilterChips payload={payload} onSend={send} />
 
       {payload.error && <div className="sql-error" role="alert">{payload.error}</div>}
+
+      {copyError && (
+        <div className="sql-error" role="alert">
+          {copyError}
+          <button type="button" onClick={() => setCopyError(null)}>Dismiss</button>
+        </div>
+      )}
 
       <div className="sql-grid-scroll">
         <table className="sql-grid">
@@ -120,48 +131,26 @@ export function DataGrid({
           </thead>
           <tbody>
             {(grid?.rows ?? []).map((row, index) => (
-              <tr key={row.key || index}>
-                <td className="sql-gutter">{index + 1 + (grid?.offset ?? 0)}</td>
-                {shown.map(({ name: column, index: cell }) => (
-                  <td
-                    key={column}
-                    className={row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell'}
-                    onDoubleClick={() => {
-                      if (object?.writable) setEditing({ row: row.key, column });
-                    }}
-                  >
-                    {editing?.row === row.key && editing.column === column ? (
-                      <CellEditor
-                        cell={row.cells[cell]}
-                        onCommit={(value) => {
-                          setEditing(null);
-                          send('update-cell', { row: row.key, column, value });
-                        }}
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : (
-                      <Cell
-                        column={object?.columns.find((entry) => entry.name === column)}
-                        cell={row.cells[cell] ?? { text: '', isNull: true }}
-                        onFollow={(target) => send('select-object', target)}
-                      />
-                    )}
-                  </td>
-                ))}
-                <td className="sql-gutter">
-                  {object?.writable && (
-                    <button
-                      type="button"
-                      className="sql-icon"
-                      title="Delete row"
-                      aria-label="Delete row"
-                      onClick={() => setDeleting(row)}
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                  )}
-                </td>
-              </tr>
+              <GridRow
+                key={row.key || index}
+                row={row}
+                index={index + (grid?.offset ?? 0)}
+                shown={shown}
+                object={object}
+                editingColumn={editing?.row === row.key ? editing.column : null}
+                deleting={object?.writable === true}
+                selection={selection}
+                onEdit={(column) => {
+                  if (object?.writable) setEditing({ row: row.key, column });
+                }}
+                onCommit={(column, value) => {
+                  setEditing(null);
+                  send('update-cell', { row: row.key, column, value });
+                }}
+                onCancel={() => setEditing(null)}
+                onFollow={(target) => send('select-object', target)}
+                onDelete={() => setDeleting(row)}
+              />
             ))}
             {grid && grid.rows.length === 0 && !payload.error && (
               <tr>
@@ -185,38 +174,5 @@ export function DataGrid({
         />
       )}
     </div>
-  );
-}
-
-/**
- * One cell's contents, and a way to follow a foreign key when the column has one.
- *
- * A keyed column is drawn as a control rather than text: its title names the table and column the
- * value points at, and activating it selects that table filtered to the value. The filter rides
- * inside the selection intent rather than following it — `topicAction` returns nothing, so a second
- * intent sent straight after would be answered against the object the user just left.
- *
- * A null offers nothing, because there is nothing to follow, and so does a reference whose target
- * column could not be resolved: following it would filter on nothing rather than on something.
- */
-function Cell({
-  column, cell, onFollow,
-}: {
-  column: SqlColumn | undefined;
-  cell: SqlCell;
-  onFollow(target: { object: string; column: string; value: string }): void;
-}) {
-  const reference = column?.references;
-  const target = reference ? reference.columns[0] : '';
-  if (!reference || !target || cell.isNull) return <>{cellText(cell)}</>;
-  return (
-    <button
-      type="button"
-      className="sql-cell-link"
-      title={`${reference.table}.${target}`}
-      onClick={() => onFollow({ object: reference.table, column: target, value: cell.text })}
-    >
-      {cellText(cell)}
-    </button>
   );
 }

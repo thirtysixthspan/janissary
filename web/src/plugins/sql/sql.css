@@ -49,6 +49,7 @@
 .sql-clear-filters:hover { color: var(--fg); }
 
 .sql-error { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
+.sql-error button { margin-left: 8px; }
 
 .sql-grid-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 4px; }
 .sql-grid { border-collapse: collapse; width: 100%; font-size: 12px; }
@@ -79,6 +80,8 @@
 .sql-pager button:disabled { opacity: 0.4; cursor: default; }
 .sql-pager button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
 .sql-pager-label { color: var(--muted); }
+.sql-cell.selected { background: var(--accent-soft, rgb(120 160 255 / 16%)); outline: 1px solid var(--accent, #5a8cff); outline-offset: -1px; }
+
 .sql-columns { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
 .sql-column { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .sql-column.off { color: var(--muted); }

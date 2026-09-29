@@ -4,6 +4,7 @@ import type {
   SqlGrid,
   SqlObject,
   SqlPayload,
+  SqlRow,
 } from '@shared/plugins/sql/shared';
 import type { SqlStatsColumn } from '@shared/plugins/sql/shared';
 
@@ -52,6 +53,53 @@ export function goToRow(value: string, grid: SqlGrid | null): number | null {
   const limit = grid?.limit ?? 100;
   const startOf = (rowNumber: number) => Math.floor((rowNumber - 1) / limit) * limit;
   return Math.min(startOf(row), Math.max(0, startOf(Math.max(1, grid?.total ?? 1))));
+}
+
+/** One cell of a selection: which row of the page it is in, and which column's cell. */
+export type CellPosition = { row: number; cell: number };
+
+/**
+ * The selection as tab-separated text, one line per row of the run.
+ *
+ * Tab-separated rather than CSV because a spreadsheet pastes it as a table with no quoting rules to
+ * disagree about, and a value containing a comma or a quote cannot change the shape of what is
+ * copied. Each value is read through `cellText`, so a null reads as `NULL` exactly as the grid shows
+ * it rather than as an empty cell the paste would turn back into a string. A selection read outside
+ * the page — a range the user cannot see because it runs off the end — is skipped rather than
+ * invented, so what is copied is only what was on screen.
+ */
+export function selectionToTsv(
+  rows: readonly SqlRow[],
+  columns: readonly string[],
+  from: CellPosition,
+  to: CellPosition,
+): string {
+  const firstRow = Math.max(0, Math.min(from.row, to.row));
+  const lastRow = Math.min(rows.length - 1, Math.max(from.row, to.row));
+  const firstCell = Math.max(0, Math.min(from.cell, to.cell));
+  const lastCell = Math.min(columns.length - 1, Math.max(from.cell, to.cell));
+  if (lastRow < firstRow || lastCell < firstCell) return '';
+  const lines: string[] = [];
+  for (let row = firstRow; row <= lastRow; row += 1) {
+    const cells: string[] = [];
+    for (let cell = firstCell; cell <= lastCell; cell += 1) {
+      cells.push(cellText(rows[row]?.cells[cell] ?? { text: '', isNull: true }));
+    }
+    lines.push(cells.join('\t'));
+  }
+  return lines.join('\n');
+}
+
+/**
+ * The selection a second click or a shift-click extends: a rectangle from the cell the run started
+ * at to the cell it reached, whichever way round that is. Dragging up and left selects the same
+ * rectangle as dragging down and right, because a run of cells has no direction.
+ */
+export function selectionTo(anchor: CellPosition, reached: CellPosition): { from: CellPosition; to: CellPosition } {
+  return {
+    from: { row: Math.min(anchor.row, reached.row), cell: Math.min(anchor.cell, reached.cell) },
+    to: { row: Math.max(anchor.row, reached.row), cell: Math.max(anchor.cell, reached.cell) },
+  };
 }
 
 /**

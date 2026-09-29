@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let a cell or a run of cells be copied to the clipboard, so a value can leave the grid without being retyped.
-
-Existing Issue: the grid has no copy path at all — `CellEditor` commits and cancels, and nothing reads a selection — while DB Browser for SQLite's data grid carries a custom `copyMimeData()` and `paste()` so a selection can be lifted out of the browser and into a spreadsheet. Severity: 5/10
-
-Existing Risk: 5/10 - Every value a user wants anywhere else is retyped by hand, and retyping a primary key or an account number is exactly the step that introduces the typo this feature's whole safe-editing design exists to prevent.
-
-Proposal Risk: 2/10 - Copy is unambiguous but paste is not, and a paste that writes a range needs its own addressing story; copying alone adds no such risk.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let a grid selection be copied to the clipboard". Add a `selectionToTsv` helper to `web/src/plugins/sql/grid-view.ts` that turns a rectangular selection of cells into tab-separated text, using the same null rendering `cellText` already applies, so a copied selection reads exactly as the grid shows it. Wire a copy control in the grid bar in `DataGrid.tsx` and a window-level listener gated on `capabilities.active`, because a plugin tab stays mounted while hidden and a listener that ignored that would copy from a tab the user is not looking at — the same reason the plugin contract says a window-wide listener must consult `active`. Write through `navigator.clipboard.writeText`, and fall back to showing the text in the error band when the clipboard is unavailable rather than silently doing nothing. Selection tracking stays in the component, since it is view state and the payload does not need it. Cover the helper in `grid-view.test.ts` for a single cell, a rectangular run, a null inside a run, and an empty selection, and cover the control in `DataGrid.test.tsx` that it writes the rendered text. Do not add paste: a pasted range needs its own key addressing, and copying is the half that has no such question.
-
-
 * Keep a record of the statements the tab has run, so an edit session can be read back instead of reconstructed from memory.
 
 Existing Issue: the tab reports only the most recent statement — `SqlConsoleResult` in `src/plugins/sql/shared.ts` holds one `sql` and one `changed` count, and `fold` overwrites it on every write — while DB Browser for SQLite lists "Examine a log of all SQL commands issued by the application" among its headline capabilities and logs each one with its outcome. Severity: 6/10
