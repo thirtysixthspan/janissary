@@ -2,8 +2,6 @@
 
 ## ready
 
-* the blinking dot in the tab no longer blinks for the latest version of the claude harness. it should blink when the harness is active. It works correctly for opencode.
-
 * the unread badge should not be shown until the tab is no longer busy. For example, when a harness asks a permission prompt expecting a response from the user, that should trigger the unread flag, but if the auto approval cause the harness to continue, the flag should no longer be shown.
 
 * Move focus off Submit with one Tab in a free-text question panel, instead of two

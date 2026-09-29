@@ -2,20 +2,22 @@ import type { ScreenCapture } from './screen.js';
 
 export type BusyState = 'busy' | 'ready';
 
-// claude and codex both animate a Braille spinner glyph (U+2800–U+28FF) at the start of the OSC
-// title while generating; an idle title leads with something else (claude's `✳`, codex's cwd
-// basename). The leading glyph alone is the discriminator.
-function leadsWithBraille(title: string): boolean {
+// claude and codex both animate a spinner glyph at the start of the OSC title while generating: a
+// Braille glyph (U+2800–U+28FF) for codex and claude 2.1.210, a half-circle `◐◑◒◓` (U+25D0–U+25D3)
+// for claude 2.1.282, which alternates `◐` and `◑`. An idle title leads with something else
+// (claude's `✳`, codex's cwd basename). The leading glyph alone is the discriminator.
+function leadsWithSpinner(title: string): boolean {
   const code = title.codePointAt(0);
-  return code !== undefined && code >= 0x28_00 && code <= 0x28_ff;
+  if (code === undefined) return false;
+  return (code >= 0x28_00 && code <= 0x28_ff) || (code >= 0x25_d0 && code <= 0x25_d3);
 }
 
-// Shared claude/codex title rule: leading Braille spinner glyph means busy, any other non-empty
-// title means ready. Returns undefined when there is no usable title to classify.
+// Shared claude/codex title rule: leading spinner glyph means busy, any other non-empty title
+// means ready. Returns undefined when there is no usable title to classify.
 function classifyTitle(title: string | undefined): BusyState | undefined {
   const trimmed = title?.trim();
   if (!trimmed) return undefined;
-  return leadsWithBraille(trimmed) ? 'busy' : 'ready';
+  return leadsWithSpinner(trimmed) ? 'busy' : 'ready';
 }
 
 // claude's own live input caret — the `❯` prompt of its input box, as distinct from a permission
@@ -63,8 +65,8 @@ export type BusyEntry = { classify: (capture: ScreenCapture) => BusyState };
 
 // Per-harness busy/ready detectors, keyed by harness name (same shape as auto-approve's
 // GATE_TABLE). A harness without an entry keeps today's coarse behavior — busy for the whole
-// process lifetime. Signals were confirmed against claude 2.1.210, codex-cli 0.144.4, and
-// opencode 1.17.18.
+// process lifetime. Signals were confirmed against claude 2.1.210 and 2.1.282, codex-cli 0.144.4,
+// and opencode 1.17.18.
 export const BUSY_TABLE: Record<string, BusyEntry> = {
   claude: {
     classify: (capture) => classifyTitle(capture.title) ?? classifyClaudeScreen(capture.text),

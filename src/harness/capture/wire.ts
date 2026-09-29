@@ -15,8 +15,10 @@ export type CaptureWiring = {
 // Build the screen-reader callback that feeds each fresh capture to whichever consumers apply: the
 // auto-approver (when `autoApprove` is on) and the busy/ready status handler (when the harness has
 // a detector). The approver runs first so the busy handler reads its stuck state as of the same
-// capture. Returns an undefined handler when neither applies, so the reader runs exactly as it
-// would with no consumers.
+// capture. A settled capture (the reader's confirming re-read of an unchanged screen) goes to the
+// busy handler only: the approver reads an identical repeat of a gate it answered as a gate it
+// could not clear. Returns an undefined handler when neither applies, so the reader runs exactly as
+// it would with no consumers.
 export function captureWiring(
   managers: Managers, name: string, label: string, id: string, autoApprove: boolean,
 ): CaptureWiring {
@@ -26,7 +28,7 @@ export function captureWiring(
   return {
     autoApprover: approver,
     handler: (capture) => {
-      approver?.onCapture(capture);
+      if (!capture.settled) approver?.onCapture(capture);
       busyHandler?.(capture);
     },
   };

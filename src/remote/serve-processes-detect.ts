@@ -38,8 +38,9 @@ export function buildHarnessDetection(
       }),
     });
   }
+  // A settled capture skips the approver for the same reason `captureWiring()` skips it.
   const reader = new HarnessScreenReader(id, cols, rows, (capture) => {
-    approver?.onCapture(capture);
+    if (!capture.settled) approver?.onCapture(capture);
     const transition = tracker?.observe(capture, harnessName, !approver || approver.isStuck);
     if (transition) send({ type: 'busy-transition', id, busy: transition.busy, unread: transition.unread });
   });

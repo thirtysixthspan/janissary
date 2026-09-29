@@ -9,20 +9,26 @@ import { messageBus, type Subscription } from '../bus.js';
 // type-only so it erases at compile time.
 const { Terminal: HeadlessTerminal } = xterm;
 
-export type ScreenCapture = { text: string; capturedAt: number; title?: string };
+// `settled` marks the one confirming re-read taken after output stops (see below): the screen is
+// unchanged since the capture before it.
+export type ScreenCapture = { text: string; capturedAt: number; title?: string; settled?: true };
 
 // Delay between a PTY byte arriving and the screen being read: long enough for a burst of output
 // to settle into a coherent frame, short enough that the capture reflects "now".
 const CAPTURE_DELAY_MS = 1000;
 
 // Mirrors one harness PTY into a headless terminal so its on-screen text can be read server-side.
-// Captures are throttled on activity: the first `data` event schedules a read 1s later, further
-// events in that window neither reschedule nor extend it, and an idle PTY schedules nothing at
-// all — so an unchanged screen is never re-captured. Only the latest capture is kept.
+// Captures are throttled on activity: the first `data` event schedules a read 1s later, and further
+// events in that window neither reschedule nor extend it. Once output stops, the screen is re-read
+// exactly once more a further 1s later, marked `settled`, so a consumer that needs an idle reading
+// to hold across two captures (busy/ready tracking) gets its second one even when the harness goes
+// silent the moment it returns to its prompt. Any data cancels that re-read, and after it an idle
+// PTY schedules nothing at all. Only the latest capture is kept.
 export class HarnessScreenReader {
   private term: Terminal;
   private subscription: Subscription;
   private pending: ReturnType<typeof setTimeout> | undefined;
+  private settle: ReturnType<typeof setTimeout> | undefined;
   private capture: ScreenCapture | undefined;
   private title: string | undefined;
   private disposed = false;
@@ -49,28 +55,42 @@ export class HarnessScreenReader {
     this.disposed = true;
     if (this.pending !== undefined) clearTimeout(this.pending);
     this.pending = undefined;
+    this.cancelSettle();
     this.subscription.unsubscribe();
     this.term.dispose();
   }
 
   private onData(data: string): void {
     this.term.write(data);
+    this.cancelSettle();
     if (this.pending !== undefined) return;
     this.pending = setTimeout(() => {
       this.pending = undefined;
       // xterm parses write() input asynchronously; read the buffer only after the queue drains.
-      this.term.write('', () => { if (!this.disposed) this.captureNow(); });
+      this.term.write('', () => {
+        if (this.disposed) return;
+        this.captureNow(false);
+        this.settle = setTimeout(() => {
+          this.settle = undefined;
+          this.captureNow(true);
+        }, CAPTURE_DELAY_MS);
+      });
     }, CAPTURE_DELAY_MS);
   }
 
-  private captureNow(): void {
+  private cancelSettle(): void {
+    if (this.settle !== undefined) clearTimeout(this.settle);
+    this.settle = undefined;
+  }
+
+  private captureNow(settled: boolean): void {
     const buffer = this.term.buffer.active;
     const lines: string[] = [];
     for (let i = 0; i < buffer.length; i++) {
       lines.push(buffer.getLine(i)?.translateToString(true) ?? '');
     }
     while (lines.length > 0 && lines.at(-1) === '') lines.pop();
-    this.capture = { text: lines.join('\n'), capturedAt: Date.now(), title: this.title };
+    this.capture = { text: lines.join('\n'), capturedAt: Date.now(), title: this.title, ...(settled && { settled: true as const }) };
     this.onCapture?.(this.capture);
   }
 }
