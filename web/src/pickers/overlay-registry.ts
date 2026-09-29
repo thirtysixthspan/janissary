@@ -45,18 +45,23 @@ type OverlayDescriptor = {
   // so suppressing the bar for it would make the popup read-only. Recorded here, with its reason,
   // rather than left as an unexplained omission from a separate list.
   claimsCommandBar: boolean;
+  // Whether the command bar is disabled outright while this overlay is open, not merely stripped of
+  // its keys. True for the route chooser alone: it is the spec's one modal overlay — text typed
+  // into the bar while it is open would never run, because Enter picks the route instead — so the
+  // bar must not take text at all. The other overlays leave it enabled, as they always have.
+  disablesCommandBar: boolean;
 };
 
 export const OVERLAYS: readonly OverlayDescriptor[] = [
-  { name: 'route', claimsCommandBar: true },
-  { name: 'syntaxTheme', claimsCommandBar: true },
-  { name: 'appTheme', claimsCommandBar: true },
-  { name: 'quickOpen', claimsCommandBar: true },
-  { name: 'tabNav', claimsCommandBar: true },
-  { name: 'history', claimsCommandBar: true },
-  { name: 'queue', claimsCommandBar: false },
-  { name: 'task', claimsCommandBar: true },
-  { name: 'profile', claimsCommandBar: true },
+  { name: 'route', claimsCommandBar: true, disablesCommandBar: true },
+  { name: 'syntaxTheme', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'appTheme', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'quickOpen', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'tabNav', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'history', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'queue', claimsCommandBar: false, disablesCommandBar: false },
+  { name: 'task', claimsCommandBar: true, disablesCommandBar: false },
+  { name: 'profile', claimsCommandBar: true, disablesCommandBar: false },
 ];
 
 // The one translation from app state to overlay names. Every consumer reads the object this
@@ -85,4 +90,9 @@ export function firstOpenOverlay(state: OverlayOpenState): OverlayName | undefin
 // Whether an overlay currently owns the command bar's keys, so the bar stops handling its own.
 export function commandBarSuppressed(state: OverlayOpenState): boolean {
   return OVERLAYS.some((overlay) => state[overlay.name] && overlay.claimsCommandBar);
+}
+
+// Whether an open overlay disables the command bar's textarea outright (see `disablesCommandBar`).
+export function commandBarDisabled(state: OverlayOpenState): boolean {
+  return OVERLAYS.some((overlay) => state[overlay.name] && overlay.disablesCommandBar);
 }

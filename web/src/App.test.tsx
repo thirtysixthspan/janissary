@@ -389,6 +389,45 @@ describe('App close-tab chord under an overlay', () => {
   }, 15_000);
 });
 
+describe('App route chooser modality', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  const route: RouteChooserView = { cmd: 'zzz qqq xxx', choices: ['shell', 'acp (agent prompt)'] };
+
+  it('disables the command line while the chooser is open, so typed text never runs and Enter picks the route', async () => {
+    const user = userEvent.setup();
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab()], 0, route, 16, [], 'github-dark', 'dark', []); });
+    const input = screen.getByRole('textbox');
+
+    expect(input).toBeDisabled();
+    sendMock.mockClear();
+    await user.type(input, 'notify typed-during-chooser');
+    await user.keyboard('{Enter}');
+
+    expect(input).toHaveValue('');
+    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
+    expect(sendMock).toHaveBeenCalledWith({ method: 'chooseRoute', params: { index: 1 } });
+  }, 15_000);
+
+  it('re-enables and refocuses the command line once the server reports route: null', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab()], 0, route, 16, [], 'github-dark', 'dark', []); });
+    const input = screen.getByRole('textbox');
+    expect(input).toBeDisabled();
+
+    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+
+    expect(input).toBeEnabled();
+    expect(input).toHaveFocus();
+  }, 15_000);
+});
+
 describe('App agent tab body click focuses command input', () => {
   beforeEach(() => {
     sendMock.mockClear();
