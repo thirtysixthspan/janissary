@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Use one row index space for the cell selection and the page the copy reads from.
-
-Existing Issue: The grid hands each row its absolute number in the whole table to the selection and the selection stores that as its row, while the routine that renders a selection as text indexes the page's own row array with the same number, so from the second page onwards every selected position falls past the end of the array and the copy comes back empty. Severity: 6/10
-
-Existing Risk: 5/10 - Copying a selection silently does nothing on any page but the first — the cells highlight, the control stays enabled, and pressing Copy or the platform's copy key leaves the clipboard untouched — so a user assembling data from a long table gets the first page and silently nothing after it.
-
-Proposal Risk: 2/10 - The two index spaces stop disagreeing, and the only case left uncovered is a page that changes while a selection is open, which the existing reset on a new grid already handles.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: use one row index space for the cell selection and the page it copies from". In `web/src/plugins/sql/DataGrid.tsx`, pass the page-relative index to `GridRow` for the selection and keep the absolute one for the gutter's row number; in `web/src/plugins/sql/GridRow.tsx`, take the two as separate props so the cell's `selection.select` and `selection.selected` calls use the page-relative one while the gutter's `{index + 1}` keeps the absolute one. In `web/src/plugins/sql/Selection.test.tsx`, add a case beside the existing copy cases that renders the grid with `payload({ offset: 100 })`, makes the same run over the first two cells, and expects the same tab-separated text the offset-zero case produces — every copy case in that file today uses the offset-zero payload, which is why this is invisible. `web/src/plugins/sql/grid-view.ts` and its tests need no change, since the helper is right for a page-relative index and is being handed one.
-
 * Refuse a cell edit or a row delete before opening a connection, so a refused write cannot bring a deleted database back.
 
 Existing Issue: The browser's existence check guards the read paths only, while `updateCell` and `deleteRow` reach the connection registry through their own helper, and opening a connection is what creates the file, so a write against a database deleted in another tab re-materialises it as an empty file before the write is refused. Severity: 7/10

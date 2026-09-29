@@ -13,15 +13,19 @@ import type { CellPosition } from './grid-view';
 /**
  * A row: its number in the table, its cells, and the delete affordance if the object is writable.
  *
- * `shown` is the visible columns with the position each holds in the row's own cells, because
- * `row.cells` is positional and a hidden column still has to be skipped by index rather than by
- * whatever happens to be left in the list.
+ * `index` is the row's number in the whole table, which is what the gutter prints. `position` is
+ * its index in the page, which is what the selection is expressed in: `row.cells` is positional and
+ * `selectionToTsv` reads the page's own array, so a selection handed the table-wide number would
+ * point past the end of that array on every page but the first. `shown` is the visible columns with
+ * the position each holds in the row's own cells, because a hidden column still has to be skipped
+ * by index rather than by whatever happens to be left in the list.
  */
 export function GridRow({
-  row, index, shown, object, editingColumn, deleting, selection, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, index, position, shown, object, editingColumn, deleting, selection, onEdit, onCommit, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
   index: number;
+  position: number;
   shown: readonly { name: string; index: number }[];
   object: SqlObject | undefined;
   // Which column of this row has its editor open, or null when none does: a double click on one
@@ -46,12 +50,12 @@ export function GridRow({
           key={column}
           className={[
             row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell',
-            selection.selected({ row: index, cell }) ? 'selected' : '',
+            selection.selected({ row: position, cell }) ? 'selected' : '',
           ].join(' ')}
           // A run starts at this cell, or extends the one in progress when shift is held. The enter
           // handler is the drag case: the mouse button is already down from the mousedown above.
-          onMouseDown={(event) => selection.select({ row: index, cell }, event.shiftKey)}
-          onMouseEnter={(event) => { if (event.shiftKey) selection.select({ row: index, cell }, true); }}
+          onMouseDown={(event) => selection.select({ row: position, cell }, event.shiftKey)}
+          onMouseEnter={(event) => { if (event.shiftKey) selection.select({ row: position, cell }, true); }}
           onDoubleClick={() => onEdit(column)}
         >
           {editingColumn === column ? (

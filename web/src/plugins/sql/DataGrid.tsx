@@ -146,6 +146,7 @@ export function DataGrid({
                 key={row.key || index}
                 row={row}
                 index={index + (grid?.offset ?? 0)}
+                position={index}
                 shown={shown}
                 object={object}
                 editingColumn={editing?.row === row.key ? editing.column : null}

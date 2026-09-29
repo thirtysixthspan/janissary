@@ -118,9 +118,9 @@ describe('a run of cells', () => {
 });
 
 describe('copying a selection', () => {
-  function withRun() {
+  function withRun(page = payload()) {
     const { capabilities } = makeCapabilities();
-    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    render(<DataGrid payload={page} capabilities={capabilities} />);
     const cells = dataCells();
     fireEvent.mouseDown(cells[0] as HTMLElement);
     fireEvent.mouseDown(cells[1] as HTMLElement, { shiftKey: true });
@@ -139,6 +139,17 @@ describe('copying a selection', () => {
     clipboardThat(write);
     withRun();
     copyKey();
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
+  });
+
+  // The copy reads the page's own row array, so a selection expressed in the table's numbering would
+  // point past its end on every page but the first — and would highlight correctly while copying
+  // nothing at all.
+  it('writes the same text from a page that is not the first', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    clipboardThat(write);
+    withRun(payload({ offset: 100 }));
+    fireEvent.click(screen.getByLabelText('Copy selection'));
     await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
   });
 
