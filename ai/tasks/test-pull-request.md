@@ -107,6 +107,8 @@ Three kinds of step are not attempted, and each goes on the report's `Not tested
 
 Nothing is filed for a step in any of these three groups.
 
+One more marker schedules a step without refusing it. **`session-ending`** marks a step whose expected effect is to end the app's session: closing the last tab, quitting, stopping, or relaunching the app. The app exits on each of those, as the start task's **Janissary, specifically** section documents. Run in the middle of a batch, such a step would take every later step down with it. So session-ending steps are left out of the main batch in Step 7 and run after it, each in its own batch on a freshly started app. Each one is judged by what the app does as it ends.
+
 ---
 
 ## Step 6 — Write the edge-case steps
@@ -123,13 +125,15 @@ Each generated step states its expected result and quotes the sentence in the pl
 
 Execute the start task with `./temp/test-pull-request/` as the scratch root, reading it from the base branch with `git show origin/<base>:ai/tasks/workspace/start-application.md`, or the installation's `$janissary/ai/tasks/workspace/start-application.md` when the base has none. Where it tells you to read the project's own instructions, read the base branch's copies. Keep everything it reports: the start command on its `App:` line, the address, the process identity, the stop command, and the path of the start record. If it reports that the app will not build or start after its single retry, record nothing: mark every step `Not tested` as `app did not start`, go to Step 11, and carry what the app printed into the report.
 
-Write **one** driver under the scratch root that runs every runnable step in order: description steps, then plan steps, then generated steps. A driver is a module with a default export; the runner hands it the page, the DOM readers from `scripts/e2e/inspect.mjs`, `out`, `shot`, and `record`. Wrap each step in its own try/catch so one failure does not end the batch, and write each step's id, result, expected text, and observed text into `record` under the step's id. Run it through the installation's runner:
+Write **one** driver under the scratch root that runs every runnable step that is not `session-ending` in order: description steps, then plan steps, then generated steps. A driver is a module with a default export; the runner hands it the page, the DOM readers from `scripts/e2e/inspect.mjs`, `out`, `shot`, and `record`. Wrap each step in its own try/catch so one failure does not end the batch, and write each step's id, result, expected text, and observed text into `record` under the step's id. Run it through the installation's runner:
 
 ```bash
 $janissary/scripts/run.mjs e2e-driver ./temp/test-pull-request/steps.mjs --log <project-dir>/.janissary/log/server.log --scratch ./temp/test-pull-request/ --out steps
 ```
 
 The runner reads the address off the app's own log, so the session token is never written down, and it writes `record` to `./temp/test-pull-request/steps.json` whether the driver returns or throws.
+
+**A step can still end the session unexpectedly.** After each step, the driver checks whether the page has closed or the app's address has stopped answering. When either happens, it records that step as having ended the session. Every later step in the batch is recorded as `not run`, never as failed, because none of them met a live app. Start the app again the way Step 8 does and run the `not run` steps in a fresh batch before any failure is counted. The step that ended the session is a failure to research in Step 9, unless its text or expected result says the app should end there, in which case it should have been marked `session-ending` in Step 5 and is judged as one. Each `session-ending` step then runs in its own batch, started the same way.
 
 **One connection is one session, and the app lives only while it is connected.** The app quits about a second after its last websocket client leaves, and every `chromium.connect()` is its own browser; a background holder cannot keep the app alive for the next script. `start-application.md`'s **Janissary, specifically** section and the header of `scripts/e2e/session.mjs` are where this is written down. So a shell or CLI step that needs the app running is run **from inside the driver** as a child process, while the driver's connection holds the app up. A CLI step that does not need the running app is run from the scratch working directory.
 
@@ -139,7 +143,7 @@ The runner reads the address off the app's own log, so the session token is neve
 
 Every failure is run a second time before it is filed. The first batch has ended and the app has quit with it, so start it again: run the start command from the `App:` line of Step 7's report, with the same scratch `HOME` and project directory, and take the new address. Do not execute the start task a second time, because its Step 0 stops on a scratch root that already exists. Rewrite `./temp/test-pull-request/start-record.txt` with the new pid and address: `stop-application.md` reads that file, and a stale pid is one it must not signal.
 
-Then run a second driver, `--out rerun`, holding only the steps that failed, each with its own setup on the fresh app. A step that fails again is a consistent failure. One that passes is intermittent at `1 of 2`. Its entry says it failed in sequence after the steps named and passed alone, because order dependence is part of the replication.
+Then run a second driver, `--out rerun`, holding only the steps that failed, each with its own setup on the fresh app. A step that fails again is a consistent failure. One that passes is intermittent at `1 of 2`. Its entry says it failed in sequence after the steps named and passed alone, because order dependence is part of the replication. A step recorded as `not run` because an earlier step ended the session is never a rerun candidate and never intermittent: it has not failed, it has not run, and Step 7 already ran it on a fresh app.
 
 ---
 

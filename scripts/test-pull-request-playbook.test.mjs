@@ -35,6 +35,14 @@ describe('the test-pull-request playbook', () => {
     expect(playbook).not.toMatch(/Run `npm install --ignore-scripts`|Then run `npm install/);
   });
 
+  // The app exits when its last tab closes or on quit, so a step that does either takes every later
+  // step in its batch down with it. Without these two rules the cut-off steps would be filed as
+  // failures, pass alone on the rerun, and land in the backlog as false intermittent entries.
+  it('isolates steps that end the session, and never reruns the steps they cut off', () => {
+    expect(playbook).toContain('**`session-ending`**');
+    expect(playbook).toContain('is never a rerun candidate and never intermittent');
+  });
+
   it("never sends the reader to the project's own copy of a task", () => {
     expect(playbook).not.toContain("the project's own copy");
   });
