@@ -28,16 +28,11 @@ function withDb<T>(run: (database: DatabaseSync) => T): T {
   }
 }
 
-// The columns and connections the write path needs, as `DatabaseBrowser` supplies them.
-function accessors(database: DatabaseSync) {
-  return {
-    columnsOf: (object: string) => objectColumns(database, object),
-    databaseOf: () => database,
-  };
-}
+// The one accessor the write path still needs, as `DatabaseBrowser` supplies it.
+const columnsOf = (database: DatabaseSync) => (object: string) => objectColumns(database, object);
 
 function keyFor(database: DatabaseSync, keys: RowKeyStore, id: number): string {
-  const page = runGrid(database, 'shop', query(), objectColumns(database, 'orders'), keys);
+  const page = runGrid(database, query(), objectColumns(database, 'orders'), keys);
   return page.rows[id - 1]?.key ?? '';
 }
 
@@ -45,8 +40,7 @@ describe('updateCell', () => {
   it('changes one row, reports one change, and leaves the other alone', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      const { columnsOf, databaseOf } = accessors(database);
-      const outcome = updateCell(keys, keyFor(database, keys, 2), 'status', 'shipped', columnsOf, databaseOf);
+      const outcome = updateCell(keys, keyFor(database, keys, 2), 'status', 'shipped', columnsOf(database), database);
       expect(outcome).toMatchObject({ ok: true, changed: 1, sql: 'UPDATE "orders" SET "status" = ? WHERE "id" = ?', parameters: ['shipped', 2] });
       const rows = database.prepare('SELECT id, status FROM orders ORDER BY id').all();
       expect(rows).toEqual([
@@ -59,9 +53,8 @@ describe('updateCell', () => {
   it('writes a null when the value is one, and the empty string when it is not', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      const { columnsOf, databaseOf } = accessors(database);
-      updateCell(keys, keyFor(database, keys, 1), 'status', null, columnsOf, databaseOf);
-      updateCell(keys, keyFor(database, keys, 2), 'status', '', columnsOf, databaseOf);
+      updateCell(keys, keyFor(database, keys, 1), 'status', null, columnsOf(database), database);
+      updateCell(keys, keyFor(database, keys, 2), 'status', '', columnsOf(database), database);
       const rows = database.prepare('SELECT id, status IS NULL AS "wasNull", status FROM orders ORDER BY id').all();
       expect(rows).toEqual([
         { id: 1, wasNull: 1, status: null },
@@ -73,16 +66,14 @@ describe('updateCell', () => {
   it('refuses a key the store no longer resolves, rather than retargeting the write', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      const { columnsOf, databaseOf } = accessors(database);
-      expect(updateCell(keys, 'r999', 'status', 'x', columnsOf, databaseOf))
+      expect(updateCell(keys, 'r999', 'status', 'x', columnsOf(database), database))
         .toEqual({ ok: false, error: 'That row is no longer loaded. Refresh and try again.' });
     });
   });
 
   it('refuses a key that was never minted, since a keyless table mints none', () => {
     withDb((database) => {
-      const { columnsOf, databaseOf } = accessors(database);
-      expect(updateCell(new RowKeyStore(), 'r1', 'line', 'x', columnsOf, databaseOf))
+      expect(updateCell(new RowKeyStore(), 'r1', 'line', 'x', columnsOf(database), database))
         .toEqual({ ok: false, error: 'That row is no longer loaded. Refresh and try again.' });
     });
   });
@@ -90,8 +81,7 @@ describe('updateCell', () => {
   it('refuses a column the table does not have', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      const { columnsOf, databaseOf } = accessors(database);
-      const outcome = updateCell(keys, keyFor(database, keys, 1), 'nope', 'x', columnsOf, databaseOf);
+      const outcome = updateCell(keys, keyFor(database, keys, 1), 'nope', 'x', columnsOf(database), database);
       expect(outcome).toEqual({ ok: false, error: '"orders" has no column "nope".' });
     });
   });
@@ -101,8 +91,7 @@ describe('deleteRow', () => {
   it('removes exactly the addressed row', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      const { columnsOf, databaseOf } = accessors(database);
-      const outcome = deleteRow(keys, keyFor(database, keys, 1), columnsOf, databaseOf);
+      const outcome = deleteRow(keys, keyFor(database, keys, 1), columnsOf(database), database);
       expect(outcome).toMatchObject({ ok: true, changed: 1, sql: 'DELETE FROM "orders" WHERE "id" = ?' });
       expect(database.prepare('SELECT id FROM orders').all()).toEqual([{ id: 2 }]);
     });
@@ -110,8 +99,7 @@ describe('deleteRow', () => {
 
   it('refuses a key the store no longer resolves', () => {
     withDb((database) => {
-      const { columnsOf, databaseOf } = accessors(database);
-      expect(deleteRow(new RowKeyStore(), 'r1', columnsOf, databaseOf))
+      expect(deleteRow(new RowKeyStore(), 'r1', columnsOf(database), database))
         .toEqual({ ok: false, error: 'That row is no longer loaded. Refresh and try again.' });
     });
   });
@@ -170,17 +158,16 @@ describe('RowKeyStore', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
       const first = keyFor(database, keys, 1);
-      for (let page = 0; page < 9; page++) runGrid(database, 'shop', query(), objectColumns(database, 'orders'), keys);
+      for (let page = 0; page < 9; page++) runGrid(database, query(), objectColumns(database, 'orders'), keys);
       expect(keys.resolve(first)).toBeUndefined();
-      const { columnsOf, databaseOf } = accessors(database);
-      expect(updateCell(keys, first, 'status', 'x', columnsOf, databaseOf).ok).toBe(false);
+      expect(updateCell(keys, first, 'status', 'x', columnsOf(database), database).ok).toBe(false);
     });
   });
 
   it('still resolves the newest page after several earlier ones', () => {
     withDb((database) => {
       const keys = new RowKeyStore();
-      for (let page = 0; page < 3; page++) runGrid(database, 'shop', query(), objectColumns(database, 'orders'), keys);
+      for (let page = 0; page < 3; page++) runGrid(database, query(), objectColumns(database, 'orders'), keys);
       expect(keys.resolve(keyFor(database, keys, 1))).toBeDefined();
     });
   });

@@ -3,9 +3,10 @@ import { quoteIdentifier } from './schema.js';
 
 // What a minted row key stands for. The primary-key values never leave the server, which is the
 // whole of the safety story: a client names a row by a token it was handed and cannot write a
-// `WHERE` clause of its own.
+// `WHERE` clause of its own. A key names no database either — `DatabaseBrowser` keeps one store per
+// database, so a key minted elsewhere does not resolve at all, and the write is handed a handle its
+// caller already opened and checked.
 export type RowTarget = {
-  database: string;
   object: string;
   values: (string | number)[];
 };
@@ -26,10 +27,10 @@ export class RowKeyStore {
   }
 
   /** A fresh opaque key for one row of `object`, addressed by its primary-key column values. */
-  mint(database: string, object: string, columns: DatabaseColumnView[], row: Record<string, unknown>): string {
+  mint(object: string, columns: DatabaseColumnView[], row: Record<string, unknown>): string {
     const key = `r${this.next++}`;
     const values = columns.map((column) => coerce(row[column.name]));
-    this.targets.set(key, { database, object, values });
+    this.targets.set(key, { object, values });
     if (this.pages.length === 0) this.beginPage();
     this.pages.at(-1)?.push(key);
     this.trim();

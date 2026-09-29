@@ -280,4 +280,50 @@ describe('DatabaseBrowser', () => {
     expect(browser.view().results.find((result) => result.requestId === requestId)).not.toMatchObject({ error: expect.anything() });
     browser.dispose();
   });
+
+  // A write reached the registry through its own accessor, so it opened a connection the guard had
+  // never checked — and opening is what creates. A click in a tab the user left open after deleting
+  // the database put an empty file back under the name they had just freed.
+  it('refuses a cell edit and a row delete for a deleted database, and does not bring the file back', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser);
+    const queryId = nextId();
+    browser.query('shop', queryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const page = browser.view().results.find((result) => result.requestId === queryId);
+    if (page?.kind !== 'query') throw new Error('expected a query answer');
+    const first = page.grid.rows[0]?.key ?? '';
+    runDatabaseCommand('db sqlite delete shop');
+
+    for (const write of [
+      (id: string) => browser.updateCell('shop', id, first, 'status', 'x'),
+      (id: string) => browser.deleteRow('shop', id, first),
+    ]) {
+      const requestId = nextId();
+      write(requestId);
+      expect(browser.view().results.find((result) => result.requestId === requestId))
+        .toMatchObject({ error: 'Database "shop" does not exist. Create it to start.' });
+    }
+    expect(existsSync(path.join(project, '.janissary', 'db', 'sqlite', 'shop.sqlite'))).toBe(false);
+    browser.dispose();
+  });
+
+  it('writes to the database the caller opened, never to one a row key names', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser);
+    browser.create('other', nextId());
+    browser.run('other', nextId(), 'CREATE TABLE orders (id INTEGER PRIMARY KEY, status TEXT);', false);
+    const queryId = nextId();
+    browser.query('other', queryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const page = browser.view().results.find((result) => result.requestId === queryId);
+    if (page?.kind !== 'query') throw new Error('expected a query answer');
+    const foreign = page.grid.rows[0]?.key ?? '';
+
+    const requestId = nextId();
+    browser.updateCell('shop', requestId, foreign, 'status', 'x');
+    const answer = browser.view().results.find((result) => result.requestId === requestId);
+    expect(answer).toMatchObject({ kind: 'write', error: 'That row is no longer loaded. Refresh and try again.' });
+    if (answer?.kind !== 'write') throw new Error('expected a write answer');
+    expect(answer.changed).toBe(0);
+    browser.dispose();
+  });
 });

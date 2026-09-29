@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Refuse a cell edit or a row delete before opening a connection, so a refused write cannot bring a deleted database back.
-
-Existing Issue: The browser's existence check guards the read paths only, while `updateCell` and `deleteRow` reach the connection registry through their own helper, and opening a connection is what creates the file, so a write against a database deleted in another tab re-materialises it as an empty file before the write is refused. Severity: 7/10
-
-Existing Risk: 7/10 - A user who deletes a database with `db sqlite delete` and then clicks a delete button in the tab they left open gets the file back and empty, which the browser then shows as a real empty database — a destructive act silently undone and a name the user believed was free taken again.
-
-Proposal Risk: 2/10 - The write paths inherit the guard the reads already carry, leaving the explicit create action as the only thing that can materialise a database, which is what it exists for.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: refuse a cell edit or a row delete before opening a connection". In `src/database/browser.ts`, route `updateCell` and `deleteRow` through the same private `open()` helper `schema`, `query`, `stats`, and `exportObject` already use, so a database that is neither on disk nor open answers the missing-database refusal rather than reaching `getConnection`; change `columnsOf` and `connectionOf` to take the handle `open()` returned rather than a name, so nothing in the write path can open a connection on its own. `src/database/browser.test.ts` already proves the read path does not recreate a deleted file and covers the case of a database whose file is gone but whose connection is still open; add the same two cases for a write, using a row key minted before the delete, and assert both the refusal and that the file is still absent afterwards. The plan recorded in `product/plans/complete/deleted-database-tells-its-tab.md` states that checking before opening is the whole difference and that the guard belongs on every path reaching `getConnection`; that is the rule this restores.
-
 * Bound what a statement typed into the console materialises, rather than slicing the result after it has been built.
 
 Existing Issue: A read typed into the console is prepared and run with `.all()`, which materialises every matching row before the two-hundred-row ceiling is applied by slicing the array that comes back, so one `SELECT * FROM large` is held in the server's memory in full. Severity: 6/10

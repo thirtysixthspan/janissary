@@ -53,7 +53,6 @@ export function unfilteredTotal(database: DatabaseSync, query: DatabaseGridQuery
  */
 export function runGrid(
   database: DatabaseSync,
-  databaseName: string,
   query: DatabaseGridQuery,
   columns: DatabaseColumnView[],
   keys: RowKeyStore,
@@ -72,7 +71,7 @@ export function runGrid(
   const writable = keyColumns.length > 0;
   keys.beginPage();
   const page: DatabaseRowView[] = rows.map((row) => ({
-    key: writable ? keys.mint(databaseName, query.object, keyColumns, row) : '',
+    key: writable ? keys.mint(query.object, keyColumns, row) : '',
     cells: names.map((name) => toCell(row[name])),
   }));
   return {

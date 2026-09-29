@@ -61,8 +61,19 @@ function consoleGrid(sql: string, rows: Record<string, unknown>[], names: string
 
 export class DatabaseBrowser {
   private readonly state = new DatabaseBrowserState();
-  private readonly keys = new RowKeyStore();
+  // One key store per database, so a key minted while browsing one cannot resolve in another. A
+  // single shared store would let a row key address a row in whatever database the tab happened to
+  // be showing, which is the cross-database write the opaque key exists to prevent.
+  private readonly keys = new Map<string, RowKeyStore>();
   private readonly unfiltered = new Map<string, number>();
+
+  private keyStore(database: string): RowKeyStore {
+    const existing = this.keys.get(database);
+    if (existing) return existing;
+    const store = new RowKeyStore();
+    this.keys.set(database, store);
+    return store;
+  }
 
   view(): DatabasesView {
     return { databases: databaseRefs(), results: this.state.results() };
@@ -130,7 +141,7 @@ export class DatabaseBrowser {
     }
     try {
       const cacheKey = `${database} ${query.object}`;
-      const grid = runGrid(opened.handle, database, query, opened.columns, this.keys, this.rememberedTotal(opened.handle, query, cacheKey));
+      const grid = runGrid(opened.handle, query, opened.columns, this.keyStore(database), this.rememberedTotal(opened.handle, query, cacheKey));
       this.unfiltered.set(cacheKey, grid.unfilteredTotal);
       this.record({ kind: 'query', requestId, database, grid });
     } catch (error) {
@@ -187,16 +198,12 @@ export class DatabaseBrowser {
       : { kind: 'write', requestId, database, sql: '', parameters: [], changed: 0, error: outcome.error });
   }
 
-  private columnsOf(database: string) {
-    return (object: string): DatabaseColumnView[] => objectColumns(getConnection(database), object);
-  }
-
-  private connectionOf() {
-    return (name: string): DatabaseSync => getConnection(name);
-  }
-
   updateCell(database: string, requestId: string, row: string, column: string, value: string | null): void {
-    this.write(database, requestId, updateCell(this.keys, row, column, value, this.columnsOf(database), this.connectionOf()));
+    const opened = this.open(database);
+    if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
+    this.write(database, requestId, updateCell(
+      this.keyStore(database), row, column, value, (object) => objectColumns(opened.handle, object), opened.handle,
+    ));
   }
 
   insertRow(database: string, requestId: string, object: string, cells: { column: string; value: string | null }[]): void {
@@ -206,7 +213,11 @@ export class DatabaseBrowser {
   }
 
   deleteRow(database: string, requestId: string, row: string): void {
-    this.write(database, requestId, deleteRow(this.keys, row, this.columnsOf(database), this.connectionOf()));
+    const opened = this.open(database);
+    if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
+    this.write(database, requestId, deleteRow(
+      this.keyStore(database), row, (object) => objectColumns(opened.handle, object), opened.handle,
+    ));
   }
 
   stats(database: string, requestId: string, object: string): void {
@@ -239,5 +250,6 @@ export class DatabaseBrowser {
   dispose(): void {
     this.state.clear();
     this.unfiltered.clear();
+    this.keys.clear();
   }
 }

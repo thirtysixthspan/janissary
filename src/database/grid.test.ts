@@ -218,7 +218,7 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const grid = withDb(SHOP, (database) => {
       const columns = objectColumns(database, 'orders');
-      return runGrid(database, 'shop', query({ filters: [filter()], limit: 2 }), columns, keys);
+      return runGrid(database, query({ filters: [filter()], limit: 2 }), columns, keys);
     });
     expect(grid.columns).toEqual(['id', 'customer', 'status', 'total']);
     expect(grid.rows.map((row) => row.cells[1].text)).toEqual(['ada', 'cy']);
@@ -231,8 +231,8 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const grid = withDb(SHOP, (database) => {
       const columns = objectColumns(database, 'orders');
-      runGrid(database, 'shop', query(), columns, keys);
-      return runGrid(database, 'shop', query({ filters: [filter()] }), columns, keys, 5);
+      runGrid(database, query(), columns, keys);
+      return runGrid(database, query({ filters: [filter()] }), columns, keys, 5);
     });
     expect(grid.total).toBe(3);
     expect(grid.unfilteredTotal).toBe(5);
@@ -242,7 +242,7 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const grid = withDb(SHOP, (database) => {
       const columns = objectColumns(database, 'orders');
-      return runGrid(database, 'shop', query({ filters: [filter({ value: 'nope' })] }), columns, keys);
+      return runGrid(database, query({ filters: [filter({ value: 'nope' })] }), columns, keys);
     });
     expect(grid.rows).toEqual([]);
     expect(grid.columns).toEqual(['id', 'customer', 'status', 'total']);
@@ -253,7 +253,7 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const grid = withDb(SHOP, (database) => {
       const columns = objectColumns(database, 'orders');
-      return runGrid(database, 'shop', query({ limit: 10, offset: 50 }), columns, keys);
+      return runGrid(database, query({ limit: 10, offset: 50 }), columns, keys);
     });
     expect(grid.rows).toEqual([]);
     expect(grid.total).toBe(5);
@@ -263,14 +263,14 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const page = withDb(SHOP, (database) => {
       const columns = objectColumns(database, 'orders');
-      return runGrid(database, 'shop', query(), columns, keys);
+      return runGrid(database, query(), columns, keys);
     });
     expect(page.rows.map((row) => keys.resolve(row.key))).toEqual([
-      { database: 'shop', object: 'orders', values: [1] },
-      { database: 'shop', object: 'orders', values: [2] },
-      { database: 'shop', object: 'orders', values: [3] },
-      { database: 'shop', object: 'orders', values: [4] },
-      { database: 'shop', object: 'orders', values: [5] },
+      { object: 'orders', values: [1] },
+      { object: 'orders', values: [2] },
+      { object: 'orders', values: [3] },
+      { object: 'orders', values: [4] },
+      { object: 'orders', values: [5] },
     ]);
   });
 
@@ -278,7 +278,7 @@ describe('runGrid', () => {
     const keys = new RowKeyStore();
     const page = withDb(
       'CREATE TABLE logs (line TEXT); INSERT INTO logs VALUES (\'a\');',
-      (database) => runGrid(database, 'shop', query({ object: 'logs' }), objectColumns(database, 'logs'), keys),
+      (database) => runGrid(database, query({ object: 'logs' }), objectColumns(database, 'logs'), keys),
     );
     expect(page.rows[0]?.key).toBe('');
     expect(keys.resolve('')).toBeUndefined();
@@ -286,7 +286,7 @@ describe('runGrid', () => {
 
   it('yields an empty grid for an object with no columns rather than throwing', () => {
     const keys = new RowKeyStore();
-    const grid = withDb(SHOP, (database) => runGrid(database, 'shop', query({ object: 'nope' }), [], keys));
+    const grid = withDb(SHOP, (database) => runGrid(database, query({ object: 'nope' }), [], keys));
     expect(grid).toMatchObject({ sql: '', rows: [], total: 0 });
   });
 });
@@ -308,7 +308,7 @@ describe('totals', () => {
     expect(withDb(SHOP, (database) => totals(database, query({ global: 'cy' }), columnsOf('orders'))))
       .toEqual({ total: 1, unfilteredTotal: 1 });
     const keys = new RowKeyStore();
-    const page = withDb(SHOP, (database) => runGrid(database, 'shop', query({ global: 'cy' }), columnsOf('orders'), keys));
+    const page = withDb(SHOP, (database) => runGrid(database, query({ global: 'cy' }), columnsOf('orders'), keys));
     expect(page.rows.map((row) => row.cells[0]?.text)).toEqual(['3']);
   });
 });

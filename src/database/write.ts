@@ -1,12 +1,14 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type { DatabaseColumnView } from '../protocol.js';
-import type { RowKeyStore} from './row-keys.js';
+import type { RowKeyStore } from './row-keys.js';
 import { targetWhere } from './row-keys.js';
 import { primaryKeyColumns, quoteIdentifier } from './schema.js';
 
 // The three mutations. Every one of them takes its object name from the row key it was handed, never
 // from the client, and every one of them refuses a table with no primary key before it prepares
-// anything — so a write cannot address a row it was not given or a table it cannot address.
+// anything — so a write cannot address a row it was not given or a table it cannot address. The
+// handle is handed in rather than named, so a write can neither open a connection nor reach a
+// database other than the one the caller already opened and checked.
 
 export type WriteOutcome =
   | { ok: true; changed: number; sql: string; parameters: (string | number | null)[] }
@@ -30,7 +32,7 @@ export function updateCell(
   column: string,
   value: string | null,
   columnsOf: (object: string) => DatabaseColumnView[],
-  databaseOf: (name: string) => DatabaseSync,
+  database: DatabaseSync,
 ): WriteOutcome {
   const target = keys.resolve(key);
   if (!target) return refuse(STALE_ROW);
@@ -43,7 +45,7 @@ export function updateCell(
   const where = targetWhere(target, columns);
   const parameters = [value, ...target.values];
   return done(
-    databaseOf(target.database),
+    database,
     `UPDATE ${quoteIdentifier(target.object)} SET ${quoteIdentifier(column)} = ? WHERE ${where}`,
     parameters,
   );
@@ -53,14 +55,14 @@ export function deleteRow(
   keys: RowKeyStore,
   key: string,
   columnsOf: (object: string) => DatabaseColumnView[],
-  databaseOf: (name: string) => DatabaseSync,
+  database: DatabaseSync,
 ): WriteOutcome {
   const target = keys.resolve(key);
   if (!target) return refuse(STALE_ROW);
   const columns = columnsOf(target.object);
   if (primaryKeyColumns(columns).length === 0) return refuse(READ_ONLY);
   return done(
-    databaseOf(target.database),
+    database,
     `DELETE FROM ${quoteIdentifier(target.object)} WHERE ${targetWhere(target, columns)}`,
     target.values,
   );
