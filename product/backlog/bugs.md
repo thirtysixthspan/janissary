@@ -2,6 +2,8 @@
 
 ## ready
 
+* the blinking dot in the tab no longer blinks for the latest version of the claude harness. it should blink when the harness is active.
+
 * Keep Shift+Tab inside a pending question panel, on the answer buttons and the answer field
 
 Existing Bug: The first Shift+Tab pressed in a pending question panel moves keyboard focus out of the panel and into the tab's command line — in both the approval and the free-text form, and from every button — where the spec promises it steps backward between the panel's buttons and wraps. Severity: 5/10
