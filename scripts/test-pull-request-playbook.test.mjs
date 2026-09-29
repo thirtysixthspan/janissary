@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = path.resolve(import.meta.dirname, '..');
 const playbook = readFileSync(path.join(repoRoot, 'ai/tasks/test-pull-request.md'), 'utf8');
 
-const WORKSPACE_TASKS = ['prepare-workspace.md', 'start-application.md', 'stop-application.md'];
+const WORKSPACE_TASKS = ['start-application.md', 'stop-application.md'];
+const PREPARE_TASK = 'prepare-workspace.md';
 
 describe('the test-pull-request playbook', () => {
   // A pull request can rewrite every file on its own branch, including the tasks that tell its
@@ -22,17 +23,36 @@ describe('the test-pull-request playbook', () => {
     expect(existsSync(path.join(repoRoot, 'ai', 'tasks', 'workspace', task))).toBe(true);
   });
 
+  // The preparation task is followed from a `master` checkout, so the branch's own copy has to
+  // still be out of the working tree while it runs.
+  it(`runs ${PREPARE_TASK} on master before the branch is checked out`, () => {
+    const checkoutMaster = playbook.indexOf('Run `git checkout master`');
+    const readPrepare = playbook.indexOf(`./ai/tasks/workspace/${PREPARE_TASK}\` from this \`master\` checkout`);
+    const checkoutBranch = playbook.indexOf('Run `gh pr checkout <number>`');
+    expect(checkoutMaster).toBeGreaterThan(-1);
+    expect(readPrepare).toBeGreaterThan(checkoutMaster);
+    expect(checkoutBranch).toBeGreaterThan(readPrepare);
+    expect(playbook).toContain(`$janissary/ai/tasks/workspace/${PREPARE_TASK}`);
+    expect(existsSync(path.join(repoRoot, 'ai', 'tasks', 'workspace', PREPARE_TASK))).toBe(true);
+  });
+
   it('records the base branch it reads from, and fetches it', () => {
     expect(playbook).toContain('baseRefName');
     expect(playbook).toContain('git fetch origin <base>');
   });
 
   // The supply-chain audit reads only the lockfile. `npm install` would re-resolve whatever the
-  // branch's manifest declares beyond it and install packages nobody audited; `npm ci` installs the
-  // lockfile exactly, or refuses.
-  it('installs exactly the audited lockfile', () => {
-    expect(playbook).toContain('npm ci --ignore-scripts');
-    expect(playbook).not.toMatch(/Run `npm install --ignore-scripts`|Then run `npm install/);
+  // branch's manifest declares beyond it and install packages nobody audited, so the branch's
+  // update runs only after the installation's audit passes and a dry-run `npm ci` proves the
+  // manifest and lockfile agree.
+  it('updates packages only from the audited lockfile', () => {
+    const audit = playbook.indexOf('$janissary/scripts/run.mjs check-malicious-package --audit ./package-lock.json');
+    const syncCheck = playbook.indexOf('Run `npm ci --dry-run --ignore-scripts`');
+    const install = playbook.indexOf('Run `npm install --ignore-scripts`');
+    expect(audit).toBeGreaterThan(-1);
+    expect(syncCheck).toBeGreaterThan(audit);
+    expect(install).toBeGreaterThan(syncCheck);
+    expect(playbook).not.toMatch(/Then run `npm install/);
   });
 
   // The app exits when its last tab closes or on quit, so a step that does either takes every later
