@@ -510,6 +510,35 @@ describe('saveProfile', () => {
   });
 });
 
+describe('saveProfile on a project that has never had a profiles directory', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), 'janus-profsave-fresh-'));
+    initProfileDir(root);
+  });
+
+  afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+
+  it('creates profiles/ and writes profiles/<name>.json', async () => {
+    expect(existsSync(path.join(root, 'profiles'))).toBe(false);
+
+    await saveProfile('scratchprofile', makeManagers([makeTab('bob', '#aaa')]));
+
+    expect(statSync(profilePath('scratchprofile')).isFile()).toBe(true);
+    expect(readdirSync(path.join(root, 'profiles'))).toEqual(['scratchprofile.json']);
+  });
+
+  it('names the profile file, not a temporary path, when the write fails', async () => {
+    writeFileSync(path.join(root, 'profiles'), '');
+
+    const failure = saveProfile('scratchprofile', makeManagers([makeTab('bob', '#aaa')]));
+
+    await expect(failure).rejects.toThrow(`could not write profile "scratchprofile" to ${profilePath('scratchprofile')}`);
+    await expect(failure).rejects.not.toThrow(/\.json\.[\da-f-]+\.tmp/);
+  });
+});
+
 describe('formatSaveSummary', () => {
   function makeSummary(overrides: Partial<SaveSummary> = {}): SaveSummary {
     return {
