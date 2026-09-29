@@ -7,6 +7,7 @@ import { pageLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosit
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
+import { ExportButtons } from './ExportButtons';
 import { CopySelectionButton, useGridSelection } from './selection';
 import { useGridKeys } from './sql-keys';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
@@ -15,7 +16,7 @@ import { DeleteRowDialog } from './DeleteRowDialog';
 
 // The data grid: a filter row under the column headers, one page of rows, and a pager. A read-only
 // object keeps the whole grid and loses only the write affordances, so a view is still useful when
-// it cannot be edited.
+// it cannot be edited — and it keeps the export, which is a read of the whole query.
 export function DataGrid({
   payload, capabilities,
 }: {
@@ -74,6 +75,10 @@ export function DataGrid({
           )}
           <CopySelectionButton onCopy={selection.copy} enabled={selection.range !== null} />
           <ColumnChooserButton hiddenCount={payload.hidden.length} onClick={() => setChoosingColumns(!choosingColumns)} />
+          <ExportButtons
+            enabled={payload.pending === null && object !== undefined}
+            onExport={(format) => send('export', { format })}
+          />
           {capabilities.splitAction}
         </span>
       </div>

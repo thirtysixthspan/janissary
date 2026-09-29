@@ -184,8 +184,14 @@ for it — one list means the line and the history cannot disagree.
 
 Exporting writes the whole filtered, ordered query — not one page — as CSV or JSON, to
 `.janissary/db/exports/<database>-<object>-<n>.<ext>`, and the tab offers it as a download. A
-second export of the same object gets the next number rather than overwriting the first. A CSV field
-containing a comma, a quote, or a line break is quoted, and an interior quote is doubled.
+`CSV` and a `JSON` control beside the grid's other actions start one, and the file appears in the
+tab's own list of exports as a link. Both are unavailable while the tab is waiting on something else,
+because it takes one request at a time. A second export of the same object gets the next number
+rather than overwriting the first. A CSV field containing a comma, a quote, or a line break is
+quoted, and an interior quote is doubled.
+
+An export reads rather than writes, so a view — or a table with no primary key, which the grid will
+not edit — can still be exported.
 
 An object whose name is not usable in a filename — anything holding a path separator, and a name left
 with nothing a file could carry — is exported under a reduced name, and one left with nothing at all

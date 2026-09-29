@@ -75,6 +75,55 @@ describe('SqlTab header', () => {
   });
 });
 
+describe('SqlTab export', () => {
+  const csv = () => screen.getByRole('button', { name: 'CSV' }) as HTMLButtonElement;
+  const json = () => screen.getByRole('button', { name: 'JSON' }) as HTMLButtonElement;
+
+  // The server already had everything an export needs; what was missing was anything that asked for
+  // one, so the header's export links could only ever be empty.
+  it('asks for each format by name, from the control beside the grid', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(csv());
+    expect(intent).toHaveBeenCalledWith('export', { format: 'csv' });
+    fireEvent.click(json());
+    expect(intent).toHaveBeenCalledWith('export', { format: 'json' });
+  });
+
+  // The tab waits on one request at a time, so an export asked for while a read is still running
+  // would be answered after it and replace the page it was meant to describe.
+  it('offers neither format while another request is outstanding, and both again once it lands', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { rerender } = render(
+      <SqlTab payload={payload({ pending: { id: 'q1', followUp: 'query' } })} capabilities={capabilities} />,
+    );
+    expect(csv().disabled).toBe(true);
+    expect(json().disabled).toBe(true);
+    fireEvent.click(csv());
+    expect(intent).not.toHaveBeenCalled();
+
+    rerender(<SqlTab payload={payload()} capabilities={capabilities} />);
+    expect(csv().disabled).toBe(false);
+    expect(json().disabled).toBe(false);
+  });
+
+  it('offers neither format before the navigator has chosen an object', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlTab payload={payload({ object: '', grid: null })} capabilities={capabilities} />);
+    expect(csv().disabled).toBe(true);
+    fireEvent.click(json());
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  // A read-only object cannot be edited, but its whole query can still be read out as a file.
+  it('offers both for a view, which cannot be written but can be exported', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload({ object: 'paid' })} capabilities={capabilities} />);
+    expect(csv().disabled).toBe(false);
+    expect(json().disabled).toBe(false);
+  });
+});
+
 describe('SqlTab console', () => {
   it('asks the host to run what was typed', () => {
     const { capabilities, intent } = makeCapabilities();

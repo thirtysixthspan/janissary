@@ -41,6 +41,11 @@
 .sql-readonly { font-size: 12px; color: var(--muted); font-style: italic; }
 .sql-grid-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 
+.sql-export-actions { display: inline-flex; gap: 4px; margin-left: 4px; }
+.sql-export-actions button { font: inherit; font-size: 11px; letter-spacing: 0.04em; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; cursor: pointer; }
+.sql-export-actions button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
+.sql-export-actions button:disabled { opacity: 0.4; cursor: default; }
+
 .sql-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sql-global-filter { display: flex; align-items: center; gap: 6px; }
 .sql-global-filter input { min-width: 220px; }
