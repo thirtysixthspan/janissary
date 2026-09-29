@@ -26,7 +26,7 @@ The command takes optional `external` and `page` keywords and a target:
 
 Before dispatch the target is classified as a web address or a file:
 
-- **Web address** — a target with an explicit `http://` or `https://` scheme, or any target preceded by the **`page`** keyword, is handed to the web opener. The `page` keyword also supplies a default `https://` scheme, so a bare address (`open page slashdot.org`) is viewable; only `http`/`https` schemes are accepted.
+- **Web address** — a target with an explicit `http://` or `https://` scheme, or any target preceded by the **`page`** keyword, is handed to the web opener. So is any other target written as a URL (`carriesUrlScheme` in `src/commands/open.ts`): a scheme followed by `//` (`file:///etc/passwd`, `ftp://example.com`), or one of the schemes a browser acts on without one (`file`, `javascript`, `data`, `vbscript`, `about`, `blob`, `mailto`, `tel`, `sms`). The web opener rejects all of those as invalid, so `open javascript:alert(1)` answers `open: invalid URL "javascript:alert(1)"` rather than a missing-file message. The rule is deliberately narrower than the URI grammar: a local file name such as `notes:v2.md` is syntactically a URI too, and stays a file. The `page` keyword also supplies a default `https://` scheme, so a bare address (`open page slashdot.org`) is viewable; only `http`/`https` schemes are accepted.
 - **File** — any other target. Relative paths resolve against the active tab's working directory, and the file's extension (case insensitive) is matched against the registered file openers.
 
 The chosen presentation of the selected opener is then invoked.

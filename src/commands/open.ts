@@ -2,10 +2,26 @@ import type { Command } from './types.js';
 
 export type ParsedOpen = { external: boolean; web: boolean; target: string } | { error: string };
 
+// Schemes a browser acts on without a `//` authority. Only `http` and `https` are viewable, so the web
+// opener rejects every one of these; routing them there is what gets them reported as an invalid
+// address rather than resolved as a file path and reported missing.
+const OPAQUE_SCHEMES = new Set(['file', 'javascript', 'data', 'vbscript', 'about', 'blob', 'mailto', 'tel', 'sms']);
+
+// Whether a target is written as a URL rather than a path: a scheme followed by `//` (`https://`,
+// `file:///`, `ftp://`), or one of the opaque schemes above. Narrower than the URI grammar on
+// purpose — a local file name like `notes:v2.md` is also a syntactically valid URI, and must still
+// open as a file.
+function carriesUrlScheme(target: string): boolean {
+  const match = /^([a-z][a-z\d+\-.]*):/i.exec(target);
+  if (!match) return false;
+  return target.startsWith('//', match[0].length) || OPAQUE_SCHEMES.has(match[1].toLowerCase());
+}
+
 // Parse an `open` command line. The leading `open` keyword is stripped; the optional `external` and
-// `page` keywords (in any order) are consumed; everything remaining is the target. A target with an
-// http/https scheme, or preceded by `page`, is routed to the web opener (`web: true`); otherwise it
-// goes to the file opener. The target is kept verbatim (paths may contain spaces).
+// `page` keywords (in any order) are consumed; everything remaining is the target. A target written
+// as a URL (see `carriesUrlScheme`), or preceded by `page`, is routed to the web opener
+// (`web: true`), which accepts only http/https; otherwise it goes to the file opener. The target is
+// kept verbatim (paths may contain spaces).
 export function parseOpen(command_: string): ParsedOpen {
   let rest = command_.replace(/^open\b\s*/i, '');
   let isExternal = false;
@@ -21,7 +37,7 @@ export function parseOpen(command_: string): ParsedOpen {
   }
   const target = rest.trim();
   if (!target) return { error: 'Usage: open [external] [page] <target>' };
-  const web = isPage || /^https?:\/\//i.test(target);
+  const web = isPage || carriesUrlScheme(target);
   return { external: isExternal, web, target };
 }
 
