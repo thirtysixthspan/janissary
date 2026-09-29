@@ -6,6 +6,8 @@ A test run takes an open pull request, builds and starts the app from its head b
 
 The branch's dependencies are installed only after a supply-chain audit of its lockfile passes, using the installation's own audit rather than the branch's copy, and no install script runs. The build and the server still run the branch's code inside the tab's sandbox.
 
+The run takes its instructions for preparing, building, starting, and stopping the app from the pull request's base branch, falling back to the installation's own when the base branch has none. It never takes them from the pull request under test. The branch's own project instructions and task files are part of what is being tested, so a pull request cannot change how its tester behaves. A pull request that changes how its own app starts is started the old way, and a resulting start failure is reported like any other.
+
 ### Edge cases
 
 After the pull request's own steps, the run writes and runs further steps for edge cases in the behavior the pull request changes: empty states, error paths, cancelling, repeating an action, unexpected input, and interaction with neighbouring features. There is no cap on their number, and nothing the plan defers as out of scope is tested. A generated step whose expected result no plan, spec, or description states fails only on plainly broken behavior, such as an uncaught error, a hang, a crash, or lost data; anything else it shows is reported as unspecified and not recorded.
