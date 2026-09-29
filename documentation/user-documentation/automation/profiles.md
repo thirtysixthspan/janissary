@@ -54,7 +54,7 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
 - **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude and codex and `false` for opencode; explicitly setting it to `true` for opencode reports an unsupported setting and skips that entry.
 - **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
-- **`browser`**: `true` launches the harness with a browser attached, the same as the `-b` flag on an interactive `harness` command. A `profile save`d entry records it, so a saved session of a `-b` harness reopens with its browser.
+- **`browser`**: launch the harness with a browser attached. It defaults to `true`, the same as an interactive `harness` command; set it to `false` to opt out, the entry form of `--no-browser`. A `profile save`d entry records it, so a saved session reopens with or without its browser exactly as it ran.
 - **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.
 - **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
 - **`run`** — commands typed into the harness once, shortly after launch.

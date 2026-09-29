@@ -57,9 +57,9 @@ describe('HarnessManager remote e2e browser', () => {
     expect(harnessBrowserMocks().handles).toHaveLength(0);
   });
 
-  it('sets browser false on remote spawn options without -b', async () => {
+  it('sets browser false on remote spawn options with --no-browser', async () => {
     const { managers, ready, registerRemotePty } = remoteBrowserLaunch();
-    expect(createHarnessManager(managers).run('harness claude on devbox')).toBeUndefined();
+    expect(createHarnessManager(managers).run('harness claude on devbox --no-browser')).toBeUndefined();
     ready('/srv/ws');
     await vi.advanceTimersByTimeAsync(0);
     expect(registerRemotePty).toHaveBeenCalledWith('claude', expect.anything(), expect.objectContaining({

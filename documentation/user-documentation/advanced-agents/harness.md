@@ -8,6 +8,7 @@
 harness claude
 harness opencode as quality        custom tab label
 harness claude --no-workspace      opt out of the default workspace
+harness claude --no-browser        opt out of the default browser
 ```
 
 The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The launch command is written to the tab you ran it from before the new tab appears, so the launch stays on the record even if the binary turns out to be missing, in which case the harness tab closes as soon as it opens.
@@ -105,7 +106,7 @@ Typing `harness` with no arguments opens a **New harness** dialog instead of err
 ## Choosing a model and effort level
 
 ```
-harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--model <name>] [--effort <level>]
+harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--no-browser] [--model <name>] [--effort <level>]
 ```
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens. The bundled catalog covers claude, codex, and opencode; the opencode entries carry a provider prefix (`opencode/…`, `opencode-go/…`, `google/…`) because that harness reaches three providers, and the model you name has to match the one whose key you've configured.
@@ -152,29 +153,31 @@ A harness with auto-approval active shows the auto-permitting flag icon in its m
 
 ## Giving a harness a browser
 
-A harness working inside a workspace can't launch a browser of its own — the sandbox blocks it — so it has no way to see what you'd see. `-b`/`--browser` fixes that:
+A harness working inside a workspace can't launch a browser of its own — the sandbox blocks it — so it has no way to see what you'd see. Janissary gives every harness one by default, so a plain `harness claude` already has it. `-b`/`--browser` confirms the default. `--no-browser` leaves the browser out, and wins if you pass both:
 
 ```
-harness claude -b
+harness claude --no-browser
 ```
 
-Janissary publishes an endpoint and two environment variables at launch — `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The headless Chromium itself starts when the harness first connects to that endpoint, which is why a `-b` tab that never drives a browser never starts one; the first connect takes longer than an ordinary one while the browser comes up. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
+The **E2E browser** box in the New harness dialog starts checked for the same reason; unchecking it adds `--no-browser`.
+
+Janissary publishes an endpoint and two environment variables at launch — `JANISSARY_BROWSER_WS_ENDPOINT`, the address to connect to, and `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client — so the harness doesn't need the project to depend on Playwright, and the client and browser versions always match. The headless Chromium itself starts when the harness first connects to that endpoint, which is why a tab that never drives a browser never starts one, and why it's cheap to have on by default; the first connect takes longer than an ordinary one while the browser comes up. The endpoint is a scoped bearer capability: anyone holding its unguessable path can control that tab's contained browser, so the value should be kept secret. From there the harness writes its own script, connects, and drives a real page.
 
 What it points that browser at is its own work: it starts the workspace clone's build and navigates to that. Janissary doesn't hand the harness the address or session token of the window you're working in, and active workspace confinement blocks the normal route through project state where those values are recorded. That reduces disclosure; it doesn't by itself prove the live session unreachable when the harness is unconfined. The warning below covers those configurations. The browser should still test the code in its own workspace rather than the code you're running.
 
 There's no test runner here and no pass/fail reporting. The two variables are the whole feature; what the harness does with them is up to it.
 
-The browser is always headless, each `-b` tab gets its own, and the flag works for every harness, with or without a workspace. Combine it with the other options in any order.
+The browser is always headless, each tab gets its own, and it works for every harness, with or without a workspace. Combine the flags with the other options in any order.
 
-A harness launched with `-b` shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". The flag is lit from launch, whether or not a browser has been started yet.
+A harness launched with its browser shows a 🌐 flag in its [metadata row](/user-documentation/getting-started/tabs), next to 📦 and ⚡. Hover it for "E2E browser". The flag is lit from launch, whether or not a browser has been started yet.
 
 ::: warning A browser endpoint is powerful, so this one is contained
 Anything holding a browser endpoint can normally read your files through `file://` URLs. The address your harness gets belongs to a guard that refuses `file:` URLs and drops the connection outright. It also refuses a request to close the browser itself. The browser belongs to the tab, not to the script driving it, so a script can't close it out from under the tab — asking just ends that script's own connection. When macOS workspace isolation is active, the harness is also blocked from connecting to any e2e browser's private port — its own tab's and every other tab's — so it can't route around that guard, and the browser itself is sandboxed to an empty scratch directory.
 
-On a machine without macOS sandboxing, or with workspace isolation switched off, neither of those boundaries applies: the browser runs loose and only the guard is left. With `--no-workspace` on a machine that can sandbox, the browser is still boxed into its scratch directory — that's decided by the browser's own directory, not by whether your harness has a workspace — but the harness isn't wrapped, so nothing stops it reaching a browser's port directly. In all three cases Janissary still hands the harness the guarded address and withholds credentials from the browser, but another process running as you could find a browser on loopback and connect to it. Use `-b` only on a host you trust in those configurations. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
+On a machine without macOS sandboxing, or with workspace isolation switched off, neither of those boundaries applies: the browser runs loose and only the guard is left. With `--no-workspace` on a machine that can sandbox, the browser is still boxed into its scratch directory — that's decided by the browser's own directory, not by whether your harness has a workspace — but the harness isn't wrapped, so nothing stops it reaching a browser's port directly. In all three cases Janissary still hands the harness the guarded address and withholds credentials from the browser, but another process running as you could find a browser on loopback and connect to it. Because the browser is on by default, pass `--no-browser` in those configurations unless you trust the host. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent).
 :::
 
-`-b` alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both flags still apply; nothing errors, and connecting just times out.
+The browser alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both still apply; nothing errors, and connecting just times out. Since the browser is on by default, add `--no-browser` to an `--offline` launch if you don't want the unusable endpoint.
 
 If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, and stays off: a later connect starts a fresh browser behind the same endpoint, and the row does not light up again for it. The band and the notifications line are where a browser's death is reported. The harness keeps running — only its browser is gone.
 
