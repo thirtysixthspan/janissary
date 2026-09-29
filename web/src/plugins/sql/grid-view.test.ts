@@ -186,6 +186,7 @@ describe('SqlPayload shape used by the view', () => {
     const payload: SqlPayload = {
       database: 'shop', databases: [{ name: 'shop', exists: true, open: true }],
       objects: [ORDERS], object: 'orders', filters: [], order: [], limit: 100, offset: 0,
+      pageSizes: [50, 100, 500],
       grid: GRID, stats: null, console: null, exports: [], error: null, pending: null,
     };
     expect(payload.grid?.columns).toEqual(['a']);

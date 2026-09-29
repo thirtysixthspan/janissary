@@ -1,6 +1,6 @@
 import React from 'react';
 import type { SqlPayload } from '@shared/plugins/sql/shared';
-import { hasNext, hasPrevious, nextOffset, pageLabel, previousOffset, PAGE_SIZES } from './grid-view';
+import { hasNext, hasPrevious, nextOffset, pageLabel, previousOffset } from './grid-view';
 
 // The pager. It shows the same range line the grid's header shows, because the two are the same
 // sentence and a user should not have to look in two places to learn how much of the table they are
@@ -36,7 +36,7 @@ export function Pager({
           onChange={(event) => onSend('set-page-size', { limit: Number(event.target.value) })}
           aria-label="Rows per page"
         >
-          {PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
+          {payload.pageSizes.map((size) => <option key={size} value={size}>{size}</option>)}
         </select>
       </label>
       <button type="button" onClick={() => onSend('refresh', {})}>Refresh</button>

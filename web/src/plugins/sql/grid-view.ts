@@ -4,14 +4,11 @@ import type {
   SqlGrid,
   SqlObject,
   SqlPayload,
-  SqlRow,
 } from '@shared/plugins/sql/shared';
 import type { SqlStatsColumn } from '@shared/plugins/sql/shared';
 
 // Pure view arithmetic, kept out of the components so it is testable without a render: where a page
 // starts and ends, what the pager says, what a filter chip reads, and what a cell shows.
-
-export const PAGE_SIZES = [50, 100, 500];
 
 /** `Rows 1–100 of 4,213`, with the object's own total beside it once a filter is narrowing. */
 export function pageLabel(grid: SqlGrid): string {
@@ -136,9 +133,5 @@ export function renderRunnableSql(sql: string, parameters: readonly (string | nu
     built += parts[index] ?? '';
   }
   return built;
-}
-
-export function rowLabel(row: SqlRow, index: number): string {
-  return row.cells.map((cell) => cellText(cell)).join(' | ') || `#${index + 1}`;
 }
 

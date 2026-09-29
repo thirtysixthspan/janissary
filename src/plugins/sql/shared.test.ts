@@ -8,6 +8,7 @@ import {
   isSetPageIntent,
   isSetPageSizeIntent,
   isUpdateCellIntent,
+  PAGE_SIZES,
 } from './shared-intents.js';
 
 function payload(over: Partial<SqlPayload> = {}): SqlPayload {
@@ -20,6 +21,7 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     order: [],
     limit: 100,
     offset: 0,
+    pageSizes: [50, 100, 500],
     grid: null,
     stats: null,
     console: null,
@@ -72,6 +74,22 @@ describe('isSqlPayload', () => {
       grid: { sql: 's', parameters: [], columns: [], rows: [{ key: 'r1', cells: [{ text: 1, isNull: false }] }], total: 0, unfilteredTotal: 0, offset: 0, limit: 1, order: [] } as never,
     }))).toBe(false);
     expect(isSqlPayload(payload({ pending: { id: 'q1', followUp: 'delete' } as never }))).toBe(false);
+  });
+
+  // The page sizes ride in the payload so the control and the guard that accepts one read the same
+  // list, which is only safe while the list itself is sound.
+  it('rejects a payload whose page sizes are missing, empty, or not numbers', () => {
+    expect(isSqlPayload(payload({ pageSizes: [] }))).toBe(false);
+    expect(isSqlPayload(payload({ pageSizes: ['100'] as never }))).toBe(false);
+    expect(isSqlPayload(payload({ pageSizes: undefined as never }))).toBe(false);
+  });
+
+  it('publishes only sizes the intent guard would accept', () => {
+    for (const size of PAGE_SIZES) {
+      expect(isSetPageSizeIntent({ limit: size })).toBe(true);
+      expect(isSqlPayload(payload({ pageSizes: [size] }))).toBe(true);
+    }
+    expect(isSetPageSizeIntent({ limit: 999 })).toBe(false);
   });
 });
 

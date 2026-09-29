@@ -4,6 +4,7 @@ import {
   type DatabaseResultView,
   type TabPluginServerCapabilities,
 } from '../api.js';
+import { PAGE_SIZES } from './shared-intents.js';
 import type {
   SqlDatabaseRef,
   SqlExport,
@@ -12,7 +13,6 @@ import type {
   SqlPending,
 } from './shared.js';
 
-export const PAGE_SIZES = [50, 100, 500];
 export const DEFAULT_PAGE_SIZE = 100;
 export const NO_DATABASES = 'No databases. Create one with: db sqlite create <name>';
 export const USAGE = 'Usage: sql [<database>] [left|right]';
@@ -49,6 +49,7 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
     order: [],
     limit: DEFAULT_PAGE_SIZE,
     offset: 0,
+    pageSizes: [...PAGE_SIZES],
     grid: null,
     stats: null,
     console: null,
@@ -60,10 +61,6 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
 
 export function instanceKeyFor(database: string): string {
   return `sqlite:${database}`;
-}
-
-export function databaseFromKey(key: string): string {
-  return key.startsWith('sqlite:') ? key.slice('sqlite:'.length) : key;
 }
 
 /**

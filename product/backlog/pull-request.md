@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the dead `rowLabel` helper and the two unused exports the plugin module accumulated, and give the page-size list one owner instead of three.
-
-Existing Issue: `rowLabel` in `web/src/plugins/sql/grid-view.ts` is exported and called by nothing, `databaseFromKey` in `src/plugins/sql/tabs.ts` is exported and called by nothing, and the page-size list `[50, 100, 500]` is written out three times — in `src/plugins/sql/tabs.ts`, in `src/plugins/sql/shared-intents.ts`, and in `web/src/plugins/sql/grid-view.ts` — so the guard that accepts a page size and the control that offers them are two independent copies that can drift. Severity: 3/10
-
-Existing Risk: 3/10 - A page size added in one place is refused by the guard or missing from the control, and the dead exports invite a caller that quietly depends on a helper nothing renders.
-
-Proposal Risk: 2/10 - The three copies become one, so a change now has a single place to land, which is the whole of the improvement.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: drop the sql plugin's dead exports and unify the page sizes". Delete `rowLabel` from `web/src/plugins/sql/grid-view.ts` and `databaseFromKey` from `src/plugins/sql/tabs.ts`, and drop the `PAGE_SIZES` copy from `src/plugins/sql/tabs.ts`, which nothing reads. Keep the one in `src/plugins/sql/shared-intents.ts` as the server's authority, because it is the guard, and have the client read its sizes from the tab payload instead of declaring its own — the payload's `limit` already carries the value in force, so add a `pageSizes` field to `SqlPayload` in `src/plugins/sql/shared.ts`, publish the server's list when a tab opens in `src/plugins/sql/open-tab.ts`, extend the payload guard for it, and render the options from it in `web/src/plugins/sql/Pager.tsx`. The `client` project's `@shared/plugins/...` alias already resolves the shared contract, so the client needs no new import of the server module. `web/src/plugins/sql/grid-view.test.ts` drops its `PAGE_SIZES` import and keeps every other case; `src/plugins/sql/shared.test.ts` gains a case that the payload guard accepts a well-formed `pageSizes` and rejects one holding a value the guard would refuse.
-
-
 * Replace the two `browser`-named modules under `src/database/` with names that say which is the state and which is the service, so a reader can tell them apart without opening both.
 
 Existing Issue: the diff adds `src/database/browser.ts` and `src/database/browser-service.ts`, and the second imports the first, so the pair is distinguishable only by the `-service` suffix and by which one exports the class; `src/database/index.ts` already uses `index.ts` for the command dispatcher, so the suffix convention is new to this tree rather than inherited. Severity: 3/10

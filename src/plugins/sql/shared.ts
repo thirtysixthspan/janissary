@@ -83,6 +83,9 @@ export type SqlPayload = {
   order: SqlOrder[];
   limit: number;
   offset: number;
+  // The page sizes the grid offers, published by the server so the control and the guard that
+  // accepts one read the same list rather than two copies of it.
+  pageSizes: number[];
   grid: SqlGrid | null;
   stats: SqlStatsColumn[] | null;
   console: SqlConsoleResult | null;
@@ -110,6 +113,16 @@ function isListOf(guard: (entry: unknown) => boolean): (value: unknown) => boole
 /** Absent, null, or present and valid. The three states an optional payload part can be in. */
 function isOptional(guard: (part: unknown) => boolean): (value: unknown) => boolean {
   return (value) => value === null || value === undefined || guard(value);
+}
+
+/**
+ * A non-empty list of page sizes, every one of them safe to offer. This contract cannot import the
+ * intent guard that owns the list — it must stay import-free, because the client executes it — so it
+ * checks the shape and the non-emptiness, and `shared-intents.ts` checks membership against the real
+ * list before a payload ever reaches here. A size the host would refuse never gets this far.
+ */
+function isPageSizes(value: unknown): boolean {
+  return Array.isArray(value) && value.length > 0 && value.every(isNumber);
 }
 
 const FOLLOW_UPS = new Set<SqlPending['followUp']>([
@@ -197,6 +210,10 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
     [value.order, isListOf(isOrder)],
     [value.limit, isNumber],
     [value.offset, isNumber],
+    // The sizes must be ones the intent guard would accept. That is the whole reason the server
+    // publishes them: a payload carrying a size the host refuses is a payload this plugin got wrong,
+    // and a control offering a size the guard refuses is a dead option.
+    [value.pageSizes, isPageSizes],
     [value.databases, isListOf(isRef)],
     [value.exports, isListOf(isExport)],
     [value.grid, isOptional(isGrid)],

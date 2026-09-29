@@ -272,6 +272,7 @@ describe('sql plugin intents', () => {
       order: [],
       limit: 100,
       offset: 0,
+      pageSizes: [50, 100, 500],
       grid: grid(),
       stats: null,
       console: null,
