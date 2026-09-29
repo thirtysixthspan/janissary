@@ -40,21 +40,21 @@ export type NavigatorListener = {
 };
 
 // The frames that belong to the tab rather than to one process's I/O: the provisioning answer (a
-// ready workspace, a failed one, or a refused label), the transcript pushes, and the browser-gone
-// report. Everything else inbound is routed to a `SessionListener` instead. `browser-exited` carries
-// a session id but is not that session's output — the tab it names is resolved by the manager,
-// since joined tabs share a channel. `clone-offer` and `root-refused` are the provisioning answer
-// too, for a project root that is missing or unusable.
+// ready workspace, a failed one, or a refused label), the transcript pushes, and the browser-started
+// and browser-gone reports. Everything else inbound is routed to a `SessionListener` instead.
+// `browser-started` and `browser-exited` carry a session id but are not that session's output — the
+// tab they name is resolved by the manager, since joined tabs share a channel. `clone-offer` and
+// `root-refused` are the provisioning answer too, for a project root that is missing or unusable.
 export type ChannelFrame = Extract<ServerFrame, {
   type: 'workspace-ready' | 'workspace-failed' | 'name-in-use' | 'clone-offer' | 'root-refused' | 'transcript'
-    | 'browser-exited' | 'attach-result' | 'session-state-result';
+    | 'browser-exited' | 'browser-started' | 'attach-result' | 'session-state-result';
 }>;
 
 // The same list as data, keyed by the union so a frame added to `ChannelFrame` without an entry here
 // is a compile error rather than one the channel refuses as unexpected.
 const CHANNEL_FRAME_KEYS: Record<ChannelFrame['type'], true> = {
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, 'clone-offer': true, 'root-refused': true,
-  transcript: true, 'browser-exited': true, 'attach-result': true, 'session-state-result': true,
+  transcript: true, 'browser-exited': true, 'browser-started': true, 'attach-result': true, 'session-state-result': true,
 };
 
 export const CHANNEL_FRAME_TYPES: ReadonlySet<string> = new Set(Object.keys(CHANNEL_FRAME_KEYS));

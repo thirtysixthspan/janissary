@@ -66,6 +66,10 @@ export function decodeBrowserExited(record: Record<string, unknown>): DecodeResu
     : { type: 'browser-exited', id: record.id, message: record.message };
 }
 
+export function decodeBrowserStarted(record: Record<string, unknown>): DecodeResult {
+  return nonEmptyString(record.id) ? { type: 'browser-started', id: record.id } : malformed('browser-started');
+}
+
 export function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
   const { dir, notice, cleaned } = record;
   const cloned = decodeCloned(record.cloned);

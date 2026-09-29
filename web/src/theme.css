@@ -229,6 +229,7 @@ html, body, #root {
 .tab-cwd { word-break: break-all; }
 .tab-flags { display: flex; align-items: center; gap: 4px; }
 .tab-flag { font-size: 13px; cursor: default; }
+.tab-flag--active { color: var(--success); }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

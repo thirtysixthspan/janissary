@@ -106,6 +106,48 @@ describe('startLazyE2EBrowserServer on the first connect', () => {
   });
 });
 
+// What lights a tab's browser flag as in use: a browser that has come up, not an endpoint that exists
+// or a launch that is still binding.
+describe('startLazyE2EBrowserServer reporting a browser that has started', () => {
+  it('reports nothing before the agent connects', () => {
+    const { onStarted } = startLazy();
+    expect(onStarted).not.toHaveBeenCalled();
+  });
+
+  it('reports the start once the browser is listening, not when it is spawned', async () => {
+    holdBrowserPort();
+    const { onStarted } = startLazy();
+    const pending = connect();
+    expect(await settled(pending)).toBe(false);
+    expect(onStarted).not.toHaveBeenCalled();
+    browserIsListening();
+    await pending;
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports once for a browser already running, however many clients connect', async () => {
+    const { onStarted } = startLazy();
+    await connect();
+    await connect();
+    expect(onStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not report a start that failed', async () => {
+    mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });
+    const { onStarted } = startLazy();
+    await expect(connect()).rejects.toThrow('spawn refused');
+    expect(onStarted).not.toHaveBeenCalled();
+  });
+
+  it('reports again for the fresh browser a connect starts after a death', async () => {
+    const { onStarted } = startLazy();
+    await connect();
+    child.handlers.get('exit')?.();
+    await connect();
+    expect(onStarted).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('startLazyE2EBrowserServer when a browser will not start', () => {
   it('reports the failure the way any other death is, and keeps the guard listening', async () => {
     mocks.spawn.mockImplementation(() => { throw new Error('spawn refused'); });

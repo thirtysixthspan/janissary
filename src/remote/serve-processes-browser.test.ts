@@ -91,6 +91,12 @@ describe('RemoteProcesses e2e browser', () => {
     );
   });
 
+  it('sends browser-started for that session when the remote\'s browser comes up', () => {
+    const { send } = spawnHarness(true);
+    vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserStarted();
+    expect(send).toHaveBeenCalledWith({ type: 'browser-started', id: 'r1' } satisfies ServerFrame);
+  });
+
   it('sends browser-exited when the remote\'s browser fails to start at all', () => {
     const { send } = spawnHarness(true);
     vi.mocked(harnessSpawnEnv).mock.calls[0][0].onBrowserGone('e2e browser failed to start: ENOENT');

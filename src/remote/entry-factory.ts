@@ -12,7 +12,9 @@ import { deferredChannelTransport } from './channel/types.js';
 import {
   cloneAnswerEcho, cloneKeyAnswer, clonePromptText, cloningLine, type CloneOfferText,
 } from './clone-prompt.js';
-import { notifyBrowserGone, reportRemoteRefusal, reportTruncatedReplay } from './manager-reports.js';
+import {
+  notifyBrowserGone, notifyBrowserStarted, reportRemoteRefusal, reportTruncatedReplay,
+} from './manager-reports.js';
 import type { RemoteLaunchHandlers } from './manager.js';
 import { answerSessionState, handleAttachResult, type RemoteResume } from './resume.js';
 import { createRemoteTranscriptSource } from './transcript-source.js';
@@ -124,6 +126,7 @@ export function createRemoteEntry({
         }
         case 'session-state-result': { answerSessionState(entry, frame.processes); break; }
         case 'browser-exited': { notifyBrowserGone(managers, frame.id, frame.message); break; }
+        case 'browser-started': { notifyBrowserStarted(managers, frame.id); break; }
         default: { transcript.push(frame.blocks); }
         }
       },

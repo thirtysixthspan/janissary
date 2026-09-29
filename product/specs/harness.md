@@ -375,10 +375,12 @@ them as it always did.
 
 A `-b` tab says so in its metadata row: a globe icon among the row's flag icons, to the right of the
 workspaced and auto-permitting ones, with "E2E browser" as its tooltip (see Metadata row in
-`tabs.md`). It is lit from launch, before any browser has been started, and the icon disappears on the
-same update that raises the gone-browser band above the terminal — and stays gone, because a later
-connect's fresh browser is behind the same endpoint and the band and the notification line are where
-its death is reported.
+`tabs.md`). It is lit from launch, before any browser has been started. When the agent's first connect
+brings a browser up and it is listening, the globe turns green and its tooltip reads "E2E browser in
+use"; a remote harness's browser does the same, reported from the far side. The icon disappears on the
+same update that raises the gone-browser band above the terminal. A later connect's fresh browser
+brings it back green, since a browser is in use again, while the band and the notification line keep
+the earlier death on record. Starting a browser notifies nothing: it is what the agent asked for.
 
 The flag is available from all three launch surfaces: the `harness` command, the **E2E browser**
 checkbox in the New harness dialog, and a `browser: true` field on a profile harness entry.

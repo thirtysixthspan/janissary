@@ -43,10 +43,13 @@ export function harnessSpawnEnv(
   options: {
     name: string; cwd: string; label: string; browser: boolean;
     onBrowserGone: (message: string, log?: string) => void;
+    onBrowserStarted: () => void;
   },
 ): HarnessSpawnEnv {
   const base = harnessEnv(options.name, options.cwd);
   if (!options.browser) return { env: base };
-  const browser = startLazyE2EBrowserServer({ label: options.label, onGone: options.onBrowserGone });
+  const browser = startLazyE2EBrowserServer({
+    label: options.label, onGone: options.onBrowserGone, onStarted: options.onBrowserStarted,
+  });
   return { env: { ...base, ...browser.env }, handle: browser.handle };
 }

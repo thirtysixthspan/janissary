@@ -66,6 +66,10 @@ export type HarnessView = {
   // renders that log — and a line written into the terminal would be painted over by the harness's
   // next repaint. The tab stays open: the harness is unaffected, only its browser is gone.
   browserError?: string;
+  // Set while a browser is running behind a `-b` tab's endpoint: raised when one comes up and
+  // listens, cleared when one is reported gone. It is what tells a browser in use apart from an
+  // endpoint nothing has connected to yet, which the metadata row's browser flag reads.
+  browserRunning?: boolean;
   // Set when the remote session behind this tab has ended, carrying the line that says so. It rides
   // the view for `browserError`'s reason — a harness tab's body is its PTY, so a line written into
   // the transcript would never be seen and one written into the terminal would be painted over.

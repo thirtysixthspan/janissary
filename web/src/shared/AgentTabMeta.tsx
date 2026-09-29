@@ -51,7 +51,7 @@ export function AgentTabMeta({
           const display = tabFlagDisplay[flag];
           if (!display) return null;
           return (
-            <span key={flag} className="tab-flag" role="img" aria-label={display.label} title={display.label}>
+            <span key={flag} className={display.className ? `tab-flag ${display.className}` : 'tab-flag'} role="img" aria-label={display.label} title={display.label}>
               <FontAwesomeIcon icon={display.icon} />
             </span>
           );

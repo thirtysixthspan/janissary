@@ -146,6 +146,10 @@ export type ServerFrame =
   // optional because only that host can say anything useful about a host the local side never sees;
   // absent, the local side falls back to naming the remote and nothing more.
   | { type: 'browser-exited'; id: string; message?: string }
+  // The remote's e2e browser for that session has come up and is listening, which is what lights the
+  // local tab's browser flag as in use. The id alone: a start has nothing to say beyond that it
+  // happened, and `browser-exited` ends it.
+  | { type: 'browser-started'; id: string }
   | { type: 'transcript'; blocks: string[] }
   // One piped process's retained history, as the runs the far side saw them in: what was written to
   // it and what it produced, in order. Sent only when an attach is rebuilding tabs, and never for a
@@ -217,7 +221,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
-  'shell-history': true, 'browser-exited': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
+  'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };
