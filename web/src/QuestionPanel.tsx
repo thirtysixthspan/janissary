@@ -34,6 +34,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
       {question.kind === 'ask' ? (
         <form
           className="question-panel-form"
+          data-claims-shift-tab
           onSubmit={(event) => {
             event.preventDefault();
             respond(answer);
@@ -43,6 +44,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
             aria-label="Answer"
             value={answer}
             onChange={(event) => setAnswer(event.target.value)}
+            onKeyDown={askButtons.onFieldKeyDown}
             autoFocus
           />
           <div className="modal-actions" onKeyDown={askButtons.onKeyDown}>
@@ -51,7 +53,7 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
           </div>
         </form>
       ) : (
-        <div className="question-panel-options" onKeyDown={options.onKeyDown}>
+        <div className="question-panel-options" data-claims-shift-tab onKeyDown={options.onKeyDown}>
           {question.options?.map((option, i) => (
             <button className="modal-button" type="button" key={option} ref={options.getRef(i)} onClick={() => respond(option)}>
               {option}

@@ -39,7 +39,7 @@ export function nextSection(current: Section, present: Section[]): Section {
 }
 
 function claimsShiftTab(target: EventTarget | null): boolean {
-  return target instanceof Element && target.matches('[data-claims-shift-tab]');
+  return target instanceof Element && target.closest('[data-claims-shift-tab]') !== null;
 }
 
 function focusSection(section: Section, focusCenter: () => void): void {
@@ -54,8 +54,9 @@ function focusSection(section: Section, focusCenter: () => void): void {
 // currently-visible tab. Runs in the capture phase so it intercepts the chord ahead of xterm
 // (which would otherwise consume it inside a focused terminal) and ahead of the browser's own
 // focus traversal. It stands down while a modal dialog is open, so the chord cannot pull focus out
-// of the dialog, and when the key lands on an element marked `data-claims-shift-tab`, such as the
-// editor's text buffer, which binds the chord to outdent.
+// of the dialog, and when the key lands on or inside an element marked `data-claims-shift-tab`, such
+// as the editor's text buffer, which binds the chord to outdent, or a pending question panel's
+// controls, which bind it to their own backward focus cycle.
 export function useSectionNav(tabs: TabView[], focusCenter: () => void): void {
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;

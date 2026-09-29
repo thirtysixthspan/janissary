@@ -20,7 +20,9 @@ The panel is non-modal. It does not trap global keyboard or pointer input, and t
 
 ### Keyboard focus and navigation
 
-When an approval panel opens, keyboard focus starts on **Cancel**. When a free-text panel opens, keyboard focus starts on the text field. Tab moves focus forward between the panel's buttons (each approval option, or Submit, plus Cancel), wrapping from the last button back to the first instead of leaving the panel; Shift+Tab moves backward the same way, wrapping from the first to the last. The left and right arrow keys move between the same buttons in the same directions as Shift+Tab and Tab, respectively.
+When an approval panel opens, keyboard focus starts on **Cancel**. When a free-text panel opens, keyboard focus starts on the text field. Tab moves focus forward between the panel's buttons (each approval option, or Submit, plus Cancel), wrapping from the last button back to the first instead of leaving the panel; Shift+Tab moves backward the same way, wrapping from the first to the last. Shift+Tab from a free-text panel's text field moves to Cancel, the last button, rather than leaving the panel. The left and right arrow keys move between the same buttons in the same directions as Shift+Tab and Tab, respectively.
+
+The panel's controls keep Shift+Tab ahead of section navigation (see [[keyboard-navigation]]): `QuestionPanel` marks its option row and its free-text form `data-claims-shift-tab`, so the app-wide listener stands down for any key landing inside them. The panel stays non-modal, so Shift+Tab pressed anywhere outside it, such as the command line, still moves to the next application section.
 
 Switching to a tab that already has a pending question moves keyboard focus to that panel's Cancel button, regardless of whether the question is a free-text or approval question — this is separate from, and takes priority over, the kind-based focus a question gets the moment it first opens.
 

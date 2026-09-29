@@ -57,6 +57,35 @@ describe('useAnswerButtons', () => {
     expect(buttons[0].focus).toHaveBeenCalled();
   });
 
+  it('Shift+Tab from a preceding field moves focus to the last button and continues from there', () => {
+    const { result } = renderHook(() => useAnswerButtons(2, 0));
+    const buttons = [makeButton(), makeButton()];
+    result.current.getRef(0)(buttons[0]);
+    result.current.getRef(1)(buttons[1]);
+
+    const e = makeEvent('Tab', true);
+    result.current.onFieldKeyDown(e);
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(buttons[1].focus).toHaveBeenCalled();
+
+    result.current.onKeyDown(makeEvent('Tab', true));
+    expect(buttons[0].focus).toHaveBeenCalled();
+  });
+
+  it('leaves every other key in a preceding field alone', () => {
+    const { result } = renderHook(() => useAnswerButtons(2, 0));
+    const buttons = [makeButton(), makeButton()];
+    result.current.getRef(0)(buttons[0]);
+    result.current.getRef(1)(buttons[1]);
+
+    for (const e of [makeEvent('Tab'), makeEvent('ArrowLeft'), makeEvent('a')]) {
+      result.current.onFieldKeyDown(e);
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    }
+    expect(buttons[0].focus).not.toHaveBeenCalled();
+    expect(buttons[1].focus).not.toHaveBeenCalled();
+  });
+
   it('ignores other keys without calling preventDefault', () => {
     const { result } = renderHook(() => useAnswerButtons(2, 0));
     const e = makeEvent('Enter');
