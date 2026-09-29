@@ -6,6 +6,8 @@
 
 * Keep Shift+Tab inside a pending question panel, on the answer buttons and the answer field
 
+* the unread badge should not be shown until the tab is no longer busy. For example, when a harness asks a permission prompt expecting a response from the user, that should trigger the unread flag, but if the auto approval cause the harness to continue, the flag should no longer be shown.
+
 Existing Bug: The first Shift+Tab pressed in a pending question panel moves keyboard focus out of the panel and into the tab's command line — in both the approval and the free-text form, and from every button — where the spec promises it steps backward between the panel's buttons and wraps. Severity: 5/10
 
 Existing Risk: 5/10 - Every keyboard user meets this the first time they reach for the backward key in a panel, nothing on screen says the panel lost focus, and because focus lands in the command line of a tab that is busy waiting for the answer, the next thing typed is queued as a command instead of answering the question.
