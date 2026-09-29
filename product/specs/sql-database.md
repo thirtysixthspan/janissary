@@ -180,8 +180,9 @@ changed or the error that stopped it, and each with its own **Copy**. A statemen
 logged too: a record of only the successes would not say what happened. This browser is the only
 surface that mutates data, so a log of what was written can live nowhere else. **Clear log** empties
 it without re-reading, since nothing on screen changes when a record of the past is discarded. The
-console's own line under the prompt reports the newest entry, which is why there is no separate field
-for it — one list means the line and the history cannot disagree.
+console's own line under the prompt reports what the newest entry did, so the result of a statement
+is visible without opening anything; the list above holds that entry too, because its statement is
+the half a user copies — one list means the line and the history cannot disagree.
 
 ### Export
 

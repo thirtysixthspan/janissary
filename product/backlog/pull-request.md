@@ -2,17 +2,6 @@
 
 # pull-request
 
-* List the newest statement in the SQL drawer, so one run statement is a record before the next one runs
-
-Existing Issue: The SQL drawer renders `payload.log.slice(1)` and the console's line under the prompt reports only the newest entry's outcome, so the statement that was just run appears nowhere and cannot be copied until a second statement runs. Severity: 4/10
-
-Existing Risk: 3/10 - A user who runs a write and wants to see or copy exactly what was sent finds only `1 row changed.` and has to run something else to make the statement appear.
-
-Proposal Risk: 1/10 - Including the newest entry in the list is a change to one slice, and the console line already reports the same entry so nothing new is invented.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: list the newest statement in the SQL drawer instead of reporting only its outcome under the prompt". Step: G27 (generated) — "Clear the statement log, run exactly one statement, and confirm the drawer lists that statement with what it changed." Fixture: `db sqlite create shop`; `db sqlite query shop "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT NOT NULL, status TEXT, total REAL)"` with rows `('ada','open',10.0)`, `('bo',NULL,20.0)`, `('cy','paid',30.0)`, `('ed','paid',50.0)`; then `sql shop`. Open the **SQL** drawer, press **Clear log**, and in the console run `UPDATE "orders" SET "customer" = 'gina-two' WHERE "id" = 1`. Expected, from `product/specs/sql-database.md` — "Above it, the statements the tab has run — newest first, capped at fifty, each showing what it changed or the error that stopped it, and each with its own **Copy**" — the drawer lists that `UPDATE` with `1 row changed.` and a Copy beside it. Observed on 8abf512: the log emptied, the console's line under the prompt read `OK.`, and the drawer still held no entry at all — `entriesAfterOneStatement=0`, `statements=[]` — showing only the grid's own `SELECT … FROM "orders" ORDER BY "id" ASC LIMIT ? OFFSET ?` with its Copy and Run. The same shape was visible in the earlier batch, where the newest entry's text was absent from the list and the run's outcome was the only trace of it. Root cause: `SqlDrawer` in `web/src/plugins/sql/SqlDrawer.tsx` takes `const history = payload.log.slice(1)` as the log to draw, and `SqlTab` renders `payload.log[0]` as `latest.error ?? 'OK.'` alone, so the newest statement's text exists in neither place. Fix: draw the whole of `payload.log` rather than `slice(1)`, or give the console line the statement as well as its outcome. A regression test should render `SqlDrawer` with a one-entry log and assert the statement text, its outcome and a Copy control are present.
-
-
 * Leave a defaulted column out of the insert the form builds, so a row keeps the database's own defaults
 
 Existing Issue: A column the user leaves alone in **Insert row** is written as an explicit null rather than taking its `DEFAULT`, so a row created by filling only the required columns comes back with nulls where the schema declares defaults. Severity: 5/10

@@ -10,6 +10,9 @@ import type { SqlConsoleResult } from '@shared/plugins/sql/shared';
 // happened has nothing to read otherwise. A log that kept only successes would not answer that, so a
 // failed statement is an entry too.
 //
+// The newest entry is listed here as well as being reported on the console's line under the prompt:
+// the line says what it did, and this is the statement itself, which is the half a user copies.
+//
 // Each entry copies as its own statement, which is worth doing per entry: a session is lifted one
 // statement at a time, not all at once.
 
@@ -31,7 +34,7 @@ export function LogHistory({
   return (
     <div className="sql-log">
       <div className="sql-log-head">
-        <span className="sql-drawer-label">Earlier statements</span>
+        <span className="sql-drawer-label">Statements run</span>
         <button type="button" onClick={onClear}>Clear log</button>
       </div>
       <ol className="sql-log-list">

@@ -19,10 +19,11 @@ export function SqlDrawer({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statement = payload.grid?.sql;
   const parameters = payload.grid?.parameters ?? [];
-  // Everything before the newest entry is the session rather than the last exchange. It is shown
-  // only when there is something to show: a drawer open on a tab that has written nothing should not
-  // carry an empty list around.
-  const history = payload.log.slice(1);
+  // Every statement the tab has run, the newest first. The console's line under the prompt reports
+  // the newest entry's outcome without being asked for it, but the statement itself belongs here too:
+  // a log that starts at the second-newest leaves the statement a user has just run nowhere they can
+  // read or copy it, which is the only record this browser keeps of what it wrote.
+  const log = payload.log;
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -40,18 +41,18 @@ export function SqlDrawer({
   };
 
   if (!statement) {
-    if (history.length === 0) return null;
+    if (log.length === 0) return null;
     return (
       <div className="sql-drawer">
-        <LogHistory log={history} copied={copied} onCopy={copy} onClear={() => { void capabilities.intent('clear-log', {}); }} />
+        <LogHistory log={log} copied={copied} onCopy={copy} onClear={() => { void capabilities.intent('clear-log', {}); }} />
       </div>
     );
   }
 
   return (
     <div className="sql-drawer">
-      {history.length > 0 && (
-        <LogHistory log={history} copied={copied} onCopy={copy} onClear={() => { void capabilities.intent('clear-log', {}); }} />
+      {log.length > 0 && (
+        <LogHistory log={log} copied={copied} onCopy={copy} onClear={() => { void capabilities.intent('clear-log', {}); }} />
       )}
       <pre className="sql-drawer-statement" data-testid="sql-statement">{statement}</pre>
       <div className="sql-drawer-parameters">

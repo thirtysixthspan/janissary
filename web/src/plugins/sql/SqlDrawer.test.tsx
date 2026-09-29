@@ -64,12 +64,20 @@ describe('the statement log', () => {
     { sql: 'UPDATE nope', changed: 0, error: 'no such table: nope' },
   ];
 
-  it('shows every statement before the current one, newest first', () => {
+  it('shows every statement the tab has run, newest first', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
     const entries = screen.getAllByRole('listitem').map((entry) => entry.querySelector('.sql-log-sql')?.textContent);
-    // The newest entry is the console line's business, not the list's.
-    expect(entries).toEqual(['DELETE FROM logs', 'UPDATE nope']);
+    // The newest entry is on the console's line too, but a list that started at the second-newest
+    // left the statement a user had just run nowhere they could read or copy it.
+    expect(entries).toEqual(['UPDATE orders SET status = ?', 'DELETE FROM logs', 'UPDATE nope']);
+  });
+
+  it('lists the one statement a tab has run, rather than showing an empty drawer', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log: [{ sql: 'DELETE FROM logs', changed: 1 }] })} capabilities={capabilities} />);
+    expect(screen.getByText('DELETE FROM logs')).toBeTruthy();
+    expect(screen.getByText('1 row changed.')).toBeTruthy();
   });
 
   it('reports what each statement did, and the failure that stopped it', () => {
@@ -109,7 +117,7 @@ describe('the statement log', () => {
   it('carries no list at all on a tab that has written nothing', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlDrawer payload={payload({ log: [] })} capabilities={capabilities} />);
-    expect(screen.queryByText('Earlier statements')).toBeNull();
+    expect(screen.queryByText('Statements run')).toBeNull();
   });
 
   it('still shows the log when there is no grid statement to show above it', () => {
