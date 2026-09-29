@@ -9,74 +9,79 @@ function makeButton(): HTMLButtonElement {
   return button;
 }
 
-function makeEvent(key: string, shiftKey = false) {
-  return { key, shiftKey, preventDefault: vi.fn() } as unknown as React.KeyboardEvent;
+function makeEvent(key: string, target: EventTarget | null = null, shiftKey = false) {
+  return { key, shiftKey, target, preventDefault: vi.fn() } as unknown as React.KeyboardEvent;
+}
+
+function makeRow(count: number) {
+  const { result } = renderHook(() => useAnswerButtons(count));
+  const buttons = Array.from({ length: count }, () => makeButton());
+  for (const [i, button] of buttons.entries()) result.current.getRef(i)(button);
+  return { result, buttons };
 }
 
 describe('useAnswerButtons', () => {
-  it('Tab and ArrowRight move focus to the next button, wrapping from the last to the first', () => {
-    const { result } = renderHook(() => useAnswerButtons(3, 0));
-    const buttons = [makeButton(), makeButton(), makeButton()];
-    result.current.getRef(0)(buttons[0]);
-    result.current.getRef(1)(buttons[1]);
-    result.current.getRef(2)(buttons[2]);
+  it('Tab and ArrowRight move focus to the button after the focused one, wrapping from the last to the first', () => {
+    const { result, buttons } = makeRow(3);
 
-    const e1 = makeEvent('Tab');
+    const e1 = makeEvent('Tab', buttons[0]);
     result.current.onKeyDown(e1);
     expect(e1.preventDefault).toHaveBeenCalled();
     expect(buttons[1].focus).toHaveBeenCalled();
 
-    result.current.onKeyDown(makeEvent('ArrowRight'));
+    result.current.onKeyDown(makeEvent('ArrowRight', buttons[1]));
     expect(buttons[2].focus).toHaveBeenCalled();
 
-    result.current.onKeyDown(makeEvent('ArrowRight'));
+    result.current.onKeyDown(makeEvent('ArrowRight', buttons[2]));
     expect(buttons[0].focus).toHaveBeenCalled();
   });
 
-  it('Shift+Tab and ArrowLeft move focus to the previous button, wrapping from the first to the last', () => {
-    const { result } = renderHook(() => useAnswerButtons(3, 0));
-    const buttons = [makeButton(), makeButton(), makeButton()];
-    result.current.getRef(0)(buttons[0]);
-    result.current.getRef(1)(buttons[1]);
-    result.current.getRef(2)(buttons[2]);
+  it('Shift+Tab and ArrowLeft move focus to the button before the focused one, wrapping from the first to the last', () => {
+    const { result, buttons } = makeRow(3);
 
-    result.current.onKeyDown(makeEvent('ArrowLeft'));
+    result.current.onKeyDown(makeEvent('ArrowLeft', buttons[0]));
     expect(buttons[2].focus).toHaveBeenCalled();
 
-    result.current.onKeyDown(makeEvent('Tab', true));
+    result.current.onKeyDown(makeEvent('Tab', buttons[2], true));
     expect(buttons[1].focus).toHaveBeenCalled();
   });
 
-  it('starts from the given initial index', () => {
-    const { result } = renderHook(() => useAnswerButtons(2, 1));
-    const buttons = [makeButton(), makeButton()];
-    result.current.getRef(0)(buttons[0]);
-    result.current.getRef(1)(buttons[1]);
+  it('steps from whichever button the key landed on, however focus got there', () => {
+    const { result, buttons } = makeRow(3);
 
-    result.current.onKeyDown(makeEvent('ArrowRight'));
-    expect(buttons[0].focus).toHaveBeenCalled();
+    result.current.onKeyDown(makeEvent('Tab', buttons[0]));
+    expect(buttons[1].focus).toHaveBeenCalledOnce();
+
+    result.current.onKeyDown(makeEvent('Tab', buttons[0]));
+    expect(buttons[1].focus).toHaveBeenCalledTimes(2);
+    expect(buttons[2].focus).not.toHaveBeenCalled();
   });
 
-  it('Shift+Tab from a preceding field moves focus to the last button and continues from there', () => {
-    const { result } = renderHook(() => useAnswerButtons(2, 0));
-    const buttons = [makeButton(), makeButton()];
-    result.current.getRef(0)(buttons[0]);
-    result.current.getRef(1)(buttons[1]);
+  it('moves forward to the first button and backward to the last when the key did not land on one', () => {
+    const { result, buttons } = makeRow(3);
+    const outside = document.createElement('div');
 
-    const e = makeEvent('Tab', true);
+    result.current.onKeyDown(makeEvent('Tab', outside));
+    expect(buttons[0].focus).toHaveBeenCalled();
+
+    result.current.onKeyDown(makeEvent('ArrowLeft', outside));
+    expect(buttons[2].focus).toHaveBeenCalled();
+  });
+
+  it('Shift+Tab from a preceding field moves focus to the last button', () => {
+    const { result, buttons } = makeRow(2);
+
+    const e = makeEvent('Tab', null, true);
     result.current.onFieldKeyDown(e);
     expect(e.preventDefault).toHaveBeenCalled();
     expect(buttons[1].focus).toHaveBeenCalled();
 
-    result.current.onKeyDown(makeEvent('Tab', true));
+    result.current.onKeyDown(makeEvent('Tab', buttons[1], true));
     expect(buttons[0].focus).toHaveBeenCalled();
   });
 
   it('leaves every other key in a preceding field alone', () => {
-    const { result } = renderHook(() => useAnswerButtons(2, 0));
-    const buttons = [makeButton(), makeButton()];
-    result.current.getRef(0)(buttons[0]);
-    result.current.getRef(1)(buttons[1]);
+    const { result, buttons } = makeRow(2);
 
     for (const e of [makeEvent('Tab'), makeEvent('ArrowLeft'), makeEvent('a')]) {
       result.current.onFieldKeyDown(e);
@@ -87,7 +92,7 @@ describe('useAnswerButtons', () => {
   });
 
   it('ignores other keys without calling preventDefault', () => {
-    const { result } = renderHook(() => useAnswerButtons(2, 0));
+    const { result } = makeRow(2);
     const e = makeEvent('Enter');
     result.current.onKeyDown(e);
     expect(e.preventDefault).not.toHaveBeenCalled();

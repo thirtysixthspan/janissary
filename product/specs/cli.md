@@ -50,7 +50,7 @@ Any other failure falls back to the underlying error's message with the same ban
 
 ### Startup sequence
 
-For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command detaches the server into the background and returns the shell prompt as soon as the server is ready, redirecting all of its output to `.janissary/log/server.log` instead of the terminal. `--help`, `--version`, and `stop` run attached, printing straight to the terminal (see their own sections).
+For a normal launch (not `--help`, `--version`, or `stop`), the `janus` command detaches the server into the background and returns the shell prompt as soon as the server is ready, redirecting all of its output to `.janissary/log/server.log` instead of the terminal. `--help`, `--version`, and `stop` run attached, printing straight to the terminal (see their own sections). So does a launch whose `<project-dir>` is missing or is not a directory: the launcher (`bin/janus.mjs`) has nowhere to put the log, so it runs the server attached instead of creating the path, and the server's own argument parsing reports the usage error above and exits 2 before anything is written.
 
 The detached server itself boots the full application against its target directory (the current directory, or the resolved `<project-dir>` argument):
 
