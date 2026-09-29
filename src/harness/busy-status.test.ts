@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { busyStatusHandler, BusyTracker } from './busy-status.js';
 import { endsWithRecap, classifyBusy } from './busy-classify.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
+import { HarnessAutoApprover } from './auto-approve.js';
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';
 
@@ -216,6 +217,7 @@ describe('busyStatusHandler debounce', () => {
       addBusy: vi.fn((label: string) => { busy.add(label); }),
       deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
       markUnread: vi.fn(),
+      clearUnread: vi.fn(),
     };
     const handler = busyStatusHandler(name, name, { tab } as unknown as Managers, undefined);
     if (!handler) throw new Error(`no busy entry for ${name}`);
@@ -323,7 +325,7 @@ describe('busyStatusHandler debounce', () => {
 });
 
 describe('busyStatusHandler state push', () => {
-  function makeStateful(name: string) {
+  function makeStateful(name: string, autoApprove = false) {
     const busy = new Set<string>();
     const tabs = [{ label: name, hasUnread: false }];
     const tab = {
@@ -333,9 +335,17 @@ describe('busyStatusHandler state push', () => {
       addBusy: (label: string) => { busy.add(label); },
       deleteBusy: (label: string) => { busy.delete(label); },
       markUnread: () => { tabs[0].hasUnread = true; },
+      clearUnread: () => { tabs[0].hasUnread = false; },
     };
-    const handler = busyStatusHandler(name, name, { tab } as unknown as Managers, undefined);
-    if (!handler) throw new Error(`no busy entry for ${name}`);
+    const approver = autoApprove
+      ? new HarnessAutoApprover({ harnessName: name, approve: vi.fn(), notify: vi.fn() })
+      : undefined;
+    const busyHandler = busyStatusHandler(name, name, { tab } as unknown as Managers, approver);
+    if (!busyHandler) throw new Error(`no busy entry for ${name}`);
+    const handler = (next: ScreenCapture) => {
+      approver?.onCapture(next);
+      busyHandler(next);
+    };
     return { tabs, handler };
   }
 
@@ -378,6 +388,27 @@ describe('busyStatusHandler state push', () => {
     handler(capture(gate));
     expect(tabs[0].hasUnread).toBe(true);
     expect(dirtyCount).toBe(1);
+  });
+
+  it('clears a gate\'s unread badge once the harness resumes work after the prompt is answered', () => {
+    const { tabs, handler } = makeStateful('claude');
+    const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+    handler(capture(gate));
+    expect(tabs[0].hasUnread).toBe(true);
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    expect(tabs[0].hasUnread).toBe(false);
+    expect(dirtyCount).toBe(2);
+  });
+
+  it('clears an auto-approved gate\'s unread badge once the harness resumes work', () => {
+    const { tabs, handler } = makeStateful('claude', true);
+    const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+    handler(capture(gate));
+    expect(tabs[0].hasUnread).toBe(false);
+    handler(capture(gate));
+    expect(tabs[0].hasUnread).toBe(true);
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+    expect(tabs[0].hasUnread).toBe(false);
   });
 
   it('badges the tab unread when the debounced ready transition commits', () => {

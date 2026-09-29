@@ -2,8 +2,6 @@
 
 ## ready
 
-* the unread badge should not be shown until the tab is no longer busy. For example, when a harness asks a permission prompt expecting a response from the user, that should trigger the unread flag, but if the auto approval cause the harness to continue, the flag should no longer be shown.
-
 * Move focus off Submit with one Tab in a free-text question panel, instead of two
 
 Existing Bug: In the free-text question panel the first Tab after the answer field lands on Submit and the very next Tab leaves focus on Submit, so a second identical press is needed to reach Cancel, where the spec promises Tab moves forward between the panel's buttons and wraps from the last back to the first. Severity: 4/10
