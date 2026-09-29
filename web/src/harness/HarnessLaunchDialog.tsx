@@ -9,7 +9,7 @@ type Properties = { view: HarnessLaunchView; client: JanusClient };
 function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
   const name = view.names[0] ?? 'claude';
   return {
-    name, label: '', workspace: true, offline: false, browser: false,
+    name, label: '', workspace: true, offline: false, browser: true,
     autoApprove: autoApproveSupported(view, name), model: '', effort: '',
   };
 }

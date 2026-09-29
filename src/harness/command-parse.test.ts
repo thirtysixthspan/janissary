@@ -5,13 +5,13 @@ import { parseHarnessCommand } from './command-parse.js';
 // module-private, so every branch is reached through the exported entry point.
 
 describe('parseHarnessCommand — launch form', () => {
-  it('defaults a supported harness to workspace and auto-approve', () => {
+  it('defaults a supported harness to workspace, auto-approve, and the e2e browser', () => {
     expect(parseHarnessCommand('harness claude')).toEqual({
       name: 'claude',
       workspace: true,
       offline: false,
       autoApprove: true,
-      browser: false,
+      browser: true,
     });
   });
 
@@ -74,15 +74,25 @@ describe('parseHarnessCommand — launch form', () => {
   });
 });
 
-describe('parseHarnessCommand — -b/--browser', () => {
-  it('defaults to false', () => {
-    expect(parseHarnessCommand('harness claude')).toMatchObject({ browser: false });
+describe('parseHarnessCommand — -b/--browser/--no-browser', () => {
+  it('defaults to true', () => {
+    expect(parseHarnessCommand('harness claude')).toMatchObject({ browser: true });
   });
 
-  it('accepts both spellings', () => {
+  it('turns the browser off with --no-browser, in any case', () => {
+    expect(parseHarnessCommand('harness claude --no-browser')).toMatchObject({ browser: false });
+    expect(parseHarnessCommand('harness claude --NO-BROWSER')).toMatchObject({ browser: false });
+  });
+
+  it('accepts both spellings of the confirming flag', () => {
     expect(parseHarnessCommand('harness claude -b')).toMatchObject({ browser: true });
     expect(parseHarnessCommand('harness claude --browser')).toMatchObject({ browser: true });
     expect(parseHarnessCommand('harness claude --BROWSER')).toMatchObject({ browser: true });
+  });
+
+  it('lets --no-browser override -b or --browser', () => {
+    expect(parseHarnessCommand('harness claude -b --no-browser')).toMatchObject({ browser: false });
+    expect(parseHarnessCommand('harness claude --no-browser --browser')).toMatchObject({ browser: false });
   });
 
   // Unlike -y, nothing here is harness-specific: every harness gets the same two variables, so there
@@ -114,10 +124,10 @@ describe('parseHarnessCommand — -b/--browser', () => {
     });
   });
 
-  // `-b` inside the prompt is prompt text: the clause is split off before any option scanning.
+  // `--no-browser` inside the prompt is prompt text: the clause is split off before any option scanning.
   it('is not scanned inside a with <prompt> clause', () => {
-    expect(parseHarnessCommand('harness claude with try -b now')).toMatchObject({
-      browser: false, prompt: 'try -b now',
+    expect(parseHarnessCommand('harness claude with try --no-browser now')).toMatchObject({
+      browser: true, prompt: 'try --no-browser now',
     });
   });
 });
@@ -175,7 +185,7 @@ describe('parseHarnessCommand — on <address> clause', () => {
   // is never read as a clause.
   it('leaves an on inside a with <prompt> clause as prompt text', () => {
     expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
-      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: false,
+      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: true,
       prompt: 'turn it on devbox',
     });
   });
@@ -194,7 +204,7 @@ describe('parseHarnessCommand — with <prompt> clause', () => {
       workspace: true,
       offline: false,
       autoApprove: true,
-      browser: false,
+      browser: true,
       prompt: 'fix the -w flag',
     });
   });

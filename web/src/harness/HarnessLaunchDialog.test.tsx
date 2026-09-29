@@ -177,12 +177,12 @@ describe('HarnessLaunchDialog', () => {
     expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --effort high' } });
   });
 
-  it('renders the E2E browser checkbox, defaulted off', () => {
+  it('renders the E2E browser checkbox, defaulted on', () => {
     const { getByLabelText } = renderDialog();
-    expect((getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(false);
+    expect((getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(true);
   });
 
-  // Unlike auto-approve, every harness accepts `-b`, so the control is never disabled.
+  // Unlike auto-approve, every harness accepts the browser, so the control is never disabled.
   it('leaves the E2E browser checkbox enabled for every harness', () => {
     const { getByLabelText, container } = renderDialog();
     for (const name of ['claude', 'opencode', 'codex']) {
@@ -191,11 +191,11 @@ describe('HarnessLaunchDialog', () => {
     }
   });
 
-  it('toggling the E2E browser checkbox appends -b to the built command', () => {
+  it('unchecking the E2E browser checkbox appends --no-browser to the built command', () => {
     const { getByText, getByLabelText, send } = renderDialog();
     fireEvent.click(getByLabelText(/E2E browser/));
     fireEvent.click(getByText('Create'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude -b' } });
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-browser' } });
   });
 
   it('remembers the E2E browser checkbox across reopen', () => {
@@ -204,6 +204,6 @@ describe('HarnessLaunchDialog', () => {
     first.unmount();
 
     const second = renderDialog();
-    expect((second.getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(true);
+    expect((second.getByLabelText(/E2E browser/) as HTMLInputElement).checked).toBe(false);
   });
 });
