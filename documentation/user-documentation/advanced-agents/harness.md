@@ -205,6 +205,8 @@ When a harness that isn't on screen finishes and goes idle, its tab picks up the
 
 A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched without `-y`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings. Opencode is the exception again: its prompts aren't recognized as prompts, so a stuck opencode tab is still flagged, just on the ordinary timing.
 
+The flag means the harness is waiting, so it goes away on its own once the harness starts working again. Say auto-approval stood down on a prompt and the tab got flagged, and then the harness carried on anyway. The flag clears as the dot starts blinking, and you won't come back to a flag on a tab that's busy. If the harness stops again, it gets flagged again.
+
 See [Tabs](/user-documentation/getting-started/tabs) for what the dot and the flag mean everywhere else. A harness type added later with no way to recognize its state gets the older, coarser rule: the dot blinks for as long as its process is alive, and nothing settles it early. All three launchable harnesses have a signal today, so that only applies to a harness added after them.
 
 ## Starting with a prompt

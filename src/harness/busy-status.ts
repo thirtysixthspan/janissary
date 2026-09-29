@@ -68,12 +68,27 @@ function dotSnapshot(managers: Managers, label: string): string {
   return `${managers.tab.isBusy(label)}:${unread}`;
 }
 
+// Apply one reported transition to the harness tab, for the local handler below and the remote
+// session's `onBusyTransition` alike. The badge means the harness is waiting — finished, or held at
+// a prompt — so going back to work clears it: a gate badged unread and then answered (auto-approve
+// landing after it stood down) must not leave the badge on a harness that is busy again. The next
+// idle commit or unanswered gate badges it afresh. `markUnread` itself only badges a hidden
+// (backgrounded, undocked) tab, so a visible tab going ready is unaffected.
+export function applyBusyTransition(managers: Managers, label: string, transition: BusyTransition): void {
+  if (transition.busy) {
+    managers.tab.addBusy(label);
+    managers.tab.clearUnread(label);
+  } else {
+    managers.tab.deleteBusy(label);
+    if (transition.unread) managers.tab.markUnread(label);
+  }
+}
+
 // Build the per-tab capture handler that keeps the tab's busy dot in sync with the harness's
 // actual state, or undefined when the harness has no detector (leaving the coarse spawn-to-exit
-// busy behavior untouched). `markUnread` itself only badges a hidden (backgrounded, undocked) tab,
-// so a visible tab going ready is unaffected. Whenever a capture flips the busy flag or the unread
-// badge, `state: dirty` is emitted so clients see the change immediately — without it, a
-// backgrounded tab's dot would sit stale until the next unrelated state push.
+// busy behavior untouched). Whenever a capture flips the busy flag or the unread badge,
+// `state: dirty` is emitted so clients see the change immediately — without it, a backgrounded
+// tab's dot would sit stale until the next unrelated state push.
 export function busyStatusHandler(
   name: string, label: string, managers: Managers, approver: HarnessAutoApprover | undefined,
 ): ((capture: ScreenCapture) => void) | undefined {
@@ -82,13 +97,7 @@ export function busyStatusHandler(
   return (capture) => {
     const before = dotSnapshot(managers, label);
     const transition = tracker.observe(capture, name, !approver || approver.isStuck);
-    if (transition) {
-      if (transition.busy) managers.tab.addBusy(label);
-      else {
-        managers.tab.deleteBusy(label);
-        if (transition.unread) managers.tab.markUnread(label);
-      }
-    }
+    if (transition) applyBusyTransition(managers, label, transition);
     if (dotSnapshot(managers, label) !== before) messageBus.emit('state', { type: 'dirty' });
   };
 }

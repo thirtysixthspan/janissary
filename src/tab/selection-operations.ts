@@ -19,6 +19,11 @@ export function markUnread(port: TabSelectionPort, label: string): void {
   markUnreadTab(port.tabs, label, port.tabs[port.activeTab]?.label, port.secondaryTabLabel);
 }
 
+export function clearUnread(port: TabSelectionPort, label: string): void {
+  const tab = port.tabs.find((t) => t.label === label);
+  if (tab) tab.hasUnread = false;
+}
+
 export function recordLeavingActiveTab(port: TabSelectionPort, newIndex: number): void {
   port.focusHistory = recordLeavingActiveTabOp(port.tabs, port.activeTab, port.focusHistory, newIndex);
 }

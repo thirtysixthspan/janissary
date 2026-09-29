@@ -2,8 +2,6 @@
 
 ## ready
 
-* the unread badge should not be shown until the tab is no longer busy. For example, when a harness asks a permission prompt expecting a response from the user, that should trigger the unread flag, but if the auto approval cause the harness to continue, the flag should no longer be shown.
-
 * Report a mistyped janus project directory as a usage error instead of crashing on a raw stack trace
 
 Existing Bug: Passing a `<project-dir>` that is not a directory makes the launcher die on an unhandled `ENOTDIR` from `mkdirSync`, printing a Node stack trace that names internal files and exiting 1, where the spec promises the error goes to stderr with a pointer to `--help` and the process exits 2. Severity: 4/10
