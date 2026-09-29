@@ -137,7 +137,9 @@ reaching a different row.
 
 **Insert row** opens a form with one input per column, the statement the save will run shown above the
 controls, and a Save and a Cancel. Nothing is written until Save, and a column the user leaves alone
-is sent as null rather than as an empty string, so it takes the database's own default. Each input
+is sent as null rather than as an empty string. The null is what is stored: a column's `DEFAULT`
+covers a column the insert does not name, so a `NOT NULL` column has to be filled in and a defaulted
+one comes back null unless a value is typed into it. Each input
 carries a **NULL** toggle matching the cell editor's, and it is on until the user turns it off — a
 blank string and an explicit null are different values, so the distinction is a control rather than a
 convention about typing nothing. A field whose column is null is disabled, so a typed value cannot

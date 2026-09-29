@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Leave a defaulted column out of the insert the form builds, so a row keeps the database's own defaults
-
-Existing Issue: A column the user leaves alone in **Insert row** is written as an explicit null rather than taking its `DEFAULT`, so a row created by filling only the required columns comes back with nulls where the schema declares defaults. Severity: 5/10
-
-Existing Risk: 5/10 - A row inserted from the form silently loses every default the schema defines, and the user has no way to see that the form decided to write a null for a column they never touched.
-
-Proposal Risk: 2/10 - Omitting untouched columns is a change to how the form builds its cell list, and the statement preview already shows which columns will be written.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let a column left alone in the insert form take its database default". Step: G8 (generated) — "Insert a row into a table whose columns carry `DEFAULT` values, leaving the defaulted columns alone in the form, and confirm they take their database default." Fixture: `db sqlite create shop`; `db sqlite query shop "CREATE TABLE defaults (id INTEGER PRIMARY KEY, n INTEGER DEFAULT 7, s TEXT DEFAULT 'fallback')"`; `db sqlite query shop "INSERT INTO defaults (id) VALUES (1)"`; then `sql shop` and **Refresh**, select `defaults`, press **Insert row** and **Save** without touching `n` or `s`. Expected, from `product/specs/sql-database.md` — "a column the user leaves alone is sent as null rather than as an empty string, so it takes the database's own default" — the new row reads `7` and `fallback`. Observed on 8abf512: the saved row read `2 | NULL | NULL`, and `db sqlite query shop "SELECT id, n, s FROM defaults ORDER BY id"` printed `1 7 fallback` and `2` with both columns empty, against the untouched `1` which had taken its defaults from the same statement's brevity. Root cause: `InsertForm` in `web/src/plugins/sql/InsertForm.tsx` seeds every draft as `{ text: '', isNull: true }` and its `onSave` sends a cell for every column of the object, so `insertParts` in `src/database/write.ts` names all three columns and prepares `INSERT INTO "defaults" ("id", "n", "s") VALUES (?, ?, ?)`; SQLite applies a `DEFAULT` only for a column absent from the statement, so the explicit null is what is stored. Fix: send only the columns the user filled in, or reconcile the spec's sentence with what an explicit null does — the first clause describes the code, the second describes something SQLite does not do. A regression test should insert through the form into a table with defaulted columns and assert the saved row holds the declared defaults, and `write.test.ts` should assert the prepared statement omits an untouched column.
-
-
 * Put the statement **Run** sends into the console, so a filtered grid becomes the starting point of a hand-written query
 
 Existing Issue: Pressing **Run** in the SQL drawer sends the statement with its values written in but leaves the console empty, so the statement the plan says it puts there is nowhere to edit. Severity: 4/10

@@ -151,6 +151,20 @@ describe('insertRow', () => {
       expect(row).toEqual({ id: 3, status: null });
     });
   });
+
+  // The two shapes the spec now tells apart: a column named with a null stores the null, and only a
+  // column the statement does not name reaches its `DEFAULT`.
+  it('stores the null a column left alone carries, rather than its default', () => {
+    withDb((database) => {
+      database.exec('CREATE TABLE priced (id INTEGER PRIMARY KEY, n INTEGER DEFAULT 7, s TEXT DEFAULT \'fallback\')');
+      const columns = objectColumns(database, 'priced');
+      const outcome = insertRow('priced', [{ column: 'id', value: null }, { column: 'n', value: null }, { column: 's', value: null }], columns, database);
+      expect(outcome).toMatchObject({ ok: true, sql: 'INSERT INTO "priced" ("id", "n", "s") VALUES (?, ?, ?)' });
+      expect(database.prepare('SELECT n, s FROM priced WHERE id = 1').get()).toEqual({ n: null, s: null });
+      insertRow('priced', [{ column: 'id', value: null }, { column: 'n', value: null }], columns, database);
+      expect(database.prepare('SELECT s FROM priced WHERE id = 2').get()).toEqual({ s: 'fallback' });
+    });
+  });
 });
 
 describe('RowKeyStore', () => {
