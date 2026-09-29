@@ -10,6 +10,11 @@ export type SqlConsoleProperties = {
   // input only claims focus on mount when the tab is actually on screen.
   active: boolean;
   busy: boolean;
+  // The text in the field, held by the frame rather than here, so the drawer's Run can put a
+  // statement in the console as well as send it — a filtered grid is meant to be the starting point
+  // of a hand-written query, and a statement that only executes is not one.
+  value: string;
+  onValue(next: string): void;
   onSend(sql: string): void;
 };
 
@@ -17,8 +22,7 @@ export type SqlConsoleProperties = {
 // in the application, and Shift+Enter still starts a new line. Enter sends whatever is typed, and the
 // host decides whether that was a read or a write using the same test `db sqlite query` uses — so
 // the console is the escape hatch for a schema change, not a second grid.
-export function SqlConsole({ active, busy, onSend }: SqlConsoleProperties) {
-  const [sql, setSql] = useState('');
+export function SqlConsole({ active, busy, value, onValue, onSend }: SqlConsoleProperties) {
   const [history, setHistory] = useState<string[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -27,12 +31,12 @@ export function SqlConsole({ active, busy, onSend }: SqlConsoleProperties) {
     onSend(text);
   };
 
-  const bar = useCommandBarKeys({ value: sql, setValue: setSql, inputRef, history, onSubmit: send });
+  const bar = useCommandBarKeys({ value, setValue: onValue, inputRef, history, onSubmit: send });
 
   return (
     <CommandBarShell
-      value={sql}
-      onChange={setSql}
+      value={value}
+      onChange={onValue}
       onKeyDown={bar.onKeyDown}
       inputRef={inputRef}
       ghost={bar.ghost}

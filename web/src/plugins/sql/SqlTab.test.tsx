@@ -134,6 +134,19 @@ describe('SqlTab console', () => {
     expect(intent).toHaveBeenCalledWith('run', { sql: 'SELECT 1' });
   });
 
+  it('leaves a statement Run sends in the console, so it is there to adjust', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const filtered = payload({
+      grid: { ...payload().grid!, sql: 'SELECT "id" FROM "orders" WHERE "status" = ? LIMIT ? OFFSET ?', parameters: ['paid', 100, 0] },
+    });
+    render(<SqlTab payload={filtered} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Toggle generated SQL'));
+    fireEvent.click(screen.getByText('Run'));
+    const bar = screen.getByLabelText('SQL') as HTMLTextAreaElement;
+    expect(bar.value).toBe(`SELECT "id" FROM "orders" WHERE "status" = 'paid' LIMIT 100 OFFSET 0`);
+    expect(intent).toHaveBeenCalledWith('run', { sql: bar.value });
+  });
+
   it('shows what the last statement did, or why it did not', () => {
     const { capabilities } = makeCapabilities();
     const { rerender } = render(<SqlTab payload={payload()} capabilities={capabilities} />);

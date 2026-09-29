@@ -10,10 +10,12 @@ import { LogHistory } from './SqlLog';
 // as `?` placeholders rather than inlined. Inlining would need to escape a value, and a copy of the
 // statement that means something slightly different is worse than one that needs filling in.
 export function SqlDrawer({
-  payload, capabilities,
+  payload, capabilities, onRun,
 }: {
   payload: SqlPayload;
   capabilities: TabPluginClientCapabilities;
+  /** Send a statement and leave it in the console, so it is there to adjust. */
+  onRun(sql: string): void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,7 +68,7 @@ export function SqlDrawer({
         <button
           type="button"
           title="Run this statement with the parameters above filled in"
-          onClick={() => { void capabilities.intent('run', { sql: renderRunnableSql(statement, parameters) }); }}
+          onClick={() => onRun(renderRunnableSql(statement, parameters))}
         >
           <FontAwesomeIcon icon={faPlay} /> Run
         </button>

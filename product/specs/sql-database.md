@@ -171,8 +171,10 @@ a value containing a quote cannot be shown inside a statement safely, and a copy
 something else is worse than one that needs filling in. **Copy** puts both on the clipboard.
 
 **Run** sends the statement *with those values written in* — a text value quoted, a number bare — so
-running a filtered grid's statement runs that query rather than one comparing against nulls. The
-panel keeps showing the placeholder form, because that is the statement that actually ran.
+running a filtered grid's statement runs that query rather than one comparing against nulls. It
+leaves that statement in the console as well, which is the point of it: a filtered grid becomes the
+starting point of a hand-written query, and the query to hand-write from is the one sitting in the
+field. The panel keeps showing the placeholder form, because that is the statement that actually ran.
 
 The order shown is the order actually used, including the primary-key fallback, so what the grid did
 is never a surprise.

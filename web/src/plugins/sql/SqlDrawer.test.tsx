@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { SqlDrawer } from './SqlDrawer';
 import { makeCapabilities, payload } from './fixture';
 
+// The drawer hands a rendered statement to the frame, which sends it and leaves it in the console.
+const onRun = vi.fn();
+
 describe('SqlDrawer', () => {
   it('shows the statement that ran with its placeholders, and the values bound into it', () => {
     const { capabilities } = makeCapabilities();
@@ -14,7 +17,7 @@ describe('SqlDrawer', () => {
         parameters: ['paid', 100, 0],
       },
     });
-    render(<SqlDrawer payload={withFilter} capabilities={capabilities} />);
+    render(<SqlDrawer payload={withFilter} capabilities={capabilities} onRun={onRun} />);
     expect(screen.getByTestId('sql-statement').textContent).toContain('WHERE "status" = ?');
     expect(screen.getByText('["paid",100,0]')).toBeTruthy();
   });
@@ -24,7 +27,7 @@ describe('SqlDrawer', () => {
     const withQuote = payload({
       grid: { ...payload().grid!, parameters: ["it's"], sql: 'SELECT "id" FROM "orders" WHERE "c" = ?' },
     });
-    render(<SqlDrawer payload={withQuote} capabilities={capabilities} />);
+    render(<SqlDrawer payload={withQuote} capabilities={capabilities} onRun={onRun} />);
     expect(screen.getByTestId('sql-statement').textContent).not.toContain("it's");
   });
 
@@ -32,27 +35,27 @@ describe('SqlDrawer', () => {
     const write = vi.fn(async () => {});
     Object.assign(navigator, { clipboard: { writeText: write } });
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload()} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload()} capabilities={capabilities} onRun={onRun} />);
     await fireEvent.click(screen.getByText('Copy'));
     expect(write).toHaveBeenCalledWith(expect.stringContaining('-- Parameters:'));
   });
 
   it('asks to run the statement with its values filled in, while still showing the placeholder', () => {
-    const { capabilities, intent } = makeCapabilities();
+    const { capabilities } = makeCapabilities();
     const sql = 'SELECT "id" FROM "orders" WHERE "status" = ? LIMIT ? OFFSET ?';
     const filtered = payload({ grid: { ...payload().grid!, sql, parameters: ['paid', 100, 0] } });
-    render(<SqlDrawer payload={filtered} capabilities={capabilities} />);
+    render(<SqlDrawer payload={filtered} capabilities={capabilities} onRun={onRun} />);
     fireEvent.click(screen.getByText('Run'));
-    expect(intent).toHaveBeenCalledWith('run', {
-      sql: `SELECT "id" FROM "orders" WHERE "status" = 'paid' LIMIT 100 OFFSET 0`,
-    });
+    expect(onRun).toHaveBeenCalledWith(
+      `SELECT "id" FROM "orders" WHERE "status" = 'paid' LIMIT 100 OFFSET 0`,
+    );
     // The panel still shows what executed, placeholders and all — the two are different on purpose.
     expect(screen.getByTestId('sql-statement').textContent).toContain('= ?');
   });
 
   it('draws nothing without a statement to show', () => {
     const { capabilities } = makeCapabilities();
-    const { container } = render(<SqlDrawer payload={payload({ grid: null })} capabilities={capabilities} />);
+    const { container } = render(<SqlDrawer payload={payload({ grid: null })} capabilities={capabilities} onRun={onRun} />);
     expect(container.firstChild).toBeNull();
   });
 });
@@ -66,7 +69,7 @@ describe('the statement log', () => {
 
   it('shows every statement the tab has run, newest first', () => {
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} onRun={onRun} />);
     const entries = screen.getAllByRole('listitem').map((entry) => entry.querySelector('.sql-log-sql')?.textContent);
     // The newest entry is on the console's line too, but a list that started at the second-newest
     // left the statement a user had just run nowhere they could read or copy it.
@@ -75,14 +78,14 @@ describe('the statement log', () => {
 
   it('lists the one statement a tab has run, rather than showing an empty drawer', () => {
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log: [{ sql: 'DELETE FROM logs', changed: 1 }] })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log: [{ sql: 'DELETE FROM logs', changed: 1 }] })} capabilities={capabilities} onRun={onRun} />);
     expect(screen.getByText('DELETE FROM logs')).toBeTruthy();
     expect(screen.getByText('1 row changed.')).toBeTruthy();
   });
 
   it('reports what each statement did, and the failure that stopped it', () => {
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} onRun={onRun} />);
     expect(screen.getByText('1 row changed.')).toBeTruthy();
     expect(screen.getByText('no such table: nope')).toBeTruthy();
   });
@@ -91,7 +94,7 @@ describe('the statement log', () => {
     const write = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: write } });
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} onRun={onRun} />);
     fireEvent.click(screen.getByLabelText('Copy DELETE FROM logs'));
     expect(write).toHaveBeenCalledWith('DELETE FROM logs');
     vi.unstubAllGlobals();
@@ -101,7 +104,7 @@ describe('the statement log', () => {
     const write = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: write } });
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} onRun={onRun} />);
     fireEvent.click(screen.getByLabelText('Copy DELETE FROM logs'));
     await vi.waitFor(() => expect(screen.getAllByText('Copied').length).toBeGreaterThan(0));
     vi.unstubAllGlobals();
@@ -109,20 +112,20 @@ describe('the statement log', () => {
 
   it('clears the log on request', () => {
     const { capabilities, intent } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} onRun={onRun} />);
     fireEvent.click(screen.getByRole('button', { name: 'Clear log' }));
     expect(intent).toHaveBeenCalledWith('clear-log', {});
   });
 
   it('carries no list at all on a tab that has written nothing', () => {
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ log: [] })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ log: [] })} capabilities={capabilities} onRun={onRun} />);
     expect(screen.queryByText('Statements run')).toBeNull();
   });
 
   it('still shows the log when there is no grid statement to show above it', () => {
     const { capabilities } = makeCapabilities();
-    render(<SqlDrawer payload={payload({ grid: null, log })} capabilities={capabilities} />);
+    render(<SqlDrawer payload={payload({ grid: null, log })} capabilities={capabilities} onRun={onRun} />);
     expect(screen.getByText('DELETE FROM logs')).toBeTruthy();
   });
 });

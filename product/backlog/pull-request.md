@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Put the statement **Run** sends into the console, so a filtered grid becomes the starting point of a hand-written query
-
-Existing Issue: Pressing **Run** in the SQL drawer sends the statement with its values written in but leaves the console empty, so the statement the plan says it puts there is nowhere to edit. Severity: 4/10
-
-Existing Risk: 3/10 - A user who presses **Run** expecting to adjust and re-run the statement finds an empty console and has to retype it from the drawer.
-
-Proposal Risk: 1/10 - Passing the rendered statement down to the console is a prop and a state write, and the run itself already behaves as specified.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: leave the statement Run sends in the SQL console". Step: G20 (generated) — "Open **SQL** on a filtered grid, press **Run**, and confirm the statement arrives in the console with its values written in, and that the same rows come back." Fixture: `db sqlite create shop`; `db sqlite query shop "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT NOT NULL, status TEXT, total REAL)"` with `('ada','open',10.0)`, `('bo',NULL,20.0)`, `('cy','paid',30.0)`; then `sql shop`, filter `status` with `eq` and the value `open`, open the **SQL** drawer and press **Run**. Expected, from the plan's design decision — "**Run** puts the statement in the console and sends it, so a filtered grid becomes the starting point of a hand-written query" — the console holds `SELECT … WHERE "status" = 'open' …` and the same single row comes back. Observed on 8abf512: the run itself worked — the panel afterwards showed `WHERE "status" = 'open'` and the grid still held the one row for `ada` — but the console's textarea was empty (`consoleValue=""`), so the statement could not be edited or re-run from where the plan says it lands. Root cause: the drawer's Run button calls `capabilities.intent('run', { sql: renderRunnableSql(statement, parameters) })` and nothing writes that text into `SqlConsole`, whose `value` state is local to it in `web/src/plugins/sql/SqlConsole.tsx` and is cleared by nothing but its own edits. Fix: hand the rendered statement to `SqlConsole` when Run is pressed, or lift that value into `SqlTab` so the button can set it. A regression test should press Run with a filtered grid and assert the console's value is the rendered statement.
-
-
 * Offer a way to name a new database in the tab's own switcher, so the database a user needs can be made from the tab
 
 Existing Issue: The database switcher in the tab header is a `<select>` of the databases the registry already knows, so the spec's promise that it creates a database has no control behind it and the `open` intent's create branch is unreachable from the client. Severity: 4/10
