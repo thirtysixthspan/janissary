@@ -2,7 +2,7 @@ import { runDatabaseCommand } from './index.js';
 import { parseDatabaseCommand } from './parsing.js';
 import { isDatabaseCommandLine, DB_PRIMER } from './primer.js';
 import { isConnectionOpen, closeConnection, closeAllConnections, listOpenConnections, listDatabaseFiles } from '../connections.js';
-import { DatabaseBrowser } from './browser-service.js';
+import { DatabaseBrowser } from './browser.js';
 import type { DatabaseGridQuery, DatabasesView } from '../protocol.js';
 
 // Owns each tab's view of the SQLite databases it has opened, and acts as the controller's facade
