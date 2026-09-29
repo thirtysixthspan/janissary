@@ -653,6 +653,13 @@ claude, if the last thing it printed before returning to its own prompt was a `r
 summary line, the transition is exempted from the badge — the busy dot still stops blinking, but a
 recap alone is not treated as new information worth flagging.
 
+The badge means the harness is waiting, so it clears as soon as busy tracking sees the harness
+working again (`applyBusyTransition` in `src/harness/busy-status.ts`, shared by the local handler
+and a remote harness's reported transitions). A permission prompt that badged a hidden tab and was
+then answered, for example by auto-approve landing after it had stood down, leaves no badge on a
+harness that has gone back to work. If it stops again, the next committed idle transition or
+unanswered prompt badges it afresh.
+
 When claude or codex shows a recognized permission prompt, the dot stops blinking immediately — the
 harness is waiting on the user, not working — and if nothing is going to answer the prompt (the tab
 was launched without `-y`, or auto-approve has stood down on a prompt it could not clear), the tab is

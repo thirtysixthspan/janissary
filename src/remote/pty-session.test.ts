@@ -47,6 +47,7 @@ function makeManagers(tabs: Tab[]): Managers {
       addBusy: vi.fn(),
       deleteBusy: vi.fn(),
       markUnread: vi.fn(),
+      clearUnread: vi.fn(),
     },
   } as unknown as Managers;
 }
@@ -235,6 +236,20 @@ describe('createRemotePtySession', () => {
       expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
       expect(dirty).toHaveBeenCalledTimes(2);
     } finally { subscription.unsubscribe(); }
+  });
+
+  it('clears the unread badge when the harness reports busy again', () => {
+    const { channel } = attachedChannel();
+    const managers = makeManagers([makeTab('claude', 'red')]);
+    createRemotePtySession(channel, managers, {
+      id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+    }, vi.fn());
+
+    channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: false, unread: true })}\n`);
+    expect(managers.tab.clearUnread).not.toHaveBeenCalled();
+    channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: true, unread: false })}\n`);
+
+    expect(managers.tab.clearUnread).toHaveBeenCalledWith('claude');
   });
 
   it('does not mark unread on a busy-transition to false with unread: false', () => {
