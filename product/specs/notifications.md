@@ -33,6 +33,21 @@ Because the feed renders the queue, 200 is also the most the feed can show, whet
 open or opened later. A session that produces more than that loses the same oldest lines from both
 the queue and feed; the notification record below is the durable trail for reading further back.
 
+### Repeated notifications
+
+A notification that repeats the one recorded just before it folds into that one instead of adding a
+line. A repeat is the same originating tab with the same message; the time is not part of it, so the
+same failure reported minutes apart still folds as long as nothing else was recorded in between.
+The feed shows a single line for the run of repeats, with ` (N times)` after the message, for
+example `● 8:34pm janus: Could not pull: network unreachable (3 times)`. The line carries the time
+and any link targets of the latest repeat. A different notification in between starts a new line,
+so only sequential repeats fold.
+
+A folded run takes one place in the queue, so a flood of one message does not push the rest of the
+200 out of the feed. Folding is a feed matter only: each repeat still counts toward the burst window,
+still raises its own toast when no feed is on screen, and is still written to the record file as
+its own line.
+
 ### The notification record
 
 Every notification is also appended to **`.janissary/notifications.json`**, one JSON object per

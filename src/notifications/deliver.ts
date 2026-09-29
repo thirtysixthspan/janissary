@@ -1,7 +1,9 @@
 import type { Managers } from '../managers.js';
 import type { RecordedNotification } from './queue.js';
 import { messageBus } from '../bus.js';
-import { appendNotification, clearNotificationsFeed, notificationsFeedVisible, showNotificationsFeed } from './tab.js';
+import {
+  appendNotification, clearNotificationsFeed, notificationsFeedVisible, replaceLatestNotification, showNotificationsFeed,
+} from './tab.js';
 import { appendNotificationRecord, clearNotificationRecord } from './record.js';
 
 // Where a notification that has already passed `shouldNotify` goes. Holding it and rendering it are
@@ -35,9 +37,10 @@ export function deliverNotification(
   notification: RecordedNotification,
   replayed: boolean,
 ): void {
-  managers.notifications.append(notification);
+  const { held, repeated } = managers.notifications.append(notification);
   appendNotificationRecord(notification);
-  appendNotification(managers, notification.entry);
+  if (repeated) replaceLatestNotification(managers, held.entry);
+  else appendNotification(managers, held.entry);
   if (notificationsFeedVisible(managers)) return;
   if (managers.notifications.isBurst(notification.recordedAt)) { escalateToFeed(managers); return; }
   if (replayed) return;

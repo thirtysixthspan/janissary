@@ -1,6 +1,7 @@
 import type { LogEntry } from '../tab/types.js';
 import type { NotificationEventType } from './index.js';
 import { capLog } from '../tab/transcript/log.js';
+import { withRepeatCount } from './format.js';
 
 // Holding a notification, separated from rendering one. The queue owns every notification the user
 // was given for the length of the run, whether or not a notifications tab exists to show it: the
@@ -42,13 +43,50 @@ export type RecordedNotification = {
   recordedAt: Date;
   openFile?: string;
   openTab?: string;
+  // How many sequential occurrences this entry stands for. Absent means one.
+  count?: number;
 };
+
+// What `append` did: the entry now held for the notification, and whether it folded into the
+// newest one rather than being added after it.
+export type HeldNotification = { held: RecordedNotification; repeated: boolean };
+
+// A repeat is the same tab reporting the same message. Time is deliberately not part of identity,
+// so the same failure minutes apart still folds as long as nothing else arrived in between.
+function repeats(previous: RecordedNotification, next: RecordedNotification): boolean {
+  return previous.tabLabel === next.tabLabel && previous.message === next.message;
+}
 
 export class NotificationQueue {
   private entries: RecordedNotification[] = [];
 
-  append(notification: RecordedNotification): void {
-    this.entries = capLog([...this.entries, notification], NOTIFICATION_QUEUE_LIMIT);
+  // Arrival times inside the burst window. Kept apart from `entries` because a folded repeat is one
+  // entry but still one more arrival: a flood of one message must escalate the same as any other.
+  private arrivals: Date[] = [];
+
+  // Hold a notification. A sequential repeat replaces the newest entry — taking its time and link
+  // targets, bumping its count, and re-rendering its feed line with the `(N times)` suffix — so a
+  // flood of one message costs one line of the feed and one slot of the limit.
+  append(notification: RecordedNotification): HeldNotification {
+    this.noteArrival(notification.recordedAt);
+    const previous = this.entries.at(-1);
+    if (previous === undefined || !repeats(previous, notification)) {
+      this.entries = capLog([...this.entries, notification], NOTIFICATION_QUEUE_LIMIT);
+      return { held: notification, repeated: false };
+    }
+    const count = (previous.count ?? 1) + 1;
+    const held = {
+      ...notification,
+      count,
+      entry: { ...notification.entry, output: withRepeatCount(notification.entry.output, count) },
+    };
+    this.entries = [...this.entries.slice(0, -1), held];
+    return { held, repeated: true };
+  }
+
+  private noteArrival(at: Date): void {
+    const since = at.getTime() - NOTIFICATION_BURST_WINDOW_MS;
+    this.arrivals = [...this.arrivals.filter((arrival) => arrival.getTime() >= since), at];
   }
 
   get all(): readonly RecordedNotification[] {
@@ -63,17 +101,15 @@ export class NotificationQueue {
 
   clear(): void {
     this.entries = [];
+    this.arrivals = [];
   }
 
-  // Whether `now` completes a burst — this many notifications recorded inside the window, counting
-  // the one just appended. A scan over the arrival times already held rather than a second list
-  // kept in parallel: linear over at most `NOTIFICATION_QUEUE_LIMIT` entries, once per notification.
+  // Whether `now` completes a burst — this many notifications arrived inside the window, counting
+  // the one just appended and every folded repeat. `arrivals` is pruned to the window on each
+  // append, so the scan stays short however long the run.
   isBurst(now: Date): boolean {
     const since = now.getTime() - NOTIFICATION_BURST_WINDOW_MS;
-    let count = 0;
-    for (const notification of this.entries) {
-      if (notification.recordedAt.getTime() >= since) count += 1;
-    }
+    const count = this.arrivals.filter((arrival) => arrival.getTime() >= since).length;
     return count >= NOTIFICATION_BURST_THRESHOLD;
   }
 }

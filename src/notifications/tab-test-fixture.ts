@@ -29,5 +29,6 @@ export function fakeNotificationsHost(tabs: FakeTabRecord[]) {
       if (tab) tab.dock = dock ?? undefined;
     },
     setActiveTab: () => {},
+    markUnread: () => {},
   };
 }

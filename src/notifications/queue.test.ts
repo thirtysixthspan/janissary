@@ -50,7 +50,69 @@ describe('NotificationQueue', () => {
   });
 });
 
+describe('NotificationQueue folding sequential repeats', () => {
+  it('folds a repeat into one entry with a count and a suffixed feed line', () => {
+    const queue = new NotificationQueue();
+    expect(queue.append(notification('failed', AT)).repeated).toBe(false);
+    const { held, repeated } = queue.append(notification('failed', after(60_000)));
+    expect(repeated).toBe(true);
+    expect(held.count).toBe(2);
+    expect(queue.all).toHaveLength(1);
+    expect(queue.all[0].recordedAt).toEqual(after(60_000));
+    expect(queue.all[0].message).toBe('failed');
+    expect(queue.logEntries).toEqual([{ input: '', output: 'failed (2 times)' }]);
+    queue.append(notification('failed', after(120_000)));
+    expect(queue.logEntries).toEqual([{ input: '', output: 'failed (3 times)' }]);
+  });
+
+  it('does not fold the same message from a different tab', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('failed', AT));
+    const { repeated } = queue.append({ ...notification('failed', AT), tabLabel: 'build' });
+    expect(repeated).toBe(false);
+    expect(queue.all).toHaveLength(2);
+  });
+
+  it('does not fold a repeat separated by another notification', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('failed', AT));
+    queue.append(notification('other', AT));
+    queue.append(notification('failed', AT));
+    expect(queue.logEntries.map((e) => e.output)).toEqual(['failed', 'other', 'failed']);
+  });
+
+  it('spends one slot of the limit on a folded flood', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('first', AT));
+    for (let index = 0; index < NOTIFICATION_QUEUE_LIMIT + 5; index += 1) {
+      queue.append(notification('failed', AT));
+    }
+    expect(queue.all.map((n) => n.message)).toEqual(['first', 'failed']);
+    expect(queue.all[1].count).toBe(NOTIFICATION_QUEUE_LIMIT + 5);
+  });
+});
+
 describe('NotificationQueue burst test', () => {
+  // A folded repeat is one entry but still one more arrival, so a flood of one message escalates
+  // the same as three different ones would.
+  it('counts folded repeats as arrivals', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('failed', AT));
+    queue.append(notification('failed', after(1000)));
+    queue.append(notification('failed', after(2000)));
+    expect(queue.all).toHaveLength(1);
+    expect(queue.isBurst(after(2000))).toBe(true);
+  });
+
+  it('forgets arrivals on clear', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('one', AT));
+    queue.append(notification('two', after(1000)));
+    queue.clear();
+    queue.append(notification('three', after(2000)));
+    expect(queue.isBurst(after(2000))).toBe(false);
+  });
+
   it('is false for the first two notifications inside the window', () => {
     const queue = new NotificationQueue();
     queue.append(notification('one', AT));

@@ -4,7 +4,7 @@ import { flattenBuffer } from '../tab/formatting.js';
 import type { Managers } from '../managers.js';
 import {
   openNotificationsTab, appendNotification, notificationsTab, revealNotificationsTab,
-  notificationsFeedVisible, showNotificationsFeed, NOTIFICATIONS_LABEL,
+  notificationsFeedVisible, showNotificationsFeed, replaceLatestNotification, NOTIFICATIONS_LABEL,
 } from './tab.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue, type RecordedNotification } from './queue.js';
 
@@ -187,5 +187,31 @@ describe('appendNotification', () => {
 
     openNotificationsTab(managers);
     expect(notificationsTab(managers)!.log).toEqual(managers.notifications.logEntries);
+  });
+});
+
+describe('replaceLatestNotification', () => {
+  let managers: Managers;
+  beforeEach(() => { managers = makeManagers(); });
+
+  it('rewrites the open feed\'s newest line in place', () => {
+    openNotificationsTab(managers);
+    appendNotification(managers, { input: '', output: 'first' });
+    appendNotification(managers, { input: '', output: 'failed' });
+    replaceLatestNotification(managers, { input: '', output: 'failed (2 times)' });
+    expect(notificationsTab(managers)!.log.map((e) => e.output)).toEqual(['first', 'failed (2 times)']);
+  });
+
+  it('appends when the open feed holds no line to rewrite', () => {
+    openNotificationsTab(managers);
+    replaceLatestNotification(managers, { input: '', output: 'failed (2 times)' });
+    expect(notificationsTab(managers)!.log.map((e) => e.output)).toEqual(['failed (2 times)']);
+  });
+
+  it('is a no-op (creates nothing) when the notifications tab is closed', () => {
+    const before = managers.tab.tabs.length;
+    replaceLatestNotification(managers, { input: '', output: 'failed (2 times)' });
+    expect(notificationsTab(managers)).toBeUndefined();
+    expect(managers.tab.tabs).toHaveLength(before);
   });
 });
