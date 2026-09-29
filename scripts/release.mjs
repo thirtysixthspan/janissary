@@ -131,6 +131,7 @@ const currentVersion = pkg.version;
 const newVersion = computeVersion(currentVersion, levelOrVersion);
 const date = new Date().toISOString().split('T', 1)[0];
 const tag = `v${newVersion}`;
+const commitSubject = `feat(package): bump version to ${newVersion}`;
 
 console.log(`Preparing release ${currentVersion} -> ${newVersion}${dryRun ? ' (DRY-RUN)' : ''}\n`);
 
@@ -146,7 +147,7 @@ updateChangelog(newVersion, date);
 const versionFiles = updateVersionFiles(newVersion);
 
 if (dryRun) {
-  console.log(`\nWould commit: "${tag}"`);
+  console.log(`\nWould commit: "${commitSubject}"`);
   console.log('Would tag:    ' + tag);
   await confirm('DRY-RUN — proceed with preview? (y/N) ');
   console.log('\nDry-run complete. Run with --for-real to execute.');
@@ -157,7 +158,7 @@ if (dryRun) {
 await confirm(`Release v${newVersion} — commit, tag, and build? (y/N) `);
 
 run('git', ['add', ...versionFiles, CHANGELOG.pathname]);
-run('git', ['commit', '-m', `feat(package): bump version to ${newVersion}`]);
+run('git', ['commit', '-m', commitSubject]);
 run('git', ['tag', tag]);
 console.log(`Committed and tagged ${tag}`);
 
