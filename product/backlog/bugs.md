@@ -2,7 +2,7 @@
 
 ## ready
 
-* the blinking dot in the tab no longer blinks for the latest version of the claude harness. it should blink when the harness is active.
+* the blinking dot in the tab no longer blinks for the latest version of the claude harness. it should blink when the harness is active. It works correctly for opencode.
 
 * Keep Shift+Tab inside a pending question panel, on the answer buttons and the answer field
 
