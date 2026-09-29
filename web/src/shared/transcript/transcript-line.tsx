@@ -34,8 +34,8 @@ function Markdown({ text, hit, onLinkClick }: { text: string; hit: boolean; onLi
   );
 }
 
-// A clickable affordance on a notification line: opens the file the line was recorded with in an
-// editor tab, mirroring the file-link click path. The artifact varies with the event — the screen
+// A clickable affordance on a notification line: opens one file the line was recorded with in an
+// editor tab, mirroring the file-link click path. A folded line carries one per repeat. The artifact varies with the event — the screen
 // behind an auto-approved permission prompt, the full output of a browser that died — so the link
 // names the action rather than any one of them.
 function OpenFileLink({ path, onEditFile }: { path: string; onEditFile: (target: string) => void }) {
@@ -145,7 +145,9 @@ export function renderLine(
       >
         <span className="message-time">{time}</span>
         {tab && renderMessageTab(tab, line.openTab, intents.onFocusTab)}
-        {line.openFile && <OpenFileLink path={line.openFile} onEditFile={intents.onEditFile} />}
+        {line.openFiles?.map((path, position) => (
+          <OpenFileLink key={position} path={path} onEditFile={intents.onEditFile} />
+        ))}
         {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
       </div>
     );

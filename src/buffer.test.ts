@@ -82,17 +82,23 @@ describe('formatMessageContent', () => {
     expect(lines).toEqual([{ type: 'message', text: '', from: 'bob', fromColor: '#fff', msgKind: 'info' }]);
   });
 
-  it('copies openFile onto the message line, but not onto trailing output lines', () => {
-    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'info', openFile: '/captures/bob-now.txt' };
+  it('copies openFiles onto the message line, but not onto trailing output lines', () => {
+    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'info', openFiles: ['/captures/bob-now.txt'] };
     const lines = formatMessageContent(entry, ['heads up', 'more']);
-    expect(lines[0]).toEqual({ type: 'message', text: 'heads up', from: 'bob', fromColor: '#fff', msgKind: 'info', openFile: '/captures/bob-now.txt' });
-    expect(lines[1].openFile).toBeUndefined();
+    expect(lines[0]).toEqual({ type: 'message', text: 'heads up', from: 'bob', fromColor: '#fff', msgKind: 'info', openFiles: ['/captures/bob-now.txt'] });
+    expect(lines[1].openFiles).toBeUndefined();
   });
 
-  it('copies openFile onto a response message header line', () => {
-    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'response', openFile: '/captures/bob-now.txt' };
+  it('copies openFiles onto a response message header line', () => {
+    const entry: LogEntry = { input: '', output: '', from: 'bob', fromColor: '#fff', msgKind: 'response', openFiles: ['/captures/bob-now.txt'] };
     const [header] = formatMessageContent(entry, ['reply']);
-    expect(header.openFile).toBe('/captures/bob-now.txt');
+    expect(header.openFiles).toEqual(['/captures/bob-now.txt']);
+  });
+
+  it('copies every file of a folded line onto the message line, in order', () => {
+    const entry: LogEntry = { input: '', output: '', from: 'bob', msgKind: 'info', openFiles: ['/captures/one.txt', '/captures/two.txt'] };
+    const [line] = formatMessageContent(entry, ['heads up (2 times)']);
+    expect(line.openFiles).toEqual(['/captures/one.txt', '/captures/two.txt']);
   });
 
   it('copies an owning-tab link onto the message line', () => {

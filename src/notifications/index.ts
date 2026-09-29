@@ -182,7 +182,7 @@ export function notify(
       // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
       from: `${provenanceTimestamp(detectedAt ?? recordedAt)} ${tabLabel}`,
       fromColor: color,
-      ...(openFile && { openFile }),
+      ...(openFile && { openFiles: [openFile] }),
       ...(openTab && { openTab }),
     },
     detectedAt: detectedAt ?? recordedAt,
