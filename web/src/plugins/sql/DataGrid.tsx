@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faTrash, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
-import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
+import type { SqlCell, SqlColumn, SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { cellText, pageLabel, readOnlyReason } from './grid-view';
 import { CellEditor } from './CellEditor';
@@ -120,7 +120,13 @@ export function DataGrid({
                         }}
                         onCancel={() => setEditing(null)}
                       />
-                    ) : cellText(row.cells[cell] ?? { text: '', isNull: true })}
+                    ) : (
+                      <Cell
+                        column={object?.columns.find((entry) => entry.name === column)}
+                        cell={row.cells[cell] ?? { text: '', isNull: true }}
+                        onFollow={(target) => send('select-object', target)}
+                      />
+                    )}
                   </td>
                 ))}
                 <td className="sql-gutter">
@@ -160,5 +166,38 @@ export function DataGrid({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One cell's contents, and a way to follow a foreign key when the column has one.
+ *
+ * A keyed column is drawn as a control rather than text: its title names the table and column the
+ * value points at, and activating it selects that table filtered to the value. The filter rides
+ * inside the selection intent rather than following it — `topicAction` returns nothing, so a second
+ * intent sent straight after would be answered against the object the user just left.
+ *
+ * A null offers nothing, because there is nothing to follow, and so does a reference whose target
+ * column could not be resolved: following it would filter on nothing rather than on something.
+ */
+function Cell({
+  column, cell, onFollow,
+}: {
+  column: SqlColumn | undefined;
+  cell: SqlCell;
+  onFollow(target: { object: string; column: string; value: string }): void;
+}) {
+  const reference = column?.references;
+  const target = reference ? reference.columns[0] : '';
+  if (!reference || !target || cell.isNull) return <>{cellText(cell)}</>;
+  return (
+    <button
+      type="button"
+      className="sql-cell-link"
+      title={`${reference.table}.${target}`}
+      onClick={() => onFollow({ object: reference.table, column: target, value: cell.text })}
+    >
+      {cellText(cell)}
+    </button>
   );
 }

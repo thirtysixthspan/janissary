@@ -311,6 +311,47 @@ describe('sql plugin intents', () => {
     expect(fixture.actions[5]).toMatchObject({ action: 'query', query: { limit: 500, offset: 0 } });
   });
 
+  it('turns a selection carrying a filter into one query already filtered', () => {
+    const fixture = fakeCapabilities();
+    // The filter travels inside the selection rather than following it: `topicAction` answers
+    // nothing, so a `set-filter` sent just after would be answered against the object just left.
+    intent('select-object', { object: 'customers', column: 'id', value: '1' }, fixture, basePayload({ object: 'orders' }));
+    expect(fixture.actions).toHaveLength(1);
+    expect(fixture.actions[0]).toMatchObject({
+      action: 'query',
+      query: { object: 'customers', filters: [{ column: 'id', op: 'eq', value: '1' }] },
+    });
+  });
+
+  it('replaces a filter on the same column rather than adding a second one', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'customers', column: 'id', value: '2' }, fixture, basePayload({
+      filters: [{ column: 'id', op: 'eq', value: '1' }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ query: { filters: [{ column: 'id', op: 'eq', value: '2' }] } });
+  });
+
+  it('leaves filters on other columns alone when selecting', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'customers', column: 'id', value: '1' }, fixture, basePayload({
+      filters: [{ column: 'status', op: 'eq', value: 'paid' }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({
+      query: {
+        filters: [
+          { column: 'status', op: 'eq', value: 'paid' },
+          { column: 'id', op: 'eq', value: '1' },
+        ],
+      },
+    });
+  });
+
+  it('refuses a selection whose column carries no value to filter on', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent('select-object', { object: 'customers', column: 'id' }, fixture, basePayload())).toThrow();
+    expect(fixture.actions).toHaveLength(0);
+  });
+
   it('removes a filter set the same way twice, and clears them all on request', () => {
     const fixture = fakeCapabilities();
     intent('set-filter', { column: 'status', op: 'eq', value: 'paid' }, fixture, basePayload({

@@ -6,6 +6,7 @@ import {
   isOpenIntent,
   isSetFilterIntent,
   isSetPageIntent,
+  isSelectObjectIntent,
   isSetPageSizeIntent,
   isUpdateCellIntent,
   PAGE_SIZES,
@@ -54,6 +55,17 @@ describe('isSqlPayload', () => {
     expect(isSqlPayload(payload({ objects: [{ name: 'x' }] as never }))).toBe(false);
   });
 
+  it('rejects a column whose key is malformed, and accepts one that is well-formed', () => {
+    const keyed = (references: unknown) => payload({
+      objects: [{ name: 't', kind: 'table', writable: true, columns: [{ name: 'a', type: 'INTEGER', notNull: false, pk: 0, references }] }] as never,
+    });
+    expect(isSqlPayload(keyed({ table: 'c', columns: ['id'] }))).toBe(true);
+    expect(isSqlPayload(keyed({ table: 'c', columns: 'id' }))).toBe(false);
+    expect(isSqlPayload(keyed({ table: 7, columns: ['id'] }))).toBe(false);
+    expect(isSqlPayload(keyed(null))).toBe(false);
+  });
+
+
   it('accepts a populated grid, stats, console, exports, error, and pending', () => {
     expect(isSqlPayload(payload({
       grid: {
@@ -100,6 +112,15 @@ describe('intent payload guards', () => {
     expect(isOpenIntent({ name: 'a/b' })).toBe(false);
     expect(isOpenIntent({ name: '' })).toBe(false);
     expect(isOpenIntent({})).toBe(false);
+  });
+
+  it('accepts a selection with or without a filter, and refuses half a filter', () => {
+    expect(isSelectObjectIntent({ object: 'customers' })).toBe(true);
+    expect(isSelectObjectIntent({ object: 'customers', column: 'id', value: '1' })).toBe(true);
+    expect(isSelectObjectIntent({ object: 'customers', column: 'id' })).toBe(false);
+    expect(isSelectObjectIntent({ object: 'customers', value: '1' })).toBe(false);
+    expect(isSelectObjectIntent({ object: 'customers', column: 'id', value: 1 })).toBe(false);
+    expect(isSelectObjectIntent({})).toBe(false);
   });
 
   it('accepts a filter with a value and one without for a null test', () => {

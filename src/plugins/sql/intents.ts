@@ -105,9 +105,17 @@ export function intentsFor(tabs: SqlTabs) {
     },
     'select-object': {
       payload: isSelectObjectIntent,
-      run: (payload, value: { object: string }, capabilities): null => {
+      run: (payload, value: { object: string; column?: string; value?: string }, capabilities): null => {
+        // A filter carried with the selection is applied before the query is issued, so the action is
+        // built from the state the tab will hold — see SelectObjectIntent.
+        const filtered = value.column === undefined
+          ? payload
+          : {
+            ...payload,
+            filters: [...payload.filters.filter((filter) => filter.column !== value.column), { column: value.column, op: 'eq' as const, value: value.value }],
+          };
         return apply(
-          reread({ ...payload, object: value.object, stats: null, error: null }, capabilities),
+          reread({ ...filtered, object: value.object, stats: null, error: null }, capabilities),
           capabilities,
           tabs,
         );

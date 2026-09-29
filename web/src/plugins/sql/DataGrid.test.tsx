@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { DataGrid } from './DataGrid';
-import { grid, makeCapabilities, payload } from './fixture';
+import { CUSTOMERS, KEYED, grid, makeCapabilities, payload } from './fixture';
 
 describe('DataGrid headers and rows', () => {
   it('renders every column in order, and the row numbers beside them', () => {
@@ -135,6 +135,57 @@ describe('DataGrid editing', () => {
     expect(screen.getByText('Delete row from "orders"?')).toBeTruthy();
     fireEvent.click(screen.getByText('Delete'));
     expect(intent).toHaveBeenCalledWith('delete-row', { row: 'r1' });
+  });
+});
+
+describe('DataGrid foreign keys', () => {
+  // `keyed` is one row whose keyed cell holds `1`, and one whose keyed cell is null.
+  const keyedRows = () =>
+    grid({
+      columns: ['id', 'customer_id'],
+      rows: [
+        { key: 'r1', cells: [{ text: '7', isNull: false }, { text: '1', isNull: false }] },
+        { key: 'r2', cells: [{ text: '8', isNull: false }, { text: '', isNull: true }] },
+      ],
+    });
+  const keyed = () => payload({ objects: [KEYED, CUSTOMERS], object: 'invoices', grid: keyedRows() });
+
+  it('asks for the referenced table filtered to the value, in one intent', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={keyed()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByRole('button', { name: '1' }));
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('select-object', { object: 'customers', column: 'id', value: '1' });
+  });
+
+  it('names the table and column it points at', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={keyed()} capabilities={capabilities} />);
+    expect(screen.getByRole('button', { name: '1' }).getAttribute('title')).toBe('customers.id');
+  });
+
+  it('leaves a column with no key as plain text, so it is not activatable', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByRole('button', { name: 'paid' })).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('offers nothing to follow for a null value, or for a key with no resolvable target', () => {
+    const { capabilities } = makeCapabilities();
+    const { unmount } = render(<DataGrid payload={keyed()} capabilities={capabilities} />);
+    // Only the first row's key cell is a control; the null one is text.
+    expect(screen.getAllByRole('button', { name: '1' }).length).toBe(1);
+    expect(screen.getAllByText('NULL').length).toBeGreaterThan(0);
+    unmount();
+    const unresolved = {
+      ...KEYED,
+      columns: KEYED.columns.map((column) =>
+        column.name === 'customer_id' ? { ...column, references: { table: 'customers', columns: [''] } } : column,
+      ),
+    };
+    render(<DataGrid payload={payload({ objects: [unresolved], object: 'invoices', grid: keyedRows() })} capabilities={capabilities} />);
+    expect(screen.queryByRole('button', { name: '1' })).toBeNull();
   });
 });
 

@@ -6,11 +6,16 @@ export const SQL_PAYLOAD_SCHEMA_VERSION = 1;
 
 export type SqlObjectKind = 'table' | 'view' | 'index' | 'trigger';
 
+// What a column points at, mirrored from the host. An empty target column means the referenced
+// table's own key could not be resolved, which the grid treats as a reference it cannot follow.
+export type SqlForeignKey = { table: string; columns: string[] };
+
 export type SqlColumn = {
   name: string;
   type: string;
   notNull: boolean;
   pk: number;
+  references?: SqlForeignKey;
 };
 
 export type SqlObject = {
@@ -145,12 +150,22 @@ function isOrder(value: unknown): value is SqlOrder {
   return isRecord(value) && isString(value.column) && typeof value.desc === 'boolean';
 }
 
+function isForeignKey(value: unknown): value is SqlForeignKey {
+  return isRecord(value) && isString(value.table) && Array.isArray(value.columns) && value.columns.every(isString);
+}
+
+function isColumn(value: unknown): value is SqlColumn {
+  if (!isRecord(value) || !isString(value.name) || !isString(value.type)) return false;
+  if (typeof value.notNull !== 'boolean' || typeof value.pk !== 'number') return false;
+  return value.references === undefined || isForeignKey(value.references);
+}
+
 function isObject(value: unknown): value is SqlObject {
   return isRecord(value)
     && isString(value.name)
     && ['table', 'view', 'index', 'trigger'].includes(String(value.kind))
     && Array.isArray(value.columns)
-    && value.columns.every((column) => isRecord(column) && isString(column.name) && isString(column.type) && typeof column.notNull === 'boolean' && typeof column.pk === 'number')
+    && value.columns.every((column) => isColumn(column))
     && typeof value.writable === 'boolean';
 }
 

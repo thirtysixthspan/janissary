@@ -80,6 +80,13 @@
 .sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
 .sql-page-size select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
 
+.sql-cell { white-space: nowrap; }
+
+/* A cell holding a foreign key: the value reads as a link because activating it is one, and its
+   title names the table and column it points at. */
+.sql-cell-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
+.sql-cell-link:hover { text-decoration: underline; }
+
 .sql-drawer { border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; max-height: 30%; overflow: auto; }
 .sql-drawer-statement { margin: 0; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .sql-drawer-parameters { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }

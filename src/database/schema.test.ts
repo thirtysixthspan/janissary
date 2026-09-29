@@ -18,6 +18,10 @@ const SHOP = `
   CREATE VIEW paid AS SELECT id, customer FROM orders WHERE status = 'paid';
   CREATE INDEX orders_status ON orders (status);
   CREATE TRIGGER orders_touch AFTER UPDATE ON orders BEGIN SELECT 1; END;
+  CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
+  CREATE TABLE invoice (id INTEGER PRIMARY KEY, customer_id INTEGER REFERENCES customers(id));
+  CREATE TABLE pairing (a TEXT, b TEXT, PRIMARY KEY (a, b), FOREIGN KEY (a, b) REFERENCES customers(id, name));
+  CREATE TABLE selfref (id INTEGER PRIMARY KEY, parent INTEGER REFERENCES selfref(id));
 `;
 
 describe('quoteIdentifier', () => {
@@ -31,8 +35,12 @@ describe('schemaObjects', () => {
   it('lists every object, grouped tables first, with sqlite internals excluded', () => {
     const objects = withDb(SHOP, schemaObjects);
     expect(objects.map((object) => `${object.kind}:${object.name}`)).toEqual([
+      'table:customers',
+      'table:invoice',
       'table:logs',
       'table:orders',
+      'table:pairing',
+      'table:selfref',
       'view:paid',
       'index:orders_status',
       'trigger:orders_touch',
@@ -93,5 +101,43 @@ describe('isWritable', () => {
     expect(isWritable('table', [{ name: 'a', type: 'TEXT', notNull: false, pk: 1 }])).toBe(true);
     expect(isWritable('table', [{ name: 'a', type: 'TEXT', notNull: false, pk: 0 }])).toBe(false);
     expect(isWritable('view', [{ name: 'a', type: 'TEXT', notNull: false, pk: 1 }])).toBe(false);
+});
+
+  });
+describe('foreign keys', () => {
+  it('carries the referenced table and column on the key column, and nothing on the others', () => {
+    withDb(SHOP, (database) => {
+      const invoice = objectColumns(database, 'invoice');
+      expect(invoice[1]?.references).toEqual({ table: 'customers', columns: ['id'] });
+      expect(invoice[0]?.references).toBeUndefined();
+      expect(objectColumns(database, 'orders')[2]?.references).toBeUndefined();
+    });
+  });
+
+  it('pairs a composite key across its seq order', () => {
+    withDb(SHOP, (database) => {
+      const pairing = objectColumns(database, 'pairing');
+      expect(pairing.find((column) => column.name === 'a')?.references).toEqual({ table: 'customers', columns: ['id', 'name'] });
+      expect(pairing.find((column) => column.name === 'b')?.references).toEqual({ table: 'customers', columns: ['id', 'name'] });
+    });
+  });
+
+  it('resolves a key that names no target column to the referenced primary key', () => {
+    withDb(`CREATE TABLE owner (id INTEGER PRIMARY KEY); CREATE TABLE pet (name TEXT, owner_id INTEGER REFERENCES owner);`, (database) => {
+      expect(objectColumns(database, 'pet')[1]?.references).toEqual({ table: 'owner', columns: ['id'] });
+    });
+  });
+  it('leaves the target empty rather than guessing when the referenced key is composite', () => {
+    withDb('CREATE TABLE pair (x TEXT, y TEXT, PRIMARY KEY (x, y)); CREATE TABLE link (a TEXT REFERENCES pair);', (database) => {
+      expect(objectColumns(database, 'link')[0]?.references).toEqual({ table: 'pair', columns: [''] });
+    });
+  });
+
+  // `primaryKeyOf` resolves a key that names no target column, and it reads the pragma directly
+  // rather than through `objectColumns` — so a table that references itself terminates.
+  it('resolves a self-reference without recursing', () => {
+    withDb(SHOP, (database) => {
+      expect(objectColumns(database, 'selfref')[1]?.references).toEqual({ table: 'selfref', columns: ['id'] });
+    });
   });
 });

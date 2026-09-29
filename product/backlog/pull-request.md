@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let a cell that holds a foreign key name the row it points at and jump to it, the way a schema navigator is supposed to connect two tables.
-
-Existing Issue: the grid renders every column as plain text, so a `customer_id` cell carrying `42` gives no hint that a `customers` row is behind it, and `src/database/schema.ts` reads columns through `PRAGMA table_info`, which does not return the foreign-key clause at all — DB Browser for SQLite reads it, shows a tooltip naming the referenced table, and jumps to the referenced row on a modified click, having shipped that after issue 192 asked for it. Severity: 6/10
-
-Existing Risk: 6/10 - Reading a normalized schema in this grid means holding the referenced id and mentally joining it, which is the one job the navigator beside the grid was built to stop doing; a user browsing five tables of an order system does that join by hand for every row they care about.
-
-Proposal Risk: 3/10 - The clause has to be read with `PRAGMA foreign_key_list`, which is a second statement per object and costs a read on every schema pass, and a jump has to resolve the referenced column's type before it can filter the target grid.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: follow a foreign key from a cell to the row it points at". Extend `src/database/schema.ts` so `DatabaseColumnView` carries the referenced table and columns alongside what `PRAGMA table_info` already gives, read through `PRAGMA foreign_key_list` in `objectColumns` — the pragma returns one row per key column and pairs on `id`, so a composite key pairs on several rows. Add the two fields to `src/protocol/database.ts`, mirror them in `src/plugins/sql/shared.ts` beside the `SqlColumn` type, and pin the pairing with a case in `src/database/schema.test.ts` covering a single-column key, a composite key, and a column with no key. On the client, render a cell holding a foreign key as a control rather than text: its title names the referenced table and column, and activating it sends the existing `select-object` intent for the referenced table and sets a filter on the referenced column. `DataGrid.tsx` already has the per-column filter editor, so this reuses it rather than adding a second filter path, and `Filters.tsx`'s `FilterRow` is where the filter it sets is expressed. `set-filter` already toggles a column's filter, so a second activation clears it and the cell returns to plain text. `web/src/plugins/sql/DataGrid.test.tsx` gains a case that a foreign-key cell emits `select-object` for the referenced table and then `set-filter` for its column, and one that a cell with no key does not.
-
-
 * Add a filter that searches every column at once, so a term can be looked for without knowing which column holds it.
 
 Existing Issue: filtering exists only per column — `withFilter` in `src/plugins/sql/intents.ts` replaces or toggles the filter on one named column, and `grid-sql.ts`'s `whereClause` joins one clause per filter with `AND` — so finding a row means guessing which column the value is in, while DB Browser for SQLite's `TableBrowser` filters at two levels and names the second one a global filter over every column. Severity: 5/10

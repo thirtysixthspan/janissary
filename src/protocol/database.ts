@@ -15,6 +15,15 @@ export type DatabaseRefView = {
 
 export type DatabaseObjectKind = 'table' | 'view' | 'index' | 'trigger';
 
+// What a column's foreign key points at, as `PRAGMA foreign_key_list` reports it. The target column
+// is the one matching `columns[index]`; a composite key has several, and an empty string means the
+// referenced table's own key could not be resolved, which the grid treats as a reference it cannot
+// follow rather than one it would follow wrongly.
+export type ForeignKey = {
+  table: string;
+  columns: string[];
+};
+
 export type DatabaseColumnView = {
   name: string;
   // The declared type as written in the schema, which SQLite treats as a hint rather than a type.
@@ -22,6 +31,8 @@ export type DatabaseColumnView = {
   notNull: boolean;
   // `PRAGMA table_info`'s per-column ordinal: 0 for a non-key column, 1..n across a composite key.
   pk: number;
+  // Absent for a column that is not a foreign key.
+  references?: ForeignKey;
 };
 
 export type DatabaseObjectView = {

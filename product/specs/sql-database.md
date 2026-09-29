@@ -56,6 +56,14 @@ A column header toggles the order: ascending, then descending, then none. With n
 grid orders by the object's primary key, or by its first column when it has none — a page needs a
 total order, or paging skips and repeats rows.
 
+A column declared as a foreign key shows its value as a control rather than as text, titled with the
+table and column it points at. Activating it selects that table filtered to the value, replacing any
+existing filter on that column and leaving filters on other columns alone. The filter travels inside
+the selection, not as a second action, because the grid's actions are answered against the state
+before the last one landed. A composite key follows on its first target column alone, and offers
+nothing to follow when the value is null, or when the referenced table's own key could not be
+resolved to a single column — following an unresolved key would filter on nothing and look broken.
+
 Pages hold 50, 100 (the default), or 500 rows. The pager reads `Rows 1–100 of 4,213 rows`, or
 `Rows 1–2 of 3 of 51,882 rows` once a filter is narrowing something — a filtered view that reported
 only the filtered total would read as though the table were that small. Changing the page size

@@ -8,7 +8,10 @@ import type { SqlFilterOperator } from './shared.js';
 // declarations and its two value guards rather than carrying a second copy of each.
 
 export type OpenIntent = { name: string };
-export type SelectObjectIntent = { object: string };
+// A filter rides along with the selection rather than following it. `topicAction` is
+// fire-and-forget and the tab's payload only changes when the answer arrives, so a `set-filter`
+// sent just after a `select-object` would build its query against the object the user just left.
+export type SelectObjectIntent = { object: string; column?: string; value?: string };
 export type SetFilterIntent = { column: string; op: SqlFilterOperator; value?: string };
 export type ClearFiltersIntent = Record<string, never>;
 export type SetOrderIntent = { column: string };
@@ -86,7 +89,12 @@ export function parseOpenCommand(argument: string): OpenCommand | 'usage' {
 }
 
 export function isSelectObjectIntent(value: unknown): value is SelectObjectIntent {
-  return isRecord(value) && isString(value.object);
+  if (!isRecord(value) || !isString(value.object)) return false;
+  // A column and a value are one thing or neither. Accepting a value with no column would filter on
+  // nothing, and accepting a column with no value would filter on `undefined` — so both halves are
+  // required together, and a lone one is refused rather than quietly dropped.
+  if (value.column === undefined) return value.value === undefined;
+  return isString(value.column) && isString(value.value);
 }
 
 export function isSetFilterIntent(value: unknown): value is SetFilterIntent {

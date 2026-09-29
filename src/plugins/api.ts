@@ -234,6 +234,7 @@ export type {
   DatabaseColumnStatsView,
   DatabaseColumnView,
   DatabaseFilterOperator,
+  ForeignKey,
   DatabaseFilterView,
   DatabaseGridQuery,
   DatabaseGridView,

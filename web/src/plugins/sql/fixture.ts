@@ -15,6 +15,23 @@ export const PAID: SqlObject = {
   columns: [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }],
 };
 
+/** `orders.customer_id` pointing at `customers.id`, as `PRAGMA foreign_key_list` reports it. */
+export const CUSTOMERS: SqlObject = {
+  name: 'customers', kind: 'table', writable: true,
+  columns: [
+    { name: 'id', type: 'INTEGER', notNull: false, pk: 1 },
+    { name: 'name', type: 'TEXT', notNull: true, pk: 0 },
+  ],
+};
+
+export const KEYED: SqlObject = {
+  name: 'invoices', kind: 'table', writable: true,
+  columns: [
+    { name: 'id', type: 'INTEGER', notNull: false, pk: 1 },
+    { name: 'customer_id', type: 'INTEGER', notNull: false, pk: 0, references: { table: 'customers', columns: ['id'] } },
+  ],
+};
+
 export const ROWS: SqlRow[] = [
   { key: 'r1', cells: [{ text: '1', isNull: false }, { text: 'paid', isNull: false }] },
   { key: 'r2', cells: [{ text: '2', isNull: false }, { text: '', isNull: true }] },
