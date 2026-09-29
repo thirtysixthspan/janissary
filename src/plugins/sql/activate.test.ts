@@ -95,13 +95,13 @@ describe('sql plugin command', () => {
     expect(fixture.actions[0]).toMatchObject({ topic: 'databases', action: 'schema', database: 'shop' });
   });
 
-  it('refuses a name the registry would reject, and opens a well-formed one it has never heard of', () => {
+  it('refuses a name the registry would reject, and one it has simply never heard of', () => {
     const fixture = fakeCapabilities();
     expect(() => fixture.activation.command?.('../evil', fixture.capabilities))
       .toThrow(new TabPluginRejection('Invalid database name "../evil".'));
+    expect(() => fixture.activation.command?.('shpo', fixture.capabilities))
+      .toThrow(new TabPluginRejection('No database named "shpo". Create it with: db sqlite create shpo'));
     expect(fixture.opened).toEqual([]);
-    fixture.activation.command?.('fresh', fixture.capabilities);
-    expect(fixture.opened[0]?.key).toBe('sqlite:fresh');
   });
 
   it('docks the named database and undocks it on a bare argument', () => {
@@ -320,6 +320,15 @@ describe('sql plugin intents', () => {
     const fixture = fakeCapabilities();
     intent('open', { name: 'blog' }, fixture);
     expect(fixture.opened[0]?.key).toBe('sqlite:blog');
+  });
+
+  // The two intentions are deliberately different: a typed name is far more likely a typo than a wish
+  // for a new database, so the command refuses an unknown one and the switcher — which asked for one
+  // — creates it.
+  it('opens a name the registry has never heard of when the switcher asks for one', () => {
+    const fixture = fakeCapabilities();
+    intent('open', { name: 'fresh' }, fixture);
+    expect(fixture.opened[0]?.key).toBe('sqlite:fresh');
   });
 
   it('refuses a database name the registry would reject, and a malformed payload, without failing', () => {

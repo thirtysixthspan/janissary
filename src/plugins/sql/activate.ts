@@ -50,14 +50,15 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
   const { name, dock } = parsed;
   if (name) {
     if (!isValidDatabaseName(name)) return capabilities.rejectRequest(`Invalid database name "${name}".`);
-    // A name the registry has never heard of is a database to create, which is what the header's
-    // switcher and the empty state's control both do.
-    openDatabase(name, dock, capabilities, tabs);
+    // A command is typed, and a typo in a typed command is the ordinary case — so a name the
+    // registry has never heard of is refused rather than created. `db sqlite create` is how a
+    // database gets made; the tab's own switcher is how one is made from here.
+    openDatabase(name, dock, capabilities, tabs, false);
     return;
   }
   const current = data.databases.find((entry) => entry.open)?.name ?? data.databases[0]?.name;
   if (!current) return capabilities.rejectRequest(NO_DATABASES);
-  openDatabase(current, dock, capabilities, tabs);
+  openDatabase(current, dock, capabilities, tabs, false);
 }
 
 /** Fold the answer a tab was waiting for, then issue whatever that answer implies. */

@@ -93,12 +93,13 @@ function apply(payload: SqlPayload, capabilities: TabPluginServerCapabilities, t
 
 export function intentsFor(tabs: SqlTabs) {
   return defineIntents('sql', isSqlPayload, {
-    // Opening a database that does not exist creates it, so the empty state's Create control and the
-    // header's database switcher are the same intent with a different name.
+    // The switcher and the empty state's control send this, which is an explicit wish for a database
+    // to exist — unlike a typed `sql <name>`, where an unknown name is far more likely a typo than an
+    // intention. So this one creates; the command refuses.
     open: {
       payload: isOpenIntent,
       run: (_payload, value: { name: string }, capabilities): null => {
-        openDatabase(value.name, undefined, capabilities, tabs);
+        openDatabase(value.name, undefined, capabilities, tabs, true);
         return null;
       },
     },

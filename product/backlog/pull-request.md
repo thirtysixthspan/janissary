@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make `sql <name>` create a database only when the user asked for one, so a mistyped name does not leave an empty database behind.
-
-Existing Issue: `runCommand` in `src/plugins/sql/activate.ts` validates that a name matches the registry's character rule and then hands it to `openDatabase`, whose first action is a schema read; `DatabaseBrowser.schema` in `src/database/browser-service.ts` opens the connection with `getConnection`, and `getConnection` in `src/connections.ts` creates the file. So `sql shpo` against a project whose database is `shop` silently creates `shpo.sqlite`, and the tab it opens reads `No tables.` Severity: 6/10
-
-Existing Risk: 6/10 - A typo leaves an empty database file in the project's database directory that nothing refers to, shows up in `db sqlite list` and in the tab's own database switcher forever, and is only discoverable by noticing which databases exist.
-
-Proposal Risk: 3/10 - Creating a database is then two paths — the command with an explicit flag and the empty state's control — so the two have to agree on the wording, and a third caller could still reach the creating path without it.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: do not create a database from a bare `sql <name>`". Split the two intentions the command currently merges: a name the registry already knows opens that database, and a name it does not know is refused with `No database named "<name>". Create it with: db sqlite create <name>` — the same guidance `db sqlite query` already gives for a database that does not exist. Keep creation reachable where it is genuinely wanted, which is the tab's empty state and its database switcher, by having those send the existing `open` intent with a name the host resolves as a create rather than a lookup; add one exported predicate in `src/plugins/sql/shared-intents.ts` so the intent that creates and the command that refuses cannot be confused later. `runDatabaseCommand` and `db sqlite create` are untouched, so the command surface is unchanged. Cover the refusal in `src/plugins/sql/activate.test.ts`, and add a case to `src/database/browser.test.ts` that a create still produces a file, since that is the path the empty state now depends on.
-
-
 * Handle a database deleted by `db sqlite delete` while its browser tab is open, instead of letting the next refresh silently bring the file back.
 
 Existing Issue: `runDatabaseCommand`'s delete arm in `src/database/index.ts` closes the connection and removes the file, and `DatabaseManager.forgetConn` drops the name from every tab's attribution, but nothing tells a `sql` tab that its database went away; the tab keeps the grid it last read, and its `Refresh` issues a schema read, which reaches `getConnection` and recreates the empty file. Severity: 5/10

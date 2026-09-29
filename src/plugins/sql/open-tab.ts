@@ -5,6 +5,10 @@ import { databasesFrom, emptyPayload, instanceKeyFor, issue, refs } from './tabs
 
 export type Dock = 'left' | 'right' | null | undefined;
 
+/** What `db sqlite query` already says for a database that is not there, reused word for word. */
+export const UNKNOWN_DATABASE = (name: string): string =>
+  `No database named "${name}". Create it with: db sqlite create ${name}`;
+
 /**
  * Open or focus one database's tab, and read its schema the first time.
  *
@@ -12,13 +16,21 @@ export type Dock = 'left' | 'right' | null | undefined;
  * twice focuses the tab that is already there rather than resetting it. `dock` is passed straight
  * through, including `undefined` for "no dock argument", which is what leaves an already-docked tab
  * where it is instead of undocking it as a side effect of being reopened.
+ *
+ * `create` is the whole difference between "show me a database" and "make a database", and it matters
+ * because reading a schema opens a connection, and opening a connection creates the file. A caller
+ * that has a name in front of a user has to choose; a caller that already knows the database exists
+ * does not.
  */
 export function openDatabase(
   database: string,
   dock: Dock,
   capabilities: TabPluginServerCapabilities,
   tabs: SqlTabs,
+  create: boolean,
 ): void {
+  const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
+  if (!create && !known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
   const key = instanceKeyFor(database);
   const existing = tabs.read(key);
   if (existing) {
@@ -33,4 +45,3 @@ export function openDatabase(
   capabilities.openOrFocusTab(key, () => ({ title: database, payload }));
   if (dock !== undefined) capabilities.dockTab(key, dock);
 }
-

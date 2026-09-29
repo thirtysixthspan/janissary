@@ -12,12 +12,14 @@ unchanged. See [[database]] for the registry, the name rules, and the file layou
 
 ### The `sql` command
 
-`sql` opens or focuses the tab for the most recently used database, creating it if it does not
-exist. `sql <name>` opens or focuses that database's tab, and creates it if it does not exist — the
-same thing `db sqlite create <name>` does. `sql <name> left` and `sql <name> right` dock that tab
-into that sidebar, and a bare `sql` on a docked tab undocks it back to the centre. These are the
-`schedules [left|right]` grammar, so a database actually named `left` or `right` is unreachable by
-name.
+`sql` opens or focuses the tab for the most recently used database. `sql <name>` opens or focuses that
+database's tab, and refuses a name the registry has never heard of with
+`No database named "<name>". Create it with: db sqlite create <name>` — a typed command is far more
+likely to carry a typo than a wish for a new database, so it does not create one. A database is made
+with `db sqlite create <name>`, or from the tab's own database switcher, which does create it.
+`sql <name> left` and `sql <name> right` dock that tab into that sidebar, and a bare `sql` on a docked
+tab undocks it back to the centre. These are the `schedules [left|right]` grammar, so a database
+actually named `left` or `right` is unreachable by name.
 
 With no database named and none open, `sql` reports `No databases. Create one with: db sqlite create
 <name>`. A name the registry's own rule would refuse — anything with a `/`, a `..`, or a character
