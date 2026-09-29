@@ -40,7 +40,14 @@ Without `--for-real` nothing is written, committed or tagged. The run prints the
 Version <current> -> <new> in package.json, package-lock.json (dry-run, not saved)
 ```
 
-— and reports the commit subject and tag it would create. It also does not pull from the remote, so a dry run leaves the repository exactly as it found it.
+— and reports the commit subject and tag it would create, each on its own line:
+
+```
+Would commit: "feat(package): bump version to <new>"
+Would tag:    v<new>
+```
+
+The subject is the same string a `--for-real` run commits with, not the tag repeated. It also does not pull from the remote, so a dry run leaves the repository exactly as it found it.
 
 ### Refusals
 
