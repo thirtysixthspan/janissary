@@ -78,6 +78,7 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       addBusy: vi.fn((label: string) => { busy.add(label); }),
       deleteBusy: vi.fn((label: string) => { busy.delete(label); }),
       markUnread: vi.fn(),
+      clearUnread: vi.fn(),
       findIndex: () => tabs.length - 1,
       // Delegates to the real lookup over the same array rather than re-implementing the scan, so
       // the fake cannot answer differently from the manager it stands in for.
@@ -826,6 +827,10 @@ describe('HarnessManager busy/ready status', () => {
     expect(managers.tab.markUnread).not.toHaveBeenCalled();
     await settle(CLEAR + GATE);
     expect(managers.tab.markUnread).toHaveBeenCalledWith('claude');
+    expect(managers.tab.clearUnread).not.toHaveBeenCalled();
+    await settle(`${CLEAR}${CLAUDE_BUSY}working`);
+    expect(managers.tab.addBusy).toHaveBeenCalledWith('claude');
+    expect(managers.tab.clearUnread).toHaveBeenCalledWith('claude');
   });
 
   it('drives opencode busy/ready from screen text, badging unread once idle (no distinct gate detection)', async () => {

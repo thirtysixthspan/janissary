@@ -12,8 +12,8 @@ export const QuestionPanel = forwardRef<QuestionPanelHandle, {
   const [answer, setAnswer] = useState('');
   const cancelRef = useRef<HTMLButtonElement>(null);
   const optionCount = (question.options?.length ?? 0) + 1;
-  const options = useAnswerButtons(optionCount, optionCount - 1);
-  const askButtons = useAnswerButtons(2, 1);
+  const options = useAnswerButtons(optionCount);
+  const askButtons = useAnswerButtons(2);
 
   useImperativeHandle(ref, () => ({ focusCancel: () => cancelRef.current?.focus() }), []);
 

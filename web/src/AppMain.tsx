@@ -11,7 +11,7 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
-import { commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
+import { commandBarDisabled, commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';
 import { mountedPickerOverlayProps } from './pickers/picker/overlay-props';
 import type { TabEntry } from './tab-entries';
@@ -20,7 +20,7 @@ import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHan
 
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,
-  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'queueOpen'
+  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'commandBarDisabled' | 'queueOpen'
 > & LayoutState & {
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
@@ -73,6 +73,7 @@ export function AppMain({
         transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
         pickerOverlays={pickerOverlays}
         blockingOverlayOpen={commandBarSuppressed(pickers.overlays)}
+        commandBarDisabled={commandBarDisabled(pickers.overlays)}
         queueOpen={pickers.overlays.queue}
         search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
         onCommandBarSubmit={onCommandBarSubmit}

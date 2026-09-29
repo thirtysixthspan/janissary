@@ -129,6 +129,40 @@ describe('QuestionPanel', () => {
     expect(no).toHaveFocus();
   });
 
+  it('moves from Submit to Cancel with one Tab after tabbing out of the answer field, then wraps', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    const question: PendingQuestionView = { id: 'question-9', tab: 'build', kind: 'ask', question: 'Your name?' };
+    render(<QuestionPanel question={question} client={value} />);
+    const submit = screen.getByRole('button', { name: 'Submit' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+    expect(screen.getByRole('textbox', { name: 'Answer' })).toHaveFocus();
+    await user.keyboard('{Tab}');
+    expect(submit).toHaveFocus();
+    await user.keyboard('{Tab}');
+    expect(cancel).toHaveFocus();
+    await user.keyboard('{Tab}');
+    expect(submit).toHaveFocus();
+    await user.keyboard('{Tab}');
+    expect(cancel).toHaveFocus();
+  });
+
+  it('continues from a clicked button rather than from where Tab last left the row', async () => {
+    const user = userEvent.setup();
+    const { value } = client();
+    const question: PendingQuestionView = {
+      id: 'question-10', tab: 'build', kind: 'approve', question: 'Deploy to prod?', options: ['Yes', 'No'],
+    };
+    render(<QuestionPanel question={question} client={value} />);
+    const no = screen.getByRole('button', { name: 'No' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+
+    no.focus();
+    await user.keyboard('{Tab}');
+    expect(cancel).toHaveFocus();
+  });
+
   it('exposes focusCancel via the imperative handle, regardless of question kind', () => {
     const { value } = client();
     const question: PendingQuestionView = { id: 'question-8', tab: 'build', kind: 'ask', question: 'What port?' };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OVERLAYS, buildOverlayOpenState, commandBarSuppressed, firstOpenOverlay,
+  OVERLAYS, buildOverlayOpenState, commandBarDisabled, commandBarSuppressed, firstOpenOverlay,
   type OverlayName, type OverlayOpenSources, type OverlayOpenState,
 } from './overlay-registry';
 
@@ -104,4 +104,20 @@ describe('commandBarSuppressed', () => {
   it('is true when the queue is open alongside an overlay that does claim the bar', () => {
     expect(commandBarSuppressed(opened('queue', 'route'))).toBe(true);
   });
+});
+
+describe('commandBarDisabled', () => {
+  it('is false when nothing is open', () => {
+    expect(commandBarDisabled(NONE)).toBe(false);
+  });
+
+  // The route chooser is the spec's one modal overlay: the command input is disabled while it is open.
+  it('is true while the route chooser is open', () => {
+    expect(commandBarDisabled(opened('route'))).toBe(true);
+  });
+
+  it.each(OVERLAYS.filter((overlay) => overlay.name !== 'route').map((overlay) => overlay.name))(
+    'is false while only %s is open',
+    (name) => { expect(commandBarDisabled(opened(name))).toBe(false); },
+  );
 });

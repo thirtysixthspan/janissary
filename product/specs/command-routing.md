@@ -60,7 +60,10 @@ can be aimed at a specific connection).
   option **labels**, in order); `null` means no chooser is open. Only one chooser exists at a time
   (the active tab's command line). See `RouteChooserView` in `src/protocol/tab.ts`.
 - **Client overlay.** `web/src/RouteChooser.tsx` floats above the command line listing the command and
-  its options. It is **modal**: the command input is disabled while it is open. **Up/Down** move the
+  its options. It is **modal**: the command input is disabled while it is open, so it takes no text,
+  and takes focus back once the chooser closes (`disablesCommandBar` in
+  `web/src/pickers/overlay-registry.ts` marks the chooser as the one overlay that disables the bar
+  rather than only claiming its keys). **Up/Down** move the
   selection, **Return** picks, **Escape** cancels (a row can also be clicked). The overlay closes
   automatically when the next `state` event reports `route: null`. The **acp (agent prompt)** option is
   highlighted by default when a chooser newly opens (or its command changes) — the last entry in
