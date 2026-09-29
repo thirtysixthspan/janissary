@@ -675,6 +675,16 @@ applies only to harnesses added later.
   observers stop when the tab closes or the PTY exits, whichever comes first, and are not retained
   after the tab closes. Detaching a remote harness closes its tab this way, so its observers stop
   even though its process keeps running on the host.
+- **Ended with everything it started** — a harness forks helpers, MCP servers, and the commands it
+  runs, and all of them share the harness's process group. Whether the tab is closed or the harness
+  exits on its own, that whole group is sent SIGTERM, and whatever is still there two seconds later
+  is sent SIGKILL. A child that ignores the hangup a closing terminal sends, or one still running
+  when the harness quits, would otherwise outlive the tab and hold its ports and files. A process
+  that deliberately leaves the group, such as a daemon that starts its own session, is beyond this
+  reach; that is what codex's shared background server was, and it is why codex launches with
+  `--no-daemon` (see [Launching with a model and effort level](#launching-with-a-model-and-effort-level)).
+  The same applies to every program janissary runs in a terminal, including an ssh tab and an
+  inline terminal card, and to a remote harness on its own host.
 
 ## Screen capture
 

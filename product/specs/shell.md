@@ -86,7 +86,9 @@ All agent tabs with a running interactive PTY stay mounted simultaneously (only 
 
 ### Closing a tab with a running PTY
 
-`close` kills the PTY (SIGTERM) and removes the tab, the same as closing any other connection. The PTY exit fires `onPtyExit`, which clears `activePty` — but since the tab is already gone this is a no-op.
+`close` kills the PTY and removes the tab, the same as closing any other connection. The program gets
+a hangup, and its whole process group is then sent SIGTERM and, after a two-second grace, SIGKILL,
+so nothing it started outlives the tab (see Lifecycle in `harness.md`). The PTY exit fires `onPtyExit`, which clears `activePty` — but since the tab is already gone this is a no-op.
 
 ## Shell Working Directory Persistence
 
