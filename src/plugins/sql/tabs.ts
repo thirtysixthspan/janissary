@@ -46,6 +46,7 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
     objects: [],
     object: '',
     filters: [],
+    hidden: [],
     global: '',
     order: [],
     limit: DEFAULT_PAGE_SIZE,

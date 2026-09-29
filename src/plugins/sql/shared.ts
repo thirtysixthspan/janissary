@@ -85,6 +85,10 @@ export type SqlPayload = {
   // than a resend of the whole page.
   object: string;
   filters: SqlFilter[];
+  // The columns the grid is not showing. The query is untouched: a hidden column is still selected
+  // and still filtered, so this is view state -- server-owned only so it survives a tab update and a
+  // profile restore the way the filters do.
+  hidden: string[];
   // One term matched against every column at once, so a value can be looked for without knowing
   // which column holds it. Empty means none, and it is not a per-column filter: it survives a
   // switch to another object, because it names no column.
@@ -226,6 +230,7 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
     [value.object, isString],
     [value.objects, isListOf(isObject)],
     [value.global, isString],
+    [value.hidden, isListOf(isString)],
     [value.filters, isListOf(isFilter)],
     [value.order, isListOf(isOrder)],
     [value.limit, isNumber],

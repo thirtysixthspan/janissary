@@ -16,6 +16,9 @@ export type SetFilterIntent = { column: string; op: SqlFilterOperator; value?: s
 // The one term matched against every column. Any string is accepted and bound, exactly as a
 // per-column value is; an empty one removes the term, so clearing it needs no separate intent.
 export type SetGlobalFilterIntent = { value: string };
+// The whole hidden set rather than a toggle, so a client cannot grow it one call at a time into
+// something the grid then has to reconcile.
+export type SetColumnsIntent = { hidden: string[] };
 export type ClearFiltersIntent = Record<string, never>;
 export type SetOrderIntent = { column: string };
 export type SetPageIntent = { offset: number };
@@ -112,6 +115,10 @@ export function isSetOrderIntent(value: unknown): value is SetOrderIntent {
 
 export const isSetGlobalFilterIntent = (value: unknown): value is SetGlobalFilterIntent =>
   isRecord(value) && isString(value.value);
+
+export function isSetColumnsIntent(value: unknown): value is SetColumnsIntent {
+  return isRecord(value) && Array.isArray(value.hidden) && value.hidden.every(isString);
+}
 
 export function isSetPageIntent(value: unknown): value is SetPageIntent {
   if (!isRecord(value)) return false;

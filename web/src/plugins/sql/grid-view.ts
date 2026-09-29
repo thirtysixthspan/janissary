@@ -54,6 +54,39 @@ export function goToRow(value: string, grid: SqlGrid | null): number | null {
   return Math.min(startOf(row), Math.max(0, startOf(Math.max(1, grid?.total ?? 1))));
 }
 
+/**
+ * The columns the grid shows, each with the position it holds in the row's cells.
+ *
+ * The index travels with the name because `row.cells` is positional: dropping a column from the
+ * header without also dropping it from each row would leave every cell after it showing the value of
+ * its neighbour. A hidden column is still selected and still filtered -- the `SELECT` is untouched --
+ * so this is a view concern and the cell it would have held is simply not rendered.
+ */
+export function visibleColumns(
+  columns: readonly string[],
+  hidden: readonly string[],
+): { name: string; index: number }[] {
+  return columns
+    .map((name, index) => ({ name, index }))
+    .filter((column) => !hidden.includes(column.name));
+}
+
+/**
+ * The hidden set with one column added or removed, in place.
+ *
+ * A name that is not in `columns` is ignored: `grid.columns` comes from the statement that ran, so a
+ * column that is not there cannot be hidden, and recording it would leave a stale entry that nothing
+ * ever clears.
+ */
+export function toggleColumn(
+  columns: readonly string[],
+  hidden: readonly string[],
+  name: string,
+): string[] {
+  if (!columns.includes(name)) return [...hidden];
+  return hidden.includes(name) ? hidden.filter((entry) => entry !== name) : [...hidden, name];
+}
+
 const OPERATOR_TEXT: Record<SqlFilter['op'], string> = {
   contains: 'contains',
   eq: '=',

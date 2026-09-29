@@ -79,6 +79,11 @@
 .sql-pager button:disabled { opacity: 0.4; cursor: default; }
 .sql-pager button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
 .sql-pager-label { color: var(--muted); }
+.sql-columns { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
+.sql-column { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.sql-column.off { color: var(--muted); }
+.sql-columns-actions { display: inline-flex; gap: 6px; }
+
 .sql-goto { display: flex; align-items: center; gap: 4px; }
 .sql-goto input { width: 90px; }
 .sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }

@@ -4,6 +4,7 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import { isSqlPayload, type SqlFilterOperator, type SqlPayload } from './shared.js';
+import { selected, toggledOrder, withFilter, withHidden } from './payload-changes.js';
 import {
   isClearFiltersIntent,
   isDeleteRowIntent,
@@ -13,6 +14,7 @@ import {
   isRefreshIntent,
   isRunIntent,
   isSelectObjectIntent,
+  isSetColumnsIntent,
   isSetFilterIntent,
   isSetGlobalFilterIntent,
   isSetOrderIntent,
@@ -40,24 +42,6 @@ import { openDatabase } from './open-tab.js';
 function reread(payload: SqlPayload, capabilities: TabPluginServerCapabilities): SqlPayload {
   const next = { ...payload, offset: 0 };
   return { ...next, pending: issue('query', next, capabilities) };
-}
-
-function toggledOrder(payload: SqlPayload, column: string) {
-  const existing = payload.order[0];
-  if (existing?.column !== column) return [{ column, desc: false }];
-  return existing.desc ? [] : [{ column, desc: true }];
-}
-
-// Replaces the filter on one column, or removes it when the same column is filtered the same way
-// again. Toggling rather than stacking is what stops a grid accumulating an unbounded filter list as
-// a user experiments.
-function withFilter(payload: SqlPayload, column: string, op: SqlFilterOperator, value: string | undefined) {
-  const same = payload.filters.find((filter) => filter.column === column);
-  const identical = same?.op === op && same?.value === value;
-  const next = op === 'isNull' || op === 'notNull' ? { column, op } : { column, op, value };
-  return identical
-    ? payload.filters.filter((filter) => filter.column !== column)
-    : [...payload.filters.filter((filter) => filter.column !== column), next];
 }
 
 /**
@@ -107,25 +91,10 @@ export function intentsFor(tabs: SqlTabs) {
     'select-object': {
       payload: isSelectObjectIntent,
       run: (payload, value: { object: string; column?: string; value?: string }, capabilities): null => {
-        // A filter is a fact about a column of one object, not a fact that follows the user around:
-        // keeping `status = 'paid'` while looking at a table with no `status` column builds a statement
-        // SQLite rejects outright, so the ones the new object does not have are dropped here rather
-        // than at the query.
-        const names = payload.objects.find((object) => object.name === value.object)?.columns.map((column) => column.name);
-        const carried = value.column === undefined
-          ? []
-          : [{ column: value.column, op: 'eq' as const, value: value.value ?? '' }];
-        // A carried filter replaces any existing one on the same column rather than stacking with it.
-        const merged = value.column === undefined
-          ? payload.filters
-          : [...payload.filters.filter((filter) => filter.column !== value.column), ...carried];
-        // An object the tab has never listed has no known columns, and knowing nothing is no reason
-        // to drop anything: only a column this object demonstrably lacks goes.
-        const filters = names === undefined ? merged : merged.filter((filter) => names.includes(filter.column));
+        // A filter carried with the selection is applied before the query is issued, so the action
+        // is built from the state the tab will hold — see SelectObjectIntent.
         return apply(
-          // A filter carried with the selection is applied before the query is issued, so the action
-          // is built from the state the tab will hold — see SelectObjectIntent.
-          reread({ ...payload, filters, object: value.object, stats: null, error: null }, capabilities),
+          reread({ ...selected(payload, value), object: value.object, stats: null, error: null }, capabilities),
           capabilities,
           tabs,
         );
@@ -147,6 +116,16 @@ export function intentsFor(tabs: SqlTabs) {
         // The global term goes with them: it is another thing narrowing the view, and leaving it
         // behind would make "Clear filters" clear only half of what the user can see.
         return apply(reread({ ...payload, filters: [], global: '' }, capabilities), capabilities, tabs);
+      },
+    },
+    'set-columns': {
+      payload: isSetColumnsIntent,
+      run: (payload, value: { hidden: string[] }, capabilities): null => {
+        return apply(
+          reread(withHidden(payload, value.hidden), capabilities),
+          capabilities,
+          tabs,
+        );
       },
     },
     'set-global-filter': {

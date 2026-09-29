@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faTrash, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlCell, SqlColumn, SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { cellText, pageLabel, readOnlyReason } from './grid-view';
+import { cellText, pageLabel, readOnlyReason, toggleColumn, visibleColumns } from './grid-view';
 import { CellEditor } from './CellEditor';
+import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
@@ -22,10 +23,15 @@ export function DataGrid({
   const [editing, setEditing] = useState<{ row: string; column: string } | null>(null);
   const [deleting, setDeleting] = useState<SqlRow | null>(null);
   const [filtering, setFiltering] = useState<string | null>(null);
+  const [choosingColumns, setChoosingColumns] = useState(false);
   const grid = payload.grid;
   const readOnly = readOnlyReason(object);
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
   const ordered = payload.order[0];
+  // The declared order, minus what the chooser has put away. A hidden column keeps its place in the
+  // row, so what is rendered is a list of names and the position each one holds in the cells.
+  const shown = visibleColumns(grid?.columns ?? [], payload.hidden);
+  const setHidden = (hidden: string[]) => send('set-columns', { hidden });
 
   return (
     <div className="sql-grid-area">
@@ -48,9 +54,20 @@ export function DataGrid({
               <FontAwesomeIcon icon={faPlus} />
             </button>
           )}
+          <ColumnChooserButton hiddenCount={payload.hidden.length} onClick={() => setChoosingColumns(!choosingColumns)} />
           {capabilities.splitAction}
         </span>
       </div>
+
+      {choosingColumns && (
+        <ColumnChooser
+          columns={grid?.columns ?? []}
+          hidden={payload.hidden}
+          onClose={() => setChoosingColumns(false)}
+          onToggle={(name) => setHidden(toggleColumn(grid?.columns ?? [], payload.hidden, name))}
+          onShowAll={() => setHidden([])}
+        />
+      )}
 
       <GlobalFilter value={payload.global} onSend={send} />
 
@@ -63,7 +80,7 @@ export function DataGrid({
           <thead>
             <tr>
               <th className="sql-gutter" />
-              {(grid?.columns ?? []).map((column) => (
+              {shown.map(({ name: column }) => (
                 <th key={column} scope="col">
                   <span className="sql-head">
                     <button
@@ -105,7 +122,7 @@ export function DataGrid({
             {(grid?.rows ?? []).map((row, index) => (
               <tr key={row.key || index}>
                 <td className="sql-gutter">{index + 1 + (grid?.offset ?? 0)}</td>
-                {(grid?.columns ?? []).map((column, cell) => (
+                {shown.map(({ name: column, index: cell }) => (
                   <td
                     key={column}
                     className={row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell'}

@@ -4,6 +4,7 @@ import {
   isExportIntent,
   isInsertRowIntent,
   isOpenIntent,
+  isSetColumnsIntent,
   isSetFilterIntent,
   isSetGlobalFilterIntent,
   isSetPageIntent,
@@ -20,6 +21,7 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     objects: [{ name: 'orders', kind: 'table', writable: true, columns: [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }] }],
     object: 'orders',
     filters: [],
+    hidden: [],
     global: '',
     order: [],
     limit: 100,
@@ -138,6 +140,20 @@ describe('intent payload guards', () => {
     expect(isSetGlobalFilterIntent({ value: "x'; DROP TABLE orders; --" })).toBe(true);
     expect(isSetGlobalFilterIntent({ value: 7 })).toBe(false);
     expect(isSetGlobalFilterIntent({})).toBe(false);
+  });
+
+  it('accepts a whole hidden set of column names, and refuses anything else', () => {
+    expect(isSetColumnsIntent({ hidden: [] })).toBe(true);
+    expect(isSetColumnsIntent({ hidden: ['a', 'b'] })).toBe(true);
+    expect(isSetColumnsIntent({ hidden: 'a' })).toBe(false);
+    expect(isSetColumnsIntent({ hidden: [1] })).toBe(false);
+    expect(isSetColumnsIntent({})).toBe(false);
+  });
+
+  it('rejects a payload whose hidden set is not a list of names', () => {
+    expect(isSqlPayload({ ...payload(), hidden: 'status' })).toBe(false);
+    expect(isSqlPayload({ ...payload(), hidden: [1] })).toBe(false);
+    expect(isSqlPayload({ ...payload(), hidden: [] })).toBe(true);
   });
 
   it('accepts a page offset and a page size the grid offers', () => {

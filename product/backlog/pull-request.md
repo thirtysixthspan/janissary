@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let a wide table's columns be hidden, so a table with forty columns is readable at the width a sidebar or a split pane allows.
-
-Existing Issue: the grid renders every declared column in every layout, so a table with a few dozen columns is only usable by horizontal scrolling, while DB Browser for SQLite's table browser header menu offers hide column, show all columns, select column, and freeze column as one group of actions. Severity: 5/10
-
-Existing Risk: 5/10 - In a docked sidebar — the layout this feature is explicitly built for — a wide table is unusable, and the two-column centre layout gives the grid whatever is left after the navigator, which is narrow on a split screen.
-
-Proposal Risk: 2/10 - Hidden columns are client view state, so they survive a refresh and do not, and a user who hides a column and forgets has to find their way back.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let the grid hide columns". Add `hiddenColumns: string[]` to `SqlPayload` in `src/plugins/sql/shared.ts` — server-owned, so it survives a tab update and a profile restore the way the filters do, and guarded in `isSqlPayload` as a list of strings. Add a `set-columns` intent in `src/plugins/sql/intents.ts` carrying the full hidden set, replacing the previous one rather than toggling, so a client cannot grow the list one call at a time into something the grid then has to reconcile. Render the choice in `DataGrid.tsx` as a control in the column header row that opens a small menu of the object's column names, each toggling, plus a Show all entry that clears the set; put the pure toggle logic in `web/src/plugins/sql/grid-view.ts` beside the other grid helpers so it is testable without a render. `grid.columns` already carries the declared order, so hiding a column is a filter over that list at render time and the `SELECT` is unchanged — a hidden column is still selected and still filtered, which is what makes the hidden set a view concern rather than a query one. Cover the toggle in `grid-view.test.ts` for hiding, showing, hiding all, and a name that is not a column, and cover the intent in `src/plugins/sql/activate.test.ts`.
-
-
 * Let a cell or a run of cells be copied to the clipboard, so a value can leave the grid without being retyped.
 
 Existing Issue: the grid has no copy path at all — `CellEditor` commits and cancels, and nothing reads a selection — while DB Browser for SQLite's data grid carries a custom `copyMimeData()` and `paste()` so a selection can be lifted out of the browser and into a spreadsheet. Severity: 5/10

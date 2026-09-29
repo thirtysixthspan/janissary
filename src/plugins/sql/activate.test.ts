@@ -269,6 +269,7 @@ describe('sql plugin intents', () => {
       objects: ORDERS,
       object: 'orders',
       filters: [],
+      hidden: [],
       global: '',
       order: [],
       limit: 100,
@@ -405,6 +406,25 @@ describe('sql plugin intents', () => {
     const fixture = fakeCapabilities();
     intent('select-object', { object: 'orders' }, fixture, basePayload({ object: 'paid', global: 'ada' }));
     expect(fixture.actions[0]).toMatchObject({ query: { object: 'orders', global: 'ada' } });
+  });
+  it('takes the whole hidden set, and ignores a name the statement does not carry', () => {
+    const fixture = fakeCapabilities();
+    intent('set-columns', { hidden: ['status', 'not-a-column'] }, fixture, basePayload());
+    // The hidden set is view state, so it lands in the tab's payload and not in the query.
+    expect(lastPayload(fixture).hidden).toEqual(['status']);
+    expect(fixture.actions[0]).toMatchObject({ action: 'query' });
+  });
+
+  it('shows every column again on an empty set', () => {
+    const fixture = fakeCapabilities();
+    intent('set-columns', { hidden: [] }, fixture, basePayload({ hidden: ['status'] }));
+    expect(lastPayload(fixture).hidden).toEqual([]);
+  });
+
+  it('drops a hidden column the new object does not have, as it drops a filter', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'paid' }, fixture, basePayload({ hidden: ['status'] }));
+    expect(lastPayload(fixture).hidden).toEqual([]);
   });
   it('removes a filter set the same way twice, and clears them all on request', () => {
     const fixture = fakeCapabilities();

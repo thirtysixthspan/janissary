@@ -67,6 +67,13 @@ no column, so it survives a switch to another object. Submitting an empty term r
 **Clear filters** takes it away with the rest. It is not the statistics panel's business: those
 counts are the object's, and the term does not reach them.
 
+A **Columns** control in the grid's action bar lists the object's columns, each one toggling, with
+**Show all** to take them all back. A wide table is otherwise only usable by horizontal scrolling, and
+a dock or a split pane leaves little width to scroll within. Hiding a column does not change the
+query: it is still selected and still filtered, so this is about which columns are on screen, not
+which rows come back. The control says how many are hidden. Like a filter, a hidden column belongs to
+one object, so selecting another object drops the ones it does not have.
+
 A column header toggles the order: ascending, then descending, then none. With no order chosen the
 grid orders by the object's primary key, or by its first column when it has none — a page needs a
 total order, or paging skips and repeats rows.
