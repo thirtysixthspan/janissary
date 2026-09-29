@@ -1,20 +1,19 @@
 import type { DatabaseSync } from 'node:sqlite';
 import type {
-  DatabaseCellView,
   DatabaseColumnView,
   DatabaseGridQuery,
   DatabaseGridView,
   DatabaseObjectView,
   DatabaseResultView,
-  DatabaseRowView,
   DatabasesView,
 } from '../protocol.js';
 import { databaseFileExists, getConnection, isConnectionOpen } from '../connections.js';
 import { errorText } from '../error-text.js';
 import { DatabaseBrowserState, databaseRefs } from './browser-state.js';
+import { readStatement } from './console-read.js';
 import { exportRows } from './export.js';
 import { runGrid, totals, unfilteredTotal } from './grid.js';
-import { coerce, RowKeyStore } from './row-keys.js';
+import { RowKeyStore } from './row-keys.js';
 import { objectColumns, hasObject, schemaObjects } from './schema.js';
 import { columnStats } from './stats.js';
 import { deleteRow, insertRow, updateCell, type WriteOutcome } from './write.js';
@@ -24,38 +23,10 @@ import { deleteRow, insertRow, updateCell, type WriteOutcome } from './write.js'
 // count cache, and delegates the SQL to the modules beside it. Nothing here is reachable from a `db`
 // command, and nothing in the `db` path comes here.
 
-/** How many rows a statement the user typed may fill the grid with. */
-export const CONSOLE_ROW_LIMIT = 200;
-
 function emptyGrid(query: DatabaseGridQuery): DatabaseGridView {
   return {
     sql: '', parameters: [], columns: [], rows: [], total: 0, unfilteredTotal: 0,
     offset: query.offset, limit: query.limit, order: [],
-  };
-}
-
-function toCell(value: unknown): DatabaseCellView {
-  const isNull = value === null || value === undefined;
-  return { text: isNull ? '' : String(coerce(value)), isNull };
-}
-
-// A statement the user typed, whose columns come from the statement rather than from row 0 — so an
-// empty result still renders a header — and which is paged like any other grid.
-function consoleGrid(sql: string, rows: Record<string, unknown>[], names: string[]): DatabaseGridView {
-  const page: DatabaseRowView[] = rows.slice(0, CONSOLE_ROW_LIMIT).map((row) => ({
-    key: '',
-    cells: names.map((name) => toCell(row[name])),
-  }));
-  return {
-    sql,
-    parameters: [],
-    columns: names,
-    rows: page,
-    total: rows.length,
-    unfilteredTotal: rows.length,
-    offset: 0,
-    limit: CONSOLE_ROW_LIMIT,
-    order: [],
   };
 }
 
@@ -169,7 +140,9 @@ export class DatabaseBrowser {
    * goes through `exec` for the same reason `db sqlite query` does — a console is where a
    * semicolon-separated script gets typed, and `exec` is what runs one. `exec` reports no change
    * count, so a write answers `0` and the console says `OK.`, exactly as the command-bar surface
-   * does; the changed count is meaningful only for the grid's own single statements.
+   * does; the changed count is meaningful only for the grid's own single statements. A read is
+   * iterated rather than materialised, so a result far larger than the console shows costs a
+   * bounded amount of memory rather than all of it.
    */
   run(database: string, requestId: string, sql: string, returnsRows: boolean): void {
     const opened = this.open(database);
@@ -179,10 +152,7 @@ export class DatabaseBrowser {
     }
     try {
       if (returnsRows) {
-        const statement = opened.handle.prepare(sql);
-        const rows = statement.all();
-        const names = statement.columns().map((column) => column.name);
-        this.record({ kind: 'query', requestId, database, grid: consoleGrid(sql, rows, names) });
+        this.record({ kind: 'query', requestId, database, grid: readStatement(opened.handle, sql) });
         return;
       }
       opened.handle.exec(sql);

@@ -197,6 +197,10 @@ the host decides whether that was a read or a write by the same test `db sqlite 
 statement that returns rows fills the grid, and anything else reports `OK.`, or the SQLite error.
 Enter's own history is the last fifty statements in this tab.
 
+A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
+off there and the range line says so rather than reporting a table of two hundred, because a query
+the console refused to finish is not the same thing as a small one.
+
 A statement that fails shows its message and leaves the grid as it was. Nothing a grid or a console
 does disables the plugin, and nothing is written to a transcript.
 

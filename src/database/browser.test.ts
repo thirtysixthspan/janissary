@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
 import { initDbDir, closeAllConnections, removeDatabaseFile } from '../connections.js';
 import { runDatabaseCommand } from './index.js';
+import { CONSOLE_ROW_LIMIT } from './console-read.js';
 import { DatabaseBrowser } from './browser.js';
 import { DatabaseBrowserState, RESULT_LIMIT } from './browser-state.js';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -176,6 +177,36 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
+  // `.all()` on a statement the user typed materialised every matching row before the ceiling was
+  // applied to the array it produced, so one `SELECT * FROM large` cost a whole table in memory.
+  // The bound is on what crosses into the server, which is what the iterator makes true.
+  it('brings at most the console limit across, and says the result was longer', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, `CREATE TABLE many (id INTEGER PRIMARY KEY);
+      INSERT INTO many (id) WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < ${CONSOLE_ROW_LIMIT * 2})
+        SELECT i FROM n;`);
+    const read = nextId();
+    browser.run('shop', read, 'SELECT id FROM many', true);
+    const answer = browser.view().results.find((result) => result.requestId === read);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.rows).toHaveLength(CONSOLE_ROW_LIMIT);
+    expect(answer.grid.total).toBe(CONSOLE_ROW_LIMIT);
+    expect(answer.error).toBeUndefined();
+    browser.dispose();
+  });
+
+  it('reports a read that fits as its own size, not as the ceiling', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    const read = nextId();
+    browser.run('shop', read, 'SELECT status FROM orders', true);
+    const answer = browser.view().results.find((result) => result.requestId === read);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.rows).toHaveLength(2);
+    expect(answer.grid.total).toBe(2);
+    browser.dispose();
+  });
+
   it('updates, inserts, and deletes through a row key, and reports the change', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);
@@ -236,8 +267,8 @@ describe('DatabaseBrowser', () => {
 
   it('lists the databases on disk with whether each exists and is open', () => {
     const browser = new DatabaseBrowser();
-    browser.create('alpha');
-    browser.create('beta');
+    browser.create('alpha', nextId());
+    browser.create('beta', nextId());
     expect(browser.view().databases).toEqual([
       { name: 'alpha', exists: true, open: true },
       { name: 'beta', exists: true, open: true },

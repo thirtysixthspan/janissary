@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Bound what a statement typed into the console materialises, rather than slicing the result after it has been built.
-
-Existing Issue: A read typed into the console is prepared and run with `.all()`, which materialises every matching row before the two-hundred-row ceiling is applied by slicing the array that comes back, so one `SELECT * FROM large` is held in the server's memory in full. Severity: 6/10
-
-Existing Risk: 6/10 - A single statement typed against a table of a few million rows blocks the event loop and allocates the entire result, taking the application down for every user rather than for the one who asked, and the export module beside it names this exact hazard as the reason export streams its rows.
-
-Proposal Risk: 3/10 - The statement still runs to completion inside SQLite and a very large read stays slow rather than fatal, but the rows crossing into the server are bounded by the ceiling the constant already names.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: bound what a statement typed into the console materialises". In `src/database/browser.ts`, replace the `.all()` in `run` with `StatementSync.iterate()`, taking at most `CONSOLE_ROW_LIMIT` rows from the iterator and stopping there, and hand `consoleGrid` the number actually read plus whether the iterator had more, so the grid's total reports the ceiling honestly rather than claiming a table of 200. The column names still come from `statement.columns()`, which is unchanged. `src/database/export.ts` already streams its rows this way and is the precedent to follow. In `src/database/browser.test.ts`, add a case that runs a read producing more than `CONSOLE_ROW_LIMIT` rows and asserts the recorded result carries the capped count, and keep every existing console case passing. `product/specs/sql-database.md` currently says only that a statement returning rows fills the grid; add a sentence saying the console shows the first two hundred rows of a read rather than the whole result, since that is user-visible and the spec is where it belongs.
-
 * Stop the cell editor's null toggle from writing to the database before the user commits.
 
 Existing Issue: The cell editor's null checkbox calls the commit handler the moment it is ticked, so a null is written on the click while the editor around it still offers Escape as though nothing had been sent. Severity: 5/10
