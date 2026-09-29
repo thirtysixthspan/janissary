@@ -31,7 +31,7 @@ export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLi
       from: entry.from,
       fromColor: entry.fromColor,
       msgKind: 'response',
-      ...(entry.openFile && { openFile: entry.openFile }),
+      ...(entry.openFiles && { openFiles: entry.openFiles }),
       ...(entry.openTab && { openTab: entry.openTab }),
     });
     for (const line of parts) {
@@ -44,7 +44,7 @@ export function formatMessageContent(entry: LogEntry, parts: string[]): BufferLi
       from: entry.from,
       fromColor: entry.fromColor,
       msgKind: kind,
-      ...(entry.openFile && { openFile: entry.openFile }),
+      ...(entry.openFiles && { openFiles: entry.openFiles }),
       ...(entry.openTab && { openTab: entry.openTab }),
     });
     for (const extra of parts.slice(1)) {

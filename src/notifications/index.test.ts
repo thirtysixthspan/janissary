@@ -319,18 +319,18 @@ describe('notify — line composition', () => {
     expect(entry.from).toBe('Dec 31 11:00pm janus');
   });
 
-  it('threads an openFile path onto the appended entry when given', () => {
+  it('threads an openFile path onto the appended entry as its one linked file when given', () => {
     const append = vi.fn();
     notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt', { openFile: '/captures/janus-now.txt' });
     const [, entry] = append.mock.calls[0];
-    expect(entry.openFile).toBe('/captures/janus-now.txt');
+    expect(entry.openFiles).toEqual(['/captures/janus-now.txt']);
   });
 
-  it('omits openFile from the appended entry when not given', () => {
+  it('omits linked files from the appended entry when no openFile is given', () => {
     const append = vi.fn();
     notify(makeManagers(append), 'auto-approve', 'janus', 'Auto-approved a permission prompt');
     const [, entry] = append.mock.calls[0];
-    expect(entry.openFile).toBeUndefined();
+    expect(entry.openFiles).toBeUndefined();
   });
 
   it('threads an owning-tab link onto a question notification', () => {
@@ -348,7 +348,7 @@ describe('notify — line composition', () => {
     );
     const [, entry] = append.mock.calls[0];
     expect(entry.from).toBe('9:05am janus');
-    expect(entry.openFile).toBeUndefined();
+    expect(entry.openFiles).toBeUndefined();
     expect(entry.openTab).toBeUndefined();
   });
 
@@ -356,7 +356,7 @@ describe('notify — line composition', () => {
     const append = vi.fn();
     notify(makeManagers(append), 'question', 'janus', undefined, { openTab: 'janus', openFile: '/captures/janus-now.txt' });
     const [, entry] = append.mock.calls[0];
-    expect(entry.openFile).toBe('/captures/janus-now.txt');
+    expect(entry.openFiles).toEqual(['/captures/janus-now.txt']);
     expect(entry.openTab).toBe('janus');
   });
 });

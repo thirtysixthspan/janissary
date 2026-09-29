@@ -57,6 +57,18 @@ function repeats(previous: RecordedNotification, next: RecordedNotification): bo
   return previous.tabLabel === next.tabLabel && previous.message === next.message;
 }
 
+// The feed line for a repeat folded into `previous`: the newest entry with the `(N times)` suffix,
+// linking every file the run has carried so far rather than only the newest one — each repeat's
+// capture stays reachable from the one line that now stands for it.
+function foldedEntry(previous: LogEntry, next: LogEntry, count: number): LogEntry {
+  const openFiles = [...(previous.openFiles ?? []), ...(next.openFiles ?? [])];
+  return {
+    ...next,
+    output: withRepeatCount(next.output, count),
+    ...(openFiles.length > 0 && { openFiles }),
+  };
+}
+
 export class NotificationQueue {
   private entries: RecordedNotification[] = [];
 
@@ -64,9 +76,10 @@ export class NotificationQueue {
   // entry but still one more arrival: a flood of one message must escalate the same as any other.
   private arrivals: Date[] = [];
 
-  // Hold a notification. A sequential repeat replaces the newest entry — taking its time and link
-  // targets, bumping its count, and re-rendering its feed line with the `(N times)` suffix — so a
-  // flood of one message costs one line of the feed and one slot of the limit.
+  // Hold a notification. A sequential repeat replaces the newest entry — taking its time and tab
+  // link, adding its file link to the ones already folded, bumping its count, and re-rendering its
+  // feed line with the `(N times)` suffix — so a flood of one message costs one line of the feed
+  // and one slot of the limit.
   append(notification: RecordedNotification): HeldNotification {
     this.noteArrival(notification.recordedAt);
     const previous = this.entries.at(-1);
@@ -75,11 +88,7 @@ export class NotificationQueue {
       return { held: notification, repeated: false };
     }
     const count = (previous.count ?? 1) + 1;
-    const held = {
-      ...notification,
-      count,
-      entry: { ...notification.entry, output: withRepeatCount(notification.entry.output, count) },
-    };
+    const held = { ...notification, count, entry: foldedEntry(previous.entry, notification.entry, count) };
     this.entries = [...this.entries.slice(0, -1), held];
     return { held, repeated: true };
   }

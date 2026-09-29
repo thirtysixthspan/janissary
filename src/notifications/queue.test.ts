@@ -81,6 +81,32 @@ describe('NotificationQueue folding sequential repeats', () => {
     expect(queue.logEntries.map((e) => e.output)).toEqual(['failed', 'other', 'failed']);
   });
 
+  it('links every repeat\'s file on the folded line, oldest first', () => {
+    const queue = new NotificationQueue();
+    for (const index of [1, 2, 3]) {
+      const base = notification('approved', AT);
+      queue.append({ ...base, entry: { ...base.entry, openFiles: [`/captures/${index}.txt`] } });
+    }
+    expect(queue.logEntries).toEqual([{
+      input: '', output: 'approved (3 times)', openFiles: ['/captures/1.txt', '/captures/2.txt', '/captures/3.txt'],
+    }]);
+  });
+
+  it('keeps the earlier files when a repeat brings none of its own', () => {
+    const queue = new NotificationQueue();
+    const base = notification('approved', AT);
+    queue.append({ ...base, entry: { ...base.entry, openFiles: ['/captures/1.txt'] } });
+    queue.append(notification('approved', AT));
+    expect(queue.logEntries[0].openFiles).toEqual(['/captures/1.txt']);
+  });
+
+  it('carries no file links when no repeat had a file', () => {
+    const queue = new NotificationQueue();
+    queue.append(notification('failed', AT));
+    queue.append(notification('failed', AT));
+    expect(queue.logEntries[0]).not.toHaveProperty('openFiles');
+  });
+
   it('spends one slot of the limit on a folded flood', () => {
     const queue = new NotificationQueue();
     queue.append(notification('first', AT));

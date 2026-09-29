@@ -191,10 +191,10 @@ describe('renderLine — search highlight', () => {
   });
 });
 
-describe('renderLine — message openFile link', () => {
-  it('renders a clickable link that asks to edit the capture when the message carries openFile', async () => {
+describe('renderLine — message openFiles links', () => {
+  it('renders a clickable link that asks to edit the capture when the message carries openFiles', async () => {
     const intents = fakeIntents();
-    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFiles: ['/captures/claude-now.txt'] };
     const { container } = render(<>{renderLine(line, 0, intents, noop, vi.fn())}</>);
     const link = container.querySelector('.file-link[role="link"]')!;
     expect(link).toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('renderLine — message openFile link', () => {
   });
 
   it('renders the capture link as an icon, not text', () => {
-    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFiles: ['/captures/claude-now.txt'] };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     const link = container.querySelector('.file-link[role="link"]')!;
     expect(link).toHaveAttribute('aria-label', 'View linked file');
@@ -214,7 +214,7 @@ describe('renderLine — message openFile link', () => {
   // auto-approved prompt as though that were the only thing it opens.
   it('opens a browser death log through the same link', async () => {
     const intents = fakeIntents();
-    const line: BufferLine = { type: 'message', text: 'e2e browser exited (signal SIGSEGV)', from: '8:32pm claude', openFile: '/browser-logs/claude-now.log' };
+    const line: BufferLine = { type: 'message', text: 'e2e browser exited (signal SIGSEGV)', from: '8:32pm claude', openFiles: ['/browser-logs/claude-now.log'] };
     const { container } = render(<>{renderLine(line, 0, intents, noop, vi.fn())}</>);
     const link = container.querySelector('.file-link[role="link"]')!;
     await userEvent.click(link);
@@ -222,14 +222,14 @@ describe('renderLine — message openFile link', () => {
   });
 
   it('renders the capture link as a clipboard icon', () => {
-    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFiles: ['/captures/claude-now.txt'] };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     const link = container.querySelector('.file-link[role="link"]')!;
     expect(link.querySelector('svg[data-icon]')).toHaveAttribute('data-icon', 'clipboard');
   });
 
   it('renders the capture link before the message text', () => {
-    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFile: '/captures/claude-now.txt' };
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFiles: ['/captures/claude-now.txt'] };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     const lineEl = container.querySelector('.line.message')!;
     const link = lineEl.querySelector('.file-link');
@@ -239,7 +239,23 @@ describe('renderLine — message openFile link', () => {
     expect(link!.compareDocumentPosition(messageText!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('renders no link when the message has no openFile', () => {
+  // A folded run of repeats keeps every capture reachable, not only the newest one.
+  it('renders one link per file on a folded line, each opening its own file', async () => {
+    const intents = fakeIntents();
+    const line: BufferLine = {
+      type: 'message', text: 'Auto-approved a permission prompt (3 times)', from: '12:32pm claude',
+      openFiles: ['/captures/1.txt', '/captures/2.txt', '/captures/3.txt'],
+    };
+    const { container } = render(<>{renderLine(line, 0, intents, noop, vi.fn())}</>);
+    const links = container.querySelectorAll('.file-link[role="link"]');
+    expect(links).toHaveLength(3);
+    await userEvent.click(links[0]);
+    await userEvent.click(links[2]);
+    expect(intents.onEditFile).toHaveBeenNthCalledWith(1, '/captures/1.txt');
+    expect(intents.onEditFile).toHaveBeenNthCalledWith(2, '/captures/3.txt');
+  });
+
+  it('renders no link when the message has no openFiles', () => {
     const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     expect(container.querySelector('[role="link"]')).toBeNull();

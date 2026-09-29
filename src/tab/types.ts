@@ -15,9 +15,9 @@ export type LogEntry = {
   // Set when this entry hosts an inline terminal card (an interactive program or AI harness
   // running in a PTY). Used by the web renderer to mount an xterm.js pane. `ptyId` keys the live PTY stream.
   terminal?: TerminalEntry;
-  // Absolute path of a file to open in an editor tab when the rendered line is clicked (e.g. an
-  // auto-approved permission prompt's screen capture).
-  openFile?: string;
+  // Absolute paths of files the rendered line opens in an editor tab, one link each, oldest first
+  // (e.g. the screen capture behind each auto-approved permission prompt a folded line stands for).
+  openFiles?: string[];
   openTab?: string;
 };
 
@@ -42,8 +42,8 @@ export type BufferLine = {
   running?: boolean;
   // Populated for `type: 'terminal'` lines.
   terminal?: TerminalEntry;
-  // Absolute path of a file to open in an editor tab when this line is clicked (see `LogEntry.openFile`).
-  openFile?: string;
+  // Absolute paths of files this line links to, one link each (see `LogEntry.openFiles`).
+  openFiles?: string[];
   openTab?: string;
 };
 
