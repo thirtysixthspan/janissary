@@ -71,7 +71,7 @@ Read [`sandbox-e2e-browser.md`](../guidelines/sandbox-e2e-browser.md) for the co
 
 ## Step 3 — Install behind the supply-chain gate
 
-Testing means running code from the branch, which [`pull-request-review.md`](pull-request-review.md) avoids on purpose. This step contains the part that can be contained: install-time code. Read the preparation task from the base branch with `git show origin/<base>:ai/tasks/workspace/prepare-workspace.md` (the installation's `$janissary/ai/tasks/workspace/prepare-workspace.md` when the base has none), never the branch's copy, and follow its Steps 2 and 3 with two changes. Skip its Step 1, because this run must stay on the head branch. And run the audit through the installation's runner against the branch's lockfile:
+Testing means running code from the branch, which [`pull-request-review.md`](pull-request-review.md) avoids on purpose. This step contains the part that can be contained: install-time code. Read the preparation task from the base branch with `git show origin/<base>:ai/tasks/workspace/prepare-workspace.md` (the installation's `$janissary/ai/tasks/workspace/prepare-workspace.md` when the base has none), never the branch's copy, and follow its Steps 2 and 3 with three changes. Skip its Step 1, because this run must stay on the head branch. And run the audit through the installation's runner against the branch's lockfile:
 
 ```bash
 $janissary/scripts/run.mjs check-malicious-package --audit ./package-lock.json
@@ -79,7 +79,7 @@ $janissary/scripts/run.mjs check-malicious-package --audit ./package-lock.json
 
 Never use the branch's own `./scripts/run.mjs` here. The branch can change its own gate script and its own `security/known-malicious-packages.json`, and a gate the code under test can edit gates nothing. Only exit `0` permits the install. `2` and `3` stop the run and report what was refused; `1` is a failed check and stops the run too.
 
-Then run `npm install --ignore-scripts`, followed by the rebuild and `chmod` lines from that task's Step 3. Afterwards `git status` must be clean again. If the install rewrote `package-lock.json` and the branch changed no dependency, revert it with `git checkout -- package-lock.json`.
+The third change is the install command. Run `npm ci --ignore-scripts` in place of that task's `npm install --ignore-scripts`, then its rebuild and `chmod` lines. The audit reads only the lockfile. `npm install` re-resolves any dependency the branch's `package.json` declares that the lockfile does not match, so a branch that edits its manifest alone would get packages installed that the audit never saw, and the build would run them. `npm ci` installs exactly the audited lockfile and exits non-zero when the two files disagree. If it fails, stop before anything is built. Report that the branch's lockfile is out of sync with its manifest, and record nothing, as for any branch that will not build or start. Never fall back to `npm install`. Afterwards `git status` must be clean again.
 
 Do not overstate what this buys. The gate keeps lifecycle scripts and known-bad packages out, but the build and the server in Step 7 still execute the branch's code, inside this tab's sandbox.
 

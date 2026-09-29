@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the test task's gated install refuse to install packages its lockfile audit never saw.
-
-Existing Issue: The task audits the branch's `package-lock.json` and then runs `npm install --ignore-scripts`, which re-resolves any dependency the branch's `package.json` declares but its lockfile does not match, so a branch whose manifest and lockfile disagree gets packages installed that the audit never read, and the only follow-up is an instruction to revert a rewritten lockfile when "the branch changed no dependency", which leaves the other case undefined. Severity: 6/10
-
-Existing Risk: 5/10 - A branch can add or bump a dependency in `package.json` alone, pass the audit on a stale lockfile, and have an unaudited or known-malicious version installed and then executed by the build in Step 7, which is precisely the install-time containment Step 3 claims to provide.
-
-Proposal Risk: 2/10 - The installed tree is exactly the audited lockfile, but a branch with an out-of-sync lockfile now fails to install and is reported as untestable, which is the correct outcome yet may surprise an author whose lockfile drifted innocently.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1477: install the tested branch with npm ci so only the audited lockfile is installed". In `ai/tasks/test-pull-request.md` Step 3, replace `npm install --ignore-scripts` with `npm ci --ignore-scripts`, which installs exactly the lockfile the audit just read and exits non-zero when `package.json` and `package-lock.json` disagree instead of resolving new versions; keep the rebuild and `chmod` lines from `ai/tasks/workspace/prepare-workspace.md` Step 3 afterwards. State that a failed `npm ci` stops the run before anything is built, is reported as the lockfile being out of sync with the manifest (not as a finding, consistent with the task's rule that a branch which will not build or start is reported rather than recorded), and never falls back to `npm install`. Remove the now-unneeded sentence about reverting a rewritten `package-lock.json`, since `npm ci` does not rewrite it, and keep the check that `git status` is clean after the install. The supply-chain gate itself in `scripts/check-malicious-package.mjs` reads only the lockfile, which is why the lockfile must be what gets installed; do not change that script. Mention the refusal in the install paragraph of `product/specs/pull-request-testing.md`. Verify by reading Step 3 end to end and, if a `-b` tab is available, by running the task against a throwaway pull request that edits a version in `package.json` without updating `package-lock.json` and confirming it stops at Step 3 with nothing installed.
-
-
 * Handle testing steps that end the app's session, so one step that quits the app does not turn every later step into a false failure.
 
 Existing Issue: The task runs every step in one driver batch against an app that exits when its last client leaves, when its last tab is closed, or on `quit` or `exit`, but says nothing about a step that does one of those, so every step after it meets a refused connection and is recorded as failing, and when each is rerun alone on a fresh app it passes and is filed as intermittent. Severity: 5/10

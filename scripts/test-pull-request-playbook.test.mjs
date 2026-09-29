@@ -27,6 +27,14 @@ describe('the test-pull-request playbook', () => {
     expect(playbook).toContain('git fetch origin <base>');
   });
 
+  // The supply-chain audit reads only the lockfile. `npm install` would re-resolve whatever the
+  // branch's manifest declares beyond it and install packages nobody audited; `npm ci` installs the
+  // lockfile exactly, or refuses.
+  it('installs exactly the audited lockfile', () => {
+    expect(playbook).toContain('npm ci --ignore-scripts');
+    expect(playbook).not.toMatch(/Run `npm install --ignore-scripts`|Then run `npm install/);
+  });
+
   it("never sends the reader to the project's own copy of a task", () => {
     expect(playbook).not.toContain("the project's own copy");
   });
