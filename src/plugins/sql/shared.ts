@@ -46,9 +46,10 @@ export type SqlGrid = {
   order: SqlOrder[];
 };
 
-// The console's most recent exchange, kept beside the grid so a write's outcome survives the next
-// read. `changed` is 0 for a statement run through `exec`, which reports no count — the same reason
-// `db sqlite query` answers a write with `OK.` rather than a number.
+// One statement the tab ran, and what it did. `changed` is 0 for a statement run through `exec`, which
+// reports no count — the same reason `db sqlite query` answers a write with `OK.` rather than a
+// number. `error` is the failure, and an entry carrying one is the record of a statement that did not
+// work, which is the half of a log that is worth keeping.
 export type SqlConsoleResult = { sql: string; changed: number; error?: string };
 
 export type SqlStatsColumn = {
@@ -101,7 +102,10 @@ export type SqlPayload = {
   pageSizes: number[];
   grid: SqlGrid | null;
   stats: SqlStatsColumn[] | null;
-  console: SqlConsoleResult | null;
+  // Every statement the tab has run, newest first, capped server-side. The last entry is what the
+  // console line under the prompt reports; the rest are the session, readable rather than
+  // reconstructable from memory.
+  log: SqlConsoleResult[];
   exports: SqlExport[];
   error: string | null;
   pending: SqlPending | null;
@@ -243,7 +247,7 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
     [value.exports, isListOf(isExport)],
     [value.grid, isOptional(isGrid)],
     [value.stats, isOptional(isListOf(isStatsColumn))],
-    [value.console, isOptional(isConsoleResult)],
+    [value.log, isListOf(isConsoleResult)],
     [value.error, isOptional(isString)],
     [value.pending, isOptional(isPending)],
   ];

@@ -6,6 +6,7 @@ import {
 } from '../api.js';
 import { PAGE_SIZES } from './shared-intents.js';
 import type {
+  SqlConsoleResult,
   SqlDatabaseRef,
   SqlExport,
   SqlObject,
@@ -20,6 +21,16 @@ export const USAGE = 'Usage: sql [<database>] [left|right]';
 // How many finished exports a tab keeps. The files stay on disk; only the allow-list references are
 // bounded, because a tab holding a thousand of them would register a thousand of them.
 export const MAX_EXPORTS = 5;
+
+// How many statements the log keeps. A cap rather than a full history because the log lives in the
+// tab payload, which is broadcast on every update -- an unbounded list would make each keystroke in
+// the console resend every statement the tab has ever run.
+export const MAX_LOG = 50;
+
+/** The log with this statement on top, oldest dropped once the cap is reached. */
+export function addToLog(log: readonly SqlConsoleResult[], entry: SqlConsoleResult): SqlConsoleResult[] {
+  return [entry, ...log].slice(0, MAX_LOG);
+}
 
 /** The topic's data, or the failure that means the host handed this plugin something unusable. */
 export function databasesFrom(capabilities: TabPluginServerCapabilities): DatabasesView {
@@ -54,7 +65,7 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
     pageSizes: [...PAGE_SIZES],
     grid: null,
     stats: null,
-    console: null,
+    log: [],
     exports: [],
     error: null,
     pending: null,

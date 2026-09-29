@@ -9,6 +9,7 @@ import {
 import type { DatabaseResultView, DatabasesView } from '../api.js';
 import { activate } from './activate.js';
 import type { SqlPayload } from './shared.js';
+import { MAX_LOG } from './tabs.js';
 
 const REFS = [{ name: 'shop', exists: true, open: true }, { name: 'blog', exists: true, open: false }];
 
@@ -176,6 +177,77 @@ describe('sql plugin notifications', () => {
     expect(after.grid?.rows).toHaveLength(1);
   });
 
+  it('puts each write on the log in order, newest first', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
+    let tab = lastPayload(fixture);
+    for (const sql of ['UPDATE orders SET status = ?', 'DELETE FROM logs']) {
+      fixture.activation.intent(
+        { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'paid' }, tabPayload: tab },
+        fixture.capabilities,
+      );
+      const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
+      deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql, parameters: ['paid'], changed: 1 }]);
+      tab = lastPayload(fixture);
+    }
+    expect(tab.log.map((entry) => entry.sql)).toEqual(['DELETE FROM logs', 'UPDATE orders SET status = ?']);
+  });
+
+  it('logs a statement that failed too, since a log of successes would not say what happened', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
+    const tab = lastPayload(fixture);
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: tab },
+      fixture.capabilities,
+    );
+    const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: 'UPDATE nope', parameters: [], changed: 0, error: 'no such table: nope' }]);
+    const after = lastPayload(fixture);
+    expect(after.log).toEqual([{ sql: 'UPDATE nope', changed: 0, error: 'no such table: nope' }]);
+    expect(after.error).toBe('no such table: nope');
+  });
+
+  it('keeps the newest fifty statements and drops the oldest past that', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
+    let tab = lastPayload(fixture);
+    for (let run = 0; run < MAX_LOG + 3; run += 1) {
+      fixture.activation.intent(
+        { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: tab },
+        fixture.capabilities,
+      );
+      const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
+      deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: `UPDATE t SET v = ${run}`, parameters: [], changed: 1 }]);
+      tab = lastPayload(fixture);
+    }
+    expect(tab.log).toHaveLength(MAX_LOG);
+    // The oldest three are gone, and the newest is the last one run.
+    expect(tab.log[0]?.sql).toBe(`UPDATE t SET v = ${MAX_LOG + 2}`);
+    expect(tab.log.at(-1)?.sql).toBe('UPDATE t SET v = 3');
+  });
+
+  it('clears the log without re-reading anything, since nothing on screen changes', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
+    let tab = lastPayload(fixture);
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: tab },
+      fixture.capabilities,
+    );
+    const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: 'UPDATE t', parameters: [], changed: 1 }]);
+    tab = lastPayload(fixture);
+    const before = fixture.actions.length;
+    fixture.activation.intent({ tab: 'sqlite:shop', intent: 'clear-log', payload: {}, tabPayload: tab }, fixture.capabilities);
+    expect(lastPayload(fixture).log).toEqual([]);
+    expect(fixture.actions).toHaveLength(before);
+  });
+
   it('re-issues a request whose answer never arrived, rather than waiting forever', () => {
     const fixture = fakeCapabilities();
     openTab(fixture);
@@ -277,7 +349,7 @@ describe('sql plugin intents', () => {
       pageSizes: [50, 100, 500],
       grid: grid(),
       stats: null,
-      console: null,
+      log: [],
       exports: [],
       error: null,
       pending: null,

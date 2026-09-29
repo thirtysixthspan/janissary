@@ -26,6 +26,9 @@ export function SqlTab({
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
   const grid = <DataGrid payload={payload} capabilities={capabilities} />;
   const navigator = <SchemaNavigator payload={payload} capabilities={capabilities} />;
+  // The log's newest entry is the last statement run, which is what the line under the prompt
+  // reports. It is not a separate field: one list means the line and the history cannot disagree.
+  const latest = payload.log[0] ?? null;
 
   return (
     <div
@@ -125,9 +128,9 @@ export function SqlTab({
           busy={payload.pending !== null}
           onSend={(sql) => send('run', { sql })}
         />
-        {payload.console && (
-          <div className={`sql-console-result${payload.console.error ? ' error' : ''}`}>
-            {payload.console.error ?? 'OK.'}
+        {latest && (
+          <div className={`sql-console-result${latest.error ? ' error' : ''}`}>
+            {latest.error ?? 'OK.'}
           </div>
         )}
       </div>

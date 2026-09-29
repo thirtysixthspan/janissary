@@ -7,6 +7,7 @@ import { isSqlPayload, type SqlFilterOperator, type SqlPayload } from './shared.
 import { selected, toggledOrder, withFilter, withHidden } from './payload-changes.js';
 import {
   isClearFiltersIntent,
+  isClearLogIntent,
   isDeleteRowIntent,
   isExportIntent,
   isInsertRowIntent,
@@ -116,6 +117,14 @@ export function intentsFor(tabs: SqlTabs) {
         // The global term goes with them: it is another thing narrowing the view, and leaving it
         // behind would make "Clear filters" clear only half of what the user can see.
         return apply(reread({ ...payload, filters: [], global: '' }, capabilities), capabilities, tabs);
+      },
+    },
+    'clear-log': {
+      payload: isClearLogIntent,
+      run: (payload, _value: Record<string, never>, capabilities): null => {
+        // No re-read: a log is a record of what already ran, so clearing it changes nothing about
+        // what the grid shows and the rows on screen are still the ones that were fetched.
+        return apply({ ...payload, log: [] }, capabilities, tabs);
       },
     },
     'set-columns': {

@@ -223,7 +223,7 @@ describe('SqlPayload shape used by the view', () => {
       database: 'shop', databases: [{ name: 'shop', exists: true, open: true }],
       objects: [ORDERS], object: 'orders', filters: [], hidden: [], global: '', order: [], limit: 100, offset: 0,
       pageSizes: [50, 100, 500],
-      grid: GRID, stats: null, console: null, exports: [], error: null, pending: null,
+      grid: GRID, stats: null, log: [], exports: [], error: null, pending: null,
     };
     expect(payload.grid?.columns).toEqual(['a']);
   });

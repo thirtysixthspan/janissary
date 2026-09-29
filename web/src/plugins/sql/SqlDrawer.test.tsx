@@ -58,6 +58,68 @@ describe('SqlDrawer', () => {
   });
 });
 
+describe('the statement log', () => {
+  const log = [
+    { sql: 'UPDATE orders SET status = ?', changed: 2 },
+    { sql: 'DELETE FROM logs', changed: 1 },
+    { sql: 'UPDATE nope', changed: 0, error: 'no such table: nope' },
+  ];
+
+  it('shows every statement before the current one, newest first', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    const entries = screen.getAllByRole('listitem').map((entry) => entry.querySelector('.sql-log-sql')?.textContent);
+    // The newest entry is the console line's business, not the list's.
+    expect(entries).toEqual(['DELETE FROM logs', 'UPDATE nope']);
+  });
+
+  it('reports what each statement did, and the failure that stopped it', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    expect(screen.getByText('1 row changed.')).toBeTruthy();
+    expect(screen.getByText('no such table: nope')).toBeTruthy();
+  });
+
+  it('lifts one statement at a time, which is how a session is read', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: write } });
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Copy DELETE FROM logs'));
+    expect(write).toHaveBeenCalledWith('DELETE FROM logs');
+    vi.unstubAllGlobals();
+  });
+
+  it('names the statement it copied, so two copies in a row are not confused', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: write } });
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Copy DELETE FROM logs'));
+    await vi.waitFor(() => expect(screen.getAllByText('Copied').length).toBeGreaterThan(0));
+    vi.unstubAllGlobals();
+  });
+
+  it('clears the log on request', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log })} capabilities={capabilities} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear log' }));
+    expect(intent).toHaveBeenCalledWith('clear-log', {});
+  });
+
+  it('carries no list at all on a tab that has written nothing', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ log: [] })} capabilities={capabilities} />);
+    expect(screen.queryByText('Earlier statements')).toBeNull();
+  });
+
+  it('still shows the log when there is no grid statement to show above it', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlDrawer payload={payload({ grid: null, log })} capabilities={capabilities} />);
+    expect(screen.getByText('DELETE FROM logs')).toBeTruthy();
+  });
+});
+
 describe('StatsPanel', () => {
   it('draws one bar per value, scaled to the largest count', () => {
     render(<StatsPanel columns={[{

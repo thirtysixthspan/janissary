@@ -105,6 +105,16 @@
 .sql-drawer-label { color: var(--muted); }
 .sql-drawer-actions { display: flex; gap: 6px; }
 
+.sql-log { border-top: 1px solid var(--border); padding-top: 6px; }
+.sql-log-head { display: flex; align-items: baseline; gap: 8px; }
+.sql-log-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 160px; overflow: auto; }
+.sql-log-entry { display: flex; align-items: baseline; gap: 8px; padding: 2px 0; font-size: 12px; }
+.sql-log-entry.error .sql-log-outcome { color: var(--danger); }
+.sql-log-sql { margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono, monospace); }
+.sql-log-outcome { color: var(--muted); white-space: nowrap; }
+.sql-log-copy { background: none; border: none; padding: 0 4px; font: inherit; color: var(--accent); cursor: pointer; white-space: nowrap; }
+.sql-log-copy:hover { text-decoration: underline; }
+
 .sql-stats { border: 1px solid var(--border); border-radius: 4px; padding: 8px; max-height: 30%; overflow: auto; }
 .sql-stats-empty { color: var(--muted); }
 .sql-stats-column + .sql-stats-column { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }

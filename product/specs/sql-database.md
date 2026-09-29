@@ -153,6 +153,14 @@ panel keeps showing the placeholder form, because that is the statement that act
 The order shown is the order actually used, including the primary-key fallback, so what the grid did
 is never a surprise.
 
+Above it, the statements the tab has run — newest first, capped at fifty, each showing what it
+changed or the error that stopped it, and each with its own **Copy**. A statement that failed is
+logged too: a record of only the successes would not say what happened. This browser is the only
+surface that mutates data, so a log of what was written can live nowhere else. **Clear log** empties
+it without re-reading, since nothing on screen changes when a record of the past is discarded. The
+console's own line under the prompt reports the newest entry, which is why there is no separate field
+for it — one list means the line and the history cannot disagree.
+
 ### Export
 
 Exporting writes the whole filtered, ordered query — not one page — as CSV or JSON, to

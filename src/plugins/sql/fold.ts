@@ -1,6 +1,6 @@
 import type { DatabaseResultView, TabPluginResources, TabPluginServerCapabilities } from '../api.js';
 import type { SqlExport, SqlObject, SqlPayload } from './shared.js';
-import { addExport, firstObject, issue, type SqlTabs } from './tabs.js';
+import { addExport, addToLog, firstObject, issue, type SqlTabs } from './tabs.js';
 
 // How an answer changes the tab. Every branch is total: a failed read keeps whatever was already
 // there and records the message, because a wrong column name in a grid is an ordinary outcome and
@@ -22,13 +22,15 @@ export function fold(
         : { ...base, grid: answer.grid, error: null };
     }
     case 'write': {
-      if (answer.error) return { ...base, ...missing(answer.error) };
+      // A statement that failed is still a statement the user ran, so it is logged too: a log that
+      // only kept successes would not say what happened.
+      if (answer.error) return { ...base, ...missing(answer.error), log: addToLog(base.log, { sql: answer.sql, changed: 0, error: answer.error }) };
       // A write invalidates the page it changed, so the grid is re-read rather than patched. The
-      // statement and its values stay in the console line, which is what the user just did.
+      // statement and its values go on the log, which is what the user just did.
       return {
         ...base,
         error: null,
-        console: answer.sql ? { sql: answer.sql, changed: answer.changed } : base.console,
+        log: answer.sql ? addToLog(base.log, { sql: answer.sql, changed: answer.changed }) : base.log,
         pending: issue('query', base, capabilities),
       };
     }

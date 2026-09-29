@@ -88,10 +88,10 @@ describe('SqlTab console', () => {
   it('shows what the last statement did, or why it did not', () => {
     const { capabilities } = makeCapabilities();
     const { rerender } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    rerender(<SqlTab payload={payload({ console: { sql: 'DELETE FROM orders', changed: 2 } })} capabilities={capabilities} />);
+    rerender(<SqlTab payload={payload({ log: [{ sql: 'DELETE FROM orders', changed: 2 }] })} capabilities={capabilities} />);
     expect(screen.getByText('OK.')).toBeTruthy();
     rerender(<SqlTab
-      payload={payload({ console: { sql: 'NOPE', changed: 0, error: 'Query error: syntax error' } })}
+      payload={payload({ log: [{ sql: 'NOPE', changed: 0, error: 'Query error: syntax error' }] })}
       capabilities={capabilities}
     />);
     expect(screen.getByText('Query error: syntax error')).toBeTruthy();

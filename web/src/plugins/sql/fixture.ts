@@ -67,7 +67,7 @@ export function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     pageSizes: [50, 100, 500],
     grid: grid(),
     stats: null,
-    console: null,
+    log: [],
     exports: [],
     error: null,
     pending: null,

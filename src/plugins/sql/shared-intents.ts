@@ -24,6 +24,7 @@ export type SetOrderIntent = { column: string };
 export type SetPageIntent = { offset: number };
 export type SetPageSizeIntent = { limit: number };
 export type RefreshIntent = Record<string, never>;
+export type ClearLogIntent = Record<string, never>;
 export type RunIntent = { sql: string };
 export type UpdateCellIntent = { row: string; column: string; value: string | null };
 export type InsertRowIntent = { object: string; cells: { column: string; value: string | null }[] };
@@ -69,6 +70,8 @@ function isEmpty(value: unknown): value is Record<string, never> {
 
 export const isClearFiltersIntent = isEmpty;
 export const isRefreshIntent = isEmpty;
+// Empty, like refresh: a log is cleared or it is not, and there is nothing to say about which.
+export const isClearLogIntent = isEmpty;
 
 // A database name the registry would accept. Re-checked here so a hand-sent intent, and a typed
 // `sql <name>`, cannot ask the host for a name its own file layer would refuse — the same rule
