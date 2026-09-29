@@ -59,6 +59,7 @@ export function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     objects: [ORDERS, PAID],
     object: 'orders',
     filters: [],
+    global: '',
     order: [],
     limit: 100,
     offset: 0,

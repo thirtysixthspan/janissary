@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add a filter that searches every column at once, so a term can be looked for without knowing which column holds it.
-
-Existing Issue: filtering exists only per column — `withFilter` in `src/plugins/sql/intents.ts` replaces or toggles the filter on one named column, and `grid-sql.ts`'s `whereClause` joins one clause per filter with `AND` — so finding a row means guessing which column the value is in, while DB Browser for SQLite's `TableBrowser` filters at two levels and names the second one a global filter over every column. Severity: 5/10
-
-Existing Risk: 5/10 - A user who does not know a database's shape cannot find a value they can see on screen, which is the common first visit to a database nobody has documented.
-
-Proposal Risk: 3/10 - A global term has to reach every column of the statement, so the bound-parameter count and the generated statement both grow with the column count, and a table with a wide BLOB column makes the predicate expensive on every row.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: add a filter that searches every column". Add a `global` string to the grid query in `src/protocol/database.ts` and to `SqlPayload` in `src/plugins/sql/shared.ts`, and have `whereClause` in `src/database/grid-sql.ts` emit one `COALESCE(CAST("col" AS TEXT), '') LIKE ?` per column, joined with `OR` and placed before the per-column `AND` group, binding one value per column. Add a `set-global-filter` intent beside the existing `set-filter` in `src/plugins/sql/intents.ts`, with a guard in `src/plugins/sql/shared-intents.ts` accepting any string, so the value is bound rather than interpolated exactly as a per-column value already is. Render it as the single field above the column filter chips in `DataGrid.tsx` beside the existing `FilterChips` row, and add `clear-filters` handling so the global term clears with the per-column ones. Cover the emitted clause and its bindings in `src/database/grid.test.ts` for a table with two columns and for one that combines a global term with a per-column filter, and cover the intent in `src/plugins/sql/activate.test.ts`. The statistics panel's page-level null and distinct counts are unaffected, and the export already runs the same query, so an export inherits the global filter for free.
-
-
 * Let the pager jump to a row the user names, so a table far larger than a page is reachable without counting.
 
 Existing Issue: the pager offers only Previous and Next, and `pageLabel` in `web/src/plugins/sql/grid-view.ts` reports the range already on screen, so reaching row 40,000 of a 51,882-row table takes 408 clicks; DB Browser for SQLite's table browser carries a navigate-to-row control beside its first/previous/next/last pair for the same reason. Severity: 5/10

@@ -14,6 +14,7 @@ import {
   isRunIntent,
   isSelectObjectIntent,
   isSetFilterIntent,
+  isSetGlobalFilterIntent,
   isSetOrderIntent,
   isSetPageIntent,
   isSetPageSizeIntent,
@@ -143,7 +144,15 @@ export function intentsFor(tabs: SqlTabs) {
     'clear-filters': {
       payload: isClearFiltersIntent,
       run: (payload, _value: Record<string, never>, capabilities): null => {
-        return apply(reread({ ...payload, filters: [] }, capabilities), capabilities, tabs);
+        // The global term goes with them: it is another thing narrowing the view, and leaving it
+        // behind would make "Clear filters" clear only half of what the user can see.
+        return apply(reread({ ...payload, filters: [], global: '' }, capabilities), capabilities, tabs);
+      },
+    },
+    'set-global-filter': {
+      payload: isSetGlobalFilterIntent,
+      run: (payload, value: { value: string }, capabilities): null => {
+        return apply(reread({ ...payload, global: value.value }, capabilities), capabilities, tabs);
       },
     },
     'set-order': {

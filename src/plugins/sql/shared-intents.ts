@@ -13,6 +13,9 @@ export type OpenIntent = { name: string };
 // sent just after a `select-object` would build its query against the object the user just left.
 export type SelectObjectIntent = { object: string; column?: string; value?: string };
 export type SetFilterIntent = { column: string; op: SqlFilterOperator; value?: string };
+// The one term matched against every column. Any string is accepted and bound, exactly as a
+// per-column value is; an empty one removes the term, so clearing it needs no separate intent.
+export type SetGlobalFilterIntent = { value: string };
 export type ClearFiltersIntent = Record<string, never>;
 export type SetOrderIntent = { column: string };
 export type SetPageIntent = { offset: number };
@@ -106,6 +109,9 @@ export function isSetFilterIntent(value: unknown): value is SetFilterIntent {
 export function isSetOrderIntent(value: unknown): value is SetOrderIntent {
   return isRecord(value) && isString(value.column);
 }
+
+export const isSetGlobalFilterIntent = (value: unknown): value is SetGlobalFilterIntent =>
+  isRecord(value) && isString(value.value);
 
 export function isSetPageIntent(value: unknown): value is SetPageIntent {
   if (!isRecord(value)) return false;

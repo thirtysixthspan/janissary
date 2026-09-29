@@ -77,6 +77,9 @@ export type DatabaseOrderView = {
 export type DatabaseGridQuery = {
   object: string;
   filters: DatabaseFilterView[];
+  // One term matched against every column of the object at once, so a value can be looked for
+  // without knowing which column holds it. Empty means no such term.
+  global: string;
   order: DatabaseOrderView[];
   limit: number;
   offset: number;

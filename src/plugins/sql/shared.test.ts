@@ -5,6 +5,7 @@ import {
   isInsertRowIntent,
   isOpenIntent,
   isSetFilterIntent,
+  isSetGlobalFilterIntent,
   isSetPageIntent,
   isSelectObjectIntent,
   isSetPageSizeIntent,
@@ -19,6 +20,7 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     objects: [{ name: 'orders', kind: 'table', writable: true, columns: [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }] }],
     object: 'orders',
     filters: [],
+    global: '',
     order: [],
     limit: 100,
     offset: 0,
@@ -128,6 +130,14 @@ describe('intent payload guards', () => {
     expect(isSetFilterIntent({ column: 'status', op: 'isNull' })).toBe(true);
     expect(isSetFilterIntent({ column: 'status', op: 'eq' })).toBe(false);
     expect(isSetFilterIntent({ column: 'status', op: 'nope', value: 'x' })).toBe(false);
+  });
+
+  it('accepts a global term of any text, including an empty one that means none', () => {
+    expect(isSetGlobalFilterIntent({ value: 'ada' })).toBe(true);
+    expect(isSetGlobalFilterIntent({ value: '' })).toBe(true);
+    expect(isSetGlobalFilterIntent({ value: "x'; DROP TABLE orders; --" })).toBe(true);
+    expect(isSetGlobalFilterIntent({ value: 7 })).toBe(false);
+    expect(isSetGlobalFilterIntent({})).toBe(false);
   });
 
   it('accepts a page offset and a page size the grid offers', () => {

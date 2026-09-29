@@ -24,8 +24,13 @@ function runCount(database: DatabaseSync, sql: string, parameters: (string | num
 }
 
 /** Rows matching the filters, and rows in the object regardless of them. */
-export function totals(database: DatabaseSync, query: DatabaseGridQuery, unfiltered?: number): { total: number; unfilteredTotal: number } {
-  const count = countStatement(query);
+export function totals(
+  database: DatabaseSync,
+  query: DatabaseGridQuery,
+  columns: readonly DatabaseColumnView[],
+  unfiltered?: number,
+): { total: number; unfilteredTotal: number } {
+  const count = countStatement(query, columns);
   const total = runCount(database, count.sql, count.parameters);
   return { total, unfilteredTotal: unfiltered ?? total };
 }
@@ -75,7 +80,7 @@ export function runGrid(
     parameters: select.parameters,
     columns: names,
     rows: page,
-    ...totals(database, query, unfilteredTotal),
+    ...totals(database, query, columns, unfilteredTotal),
     offset: query.offset,
     limit: query.limit,
     // The order actually used, which is not always the order that was asked for.

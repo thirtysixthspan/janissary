@@ -60,6 +60,31 @@ describe('DataGrid ordering and paging', () => {
 });
 
 describe('DataGrid filtering', () => {
+  it('asks for a global term, and clears it by submitting nothing', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const field = screen.getByLabelText('Search every column');
+    fireEvent.change(field, { target: { value: 'ada' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('set-global-filter', { value: 'ada' });
+  });
+
+  it('offers a way to take the term away, and says which term is in force', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload({ global: 'ada' })} capabilities={capabilities} />);
+    expect(screen.getByText('matches "ada" anywhere')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(intent).toHaveBeenCalledWith('set-global-filter', { value: '' });
+  });
+
+  it('asks for nothing when the term is resubmitted unchanged', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid payload={payload({ global: 'ada' })} capabilities={capabilities} />);
+    const field = screen.getByLabelText('Search every column');
+    fireEvent.keyDown(field, { key: 'Enter' });
+    expect(intent).not.toHaveBeenCalled();
+  });
+
   it('asks for a filter when one is applied, and shows the chip it produced', () => {
     const { capabilities, intent } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);

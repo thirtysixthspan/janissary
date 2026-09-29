@@ -229,7 +229,7 @@ export class DatabaseBrowser {
     const fail = (error: string) => this.record({ kind: 'export', requestId, database, path: '', name: '', size: '', rows: 0, error });
     if ('error' in opened) { fail(opened.error); return; }
     try {
-      const outcome = exportRows(opened.handle, database, query, opened.columns, format, totals(opened.handle, query).total);
+      const outcome = exportRows(opened.handle, database, query, opened.columns, format, totals(opened.handle, query, opened.columns).total);
       if (!outcome.ok) { fail(outcome.error); return; }
       this.record({
         kind: 'export', requestId, database,

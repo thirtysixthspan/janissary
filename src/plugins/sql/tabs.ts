@@ -46,6 +46,7 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
     objects: [],
     object: '',
     filters: [],
+    global: '',
     order: [],
     limit: DEFAULT_PAGE_SIZE,
     offset: 0,
@@ -82,6 +83,7 @@ export function gridQueryOf(payload: SqlPayload) {
   return {
     object: payload.object,
     filters: payload.filters.map((filter) => ({ ...filter })),
+    global: payload.global,
     order: payload.order.map((entry) => ({ ...entry })),
     limit: payload.limit,
     offset: payload.offset,

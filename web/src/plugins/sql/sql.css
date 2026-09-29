@@ -42,6 +42,8 @@
 .sql-grid-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 
 .sql-filters { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sql-global-filter { display: flex; align-items: center; gap: 6px; }
+.sql-global-filter input { min-width: 220px; }
 .sql-filter-chip { padding: 1px 8px; border: 1px solid var(--border); border-radius: 10px; font-size: 12px; }
 .sql-clear-filters { background: none; border: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; }
 .sql-clear-filters:hover { color: var(--fg); }

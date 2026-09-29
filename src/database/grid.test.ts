@@ -13,11 +13,16 @@ const COLUMNS: DatabaseColumnView[] = [
 ];
 
 function query(over: Partial<DatabaseGridQuery> = {}): DatabaseGridQuery {
-  return { object: 'orders', filters: [], order: [], limit: 100, offset: 0, ...over };
+  return { object: 'orders', filters: [], global: '', order: [], limit: 100, offset: 0, ...over };
 }
 
 function filter(over: Partial<DatabaseFilterView> = {}): DatabaseFilterView {
   return { column: 'status', op: 'eq', value: 'paid', ...over };
+}
+
+/** The clause for a query with these filters and this global term, over the columns above. */
+function where(filters: DatabaseFilterView[] = [], global = '') {
+  return whereClause(query({ filters, global }), COLUMNS);
 }
 
 describe('whereClause', () => {
@@ -34,40 +39,69 @@ describe('whereClause', () => {
       [filter({ op: 'notNull' }), ' WHERE "status" IS NOT NULL', []],
     ];
     for (const [entry, text, values] of cases) {
-      expect(whereClause([entry])).toEqual({ text, values });
+      expect(where([entry])).toEqual({ text, values });
     }
   });
 
   it('joins several filters with AND and concatenates their values', () => {
-    expect(whereClause([filter(), filter({ column: 'total', op: 'gt', value: '10' })])).toEqual({
+    expect(where([filter(), filter({ column: 'total', op: 'gt', value: '10' })])).toEqual({
       text: ' WHERE "status" = ? AND "total" > ?',
       values: ['paid', 10],
     });
   });
 
   it('binds a comparison value that parses as a number as a number, and one that does not as text', () => {
-    expect(whereClause([filter({ op: 'gte', value: '10' })]).values).toEqual([10]);
-    expect(whereClause([filter({ op: 'gte', value: 'ten' })]).values).toEqual(['ten']);
-    expect(whereClause([filter({ op: 'gte', value: '' })]).values).toEqual(['']);
+    expect(where([filter({ op: 'gte', value: '10' })]).values).toEqual([10]);
+    expect(where([filter({ op: 'gte', value: 'ten' })]).values).toEqual(['ten']);
+    expect(where([filter({ op: 'gte', value: '' })]).values).toEqual(['']);
   });
 
   it('escapes the LIKE wildcards a value itself contains', () => {
-    expect(whereClause([filter({ op: 'contains', value: '50%_off' })]).values).toEqual([String.raw`%50\%\_off%`]);
+    expect(where([filter({ op: 'contains', value: '50%_off' })]).values).toEqual([String.raw`%50\%\_off%`]);
   });
 
   it('binds a value that is SQL rather than interpolating any of it', () => {
     const injection = "x'; DROP TABLE orders; --";
-    const clause = whereClause([filter({ value: injection })]);
+    const clause = where([filter({ value: injection })]);
     expect(clause.text).toBe(' WHERE "status" = ?');
     expect(clause.text).not.toContain('DROP');
     expect(clause.values).toEqual([injection]);
   });
 
-  it('is empty for no filters', () => {
-    expect(whereClause([])).toEqual({ text: '', values: [] });
+  it('is empty for no filters and no term', () => {
+    expect(where([])).toEqual({ text: '', values: [] });
+  });
+
+  it('matches the term against every column at once, joined with OR', () => {
+    expect(where([], 'cy')).toEqual({
+      text: ' WHERE (COALESCE(CAST("id" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("customer" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("status" AS TEXT), \'\') LIKE ?)',
+      values: ['%cy%', '%cy%', '%cy%'],
+    });
+  });
+
+  // A parenthesized group, not one more link in the `AND` chain: a row must match the term
+  // *and* every per-column filter, and without the parentheses the first filter would read as an
+  // alternative to the term.
+  it('requires the term and the per-column filters together', () => {
+    const clause = where([filter({ op: 'eq', value: 'paid' })], 'ada');
+    expect(clause.text).toBe(' WHERE (COALESCE(CAST("id" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("customer" AS TEXT), \'\') LIKE ? OR COALESCE(CAST("status" AS TEXT), \'\') LIKE ?) AND "status" = ?');
+    expect(clause.values).toEqual(['%ada%', '%ada%', '%ada%', 'paid']);
+  });
+
+  it('binds the term once per column, because a placeholder is a placeholder', () => {
+    expect(where([], 'x').values).toHaveLength(COLUMNS.length);
+  });
+
+  it('emits no group for an object with no columns', () => {
+    expect(whereClause(query({ global: 'x' }), [])).toEqual({ text: '', values: [] });
+  });
+
+  it('binds a term that is SQL rather than interpolating any of it', () => {
+    const clause = where([], "x'; DROP TABLE orders; --");
+    expect(clause.text).not.toContain('DROP');
+    expect(clause.values).toEqual(Array.from({ length: COLUMNS.length }, () => "%x'; DROP TABLE orders; --%"));
   });
 });
-
 describe('resolveOrder', () => {
   it('keeps the order that was asked for', () => {
     expect(resolveOrder([{ column: 'status', desc: true }], COLUMNS)).toEqual([{ column: 'status', desc: true }]);
@@ -221,10 +255,26 @@ describe('totals', () => {
   });
 
   it('keeps a supplied unfiltered total beside the filtered one', () => {
-    expect(withDb(SHOP, (database) => totals(database, query({ filters: [filter()] }), 5)))
+    expect(withDb(SHOP, (database) => totals(database, query({ filters: [filter()] }), columnsOf('orders'), 5)))
       .toEqual({ total: 3, unfilteredTotal: 5 });
   });
+
+  // The count the pager reads and the export's row cap come from here, so a count built without the
+  // columns would drop the global term and disagree with the page it is counting.
+  it('counts the global term too, so the total matches the page', () => {
+    // Only one order has `cy` anywhere in it, and it is in `customer` rather than `status`.
+    expect(withDb(SHOP, (database) => totals(database, query({ global: 'cy' }), columnsOf('orders'))))
+      .toEqual({ total: 1, unfilteredTotal: 1 });
+    const keys = new RowKeyStore();
+    const page = withDb(SHOP, (database) => runGrid(database, 'shop', query({ global: 'cy' }), columnsOf('orders'), keys));
+    expect(page.rows.map((row) => row.cells[0]?.text)).toEqual(['3']);
+  });
 });
+
+/** The object's real columns, read the way the server reads them. */
+function columnsOf(object: string): DatabaseColumnView[] {
+  return withDb(SHOP, (database) => objectColumns(database, object));
+}
 
 describe('unfilteredTotal', () => {
   it('counts the object whole, ignoring the query filters', () => {

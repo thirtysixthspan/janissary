@@ -58,13 +58,41 @@ function fragmentFor(filter: DatabaseFilterView): Fragment {
   }
 }
 
-export function whereClause(filters: readonly DatabaseFilterView[]): Fragment {
-  const parts = filters.map((filter) => fragmentFor(filter));
-  if (parts.length === 0) return { text: '', values: [] };
+/**
+ * The one term matched against every column of the object.
+ *
+ * Each column contributes its own `LIKE` and they are joined with `OR`, so a row survives if the
+ * term is anywhere in it. `CAST(... AS TEXT)` is what makes that possible across types — a number,
+ * a blob and a string are compared as text here and nowhere else — and `COALESCE` is what keeps a
+ * null from making the whole row invisible to the term, since `NULL LIKE '%x%'` is not true.
+ *
+ * The value is bound once per column rather than once, because SQLite has no array parameter and a
+ * placeholder is a placeholder. An object with no columns has no group to contribute.
+ */
+function globalFragment(term: string, columns: readonly DatabaseColumnView[]): Fragment {
+  if (term === '' || columns.length === 0) return { text: '', values: [] };
+  const value = likeValue(term);
+  const text = columns.map((column) => `COALESCE(CAST(${quoteIdentifier(column.name)} AS TEXT), '') LIKE ?`).join(' OR ');
+  return { text: `(${text})`, values: columns.map(() => value) };
+}
+
+/**
+ * The object's whole `WHERE`, global term first so it binds ahead of the per-column clauses.
+ *
+ * The term is its own parenthesized group rather than folded into the `AND` chain on purpose: a row
+ * has to match the term *and* every per-column filter, and dropping the parentheses would read as
+ * "matches the term somewhere, or matches the first filter".
+ */
+export function whereClause(query: DatabaseGridQuery, columns: readonly DatabaseColumnView[]): Fragment {
+  const parts = query.filters.map((filter) => fragmentFor(filter));
+  const global = globalFragment(query.global ?? '', columns);
+  const groups = [global.text, ...parts.map((part) => part.text)].filter((text) => text !== '');
+  if (groups.length === 0) return { text: '', values: [] };
   return {
-    text: ` WHERE ${parts.map((part) => part.text).join(' AND ')}`,
-    values: parts.flatMap((part) => part.values),
-  };}
+    text: ` WHERE ${groups.join(' AND ')}`,
+    values: [...global.values, ...parts.flatMap((part) => part.values)],
+  };
+}
 
 /**
  * The order actually used: the user's, or the object's primary key ascending, or its first column.
@@ -87,7 +115,7 @@ export function orderClause(order: readonly DatabaseOrderView[]): string {
 export function selectStatement(query: DatabaseGridQuery, columns: DatabaseColumnView[]): BoundStatement {
   const names = columns.length > 0 ? columns : [];
   if (names.length === 0) return { sql: '', parameters: [] };
-  const where = whereClause(query.filters);
+  const where = whereClause(query, names);
   return {
     sql: `SELECT ${names.map((column) => quoteIdentifier(column.name)).join(', ')}`
       + ` FROM ${quoteIdentifier(query.object)}${where.text}${orderClause(resolveOrder(query.order, columns))}`
@@ -96,8 +124,14 @@ export function selectStatement(query: DatabaseGridQuery, columns: DatabaseColum
   };
 }
 
-export function countStatement(query: DatabaseGridQuery): BoundStatement {
-  const where = whereClause(query.filters);
+/**
+ * The count the pager and the export's row cap are read from.
+ *
+ * `columns` is required rather than defaulted: the global term is emitted per column, so a count
+ * built without them would quietly drop it and disagree with the page it is counting.
+ */
+export function countStatement(query: DatabaseGridQuery, columns: readonly DatabaseColumnView[]): BoundStatement {
+  const where = whereClause(query, columns);
   return {
     sql: `SELECT COUNT(*) AS n FROM ${quoteIdentifier(query.object)}${where.text}`,
     parameters: where.values,

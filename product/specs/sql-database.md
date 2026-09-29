@@ -57,6 +57,16 @@ columns it does not have — keeping them would build a statement naming a colum
 A filter on a column the new object does have stays, and an object the tab has never listed has no
 known columns and so keeps everything.
 
+**Search every column** takes one term and matches it against the whole row, so a value can be found
+without knowing which column holds it. It is the other order of narrowing — a per-column filter is
+asked when the column is known, and this when it is not — so it sits above the per-column chips. Each
+column contributes its own match and they are joined with `OR`, with every value rendered as text
+first so a number and a string are searched alike, and a null column passing rather than hiding the
+row. The term is its own group, so a row must match the term *and* every per-column filter. It names
+no column, so it survives a switch to another object. Submitting an empty term removes it, and
+**Clear filters** takes it away with the rest. It is not the statistics panel's business: those
+counts are the object's, and the term does not reach them.
+
 A column header toggles the order: ascending, then descending, then none. With no order chosen the
 grid orders by the object's primary key, or by its first column when it has none — a page needs a
 total order, or paging skips and repeats rows.

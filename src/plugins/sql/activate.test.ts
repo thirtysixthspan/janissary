@@ -269,6 +269,7 @@ describe('sql plugin intents', () => {
       objects: ORDERS,
       object: 'orders',
       filters: [],
+      global: '',
       order: [],
       limit: 100,
       offset: 0,
@@ -388,6 +389,23 @@ describe('sql plugin intents', () => {
     expect(fixture.actions[0]).toMatchObject({ query: { object: 'elsewhere', filters: [{ column: 'status', op: 'eq', value: 'paid' }] } });
   });
 
+  it('puts a global term in the query and replaces the one before it', () => {
+    const fixture = fakeCapabilities();
+    intent('set-global-filter', { value: 'ada' }, fixture, basePayload({ global: 'bo' }));
+    expect(fixture.actions[0]).toMatchObject({ action: 'query', query: { global: 'ada' } });
+  });
+
+  it('clears the term along with the per-column filters, since it narrows the same view', () => {
+    const fixture = fakeCapabilities();
+    intent('clear-filters', {}, fixture, basePayload({ global: 'ada', filters: [{ column: 'status', op: 'eq', value: 'paid' }] }));
+    expect(fixture.actions[0]).toMatchObject({ query: { global: '', filters: [] } });
+  });
+
+  it('keeps the term when the object changes, because it names no column', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'orders' }, fixture, basePayload({ object: 'paid', global: 'ada' }));
+    expect(fixture.actions[0]).toMatchObject({ query: { object: 'orders', global: 'ada' } });
+  });
   it('removes a filter set the same way twice, and clears them all on request', () => {
     const fixture = fakeCapabilities();
     intent('set-filter', { column: 'status', op: 'eq', value: 'paid' }, fixture, basePayload({

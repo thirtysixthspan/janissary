@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faFilter } from '@fortawesome/free-solid-svg-icons';
+import { faFilter, faSearch } from '@fortawesome/free-solid-svg-icons';
 import type { SqlFilterOperator, SqlPayload } from '@shared/plugins/sql/shared';
 import { filterLabel } from './grid-view';
 
@@ -13,9 +13,10 @@ export function FilterChips({
   payload: SqlPayload;
   onSend(name: string, body: unknown): void;
 }) {
-  if (payload.filters.length === 0) return null;
+  if (payload.filters.length === 0 && payload.global === '') return null;
   return (
     <div className="sql-filters">
+      {payload.global !== '' && <span className="sql-filter-chip"><span>matches "{payload.global}" anywhere</span></span>}
       {payload.filters.map((filter) => (
         <span className="sql-filter-chip" key={filter.column}>
           <span>{filterLabel(filter)}</span>
@@ -24,6 +25,51 @@ export function FilterChips({
       <button type="button" className="sql-clear-filters" onClick={() => onSend('clear-filters', {})}>
         <FontAwesomeIcon icon={faFilter} /> Clear filters
       </button>
+    </div>
+  );
+}
+
+/**
+ * The one field that matches a term against every column at once.
+ *
+ * It sits above the per-column chips because it is the other order of narrowing: a per-column filter
+ * is asked when the column is known, and this is asked when it is not. Submitting an empty value
+ * removes the term rather than filtering for nothing, so clearing it needs no second control — and
+ * the server's `clear-filters` takes it away with the rest.
+ */
+export function GlobalFilter({
+  value, onSend,
+}: {
+  value: string;
+  onSend(name: string, body: unknown): void;
+}) {
+  const [term, setTerm] = useState(value);
+  // The payload is the term in force, and a fresh answer replaces what was typed; keeping the
+  // local copy in step is what stops the field showing one thing while the grid shows another.
+  useEffect(() => setTerm(value), [value]);
+  const apply = () => {
+    if (term === value) return;
+    onSend('set-global-filter', { value: term });
+  };
+  return (
+    <div className="sql-global-filter">
+      <FontAwesomeIcon icon={faSearch} />
+      <input
+        value={term}
+        onChange={(event) => setTerm(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter') return;
+          event.preventDefault();
+          apply();
+        }}
+        placeholder="Search every column"
+        aria-label="Search every column"
+      />
+      {term !== '' && (
+        <button type="button" onClick={() => { setTerm(''); onSend('set-global-filter', { value: '' }); }}>
+          Clear
+        </button>
+      )}
     </div>
   );
 }

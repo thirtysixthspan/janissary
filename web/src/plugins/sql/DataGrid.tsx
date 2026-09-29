@@ -5,7 +5,7 @@ import type { SqlCell, SqlColumn, SqlPayload, SqlRow } from '@shared/plugins/sql
 import type { TabPluginClientCapabilities } from '../api';
 import { cellText, pageLabel, readOnlyReason } from './grid-view';
 import { CellEditor } from './CellEditor';
-import { FilterChips, FilterRow } from './Filters';
+import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
 
@@ -51,6 +51,8 @@ export function DataGrid({
           {capabilities.splitAction}
         </span>
       </div>
+
+      <GlobalFilter value={payload.global} onSend={send} />
 
       <FilterChips payload={payload} onSend={send} />
 
