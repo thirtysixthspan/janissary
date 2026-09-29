@@ -106,16 +106,25 @@ export function intentsFor(tabs: SqlTabs) {
     'select-object': {
       payload: isSelectObjectIntent,
       run: (payload, value: { object: string; column?: string; value?: string }, capabilities): null => {
-        // A filter carried with the selection is applied before the query is issued, so the action is
-        // built from the state the tab will hold — see SelectObjectIntent.
-        const filtered = value.column === undefined
-          ? payload
-          : {
-            ...payload,
-            filters: [...payload.filters.filter((filter) => filter.column !== value.column), { column: value.column, op: 'eq' as const, value: value.value }],
-          };
+        // A filter is a fact about a column of one object, not a fact that follows the user around:
+        // keeping `status = 'paid'` while looking at a table with no `status` column builds a statement
+        // SQLite rejects outright, so the ones the new object does not have are dropped here rather
+        // than at the query.
+        const names = payload.objects.find((object) => object.name === value.object)?.columns.map((column) => column.name);
+        const carried = value.column === undefined
+          ? []
+          : [{ column: value.column, op: 'eq' as const, value: value.value ?? '' }];
+        // A carried filter replaces any existing one on the same column rather than stacking with it.
+        const merged = value.column === undefined
+          ? payload.filters
+          : [...payload.filters.filter((filter) => filter.column !== value.column), ...carried];
+        // An object the tab has never listed has no known columns, and knowing nothing is no reason
+        // to drop anything: only a column this object demonstrably lacks goes.
+        const filters = names === undefined ? merged : merged.filter((filter) => names.includes(filter.column));
         return apply(
-          reread({ ...filtered, object: value.object, stats: null, error: null }, capabilities),
+          // A filter carried with the selection is applied before the query is issued, so the action
+          // is built from the state the tab will hold — see SelectObjectIntent.
+          reread({ ...payload, filters, object: value.object, stats: null, error: null }, capabilities),
           capabilities,
           tabs,
         );

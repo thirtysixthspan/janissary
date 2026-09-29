@@ -8,7 +8,7 @@ import type {
 } from '../protocol.js';
 import { countStatement, resolveOrder, selectStatement } from './grid-sql.js';
 import { coerce, type RowKeyStore } from './row-keys.js';
-import { primaryKeyColumns } from './schema.js';
+import { primaryKeyColumns, quoteIdentifier } from './schema.js';
 
 // Runs a grid query and mints the row keys its page carries. `DatabaseGridView.sql` is the exact
 // statement that ran, with `?` where a value was bound — the browser shows it rather than an inlined
@@ -28,6 +28,18 @@ export function totals(database: DatabaseSync, query: DatabaseGridQuery, unfilte
   const count = countStatement(query);
   const total = runCount(database, count.sql, count.parameters);
   return { total, unfilteredTotal: unfiltered ?? total };
+}
+
+/**
+ * How many rows the object holds with no filters at all.
+ *
+ * `totals` cannot answer this on its own: given a filtered query and no remembered figure, its only
+ * option is to report the filtered count as the whole object, which then becomes the "showing N of
+ * M" denominator for good. This is the count that is correct by construction, and it is worth one
+ * extra statement the first time an object is asked about with filters on.
+ */
+export function unfilteredTotal(database: DatabaseSync, query: DatabaseGridQuery): number {
+  return runCount(database, `SELECT COUNT(*) AS n FROM ${quoteIdentifier(query.object)}`, []);
 }
 
 /**

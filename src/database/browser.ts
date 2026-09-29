@@ -13,7 +13,7 @@ import { databaseFileExists, getConnection, isConnectionOpen } from '../connecti
 import { errorText } from '../error-text.js';
 import { DatabaseBrowserState, databaseRefs } from './browser-state.js';
 import { exportRows } from './export.js';
-import { runGrid, totals } from './grid.js';
+import { runGrid, totals, unfilteredTotal } from './grid.js';
 import { coerce, RowKeyStore } from './row-keys.js';
 import { objectColumns, hasObject, schemaObjects } from './schema.js';
 import { columnStats } from './stats.js';
@@ -134,12 +134,27 @@ export class DatabaseBrowser {
     }
     try {
       const cacheKey = `${database} ${query.object}`;
-      const grid = runGrid(opened.handle, database, query, opened.columns, this.keys, this.unfiltered.get(cacheKey));
+      const grid = runGrid(opened.handle, database, query, opened.columns, this.keys, this.rememberedTotal(opened.handle, query, cacheKey));
       this.unfiltered.set(cacheKey, grid.unfilteredTotal);
       this.record({ kind: 'query', requestId, database, grid });
     } catch (error) {
       this.record({ kind: 'query', requestId, database, grid: emptyGrid(query), error: errorText(error) });
     }
+  }
+
+  /**
+   * The object's size without filters, for the pager's "showing N of M", or undefined when this
+   * query already answers that.
+   *
+   * A filtered query whose object has never been counted cannot seed the cache from its own count:
+   * that number is the filtered one, and it would go on being reported as the object's size. So the
+   * first time an object is asked about with filters on, it is counted without them.
+   */
+  private rememberedTotal(handle: DatabaseSync, query: DatabaseGridQuery, cacheKey: string): number | undefined {
+    const remembered = this.unfiltered.get(cacheKey);
+    if (remembered !== undefined) return remembered;
+    if (query.filters.length === 0) return undefined;
+    return unfilteredTotal(handle, query);
   }
 
   /**

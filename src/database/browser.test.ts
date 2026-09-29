@@ -126,6 +126,25 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
+  it('counts an object whole the first time a filtered query asks about it', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    // Jumping into a table the tab has never shown issues a filtered query as that table's first,
+    // and the cache would otherwise keep that filtered count as the object's size for good.
+    const requestId = browser.requestId();
+    browser.query('shop', requestId, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
+    const first = browser.view().results.find((result) => result.requestId === requestId);
+    if (first?.kind !== 'query') throw new Error('expected a query answer');
+    expect(first.grid.total).toBe(1);
+    expect(first.grid.unfilteredTotal).toBe(2);
+    const second = browser.requestId();
+    browser.query('shop', second, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'open' }], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === second);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.unfilteredTotal).toBe(2);
+    browser.dispose();
+  });
+
   it('records a query for an object the database does not have as an error, not an empty page', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);

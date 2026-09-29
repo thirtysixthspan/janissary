@@ -352,6 +352,42 @@ describe('sql plugin intents', () => {
     expect(fixture.actions).toHaveLength(0);
   });
 
+  it('drops a filter whose column the newly selected object does not have', () => {
+    const fixture = fakeCapabilities();
+    // Keeping it would build `WHERE "status" = ?` against an object with no such column, which
+    // SQLite rejects outright — so an ordinary two-click path would replace the grid with an error.
+    intent('select-object', { object: 'paid' }, fixture, basePayload({
+      object: 'orders',
+      filters: [{ column: 'status', op: 'eq', value: 'paid' }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ action: 'query', query: { object: 'paid', filters: [] } });
+  });
+
+  it('keeps a filter the newly selected object does have', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'orders' }, fixture, basePayload({
+      object: 'paid',
+      filters: [{ column: 'id', op: 'eq', value: '1' }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ action: 'query', query: { object: 'orders', filters: [{ column: 'id', op: 'eq', value: '1' }] } });
+  });
+
+  it('drops a carried filter naming a column the target object does not have', () => {
+    const fixture = fakeCapabilities();
+    intent('select-object', { object: 'paid', column: 'status', value: 'paid' }, fixture, basePayload());
+    expect(fixture.actions[0]).toMatchObject({ query: { object: 'paid', filters: [] } });
+  });
+
+  it('keeps the filters when the target object is not one the tab has listed', () => {
+    const fixture = fakeCapabilities();
+    // Not knowing an object's columns is no reason to drop anything: only a column the object
+    // demonstrably lacks goes, and this one was never read.
+    intent('select-object', { object: 'elsewhere' }, fixture, basePayload({
+      filters: [{ column: 'status', op: 'eq', value: 'paid' }],
+    }));
+    expect(fixture.actions[0]).toMatchObject({ query: { object: 'elsewhere', filters: [{ column: 'status', op: 'eq', value: 'paid' }] } });
+  });
+
   it('removes a filter set the same way twice, and clears them all on request', () => {
     const fixture = fakeCapabilities();
     intent('set-filter', { column: 'status', op: 'eq', value: 'paid' }, fixture, basePayload({

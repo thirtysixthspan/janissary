@@ -52,6 +52,11 @@ operators are `contains`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `isNull`, and `n
 bind no value and hide the value field. Filtering the same column the same way again removes that
 filter, so experimenting does not accumulate a list of them. **Clear filters** removes them all.
 
+A filter belongs to a column of one object, so selecting a different object drops the filters naming
+columns it does not have — keeping them would build a statement naming a column that is not there.
+A filter on a column the new object does have stays, and an object the tab has never listed has no
+known columns and so keeps everything.
+
 A column header toggles the order: ascending, then descending, then none. With no order chosen the
 grid orders by the object's primary key, or by its first column when it has none — a page needs a
 total order, or paging skips and repeats rows.
@@ -66,7 +71,9 @@ resolved to a single column — following an unresolved key would filter on noth
 
 Pages hold 50, 100 (the default), or 500 rows. The pager reads `Rows 1–100 of 4,213 rows`, or
 `Rows 1–2 of 3 of 51,882 rows` once a filter is narrowing something — a filtered view that reported
-only the filtered total would read as though the table were that small. Changing the page size
+only the filtered total would read as though the table were that small. The second figure counts the
+object with no filters at all, so it is right even when the first query for an object arrives
+already filtered, as following a key into an unvisited table does. Changing the page size
 returns to the first page. **Refresh** re-reads the schema and the current query.
 
 Every value a filter, an order, or a write supplies is bound to the statement rather than

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { countStatement, orderClause, resolveOrder, selectStatement, whereClause } from './grid-sql.js';
 import type { DatabaseColumnView, DatabaseFilterView, DatabaseGridQuery } from '../protocol.js';
 import { objectColumns } from './schema.js';
-import { runGrid, totals } from './grid.js';
+import { runGrid, totals, unfilteredTotal } from './grid.js';
 import { RowKeyStore } from './row-keys.js';
 
 const COLUMNS: DatabaseColumnView[] = [
@@ -223,5 +223,19 @@ describe('totals', () => {
   it('keeps a supplied unfiltered total beside the filtered one', () => {
     expect(withDb(SHOP, (database) => totals(database, query({ filters: [filter()] }), 5)))
       .toEqual({ total: 3, unfilteredTotal: 5 });
+  });
+});
+
+describe('unfilteredTotal', () => {
+  it('counts the object whole, ignoring the query filters', () => {
+    // `totals` alone cannot answer this: asked for a filtered query with nothing remembered, its
+    // only option is to report the filtered count as the object's size.
+    expect(withDb(SHOP, (database) => unfilteredTotal(database, query({ filters: [filter()] })))).toBe(5);
+  });
+
+  it('counts the object whole whatever the filter is', () => {
+    expect(withDb(SHOP, (database) => unfilteredTotal(database, query({
+      filters: [{ column: 'status', op: 'eq', value: 'nothing-has-this' }],
+    })))).toBe(5);
   });
 });
