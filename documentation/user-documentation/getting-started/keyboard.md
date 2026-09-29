@@ -59,6 +59,8 @@ The focused section changes without sending a command to the application.
 
 An editor tab is different. While you're typing in its text, `Shift+Tab` outdents the current lines instead of moving focus (see [Editor](/user-documentation/tab-types/editor)). To leave an editor tab, press `Cmd+Shift+[` or `Cmd+Shift+]`, or click another section.
 
+A pending question panel keeps `Shift+Tab` too. On the panel's buttons or in its answer field, `Shift+Tab` moves backward through the buttons and stays in the panel (see [Agent questions](/user-documentation/advanced-agents/agent-questions)). From the command line, it still moves to the next section.
+
 Bare `Tab` keeps its command-completion behavior in the command bar.
 
 ## While an overlay is open

@@ -139,6 +139,18 @@ describe('useSectionNav', () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
+  it('leaves Shift+Tab to an element inside one that claims the chord', () => {
+    document.body.innerHTML = '<div class="app-center"><div data-claims-shift-tab><button id="inner"></button></div></div>';
+    const focusCenter = vi.fn();
+    renderHook(() => useSectionNav([makeTab()], focusCenter));
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true });
+    document.querySelector('#inner')!.dispatchEvent(event);
+
+    expect(focusCenter).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it('is a no-op when center is the only present section', () => {
     document.body.innerHTML = '<div class="app-center"></div>';
     const focusCenter = vi.fn();

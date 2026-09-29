@@ -21,5 +21,14 @@ export function useAnswerButtons(count: number, initialIndex: number) {
     buttonRefs.current[next]?.focus();
   };
 
-  return { getRef, onKeyDown };
+  // For a field that precedes the row (a question dialog's text answer): Shift+Tab wraps backward to
+  // the row's last button rather than leaving the dialog. Every other key stays with the field.
+  const onFieldKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Tab' || !e.shiftKey) return;
+    e.preventDefault();
+    indexRef.current = count - 1;
+    buttonRefs.current[count - 1]?.focus();
+  };
+
+  return { getRef, onKeyDown, onFieldKeyDown };
 }

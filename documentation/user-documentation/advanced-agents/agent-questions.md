@@ -28,7 +28,7 @@ Both kinds of panel — text field and option buttons — include a **Cancel** b
 
 ## Keyboard focus
 
-A free-text panel starts with focus on the text field. An approval panel starts with focus on **Cancel**. `Tab` and the right arrow move focus forward through the panel's buttons (each option, or **Submit**, then **Cancel**), wrapping back to the first button at the end; `Shift+Tab` and the left arrow move backward the same way. If you switch to a tab that already has a pending question, focus jumps straight to that panel's **Cancel** button, whichever kind it is.
+A free-text panel starts with focus on the text field. An approval panel starts with focus on **Cancel**. `Tab` and the right arrow move focus forward through the panel's buttons (each option, or **Submit**, then **Cancel**), wrapping back to the first button at the end; `Shift+Tab` and the left arrow move backward the same way. In the text field, `Shift+Tab` jumps to **Cancel**. If you switch to a tab that already has a pending question, focus jumps straight to that panel's **Cancel** button, whichever kind it is.
 
 ## One question at a time per tab
 
