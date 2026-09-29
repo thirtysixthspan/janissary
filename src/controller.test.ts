@@ -870,6 +870,18 @@ describe('Controller page tabs', () => {
     await vi.waitFor(() => expect(allText(c)).toContain('invalid URL'));
     expect(pageTabs(c)).toHaveLength(0);
   });
+
+  it.each(['file:///etc/passwd', 'data:text/html,<b>x</b>', 'javascript:alert(1)'])(
+    'open %s without the page keyword reports an invalid address, not a missing file',
+    async (target) => {
+      const { c } = makeController();
+      const tabsBefore = c.view().length;
+      c.dispatch(`open ${target}`);
+      await vi.waitFor(() => expect(allText(c)).toContain(`open: invalid URL "${target}"`));
+      expect(allText(c)).not.toContain('no such file');
+      expect(c.view()).toHaveLength(tabsBefore);
+    },
+  );
 });
 
 describe('Controller harness view', () => {

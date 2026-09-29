@@ -18,7 +18,7 @@ Full form: `open [external] [page] <target>`. Relative paths resolve against the
 
 Files opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) use the same viewer or editor as local files. Janissary reads the remote content into its session cache first; saving an editor tab writes the change back to the remote host. If that write fails, the editor remains marked as changed and the notifications feed reports the failure.
 
-Targets with an `http://` or `https://` scheme are treated as web addresses; the `page` keyword forces web interpretation and assumes `https://` for a bare address like `example.com`. Anything else is a file path. Only `http` and `https` pages can be opened — other schemes are rejected as invalid.
+Targets with an `http://` or `https://` scheme are treated as web addresses; the `page` keyword forces web interpretation and assumes `https://` for a bare address like `example.com`. So are other targets written as a URL, like `file:///etc/passwd`, `ftp://example.com`, `data:…`, or `javascript:…`, but only `http` and `https` pages can be opened, so those are rejected as invalid. Anything else is a file path, including a file whose name happens to contain a colon, like `notes:v2.md`.
 
 ## Opening outside the app: `open external`
 

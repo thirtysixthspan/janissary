@@ -57,6 +57,21 @@ describe('parseOpen', () => {
     expect(parseOpen('open page external slashdot.org')).toEqual({ external: true, web: true, target: 'slashdot.org' });
   });
 
+  it.each(['file:///etc/passwd', 'file:/etc/passwd', 'data:text/html,<b>x</b>', 'javascript:alert(1)', 'ftp://example.com', 'mailto:someone@example.com'])(
+    'sets web:true for %s, so the web opener rejects its scheme',
+    (target) => {
+      expect(parseOpen(`open ${target}`)).toEqual({ external: false, web: true, target });
+      expect(parseOpen(`open external ${target}`)).toEqual({ external: true, web: true, target });
+    },
+  );
+
+  it.each(['notes:v2.md', 'dir/a:b.md', './todo:list.txt', '12:30.log', 'my notes: draft.md'])(
+    'keeps the colon-bearing local path %s on the file branch',
+    (target) => {
+      expect(parseOpen(`open ${target}`)).toEqual({ external: false, web: false, target });
+    },
+  );
+
   it('does not treat a target starting with "page..." as the keyword', () => {
     expect(parseOpen('open pages/index.html')).toEqual({ external: false, web: false, target: 'pages/index.html' });
   });
