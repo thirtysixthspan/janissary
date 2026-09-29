@@ -1,4 +1,5 @@
-import { rmSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
+import path from 'node:path';
 import { profilePath } from '../../profiles.js';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { captureTab, newCaptureState } from './route.js';
@@ -42,7 +43,7 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   if (state.tabEntries.length > 0) root.tabs = state.tabEntries;
   if (monitors.length > 0) root.monitors = monitors;
   root.layout = layout;
-  atomicWriteFile(file, JSON.stringify(root, null, 2));
+  writeProfileFile(name, file, JSON.stringify(root, null, 2));
   rmSync(file.replace(/\.json$/, ''), { recursive: true, force: true });
 
   return {
@@ -57,6 +58,20 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
     skipped: state.skipped,
     notes,
   };
+}
+
+// A project that has never saved a profile has no `profiles/` yet, so it is created here, on the first
+// save, rather than at startup — a project that never saves one gets no empty directory. A write that
+// still fails is reported against the profile file: `atomicWriteFile` writes a temporary file beside
+// the target, and the raw error would name that instead.
+function writeProfileFile(name: string, file: string, content: string): void {
+  try {
+    mkdirSync(path.dirname(file), { recursive: true });
+    atomicWriteFile(file, content);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code ?? 'unknown error';
+    throw new Error(`could not write profile "${name}" to ${file} (${code})`, { cause: error });
+  }
 }
 
 // `N <label>`, pluralized by appending `s` — the shape every count in the report shares except
