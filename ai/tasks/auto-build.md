@@ -1,6 +1,6 @@
 # Auto-build a Feature
 
-Take a supplied feature description through interactive planning and an interactive gap review that can widen the plan's scope. Then, autonomously, build it into one new open pull request, review that PR and resolve its backlog, and test it and resolve its failures until no failing tests remain.
+Take a supplied feature description through interactive planning and an interactive gap review that can widen the plan's scope. Then, autonomously, build it into one new open pull request, review that PR and resolve its backlog, test it and resolve its failures until no failing tests remain, and update its description, plan, specs, and help to match its final code.
 
 Invocation: `execute ./ai/tasks/auto-build.md "<feature description>"`.
 
@@ -96,7 +96,13 @@ A test run passes when every step that ran is `pass` or `unspecified`, no step f
 
 A run that ends with `app did not start` or `browser lost` has not tested anything and is not a pass. Repeat it once. If it ends the same way again, stop with `Status: blocked` and the reason. The same applies to a failure that returns unchanged after its repair: investigate a new recovery path when evidence supports one, and otherwise report blocked rather than looping.
 
-The run is complete when a test run passes, the backlog is empty, and all required verification and publication succeeded. Before reporting success, confirm the recorded PR is still `OPEN`, its remote head equals local `HEAD`, and the working tree is clean. A review or test run does not replace implementation verification, and a failed or skipped review or test pass cannot establish completion.
+## Step 6 — Update the PR
+
+Execute `ai/tasks/update-pull-request.md` with the recorded PR number. It brings the PR's description, its plan, the specs, and `help.md` in line with the code the drains left behind, and folds the fix plans the drains added into the feature plan. Its Step 1 runs as written: it has no `master` checkout for Step 0's reuse rule to skip. The backlog is empty when this step starts, so the task's removal of unresolved entries never fires here, and the rule against deleting a real finding to empty the backlog still holds. It commits and pushes on this PR branch and leaves the PR open.
+
+Record what the update changed, or that the PR was already in sync. A push it could not complete or a description edit that failed is a failed publication: stop with `Status: blocked` and the reason.
+
+The run is complete when a test run passes, the backlog is empty, the update succeeds, and all required verification and publication succeeded. Before reporting success, confirm the recorded PR is still `OPEN`, its remote head equals local `HEAD`, and the working tree is clean. A review, test, or update run does not replace implementation verification, and a failed or skipped review, test, or update pass cannot establish completion.
 
 ## Progress and failures
 
@@ -104,7 +110,7 @@ Measure progress by delivered behavior and resolved obligations, not commits or 
 
 For failures, follow the child's bounded retry policy where one exists. Continue independent recorded work only when doing so preserves phase order, branch identity, and clean-tree requirements. If a required capability, dependency, or publication step cannot be recovered, stop with `Status: blocked`, the concrete reason, and remaining entries. Preserve local edits and commits, report any unpublished work, and leave the PR open if it still exists. If another actor closed the PR, report that state instead of reopening it or substituting a new PR.
 
-## Step 6 — Report
+## Step 7 — Report
 
 Give a short report with these fields. Use `not created` where blocked before producing an artifact, and name any verification that could not run.
 
@@ -117,9 +123,10 @@ Branch:         <recorded head branch, or not created>
 Test runs:      <test run count>, last run <pass | fail | not run>
 Resolved:       <review finding count>, <test failure count>
 Not tested:     none | <step — reason, from the last test run>
+Updated:        <what the update run changed> | already in sync | failed — <reason>
 Verification:   <results and any unperformed checks>
 Backlog:        empty | <remaining entries and their blockers>
 Publication:    pushed | <unpublished work or pending description correction>
 Status:         complete; PR open | blocked
-Reason:         <final test run passed with the backlog empty, or concrete blocker>
+Reason:         <final test run passed with the backlog empty and the PR updated, or concrete blocker>
 ```
