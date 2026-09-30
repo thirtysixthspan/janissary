@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import { startScan, type ScanHandle, type ScanRead } from './scan.js';
+import { patternError } from './compile-matcher.js';
 import { modesFrom, sameModes, type SearchModes } from './saved-modes.js';
 import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
 
@@ -64,9 +65,20 @@ export class SearchSession {
   // repainted into the searching state immediately so the body reads `Searching…` before the first
   // row lands, and rows append as batches arrive. Only the query half of the payload is taken; the
   // rest is what this method produces.
-  run(request: SearchIntent): void {
+  //
+  // A regular expression that will not compile starts no scan: the tab shows why, and the reason is
+  // noted through `reporter` — the calling request's own capabilities, whose origin is the transcript
+  // the search tab was opened from — rather than settling as a search that found nothing.
+  run(request: SearchIntent, reporter: TabPluginServerCapabilities = this.capabilities): void {
     this.remember(request);
     this.cancel();
+    const invalid = patternError(request.query, request);
+    if (invalid !== null) {
+      this.payload = payloadOf(this.payload, { ...request, state: 'error', message: invalid, rows: [] });
+      this.publish();
+      reporter.note(invalid);
+      return;
+    }
     this.payload = payloadOf(this.payload, { ...request, state: 'searching', message: '', rows: [] });
     this.publish();
     const contents = this.contents;

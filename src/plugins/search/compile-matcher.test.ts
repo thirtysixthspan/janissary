@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileMatcher } from './compile-matcher.js';
+import { compileMatcher, patternError } from './compile-matcher.js';
 
 const off = { regex: false, matchCase: false, wholeWord: false };
 
@@ -111,5 +111,23 @@ describe('Matcher.locate', () => {
       expect(matcher.test(line)).toBe(false);
       expect(matcher.locate(line)).toBeNull();
     }
+  });
+});
+
+describe('patternError', () => {
+  it('answers the engine\'s message for a regex that will not compile', () => {
+    expect(patternError('[unclosed', { ...off, regex: true })).toMatch(/Invalid regular expression: \/\[unclosed\//);
+  });
+
+  it('names the user\'s own pattern in whole-word mode, not the wrapper around it', () => {
+    const message = patternError('[unclosed', { ...off, regex: true, wholeWord: true }) ?? '';
+    expect(message).toContain('/[unclosed/');
+    expect(message).not.toContain('(?<!');
+  });
+
+  it('answers null for plain text, a valid regex, and an empty query', () => {
+    expect(patternError('[unclosed', off)).toBeNull();
+    expect(patternError('to+do', { ...off, regex: true })).toBeNull();
+    expect(patternError('', { ...off, regex: true })).toBeNull();
   });
 });

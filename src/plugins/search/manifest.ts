@@ -17,6 +17,7 @@ export const searchManifest = {
   fileExtensions: {},
   command: 'search',
   capabilities: [
+    'note',
     'openOrFocusTab',
     'updateTab',
     'projectFileList',

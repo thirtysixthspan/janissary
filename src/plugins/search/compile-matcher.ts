@@ -41,6 +41,20 @@ export function compileMatcher(query: string, modes: MatcherModes): Matcher | nu
   };
 }
 
+// Why a regex-mode query will not compile, in the engine's own words, or null when it compiles or is
+// not a regex at all. `compileMatcher` answers null for this and for an empty pattern alike; a search
+// has to tell them apart, because one is nothing to search for and the other is a mistake to report.
+// The user's own pattern is compiled, not the whole-word wrapper, so the message names what they typed.
+export function patternError(query: string, modes: MatcherModes): string | null {
+  if (!query || !modes.regex) return null;
+  try {
+    new RegExp(query, modes.matchCase ? '' : 'i');
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
 function safe(source: string, flags: string): RegExp | null {
   try {
     return new RegExp(source, flags);

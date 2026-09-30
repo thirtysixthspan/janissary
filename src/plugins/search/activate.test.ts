@@ -17,13 +17,14 @@ function makeCapabilities(overrides: Capability = {}) {
   const rejectRequest = vi.fn((reason: string) => { throw new Error(reason); });
   const readSettings = vi.fn(() => ({}));
   const saveSettings = vi.fn((_settings: Record<string, unknown>) => true);
+  const note = vi.fn();
   const capabilities = {
-    openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest, readSettings, saveSettings,
+    note, openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest, readSettings, saveSettings,
     reportFailure: vi.fn((reason: unknown) => { throw new Error(String(reason)); }),
     ...overrides,
   };
   return {
-    capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor, saveSettings,
+    capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor, saveSettings, note,
   };
 }
 
@@ -154,6 +155,41 @@ describe('search plugin activation', () => {
     await settle();
     expect(projectFileList).not.toHaveBeenCalled();
     expect(lastPayload(updateTab).state).toBe('done');
+  });
+
+  it('reports a regex that will not compile instead of searching for it', async () => {
+    const { capabilities, updateTab, projectFileList, note } = makeCapabilities();
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, query: '[unclosed', regex: true }), capabilities);
+    await settle();
+    expect(projectFileList).not.toHaveBeenCalled();
+    const payload = lastPayload(updateTab);
+    expect(payload.state).toBe('error');
+    expect(payload.rows).toEqual([]);
+    expect(payload.message).toContain('Invalid regular expression');
+    expect(note).toHaveBeenCalledWith(payload.message);
+  });
+
+  it('notes the error through the capabilities of the request that asked', () => {
+    const first = makeCapabilities();
+    const second = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('', first.capabilities);
+    activation.intent(intent(settledTab, 'search', { ...query, query: '(', regex: true }), second.capabilities);
+    expect(second.note).toHaveBeenCalledTimes(1);
+    expect(first.note).not.toHaveBeenCalled();
+  });
+
+  it('keeps searching normally after a pattern that would not compile', async () => {
+    const { capabilities, updateTab } = makeCapabilities();
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, query: '[unclosed', regex: true }), capabilities);
+    activation.intent(intent(settledTab, 'search', { ...query, query: 'to+do', regex: true }), capabilities);
+    await settle();
+    const payload = lastPayload(updateTab);
+    expect(payload.state).toBe('done');
+    expect(payload.message).toBe('');
+    expect(payload.rows.map((row) => [row.path, row.line])).toEqual([['b.ts', 2]]);
   });
 
   it('rejects an intent name the table does not declare', () => {

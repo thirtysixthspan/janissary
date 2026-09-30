@@ -39,7 +39,7 @@ export function activate(readFile?: ScanRead): TabPluginActivation {
       search: {
         payload: isSearchIntent,
         run: (_tab, payload: SearchIntent, capabilities) => {
-          sessionFor(capabilities).run(payload);
+          sessionFor(capabilities).run(payload, capabilities);
           return null;
         },
       },

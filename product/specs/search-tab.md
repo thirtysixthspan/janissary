@@ -51,8 +51,12 @@ Three toggles sit at the right-hand end of the command line, beside the query th
 changes how that query is interpreted:
 
 - **Regular expression** — off by default, and the query is then matched as literal text, so
-  punctuation in it searches for itself. On, it is a regular expression. One that will not compile is
-  reported on the transcript the search was started from, and the search tab keeps working.
+  punctuation in it searches for itself. On, it is a regular expression. One that will not compile
+  starts no search and is never shown as a search that found nothing: the tab's body gives the
+  reason, in the regular expression engine's own words naming the pattern as typed (for example
+  `Invalid regular expression: /[unclosed/i: Unterminated character class`), and the same line is
+  written to the transcript the search tab was opened from. The plugin stays active and the next
+  query that compiles searches as usual.
 - **Match case** — off by default. On, the query is case-sensitive.
 - **Whole word** — off by default. On, a match must sit on a word boundary rather than inside a
   longer word. It composes with the other two, including in regular-expression mode.
