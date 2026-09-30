@@ -52,6 +52,13 @@ describe('the sql stylesheet', () => {
     expect(scroll).toContain('overflow: auto');
   });
 
+  // The frame holds the focus while the rows answer the keyboard, and a focus ring would outline the
+  // whole table as though it were selected; the highlighted row is what shows where the keys act.
+  it('draws no focus ring around the table when it has the focus', () => {
+    expect(rule('.sql-grid-scroll')).toContain('outline: none');
+    expect(sql).not.toMatch(/\.sql-grid-scroll:focus/u);
+  });
+
   // The command bar is the fixed half. It is what the table must not be laid out against, so it is
   // not allowed to give way when the table is tall.
   it('never lets the table squeeze the command bar', () => {

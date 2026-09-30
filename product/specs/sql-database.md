@@ -148,6 +148,10 @@ right arrows are not the grid's â€” a run of rows has no column to move along â€
 application, which scrolls the frame the way it otherwise would. The highlight is back on the first
 row after a new query, so it never sits on a row that now holds other values.
 
+The table is not outlined or highlighted when the rows have the focus: a ring around the whole table
+would read as the whole of it being selected, and the highlighted row is what shows where the keys
+act.
+
 A keypress belongs to whichever of the two panes has the focus, and to no other: the copy key with
 the command bar focused copies what is selected in the command bar, and `ArrowUp` in it recalls a
 statement rather than moving the highlighted row. A cell holds either text

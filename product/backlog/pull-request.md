@@ -2,10 +2,3 @@
 
 # pull-request
 
-* when the sql table has focus, do not highlight the table.
-
-
-
-
- 
-

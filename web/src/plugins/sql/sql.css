@@ -43,7 +43,10 @@
 .sql-error { border: 1px solid var(--danger); color: var(--danger); border-radius: 4px; padding: 4px 8px; font-size: 12px; }
 .sql-error button { margin-left: 8px; }
 
-.sql-grid-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 4px; }
+/* The frame takes the focus so the rows answer the keyboard, but it draws no focus ring: a ring would
+   outline the whole table as though all of it were selected. The highlighted row's accent bar is
+   what shows where the keys act, the way the file-navigator tree and the conversations list do it. */
+.sql-grid-scroll { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 4px; outline: none; }
 .sql-grid { border-collapse: collapse; width: 100%; font-size: 12px; }
 .sql-grid th, .sql-grid td { border-bottom: 1px solid var(--border); padding: 3px 8px; text-align: left; white-space: nowrap; }
 .sql-grid thead th { position: sticky; top: 0; background: var(--bg); z-index: 1; }
