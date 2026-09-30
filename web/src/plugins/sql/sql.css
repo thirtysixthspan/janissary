@@ -125,4 +125,3 @@
 .sql-console-bar { display: flex; align-items: flex-end; gap: 4px; }
 .sql-console-bar > .command-area { flex: 1; min-width: 0; }
 .sql-console-result { font-size: 12px; color: var(--muted); padding: 2px 4px; }
-.sql-console-result.error { color: var(--danger); }

@@ -173,16 +173,21 @@ describe('SqlTab console', () => {
     expect(intent).toHaveBeenCalledWith('run', { sql: 'SELECT 1' });
   });
 
-  it('shows what the last statement did, or why it did not', () => {
+  // The line says how the last statement went and nothing about one that failed. A failure is a
+  // notification: this line is where the next thing typed goes, and a user who has looked away needs
+  // to be told rather than to come back and find the tab exactly as they left it.
+  it('reports what the last statement did, and says nothing about one that failed', () => {
     const { capabilities } = makeCapabilities();
     const { rerender } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByText('OK.')).toBeNull();
     rerender(<SqlTab payload={payload({ log: [{ sql: 'DELETE FROM orders', changed: 2 }] })} capabilities={capabilities} />);
-    expect(screen.getByText('OK.')).toBeTruthy();
+    expect(screen.getByText('2 rows changed.')).toBeTruthy();
     rerender(<SqlTab
       payload={payload({ log: [{ sql: 'NOPE', changed: 0, error: 'Query error: syntax error' }] })}
       capabilities={capabilities}
     />);
-    expect(screen.getByText('Query error: syntax error')).toBeTruthy();
+    expect(screen.queryByText('Query error: syntax error')).toBeNull();
+    expect(document.querySelector('.sql-console-result')).toBeNull();
   });
 
   it('shows the console as busy while a request is outstanding', () => {

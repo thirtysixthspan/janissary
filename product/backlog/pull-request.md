@@ -2,5 +2,3 @@
 
 # pull-request
 
-* SQL query errors should create notifications, and not print in the command bar.
-

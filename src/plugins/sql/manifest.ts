@@ -22,6 +22,7 @@ export const sqlManifest = {
     'dockTab',
     'topicData',
     'topicAction',
+    'notifyUser',
     'rejectRequest',
     'reportFailure',
   ],

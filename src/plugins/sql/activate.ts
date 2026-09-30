@@ -109,9 +109,24 @@ function deliver(
     return;
   }
   const folded = fold(key, refreshed, answer, tabs);
+  report(refreshed.error, folded.payload.error, capabilities);
   if (folded.followUp) {
     dispatch(key, folded.payload, folded.followUp, capabilities, tabs, publish);
     return;
   }
   publish(folded.payload);
+}
+
+/**
+ * Say a failure once, to the notifications feed, when it is a new one.
+ *
+ * The line under the prompt is not where a failure belongs: it is the outcome of the last statement,
+ * it is overwritten by the next thing typed, and it is gone the moment the user looks at another tab.
+ * A failure is the one result a user did not ask for and cannot predict, so it is the one that wants
+ * to be said whether or not this tab is on screen. Comparing against the error already on screen is
+ * what keeps a refresh that fails the same way twice from saying it twice.
+ */
+function report(before: string | null, after: string | null, capabilities: TabPluginServerCapabilities): void {
+  if (after === null || after === before) return;
+  capabilities.notifyUser(after);
 }

@@ -205,9 +205,9 @@ changes when a record of the past is discarded.
 
 A statement that failed is listed too: a record of only the successes would not say what happened.
 This browser is the only surface that mutates data, so a log of what was written can live nowhere
-else. The console's own line under the prompt reports what the newest entry did, so the result of a
-statement is visible without opening anything; the panel holds that entry too, and both read the same
-list, so the line and the history cannot disagree.
+else. The console's own line under the prompt reports what the newest entry did where it worked, so
+the result of a statement is visible without opening anything; the panel holds that entry too, and
+both read the same list, so the line and the history cannot disagree.
 
 The grid's own query is not shown anywhere. There is no panel for it and no way to re-run it: the
 command bar is the only place SQL is entered, which is what makes one answer to "run this" enough.
@@ -249,15 +249,25 @@ for it anywhere in the tab.
 
 Enter sends what is typed, and the host decides whether that was a read or a write by the same test
 `db sqlite query` uses: a statement that returns rows fills the grid, and anything else reports
-`OK.`, or the SQLite error. Arrow keys walk back through the last fifty statements typed in this tab,
-and the statement history beside the bar is the same list written down where it can be read.
+`OK.` or the number of rows it changed, on the line under the prompt. Arrow keys walk back through the
+last fifty statements typed in this tab, and the statement history beside the bar is the same list
+written down where it can be read.
+
+A statement that fails is a **notification**, not a line under the prompt. A failure is the one
+result a user did not ask for and cannot predict, and the line under the prompt is the first thing
+anything else typed replaces and the first thing lost when the user looks at another tab. The message
+is the SQLite error, it is attributed to the tab the statement was run from, and it is said once per
+failure: an answer that arrives twice for one request says it once, and a failure that has gone away
+and come back says it again. See [[notifications]] for the feed. The grid's own error band still
+carries the message where the failed
+read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
+is deleted under an open tab. A failed statement leaves the grid as it was and stays on the history.
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
 the console refused to finish is not the same thing as a small one.
 
-A statement that fails shows its message and leaves the grid as it was. Nothing a grid or a console
-does disables the plugin, and nothing is written to a transcript.
+Nothing a grid or a console does disables the plugin, and nothing is written to a transcript.
 
 A database deleted by `db sqlite delete` while its tab is open is not an ordinary read failure. The
 tab drops the grid and reads `Database "<name>" does not exist. Create it to start.` rather than

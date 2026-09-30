@@ -41,8 +41,11 @@ function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respon
   // `registerFile` mints a fresh id on every call, so recording what was asked for is how a test can
   // tell a reference registered once from one registered again on every update.
   const resources = { registerFile: (file: string) => { registered.push(file); return `/open/${registered.length}`; } };
+  // The plugin's own line into the notifications feed, recorded here so a test can ask what it said.
+  const notifyUser = vi.fn();
   const capabilities = {
     note: vi.fn(),
+    notifyUser,
     openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); shown.push(opened.at(-1)!.value.payload); },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory(resources) }); shown.push(updated.at(-1)!.value.payload); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
@@ -70,7 +73,7 @@ function fakeCapabilities(initial: DatabasesView = emptyView(), respond?: Respon
     activation.notify?.({ topic: 'databases', data: state.view, tabs: owned }, capabilities);
   }
 
-  return { actions, activation, capabilities, docks, opened, registered, shown, state, updated };
+  return { actions, activation, capabilities, docks, notifyUser, opened, registered, shown, state, updated };
 }
 
 /** A host that answers a schema read with the fixture's objects and a query with its grid. */
@@ -92,6 +95,33 @@ function grid(over: Partial<SqlPayload['grid']> = {}) {
     ...over,
   } as NonNullable<SqlPayload['grid']>;
 }
+
+
+  function intent(name: string, payload: unknown, fixture: ReturnType<typeof fakeCapabilities>, tab?: SqlPayload) {
+    return fixture.activation.intent({ tab: 'sqlite:shop', intent: name, payload, tabPayload: tab ?? basePayload() }, fixture.capabilities);
+  }
+
+  function basePayload(over: Partial<SqlPayload> = {}): SqlPayload {
+    return {
+      database: 'shop',
+      databases: REFS,
+      objects: ORDERS,
+      object: 'orders',
+      filters: [],
+      hidden: [],
+      global: '',
+      order: [],
+      limit: 100,
+      offset: 0,
+      pageSizes: [50, 100, 500],
+      grid: grid(),
+      log: [],
+      exports: [],
+      error: null,
+      pending: null,
+      ...over,
+    };
+  }
 
 function openTab(fixture: ReturnType<typeof fakeCapabilities>, database = 'shop') {
   fixture.activation.command?.(database, fixture.capabilities);
@@ -475,32 +505,6 @@ describe('sql plugin answering a request before it returns', () => {
 });
 
 describe('sql plugin intents', () => {
-  function intent(name: string, payload: unknown, fixture: ReturnType<typeof fakeCapabilities>, tab?: SqlPayload) {
-    return fixture.activation.intent({ tab: 'sqlite:shop', intent: name, payload, tabPayload: tab ?? basePayload() }, fixture.capabilities);
-  }
-
-  function basePayload(over: Partial<SqlPayload> = {}): SqlPayload {
-    return {
-      database: 'shop',
-      databases: REFS,
-      objects: ORDERS,
-      object: 'orders',
-      filters: [],
-      hidden: [],
-      global: '',
-      order: [],
-      limit: 100,
-      offset: 0,
-      pageSizes: [50, 100, 500],
-      grid: grid(),
-      log: [],
-      exports: [],
-      error: null,
-      pending: null,
-      ...over,
-    };
-  }
-
   // A parked filter keeps its column, operator and value in the payload and leaves the query, so
   // bringing it back is one press rather than a retyped column, an operator, and a value.
   it('parks a filter out of the query without losing it, and brings it back on a second press', () => {
@@ -798,6 +802,70 @@ describe('sql plugin intents', () => {
       { tab: 'sqlite:shop', intent: 'refresh', payload: {}, tabPayload: { nope: true } },
       fixture.capabilities,
     )).toThrow('invalid sql tab payload');
+  });
+});
+
+describe('a failure reported to the notifications feed', () => {
+  // A failure is the one result a user did not ask for and cannot predict, so it is said where it
+  // outlasts the tab: the line under the prompt is where the next thing typed goes.
+  function failing(error: string): Respond {
+    return (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'schema') return { kind: 'schema', requestId, database: 'shop', objects: ORDERS };
+      if (action.action === 'query') return { kind: 'query', requestId, database: 'shop', error };
+    };
+  }
+
+  const said = (fixture: ReturnType<typeof fakeCapabilities>) => fixture.notifyUser.mock.calls;
+
+  it('reports a read that failed, and says nothing when a read succeeds', () => {
+    const failed = fakeCapabilities(emptyView(), failing('no such column: nope'));
+    openTab(failed);
+    expect(said(failed)).toEqual([['no such column: nope']]);
+
+    const well = fakeCapabilities(emptyView(), answering());
+    openTab(well);
+    expect(said(well)).toEqual([]);
+  });
+
+  it('reports a write that failed, because it is the same answer in a different shape', () => {
+    const fixture = fakeCapabilities(emptyView(), (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'schema') return { kind: 'schema', requestId, database: 'shop', objects: ORDERS };
+      if (action.action === 'run') {
+        return { kind: 'write', requestId, database: 'shop', sql: 'NOPE', parameters: [], changed: 0, error: 'syntax error' };
+      }
+    });
+    openTab(fixture);
+    intent('run', { sql: 'NOPE' }, fixture);
+    expect(said(fixture)).toEqual([['syntax error']]);
+  });
+
+  // One failure, said once. An answer that arrives twice for a request the tab is still waiting on
+  // is the same thing happening, and a feed that repeats itself is one the user learns to ignore.
+  it('does not report the same failure twice over', () => {
+    const fixture = fakeCapabilities();
+    openTab(fixture);
+    const schemaId = (fixture.actions[0] as { requestId: string }).requestId;
+    deliver(fixture, [schemaAnswer(schemaId)]);
+    const queryId = (fixture.actions[1] as { requestId: string }).requestId;
+    const failed: DatabaseResultView = {
+      kind: 'query', requestId: queryId, database: 'shop', grid: grid(), error: 'no such column: nope',
+    };
+    deliver(fixture, [schemaAnswer(schemaId), failed]);
+    expect(said(fixture)).toEqual([['no such column: nope']]);
+    deliver(fixture, [schemaAnswer(schemaId), failed]);
+    expect(said(fixture)).toHaveLength(1);
+  });
+
+  // The other half of the rule: a failure that has gone away and come back is news again, which is
+  // what a refresh that succeeds and then fails on the query it issues means.
+  it('reports a failure that has gone away and come back', () => {
+    const fixture = fakeCapabilities(emptyView(), failing('no such column: nope'));
+    openTab(fixture);
+    expect(said(fixture)).toHaveLength(1);
+    intent('refresh', {}, fixture, basePayload());
+    expect(said(fixture)).toHaveLength(2);
   });
 });
 

@@ -8,6 +8,7 @@ import { DataGrid } from './DataGrid';
 import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
+import { logOutcome } from './SqlHistory';
 import { TableSwitcher } from './TableSwitcher';
 
 // A database tab: one metadata row across the full width and one body below it. The row is the shape
@@ -35,8 +36,10 @@ export function SqlTab({
   const [choosingColumns, setChoosingColumns] = useState(false);
   const docked = capabilities.dock !== null;
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
-  // The log's newest entry is the last statement run, which is what the line under the prompt reports.
-  // It is not a separate field: one list means the line and the history cannot disagree.
+  // The log's newest entry is the last statement run, and the line under the prompt says how it
+  // went — the outcome rule is the history's own, so the two cannot disagree. It says nothing about
+  // a statement that failed: a failure is a notification, and this line is where the next thing typed
+  // goes. It is not a separate field either: one list means the line and the history agree.
   const latest = payload.log[0] ?? null;
   const object = payload.objects.find((entry) => entry.name === payload.object);
 
@@ -105,9 +108,9 @@ export function SqlTab({
           onValue={setConsoleText}
           onSend={(sql) => send('run', { sql })}
         />
-        {latest && (
-          <div className={`sql-console-result${latest.error ? ' error' : ''}`}>
-            {latest.error ?? 'OK.'}
+        {latest && !latest.error && (
+          <div className="sql-console-result">
+            {logOutcome(latest)}
           </div>
         )}
       </div>
