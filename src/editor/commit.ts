@@ -3,6 +3,8 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { EditorView } from '../tab/types.js';
 import { commitLeftStagingInPlace, commitRoot } from '../git/commit.js';
+import { writeGitFailureOutput } from '../git/failure-output.js';
+import { errorFirstLine } from '../error-text.js';
 import { remoteFileFor } from '../file-navigator/remote/file-cache.js';
 import { notify } from '../notifications/index.js';
 
@@ -54,10 +56,11 @@ export function commitEditorFile(managers: Managers, url: string, message: strin
       notify(managers, 'file-operation', tab.label, commitSuccessText(result.summary));
       settled('committed');
     } catch (error) {
-      const errorText = error instanceof Error ? error.message : String(error);
+      const firstLine = errorFirstLine(error);
       notify(
         managers, 'file-operation', tab.label,
-        commitLeftStagingInPlace(error) ? commitFailureLeavesStagedText(errorText) : commitFailureText(errorText),
+        commitLeftStagingInPlace(error) ? commitFailureLeavesStagedText(firstLine) : commitFailureText(firstLine),
+        { openFile: writeGitFailureOutput(tab.label, Date.now(), error) },
       );
       settled('error');
     }

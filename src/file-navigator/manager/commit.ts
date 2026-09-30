@@ -1,5 +1,6 @@
 import { commitFailureLeavesStagedText, commitFailureText, commitSuccessText, NOTHING_TO_COMMIT_TEXT } from '../commit-report.js';
 import { commitLeftStagingInPlace } from '../../git/commit.js';
+import { writeGitFailureOutput } from '../../git/failure-output.js';
 import { notify } from '../../notifications/index.js';
 import { armFlash, commitFlashDescriptor, restFlash, stillRooted } from './flash.js';
 import type { MutationContext } from './mutations.js';
@@ -37,7 +38,7 @@ export function runCommit(context: CommitContext, label: string, message: string
     if (stillRooted(context, label, state.root)) context.refreshGit(label);
   }, (error: unknown) => {
     const text = commitLeftStagingInPlace(error) ? commitFailureLeavesStagedText(error) : commitFailureText(error);
-    notify(context.managers, 'file-operation', label, text);
+    notify(context.managers, 'file-operation', label, text, { openFile: writeGitFailureOutput(label, Date.now(), error) });
     armFlash(context, label, commitFlashDescriptor, 'error');
   });
 }

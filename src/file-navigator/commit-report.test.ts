@@ -22,12 +22,22 @@ describe('commitFailureText', () => {
   it('stringifies a non-Error throw', () => {
     expect(commitFailureText('killed')).toBe('Could not commit: killed');
   });
+
+  it('carries only the first line of a multi-line git error', () => {
+    const error = new Error('Command failed: git push origin HEAD\nerror: failed to push some refs\n1:35PM INF no leaks found\n');
+    expect(commitFailureText(error)).toBe('Could not commit: Command failed: git push origin HEAD');
+  });
 });
 
 describe('commitFailureLeavesStagedText', () => {
   it('carries an Error\'s message and says the staging was left in place', () => {
     expect(commitFailureLeavesStagedText(new Error('pre-commit hook refused')))
       .toBe('Could not commit: pre-commit hook refused — what was staged is still in your index');
+  });
+
+  it('carries only the first line of a multi-line git error', () => {
+    expect(commitFailureLeavesStagedText(new Error('Command failed: git commit -m x\nhook output')))
+      .toBe('Could not commit: Command failed: git commit -m x — what was staged is still in your index');
   });
 });
 

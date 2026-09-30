@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   clearHarnessTranscriptDirectory: vi.fn(),
   initBrowserLogDirectory: vi.fn(),
   clearBrowserLogDirectory: vi.fn(),
+  initGitFailureDirectory: vi.fn(),
+  clearGitFailureDirectory: vi.fn(),
   initGlobalHistory: vi.fn(),
   initDbDir: vi.fn(),
   initProfileDir: vi.fn(),
@@ -40,6 +42,10 @@ vi.mock('./harness/transcript-file.js', () => ({
 vi.mock('./browser/browser-log.js', () => ({
   initBrowserLogDirectory: mocks.initBrowserLogDirectory,
   clearBrowserLogDirectory: mocks.clearBrowserLogDirectory,
+}));
+vi.mock('./git/failure-output.js', () => ({
+  initGitFailureDirectory: mocks.initGitFailureDirectory,
+  clearGitFailureDirectory: mocks.clearGitFailureDirectory,
 }));
 vi.mock('./global-history.js', () => ({
   initGlobalHistory: mocks.initGlobalHistory,
@@ -86,6 +92,7 @@ describe('initStateDirectories', () => {
     expect(mocks.initHarnessRecordingDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initHarnessTranscriptDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initBrowserLogDirectory).toHaveBeenCalledWith('/project');
+    expect(mocks.initGitFailureDirectory).toHaveBeenCalledWith('/project');
     expect(mocks.initGlobalHistory).not.toHaveBeenCalledWith('/project');
     expect(mocks.initDbDir).toHaveBeenCalledWith('/project');
     expect(mocks.initWorkspaceDir).toHaveBeenCalledWith('/project');
@@ -104,7 +111,7 @@ describe('initStateDirectories', () => {
 
   it('covers exactly the keys the registry is pinned against', () => {
     expect(STATE_DIRECTORY_ORDER_IS_COMPLETE).toBe(true);
-    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(14);
+    expect(STATE_DIRECTORY_ENTRIES).toHaveLength(15);
   });
 });
 
@@ -121,6 +128,7 @@ describe('clearStateDirectories', () => {
     expect(mocks.clearHarnessRecordingDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearHarnessTranscriptDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearBrowserLogDirectory).toHaveBeenCalledOnce();
+    expect(mocks.clearGitFailureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearWorkspaceDir).toHaveBeenCalledOnce();
     expect(storeModule.TranscriptStore.clear).toHaveBeenCalledOnce();
     expect(mocks.clearRemoteFileCache).toHaveBeenCalledOnce();
@@ -133,6 +141,7 @@ describe('clearStateDirectories', () => {
     expect(mocks.clearHarnessRecordingDirectory).not.toHaveBeenCalled();
     expect(mocks.clearHarnessTranscriptDirectory).not.toHaveBeenCalled();
     expect(mocks.clearBrowserLogDirectory).not.toHaveBeenCalled();
+    expect(mocks.clearGitFailureDirectory).not.toHaveBeenCalled();
     expect(mocks.clearWorkspaceDir).not.toHaveBeenCalled();
     expect(storeModule.TranscriptStore.clear).not.toHaveBeenCalled();
     expect(mocks.clearRemoteFileCache).toHaveBeenCalledOnce();

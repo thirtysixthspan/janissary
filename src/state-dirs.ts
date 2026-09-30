@@ -3,6 +3,7 @@ import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/ca
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
 import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from './browser/browser-log.js';
+import { initGitFailureDirectory, clearGitFailureDirectory } from './git/failure-output.js';
 import { initGlobalHistory } from './global-history.js';
 import { initDbDir } from './connections.js';
 import { initProfileDir } from './profiles.js';
@@ -53,6 +54,12 @@ export const STATE_DIRECTORY_ENTRIES = [
     name: 'browserLog',
     init: (projectDir: string): void => { initBrowserLogDirectory(projectDir); },
     clear: (): void => { clearBrowserLogDirectory(); },
+    always: false,
+  },
+  {
+    name: 'gitFailureOutput',
+    init: (projectDir: string): void => { initGitFailureDirectory(projectDir); },
+    clear: (): void => { clearGitFailureDirectory(); },
     always: false,
   },
   {
@@ -116,7 +123,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 // the compiler names both.
 export const KNOWN_STATE_DIRECTORY_KEYS = [
   'agentState', 'harnessCapture', 'harnessRecording', 'harnessTranscript',
-  'browserLog', 'globalHistory', 'connections', 'profiles', 'workspace',
+  'browserLog', 'gitFailureOutput', 'globalHistory', 'connections', 'profiles', 'workspace',
   'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog', 'transcriptStore',
 ] as const;
 

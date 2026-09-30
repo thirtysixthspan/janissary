@@ -8,8 +8,12 @@ import type { Managers } from '../managers.js';
 import { EditorWatchManager } from './watch-manager.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from './save-conflict.js';
 
-const { notify } = vi.hoisted(() => ({ notify: vi.fn() }));
+const { notify, writeGitFailureOutput } = vi.hoisted(() => ({
+  notify: vi.fn(),
+  writeGitFailureOutput: vi.fn((): string | undefined => undefined),
+}));
 vi.mock('../notifications/index.js', () => ({ notify }));
+vi.mock('../git/failure-output.js', () => ({ writeGitFailureOutput }));
 
 function setup(content = 'original') {
   const managers = {} as Managers;
@@ -215,8 +219,23 @@ describe('saveFile git sync', () => {
     const label = managers.tab.tabs.find((t) => t.editor)?.label;
 
     await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(
-      managers, 'file-operation', label, 'Could not sync synced.txt: push rejected (non-fast-forward)',
+      managers, 'file-operation', label, 'Could not sync synced.txt: push rejected (non-fast-forward)', { openFile: undefined },
     ));
+  });
+
+  it('reports only the first line of a multi-line failure, linking its full output', async () => {
+    notify.mockClear();
+    writeGitFailureOutput.mockReturnValueOnce('/project/.janissary/git-errors/synced.log');
+    const error = 'Command failed: git push origin HEAD:master\nerror: failed to push some refs\n1:35PM INF no leaks found\n';
+    const { managers, url } = setupSynced(() => Promise.resolve({ error }));
+    saveFile(managers, url, 'updated content');
+    const label = managers.tab.tabs.find((t) => t.editor)?.label;
+
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(
+      managers, 'file-operation', label, 'Could not sync synced.txt: Command failed: git push origin HEAD:master',
+      { openFile: '/project/.janissary/git-errors/synced.log' },
+    ));
+    expect(writeGitFailureOutput).toHaveBeenCalledWith(label, expect.any(Number), error);
   });
 
   it('re-checks every open synced tab once the cycle\'s pull has run, but no unsynced one', async () => {

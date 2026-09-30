@@ -94,7 +94,7 @@ The button tells you how the pull is going. Its icon spins while the pull runs, 
 
 Clicking again while a pull is still running does nothing, so overlapping pulls can't collide — and neither can a pull collide with a commit that is still running, so pulling is also a no-op while a commit is in flight.
 
-Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by git's own error. Outside a git repository there is nothing to pull, and the button doesn't appear. When a pull fails, the button's own hover text points you at that notifications line rather than repeating git's error.
+Either way it turns out, the pull reports one line in the [notifications](/user-documentation/tab-types/notifications) tab. A pull that works reads `Pulled from origin:` followed by git's own summary — `Already up to date.` when nothing came down, or the count of what changed when something did. A pull that fails (no upstream branch, a merge conflict, an authentication problem) leaves the tree untouched and reads `Could not pull:` followed by the first line of git's own error. When git said more than that, the full text is saved under `.janissary/git-errors/` and the line carries a link that opens it in an editor tab. These files clear the next time janissary starts. Outside a git repository there is nothing to pull, and the button doesn't appear. When a pull fails, the button's own hover text points you at that notifications line rather than repeating git's error.
 
 ## Committing your changes to origin
 
@@ -110,7 +110,7 @@ If the commit itself fails before it produces anything — a pre-commit hook tha
 
 The button spins while the commit runs, turns green when it lands, and turns red when it fails, going back to normal a few seconds later. Clicking again while one is running does nothing, so commits can't overlap — and neither can a commit collide with a pull that is still running, so committing is also a no-op while a pull is in flight.
 
-Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by git's own error when it fails, and `Nothing to commit` when there was nothing to send — whether that verdict came from a commit that ran and found nothing staged, or from the header button on a tree that had no changes to begin with. Once a commit lands, the rows that were colored as changed lose their color.
+Each commit reports one line in the [notifications](/user-documentation/tab-types/notifications) tab: `Committed to origin:` followed by git's own summary when it lands, `Could not commit:` followed by the first line of git's own error when it fails (with a link to the rest of it, such as a rejected push's hook output, when there is more), and `Nothing to commit` when there was nothing to send — whether that verdict came from a commit that ran and found nothing staged, or from the header button on a tree that had no changes to begin with. Once a commit lands, the rows that were colored as changed lose their color.
 
 For a tree rooted on a remote host, the commit runs there, in that host's workspace.
 

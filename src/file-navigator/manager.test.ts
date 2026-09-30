@@ -41,6 +41,12 @@ vi.mock('../git/commit.js', () => ({
   commitLeftStagingInPlace: () => false,
 }));
 
+const writeGitFailureOutputMock = vi.fn((_label: string, _failedAt: number, _error: unknown): string | undefined => undefined);
+
+vi.mock('../git/failure-output.js', () => ({
+  writeGitFailureOutput: (...args: [string, number, unknown]) => writeGitFailureOutputMock(...args),
+}));
+
 const { FileNavigatorManager } = await import('./manager.js');
 type FileNavigatorManagerInstance = InstanceType<typeof FileNavigatorManager>;
 
@@ -48,6 +54,7 @@ describe('FileNavigatorManager', () => {
   let root: string;
   let otherRoot: string;
   let outputs: string[];
+  let entries: LogEntry[];
   let tabs: Tab[];
   let activeTab: number;
   let managers: unknown;
@@ -58,7 +65,10 @@ describe('FileNavigatorManager', () => {
     root = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-'));
     otherRoot = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-other-'));
     outputs = [];
+    entries = [];
     activeTab = 0;
+    writeGitFailureOutputMock.mockReset();
+    writeGitFailureOutputMock.mockReturnValue(undefined);
     closeFns = [];
     watchMock.mockReset();
     changedPathsMock.mockReset();
@@ -95,7 +105,7 @@ describe('FileNavigatorManager', () => {
         editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
         filesTabByRoot: (r: string) => tabs.find((t) => t.files?.root === r),
         cwdOf: (label: string) => (label === 'other' ? otherRoot : root),
-        append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
+        append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); entries.push(entry); },
         findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
         setActiveTab: (index: number) => { activeTab = index; },
         setDock: (index: number, dock: 'left' | 'right' | null) => {
@@ -1143,6 +1153,21 @@ describe('FileNavigatorManager', () => {
       expect(navTab().files!.rows.some((row) => row.path === 'failed-pull.txt')).toBe(false);
     });
 
+    it('reports a multi-line pull failure by its first line, linking the full output', async () => {
+      openNotificationsTab();
+      const error = new Error('Command failed: git pull\nfatal: Could not read from remote repository.\n');
+      pullRootMock.mockRejectedValue(error);
+      writeGitFailureOutputMock.mockReturnValue('/project/.janissary/git-errors/pull.log');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.pull(navLabel());
+      await vi.waitFor(() => expect(outputs).toEqual(['Could not pull: Command failed: git pull']));
+
+      expect(entries[0].openFiles).toEqual(['/project/.janissary/git-errors/pull.log']);
+      expect(writeGitFailureOutputMock).toHaveBeenCalledWith(navLabel(), expect.any(Number), error);
+    });
+
     it('ignores a second pull while one is still in flight', async () => {
       openNotificationsTab();
       const { promise, resolve } = Promise.withResolvers<string>();
@@ -1314,6 +1339,21 @@ describe('FileNavigatorManager', () => {
 
       expect(outputs).toHaveLength(1);
       expect(navTab().files!.rows.some((row) => row.path === 'failed-commit.txt')).toBe(false);
+    });
+
+    it('reports a multi-line push failure by its first line, linking the full output', async () => {
+      openNotificationsTab();
+      const error = new Error('Command failed: git push origin HEAD\nerror: failed to push some refs\n1:35PM INF no leaks found\n');
+      commitRootMock.mockRejectedValue(error);
+      writeGitFailureOutputMock.mockReturnValue('/project/.janissary/git-errors/commit.log');
+      const manager = run();
+      manager.open('files', 'janus');
+
+      manager.commit(navLabel(), 'commit: notes.md', []);
+      await vi.waitFor(() => expect(outputs).toEqual(['Could not commit: Command failed: git push origin HEAD']));
+
+      expect(entries[0].openFiles).toEqual(['/project/.janissary/git-errors/commit.log']);
+      expect(writeGitFailureOutputMock).toHaveBeenCalledWith(navLabel(), expect.any(Number), error);
     });
 
     it('reports a nothing-to-commit result without leaving the button showing failure', async () => {

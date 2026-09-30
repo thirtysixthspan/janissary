@@ -19,4 +19,9 @@ describe('pullFailureText', () => {
   it('stringifies a non-Error throw', () => {
     expect(pullFailureText('killed')).toBe('Could not pull: killed');
   });
+
+  it('carries only the first line of a multi-line git error', () => {
+    expect(pullFailureText(new Error('Command failed: git pull\nfatal: Could not read from remote repository.\n')))
+      .toBe('Could not pull: Command failed: git pull');
+  });
 });

@@ -1,4 +1,4 @@
-import { errorText } from '../error-text.js';
+import { errorFirstLine } from '../error-text.js';
 
 // The two notifications-feed lines a file navigator pull can produce, written together so the pair
 // stays consistent. They are not part of `operation-report.ts`, which reports a `BatchResult`'s
@@ -11,7 +11,8 @@ export function pullSuccessText(summary: string): string {
   return summary ? `Pulled from origin: ${summary}` : 'Pulled from origin';
 }
 
-// A pull that failed, carrying git's own error text.
+// A pull that failed, carrying the first line of git's own error; the rest of it is kept in the
+// file the notification links (see `src/git/failure-output.ts`).
 export function pullFailureText(error: unknown): string {
-  return `Could not pull: ${errorText(error)}`;
+  return `Could not pull: ${errorFirstLine(error)}`;
 }
