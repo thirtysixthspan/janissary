@@ -98,10 +98,14 @@ export function createPluginContext(
     // The plugin's own line into the notifications feed, kept distinct from the host's failure path
     // by its own event type: a plugin says something happened, it never says a plugin broke. The one
     // thing the plugin may add is a file for the line to carry, which the host serves from the
-    // plugin's own workspace like any other plugin-registered file.
+    // plugin's own workspace like any other plugin-registered file. A line may name one of the
+    // plugin's own tabs to be attributed to, resolved here so it can never name anybody else's.
     notifyUser: (text, options) => {
       if (!isEnabled()) return;
-      notify(managers, 'plugin-note', origin.label, text, {
+      const own = options?.tab === undefined
+        ? undefined
+        : managers.tab.pluginTabByInstanceKey(declaration.id, options.tab);
+      notify(managers, 'plugin-note', own?.label ?? origin.label, text, {
         ...(options?.openFile && { openFile: options.openFile }),
       });
     },

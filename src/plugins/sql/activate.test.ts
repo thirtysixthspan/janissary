@@ -13,6 +13,10 @@ import type { SqlPayload } from './shared.js';
 
 const REFS = [{ name: 'shop', exists: true, open: true }, { name: 'blog', exists: true, open: false }];
 
+// Every line the plugin reports names the tab it is about, since it is said from a topic
+// notification that has no invoking tab of its own.
+const ON_TAB = { tab: 'sqlite:shop' };
+
 const ORDERS = [{
   name: 'orders', kind: 'table' as const, writable: true,
   columns: [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }, { name: 'status', type: 'TEXT', notNull: false, pk: 0 }],
@@ -479,7 +483,7 @@ describe('sql plugin answering a request before it returns', () => {
     expect(payload.grid?.rows).toHaveLength(1);
     // The statement reported what it changed, and nothing about the table it made: the tab read that
     // back from the schema rather than from a line under the prompt.
-    expect(fixture.notifyUser.mock.calls).toEqual([['OK.']]);
+    expect(fixture.notifyUser.mock.calls).toEqual([['OK.', ON_TAB]]);
   });
 
   // A grid write is one cell value in a table that already exists, so it cannot have changed the
@@ -818,7 +822,7 @@ describe('sql plugin intents', () => {
     expect(payload.error).toBe(refused);
     expect(payload.grid).not.toBeNull();
     expect(fixture.actions.slice(1).map((action) => action.action)).toEqual(['insertRow']);
-    expect(fixture.notifyUser.mock.calls).toEqual([[refused]]);
+    expect(fixture.notifyUser.mock.calls).toEqual([[refused, ON_TAB]]);
   });
 
   it('opens another database from the header switcher', () => {
@@ -871,7 +875,7 @@ describe('a failure reported to the notifications feed', () => {
   it('reports a read that failed, and says nothing when a read succeeds', () => {
     const failed = fakeCapabilities(emptyView(), failing('no such column: nope'));
     openTab(failed);
-    expect(said(failed)).toEqual([['no such column: nope']]);
+    expect(said(failed)).toEqual([['no such column: nope', ON_TAB]]);
 
     const well = fakeCapabilities(emptyView(), answering());
     openTab(well);
@@ -888,7 +892,7 @@ describe('a failure reported to the notifications feed', () => {
     });
     openTab(fixture);
     intent('run', { sql: 'NOPE' }, fixture);
-    expect(said(fixture)).toEqual([['syntax error']]);
+    expect(said(fixture)).toEqual([['syntax error', ON_TAB]]);
   });
 
   // One failure, said once. An answer that arrives twice for a request the tab is still waiting on
@@ -903,7 +907,7 @@ describe('a failure reported to the notifications feed', () => {
       kind: 'query', requestId: queryId, database: 'shop', grid: grid(), error: 'no such column: nope',
     };
     deliver(fixture, [schemaAnswer(schemaId), failed]);
-    expect(said(fixture)).toEqual([['no such column: nope']]);
+    expect(said(fixture)).toEqual([['no such column: nope', ON_TAB]]);
     deliver(fixture, [schemaAnswer(schemaId), failed]);
     expect(said(fixture)).toHaveLength(1);
   });
@@ -947,7 +951,7 @@ describe("a statement's result reported to the notifications feed", () => {
       kind: 'query', database: 'shop', grid: grid(),
       report: { text: 'id\tstatus\n1\tpaid\n(1 row)' },
     });
-    expect(said(fixture)).toEqual([['id\tstatus\n1\tpaid\n(1 row)']]);
+    expect(said(fixture)).toEqual([['id\tstatus\n1\tpaid\n(1 row)', ON_TAB]]);
   });
 
   it('says a long result shortened, and links the file holding all of it', () => {
@@ -956,12 +960,12 @@ describe("a statement's result reported to the notifications feed", () => {
       kind: 'query', database: 'shop', grid: grid(),
       report: { text: 'id\n1\n(9,000 rows — first 40 shown)', file },
     });
-    expect(said(fixture)).toEqual([['id\n1\n(9,000 rows — first 40 shown)', { openFile: file }]]);
+    expect(said(fixture)).toEqual([['id\n1\n(9,000 rows — first 40 shown)', { ...ON_TAB, openFile: file }]]);
   });
 
   it('says what a statement that changed rows did', () => {
     const fixture = running({ kind: 'write', database: 'shop', sql: 'DELETE FROM orders', parameters: [], changed: 3 });
-    expect(said(fixture)).toEqual([['3 rows changed.']]);
+    expect(said(fixture)).toEqual([['3 rows changed.', ON_TAB]]);
   });
 
   // A statement that failed is already reported as a failure, and saying it a second time as a count
@@ -975,7 +979,7 @@ describe("a statement's result reported to the notifications feed", () => {
     });
     openTab(fixture);
     intent('run', { sql: 'NOPE' }, fixture);
-    expect(said(fixture)).toEqual([['syntax error']]);
+    expect(said(fixture)).toEqual([['syntax error', ON_TAB]]);
   });
 
   // A page the tab asked for carries no report, and a write the grid made itself is not a statement

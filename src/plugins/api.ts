@@ -79,13 +79,17 @@ export type TabPluginSelectionAction = {
 export type TabPluginServerCapabilities = {
   note(text: string): void;
   // Report one line to the notifications feed, attributed to the tab the plugin was invoked from.
-  // Deliberately narrow: a plugin may say that something happened and may not choose the event type,
-  // the originating tab, or a tab to jump to. The one thing it may add is a file for the line to
-  // carry — the arrangement an auto-approved permission prompt's screen capture already uses, and the
-  // only way a plugin can offer something too long to read in place. The line is dropped when no
-  // notifications feed is open, exactly as every other event is — plugin activity never conjures the
-  // feed into existence.
-  notifyUser(text: string, options?: { openFile?: string }): void;
+  // Deliberately narrow: a plugin may say that something happened and may not choose the event type
+  // or a tab to jump to. The one thing it may add is a file for the line to carry — the arrangement
+  // an auto-approved permission prompt's screen capture already uses, and the only way a plugin can
+  // offer something too long to read in place. The line is dropped when no notifications feed is
+  // open, exactly as every other event is — plugin activity never conjures the feed into existence.
+  //
+  // `tab` attributes the line to one of this plugin's own tabs instead, addressed by instance key like
+  // `updateTab`. It is how a line said from a `notify` handler — which has no invoking tab — names the
+  // tab it is about. A key with no open tab of this plugin's falls back to the invoking tab, so a
+  // plugin can never attribute a line to a tab it does not own.
+  notifyUser(text: string, options?: { openFile?: string; tab?: string }): void;
   openOrFocusTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginPayload): void;
   // Replace what one of this plugin's own tabs shows, addressed by the instance key it was opened
   // with. The tab keeps its label, position, group, focus, instance key, schema version, and the

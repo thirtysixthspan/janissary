@@ -110,8 +110,8 @@ function deliver(
     return;
   }
   const folded = fold(key, refreshed, answer, tabs, pending.followUp);
-  report(refreshed.error, folded.payload.error, capabilities);
-  say(pending.followUp, answer, capabilities);
+  report(key, refreshed.error, folded.payload.error, capabilities);
+  say(key, pending.followUp, answer, capabilities);
   if (folded.followUp) {
     dispatch(key, folded.payload, folded.followUp, capabilities, tabs, publish);
     return;
@@ -123,12 +123,20 @@ function deliver(
  * Say a failure once, to the notifications feed, when it is a new one.
  *
  * A failure is the one result a user did not ask for and cannot predict, so it is the one that wants
- * to be said whether or not this tab is on screen. Comparing against the error already on screen is
- * what keeps a refresh that fails the same way twice from saying it twice.
+ * to be said whether or not this tab is on screen. Comparing against the error the tab last recorded
+ * is what keeps a refresh that fails the same way twice from saying it twice.
+ *
+ * Every line names the tab it is about. It is said from a topic notification, which has no invoking
+ * tab, so without the key the feed would attribute it to nothing.
  */
-function report(before: string | null, after: string | null, capabilities: TabPluginServerCapabilities): void {
+function report(
+  key: string,
+  before: string | null,
+  after: string | null,
+  capabilities: TabPluginServerCapabilities,
+): void {
   if (after === null || after === before) return;
-  capabilities.notifyUser(after);
+  capabilities.notifyUser(after, { tab: key });
 }
 
 /** What a statement that changed rows reports once it has run. */
@@ -150,17 +158,18 @@ function changedOutcome(changed: number): string {
  * would put the same failure in the feed twice.
  */
 function say(
+  key: string,
   followUp: SqlPending['followUp'],
   answer: DatabaseResultView,
   capabilities: TabPluginServerCapabilities,
 ): void {
   if (answer.kind === 'query' && answer.report) {
-    // The options are carried only when there is a file to carry: a line that has nothing to open
-    // says so by having no link on it, which is what a line without one already does.
-    if (answer.report.file) capabilities.notifyUser(answer.report.text, { openFile: answer.report.file });
-    else capabilities.notifyUser(answer.report.text);
+    // The file is carried only when there is one: a line that has nothing to open says so by having
+    // no link on it, which is what a line without one already does.
+    const { file } = answer.report;
+    capabilities.notifyUser(answer.report.text, { tab: key, ...(file && { openFile: file }) });
     return;
   }
   if (followUp !== 'console' || answer.kind !== 'write' || answer.error) return;
-  capabilities.notifyUser(changedOutcome(answer.changed));
+  capabilities.notifyUser(changedOutcome(answer.changed), { tab: key });
 }

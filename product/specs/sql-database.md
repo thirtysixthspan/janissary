@@ -276,7 +276,9 @@ complete a word: there is nothing in this tab for a word to be completed against
 
 A statement's result is a **notification**, and the tab says nothing about it. The line under the
 prompt was the first thing anything else typed replaces and the first thing lost when the user looks
-at another tab, so a result the user asked for belongs where it outlasts the tab.
+at another tab, so a result the user asked for belongs where it outlasts the tab. Every notification
+the tab reports — a result, a count, or a failure — is formatted like any other line in the feed and
+attributed to the database's tab, so it reads `● 8:32pm shop: …` with the tab's colour on the dot.
 
 A statement that changed rows reports `OK.` or the number of rows it changed, which is always short
 enough to say outright. A statement that returned rows reports its result: the column names, one
