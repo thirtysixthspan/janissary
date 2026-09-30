@@ -359,6 +359,46 @@ describe('notify — line composition', () => {
     expect(entry.openFiles).toEqual(['/captures/janus-now.txt']);
     expect(entry.openTab).toBe('janus');
   });
+
+  // A label is an identity, not a name: a plugin tab's is derived from its prefix (`sql`, then
+  // `sql-2`) while the name its strip shows is what it is about. A line leading with the label named
+  // neither the database a failure came from nor the file a suggestion failed on.
+  it('leads the header with the tab\'s own name, not the label it is addressed by', () => {
+    const append = vi.fn();
+    const managers = makeManagers(append);
+    managers.tab.tabs.push({ label: 'sql', title: 'shop', dotColor: '#def', log: [] });
+    notify(managers, 'plugin-note', 'sql', 'no such table: nosuchtable');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('8:32pm shop');
+    expect(entry.fromColor).toBe('#def');
+  });
+
+  // The label is still the identity, so it is what the queue and the record file carry: two `sql`
+  // tabs sharing a name still hold their own lines rather than folding into one.
+  it('holds the tab\'s label, not its name, as the identity a repeat folds on', () => {
+    const append = vi.fn();
+    const managers = makeManagers(append);
+    managers.tab.tabs.push(
+      { label: 'sql', title: 'shop', dotColor: '#def', log: [] },
+      { label: 'sql-2', title: 'blog', dotColor: '#123', log: [] },
+    );
+    notify(managers, 'plugin-note', 'sql', 'no such table: nosuchtable');
+    notify(managers, 'plugin-note', 'sql-2', 'no such table: nosuchtable');
+    const held = managers.notifications.all;
+    expect(held.map((n) => [n.tabLabel, n.tabName, n.count ?? 1]))
+      .toEqual([['sql', 'shop', 1], ['sql-2', 'blog', 1]]);
+  });
+
+  // A tab with no title reads as its label, which is the fallback the tab strip has too, and no
+  // separate name is carried for a line that has none to carry.
+  it('leads with the label for a tab that has no name of its own', () => {
+    const append = vi.fn();
+    const managers = makeManagers(append);
+    notify(managers, 'manual', 'janus', 'this is a notification');
+    const [, entry] = append.mock.calls[0];
+    expect(entry.from).toBe('8:32pm janus');
+    expect(managers.notifications.all[0]?.tabName).toBeUndefined();
+  });
 });
 
 // Holding a notification and rendering one are separate: everything `shouldNotify` accepts reaches
@@ -419,6 +459,17 @@ describe('notify — surface routing', () => {
       notify(fixture.managers, 'plugin-note', 'janus', 'Dropped a.mp3.');
       expect(fixture.toasts).toEqual([{ from: 'janus', message: 'Dropped a.mp3.', color: '#abc' }]);
       expect(fixture.tabs.some((t) => t.label === NOTIFICATIONS_LABEL)).toBe(false);
+    } finally { fixture.dispose(); }
+  });
+
+  // A toast is the same line without its time, so it leads with the same name the feed line leads
+  // with — a toast reading `sql` beside a feed line reading `shop` is one notification told twice.
+  it('toasts the tab\'s own name, the same one the feed line leads with', () => {
+    const fixture = setup();
+    try {
+      fixture.tabs.push({ label: 'sql', title: 'shop', dotColor: '#def', log: [] });
+      notify(fixture.managers, 'plugin-note', 'sql', 'no such table: nosuchtable');
+      expect(fixture.toasts).toEqual([{ from: 'shop', message: 'no such table: nosuchtable', color: '#def' }]);
     } finally { fixture.dispose(); }
   });
 

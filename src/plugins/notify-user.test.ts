@@ -17,10 +17,13 @@ const activation: TabPluginActivation = {
   isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
 };
 
-// The plugin's own tab, and another plugin's that happens to use the same instance key.
+// The plugin's own tab, and another plugin's that happens to use the same instance key. The pair is
+// the one `addPluginTab` produces: a label derived from the prefix, and the title the payload
+// supplied. Handing this fixture a `label: 'shop'` — as it once did — pinned a value the
+// application can never hold, so nothing here could notice the two coming apart.
 const tabs = [
-  { label: 'shop', plugin: { id: 'sql', instanceKey: 'sqlite:shop' } },
-  { label: 'player', plugin: { id: 'audio', instanceKey: 'sqlite:blog' } },
+  { label: 'sql', title: 'shop', plugin: { id: 'sql', instanceKey: 'sqlite:shop' } },
+  { label: 'player', title: 'blog', plugin: { id: 'audio', instanceKey: 'sqlite:blog' } },
 ];
 
 const managers = {
@@ -45,16 +48,17 @@ describe('notifyUser', () => {
   });
 
   // A topic notification has no invoking tab, so without naming one the line is attributed to
-  // nothing and reads without a tab name or a colour.
+  // nothing and reads without a tab name or a colour. What it hands on is the tab's *label* — which
+  // tab the line is about — because the name it reads as is `notify`'s to derive from the label.
   it('attributes a line to one of the plugin\'s own tabs when it names one', () => {
     capabilitiesFrom('').notifyUser('3 rows changed.', { tab: 'sqlite:shop' });
-    expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'shop', '3 rows changed.', {});
+    expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'sql', '3 rows changed.', {});
   });
 
   it('carries the file alongside the tab it names', () => {
     capabilitiesFrom('').notifyUser('Query returned 9 rows.', { tab: 'sqlite:shop', openFile: '/tmp/result.txt' });
     expect(notify).toHaveBeenCalledWith(
-      managers, 'plugin-note', 'shop', 'Query returned 9 rows.', { openFile: '/tmp/result.txt' },
+      managers, 'plugin-note', 'sql', 'Query returned 9 rows.', { openFile: '/tmp/result.txt' },
     );
   });
 

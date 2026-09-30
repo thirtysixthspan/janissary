@@ -232,7 +232,7 @@ suppresses it only in clients currently showing the notifications body; when ano
 selected, the feed is off screen and the client shows a toast. A toast never opens or moves a tab —
 the layout the user arranged is left alone.
 
-A toast reads `● <tab>: <message>`: the same colored dot and originating tab label the feed line
+A toast reads `● <tab>: <message>`: the same colored dot and tab name the feed line
 carries, and the same message body, with **no timestamp** — a toast is by definition happening now.
 Link targets are not rendered on it; they are preserved in the queue and the record, so the link is
 still there in the feed. A long message is clamped to two lines.
@@ -308,10 +308,13 @@ a per-row selection.
 
 The feed displays **newest first**: the most recently recorded notification appears at the top,
 with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
-compact 12-hour clock time (for example `8:32pm`), the originating tab's label, and the message.
-The tab label appears **once**, in this header: a `notify <message>` shows the message on its own
-without repeating the label ahead of it. A notification whose actual detection time falls on an
-earlier calendar day than today — a queued report replayed after a multi-day detachment — carries
-a short date ahead of the time (for example `Sep 20 8:32pm`) rather than the bare time alone, so it
-does not read as having happened today; the comparison is calendar day, not elapsed hours, so an
-event from late the previous night is still dated even a few hours later.
+compact 12-hour clock time (for example `8:32pm`), the name of the tab the event happened to, and the
+message. A tab's name is what its own tab strip shows, which for most tabs is its label and for a
+plugin tab is what that tab is about — a line the `sql` tab reports leads with the database's name,
+not the `sql` its label is derived from. The name appears **once**, in this header: a `notify <message>`
+shows the message on its own without repeating the name ahead of it. A notification whose actual
+detection time falls on an earlier calendar day than today — a queued report replayed after a
+multi-day detachment — carries a short date ahead of the time (for example `Sep 20 8:32pm`) rather
+than the bare time alone, so it does not read as having happened today; the comparison is calendar
+day, not elapsed hours, so an event from late the previous night is still dated even a few hours
+later.

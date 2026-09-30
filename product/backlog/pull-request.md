@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Name the database on every notifications line its sql tab reports
-
-Existing Issue: Every line the sql tab reports into the notifications feed reads `1:19pm sql: no such table: nosuchtable` while the tab's own name in the strip is `shop`, because the line is attributed to the tab's internal label rather than its name. Severity: 5/10
-
-Existing Risk: 5/10 - With two databases open the feed shows `sql` and `sql2` and neither says which database a failed statement, a row count or a query result came from, so a user has to visit each tab to find out.
-
-Proposal Risk: 1/10 - Attribution falls back to the label for a tab that has no title, which is the path `src/plugins/notify-user.test.ts` already covers.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: a notification from a sql tab is attributed to `sql` rather than to the database". Failing step G3 (generated), verbatim: "With `shop` showing a page of `orders`, type `SELECT * FROM nosuchtable` into the SQL console and press Enter. Confirm the tab still shows the same grid with no error message of its own, and read the notifications feed line the failure produced." Reproduce from a project with no database: `db sqlite create shop`; `sql shop`; `db sqlite query shop "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT NOT NULL, status TEXT, total REAL)"` and one `INSERT`; press `Refresh` and choose `orders`; open the notifications tab; type `SELECT * FROM nosuchtable` into the `SQL >` console and press Enter; read the newest feed line. Expected, per `product/specs/sql-database.md`: "Every notification the tab reports — a result, a count, or a failure — is formatted like any other line in the feed and attributed to the database's tab, so it reads `● 8:32pm shop: …` with the tab's colour on the dot." Observed on 8f2fb12 in two runs: the line renders `<span class="message-tab">sql</span>` followed by the message, reading `1:19pm sql no such table: nosuchtable`, while the tab strip names the same tab `shop`; the grid itself was correctly left exactly as it was. Cause: `notifyUser` in `src/plugins/context.ts` passes `own?.label ?? origin.label` to `notify`, and `addPluginTab` in `src/tab/creators.ts` gives a plugin tab `label = uniquePluginLabel(tabs, labelPrefix)` — `sql`, then `sql2` — while the payload's title (`shop`) goes into `title`, which is what the tab strip and a feed line's header draw; `src/plugins/notify-user.test.ts` builds its fixture with `label: 'shop'`, a label `addPluginTab` never produces, so the suite pins a value the app cannot have. Likely fix: attribute to the tab's displayed name, `tab.title` falling back to `tab.label`. A regression test should build its fixture through `addPluginTab`, or assert against a tab whose `label` is the prefix and whose `title` is the database name, so the two cannot drift apart again.
-
-
 * Correct the pull request's testing step that types a row number into the pager's Row field
 
 Existing Issue: The seventh `How to verify` step types a row number "into the pager's **Row** field", and the pager holds no such field, so the step cannot be followed as written. Severity: 3/10
