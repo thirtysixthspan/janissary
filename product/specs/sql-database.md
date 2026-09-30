@@ -107,6 +107,8 @@ the selection, not as a second action, because the grid's actions are answered a
 before the last one landed. A composite key follows on its first target column alone, and offers
 nothing to follow when the value is null, or when the referenced table's own key could not be
 resolved to a single column — following an unresolved key would filter on nothing and look broken.
+That is the whole of it: the key is followed one hop, into the row the value names, and no further,
+because the grid is one object at a time.
 
 Pages hold 50, 100 (the default), or 500 rows. The pager reads `Rows 1–100 of 4,213 rows`, or
 `Rows 1–2 of 3 of 51,882 rows` once a filter is narrowing something — a filtered view that reported
@@ -299,7 +301,7 @@ of bringing the empty database back.
   `DROP`, exactly as `db sqlite query` already is.
 - It does not show the statement behind the grid, and offers no way to run one the user did not type.
   The console is the way to run SQL, and the history is a record of what has been run.
-- It does not join tables, follow a foreign key, or build a query.
+- It does not join tables or build a query. The grid is one object at a time.
 - It does not report statistics. A per-column distribution is a statement in the command bar.
 - It has no copy control. A selection is copied by the application's own copy key.
 - It does not watch other tabs. A `db` command run elsewhere that changes the data leaves this view
