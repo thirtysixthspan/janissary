@@ -81,8 +81,6 @@
 .sql-column.off { color: var(--muted); }
 .sql-columns-actions { display: inline-flex; gap: 6px; }
 
-.sql-goto { display: flex; align-items: center; gap: 4px; }
-.sql-goto input { width: 90px; }
 .sql-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
 .sql-page-size select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; font-size: 12px; }
 

@@ -3,8 +3,6 @@
 # pull-request
 
 
-* remove the sql goto feature
-
 * remove the statement history UI sql-history-toggle and backing support code. the command bar should be the only way to inspect the command history.
 
 * individual cells should not be highlightable, only rows. clicking once on the row will highlight it. click twice will allow you to edit a particular cell. on tab opening or after a new query, the highlight should be on the first row. mirrow the highlighting and navigation of the file-navigator. when the keyboard focus is on the table, up and down arrows should cause the highlighted row to move up or down and scroll the results when required. left and right arrows should have no effect.

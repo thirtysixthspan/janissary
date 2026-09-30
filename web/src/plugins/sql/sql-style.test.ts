@@ -58,11 +58,14 @@ describe('the sql stylesheet', () => {
     expect(rule('.sql-console')).toContain('flex-shrink: 0');
   });
 
-  // The three removed surfaces must not leave their rules behind: a stylesheet entry for a control
+  // The removed surfaces must not leave their rules behind: a stylesheet entry for a control
   // that no longer exists is how the next reader is misled about what this tab offers.
   it('carries no rule for a control the tab no longer has', () => {
-    for (const gone of ['.sql-header', '.sql-nav-row', '.sql-stats', '.sql-switch', '.sql-grid-pane']) {
-      expect(sql).not.toContain(`${gone} {`);
+    const gone = [
+      '.sql-header', '.sql-nav-row', '.sql-stats', '.sql-switch', '.sql-grid-pane', '.sql-goto',
+    ];
+    for (const selector of gone) {
+      expect(sql).not.toContain(`${selector} {`);
     }
   });
 });

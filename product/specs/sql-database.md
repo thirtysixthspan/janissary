@@ -120,13 +120,6 @@ size as of the last read, and it is re-counted by a write and by **Refresh**, so
 object smaller than the one the first figure is counting. Changing the page size
 returns to the first page. **Refresh** re-reads the schema and the current query.
 
-A **Row** field beside the range label jumps to a row the user names, so a table far larger than a
-page is reachable without counting. It numbers rows from 1 because the range label does, so a number
-read off the label and typed back lands on that row. A row past the end lands on the last page
-rather than on an empty one — a number the user got wrong should show them the end, not look like
-the table is empty — and the range label is left where it is so they can see where they arrived. A
-number that is not a whole row above zero asks for nothing, and the control stays disabled.
-
 Every value a filter, an order, or a write supplies is bound to the statement rather than
 concatenated into it, and every object and column name comes from the database's own schema. A
 filter value is compared as text, except in a comparison operator, where a value that parses as a

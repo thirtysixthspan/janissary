@@ -9,7 +9,6 @@ import {
   groupedObjects,
   hasNext,
   hasPrevious,
-  goToRow,
   nextOffset,
   pageLabel,
   previousOffset,
@@ -148,41 +147,6 @@ describe('pager arithmetic', () => {
     expect(previousOffset(grid({ offset: 100 }))).toBe(0);
     expect(previousOffset(grid({ offset: 0 }))).toBe(0);
     expect(previousOffset(null)).toBe(0);
-  });
-});
-
-describe('goToRow', () => {
-  const big = grid({ total: 51_882, limit: 100, offset: 0, unfilteredTotal: 51_882 });
-
-  it('turns a row number into the page that starts it', () => {
-    expect(goToRow('1', big)).toBe(0);
-    expect(goToRow('100', big)).toBe(0);
-    expect(goToRow('101', big)).toBe(100);
-    expect(goToRow('40000', big)).toBe(39_900);
-  });
-
-  it('clamps past the end to the last page rather than past it', () => {
-    // A row number the user got wrong should land them at the end and show them that, not show
-    // nothing at all.
-    expect(goToRow('99999', big)).toBe(51_800);
-    expect(goToRow('51882', big)).toBe(51_800);
-  });
-
-  it('asks for no page when the number is not a whole row above zero', () => {
-    expect(goToRow('', big)).toBeNull();
-    expect(goToRow('0', big)).toBeNull();
-    expect(goToRow('-5', big)).toBeNull();
-    expect(goToRow('1.5', big)).toBeNull();
-    expect(goToRow('abc', big)).toBeNull();
-    expect(goToRow('twelve', big)).toBeNull();
-  });
-
-  it('lands on the first page for an empty object rather than nowhere', () => {
-    expect(goToRow('5', grid({ total: 0, limit: 100, offset: 0 }))).toBe(0);
-  });
-
-  it('uses a page size other than the default', () => {
-    expect(goToRow('120', grid({ total: 4213, limit: 50, offset: 0 }))).toBe(100);
   });
 });
 
