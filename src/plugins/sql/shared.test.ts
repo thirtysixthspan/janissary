@@ -29,7 +29,6 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     offset: 0,
     pageSizes: [50, 100, 500],
     grid: null,
-    log: [],
     exports: [],
     error: null,
     pending: null,
@@ -87,7 +86,6 @@ describe('isSqlPayload', () => {
         rows: [{ key: 'r1', cells: [{ text: 'x', isNull: false }] }],
         total: 1, unfilteredTotal: 4, offset: 0, limit: 100, order: [{ column: 'a', desc: false }],
       },
-      log: [{ sql: 'UPDATE t', changed: 1 }],
       exports: [{ name: 'shop-orders-1.csv', size: '1.2 kB', rows: 4, ref: '/open/7' }],
       error: 'Query error: nope',
       pending: { id: 'q1', followUp: 'query' },
@@ -203,13 +201,6 @@ describe('intent payload guards', () => {
     expect(isSqlPayload({ ...payload(), hidden: 'status' })).toBe(false);
     expect(isSqlPayload({ ...payload(), hidden: [1] })).toBe(false);
     expect(isSqlPayload({ ...payload(), hidden: [] })).toBe(true);
-  });
-
-  it('accepts a whole log of statements, and refuses a malformed entry', () => {
-    expect(isSqlPayload({ ...payload(), log: [{ sql: 'UPDATE t', changed: 1 }] })).toBe(true);
-    expect(isSqlPayload({ ...payload(), log: [{ sql: 'UPDATE t', changed: 1, error: 'no such table' }] })).toBe(true);
-    expect(isSqlPayload({ ...payload(), log: [{ sql: 7, changed: 1 }] })).toBe(false);
-    expect(isSqlPayload({ ...payload(), log: { sql: 'x', changed: 0 } })).toBe(false);
   });
 
   it('previews the insert it would run, with every value a placeholder', () => {

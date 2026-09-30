@@ -201,7 +201,8 @@ The command bar is the only way to inspect what this tab has run. `ArrowUp` walk
 last fifty statements typed in it, `ArrowDown` walks forward again, and a statement is put in the
 line rather than run on the spot, so it is always something the user can read and change before they
 send it. There is no second list of the tab's statements anywhere in the tab, and no control that
-empties one.
+empties one. What a statement produced is in the notifications feed, and the tab keeps nothing of
+its own.
 
 A statement the grid's own query issued is not in that walk, because the user did not type it. The
 command bar is the only place SQL is entered, which is what makes one answer to "run this" enough.
@@ -242,19 +243,37 @@ command line and this one is not that. It is the only place SQL is entered: ther
 for it anywhere in the tab.
 
 Enter sends what is typed, and the host decides whether that was a read or a write by the same test
-`db sqlite query` uses: a statement that returns rows fills the grid, and anything else reports
-`OK.` or the number of rows it changed, on the line under the prompt. Arrow keys walk back through the
-last fifty statements typed in this tab.
+`db sqlite query` uses: a statement that returns rows fills the grid, and anything else is a write
+whose outcome is reported as a notification, as described below. Nothing is written under the prompt.
+Arrow keys walk back through the last fifty statements typed in this tab.
 
-A statement that fails is a **notification**, not a line under the prompt. A failure is the one
-result a user did not ask for and cannot predict, and the line under the prompt is the first thing
-anything else typed replaces and the first thing lost when the user looks at another tab. The message
-is the SQLite error, it is attributed to the tab the statement was run from, and it is said once per
-failure: an answer that arrives twice for one request says it once, and a failure that has gone away
-and come back says it again. See [[notifications]] for the feed. The grid's own error band still
+A statement's result is a **notification**, and the tab says nothing about it. The line under the
+prompt was the first thing anything else typed replaces and the first thing lost when the user looks
+at another tab, so a result the user asked for belongs where it outlasts the tab.
+
+A statement that changed rows reports `OK.` or the number of rows it changed, which is always short
+enough to say outright. A statement that returned rows reports its result: the column names, one
+tab-separated line per row, and the number of rows the statement returned. A result of more than
+forty lines is shortened to the first forty, with the real count beside it, and the notification
+carries a link to a file holding every row — the same arrangement an auto-approved permission
+prompt's screen capture uses. That file is written to
+`.janissary/db/exports/<database>-result-<timestamp>.txt` and is named for when the statement ran, so
+a link on an older notification keeps opening the result that notification is about. A result of more
+than a million rows is written out to that million and the notification says so, because a capped file
+read as a complete one would be worse than a query too large to export. See [[notifications]] for the
+feed.
+
+A statement that fails is the same kind of notification, and it says the SQLite error. A failure is
+the one result a user did not ask for and cannot predict. It is attributed to the tab the statement
+was run from, and it is said once per failure: an answer that arrives twice for one request says it
+once, and a failure that has gone away and come back says it again. The grid's own error band still
 carries the message where the failed
 read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
-is deleted under an open tab. A failed statement leaves the grid as it was.
+is deleted under an open tab. A failed statement leaves the grid as it was, and is not also reported
+as a count.
+
+The tab keeps no record of the statements it has run. What ran is in the notifications feed, and the
+command bar's own `ArrowUp` walk is the way back to what was typed.
 
 A statement that succeeds reports its outcome and adds nothing to the error band, and the tab then
 reads itself again: the object list, then the page it was showing. That is the same reading **Refresh**
@@ -263,13 +282,14 @@ without a second press — the console is the only way to change a schema, so th
 It is also how a table a `CREATE` made becomes the tab's page: there is nothing on screen to re-read
 before the statement, and the object list is what picks one.
 
-A statement that failed changes nothing the tab can show, so it asks for no re-read at all and the
-failure is the notification described above. A statement that returns rows only fills the grid, since
-a read cannot have changed anything.
+A statement that failed changes nothing the tab can show, so it asks for no re-read at all. A statement
+that returns rows only fills the grid, since a read cannot have changed anything.
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
-the console refused to finish is not the same thing as a small one. What it fills the grid with is
+the console refused to finish is not the same thing as a small one. The grid and the notification are
+two different shortenings of one result — two hundred rows in a table, forty lines in a feed — and
+neither is the whole of it unless the range line says so. What the grid fills with is
 read-only, as described under Editing: a statement is not a page of one object, so nothing in it can
 be written to.
 

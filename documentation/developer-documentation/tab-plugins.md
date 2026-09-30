@@ -94,7 +94,7 @@ type TabPluginActivation = {
 The host supplies seventeen capabilities:
 
 - `note(text)` writes to the originating transcript.
-- `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
+- `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query that returned too many rows for the line; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.

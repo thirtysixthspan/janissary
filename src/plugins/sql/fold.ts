@@ -1,7 +1,7 @@
 import type { DatabaseResultView, TabPluginResources } from '../api.js';
 import type { SqlExport, SqlObject, SqlPayload, SqlPending } from './shared.js';
 import { planRequest, type SqlRequest } from './request.js';
-import { addExport, addToLog, firstObject, type SqlTabs } from './tabs.js';
+import { addExport, firstObject, type SqlTabs } from './tabs.js';
 
 // What folding an answer produced: the tab's new state, and the request that state is now waiting on
 // — planned but deliberately not sent, so the caller can record it in the mirror first. `null` means
@@ -31,19 +31,11 @@ export function fold(
         : { ...base, grid: answer.grid, error: null });
     }
     case 'write': {
-      // A statement that failed is still a statement the user ran, so it is logged too: a log that
-      // only kept successes would not say what happened. It also changed nothing the tab can show, so
-      // it asks for no re-read at all and the failure is reported as a notification instead.
-      if (answer.error) {
-        return settled({ ...base, ...missing(answer.error), log: addToLog(base.log, { sql: answer.sql, changed: 0, error: answer.error }) });
-      }
-      // A write invalidates the page it changed, so the grid is re-read rather than patched. The
-      // statement and its values go on the log, which is what the user just did.
-      const written: SqlPayload = {
-        ...base,
-        error: null,
-        log: answer.sql ? addToLog(base.log, { sql: answer.sql, changed: answer.changed }) : base.log,
-      };
+      // A statement that failed changed nothing the tab can show, so it asks for no re-read at all —
+      // the failure is a notification, and `deliver` says it.
+      if (answer.error) return settled({ ...base, ...missing(answer.error) });
+      // A write invalidates the page it changed, so the grid is re-read rather than patched.
+      const written: SqlPayload = { ...base, error: null };
       // A statement the user typed is arbitrary SQL, so it may have changed anything at all — a table
       // it created, one it dropped, a column it added. The tab reads itself again the way **Refresh**
       // does, and that schema read is also what picks an object for a tab that had none. A grid's own

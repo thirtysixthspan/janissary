@@ -247,21 +247,14 @@ describe('SqlTab console', () => {
     expect((bar as HTMLTextAreaElement).value).toBe('SELECT 2');
   });
 
-  // The line says how the last statement went and nothing about one that failed. A failure is a
-  // notification: this line is where the next thing typed goes, and a user who has looked away needs
-  // to be told rather than to come back and find the tab exactly as they left it.
-  it('reports what the last statement did, and says nothing about one that failed', () => {
+  // A result is a notification now, not a line in the tab. A line here was the first thing the next
+  // keystroke replaced and the first thing lost when the user looked at another tab, so the tab keeps
+  // nothing under the prompt at all.
+  it('has no line under the prompt, because a result is a notification', () => {
     const { capabilities } = makeCapabilities();
-    const { rerender } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    expect(screen.queryByText('OK.')).toBeNull();
-    rerender(<SqlTab payload={payload({ log: [{ sql: 'DELETE FROM orders', changed: 2 }] })} capabilities={capabilities} />);
-    expect(screen.getByText('2 rows changed.')).toBeTruthy();
-    rerender(<SqlTab
-      payload={payload({ log: [{ sql: 'NOPE', changed: 0, error: 'Query error: syntax error' }] })}
-      capabilities={capabilities}
-    />);
-    expect(screen.queryByText('Query error: syntax error')).toBeNull();
+    const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
     expect(document.querySelector('.sql-console-result')).toBeNull();
+    expect(container.querySelector('.sql-console')?.textContent).toBe('SQL ');
   });
 
   it('shows the console as busy while a request is outstanding', () => {

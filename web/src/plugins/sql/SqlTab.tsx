@@ -9,7 +9,6 @@ import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
 import { statementResult } from './grid-view';
-import { logOutcome } from './console-result';
 import { TableSwitcher } from './TableSwitcher';
 
 // A database tab: one metadata row across the full width and one body below it. The row is the shape
@@ -36,10 +35,6 @@ export function SqlTab({
   const [choosingColumns, setChoosingColumns] = useState(false);
   const docked = capabilities.dock !== null;
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
-  // The log's newest entry is the last statement run, and the line under the prompt says how it
-  // went. It says nothing about a statement that failed: a failure is a notification, and this line
-  // is where the next thing typed goes.
-  const latest = payload.log[0] ?? null;
   const object = payload.objects.find((entry) => entry.name === payload.object);
   // A statement's result is read-only the way a view is — there is no row identity in it to write to
   // — so the insert control goes with the rest of the write controls rather than offering a form
@@ -109,11 +104,6 @@ export function SqlTab({
           onValue={setConsoleText}
           onSend={(sql) => send('run', { sql })}
         />
-        {latest && !latest.error && (
-          <div className="sql-console-result">
-            {logOutcome(latest)}
-          </div>
-        )}
       </div>
     </div>
   );

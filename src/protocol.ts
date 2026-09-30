@@ -68,6 +68,7 @@ export type {
   DatabaseRefView,
   DatabaseResultView,
   DatabaseRowView,
+  DatabaseStatementReport,
   DatabasesView,
 } from './protocol/database.js';
 export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';

@@ -1,9 +1,10 @@
 import {
   noFileOpener,
+  type DatabaseResultView,
   type TabPluginActivation,
   type TabPluginServerCapabilities,
 } from '../api.js';
-import { isSqlPayload, type SqlPayload } from './shared.js';
+import { isSqlPayload, type SqlPayload, type SqlPending } from './shared.js';
 import { databasesFrom, NO_DATABASES, resultFor, SqlTabs, USAGE } from './tabs.js';
 import { dispatch, planRequest } from './request.js';
 import { openDatabase } from './open-tab.js';
@@ -110,6 +111,7 @@ function deliver(
   }
   const folded = fold(key, refreshed, answer, tabs, pending.followUp);
   report(refreshed.error, folded.payload.error, capabilities);
+  say(pending.followUp, answer, capabilities);
   if (folded.followUp) {
     dispatch(key, folded.payload, folded.followUp, capabilities, tabs, publish);
     return;
@@ -120,8 +122,6 @@ function deliver(
 /**
  * Say a failure once, to the notifications feed, when it is a new one.
  *
- * The line under the prompt is not where a failure belongs: it is the outcome of the last statement,
- * it is overwritten by the next thing typed, and it is gone the moment the user looks at another tab.
  * A failure is the one result a user did not ask for and cannot predict, so it is the one that wants
  * to be said whether or not this tab is on screen. Comparing against the error already on screen is
  * what keeps a refresh that fails the same way twice from saying it twice.
@@ -129,4 +129,38 @@ function deliver(
 function report(before: string | null, after: string | null, capabilities: TabPluginServerCapabilities): void {
   if (after === null || after === before) return;
   capabilities.notifyUser(after);
+}
+
+/** What a statement that changed rows reports once it has run. */
+function changedOutcome(changed: number): string {
+  if (changed === 0) return 'OK.';
+  return `${changed} row${changed === 1 ? '' : 's'} changed.`;
+}
+
+/**
+ * Say what a statement the user typed produced.
+ *
+ * A statement that returned rows carries its result on the answer, shortened and with a file beside
+ * it when the whole of it is too long for one line — the same arrangement an auto-approved permission
+ * prompt's screen capture uses. A statement that changed rows reports the count, which is always
+ * short enough to say outright. Anything else was not a statement the user typed: a write the grid
+ * made itself, or a page it asked for, and neither is a report.
+ *
+ * A statement that failed is not reported here — `report` has already said so, and saying it twice
+ * would put the same failure in the feed twice.
+ */
+function say(
+  followUp: SqlPending['followUp'],
+  answer: DatabaseResultView,
+  capabilities: TabPluginServerCapabilities,
+): void {
+  if (answer.kind === 'query' && answer.report) {
+    // The options are carried only when there is a file to carry: a line that has nothing to open
+    // says so by having no link on it, which is what a line without one already does.
+    if (answer.report.file) capabilities.notifyUser(answer.report.text, { openFile: answer.report.file });
+    else capabilities.notifyUser(answer.report.text);
+    return;
+  }
+  if (followUp !== 'console' || answer.kind !== 'write' || answer.error) return;
+  capabilities.notifyUser(changedOutcome(answer.changed));
 }

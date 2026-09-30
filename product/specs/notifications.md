@@ -174,7 +174,10 @@ These event types can produce a notification line:
   was typed.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
-  neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled
+  neither the event type, nor the tab it is attributed to, nor any tab to jump to. It may add one
+  link to a file, which is how a plugin offers something too long to read in place — the `sql` tab
+  uses it for the whole result of a query that returned too many rows for the line (see
+  [[sql-database]]). A line with no file has no link on it. The bundled
   audio plugin uses it to name a track it had to drop from a playlist because the browser could not
   decode it (see [[audio-tab]]).
 - **`launch-refused`** — a harness or agent launch was refused because its name is already in use:

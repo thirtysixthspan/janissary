@@ -11,7 +11,7 @@ import { databaseFileExists, getConnection, isConnectionOpen } from '../connecti
 import { errorText } from '../error-text.js';
 import { DatabaseBrowserState, databaseRefs, lastOpenedDatabase } from './browser-state.js';
 import { readStatement } from './console-read.js';
-import { exportRows } from './export.js';
+import { exportRows, openResultFile } from './export.js';
 import { runGrid, totals, unfilteredTotal } from './grid.js';
 import { RowKeyStore } from './row-keys.js';
 import { objectColumns, hasObject, schemaObjects } from './schema.js';
@@ -174,7 +174,13 @@ export class DatabaseBrowser {
     }
     try {
       if (returnsRows) {
-        this.record({ kind: 'query', requestId, database, grid: readStatement(opened.handle, sql) });
+        // A read is reported as well as drawn: the grid is one page of the result and the report is
+        // the result, and a statement long enough to need a file for the whole of it is exactly the
+        // one a user will want to keep. The writer is opened only if the result turns out to be long.
+        const { grid, report } = readStatement(
+          opened.handle, sql, () => openResultFile(database, Date.now()),
+        );
+        this.record({ kind: 'query', requestId, database, grid, report });
         return;
       }
       opened.handle.exec(sql);

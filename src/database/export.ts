@@ -20,6 +20,20 @@ import { dbExportDir } from '../connections.js';
 
 export const EXPORT_ROW_LIMIT = 1_000_000;
 
+// A result file holds a statement's rows rather than an export's, and the same ceiling bounds it: a
+// query of ten million rows is not something to write to disk on the strength of a notification.
+export const RESULT_ROW_LIMIT = 1_000_000;
+
+/** A file a result is streaming into, opened only once a result has proved long. */
+export type ResultWriter = {
+  path: string;
+  write(chunk: string): void;
+  end(trailer: string): void;
+};
+
+/** What opens one, called only when a result turns out to need it and answering nothing if it cannot. */
+export type OpenResult = () => ResultWriter | undefined;
+
 export type ExportOutcome =
   | { ok: true; path: string; name: string; size: string; rows: number }
   | { ok: false; error: string };
@@ -129,4 +143,36 @@ export function exportRows(
   } catch (error) {
     return { ok: false, error: errorText(error) };
   }
+}
+
+/**
+ * A writer for a statement's whole result, beside the exports.
+ *
+ * A notification that links somewhere has to have somewhere to point, and a result is not an export —
+ * it is not a filtered view of one object and it is not CSV — but it is the same kind of thing: a
+ * file the user asked for by running a statement, in the directory a user would look in for one. The
+ * name carries a timestamp rather than a number, because a result is not numbered against its
+ * predecessors: two statements that both return a great many rows are two different results, and a
+ * link on the older notification has to keep opening the older one.
+ *
+ * A file that cannot be opened returns nothing, and the caller falls back to the shortened result on
+ * its own rather than failing a statement that ran perfectly well.
+ */
+export function openResultFile(databaseName: string, at: number): ResultWriter | undefined {
+  const dir = exportDir();
+  const stamp = new Date(at).toISOString().replaceAll(/[:.]/gu, '-');
+  const name = `${safeFileName(databaseName) ?? 'database'}-result-${stamp}.txt`;
+  const file = path.join(dir, name);
+  let handle: number;
+  try {
+    mkdirSync(dir, { recursive: true });
+    handle = openSync(file, 'w');
+  } catch {
+    return undefined;
+  }
+  return {
+    path: file,
+    write: (chunk) => { writeSync(handle, chunk); },
+    end: (trailer) => { writeSync(handle, trailer); closeSync(handle); },
+  };
 }

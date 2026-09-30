@@ -9,7 +9,7 @@ import {
 import type { DatabaseResultView, DatabasesView } from '../api.js';
 import { activate } from './activate.js';
 import type { SqlPayload } from './shared.js';
-import { MAX_LOG } from './tabs.js';
+
 
 const REFS = [{ name: 'shop', exists: true, open: true }, { name: 'blog', exists: true, open: false }];
 
@@ -115,7 +115,6 @@ function grid(over: Partial<SqlPayload['grid']> = {}) {
       offset: 0,
       pageSizes: [50, 100, 500],
       grid: grid(),
-      log: [],
       exports: [],
       error: null,
       pending: null,
@@ -264,24 +263,9 @@ describe('sql plugin notifications', () => {
     expect(after.grid?.rows).toHaveLength(1);
   });
 
-  it('puts each write on the log in order, newest first', () => {
-    const fixture = fakeCapabilities();
-    openTab(fixture);
-    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
-    let tab = lastPayload(fixture);
-    for (const sql of ['UPDATE orders SET status = ?', 'DELETE FROM logs']) {
-      fixture.activation.intent(
-        { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'paid' }, tabPayload: tab },
-        fixture.capabilities,
-      );
-      const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
-      deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql, parameters: ['paid'], changed: 1 }]);
-      tab = lastPayload(fixture);
-    }
-    expect(tab.log.map((entry) => entry.sql)).toEqual(['DELETE FROM logs', 'UPDATE orders SET status = ?']);
-  });
-
-  it('logs a statement that failed too, since a log of successes would not say what happened', () => {
+  it('keeps no log of the statements a tab has run', () => {
+    // The panel that read the log is gone and so is the line under the prompt, so a list of every
+    // statement the tab ever ran would be broadcast on every update for nothing.
     const fixture = fakeCapabilities();
     openTab(fixture);
     deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
@@ -292,29 +276,7 @@ describe('sql plugin notifications', () => {
     );
     const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
     deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: 'UPDATE nope', parameters: [], changed: 0, error: 'no such table: nope' }]);
-    const after = lastPayload(fixture);
-    expect(after.log).toEqual([{ sql: 'UPDATE nope', changed: 0, error: 'no such table: nope' }]);
-    expect(after.error).toBe('no such table: nope');
-  });
-
-  it('keeps the newest fifty statements and drops the oldest past that', () => {
-    const fixture = fakeCapabilities();
-    openTab(fixture);
-    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
-    let tab = lastPayload(fixture);
-    for (let run = 0; run < MAX_LOG + 3; run += 1) {
-      fixture.activation.intent(
-        { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: tab },
-        fixture.capabilities,
-      );
-      const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
-      deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: `UPDATE t SET v = ${run}`, parameters: [], changed: 1 }]);
-      tab = lastPayload(fixture);
-    }
-    expect(tab.log).toHaveLength(MAX_LOG);
-    // The oldest three are gone, and the newest is the last one run.
-    expect(tab.log[0]?.sql).toBe(`UPDATE t SET v = ${MAX_LOG + 2}`);
-    expect(tab.log.at(-1)?.sql).toBe('UPDATE t SET v = 3');
+    expect('log' in lastPayload(fixture)).toBe(false);
   });
 
   it('re-issues a request whose answer never arrived, rather than waiting forever', () => {
@@ -459,7 +421,6 @@ describe('sql plugin answering a request before it returns', () => {
     const writeId = (fixture.actions.at(-1) as { requestId: string }).requestId;
     deliver(fixture, [{ kind: 'write', requestId: writeId, database: 'shop', sql: 'UPDATE orders SET status = ?', parameters: ['paid'], changed: 1 }]);
     const payload = lastPayload(fixture);
-    expect(payload.log.map((entry) => entry.sql)).toEqual(['UPDATE orders SET status = ?']);
     expect(payload.pending).toBeNull();
     expect(payload.grid?.rows).toHaveLength(1);
   });
@@ -516,7 +477,9 @@ describe('sql plugin answering a request before it returns', () => {
     expect(payload.error).toBeNull();
     expect(payload.object).toBe('t');
     expect(payload.grid?.rows).toHaveLength(1);
-    expect(payload.log.map((entry) => entry.sql)).toEqual([sql]);
+    // The statement reported what it changed, and nothing about the table it made: the tab read that
+    // back from the schema rather than from a line under the prompt.
+    expect(fixture.notifyUser.mock.calls).toEqual([['OK.']]);
   });
 
   // A grid write is one cell value in a table that already exists, so it cannot have changed the
@@ -841,7 +804,7 @@ describe('sql plugin intents', () => {
   // A constraint the database itself enforces is an answer, not a failure of this plugin. The host
   // reports anything thrown out of an intent as a plugin failure, which disabled `sql` and closed
   // every one of its tabs — so a user who left one required column alone lost the tab they were in.
-  it('draws a refused insert as a message and a history entry, and asks for no re-read', () => {
+  it('draws a refused insert as a message and a notification, and asks for no re-read', () => {
     const refused = 'NOT NULL constraint failed: notes.required';
     const fixture = fakeCapabilities(emptyView(), (action) => {
       const { requestId } = action as { requestId: string };
@@ -854,7 +817,6 @@ describe('sql plugin intents', () => {
     const payload = lastPayload(fixture);
     expect(payload.error).toBe(refused);
     expect(payload.grid).not.toBeNull();
-    expect(payload.log).toEqual([{ sql: '', changed: 0, error: refused }]);
     expect(fixture.actions.slice(1).map((action) => action.action)).toEqual(['insertRow']);
     expect(fixture.notifyUser.mock.calls).toEqual([[refused]]);
   });
@@ -954,6 +916,76 @@ describe('a failure reported to the notifications feed', () => {
     expect(said(fixture)).toHaveLength(1);
     intent('refresh', {}, fixture, basePayload());
     expect(said(fixture)).toHaveLength(2);
+  });
+});
+
+/**
+ * A statement's result is a notification rather than a line in the tab: a short result is the whole
+ * of it, and a long one is a shortening with a file beside it — the arrangement an auto-approved
+ * permission prompt's screen capture already uses.
+ */
+describe("a statement's result reported to the notifications feed", () => {
+  const said = (fixture: ReturnType<typeof fakeCapabilities>) => fixture.notifyUser.mock.calls;
+
+  /**
+   * A host whose `run` answers with whatever the case needs. The statement has to be the shape the
+   * answer is — a `SELECT` is what the host answers with rows, anything else with a count.
+   */
+  function running(answer: DatabaseResultView): ReturnType<typeof fakeCapabilities> {
+    const sql = answer.kind === 'query' ? 'SELECT 1' : 'DELETE FROM orders';
+    const fixture = fakeCapabilities(emptyView(), (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'run') return { ...answer, requestId } as DatabaseResultView;
+    });
+    openTab(fixture);
+    intent('run', { sql }, fixture);
+    return fixture;
+  }
+
+  it('says a short result outright, with nothing to open', () => {
+    const fixture = running({
+      kind: 'query', database: 'shop', grid: grid(),
+      report: { text: 'id\tstatus\n1\tpaid\n(1 row)' },
+    });
+    expect(said(fixture)).toEqual([['id\tstatus\n1\tpaid\n(1 row)']]);
+  });
+
+  it('says a long result shortened, and links the file holding all of it', () => {
+    const file = '/tmp/project/.janissary/db/exports/shop-result-2026-01-01T00-00-00-000Z.txt';
+    const fixture = running({
+      kind: 'query', database: 'shop', grid: grid(),
+      report: { text: 'id\n1\n(9,000 rows — first 40 shown)', file },
+    });
+    expect(said(fixture)).toEqual([['id\n1\n(9,000 rows — first 40 shown)', { openFile: file }]]);
+  });
+
+  it('says what a statement that changed rows did', () => {
+    const fixture = running({ kind: 'write', database: 'shop', sql: 'DELETE FROM orders', parameters: [], changed: 3 });
+    expect(said(fixture)).toEqual([['3 rows changed.']]);
+  });
+
+  // A statement that failed is already reported as a failure, and saying it a second time as a count
+  // would put one failure in the feed twice.
+  it('says a failed statement once, as the failure', () => {
+    const fixture = fakeCapabilities(emptyView(), (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'run') {
+        return { kind: 'write', requestId, database: 'shop', sql: 'NOPE', parameters: [], changed: 0, error: 'syntax error' };
+      }
+    });
+    openTab(fixture);
+    intent('run', { sql: 'NOPE' }, fixture);
+    expect(said(fixture)).toEqual([['syntax error']]);
+  });
+
+  // A page the tab asked for carries no report, and a write the grid made itself is not a statement
+  // the user typed: neither is something to report.
+  it('says nothing for a page or for a write the grid made itself', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    expect(said(fixture)).toEqual([]);
+    intent('update-cell', { row: 'r1', column: 'status', value: 'x' }, fixture, lastPayload(fixture));
+    expect(said(fixture)).toEqual([]);
   });
 });
 

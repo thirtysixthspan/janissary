@@ -96,10 +96,14 @@ export function createPluginContext(
       }
     },
     // The plugin's own line into the notifications feed, kept distinct from the host's failure path
-    // by its own event type: a plugin says something happened, it never says a plugin broke.
-    notifyUser: (text) => {
+    // by its own event type: a plugin says something happened, it never says a plugin broke. The one
+    // thing the plugin may add is a file for the line to carry, which the host serves from the
+    // plugin's own workspace like any other plugin-registered file.
+    notifyUser: (text, options) => {
       if (!isEnabled()) return;
-      notify(managers, 'plugin-note', origin.label, text);
+      notify(managers, 'plugin-note', origin.label, text, {
+        ...(options?.openFile && { openFile: options.openFile }),
+      });
     },
     openOrFocusTab: (instanceKey, factory) => {
       if (!isEnabled()) return;

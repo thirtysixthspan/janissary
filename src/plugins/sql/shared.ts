@@ -87,13 +87,6 @@ export type SqlGrid = {
   keyless?: boolean;
 };
 
-// One statement the tab ran, and what it did. `changed` is 0 for a statement run through `exec`, which
-// reports no count — the same reason `db sqlite query` answers a write with `OK.` rather than a
-// number. `error` is the failure, and an entry carrying one is the record of a statement that did not
-// work, which is the half of a log that is worth keeping.
-export type SqlConsoleResult = { sql: string; changed: number; error?: string };
-
-
 // One finished export. `ref` is the authenticated `/open/<id>` reference the host issued, minted
 // once when the file was registered; the client turns it into a download URL with `resourceUrl`.
 export type SqlExport = { name: string; size: string; rows: number; ref: string };
@@ -132,11 +125,8 @@ export type SqlPayload = {
   // accepts one read the same list rather than two copies of it.
   pageSizes: number[];
   grid: SqlGrid | null;
-  // Every statement the tab has run, newest first, capped server-side. The last entry is what the
-  //   console line under the prompt reports; the rest are the session, readable rather than
-  // reconstructable from memory.
-  log: SqlConsoleResult[];
   exports: SqlExport[];
+
   error: string | null;
   pending: SqlPending | null;
 };
@@ -245,11 +235,6 @@ function isExport(value: unknown): value is SqlExport {
   return isRecord(value) && isString(value.name) && isString(value.size) && typeof value.rows === 'number' && isString(value.ref);
 }
 
-function isConsoleResult(value: unknown): value is SqlConsoleResult {
-  return isRecord(value) && isString(value.sql) && typeof value.changed === 'number'
-    && (value.error === undefined || isString(value.error));
-}
-
 function isPending(value: unknown): value is SqlPending {
   if (!isRecord(value) || !isString(value.id) || !isString(value.followUp)) return false;
   return FOLLOW_UPS.has(value.followUp as SqlPending['followUp']);
@@ -279,7 +264,6 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
     [value.databases, isListOf(isRef)],
     [value.exports, isListOf(isExport)],
     [value.grid, isOptional(isGrid)],
-    [value.log, isListOf(isConsoleResult)],
     [value.error, isOptional(isString)],
     [value.pending, isOptional(isPending)],
   ];
