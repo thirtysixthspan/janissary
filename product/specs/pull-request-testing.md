@@ -10,7 +10,9 @@ The run takes its instructions for preparing the workspace from `master`, and it
 
 ### Edge cases
 
-After the pull request's own steps, the run writes and runs further steps for edge cases in the behavior the pull request changes: empty states, error paths, cancelling, repeating an action, unexpected input, and interaction with neighbouring features. There is no cap on their number, and nothing the plan defers as out of scope is tested. A generated step whose expected result no plan, spec, or description states fails only on plainly broken behavior, such as an uncaught error, a hang, a crash, or lost data; anything else it shows is reported as unspecified and not recorded.
+After the pull request's own manual steps, the run writes and runs up to five further steps for use cases and edge cases in the behavior the pull request changes: realistic uses the manual steps skip, empty states, error paths, cancelling, repeating an action, unexpected input, and interaction with neighbouring features. When more cases apply, it keeps the five most likely to expose a defect. A small change may get fewer, and nothing the plan defers as out of scope is tested.
+
+The run adds those steps to the pull request description in an "Additional test cases" section, placed after "How to verify", so a reviewer can see what was covered and repeat it by hand. Each step gives its actions, inputs, and expected result, and the section names the commit it was written for. A later run replaces that section rather than adding a second one. Nothing else in the description changes. A generated step whose expected result no plan, spec, or description states fails only on plainly broken behavior, such as an uncaught error, a hang, a crash, or lost data; anything else it shows is reported as unspecified and not recorded.
 
 When a pull request carries no testing steps at all, the run writes steps from its plan and diff, runs them, and records that the description lacks testing steps.
 
@@ -24,4 +26,4 @@ Failures are recorded in the [[pull-request-review]] backlog on the pull request
 
 ### What a run never does
 
-A run never fixes what it finds, never edits the pull request's title or description, never posts to the pull request, never runs the project's quality tooling, and never merges or closes the pull request. Steps that pass appear only in the run's report, which lists every step with its source and result, and every step not tested with its reason.
+A run never fixes what it finds, never edits the pull request's title, never edits its description beyond the "Additional test cases" section, never posts to the pull request, never runs the project's quality tooling, and never merges or closes the pull request. Steps that pass appear only in the run's report, which lists every step with its source and result, and every step not tested with its reason.

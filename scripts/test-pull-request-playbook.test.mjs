@@ -63,6 +63,22 @@ describe('the test-pull-request playbook', () => {
     expect(playbook).toContain('is never a rerun candidate and never intermittent');
   });
 
+  it('writes at most five additional steps of its own', () => {
+    expect(playbook).toContain('Write **at most five**.');
+    expect(playbook).not.toContain('There is no cap.');
+  });
+
+  // The description edit is the run's only write to GitHub. It goes through a body file under the
+  // scratch root, so the stop task removes it and the backlog commit can never stage it, and it
+  // stays inside the run's own section so the author's text and the title are never rewritten.
+  it('adds its steps to the description only through its own section', () => {
+    expect(playbook).toContain('gh pr edit <number> --body-file ./temp/test-pull-request/pr-body.md');
+    expect(playbook).toContain('`### Additional test cases`');
+    expect(playbook).toContain('Every other character of the body stays exactly as it was.');
+    expect(playbook).toContain('Never pass `--title`.');
+    expect(playbook).not.toMatch(/gh pr edit [^\n]*--body /);
+  });
+
   it("never sends the reader to the project's own copy of a task", () => {
     expect(playbook).not.toContain("the project's own copy");
   });
