@@ -42,7 +42,9 @@ The feed shows a single line for the run of repeats, with ` (N times)` after the
 example `● 8:34pm janus: Could not pull: network unreachable (3 times)`. The line carries the time
 and tab link of the latest repeat. File links are not replaced but gathered: the line carries one
 file link for every repeat that had one, oldest first, so a run of seven auto-approved permission
-prompts shows seven capture icons and each opens its own capture. A different notification in
+prompts shows seven capture icons and each opens its own capture. The icons sit side by side as one
+group, with no space between them; the group keeps its usual spacing from the tab link before it
+and the message after it. A different notification in
 between starts a new line, so only sequential repeats fold.
 
 A folded run takes one place in the queue, so a flood of one message does not push the rest of the
