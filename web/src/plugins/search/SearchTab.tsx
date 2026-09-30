@@ -70,6 +70,14 @@ export function SearchTab({
     void capabilities.intent('open', { path: row.path, line: row.line });
   }, [capabilities, rows]);
 
+  // One click goes through the shared list selection, and its own answer says whether the row opens.
+  // That is the same arrangement the sessions and conversations lists use, and it is what keeps the
+  // focus the selection performs and the open the tab performs from being two independent steps —
+  // `rowClicked` focuses the list, which is why clicking a row works at all.
+  const onRowClick = useCallback((index: number) => {
+    if (rowClicked(index)) onOpen(index);
+  }, [onOpen, rowClicked]);
+
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (navigate(event.key)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selected !== null) {
@@ -124,8 +132,7 @@ export function SearchTab({
         <ResultTable
           rows={rows}
           selected={selected}
-          onOpen={onOpen}
-          onSelect={(index) => { rowClicked(index); }}
+          onRowClick={onRowClick}
           state={payload.state}
           query={query}
           message={payload.message}

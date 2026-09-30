@@ -134,6 +134,19 @@ describe('SearchTab', () => {
     expect(intent).toHaveBeenCalledWith('open', { path: 'src/a.ts', line: 12 });
   });
 
+  it('opens a match on a single click and leaves that row highlighted', () => {
+    const { container, intent } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
+    }));
+    const rows = container.querySelectorAll('.search-row');
+    fireEvent.click(rows[1]!);
+    // The selection is what the shared list selection performs — including focusing the list — so
+    // opening and highlighting are one click rather than two independent steps.
+    expect(intent).toHaveBeenCalledWith('open', { path: 'b.ts', line: 2 });
+    expect(container.querySelectorAll('.search-row.selected')).toHaveLength(1);
+    expect((container.querySelectorAll('.search-row')[1] as HTMLElement).className).toContain('selected');
+  });
+
   it('opens the row the arrows moved to, not the first', () => {
     const { container, intent } = renderTab(payload({
       rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],

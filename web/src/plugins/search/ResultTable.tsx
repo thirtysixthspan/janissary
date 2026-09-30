@@ -4,8 +4,9 @@ import type { SearchMatch } from '@shared/plugins/search/shared';
 export type ResultTableProperties = {
   rows: readonly SearchMatch[];
   selected: number | null;
-  onOpen(index: number): void;
-  onSelect(index: number): void;
+  // A click on the row at this index. The selection and the open are the handler's business, so the
+  // table reports the click and holds no opinion about either.
+  onRowClick(index: number): void;
   state: 'searching' | 'done' | 'error';
   query: string;
   message: string;
@@ -24,8 +25,8 @@ function ContextLine({ text, line }: { text: string; line: number }) {
 // context lines above it, the match itself, and the two below. The context carries its own line
 // numbers, derived from the header's and the position within the block, so a reader can see where
 // every line sits without the server sending five numbers per row to draw one.
-function SearchRow({ row, index, selected, onOpen }: {
-  row: SearchMatch; index: number; selected: boolean; onOpen: () => void;
+function SearchRow({ row, index, selected, onClick }: {
+  row: SearchMatch; index: number; selected: boolean; onClick: () => void;
 }) {
   const first = row.line - row.above.length;
   return (
@@ -34,7 +35,7 @@ function SearchRow({ row, index, selected, onOpen }: {
       data-index={index}
       role="button"
       tabIndex={-1}
-      onClick={onOpen}
+      onClick={onClick}
     >
       <div className="search-row-header">
         <span className="search-row-path">{row.path}</span>
@@ -58,7 +59,7 @@ function SearchRow({ row, index, selected, onOpen }: {
 // settled with nothing, or a scan failed. Rows and the searching state coexist, because a scan that
 // is still finding matches is showing the ones it has already found.
 export function ResultTable({
-  rows, selected, onOpen, onSelect, state, query, message,
+  rows, selected, onRowClick, state, query, message,
 }: ResultTableProperties) {
   if (rows.length === 0) {
     if (state === 'error') return <div className="search-empty">{message}</div>;
@@ -77,7 +78,7 @@ export function ResultTable({
           row={row}
           index={index}
           selected={selected === index}
-          onOpen={() => { onSelect(index); onOpen(index); }}
+          onClick={() => { onRowClick(index); }}
         />
       ))}
       {state === 'searching' && <div className="search-empty">Searching…</div>}
