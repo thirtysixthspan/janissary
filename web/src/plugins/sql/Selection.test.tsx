@@ -27,14 +27,37 @@ function headers(): HTMLElement[] {
   return [...document.querySelectorAll('td.sql-row-head')] as HTMLElement[];
 }
 
-const press = (key: string, shiftKey = false) => fireEvent.keyDown(document.body, { key, shiftKey });
+/**
+ * The rows with the focus, which is the only state in which the grid answers a key.
+ *
+ * `fireEvent` answers `false` for a keypress something claimed, so the two questions — did the grid
+ * take the key, and did the frame swallow the browser's own — are the same question asked twice.
+ */
+function focused(): void {
+  (screen.getByLabelText('Results') as HTMLElement).focus();
+}
+
+const press = (key: string, shiftKey = false) => {
+  focused();
+  return fireEvent.keyDown(screen.getByLabelText('Results'), { key, shiftKey });
+};
 
 function clipboardThat(write: ReturnType<typeof vi.fn>) {
   vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: write } });
 }
 
-/** The clipboard keypress, the way a user with a keyboard would make it. */
+/**
+ * The clipboard keypress, the way a user with a keyboard would make it. The rows hold the focus,
+ * because they are the pane whose copy chord this is: text selected in the command bar is the user's,
+ * and the grid does not answer over it.
+ */
 function copyKey() {
+  focused();
+  return copyKeyOutside();
+}
+
+/** The same keypress without moving the focus, for the cases about whose focus it is. */
+function copyKeyOutside() {
   const event = new KeyboardEvent('keydown', { key: 'c', metaKey: true, cancelable: true });
   globalThis.dispatchEvent(event);
   return event;
@@ -269,6 +292,21 @@ describe('copying a run of rows', () => {
     fireEvent.mouseDown(headers()[0] as HTMLElement);
     copyKey();
     expect(write).not.toHaveBeenCalled();
+  });
+
+  // The grid's copy chord is the grid's. The window listener is there so a key pressed on a row's own
+  // control still copies, and it is the focus that tells it whether the keystroke was the grid's at all.
+  it('does not take the copy key while something outside the rows has the focus', () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    clipboardThat(write);
+    shown();
+    const outside = document.createElement('input');
+    document.body.append(outside);
+    outside.focus();
+    const event = copyKeyOutside();
+    expect(write).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+    outside.remove();
   });
 
   it('leaves a text selection inside a cell to the browser, so Copy still gets the word', () => {

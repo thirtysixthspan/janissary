@@ -23,6 +23,7 @@ export function DataGrid({
   payload, capabilities,
   inserting = false, onInserting = () => {},
   choosingColumns = false, onChoosingColumns = () => {},
+  frameRef, onEnter = () => {},
 }: {
   payload: SqlPayload;
   capabilities: TabPluginClientCapabilities;
@@ -35,6 +36,13 @@ export function DataGrid({
   onInserting?(open: boolean): void;
   choosingColumns?: boolean;
   onChoosingColumns?(open: boolean): void;
+  /**
+   * The scroll frame's ref, when something above the grid needs to focus it — the tab frame, which
+   * hands `Tab` from the command bar down to the rows. A grid rendered on its own keeps its own.
+   */
+  frameRef?: React.RefObject<HTMLDivElement | null>;
+  /** Hand focus back to the command bar: a bare `Tab` in the grid returns to the other pane. */
+  onEnter?(): void;
 }) {
   const object = payload.objects.find((entry) => entry.name === payload.object);
   const [editing, setEditing] = useState<{ row: string; column: string } | null>(null);
@@ -54,7 +62,8 @@ export function DataGrid({
   // row, so what is rendered is a list of names and the position each one holds in the cells.
   const shown = visibleColumns(grid?.columns ?? [], payload.hidden);
   const setHidden = (hidden: string[]) => send('set-columns', { hidden });
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const ownRef = useRef<HTMLDivElement>(null);
+  const scrollRef = frameRef ?? ownRef;
   const selection = useGridSelection({
     grid, active: capabilities.active, containerRef: scrollRef, onError: setCopyError,
   });
@@ -102,7 +111,19 @@ export function DataGrid({
         </div>
       )}
 
-      <div className="sql-grid-scroll" ref={scrollRef}>
+      <div
+        className="sql-grid-scroll"
+        ref={scrollRef}
+        tabIndex={0}
+        aria-label="Results"
+        onKeyDown={(event) => {
+          // A bare `Tab` in the grid comes back to the command bar; a held modifier is the host's and
+          // walks out of the plugin tab, which is what it does from anywhere else in it.
+          if (event.key !== 'Tab' || event.shiftKey || event.ctrlKey || event.metaKey || event.altKey) return;
+          event.preventDefault();
+          onEnter();
+        }}
+      >
         <table className="sql-grid">
           <thead>
             <tr>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { CommandBarShell, useCommandBarKeys } from '../api';
 
 // How many statements the console recalls. Long enough to walk back through a session of
@@ -10,10 +10,14 @@ export type SqlConsoleProperties = {
   // input only claims focus on mount when the tab is actually on screen.
   active: boolean;
   busy: boolean;
+  // The field, whose ref the frame holds so it can bring focus back here from the grid.
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   // The text in the field, held by the frame rather than here, so it survives a re-read of the grid.
   value: string;
   onValue(next: string): void;
   onSend(sql: string): void;
+  /** Hand focus to the grid: a bare `Tab` leaves the bar for the other pane of this tab. */
+  onLeave(): void;
 };
 
 // The SQL console: the host's own command bar, so it looks and behaves like every other line of text
@@ -24,13 +28,15 @@ export type SqlConsoleProperties = {
 // The prompt is labelled `SQL`, because a bare `>` in a tab full of grids reads as the application's
 // own command line and this one is not that.
 //
-// The bar is also the only way back through what this tab has run: the shared keymap walks the
-// console's own recall list on `ArrowUp` and `ArrowDown`, and nothing else keeps a record of it.
+// Its keys are the shared keymap's, and they are the bar's own: `ArrowUp` and `ArrowDown` walk the
+// console's recall list, `Enter` sends, `Shift+Enter` starts a line, and nothing pressed here also
+// reaches the grid above. The one key the bar claims for itself is a bare `Tab`, which moves focus to
+// the grid and comes back on the next one — the tab has two panes and this is how a user crosses to
+// the other.
 export function SqlConsole({
-  active, busy, value, onValue, onSend,
+  active, busy, inputRef, value, onValue, onSend, onLeave,
 }: SqlConsoleProperties) {
   const [history, setHistory] = useState<string[]>([]);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Oldest first, which is the order the shared keymap's `history` is walked in: it steps back from
   // the end of the list, so a list kept newest-first recalled the oldest statement first. Keeping the
@@ -43,11 +49,22 @@ export function SqlConsole({
 
   const bar = useCommandBarKeys({ value, setValue: onValue, inputRef, history, onSubmit: send });
 
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // A held modifier is never this key's: `Shift+Tab` is the host's, and it walks out of a plugin
+    // tab whatever is focused inside it.
+    if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      onLeave();
+      return;
+    }
+    bar.onKeyDown(event);
+  };
+
   return (
     <CommandBarShell
       value={value}
       onChange={onValue}
-      onKeyDown={bar.onKeyDown}
+      onKeyDown={onKeyDown}
       inputRef={inputRef}
       ghost={bar.ghost}
       busy={busy}

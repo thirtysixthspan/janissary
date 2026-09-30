@@ -86,8 +86,12 @@ export function useGridSelection({
     // The keyboard route to the same copy, for the muscle memory of a spreadsheet. Cells are not
     // rendered inside a button, so a user who selected text inside a cell and presses Copy still
     // gets that text from the browser's own handler first; this only fires when nothing else did.
+    // It answers only while the grid has the focus, for the same reason its other keys do: text
+    // selected in the command bar is the user's, and copying the highlighted rows over it would
+    // replace what they selected with what they did not.
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key !== 'c') return;
+      if (!containerRef.current?.contains(document.activeElement)) return;
       if (selectedWithinOneCell()) return;
       if (range === null || !grid) return;
       const text = selectionToTsv(grid.rows, range);
@@ -98,11 +102,18 @@ export function useGridSelection({
     };
     globalThis.addEventListener('keydown', onKey);
     return () => globalThis.removeEventListener('keydown', onKey);
-  }, [active, range, grid, onError]);
+  }, [active, range, grid, onError, containerRef]);
 
   useEffect(() => {
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
+      // The grid's keys are its own, and "its own" means the grid has the focus. The listener sits
+      // on the window so a key pressed on a row's delete control or a foreign-key cell still moves
+      // the highlight, which is why it asks where the focus is rather than taking the target's word
+      // for it — without that, an `ArrowUp` in the command bar recalls a statement and moves the
+      // highlighted row in the same press.
+      const frame = containerRef.current;
+      if (!frame?.contains(document.activeElement)) return;
       if (event.key === 'Escape') {
         if (range === null) return;
         event.preventDefault();
@@ -119,7 +130,7 @@ export function useGridSelection({
     };
     globalThis.addEventListener('keydown', onKey);
     return () => globalThis.removeEventListener('keydown', onKey);
-  }, [active, rows, range]);
+  }, [active, rows, range, containerRef]);
 
   return {
     range,

@@ -191,10 +191,24 @@ describe('DataGrid filtering', () => {
 });
 
 describe('DataGrid keyboard', () => {
-  // The listener is on the window, so the event goes to the document and bubbles up — dispatched
+  // The frame is what holds the focus, and it is what the keys are dispatched on — dispatched
   // through fireEvent rather than raw so React flushes the row the key moves.
-  const press = (key: string) => { fireEvent.keyDown(document.body, { key }); };
+  const press = (key: string) => {
+    const frame = screen.getByLabelText('Results') as HTMLElement;
+    frame.focus();
+    fireEvent.keyDown(frame, { key });
+  };
   const highlighted = () => [...document.querySelectorAll('tr.selected')] as HTMLElement[];
+
+  it('can hold the focus, and says what it is holding it', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const frame = screen.getByLabelText('Results') as HTMLElement;
+    // The tab has two panes, and this is the other one: it has to be reachable, and to say what it is
+    // once it has the focus, or a screen reader user is told only that something is focused.
+    expect(frame.tabIndex).toBe(0);
+    expect(frame.getAttribute('aria-label')).toBe('Results');
+  });
 
   it('moves the highlighted row with the arrows', () => {
     const { capabilities } = makeCapabilities();
@@ -212,6 +226,19 @@ describe('DataGrid keyboard', () => {
     // The first row is highlighted because the page arrived, not because a key was pressed, so
     // nothing moved at all.
     expect(highlighted().map((row) => row.textContent)).toEqual(['1paid']);
+  });
+
+  it('hands focus back to the command bar on a bare Tab, and leaves a held one alone', () => {
+    const onEnter = vi.fn();
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} onEnter={onEnter} />);
+    const frame = screen.getByLabelText('Results') as HTMLElement;
+    // `fireEvent` answers `false` for a keypress something claimed, which is the same question asked
+    // the other way round.
+    expect(fireEvent.keyDown(frame, { key: 'Tab' })).toBe(false);
+    expect(onEnter).toHaveBeenCalledOnce();
+    expect(fireEvent.keyDown(frame, { key: 'Tab', shiftKey: true })).toBe(true);
+    expect(onEnter).toHaveBeenCalledOnce();
   });
 });
 

@@ -8,6 +8,8 @@ import { grid, makeCapabilities, payload } from './fixture';
 // lays out nor does.
 beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
+const highlighted = () => [...document.querySelectorAll('tr.selected')] as HTMLElement[];
+
 describe('SqlTab layout', () => {
   // A harness tab is one metadata row across the full width and one body below it. This is the same
   // shape, rebuilt with the plugin's own classes because a plugin may not reach the host's.
@@ -263,6 +265,39 @@ describe('SqlTab console', () => {
       <SqlTab payload={payload({ pending: { id: 'q1', followUp: 'query' } })} capabilities={capabilities} />,
     );
     expect(container.querySelector('.dot.busy')).toBeTruthy();
+  });
+});
+
+// The tab is two panes and `Tab` crosses between them, which only the frame knows about: neither pane
+// can move focus without being told where the other one is.
+describe('Tab across the two panes of the sql tab', () => {
+  const bar = () => screen.getByLabelText('SQL') as HTMLTextAreaElement;
+  const rows = () => screen.getByLabelText('Results') as HTMLElement;
+
+  it('goes from the command bar to the rows and back again', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    bar().focus();
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    expect(document.activeElement).toBe(rows());
+    fireEvent.keyDown(rows(), { key: 'Tab' });
+    expect(document.activeElement).toBe(bar());
+  });
+
+  // The two panes answer different keys with different keys, so a keystroke belongs to whichever one
+  // has the focus. `ArrowUp` in the bar recalls a statement; the same key in the rows moves the
+  // highlighted row. Answering both from one press is what this split exists to prevent.
+  it('gives a keypress to the pane that has the focus and to no other', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    bar().focus();
+    fireEvent.keyDown(bar(), { target: bar(), key: 'ArrowUp' });
+    expect(highlighted().map((row) => row.textContent)).toEqual(['1paid']);
+    rows().focus();
+    fireEvent.keyDown(rows(), { key: 'ArrowUp' });
+    expect(highlighted().map((row) => row.textContent)).toEqual(['1paid']);
+    fireEvent.keyDown(rows(), { key: 'ArrowDown' });
+    expect(highlighted().map((row) => row.textContent)).toEqual(['2NULL']);
   });
 });
 

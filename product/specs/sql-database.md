@@ -129,14 +129,17 @@ escapes any `%` or `_` the value itself contains.
 ### Editing
 
 Double-clicking a cell opens an editor; Enter commits it and Escape leaves it without changing
-anything. The grid also answers the keyboard on its own: the highlighted row starts on the first row
-of whatever page arrives, `ArrowUp` and `ArrowDown` move it a row at a time and stop at the ends
-rather than wrapping, `Home` and `End` reach the first and last row of the page, and `Escape` leaves
-the grid with nothing highlighted. The page scrolls to follow the highlighted row. The left and right
-arrows are not the grid's — a run of rows has no column to move along — so they are left to the
+anything. The rows answer the keyboard while the rows have the focus: the highlighted row starts on
+the first row of whatever page arrives, `ArrowUp` and `ArrowDown` move it a row at a time and stop at
+the ends rather than wrapping, `Home` and `End` reach the first and last row of the page, and `Escape`
+leaves the grid with nothing highlighted. The page scrolls to follow the highlighted row. The left and
+right arrows are not the grid's — a run of rows has no column to move along — so they are left to the
 application, which scrolls the frame the way it otherwise would. The highlight is back on the first
-row after a new query, so it never sits on a row that now holds other values. `Tab` is left to the
-application as well, which walks out of the tab as it does from anywhere else. A cell holds either text
+row after a new query, so it never sits on a row that now holds other values.
+
+A keypress belongs to whichever of the two panes has the focus, and to no other: the copy key with
+the command bar focused copies what is selected in the command bar, and `ArrowUp` in it recalls a
+statement rather than moving the highlighted row. A cell holds either text
 or null, and they are drawn differently: a null reads `NULL` in a muted style rather than as a blank
 cell, so an empty string and a null are never confused. The editor has a **NULL** toggle, so writing a
 null and writing the four characters `NULL` are two different acts. The toggle is part of the value
@@ -246,6 +249,17 @@ Enter sends what is typed, and the host decides whether that was a read or a wri
 `db sqlite query` uses: a statement that returns rows fills the grid, and anything else is a write
 whose outcome is reported as a notification, as described below. Nothing is written under the prompt.
 Arrow keys walk back through the last fifty statements typed in this tab.
+
+The console's keys are the agent command bar's, and they are the console's own while it has the focus:
+the left and right arrows move the caret along the line, the up and down arrows walk the fifty
+statements back and forward again, `Enter` sends, and `Shift+Enter` starts a new line. Nothing pressed
+here reaches the rows above — an up arrow recalls a statement and does not also move the highlighted
+row.
+
+`Tab` moves focus from the command bar to the rows, and `Tab` again brings it back to the command bar.
+The tab is two panes and this is how a user crosses between them; `Shift+Tab` is left to the
+application, which walks out of a plugin tab. Unlike the agent command bar, `Tab` here does not
+complete a word: there is nothing in this tab for a word to be completed against.
 
 A statement's result is a **notification**, and the tab says nothing about it. The line under the
 prompt was the first thing anything else typed replaces and the first thing lost when the user looks

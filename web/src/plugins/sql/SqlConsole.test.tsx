@@ -1,29 +1,32 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SqlConsole } from './SqlConsole';
 import { makeCapabilities } from './fixture';
 
-// The console is the host's own command bar and nothing sits beside it. There is no history panel to
-// open, so every key reaches the line, and the line's own recall walk is the only way back through
-// what this tab has run.
-function Console({ onSend }: { onSend(sql: string): void }) {
+// The console is the host's own command bar and nothing sits beside it. Its keys are its own: a bare
+// `Tab` leaves for the grid, and a held modifier is the host's.
+function Console({ onSend, onLeave }: { onSend(sql: string): void; onLeave(): void }) {
   const [value, setValue] = useState('');
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   return (
     <SqlConsole
       active
       busy={false}
+      inputRef={inputRef}
       value={value}
       onValue={setValue}
       onSend={onSend}
+      onLeave={onLeave}
     />
   );
 }
 
 function shown() {
   const { intent } = makeCapabilities();
-  render(<Console onSend={(sql) => intent('run', { sql })} />);
-  return { intent };
+  const onLeave = vi.fn();
+  render(<Console onSend={(sql) => intent('run', { sql })} onLeave={onLeave} />);
+  return { intent, onLeave };
 }
 
 const line = () => screen.getByLabelText('SQL') as HTMLTextAreaElement;
@@ -58,13 +61,21 @@ describe('the SQL command bar', () => {
     expect(line().value).toBe('SELECT 1');
   });
 
-  // With no panel to be modal over, Enter is the line's own key on every press — there is nothing
-  // that can swallow the first one and leave the user pressing it again.
-  it('runs on the first Enter, with nothing between it and the line', () => {
-    const { intent } = shown();
-    fireEvent.change(line(), { target: { value: 'DELETE FROM logs' } });
-    press('Enter');
-    expect(intent).toHaveBeenCalledTimes(1);
-    expect(intent).toHaveBeenCalledWith('run', { sql: 'DELETE FROM logs' });
+  // The tab has two panes, and this is how a user crosses to the other one. The frame above owns
+  // both, so all the bar can say is that it is leaving. `fireEvent` answers `false` for a keypress
+  // something claimed, which is the same question asked the other way round.
+  it('hands focus to the grid on a bare Tab', () => {
+    const { onLeave } = shown();
+    expect(fireEvent.keyDown(line(), { key: 'Tab' })).toBe(false);
+    expect(onLeave).toHaveBeenCalledOnce();
+  });
+
+  // Shift+Tab walks out of a plugin tab, and Ctrl+Tab is the host's too. Neither is this key's, so
+  // neither may be swallowed here.
+  it('leaves a held Tab to the application', () => {
+    const { onLeave } = shown();
+    expect(fireEvent.keyDown(line(), { key: 'Tab', shiftKey: true })).toBe(true);
+    expect(fireEvent.keyDown(line(), { key: 'Tab', ctrlKey: true })).toBe(true);
+    expect(onLeave).not.toHaveBeenCalled();
   });
 });
