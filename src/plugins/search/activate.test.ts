@@ -189,6 +189,38 @@ describe('search plugin activation', () => {
     expect(openInEditor).not.toHaveBeenCalled();
   });
 
+  it('refuses a result whose path escapes the project root', async () => {
+    const { capabilities, updateTab, openInEditor } = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    await settle();
+    const rows = lastPayload(updateTab).rows;
+
+    // The path arrived from the client. `path.join` collapses `..`, so a traversing path would
+    // resolve outside the project and be opened and served — this is the check that stops it.
+    // Only a traversing path can escape: `path.join` treats an absolute path as relative to the
+    // root, so `/etc/passwd` names a file inside the project and is a legitimate result.
+    activation.intent(intent(settledTab, 'open', { path: '../../../etc/passwd', line: 1 }), capabilities);
+    activation.intent(intent(settledTab, 'open', { path: 'b.ts/../../../../etc/shadow', line: 1 }), capabilities);
+
+    expect(openInEditor).not.toHaveBeenCalled();
+    // The tab is untouched: a refused open repaints nothing.
+    expect(lastPayload(updateTab).rows).toEqual(rows);
+  });
+
+  it('still opens a result whose path is inside the project', async () => {
+    const { capabilities, openInEditor } = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    await settle();
+
+    // `path.join` resolves an absolute path against the root, so this names a project file and is
+    // exactly the case the confinement check must not break.
+    activation.intent(intent(settledTab, 'open', { path: '/src/a.ts', line: 3 }), capabilities);
+
+    expect(openInEditor).toHaveBeenCalledWith('/repo/src/a.ts', 3);
+  });
+
   it('clears the query and the rows', async () => {
     const { capabilities, updateTab } = makeCapabilities();
     const activation = searchActivation();

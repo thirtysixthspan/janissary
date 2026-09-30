@@ -13,6 +13,7 @@ import {
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
+import { isInsideRoot } from './files.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -152,8 +153,13 @@ export function createPluginContext(
     // so the tab is de-duplicated, the line is centered, and the file is served by the same
     // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
     // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
+    //
+    // A path outside the launch directory is refused. The capability is this plugin's whole reach
+    // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
+    // plugin holding one could otherwise name any path on the machine and have it opened and served.
     openInEditor: (absPath, line) => {
       if (!isEnabled()) return;
+      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
       managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
     },
     topicData: (topic) => {

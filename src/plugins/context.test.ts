@@ -32,6 +32,7 @@ function makeManagers() {
   const managers = {
     tab: {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
+      launchDir: '/repo',
       ...fakeNotificationsHost(tabs),
     },
     openFile: { runAs: vi.fn(async () => {}) },
@@ -269,6 +270,24 @@ describe('capability revocation', () => {
     expect(edit).toHaveBeenCalledWith(
       'fixture /repo/src/a.ts:42', '/repo/src/a.ts', 'janus', 42,
     );
+  });
+
+  it('refuses a line in a file outside the launch directory', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    // The capability is the plugin's whole reach over the filesystem, so the boundary lives here
+    // rather than in each plugin that asks — a plugin holding one must not be able to name any
+    // path on the machine and have it opened and served.
+    capabilities.openInEditor('/etc/passwd', 1);
+    capabilities.openInEditor('/repo/../etc/passwd', 1);
+    capabilities.openInEditor('/repo-evil/a.ts', 1);
+
+    expect(edit).not.toHaveBeenCalled();
   });
 
   it('does nothing for a revoked plugin asking to open a line', () => {

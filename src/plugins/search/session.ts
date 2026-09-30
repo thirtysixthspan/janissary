@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
+import { isInsideRoot } from '../files.js';
 import { startScan, type ScanHandle, type ScanRead } from './scan.js';
 import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
 
@@ -92,10 +93,14 @@ export class SearchSession {
     this.publish();
   }
 
-  // Put the file a result names on the line that result names, in an editor tab.
+  // Put the file a result names on the line that result names, in an editor tab. The path arrived
+  // from the client, and `path.join` collapses `..`, so it is resolved and checked against the
+  // project root before it goes anywhere: a row's path is one the scan itself produced, and a
+  // client that names anything else gets nothing.
   openMatch(relPath: string, line: number): void {
-    if (this.root === '') return;
-    this.capabilities.openInEditor(path.join(this.root, relPath), line);
+    const target = path.join(this.root, relPath);
+    if (!isInsideRoot(this.root, target)) return;
+    this.capabilities.openInEditor(target, line);
   }
 
   dispose(): void {

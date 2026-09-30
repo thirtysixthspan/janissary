@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Confine the search plugin's open-a-result path to the project root, which a client-supplied relative path can currently escape.
-
-Existing Issue: The `open` intent in the search plugin takes its `path` straight from the client and joins it onto the project root with no confinement, so a crafted path like `../../../etc/passwd` opens a file outside the project, against the tab-plugins spec's promise that "a client cannot choose another plugin, filesystem path, or served-file identity by adding fields to an intent". Severity: 8/10
-
-Existing Risk: 7/10 - Any process that can reach the authenticated local WebSocket can read arbitrary files the user can read by opening them in an editor tab, turning the search tab into a file-disclosure primitive over a boundary the rest of the application holds.
-
-Proposal Risk: 2/10 - The path is checked against the project root before use, so only files the search could have listed can be opened; the residual risk is a path check that is wrong in a way a test would catch.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1481: confine the search plugin's open-a-result path to the project root". In `src/plugins/search/session.ts`, `SearchSession.openMatch` currently does `path.join(this.root, relPath)` on a `relPath` that arrived from the client in the `open` intent, and `path.join` collapses `..` segments, so a path such as `../../../etc/passwd` resolves outside the project. Resolve the joined path and require it to be inside the root before calling `capabilities.openInEditor`: compare `path.resolve(joined)` against `path.resolve(this.root)` with a trailing separator, and return without opening when the resolved path is neither the root itself nor beneath it. Add a case to `src/plugins/search/activate.test.ts` asserting that an `open` intent naming a traversing path calls neither `openInEditor` nor `openPluginTab`, alongside the existing test that a result opens at its line; the existing tests in that file must keep passing unchanged. Note that the same confinement gap exists one level down, in the new `openInEditor` capability in `src/plugins/context.ts`, which accepts any absolute path from any plugin that declares it; consider whether the capability itself should refuse a path outside the launch directory, and if it does, say so in `documentation/developer-documentation/tab-plugins.md` next to the capability's entry so the contract states the boundary rather than leaving each plugin to enforce it. Verify by sending a traversing `open` intent and confirming no tab opens, and a legitimate result path and confirming the editor tab still opens at the requested line.
-
-
 * Handle a rejected project file list in the search scan, which currently surfaces as an unhandled rejection and leaves the tab searching forever.
 
 Existing Issue: `startScan` in `src/plugins/search/scan.ts` calls `void run(runtime)` with no rejection handler, and `run` awaits `options.listFiles()`, so a rejected file list escapes as an unhandled promise rejection while the tab stays in its `searching` state with no rows and no message. Severity: 6/10
