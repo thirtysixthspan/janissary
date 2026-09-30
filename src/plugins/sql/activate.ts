@@ -148,10 +148,10 @@ function changedOutcome(changed: number): string {
 /**
  * Say what a statement the user typed produced.
  *
- * A statement that returned rows carries its result on the answer, shortened and with a file beside
- * it when the whole of it is too long for one line — the same arrangement an auto-approved permission
- * prompt's screen capture uses. A statement that changed rows reports the count, which is always
- * short enough to say outright. Anything else was not a statement the user typed: a write the grid
+ * A statement that returned rows carries its report on the answer: one line saying how many rows
+ * came back, and the file holding the result, which the line links to — the same arrangement an
+ * auto-approved permission prompt's screen capture uses. A statement that changed rows reports the
+ * count, which is always short enough to say outright. Anything else was not a statement the user typed: a write the grid
  * made itself, or a page it asked for, and neither is a report.
  *
  * A statement that failed is not reported here — `report` has already said so, and saying it twice

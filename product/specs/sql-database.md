@@ -281,16 +281,20 @@ the tab reports — a result, a count, or a failure — is formatted like any ot
 attributed to the database's tab, so it reads `● 8:32pm shop: …` with the tab's colour on the dot.
 
 A statement that changed rows reports `OK.` or the number of rows it changed, which is always short
-enough to say outright. A statement that returned rows reports its result: the column names, one
-tab-separated line per row, and the number of rows the statement returned. A result of more than
-forty lines is shortened to the first forty, with the real count beside it, and the notification
-carries a link to a file holding every row — the same arrangement an auto-approved permission
-prompt's screen capture uses. That file is written to
-`.janissary/db/exports/<database>-result-<timestamp>.txt` and is named for when the statement ran, so
-a link on an older notification keeps opening the result that notification is about. A result of more
-than a million rows is written out to that million and the notification says so, because a capped file
-read as a complete one would be worse than a query too large to export. See [[notifications]] for the
-feed.
+enough to say outright. A statement that returned rows reports it in one line — `Query returned 12
+rows.`, `Query returned 1 row.`, or `Query returned no rows.` — and the result itself is attached to
+the notification as a file the line links to. Clicking the line opens the file in an editor tab: the
+same arrangement an auto-approved permission prompt's screen capture uses, so the feed stays a list of
+one-line events rather than holding a table. The file holds the column names, one tab-separated line
+per row, and the number of rows, so a result with no rows still records what it would have returned.
+It is written to `.janissary/db/exports/<database>-result-<timestamp>.txt` and is named for when the
+statement ran, so a link on an older notification keeps opening the result that notification is about.
+A result of more than a million rows is written out to that million, and the line reads `Query
+returned more than 1,000,000 rows; the first 1,000,000 are in the file.`, because a capped file read as
+a complete one would be worse than a query too large to export. If the file cannot be written, the line
+carries the result itself instead — the column names and the first forty rows, with the real count —
+and has nothing to open, so a statement that ran never loses what it returned. See [[notifications]]
+for the feed.
 
 A statement that fails is the same kind of notification, and it says the SQLite error. A failure is
 the one result a user did not ask for and cannot predict. It is attributed to the tab the statement
@@ -315,9 +319,9 @@ that returns rows only fills the grid, since a read cannot have changed anything
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
-the console refused to finish is not the same thing as a small one. The grid and the notification are
-two different shortenings of one result — two hundred rows in a table, forty lines in a feed — and
-neither is the whole of it unless the range line says so. What the grid fills with is
+the console refused to finish is not the same thing as a small one. The grid is a shortening of the
+result and the notification's file is the whole of it, up to its million-row ceiling. What the grid
+fills with is
 read-only, as described under Editing: a statement is not a page of one object, so nothing in it can
 be written to.
 

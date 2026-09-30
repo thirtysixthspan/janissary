@@ -924,8 +924,8 @@ describe('a failure reported to the notifications feed', () => {
 });
 
 /**
- * A statement's result is a notification rather than a line in the tab: a short result is the whole
- * of it, and a long one is a shortening with a file beside it — the arrangement an auto-approved
+ * A statement's result is a notification rather than a line in the tab: one line saying how many rows
+ * came back, with a file holding the result linked from it — the arrangement an auto-approved
  * permission prompt's screen capture already uses.
  */
 describe("a statement's result reported to the notifications feed", () => {
@@ -946,21 +946,22 @@ describe("a statement's result reported to the notifications feed", () => {
     return fixture;
   }
 
-  it('says a short result outright, with nothing to open', () => {
+  it('says a result in one line, and links the file holding all of it', () => {
+    const file = '/tmp/project/.janissary/db/exports/shop-result-2026-01-01T00-00-00-000Z.txt';
+    const fixture = running({
+      kind: 'query', database: 'shop', grid: grid(),
+      report: { text: 'Query returned 9,000 rows.', file },
+    });
+    expect(said(fixture)).toEqual([['Query returned 9,000 rows.', { ...ON_TAB, openFile: file }]]);
+  });
+
+  // A host that had nowhere to write the file says the shortened result instead, with nothing to open.
+  it('says the result itself, with no link, when there is no file', () => {
     const fixture = running({
       kind: 'query', database: 'shop', grid: grid(),
       report: { text: 'id\tstatus\n1\tpaid\n(1 row)' },
     });
     expect(said(fixture)).toEqual([['id\tstatus\n1\tpaid\n(1 row)', ON_TAB]]);
-  });
-
-  it('says a long result shortened, and links the file holding all of it', () => {
-    const file = '/tmp/project/.janissary/db/exports/shop-result-2026-01-01T00-00-00-000Z.txt';
-    const fixture = running({
-      kind: 'query', database: 'shop', grid: grid(),
-      report: { text: 'id\n1\n(9,000 rows — first 40 shown)', file },
-    });
-    expect(said(fixture)).toEqual([['id\n1\n(9,000 rows — first 40 shown)', { ...ON_TAB, openFile: file }]]);
   });
 
   it('says what a statement that changed rows did', () => {

@@ -174,9 +174,8 @@ export class DatabaseBrowser {
     }
     try {
       if (returnsRows) {
-        // A read is reported as well as drawn: the grid is one page of the result and the report is
-        // the result, and a statement long enough to need a file for the whole of it is exactly the
-        // one a user will want to keep. The writer is opened only if the result turns out to be long.
+        // A read is reported as well as drawn: the grid is one page of the result, and the report is
+        // a line saying how many rows came back with the whole result in a file it links to.
         const { grid, report } = readStatement(
           opened.handle, sql, () => openResultFile(database, Date.now()),
         );

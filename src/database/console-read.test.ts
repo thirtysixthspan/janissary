@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initDbDir } from '../connections.js';
 import { CONSOLE_ROW_LIMIT, readStatement, REPORT_LINE_BUDGET } from './console-read.js';
 import { openResultFile, RESULT_ROW_LIMIT, type ResultWriter } from './export.js';
@@ -25,7 +25,7 @@ afterEach(() => {
   rmSync(project, { recursive: true, force: true });
 });
 
-/** The writer a statement's long result streams into, with the timestamp pinned. */
+/** The writer a statement's result streams into, with the timestamp pinned. */
 function writer() {
   return () => openResultFile('shop', Date.parse('2026-01-02T03:04:05.678Z'));
 }
@@ -42,45 +42,51 @@ function manyRows(count: number): void {
   `);
 }
 
+const written = (file: string | undefined) => readFileSync(file as string, 'utf8');
+
+// A notification is a one-line event, so the line says how many rows came back and the result is a
+// file the line links to — the arrangement an auto-approved permission prompt's screen capture uses.
 describe("a statement's report", () => {
-  it('says a short result outright, and leaves no file behind', () => {
+  it('says how many rows came back in one line, and files the result', () => {
     const { report } = readStatement(database, 'SELECT id, status FROM orders', writer());
-    expect(report.text).toBe('id\tstatus\n1\tpaid\n2\tdue\n(2 rows)');
-    expect(report.file).toBeUndefined();
-  });
-
-  it('says a null as the empty string the grid shows, rather than as the word NULL', () => {
-    const { report } = readStatement(database, 'SELECT note FROM orders WHERE id = 1', writer());
-    expect(report.text).toBe('note\n\n(1 row)');
-  });
-
-  it('says so on a statement that returned nothing', () => {
-    const { report } = readStatement(database, 'SELECT id FROM orders WHERE id = 99', writer());
-    expect(report.text).toBe('(no rows)');
-  });
-
-  // A notification holds one line of text, and a result of a thousand rows is not one — so the line
-  // carries the first of them and the file carries all of them, which is the arrangement an
-  // auto-approved permission prompt's screen capture already uses.
-  it('shortens a long result and links a file holding every row', () => {
-    manyRows(REPORT_LINE_BUDGET * 2);
-    const { report } = readStatement(database, 'SELECT id FROM many', writer());
-    const lines = report.text.split('\n');
-    expect(lines[0]).toBe('id');
-    expect(lines).toHaveLength(REPORT_LINE_BUDGET + 2);
-    expect(lines.at(-1)).toBe(`(${(REPORT_LINE_BUDGET * 2).toLocaleString('en-US')} rows — first ${REPORT_LINE_BUDGET} shown)`);
+    expect(report.text).toBe('Query returned 2 rows.');
     expect(report.file).toMatch(/shop-result-2026-01-02T03-04-05-678Z\.txt$/u);
-
-    const whole = readFileSync(report.file as string, 'utf8');
-    const every = Array.from({ length: REPORT_LINE_BUDGET * 2 }, (_, i) => String(i + 1));
-    expect(whole).toBe(`${every.join('\n')}\n(${(REPORT_LINE_BUDGET * 2).toLocaleString('en-US')} rows)\n`);
+    expect(written(report.file)).toBe('id\tstatus\n1\tpaid\n2\tdue\n(2 rows)\n');
   });
 
-  it('keeps the grid to its own ceiling, whatever the report holds', () => {
+  it('says one row as one row', () => {
+    const { report } = readStatement(database, 'SELECT id FROM orders WHERE id = 1', writer());
+    expect(report.text).toBe('Query returned 1 row.');
+    expect(written(report.file)).toBe('id\n1\n(1 row)\n');
+  });
+
+  it('files a null as the empty string the grid shows, rather than as the word NULL', () => {
+    const { report } = readStatement(database, 'SELECT note FROM orders WHERE id = 1', writer());
+    expect(written(report.file)).toBe('note\n\n(1 row)\n');
+  });
+
+  // An empty result is still an answer, and its header says what the statement would have returned.
+  it('says so on a statement that returned nothing, and still files its header', () => {
+    const { report } = readStatement(database, 'SELECT id FROM orders WHERE id = 99', writer());
+    expect(report.text).toBe('Query returned no rows.');
+    expect(written(report.file)).toBe('id\n(no rows)\n');
+  });
+
+  it('files every row of a long result, and still says it in one line', () => {
+    const rows = REPORT_LINE_BUDGET * 2;
+    manyRows(rows);
+    const { report } = readStatement(database, 'SELECT id FROM many', writer());
+    expect(report.text).toBe(`Query returned ${rows} rows.`);
+    const every = Array.from({ length: rows }, (_, i) => String(i + 1));
+    expect(written(report.file)).toBe(`id\n${every.join('\n')}\n(${rows} rows)\n`);
+  });
+
+  it('keeps the grid to its own ceiling, whatever the file holds', () => {
     manyRows(CONSOLE_ROW_LIMIT + 5);
-    const { grid } = readStatement(database, 'SELECT id FROM many', writer());
+    const { grid, report } = readStatement(database, 'SELECT id FROM many', writer());
     expect(grid.rows).toHaveLength(CONSOLE_ROW_LIMIT);
     expect(grid.truncated).toBe(true);
+    expect(report.text).toBe(`Query returned ${CONSOLE_ROW_LIMIT + 5} rows.`);
   });
 
   // A result of a million rows is a query to narrow, not a file to write — and the line has to say
@@ -88,21 +94,35 @@ describe("a statement's report", () => {
   it('says so when the result is too long to write out in full', () => {
     manyRows(RESULT_ROW_LIMIT + 5);
     const { report, grid } = readStatement(database, 'SELECT id FROM many', writer());
-    expect(report.text).toMatch(/rows read, 1,000,000 written to the file\)$/u);
-    expect(readFileSync(report.file as string, 'utf8')).toContain(
-      `capped at ${RESULT_ROW_LIMIT.toLocaleString('en-US')}`,
-    );
+    expect(report.text).toBe('Query returned more than 1,000,000 rows; the first 1,000,000 are in the file.');
+    expect(written(report.file)).toContain(`capped at ${RESULT_ROW_LIMIT.toLocaleString('en-US')}`);
     expect(grid.truncated).toBe(true);
   }, 60_000);
 
   // A host with nowhere to put a file still reports the result, and a statement that ran perfectly
   // well is not a statement that failed.
-  it('shortens rather than files when there is nowhere to put a file', () => {
+  it('says the result itself, shortened, when there is nowhere to put a file', () => {
     manyRows(REPORT_LINE_BUDGET * 2);
     const { report } = readStatement(database, 'SELECT id FROM many', noFiles);
     expect(report.file).toBeUndefined();
     expect(report.text).toContain(`first ${REPORT_LINE_BUDGET} shown`);
     expect(report.text.split('\n')).toHaveLength(REPORT_LINE_BUDGET + 2);
+
+    const short = readStatement(database, 'SELECT id, status FROM orders', noFiles).report;
+    expect(short.text).toBe('id\tstatus\n1\tpaid\n2\tdue\n(2 rows)');
+  });
+
+  // The file is opened before the walk, so a statement that fails part-way must not leave it open.
+  it('closes the file when the walk fails part-way through its rows', () => {
+    const end = vi.fn();
+    let writes = 0;
+    const failing = () => ({
+      path: '/tmp/result.txt',
+      write: () => { writes += 1; if (writes > 1) throw new Error('disk full'); },
+      end,
+    });
+    expect(() => readStatement(database, 'SELECT id FROM orders', failing)).toThrow('disk full');
+    expect(end).toHaveBeenCalledExactlyOnceWith('');
   });
 
   // The statement runs once: the grid and the report are two answers from one walk, and a statement
@@ -115,7 +135,7 @@ describe("a statement's report", () => {
     const before = database.prepare('SELECT n FROM counted').all();
     const { grid, report } = readStatement(database, 'SELECT n FROM counted', writer());
     expect(grid.rows).toHaveLength(1);
-    expect(report.text).toBe('n\n0\n(1 row)');
+    expect(report.text).toBe('Query returned 1 row.');
     expect(database.prepare('SELECT n FROM counted').all()).toEqual(before);
   });
 });

@@ -108,10 +108,13 @@ export type DatabaseGridView = {
   keyless?: boolean;
 };
 
-/** A statement's result as a notification carries it, and a file for it when it is too long for that. */
+/**
+ * A statement's result as a notification carries it: one line saying how many rows came back, and the
+ * file holding them. With nowhere to write the file, `text` is the result itself, shortened.
+ */
 export type DatabaseStatementReport = {
   text: string;
-  /** Absolute path of a file holding every row, present only when `text` is a shortening. */
+  /** Absolute path of a file holding the column names, every row, and the count. */
   file?: string;
 };
 
@@ -129,10 +132,10 @@ export type DatabaseResultView =
     database: string;
     grid: DatabaseGridView;
     /**
-     * What the statement produced, said where a user will read it rather than in the grid: the whole
-     * result as `text` when it is short enough for one line, and the first `REPORT_LINE_BUDGET` lines
-     * of it plus a `file` holding every row when it is not. The grid is a page and the report is the
-     * result, and neither is derivable from the other.
+     * What the statement produced, said where a user will read it rather than in the grid: a line
+     * saying how many rows came back as `text`, and a `file` holding the whole result. With nowhere to
+     * write the file, `text` is the first `REPORT_LINE_BUDGET` lines of the result instead. The grid is
+     * a page and the report is the result, and neither is derivable from the other.
      */
     report?: DatabaseStatementReport;
     error?: string;

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* results from the sql command line should be attached to the notification, but stored in a file and linked to in the notification in a way that opens the file in an editor tab. This should match the auto-approve notification design.
-
 * when the sql table has focus, do not highlight the table.
 
 
