@@ -317,24 +317,6 @@ describe('sql plugin notifications', () => {
     expect(tab.log.at(-1)?.sql).toBe('UPDATE t SET v = 3');
   });
 
-  it('clears the log without re-reading anything, since nothing on screen changes', () => {
-    const fixture = fakeCapabilities();
-    openTab(fixture);
-    deliver(fixture, [schemaAnswer((fixture.actions[0] as { requestId: string }).requestId)]);
-    let tab = lastPayload(fixture);
-    fixture.activation.intent(
-      { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: tab },
-      fixture.capabilities,
-    );
-    const id = (fixture.actions.at(-1) as { requestId: string }).requestId;
-    deliver(fixture, [{ kind: 'write', requestId: id, database: 'shop', sql: 'UPDATE t', parameters: [], changed: 1 }]);
-    tab = lastPayload(fixture);
-    const before = fixture.actions.length;
-    fixture.activation.intent({ tab: 'sqlite:shop', intent: 'clear-log', payload: {}, tabPayload: tab }, fixture.capabilities);
-    expect(lastPayload(fixture).log).toEqual([]);
-    expect(fixture.actions).toHaveLength(before);
-  });
-
   it('re-issues a request whose answer never arrived, rather than waiting forever', () => {
     const fixture = fakeCapabilities();
     openTab(fixture);

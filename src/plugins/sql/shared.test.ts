@@ -4,7 +4,6 @@ import {
   isExportIntent,
   isInsertRowIntent,
   isOpenIntent,
-  isClearLogIntent,
   isSetColumnsIntent,
   isSetFilterEnabledIntent,
   isSetFilterIntent,
@@ -207,8 +206,6 @@ describe('intent payload guards', () => {
   });
 
   it('accepts a whole log of statements, and refuses a malformed entry', () => {
-    expect(isClearLogIntent({})).toBe(true);
-    expect(isClearLogIntent({ sql: 'x' })).toBe(false);
     expect(isSqlPayload({ ...payload(), log: [{ sql: 'UPDATE t', changed: 1 }] })).toBe(true);
     expect(isSqlPayload({ ...payload(), log: [{ sql: 'UPDATE t', changed: 1, error: 'no such table' }] })).toBe(true);
     expect(isSqlPayload({ ...payload(), log: [{ sql: 7, changed: 1 }] })).toBe(false);

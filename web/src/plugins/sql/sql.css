@@ -103,23 +103,5 @@
 .sql-cell-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
 .sql-cell-link:hover { text-decoration: underline; }
 
-/* The statement history: the agent tab's history picker, over the command line. The rows are the
-   statements themselves in a monospaced face, because a statement is the thing being read here, and
-   the outcome sits to the right of it in the colour a failure is drawn in everywhere else. */
-.sql-history { border: 1px solid var(--border); border-radius: 4px; background: var(--bg); max-height: 200px; overflow: auto; padding: 4px; margin-bottom: 4px; }
-.sql-history-title { font-size: 11px; color: var(--muted); padding: 0 4px 2px; }
-.sql-history-row { display: flex; align-items: baseline; gap: 8px; padding: 2px 4px; font-size: 12px; border-radius: 3px; cursor: pointer; }
-.sql-history-row.selected { background: var(--bg-hover); }
-.sql-history-row.empty { color: var(--muted); cursor: default; }
-.sql-history-row.error .sql-history-outcome { color: var(--danger); }
-.sql-history-sql { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono, monospace); }
-.sql-history-outcome { color: var(--muted); white-space: nowrap; }
-.sql-history-actions { display: flex; gap: 6px; padding: 4px 4px 0; }
-.sql-history-actions button { background: none; border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: 12px; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
-.sql-history-actions button:disabled { opacity: 0.4; cursor: default; }
-.sql-history-actions button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
-
 .sql-console { flex-shrink: 0; }
-.sql-console-bar { display: flex; align-items: flex-end; gap: 4px; }
-.sql-console-bar > .command-area { flex: 1; min-width: 0; }
 .sql-console-result { font-size: 12px; color: var(--muted); padding: 2px 4px; }

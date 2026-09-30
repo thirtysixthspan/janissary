@@ -194,25 +194,13 @@ paged, copied, and exported like any other, and the console still writes to the 
 
 ### Statement history
 
-A control beside the command bar opens a panel over it listing the statements the tab has run, newest
-first, each with what it changed or the error that stopped it, and a tab that has run none saying
-`(no history)`. It is the agent tab's `hist` picker and behaves as it does: `ArrowUp` and `ArrowDown`
-move the selected row and stop at the ends, `Home` and `End` reach the first and last, `Enter` and a
-click both put that statement in the command line, and `Escape` closes the panel. While it is open
-those keys are the panel's, so `Enter` cannot also submit whatever happens to be in the line.
+The command bar is the only way to inspect what this tab has run. `ArrowUp` walks back through the
+last fifty statements typed in it, `ArrowDown` walks forward again, and a statement is put in the
+line rather than run on the spot, so it is always something the user can read and change before they
+send it. There is no second list of the tab's statements anywhere in the tab, and no control that
+empties one.
 
-A picked statement goes into the line rather than running on the spot, which is the point of it: a
-statement from the history is a statement to read and change before it is sent, and sending it is the
-next Enter like any other. **Clear log** empties the list without re-reading, since nothing on screen
-changes when a record of the past is discarded.
-
-A statement that failed is listed too: a record of only the successes would not say what happened.
-This browser is the only surface that mutates data, so a log of what was written can live nowhere
-else. The console's own line under the prompt reports what the newest entry did where it worked, so
-the result of a statement is visible without opening anything; the panel holds that entry too, and
-both read the same list, so the line and the history cannot disagree.
-
-The grid's own query is not shown anywhere. There is no panel for it and no way to re-run it: the
+A statement the grid's own query issued is not in that walk, because the user did not type it. The
 command bar is the only place SQL is entered, which is what makes one answer to "run this" enough.
 
 ### Export
@@ -253,8 +241,7 @@ for it anywhere in the tab.
 Enter sends what is typed, and the host decides whether that was a read or a write by the same test
 `db sqlite query` uses: a statement that returns rows fills the grid, and anything else reports
 `OK.` or the number of rows it changed, on the line under the prompt. Arrow keys walk back through the
-last fifty statements typed in this tab, and the statement history beside the bar is the same list
-written down where it can be read.
+last fifty statements typed in this tab.
 
 A statement that fails is a **notification**, not a line under the prompt. A failure is the one
 result a user did not ask for and cannot predict, and the line under the prompt is the first thing
@@ -264,7 +251,7 @@ failure: an answer that arrives twice for one request says it once, and a failur
 and come back says it again. See [[notifications]] for the feed. The grid's own error band still
 carries the message where the failed
 read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
-is deleted under an open tab. A failed statement leaves the grid as it was and stays on the history.
+is deleted under an open tab. A failed statement leaves the grid as it was.
 
 A statement that succeeds reports its outcome and adds nothing to the error band, including on a tab
 with no object selected, where there is no page for it to have disturbed and so nothing to re-read.
@@ -293,7 +280,7 @@ of bringing the empty database back.
 - It does not change a schema from the grid. The console is the way to run `CREATE`, `ALTER`, or
   `DROP`, exactly as `db sqlite query` already is.
 - It does not show the statement behind the grid, and offers no way to run one the user did not type.
-  The console is the way to run SQL, and the history is a record of what has been run.
+  The console is the only place SQL is entered.
 - It does not join tables or build a query. The grid is one object at a time.
 - It does not report statistics. A per-column distribution is a statement in the command bar.
 - It has no copy control. A selection is copied by the application's own copy key.

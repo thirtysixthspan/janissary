@@ -63,6 +63,7 @@ describe('the sql stylesheet', () => {
   it('carries no rule for a control the tab no longer has', () => {
     const gone = [
       '.sql-header', '.sql-nav-row', '.sql-stats', '.sql-switch', '.sql-grid-pane', '.sql-goto',
+      '.sql-history', '.sql-console-bar',
     ];
     for (const selector of gone) {
       expect(sql).not.toContain(`${selector} {`);

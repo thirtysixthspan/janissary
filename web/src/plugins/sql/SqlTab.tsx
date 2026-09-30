@@ -9,7 +9,7 @@ import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
 import { statementResult } from './grid-view';
-import { logOutcome } from './SqlHistory';
+import { logOutcome } from './console-result';
 import { TableSwitcher } from './TableSwitcher';
 
 // A database tab: one metadata row across the full width and one body below it. The row is the shape
@@ -26,9 +26,8 @@ export function SqlTab({
   payload: SqlPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  // The console's text lives here rather than in the console, so a statement picked out of the history
-  // can be put in the field for the user to change before they send it, rather than running on the
-  // spot the way a copy would.
+  // The console's text lives here rather than in the console, so it survives a re-read of the grid
+  // and so a statement the user typed is always something they can read and change before sending.
   const [consoleText, setConsoleText] = useState('');
   // The two forms the row's controls open are the grid's business — one is a statement about the
   // object on screen, the other can only list the columns that statement carried — so the row holds
@@ -38,9 +37,8 @@ export function SqlTab({
   const docked = capabilities.dock !== null;
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
   // The log's newest entry is the last statement run, and the line under the prompt says how it
-  // went — the outcome rule is the history's own, so the two cannot disagree. It says nothing about
-  // a statement that failed: a failure is a notification, and this line is where the next thing typed
-  // goes. It is not a separate field either: one list means the line and the history agree.
+  // went. It says nothing about a statement that failed: a failure is a notification, and this line
+  // is where the next thing typed goes.
   const latest = payload.log[0] ?? null;
   const object = payload.objects.find((entry) => entry.name === payload.object);
   // A statement's result is read-only the way a view is — there is no row identity in it to write to
@@ -107,8 +105,6 @@ export function SqlTab({
         <SqlConsole
           active={capabilities.active}
           busy={payload.pending !== null}
-          log={payload.log}
-          onClearLog={() => send('clear-log', {})}
           value={consoleText}
           onValue={setConsoleText}
           onSend={(sql) => send('run', { sql })}
