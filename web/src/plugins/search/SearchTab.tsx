@@ -88,14 +88,6 @@ export function SearchTab({
     void capabilities.intent('open', { path: row.path, line: row.line });
   }, [capabilities, rows]);
 
-  // One click goes through the shared list selection, and its own answer says whether the row opens.
-  // That is the same arrangement the sessions and conversations lists use, and it is what keeps the
-  // focus the selection performs and the open the tab performs from being two independent steps —
-  // `rowClicked` focuses the list, which is why clicking a row works at all.
-  const onRowClick = useCallback((index: number) => {
-    if (rowClicked(index)) onOpen(index);
-  }, [onOpen, rowClicked]);
-
   // Tab steps back to the bar, which is the tab's next focusable element; Shift+Tab is left to the
   // browser, so it keeps walking backwards out of the tab rather than folding into a two-element
   // loop. Checked before the selection keys, none of which answer to Tab.
@@ -129,7 +121,8 @@ export function SearchTab({
         <ResultTable
           rows={rows}
           selected={selected}
-          onRowClick={onRowClick}
+          onRowClick={rowClicked}
+          onRowDoubleClick={onOpen}
           state={payload.state}
           query={query}
           message={payload.message}

@@ -2,5 +2,3 @@
 
 # pull-request
 
-* a double click on a search result row should be required to open an editor tab. a single click will select the row brinking the keyboard focused selection to that row.
-	

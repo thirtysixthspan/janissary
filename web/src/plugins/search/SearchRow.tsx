@@ -34,8 +34,9 @@ function capsOf(measured: MeasuredWindow | null) {
 // line long enough to wrap supplies as many of those as it can itself — clipped to the window around
 // the match and shifted to it — and each context block draws only the lines left over, which is none
 // on a side the match line filled.
-export function SearchRow({ row, index, selected, onClick }: {
-  row: SearchMatch; index: number; selected: boolean; onClick: () => void;
+export function SearchRow({ row, index, selected, onClick, onDoubleClick }: {
+  row: SearchMatch; index: number; selected: boolean;
+  onClick: () => void; onDoubleClick: () => void;
 }) {
   const blockRef = useRef<HTMLSpanElement>(null);
   const markRef = useRef<HTMLSpanElement>(null);
@@ -52,6 +53,7 @@ export function SearchRow({ row, index, selected, onClick }: {
       role="button"
       tabIndex={-1}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
     >
       <div className="search-row-header">
         <span className="search-row-path">{row.path}</span>

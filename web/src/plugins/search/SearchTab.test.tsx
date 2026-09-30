@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SearchMatch, SearchPayload } from '@shared/plugins/search/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -377,23 +378,61 @@ describe('SearchTab', () => {
     expect(intent).toHaveBeenCalledWith('open', { path: 'src/a.ts', line: 12 });
   });
 
-  it('opens a match on a single click', () => {
+  it('does not open the initially selected match on a single click', () => {
     const { container, intent } = renderTab();
     fireEvent.click(container.querySelector('.search-row')!);
-    expect(intent).toHaveBeenCalledWith('open', { path: 'src/a.ts', line: 12 });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+    expect(container.querySelector('.search-results')).toHaveFocus();
   });
 
-  it('opens a match on a single click and leaves that row highlighted', () => {
+  it('selects a clicked row and focuses the results without opening it', () => {
     const { container, intent } = renderTab(payload({
       rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
     }));
     const rows = container.querySelectorAll('.search-row');
     fireEvent.click(rows[1]!);
-    // The selection is what the shared list selection performs — including focusing the list — so
-    // opening and highlighting are one click rather than two independent steps.
-    expect(intent).toHaveBeenCalledWith('open', { path: 'b.ts', line: 2 });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+    expect(container.querySelector('.search-results')).toHaveFocus();
     expect(container.querySelectorAll('.search-row.selected')).toHaveLength(1);
-    expect((container.querySelectorAll('.search-row')[1] as HTMLElement).className).toContain('selected');
+    expect(rows[1]).toHaveClass('selected');
+  });
+
+  it('keeps separate clicks on the same row selection-only after refocusing', () => {
+    const { container, intent } = renderTab();
+    const row = container.querySelector('.search-row')!;
+    fireEvent.click(row);
+    fireEvent.click(row);
+    screen.getByLabelText('Search the project').focus();
+    fireEvent.click(row);
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+    expect(container.querySelector('.search-results')).toHaveFocus();
+    expect(row).toHaveClass('selected');
+  });
+
+  it('opens the double-clicked match exactly once', async () => {
+    const user = userEvent.setup();
+    const { container, intent } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
+    }));
+    const row = container.querySelectorAll('.search-row')[1]!;
+    await user.dblClick(row);
+    expect(intent.mock.calls.filter(([name]) => name === 'open'))
+      .toEqual([['open', { path: 'b.ts', line: 2 }]]);
+    expect(row).toHaveClass('selected');
+    expect(container.querySelector('.search-results')).toHaveFocus();
+  });
+
+  it('starts keyboard navigation and activation from the clicked row', () => {
+    const { container, intent } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 }), match({ path: 'c.ts', line: 3 })],
+    }));
+    const results = container.querySelector('.search-results')!;
+    fireEvent.click(results.querySelectorAll('.search-row')[1]!);
+    fireEvent.keyDown(results, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { path: 'b.ts', line: 2 });
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    fireEvent.keyDown(results, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { path: 'c.ts', line: 3 });
   });
 
   it('opens the row the arrows moved to, not the first', () => {

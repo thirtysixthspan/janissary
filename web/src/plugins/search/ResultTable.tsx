@@ -5,9 +5,9 @@ import { SearchRow } from './SearchRow';
 export type ResultTableProperties = {
   rows: readonly SearchMatch[];
   selected: number | null;
-  // A click on the row at this index. The selection and the open are the handler's business, so the
-  // table reports the click and holds no opinion about either.
+  // Selection and activation are separate gestures, handled by the tab.
   onRowClick(index: number): void;
+  onRowDoubleClick(index: number): void;
   state: 'searching' | 'done' | 'error';
   query: string;
   message: string;
@@ -17,7 +17,7 @@ export type ResultTableProperties = {
 // settled with nothing, or a scan failed. Rows and the searching state coexist, because a scan that
 // is still finding matches is showing the ones it has already found.
 export function ResultTable({
-  rows, selected, onRowClick, state, query, message,
+  rows, selected, onRowClick, onRowDoubleClick, state, query, message,
 }: ResultTableProperties) {
   if (rows.length === 0) {
     if (state === 'error') return <div className="search-empty">{message}</div>;
@@ -37,6 +37,7 @@ export function ResultTable({
           index={index}
           selected={selected === index}
           onClick={() => { onRowClick(index); }}
+          onDoubleClick={() => { onRowDoubleClick(index); }}
         />
       ))}
       {state === 'searching' && <div className="search-empty">Searching…</div>}

@@ -49,7 +49,7 @@ const row = (overrides: Partial<SearchMatch> = {}): SearchMatch => ({
 });
 
 const renderRow = (value: SearchMatch = row()) =>
-  render(<SearchRow row={value} index={0} selected={false} onClick={() => {}} />).container;
+  render(<SearchRow row={value} index={0} selected={false} onClick={() => {}} onDoubleClick={() => {}} />).container;
 
 const styleOf = (container: HTMLElement, selector: string) =>
   (container.querySelector(`:scope ${selector}`) as HTMLElement).style;
@@ -121,7 +121,9 @@ describe('SearchRow match line', () => {
       observe = vi.fn();
       disconnect = disconnect;
     });
-    const { unmount } = render(<SearchRow row={row()} index={0} selected={false} onClick={() => {}} />);
+    const { unmount } = render(
+      <SearchRow row={row()} index={0} selected={false} onClick={() => {}} onDoubleClick={() => {}} />,
+    );
     unmount();
     expect(disconnect).toHaveBeenCalledTimes(1);
   });

@@ -3,8 +3,7 @@
 The search tab answers the question Quick Open cannot: not *which file is this*, but *where does this
 appear*. It searches the whole project for a phrase, as plain text or as a regular expression, and
 lists every match in a table the user can walk with the keyboard or the mouse — each entry showing
-the match in place, with the lines around it, under a header naming the file and the line. Selecting
-an entry opens that file in an editor tab with the matching line centered.
+the match in place, with the lines around it, under a header naming the file and the line. Double-clicking an entry or pressing Return on the selected entry opens that file in an editor tab with the matching line centered.
 
 Before it, the only ways to answer that question were to type `grep` into a shell tab and read a wall
 of text with no path-to-line affordance, or to search one already-open buffer at a time.
@@ -146,9 +145,7 @@ to the caret.
 move the highlight and never scroll the window, so scrolling the window can only be something the
 user's own arrow key did.
 
-**A single click on an entry opens it** — no double click, and no separate selecting step. Rows
-arriving as a search runs never move the highlight, so an entry picked early is still the entry
-under the cursor when the next batch lands.
+**A single click selects an entry and focuses the results.** The arrow keys and Return then act from that entry. A double click opens the clicked match; separate single clicks only select it, even if it was already selected. Rows arriving as a search runs never move the highlight, so an entry picked early is still the entry under the cursor when the next batch lands.
 
 Opening a match puts that file in an editor tab with the matching line centered. A file already open
 is focused rather than duplicated, and the line is re-centered on every request. **The search tab

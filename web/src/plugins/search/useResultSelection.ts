@@ -10,18 +10,16 @@ export type ResultSelection = {
   // Move the selection with the arrow, Home, and End keys, answering whether the key was taken.
   // Reports false for a key that is not one of those, so a caller with keys of its own can go on.
   navigate(key: string): boolean;
-  // A click on a row, which both selects and opens in one step.
-  rowClicked(index: number): boolean;
+  // A click selects the row and focuses the results for keyboard navigation.
+  rowClicked(index: number): void;
 };
 
 type Properties = {
   count: number;
 };
 
-// Every click opens. `useListSelection`'s own click rule opens only on a second click on an
-// already-highlighted row, which is right for a list of records a user inspects and wrong for a list
-// of places to jump to — so the decision is supplied here rather than taken from the shared default.
-const clickOpens = (index: number): ListRowClick => ({ selected: index, opens: true });
+// Only the browser's double-click event opens a result; separate clicks keep selecting it.
+const selectRow = (index: number): ListRowClick => ({ selected: index, opens: false });
 
 // The selection state of the result table, on the host's shared list selection so this list moves its
 // current row the same way every other plugin list does. Streaming rows never move it: the selection
@@ -37,7 +35,7 @@ export function useResultSelection({ count }: Properties): ResultSelection {
     (key: string) => selection.navigate(key, nextResultSelection), [selection],
   );
   const rowClicked = useCallback(
-    (index: number) => selection.rowClicked(index, clickOpens), [selection],
+    (index: number) => { selection.rowClicked(index, selectRow); }, [selection],
   );
 
   return { listRef, selected, navigate, rowClicked };
