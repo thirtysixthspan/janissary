@@ -219,33 +219,3 @@ export function barScale(column: SqlStatsColumn): number {
   return largest;
 }
 
-function sqlLiteral(value: string | number): string {
-  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'NULL';
-  return `'${value.replaceAll("'", "''")}'`;
-}
-
-/**
- * The grid's statement with its bound values written in, so it can be run as it is shown.
- *
- * This is the one place in the browser that puts a value into SQL rather than binding it, which is
- * why the drawer shows the placeholder form alongside: `sql` is what executed, and this is a
- * rendering of it made runnable. Substitution is positional — the nth `?` takes the nth value — and
- * it assumes a statement the grid produced, which never carries a `?` inside a string literal
- * because every value in it is bound and no literal text is interpolated.
- *
- * A count that does not match degrades visibly rather than silently: an unmatched `?` is left as
- * written, and a value with no `?` left for it is dropped, so a caller pairing the wrong two
- * arguments finds out from the statement rather than from a wrong result.
- */
-export function renderRunnableSql(sql: string, parameters: readonly (string | number)[]): string {
-  const parts = sql.split('?');
-  if (parts.length === 1) return sql;
-  let built = parts[0] ?? '';
-  for (let index = 1; index < parts.length; index += 1) {
-    const value = parameters[index - 1];
-    built += value === undefined ? '?' : sqlLiteral(value);
-    built += parts[index] ?? '';
-  }
-  return built;
-}
-

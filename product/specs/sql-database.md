@@ -185,30 +185,28 @@ that can address one row of it rather than several, and `rowid` is not a safe an
 "<name>" is a view.` or `Read-only: "<name>" has no primary key.` and offers no edit, insert, or
 delete control at all. Its grid is otherwise ordinary, and the console still writes to it.
 
-### The generated SQL
+### Statement history
 
-A **SQL** control opens a panel showing the exact statement that produced the grid, with `?` where a
-value was bound, and the bound values listed beside it. It is deliberately not an inlined rendering:
-a value containing a quote cannot be shown inside a statement safely, and a copy that quietly means
-something else is worse than one that needs filling in. **Copy** puts both on the clipboard.
+A control beside the command bar opens a panel over it listing the statements the tab has run, newest
+first, each with what it changed or the error that stopped it, and a tab that has run none saying
+`(no history)`. It is the agent tab's `hist` picker and behaves as it does: `ArrowUp` and `ArrowDown`
+move the selected row and stop at the ends, `Home` and `End` reach the first and last, `Enter` and a
+click both put that statement in the command line, and `Escape` closes the panel. While it is open
+those keys are the panel's, so `Enter` cannot also submit whatever happens to be in the line.
 
-**Run** sends the statement *with those values written in* — a text value quoted, a number bare — so
-running a filtered grid's statement runs that query rather than one comparing against nulls. It
-leaves that statement in the console as well, which is the point of it: a filtered grid becomes the
-starting point of a hand-written query, and the query to hand-write from is the one sitting in the
-field. The panel keeps showing the placeholder form, because that is the statement that actually ran.
+A picked statement goes into the line rather than running on the spot, which is the point of it: a
+statement from the history is a statement to read and change before it is sent, and sending it is the
+next Enter like any other. **Clear log** empties the list without re-reading, since nothing on screen
+changes when a record of the past is discarded.
 
-The order shown is the order actually used, including the primary-key fallback, so what the grid did
-is never a surprise.
+A statement that failed is listed too: a record of only the successes would not say what happened.
+This browser is the only surface that mutates data, so a log of what was written can live nowhere
+else. The console's own line under the prompt reports what the newest entry did, so the result of a
+statement is visible without opening anything; the panel holds that entry too, and both read the same
+list, so the line and the history cannot disagree.
 
-Above it, the statements the tab has run — newest first, capped at fifty, each showing what it
-changed or the error that stopped it, and each with its own **Copy**. A statement that failed is
-logged too: a record of only the successes would not say what happened. This browser is the only
-surface that mutates data, so a log of what was written can live nowhere else. **Clear log** empties
-it without re-reading, since nothing on screen changes when a record of the past is discarded. The
-console's own line under the prompt reports what the newest entry did, so the result of a statement
-is visible without opening anything; the list above holds that entry too, because its statement is
-the half a user copies — one list means the line and the history cannot disagree.
+The grid's own query is not shown anywhere. There is no panel for it and no way to re-run it: the
+command bar is the only place SQL is entered, which is what makes one answer to "run this" enough.
 
 ### Export
 
@@ -241,10 +239,15 @@ a line saying it has too many to chart. It is read when asked, never on a refres
 ### The console
 
 The tab's bottom line is the application's own command bar, so it looks and behaves like every other
-line of text in the application, and Shift+Enter starts a new line. Enter sends what is typed, and
-the host decides whether that was a read or a write by the same test `db sqlite query` uses: a
-statement that returns rows fills the grid, and anything else reports `OK.`, or the SQLite error.
-Enter's own history is the last fifty statements in this tab.
+line of text in the application, and Shift+Enter starts a new line. Its prompt reads `SQL >` rather
+than a bare `>`, because a chevron on its own in a tab full of grids reads as the application's own
+command line and this one is not that. It is the only place SQL is entered: there is no second control
+for it anywhere in the tab.
+
+Enter sends what is typed, and the host decides whether that was a read or a write by the same test
+`db sqlite query` uses: a statement that returns rows fills the grid, and anything else reports
+`OK.`, or the SQLite error. Arrow keys walk back through the last fifty statements typed in this tab,
+and the statement history beside the bar is the same list written down where it can be read.
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
@@ -268,6 +271,8 @@ of bringing the empty database back.
   `db sqlite delete` is the way to remove one.
 - It does not change a schema from the grid. The console is the way to run `CREATE`, `ALTER`, or
   `DROP`, exactly as `db sqlite query` already is.
+- It does not show the statement behind the grid, and offers no way to run one the user did not type.
+  The console is the way to run SQL, and the history is a record of what has been run.
 - It does not join tables, follow a foreign key, or build a query.
 - It does not watch other tabs. A `db` command run elsewhere that changes the data leaves this view
   showing what it last read, which is what **Refresh** is for.

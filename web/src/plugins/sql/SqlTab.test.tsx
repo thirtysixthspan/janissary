@@ -69,14 +69,6 @@ describe('SqlTab header', () => {
     expect(intent).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the generated SQL when asked, and hides it again', () => {
-    const { capabilities } = makeCapabilities();
-    render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    expect(screen.queryByTestId('sql-statement')).toBeNull();
-    fireEvent.click(screen.getByLabelText('Toggle generated SQL'));
-    expect(screen.getByTestId('sql-statement')).toBeTruthy();
-  });
-
   it('links each export through the authenticated resource URL', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload({
@@ -85,6 +77,16 @@ describe('SqlTab header', () => {
     const link = screen.getByText('shop-orders-1.csv').closest('a');
     expect(link?.getAttribute('href')).toBe('/open/7?token=test');
     expect(link?.getAttribute('download')).toBe('shop-orders-1.csv');
+  });
+
+  // The command bar is the only place SQL is entered, so there is no second control for it and no
+  // panel showing a statement the user did not type.
+  it('offers no control for showing or re-running a statement', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('Toggle generated SQL')).toBeNull();
+    expect(screen.queryByTestId('sql-statement')).toBeNull();
+    expect(screen.queryByText('Run')).toBeNull();
   });
 });
 
@@ -145,19 +147,6 @@ describe('SqlTab console', () => {
     fireEvent.change(bar, { target: { value: 'SELECT 1' } });
     fireEvent.keyDown(bar, { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('run', { sql: 'SELECT 1' });
-  });
-
-  it('leaves a statement Run sends in the console, so it is there to adjust', () => {
-    const { capabilities, intent } = makeCapabilities();
-    const filtered = payload({
-      grid: { ...payload().grid!, sql: 'SELECT "id" FROM "orders" WHERE "status" = ? LIMIT ? OFFSET ?', parameters: ['paid', 100, 0] },
-    });
-    render(<SqlTab payload={filtered} capabilities={capabilities} />);
-    fireEvent.click(screen.getByLabelText('Toggle generated SQL'));
-    fireEvent.click(screen.getByText('Run'));
-    const bar = screen.getByLabelText('SQL') as HTMLTextAreaElement;
-    expect(bar.value).toBe(`SELECT "id" FROM "orders" WHERE "status" = 'paid' LIMIT 100 OFFSET 0`);
-    expect(intent).toHaveBeenCalledWith('run', { sql: bar.value });
   });
 
   it('shows what the last statement did, or why it did not', () => {

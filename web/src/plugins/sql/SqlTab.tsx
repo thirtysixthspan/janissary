@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartBar, faCode, faDatabase, faDownload } from '@fortawesome/free-solid-svg-icons';
+import { faChartBar, faDatabase, faDownload } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { DataGrid } from './DataGrid';
 import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { SchemaNavigator } from './SchemaNavigator';
 import { SqlConsole } from './SqlConsole';
-import { SqlDrawer } from './SqlDrawer';
 import { StatsPanel } from './StatsPanel';
 
-type Drawer = 'none' | 'sql' | 'stats';
+type Drawer = 'none' | 'stats';
 
 // A database tab. In the centre it is the schema navigator beside the grid; docked in a sidebar it
 // is one narrow column with a Schema/Data switch, because `capabilities.dock` says it is narrow and
@@ -23,17 +22,16 @@ export function SqlTab({
 }) {
   const [showSchema, setShowSchema] = useState(false);
   const [drawer, setDrawer] = useState<Drawer>('none');
-  // The console's text lives here rather than in the console, so the drawer's Run can leave a
-  // statement in it as well as send it. Both halves go through one handler, so what the field shows
-  // and what ran are the same string rather than two call sites agreeing to be.
+  // The console's text lives here rather than in the console, so a statement picked out of the history
+  // can be put in the field for the user to change before they send it, rather than running on the
+  // spot the way a copy would.
   const [consoleText, setConsoleText] = useState('');
   const docked = capabilities.dock !== null;
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
-  const run = (sql: string) => { setConsoleText(sql); send('run', { sql }); };
   const grid = <DataGrid payload={payload} capabilities={capabilities} />;
   const navigator = <SchemaNavigator payload={payload} capabilities={capabilities} />;
-  // The log's newest entry is the last statement run, which is what the line under the prompt
-  // reports. It is not a separate field: one list means the line and the history cannot disagree.
+  // The log's newest entry is the last statement run, which is what the line under the prompt reports.
+  // It is not a separate field: one list means the line and the history cannot disagree.
   const latest = payload.log[0] ?? null;
 
   return (
@@ -66,16 +64,6 @@ export function SqlTab({
           </span>
         )}
         <span className="sql-header-actions">
-          <button
-            type="button"
-            className="sql-icon"
-            title="SQL"
-            aria-label="Toggle generated SQL"
-            aria-pressed={drawer === 'sql'}
-            onClick={() => setDrawer(drawer === 'sql' ? 'none' : 'sql')}
-          >
-            <FontAwesomeIcon icon={faCode} />
-          </button>
           <button
             type="button"
             className="sql-icon"
@@ -113,13 +101,14 @@ export function SqlTab({
         </div>
       )}
 
-      {drawer === 'sql' && <SqlDrawer payload={payload} capabilities={capabilities} onRun={run} />}
       {drawer === 'stats' && <StatsPanel columns={payload.stats ?? []} />}
 
       <div className="sql-console">
         <SqlConsole
           active={capabilities.active}
           busy={payload.pending !== null}
+          log={payload.log}
+          onClearLog={() => send('clear-log', {})}
           value={consoleText}
           onValue={setConsoleText}
           onSend={(sql) => send('run', { sql })}
