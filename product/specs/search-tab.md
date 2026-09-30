@@ -94,8 +94,9 @@ before it has been fully searched, and the rows already found stay on screen. Th
 arrive as soon as any file is known to match rather than only once the whole project has been read
 in order.
 
-There is no cap and no tally: the header shows no count of matches or files, and the window shows the
-rows and nothing else. Three states cover everything the body can say — **Searching…** while a scan
+**A search stops at 250 matches.** Once it has found that many, in the order the results are
+listed, it stops reading the project and settles as finished. There is no tally: the header shows no
+count of matches or files, and the window shows the rows and nothing else. Three states cover everything the body can say — **Searching…** while a scan
 is running (over whatever rows have already arrived), **`No matches found for "<query>".`** when
 one settles with nothing, and the reason when a search fails.
 

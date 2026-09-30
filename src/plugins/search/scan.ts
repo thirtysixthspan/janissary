@@ -22,6 +22,11 @@ const BINARY_PREFIX = 8192;
 const BATCH_SIZE = 64;
 const READ_CONCURRENCY = 8;
 
+// How many rows one search delivers before it settles. Enforced here rather than in the session,
+// because the scan is what reads the disk: a cap applied to the rows as they arrive would hide the
+// rest while the scan kept reading every file to the end.
+const MAX_RESULTS = 250;
+
 export type ScanRead = (absPath: string) => Promise<string>;
 export type ScanQuery = {
   query: string;
@@ -104,20 +109,25 @@ type Runtime = {
   read: ScanRead;
   sizeOf: SizeLookup;
   signal: AbortSignal;
+  // Rows still to deliver before the search reaches its cap.
+  remaining: number;
 };
 
 // Phase two: turn every queued candidate into rows, one `onBatch` per file so the table fills
-// progressively. Aborted midway, the rows already delivered stand and the rest are dropped.
+// progressively. Aborted midway, the rows already delivered stand and the rest are dropped. A file
+// whose matches straddle the cap gives only the rows that fit, and the queue behind it is not read.
 async function deliver(queue: Candidate[], matcher: Matcher, runtime: Runtime): Promise<void> {
   const { options, read, sizeOf, signal } = runtime;
-  while (queue.length > 0) {
+  while (queue.length > 0 && runtime.remaining > 0) {
     if (signal.aborted) return;
     const candidate = queue.shift();
     if (candidate === undefined) return;
     const text = await readableText(candidate.absPath, read, sizeOf);
     if (signal.aborted) return;
     if (text === null) continue;
-    options.onBatch({ rows: matchFile(candidate.relPath, text, matcher), done: false });
+    const rows = matchFile(candidate.relPath, text, matcher).slice(0, runtime.remaining);
+    runtime.remaining -= rows.length;
+    if (rows.length > 0) options.onBatch({ rows, done: false });
   }
 }
 
@@ -152,6 +162,7 @@ async function run(runtime: Runtime): Promise<void> {
 
   for (const batch of chunk(candidates, BATCH_SIZE)) {
     if (signal.aborted) return;
+    if (runtime.remaining === 0) break;
     pending.push(...await detect(batch, matcher, runtime));
     await deliver(pending, matcher, runtime);
   }
@@ -182,7 +193,9 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
     }
   });
   const controller = new AbortController();
-  const runtime: Runtime = { options, request, read, sizeOf, signal: controller.signal };
+  const runtime: Runtime = {
+    options, request, read, sizeOf, signal: controller.signal, remaining: MAX_RESULTS,
+  };
   // A rejection here would otherwise escape as an unhandled rejection while the tab sat in its
   // searching state forever, so it is reported through the same channel the rows arrive on. A scan
   // the user cancelled is not a failure and reports nothing at all.
