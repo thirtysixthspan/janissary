@@ -17,8 +17,18 @@ import { insertStatement, type SqlColumn, type SqlInsertCell } from '@shared/plu
 // `CellEditor` already offers, so the two agree about how a null is set.
 type Draft = { text: string; isNull: boolean };
 
-function draftFor(value: string | null): Draft {
-  return value === null ? { text: '', isNull: true } : { text: value, isNull: false };
+// A column's first state. The primary key starts as an explicit null, because a key the user did not
+// choose is the one value a new row almost always has. Every other column starts untouched, which is
+// a third state the two fields already spell between them: no text and no null.
+function draftFor(column: SqlColumn): Draft {
+  return { text: '', isNull: column.pk > 0 };
+}
+
+// The two states that put a column in the statement, and the one that leaves it out. A column the
+// insert does not name gets the table's own `DEFAULT`, so a schema's defaults run for a row added
+// here rather than being overwritten by a null nobody typed.
+function isNamed(draft: Draft): boolean {
+  return draft.isNull || draft.text !== '';
 }
 
 export function InsertForm({
@@ -30,16 +40,18 @@ export function InsertForm({
   onCancel(): void;
 }) {
   // Every column is offered, so the form is a picture of the row rather than a question about which
-  // columns to fill in. A column the user leaves alone is still sent as null, which is what the
-  // click-to-insert path did and what a database default expects.
+  // columns to fill in. Only the columns the user has given a value or an explicit null are named by
+  // the statement; the rest are left to the table's defaults, which is what a column nobody filled in
+  // is asking for.
   const [drafts, setDrafts] = useState<Record<string, Draft>>(
-    () => Object.fromEntries(columns.map((column) => [column.name, draftFor(null)])),
+    () => Object.fromEntries(columns.map((column) => [column.name, draftFor(column)])),
   );
 
-  const cells = columns.map((column) => ({
-    column: column.name,
-    value: drafts[column.name]?.isNull ? null : (drafts[column.name]?.text ?? ''),
-  }));
+  const cells = columns.filter((column) => isNamed(drafts[column.name] ?? draftFor(column)))
+    .map((column) => ({
+      column: column.name,
+      value: drafts[column.name]?.isNull ? null : (drafts[column.name]?.text ?? ''),
+    }));
 
   return (
     <div className="sql-insert">

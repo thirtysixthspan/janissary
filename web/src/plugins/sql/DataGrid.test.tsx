@@ -143,10 +143,10 @@ describe('the insert form', () => {
   it('previews the statement the save will run', () => {
     opened();
     expect(screen.getByTestId('sql-insert-statement').textContent)
-      .toBe('INSERT INTO "orders" ("id", "status") VALUES (?, ?)');
+      .toBe('INSERT INTO "orders" ("id") VALUES (?)');
   });
 
-  it('sends the collected cells on Save, and an untouched column as null', () => {
+  it('sends only the columns that were given a value', () => {
     const intent = opened();
     fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -156,10 +156,30 @@ describe('the insert form', () => {
     });
   });
 
-  // An untouched column is null rather than an empty string, so a column the user is not thinking
-  // about gets the database's own default instead of a value they never typed.
-  it('treats an untouched column as null, not as an empty string', () => {
+  // A column the insert does not name is stored as whatever the table's own DEFAULT says, which is
+  // the whole reason a form should leave one out rather than write a null over it.
+  it('does not name a column left alone, so its default runs', () => {
     const intent = opened();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }],
+    });
+  });
+
+  it('leaves the primary key as the one column a new row names without being asked', () => {
+    opened();
+    expect((screen.getByLabelText('id is null') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText('status is null') as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('turning the NULL toggle off leaves the column unnamed, and on again names it null', () => {
+    const intent = opened();
+    fireEvent.click(screen.getByLabelText('status is null'));
+    fireEvent.click(screen.getByLabelText('status is null'));
+    expect(screen.getByTestId('sql-insert-statement').textContent)
+      .toBe('INSERT INTO "orders" ("id") VALUES (?)');
+    fireEvent.click(screen.getByLabelText('status is null'));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(intent).toHaveBeenCalledWith('insert-row', {
       object: 'orders',
@@ -167,18 +187,10 @@ describe('the insert form', () => {
     });
   });
 
-  it('lets the NULL toggle be turned off, which is the empty string the user typed', () => {
-    const intent = opened();
-    fireEvent.click(screen.getByLabelText('status is null'));
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-    expect(intent).toHaveBeenCalledWith('insert-row', {
-      object: 'orders',
-      cells: [{ column: 'id', value: null }, { column: 'status', value: '' }],
-    });
-  });
-
   it('disables a field whose column is null, so a typed value cannot be a silent contradiction', () => {
     opened();
+    expect((screen.getByLabelText('New id') as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('status is null'));
     expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(true);
     fireEvent.click(screen.getByLabelText('status is null'));
     expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(false);

@@ -140,14 +140,16 @@ reaching a different row.
 
 **Insert row** opens a form with one input per column, the statement the save will run shown above the
 controls, and a Save and a Cancel. Nothing is written until Save, and a column the user leaves alone
-is sent as null rather than as an empty string. The null is what is stored: a column's `DEFAULT`
-covers a column the insert does not name, so a `NOT NULL` column has to be filled in and a defaulted
-one comes back null unless a value is typed into it. Each input
-carries a **NULL** toggle matching the cell editor's, and it is on until the user turns it off — a
-blank string and an explicit null are different values, so the distinction is a control rather than a
-convention about typing nothing. A field whose column is null is disabled, so a typed value cannot
-silently contradict the toggle beside it. **Delete row** is on every row and asks first, through the
-application's own confirmation, naming the table.
+is not named by that statement at all — so the table's own `DEFAULT` runs for it, which is what a
+column nobody filled in is asking for. A `NOT NULL` column with no default and nothing typed into it
+is the one that gets refused, by the database, naming the column. The primary key is the one column
+that starts as an explicit null, since a key nobody chose is the one value a new row always has.
+Each input carries a **NULL** toggle matching the cell editor's, and it is off until the user turns it
+on — a blank field and an explicit null are different values, so the distinction is a control rather
+than a convention about typing nothing, and turning the toggle off leaves the column unnamed again. A
+field whose column is null is disabled, so a typed value cannot silently contradict the toggle beside
+it. **Delete row** is on every row and asks first, through the application's own confirmation, naming
+the table.
 
 A run of cells is copied as tab-separated text, one line per row, from **Copy selection** or from
 the platform's own copy key. A spreadsheet pastes it as a table with no quoting rules to disagree
