@@ -8,6 +8,7 @@ import { DataGrid } from './DataGrid';
 import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
+import { statementResult } from './grid-view';
 import { logOutcome } from './SqlHistory';
 import { TableSwitcher } from './TableSwitcher';
 
@@ -42,6 +43,10 @@ export function SqlTab({
   // goes. It is not a separate field either: one list means the line and the history agree.
   const latest = payload.log[0] ?? null;
   const object = payload.objects.find((entry) => entry.name === payload.object);
+  // A statement's result is read-only the way a view is — there is no row identity in it to write to
+  // — so the insert control goes with the rest of the write controls rather than offering a form
+  // about a table the grid is not showing.
+  const writable = object?.writable === true && !statementResult(payload.grid);
 
   return (
     <div
@@ -54,7 +59,7 @@ export function SqlTab({
         <DatabaseSwitcher payload={payload} onOpen={(name) => send('open', { name })} />
         <TableSwitcher payload={payload} onOpen={(name) => send('select-object', { object: name })} />
         <span className="sql-meta-actions">
-          {object?.writable && (
+          {writable && (
             <button
               type="button"
               className="sql-icon"

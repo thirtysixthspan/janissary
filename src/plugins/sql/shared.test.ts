@@ -118,6 +118,22 @@ describe('isSqlPayload', () => {
     expect(isSqlPayload(cut('yes'))).toBe(false);
   });
 
+  // A statement's result is read-only because its rows carry no identity, and the tab needs the
+  // server's word for that rather than inferring it from rows it cannot write to anyway.
+  it('accepts a keyless grid, and refuses a keyless flag that is not a boolean', () => {
+    const keyless = (keyless: unknown) => payload({
+      grid: {
+        sql: 'SELECT x FROM t', parameters: [], columns: ['x'],
+        rows: [{ key: '', cells: [{ text: '1', isNull: false }] }],
+        total: 1, unfilteredTotal: 1, offset: 0, limit: 200, order: [], keyless,
+      } as never,
+    });
+    expect(isSqlPayload(keyless(true))).toBe(true);
+    expect(isSqlPayload(keyless(false))).toBe(true);
+    expect(isSqlPayload(keyless(undefined))).toBe(true);
+    expect(isSqlPayload(keyless('yes'))).toBe(false);
+  });
+
   // The page sizes ride in the payload so the control and the guard that accepts one read the same
   // list, which is only safe while the list itself is sound.
   it('rejects a payload whose page sizes are missing, empty, or not numbers', () => {

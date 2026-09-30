@@ -372,6 +372,32 @@ describe('DataGrid read-only objects', () => {
     expect(container.querySelector('.sql-cell-editor')).toBeNull();
     expect(intent).not.toHaveBeenCalled();
   });
+
+  // A statement's result arrives with every row keyed by the empty string, and the editor's test is
+  // `editing?.row === row.key` — so a double-click on one cell opened an editor in all of them, the
+  // first blur sent a write the server could only refuse, and the log filled with refusals the user
+  // never asked for.
+  it('says a statement result cannot be written and sends nothing when a cell is pressed', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(
+      <DataGrid payload={payload({ grid: grid({ keyless: true }) })} capabilities={capabilities} />,
+    );
+    expect(screen.getByText("Read-only: this is a statement's result, not a table.")).toBeTruthy();
+    expect(screen.queryByLabelText('Delete row')).toBeNull();
+    const cell = container.querySelector('.sql-cell');
+    fireEvent.doubleClick(cell!);
+    expect(container.querySelector('.sql-cell-editor')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('still writes on a page of an object, so the flag is what changed the above', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByText("Read-only: this is a statement's result, not a table.")).toBeNull();
+    expect(screen.getAllByLabelText('Delete row').length).toBeGreaterThan(0);
+    fireEvent.doubleClick(container.querySelector('.sql-cell')!);
+    expect(container.querySelector('.sql-cell-editor')).not.toBeNull();
+  });
 });
 
 describe('DataGrid errors', () => {

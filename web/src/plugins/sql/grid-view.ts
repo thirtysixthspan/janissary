@@ -228,7 +228,21 @@ export function currentObject(payload: SqlPayload): SqlObject | undefined {
   return payload.objects.find((object) => object.name === payload.object);
 }
 
-export function readOnlyReason(object: SqlObject | undefined): string | null {
+/**
+ * Whether this grid is a statement's result rather than a page of an object, and so carries no row a
+ * write can address.
+ *
+ * A statement the user typed is not necessarily about one object, so the server had no row to mint an
+ * identity for and every row arrived with an empty one. `editing?.row === row.key` matches those all
+ * at once, which is how a single double-click opened an editor in every row and the first blur sent a
+ * write that could only be refused.
+ */
+export function statementResult(grid: SqlGrid | null): boolean {
+  return grid?.keyless === true;
+}
+
+export function readOnlyReason(object: SqlObject | undefined, statement = false): string | null {
+  if (statement) return "Read-only: this is a statement's result, not a table.";
   if (!object) return null;
   if (object.kind === 'view') return `Read-only: "${object.name}" is a view.`;
   if (!object.writable) return `Read-only: "${object.name}" has no primary key.`;

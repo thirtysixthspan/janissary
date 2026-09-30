@@ -82,6 +82,9 @@ export type SqlGrid = {
   // The console's ceiling cut this result short, so the rows are the first of more rather than all of
   // them. Absent for a page of an object, which is a count and not a cut.
   truncated?: boolean;
+  // The rows carry no row identity, because the statement was not about one object and the server had
+  // no row to mint one for. Absent for a page of an object, which a write can address.
+  keyless?: boolean;
 };
 
 // One statement the tab ran, and what it did. `changed` is 0 for a statement run through `exec`, which
@@ -229,7 +232,8 @@ function isGrid(value: unknown): value is SqlGrid {
     && typeof value.offset === 'number'
     && typeof value.limit === 'number'
     && Array.isArray(value.order) && value.order.every(isOrder)
-    && (value.truncated === undefined || typeof value.truncated === 'boolean');
+    && (value.truncated === undefined || typeof value.truncated === 'boolean')
+    && (value.keyless === undefined || typeof value.keyless === 'boolean');
 }
 
 

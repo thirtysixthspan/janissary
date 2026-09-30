@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SqlTab } from './SqlTab';
-import { makeCapabilities, payload } from './fixture';
+import { grid, makeCapabilities, payload } from './fixture';
 
 describe('SqlTab layout', () => {
   // A harness tab is one metadata row across the full width and one body below it. This is the same
@@ -86,6 +86,16 @@ describe('SqlTab metadata row', () => {
   it('offers no insert control for an object that cannot be written to', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload({ object: 'paid' })} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('Insert row')).toBeNull();
+  });
+
+  // A statement's result is read-only the way a view is, and it sits over a table the tab may well be
+  // able to write to — so the form has to go with the rest of the write controls rather than offering
+  // columns of a table the grid is not showing.
+  it('offers no insert control over a statement result, however writable its table is', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload({ grid: grid({ keyless: true }) })} capabilities={capabilities} />);
+    expect(screen.getByText("Read-only: this is a statement's result, not a table.")).toBeTruthy();
     expect(screen.queryByLabelText('Insert row')).toBeNull();
   });
 

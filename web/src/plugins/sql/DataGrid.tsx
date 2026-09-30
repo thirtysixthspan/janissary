@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { countLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
+import { countLabel, readOnlyReason, statementResult, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser } from './ColumnChooser';
@@ -43,7 +43,12 @@ export function DataGrid({
   const [filtering, setFiltering] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const grid = payload.grid;
-  const readOnly = readOnlyReason(object);
+  // A statement's result carries no row identity, so the grid is read-only the way a view is and
+  // offers no write control at all. One flag decides it, so the reason, the delete affordance, and
+  // both routes to an editor cannot disagree about whether this grid can be written to.
+  const statement = statementResult(grid);
+  const readOnly = readOnlyReason(object, statement);
+  const writable = object?.writable === true && !statement;
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
   const ordered = payload.order[0];
   // The declared order, minus what the chooser has put away. A hidden column keeps its place in the
@@ -60,7 +65,7 @@ export function DataGrid({
     onEdit: (at) => {
       const row = grid?.rows[at.row];
       const column = shown[at.cell]?.name;
-      if (row && column && object?.writable) setEditing({ row: row.key, column });
+      if (row && column && writable) setEditing({ row: row.key, column });
     },
     onSelectRow: (row) => selection.selectRow(row, true),
     edgeRow: selection.range?.to.row ?? null,
@@ -165,12 +170,12 @@ export function DataGrid({
                 shown={shown}
                 object={object}
                 editingColumn={editing?.row === row.key ? editing.column : null}
-                deleting={object?.writable === true}
+                deleting={writable}
                 selected={selected}
                 onSelect={selection.select}
                 onSelectRow={(extend) => selection.selectRow(index, extend)}
                 onEdit={(column) => {
-                  if (object?.writable) setEditing({ row: row.key, column });
+                  if (writable) setEditing({ row: row.key, column });
                 }}
                 onCommit={(column, value) => {
                   setEditing(null);

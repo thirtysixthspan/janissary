@@ -103,6 +103,9 @@ export type DatabaseGridView = {
   // The console's own ceiling cut this result short, so the rows are the first of more rather than
   // all of them. Absent for a page of an object, which is a count and not a cut.
   truncated?: boolean;
+  // The rows carry no row identity, because the statement was not about one object and the server
+  // had no row to mint one for. Absent for a page of an object, which a write can address.
+  keyless?: boolean;
 };
 
 export type DatabaseResultView =

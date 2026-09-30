@@ -112,6 +112,7 @@ describe('DatabaseBrowser', () => {
     expect(answer.grid.total).toBe(2);
     expect(answer.grid.rows.map((row) => row.cells[1].text)).toEqual(['paid', 'open']);
     expect(answer.grid.rows[0]?.key).not.toBe('');
+    expect(answer.grid.keyless).toBeFalsy();
     browser.dispose();
   });
 
@@ -213,6 +214,7 @@ describe('DatabaseBrowser', () => {
     expect(answer.grid.rows).toHaveLength(CONSOLE_ROW_LIMIT);
     expect(answer.grid.total).toBe(CONSOLE_ROW_LIMIT);
     expect(answer.grid.truncated).toBe(true);
+    expect(answer.grid.keyless).toBe(true);
     expect(answer.error).toBeUndefined();
     browser.dispose();
   });

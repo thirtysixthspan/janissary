@@ -29,7 +29,9 @@ function takeRows(rows: Iterable<Record<string, unknown>>): { taken: Record<stri
  *
  * The column names come from the statement rather than from row 0, so an empty result still renders
  * a header. `truncated` makes the totals report the ceiling rather than claiming a result of exactly
- * that size, which is the difference between a table that is short and a query that was cut off.
+ * that size, which is the difference between a table that is short and a query that was cut off, and
+ * `keyless` carries the same idea about identity: a statement is not necessarily about one object, so
+ * there is no row here for a write to address.
  */
 function consoleGrid(
   sql: string,
@@ -53,6 +55,7 @@ function consoleGrid(
     limit: CONSOLE_ROW_LIMIT,
     order: [],
     truncated,
+    keyless: true,
   };
 }
 

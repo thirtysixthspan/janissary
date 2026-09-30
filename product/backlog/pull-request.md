@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Stop a console result's grid from writing refused statements into the log on every click
-
-Existing Issue: After a read typed into the console fills the grid, double-clicking a cell opens no editor at all and instead issues refused `update-cell` writes, one per row, each adding a `That row is no longer loaded. Refresh and try again.` entry to the statement log and a notification. Severity: 6/10
-
-Existing Risk: 6/10 - The statement log is this browser's only record of what was written, so a user reading it later sees writes they never made and cannot tell them from the ones they did, and no cell of a console result can be edited at all.
-
-Proposal Risk: 2/10 - A grid that either offers its write controls or hides them for a keyless result is a smaller surface than one that silently writes on every click.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: a grid filled by a console read fires refused writes and never opens a cell editor". Step G10 (generated), quoting the spec: "A row is named on the wire by an opaque key the server minted when it returned the page" (product/specs/sql-database.md). With a `shop` database holding `orders`, select `orders` and type `SELECT id, customer, status, total FROM orders WHERE id <= 5` into the console. Expected: double-clicking one cell opens that cell's editor and nothing else happens, and committing a value either writes that row or says the row is not loaded once. Observed on two fresh instances and once with a tight probe: immediately after a single double-click no `.sql-cell-editor` was on screen, and 1.5 seconds later the error band read `That row is no longer loaded. Refresh and try again.`, two notifications had been raised, and the statement log held two entries with that text and no SQL. `readStatement` in `src/database/console-read.ts` mints every row of a console result with `key: ''` (`consoleGrid` builds `DatabaseRowView` objects whose `key` is the empty string, because a console result is not a page to edit), and `GridRow` in `web/src/plugins/sql/GridRow.tsx` decides which cell is being edited with `editing?.row === row.key`, so a key of `''` matches every row at once: one double-click puts an editor in each row, the first blur commits, and `updateCell` in `src/database/write.ts` refuses the empty key with `STALE_ROW`. The likely fix is to make the grid treat a page whose rows carry no key as read-only — no editor, no **Insert row**, no **Delete row** — and to show why, rather than to make the empty key addressable. A regression test should render a grid whose rows all carry `key: ''`, double-click one cell, and assert that no editor opens and no `update-cell` intent is sent.
-
 * Make `ArrowUp` in the SQL console recall the statement typed last, not the first one typed
 
 Existing Issue: The first `ArrowUp` in the SQL console recalls the oldest statement typed in that tab, so the most recent one is only reached after pressing it as many times as the tab has statements. Severity: 5/10

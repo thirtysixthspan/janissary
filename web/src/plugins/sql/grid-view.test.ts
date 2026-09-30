@@ -15,6 +15,7 @@ import {
   previousOffset,
   readOnlyReason,
   rowRange,
+  statementResult,
 } from './grid-view';
 
 const GRID: SqlGrid = {
@@ -240,6 +241,27 @@ describe('readOnlyReason', () => {
     expect(readOnlyReason(PAID)).toBe('Read-only: "paid" is a view.');
     expect(readOnlyReason(LOGS)).toBe('Read-only: "logs" has no primary key.');
     expect(readOnlyReason(undefined)).toBeNull();
+  });
+
+  // A statement's result sits over whatever object the tab had selected, and a writable one is
+  // exactly the case where the object has nothing to say — the result is what cannot be written.
+  it('names a statement result for a writable object, and for no object at all', () => {
+    expect(readOnlyReason(ORDERS, true)).toBe("Read-only: this is a statement's result, not a table.");
+    expect(readOnlyReason(undefined, true)).toBe("Read-only: this is a statement's result, not a table.");
+  });
+});
+
+describe('statementResult', () => {
+  it('is true only for a grid the server says carries no row identity', () => {
+    expect(statementResult(grid({ keyless: true }))).toBe(true);
+    expect(statementResult(grid())).toBe(false);
+    expect(statementResult(null)).toBe(false);
+  });
+
+  it('says a result that returned no rows is still a statement result', () => {
+    // The rows are what a key is, so an empty one gives a client nothing to go on — the server's
+    // own word is what keeps a read that matched nothing from being treated as a writable page.
+    expect(statementResult(grid({ rows: [], total: 0, unfilteredTotal: 0, keyless: true }))).toBe(true);
   });
 });
 

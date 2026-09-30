@@ -189,6 +189,12 @@ that can address one row of it rather than several, and `rowid` is not a safe an
 "<name>" is a view.` or `Read-only: "<name>" has no primary key.` and offers no edit, insert, or
 delete control at all. Its grid is otherwise ordinary, and the console still writes to it.
 
+A **statement's result** is read-only for the same reason: a statement the user typed is not
+necessarily about one object, so there is no row in it for a write to name. Its header reads
+`Read-only: this is a statement's result, not a table.`, it offers no edit, insert, or delete control
+at all, and pressing a cell does nothing rather than writing. It can still be filtered, ordered,
+paged, copied, and exported like any other, and the console still writes to the database.
+
 ### Statement history
 
 A control beside the command bar opens a panel over it listing the statements the tab has run, newest
@@ -265,7 +271,9 @@ is deleted under an open tab. A failed statement leaves the grid as it was and s
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
-the console refused to finish is not the same thing as a small one.
+the console refused to finish is not the same thing as a small one. What it fills the grid with is
+read-only, as described under Editing: a statement is not a page of one object, so nothing in it can
+be written to.
 
 Nothing a grid or a console does disables the plugin, and nothing is written to a transcript.
 
