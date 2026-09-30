@@ -1,8 +1,8 @@
 # Test an Open Pull Request
 
-Your job: take a pull request that is **already open** and check out its head branch. Build and start the app from that branch, then drive it through the browser Janissary attached to this tab, following the testing steps the pull request itself offers as proof that it works. Then write edge-case steps of your own for the behavior it changes, and run those too. Every failure is rerun, researched to a likely root cause, and recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch. Each entry carries enough detail that an agent opening it cold can replicate the failing test. The entry is committed and pushed, and the pull request is **left open**.
+Your job: take a pull request that is **already open** and check out its head branch. Build and start the app from that branch, then drive it through the browser Janissary attached to this tab, following the manual testing steps the pull request itself offers as proof that it works. Then write up to five additional use-case or edge-case steps of your own for the behavior it changes, run those too, and add them to the pull request's description in a section of their own. Every failure is rerun, researched to a likely root cause, and recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch. Each entry carries enough detail that an agent opening it cold can replicate the failing test. The entry is committed and pushed, and the pull request is **left open**.
 
-This task **tests and records**. It never fixes what it finds, never edits source code, never edits the pull request's description, and never merges or closes anything. Every recorded failure is addressed in a separate invocation of `execute ./ai/tasks/work-an-issue.md`, using its `PR <number>:` prefix to update the tested pull request's branch and leave it open. Steps that pass are shown in this run's report and nowhere else.
+This task **tests and records**. It never fixes what it finds, never edits source code, never touches the pull request's description beyond its own **Additional test cases** section, and never merges or closes anything. Every recorded failure is addressed in a separate invocation of `execute ./ai/tasks/work-an-issue.md`, using its `PR <number>:` prefix to update the tested pull request's branch and leave it open. Steps that pass are shown in this run's report and nowhere else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation. Janissary's own scripts are reached as `$janissary/scripts/run.mjs`, the installation's copy, never through the branch's `./scripts/run.mjs`: the checked-out branch's scripts are part of what is under test.
 
@@ -22,14 +22,14 @@ This task **tests and records**. It never fixes what it finds, never edits sourc
 
 ### Allowed — do it automatically, never ask
 
-Read any file in the repo. Check out `master` and run the preparation task there. Check out the pull request's head branch. Run read-only `git` and `gh` commands. Run the gated package update in Step 3. Read the base branch with `git show origin/<base>:<path>`. Execute the start and stop tasks, read from the base branch as described above, with the scratch root `./temp/test-pull-request/`. Write drivers, fixtures, and evidence under that scratch root. Drive the attached browser. Run the app's own CLI and shell steps as Steps 5 and 7 allow. Create `./product/backlog/pull-request.md`, append entries to it, and append `re-observed on` evidence to an existing entry's `Proposal`. Commit and push that one file to the pull request's head branch.
+Read any file in the repo. Check out `master` and run the preparation task there. Check out the pull request's head branch. Run read-only `git` and `gh` commands. Run the gated package update in Step 3. Read the base branch with `git show origin/<base>:<path>`. Execute the start and stop tasks, read from the base branch as described above, with the scratch root `./temp/test-pull-request/`. Write drivers, fixtures, and evidence under that scratch root. Drive the attached browser. Run the app's own CLI and shell steps as Steps 5 and 7 allow. Create `./product/backlog/pull-request.md`, append entries to it, and append `re-observed on` evidence to an existing entry's `Proposal`. Commit and push that one file to the pull request's head branch. Write the **Additional test cases** section of the pull request's description with `gh pr edit --body-file`, as Step 11 describes.
 
 ### Forbidden — no exceptions
 
 1. **Merging or closing the pull request, or pushing anywhere but its head branch.** Never run `gh pr merge`, never open a replacement pull request. Merging is the human's decision.
 2. **Working a pull request that is not `OPEN`, or an ambiguous target.** Report and stop; never substitute another pull request or branch.
 3. **Editing any tracked file other than `./product/backlog/pull-request.md`.** No source, test, spec, config, plan, or documentation edit. This task records; `work-an-issue.md` fixes.
-4. **Editing the pull request's title or description, or posting to GitHub.** No `gh pr edit`, `gh pr comment`, or `gh pr review`. A wrong testing step is recorded as a finding for `work-an-issue.md` to correct.
+4. **Editing the pull request's title, editing its description outside the Additional test cases section, or posting to GitHub.** No `gh pr comment` or `gh pr review`, and no `gh pr edit` beyond Step 11's `--body-file` write. Every other part of the description, **How to verify** included, is the author's and stays byte-for-byte. A wrong testing step is recorded as a finding for `work-an-issue.md` to correct.
 5. **Running the project's quality tooling.** No lint, typecheck, test suite, `check-diff`, `pr-check-gate`, or `npm run check`, even when a testing step asks for it. CI and the build and issue tasks own that tooling; this task tests behavior.
 6. **Installing anything outside Step 2's preparation of `master` and Step 3's gated package update, or letting a lifecycle script run.** The gate is what contains install-time code from a branch you did not write.
 7. **Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL.** Never drive the human's live app or any instance other than the one this run started.
@@ -62,7 +62,7 @@ Read [`sandbox-e2e-browser.md`](../guidelines/sandbox-e2e-browser.md) for the co
 
 The workspace is prepared from the primary branch first, so `node_modules/` starts out holding `master`'s dependencies. Step 3 then changes only what the branch needs.
 
-1. Confirm the working tree is clean with `git status`. Both checkouts below carry a stray file along, and the commit in Step 12 stages everything, so it would be swept into that too. If the tree is not clean, stop and report what is there.
+1. Confirm the working tree is clean with `git status`. Both checkouts below carry a stray file along, and the commit in Step 13 stages everything, so it would be swept into that too. If the tree is not clean, stop and report what is there.
 2. Run `git checkout master` and `git pull origin master`. That is the preparation task's Step 1.
 3. Read `./ai/tasks/workspace/prepare-workspace.md` from this `master` checkout, or the installation's `$janissary/ai/tasks/workspace/prepare-workspace.md` when `master` has none, and follow its Steps 2 and 3. Its gate verdicts apply here as written. A stop there stops this run before any branch code is checked out.
 4. Run `gh pr checkout <number>`. Do not create a new branch.
@@ -122,11 +122,13 @@ One more marker schedules a step without refusing it. **`session-ending`** marks
 
 ---
 
-## Step 6 — Write the edge-case steps
+## Step 6 — Write up to five additional steps
 
-Read `git diff origin/master...HEAD` in full, the plan, and every spec under `./product/specs/` the diff touches. Write the edge cases the pull request's own steps miss, for the behavior this pull request changes and nothing else: the empty state, the error path, cancelling, doing it twice, unexpected input, and how the change meets the features next to it. Skip anything the plan's **Out of scope** section defers — a deliberate deferral is not a gap. Number them after any generated steps from Step 4.
+Read `git diff origin/master...HEAD` in full, the plan, and every spec under `./product/specs/` the diff touches. Write the use cases and edge cases the pull request's own steps miss, for the behavior this pull request changes and nothing else: a realistic use the manual steps skip, the empty state, the error path, cancelling, doing it twice, unexpected input, and how the change meets the features next to it. Skip anything the plan's **Out of scope** section defers — a deliberate deferral is not a gap. Number them after any generated steps from Step 4.
 
-There is no cap. Write as many as the change warrants; do not pad to reach a number and do not drop a real case to stay under one. Classify each one through Step 5 like any other step.
+Write **at most five**. When the change warrants more, keep the five most likely to expose a defect in the changed behavior. Do not pad to reach five: a small change may warrant fewer, or none. The steps Step 4 generates in place of missing manual steps are not counted against the five. Classify each one through Step 5 like any other step.
+
+Write each step concretely enough for a reviewer to follow by hand: the actions, the inputs, and the expected result. Step 11 copies these steps into the pull request's description.
 
 Each generated step states its expected result and quotes the sentence in the plan, a spec, or the description that promises it. **When no source says what should happen**, the step still runs, and it fails only on plainly broken behavior: an uncaught error, a `[pageerror]` line in the driver's console log, a hang, a crash, or lost data. Anything else it shows is reported as `unspecified — <what was observed>`, and nothing is filed.
 
@@ -166,7 +168,7 @@ Decide here whether the code or the step is wrong. When the app does what the pl
 
 A failure whose root cause you cannot locate is still filed. Say plainly that the cause was not found, name what was checked and ruled out, and describe the fix only as far as the evidence supports it. Failures that share one root cause become one entry that lists every failing step, so the cause is fixed once.
 
-**If the browser is lost,** retry the connect once, unless its close reason says the browser will not be restarted. A second refusal, or that close reason, ends testing. Keep the failures already rerun and researched, list every step not yet run under `Not tested` as `browser lost`, and continue through Steps 10–14. Do not close or restart the attached browser, and never navigate to `file:` as a recovery attempt.
+**If the browser is lost,** retry the connect once, unless its close reason says the browser will not be restarted. A second refusal, or that close reason, ends testing. Keep the failures already rerun and researched, list every step not yet run under `Not tested` as `browser lost`, and continue through Steps 10–15. Do not close or restart the attached browser, and never navigate to `file:` as a recovery attempt.
 
 ---
 
@@ -183,7 +185,7 @@ A failure whose root cause you cannot locate is still filed. Say plainly that th
 # pull-request
 ```
 
-5. **Verify.** `git status --porcelain` names `./product/backlog/pull-request.md` and nothing else, apart from a `temp/` line the start task may have added to `.gitignore`, which Step 11 reverts. When the backlog line is marked `??`, the file is new and `git diff` shows nothing for it: read it back and confirm it holds the comment, the heading, and your entries. When it carries a modification marker, `git diff` must show only lines appended to the end, plus any `re-observed on` sentences. Revert anything else this run can account for.
+5. **Verify.** `git status --porcelain` names `./product/backlog/pull-request.md` and nothing else, apart from a `temp/` line the start task may have added to `.gitignore`, which Step 12 reverts. When the backlog line is marked `??`, the file is new and `git diff` shows nothing for it: read it back and confirm it holds the comment, the heading, and your entries. When it carries a modification marker, `git diff` must show only lines appended to the end, plus any `re-observed on` sentences. Revert anything else this run can account for.
 
 ### The entry format
 
@@ -233,7 +235,24 @@ A real fix brings `Proposal Risk` in well below `Existing Risk`. When it does no
 
 ---
 
-## Step 11 — Tear down
+## Step 11 — Add the additional steps to the description
+
+Skip this step when Step 6 wrote no steps, and leave the description untouched. Otherwise, copy those steps into the pull request's description, so a reviewer can see which extra cases the run covered and run them by hand. Do it before tear-down: the body file lives under the scratch root, so the stop task removes it and the commit in Step 13 can never stage it.
+
+1. Run `gh pr view <number> --json body` and take the current body.
+2. Write the section. It is an `### Additional test cases` heading, one line naming the tested commit's short sha, then every Step 6 step as a numbered item in step-id order. Each item gives the actions, the inputs, and the expected result, in the words Step 6 wrote. Include steps Step 5 marked not tested, because a reviewer may be able to run them. Leave out results, the scratch root's paths, the browser endpoint, and the session token.
+3. Place it. When the body already has an `### Additional test cases` section, from an earlier run, replace that section, from its heading up to the next heading of the same or a higher level or the end of the body, with the new one. Otherwise insert it directly after the **How to verify** section, or at the end of the body when there is none. Every other character of the body stays exactly as it was.
+4. Write the full revised body to `./temp/test-pull-request/pr-body.md` with the file-editing tool, and apply it:
+
+```bash
+gh pr edit <number> --body-file ./temp/test-pull-request/pr-body.md
+```
+
+Use the body file rather than an inline `--body` string, because multi-line markdown breaks on shell quoting. Never pass `--title`. If the edit fails, note the error for the report and go on; it does not stop the run and is not retried.
+
+---
+
+## Step 12 — Tear down
 
 1. Close only the pages and contexts this run opened. The `e2e-driver` runner already does this for each driver; never close or kill the attached browser.
 2. Execute the stop task with `./temp/test-pull-request/` and the record path, reading it from the base branch with `git show origin/<base>:ai/tasks/workspace/stop-application.md`, or the installation's `$janissary/ai/tasks/workspace/stop-application.md` when the base has none. Take whatever text the report still needs out of the scratch root first. If it reports an incomplete teardown, carry that into the report verbatim; never claim a cleanup that did not happen.
@@ -242,7 +261,7 @@ A real fix brings `Proposal Risk` in well below `Existing Risk`. When it does no
 
 ---
 
-## Step 12 — Commit and push
+## Step 13 — Commit and push
 
 Skip this step when Step 10 wrote nothing.
 
@@ -263,17 +282,17 @@ If the push is rejected because the remote branch advanced, run `git pull --reba
 
 ---
 
-## Step 13 — Confirm the pull request is still open
+## Step 14 — Confirm the pull request is still open
 
 ```bash
 gh pr view <number> --json state,headRefName,headRefOid,url
 ```
 
-Confirm the state is `OPEN` and, when Step 12 pushed, that `headRefOid` matches `git rev-parse HEAD`. **Do not merge it.**
+Confirm the state is `OPEN` and, when Step 13 pushed, that `headRefOid` matches `git rev-parse HEAD`. **Do not merge it.**
 
 ---
 
-## Step 14 — Report
+## Step 15 — Report
 
 Give the user a short report in this exact shape, with one `Results` line per step that ran:
 
@@ -288,6 +307,7 @@ Results:
   [generated]   <step> — intermittent 1 of 2
 Not tested:  none | <step — reason>
 Recorded:    <n> new, <n> appended — <short-sha> pushed | nothing to record | push failed
+Description: <n> additional test cases added | <n> additional test cases replaced | unchanged — no additional steps | edit failed — <error>
 Status:      open (not merged)
 ```
 
