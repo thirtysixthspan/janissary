@@ -23,6 +23,18 @@ describe('SqlTab layout', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
+  // The pane is the box the stylesheet bounds the grid in; a grid outside it would be laid out
+  // against nothing and paint over the command bar. The rule and the class have to agree.
+  it('puts the grid in a bounded pane beside the navigator, which is what keeps it out of the bar', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const body = container.querySelector('.sql-body') as HTMLElement;
+    const pane = body.querySelector('.sql-grid-pane') as HTMLElement;
+    expect(pane.querySelector('.sql-grid-area')).toBeTruthy();
+    expect(pane.querySelector('.sql-grid-scroll')).toBeTruthy();
+    expect(body.querySelector('.sql-nav-pane')).toBeTruthy();
+  });
+
   it('marks both layouts for the documentation screenshot', () => {
     const centre = makeCapabilities(null);
     const { container } = render(<SqlTab payload={payload()} capabilities={centre.capabilities} />);

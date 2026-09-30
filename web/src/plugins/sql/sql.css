@@ -21,6 +21,11 @@
 
 .sql-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
 .sql-nav-pane { width: 220px; flex-shrink: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--border); }
+/* The grid's half of the body. It has to be a flex container itself, or `.sql-grid-area`'s own
+   `flex: 1; min-height: 0` has no parent to be flexed in and the table sizes to its content — which
+   overflows the pane, is not clipped, and lands on the command bar. `min-width: 0` is the horizontal
+   half of the same repair: without it a wide table sizes the pane instead of scrolling inside it. */
+.sql-grid-pane { flex: 1; min-width: 0; min-height: 0; display: flex; }
 .sql-docked .sql-nav-pane, .sql-docked .sql-grid-area { width: 100%; border-right: none; }
 
 .sql-nav { display: flex; flex-direction: column; gap: 8px; padding-right: 8px; }
