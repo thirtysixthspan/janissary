@@ -101,10 +101,15 @@ focus from the term to the window and Tab again moves it back. **Shift+Tab is no
 keeps walking backwards out of the tab, which is what it is for.
 
 The search bar and the result window each keep their own keys, because only the focused element
-receives them. Click into the window to give it focus: the arrow keys then move the highlighted row,
-Home and End jump to the first and last, and `Return` opens the highlighted match. While the search
-bar has focus the arrow keys walk the searched terms instead, and a term that has wrapped onto a
-second line leaves them to the caret.
+receives them. Click into the window to give it focus: the arrow keys then move the highlighted entry
+and scroll the window only as far as it must to keep that entry visible, `Home` and `End` jump to the
+first and the last, and `Return` opens the highlighted match. While the search bar has focus the
+arrow keys walk the searched terms instead, and a term that has wrapped onto a second line leaves them
+to the caret.
+
+**An entry picked with the keyboard stays where it was picked.** Rows arriving as a search runs never
+move the highlight and never scroll the window, so scrolling the window can only be something the
+user's own arrow key did.
 
 **A single click on an entry opens it** — no double click, and no separate selecting step. Rows
 arriving as a search runs never move the highlight, so an entry picked early is still the entry

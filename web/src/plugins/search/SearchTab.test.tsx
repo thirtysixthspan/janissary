@@ -33,17 +33,31 @@ function makeCapabilities() {
   return { capabilities, intent };
 }
 
+// The shared list selection scrolls the highlighted row into view, which jsdom does not implement —
+// so the call has to be absorbed. A spy rather than a bare stub, because which row the window scrolls
+// is part of what this tab promises, and a discarded mock cannot be asked about it. jsdom has no
+// `scrollIntoView` of its own, so the no-op it is spied over is installed here.
+Element.prototype.scrollIntoView ??= () => {};
+const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView');
+
+beforeEach(() => { scrollIntoView.mockClear(); });
+
 const renderTab = (value: SearchPayload = payload()) => {
   const { capabilities, intent } = makeCapabilities();
   const rendered = render(<SearchTab payload={value} capabilities={capabilities} />);
   return { ...rendered, intent };
 };
 
+// The `data-index` of every row the window was asked to bring into view, in order.
+const scrollIndexes = () => scrollIntoView.mock.instances.map(
+  (element) => (element as HTMLElement).dataset?.index,
+);
+
+// The row the window was last asked to bring into view.
+const lastScrolled = () => scrollIndexes().at(-1);
+
 const searches = (intent: ReturnType<typeof vi.fn>) =>
   intent.mock.calls.filter(([name]) => name === 'search').map(([, sent]) => sent);
-
-// The shared list selection scrolls the highlighted row into view, which jsdom does not implement.
-beforeEach(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 // How long a typed term rests before it becomes a search, from the bar's own debounce. Longer than
 // the real one so a test that advances by this is never racing it.
@@ -452,5 +466,87 @@ describe('SearchTab', () => {
     fireEvent.keyDown(container.querySelector('.search-results')!, { key: 'End' });
     fireEvent.keyDown(container.querySelector('.search-results')!, { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('open', { path: 'src/a.ts', line: 12 });
+  });
+});
+
+// A window that stacks upward puts row 0 at the bottom edge, so "the row the arrows moved to" is the
+// entry the scan found Nth, not the Nth one on screen. Every case below is about the window being
+// told to bring one particular row into view, and about it being left alone when nothing moved.
+describe('SearchTab result scrolling', () => {
+  const threeRows = () => payload({
+    rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 }), match({ path: 'c.ts', line: 3 })],
+  });
+
+  it('brings the first result into view when the tab opens on one', () => {
+    renderTab();
+    // The selection starts on the first match, which is the entry at the bottom edge — so this is
+    // the scroll that puts the thing the search found first under the reader's eye.
+    expect(scrollIndexes()).toEqual(['0']);
+  });
+
+  it('scrolls the row each arrow moves to, and only that row', () => {
+    const { container } = renderTab(threeRows());
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    scrollIntoView.mockClear();
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    expect(scrollIndexes()).toEqual(['1']);
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    expect(scrollIndexes()).toEqual(['1', '2']);
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    expect(scrollIndexes()).toEqual(['1', '2', '1']);
+    // Row 0 is the bottom of the window, so walking back to the start of the list is a scroll to the
+    // bottom edge and not to the top of the list.
+    fireEvent.keyDown(results, { key: 'Home' });
+    expect(lastScrolled()).toBe('0');
+  });
+
+  it('scrolls to the last result for End and back to the first for Home', () => {
+    const { container } = renderTab(threeRows());
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    scrollIntoView.mockClear();
+    fireEvent.keyDown(results, { key: 'End' });
+    expect(lastScrolled()).toBe('2');
+    fireEvent.keyDown(results, { key: 'Home' });
+    expect(lastScrolled()).toBe('0');
+  });
+
+  it('scrolls as little as it must rather than centring the row', () => {
+    const { container } = renderTab(threeRows());
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    scrollIntoView.mockClear();
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    // `nearest` moves the window the minimum distance to show the row, so stepping down a long list
+    // does not jump it on every key.
+    expect(scrollIntoView.mock.calls.at(-1)?.[0]).toEqual({ block: 'nearest' });
+  });
+
+  it('neither scrolls nor moves the highlight when a streaming batch lands', () => {
+    const { capabilities } = makeCapabilities();
+    const { container, rerender } = render(<SearchTab payload={threeRows()} capabilities={capabilities} />);
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    results.focus();
+    fireEvent.keyDown(results, { key: 'End' });
+    scrollIntoView.mockClear();
+    rerender(
+      <SearchTab
+        payload={payload({ rows: [...threeRows().rows, match({ path: 'd.ts', line: 4 })] })}
+        capabilities={capabilities}
+      />,
+    );
+    // A scroll fired by an arriving row would drag the window away from the bottom edge, which is
+    // where the first match is, and the highlight the user had chosen would move with it.
+    expect(scrollIndexes()).toEqual([]);
+    expect(results.querySelectorAll('.search-row.selected')).toHaveLength(1);
+  });
+
+  it('does not scroll again when Enter opens the row that is already in view', () => {
+    const { container } = renderTab(threeRows());
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    results.focus();
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    scrollIntoView.mockClear();
+    fireEvent.keyDown(results, { key: 'Enter' });
+    // The selection did not move, so there is nothing new to bring into view.
+    expect(scrollIndexes()).toEqual([]);
   });
 });
