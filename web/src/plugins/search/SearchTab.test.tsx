@@ -471,6 +471,25 @@ describe('SearchTab', () => {
     expect(bar).toHaveFocus();
   });
 
+  it('keeps the selected row when focus leaves the results and returns', () => {
+    const { container, intent } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
+    }));
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    const bar = screen.getByLabelText('Search the project');
+    results.focus();
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    const selected = results.querySelectorAll('.search-row')[1]!;
+    expect(selected).toHaveClass('selected');
+    fireEvent.keyDown(results, { key: 'Tab' });
+    expect(bar).toHaveFocus();
+    expect(selected).toHaveClass('selected');
+    fireEvent.keyDown(bar, { key: 'Tab' });
+    expect(results).toHaveFocus();
+    expect(selected).toHaveClass('selected');
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+  });
+
   it('leaves Shift+Tab to the browser so it walks backwards out of the tab', () => {
     const { container } = renderTab();
     const bar = screen.getByLabelText('Search the project');

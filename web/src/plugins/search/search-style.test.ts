@@ -56,6 +56,13 @@ describe('search stylesheet', () => {
     expect(row).not.toContain('border-top');
   });
 
+  it('colors only the selected row’s left border while focus is in the results', () => {
+    expect(rule('.search-row')).toContain('border-left: 2px solid transparent');
+    expect(rule('.search-row.selected')).not.toContain('border-left-color');
+    expect(rule('.search-results:focus-within .search-row.selected'))
+      .toContain('border-left-color: var(--accent)');
+  });
+
   it('leaves the match line’s height to the window the row measures', () => {
     // A fixed stylesheet height would cut a long match line at its start, wherever the match sat in
     // it. The row caps it inline at the display lines around the match instead, so the stylesheet
@@ -151,7 +158,7 @@ describe('search control placement', () => {
   it('leaves the result window’s frame unchanged when the window has keyboard focus', () => {
     // The selected row carries the accent, so the frame does not repeat it. The browser's own ring
     // stays hidden too, or it would draw the highlight this leaves out.
-    expect(search).not.toContain('.search-results:focus');
+    expect(search).not.toMatch(/\.search-results:focus(?:-visible|-within)?\s*\{/u);
     expect(rule('.search-results')).toContain('outline: none');
   });
 });
