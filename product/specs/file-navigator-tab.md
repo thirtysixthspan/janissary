@@ -699,8 +699,11 @@ Every pull that runs reports its outcome as exactly one line in the notification
 succeeds reads `Pulled from origin: <git summary>`, carrying git's own account of what it did —
 `Already up to date.` when there was nothing to take, otherwise the count of what changed. When git
 reports no summary at all the line is `Pulled from origin`. A pull that fails leaves the tree exactly
-as it was and reads `Could not pull: <git error>`, carrying git's own error. The outcome is reported
-whether the tree that started the pull is still open or still rooted where it was.
+as it was and reads `Could not pull: <git error>`, carrying the first line of git's own error. When
+git's error runs past one line — everything the git process wrote, hook output included — the whole
+of it is kept in a file the line links, which opens in an editor tab, so the feed never shows more
+than the one line. The outcome is reported whether the tree that started the pull is still open or
+still rooted where it was.
 
 The button also says what is happening on its own face, in the same vocabulary an editor tab's sync
 icon uses (see [[editor-tab]]): its icon spins while the pull runs, turns the success color when the
@@ -778,7 +781,9 @@ and it is left exactly as it landed.
 Every commit that runs reports its outcome as exactly one line in the notifications feed. One that
 lands reads `Committed to origin: <git summary>`, carrying git's own account of what it did, or
 `Committed to origin` when git reported no summary. One that fails reads `Could not commit: <git
-error>`, carrying git's own error. When a commit runs and finds nothing to commit — a selection
+error>`, carrying the first line of git's own error; a longer error — a rejected push with its
+pre-push hook's output, say — is kept whole in a file the line links, the same way a failed pull's
+is. When a commit runs and finds nothing to commit — a selection
 whose files are all unchanged — the line reads `Nothing to commit`, since the user armed the action
 and is owed an answer about why nothing happened. The header button on a clean tree reports the
 same line without running any commit at all. The outcome is reported whether or not the tree

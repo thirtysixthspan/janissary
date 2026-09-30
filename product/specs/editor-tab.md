@@ -539,7 +539,8 @@ of a conflicting remote change, the local save and its commit remain in the shar
 push is skipped, and the sync enters its error state. A later manual resync retries the update
 without silently replacing the saved content with the remote version. Any failure of this
 save-triggered sync, including a rejected push, is also posted to the notifications tab as
-`Could not sync <filename>: <reason>`.
+`Could not sync <filename>: <reason>`, where the reason is the first line of git's error. When that
+error runs longer, the whole of it is kept in a file the line links.
 
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an

@@ -165,7 +165,9 @@ These event types can produce a notification line:
   and is one of two cases that also report a success: `Pulled from origin: <git summary>` when the
   pull worked, `Could not pull: <git error>` when it did not. A file navigator commit is the other,
   and reports three lines: `Committed to origin: <git summary>` when it landed, `Could not commit:
-  <git error>` when it failed, and `Nothing to commit` when there was nothing staged to commit.
+  <git error>` when it failed, and `Nothing to commit` when there was nothing staged to commit. A
+  failed pull, commit, editor commit, or synced-file save shows only the first line of git's error;
+  when the error runs longer, the line links a file holding all of it, which opens in an editor tab.
 - **`open-unsupported`** — `open <file>` found no opener registered for the file's extension (see
   [[open]]). The line is the same `No opener for "<ext>" files.` the dispatcher has always
   produced, attributed to the tab the command was issued from. It is reported here rather than in

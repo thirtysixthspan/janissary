@@ -8,7 +8,8 @@ import { atomicWriteFile } from '../atomic-write.js';
 import { remoteFileFor } from '../file-navigator/remote/file-cache.js';
 import { notify } from '../notifications/index.js';
 import type { MaybePromise } from '../maybe-promise.js';
-import { errorText } from '../error-text.js';
+import { errorFirstLine, errorText } from '../error-text.js';
+import { writeGitFailureOutput } from '../git/failure-output.js';
 import { refuseStaleSave } from './stale-save.js';
 import { refreshSyncedTabs } from './refresh-synced.js';
 
@@ -99,7 +100,9 @@ async function syncAfterSave(managers: Managers, label: string, filePath: string
   const result = await managers.gitSync.saveSync(filePath);
   refreshSyncedTabs(managers);
   if ('error' in result) {
-    notify(managers, 'file-operation', label, `Could not sync ${path.basename(filePath)}: ${result.error}`);
+    notify(managers, 'file-operation', label, `Could not sync ${path.basename(filePath)}: ${errorFirstLine(result.error)}`, {
+      openFile: writeGitFailureOutput(label, Date.now(), result.error),
+    });
   }
   const tab = managers.tab.editorTab(label);
   if (!tab) return;

@@ -1,4 +1,4 @@
-import { errorText } from '../error-text.js';
+import { errorFirstLine } from '../error-text.js';
 
 // The three notifications-feed lines a file navigator commit can produce, written together so the
 // set stays consistent — the same shape `pull-report.ts` holds for the pull, and for the same
@@ -12,15 +12,16 @@ export function commitSuccessText(summary: string): string {
   return summary ? `Committed to origin: ${summary}` : 'Committed to origin';
 }
 
-// A commit that failed, carrying git's own error text.
+// A commit that failed, carrying the first line of git's own error; the rest of it is kept in the
+// file the notification links (see `src/git/failure-output.ts`).
 export function commitFailureText(error: unknown): string {
-  return `Could not commit: ${errorText(error)}`;
+  return `Could not commit: ${errorFirstLine(error)}`;
 }
 
 // A commit that failed after leaving its own staging in place, because the index already held the
 // user's own changes before this action touched it and unwinding it would have destroyed those.
 export function commitFailureLeavesStagedText(error: unknown): string {
-  return `Could not commit: ${errorText(error)} — what was staged is still in your index`;
+  return `Could not commit: ${errorFirstLine(error)} — what was staged is still in your index`;
 }
 
 // Nothing was staged, so nothing was committed. Neither of the other two outcomes, so it borrows

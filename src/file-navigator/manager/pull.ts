@@ -1,6 +1,7 @@
 import { clearFilesystemCache } from '../filesystem-cache.js';
 import { pullFailureText, pullSuccessText } from '../pull-report.js';
 import { notify } from '../../notifications/index.js';
+import { writeGitFailureOutput } from '../../git/failure-output.js';
 import { stillRooted, armFlash, pullFlashDescriptor } from './flash.js';
 import type { MutationContext } from './mutations.js';
 
@@ -31,7 +32,9 @@ export function runPull(context: PullContext, label: string): void {
     armFlash(context, label, pullFlashDescriptor, 'pulled');
     if (refreshed) context.refreshGit(label);
   }, (error: unknown) => {
-    notify(context.managers, 'file-operation', label, pullFailureText(error));
+    notify(context.managers, 'file-operation', label, pullFailureText(error), {
+      openFile: writeGitFailureOutput(label, Date.now(), error),
+    });
     armFlash(context, label, pullFlashDescriptor, 'error');
   });
 }

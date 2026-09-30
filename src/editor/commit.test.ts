@@ -7,7 +7,11 @@ import type { Managers } from '../managers.js';
 const commitRoot = vi.fn();
 const commitLeftStagingInPlace = vi.fn(() => false);
 const notify = vi.fn();
+const writeGitFailureOutput = vi.fn((): string | undefined => undefined);
 
+vi.mock('../git/failure-output.js', () => ({
+  writeGitFailureOutput: (...args: unknown[]) => writeGitFailureOutput(...args),
+}));
 vi.mock('../git/commit.js', () => ({
   commitRoot: (...args: unknown[]) => commitRoot(...args),
   commitLeftStagingInPlace: (...args: unknown[]) => commitLeftStagingInPlace(...args),
@@ -62,7 +66,7 @@ describe('commitEditorFile', () => {
     commitRoot.mockRejectedValue(new Error('push rejected'));
     commitEditorFile(jigs.managers, jigs.url, 'sync: notes.txt');
     await vi.waitFor(() => expect(jigs.tab().editor?.commit).toBe('error'));
-    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(jigs.managers, 'file-operation', jigs.tab().label, 'Could not commit: push rejected'));
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(jigs.managers, 'file-operation', jigs.tab().label, 'Could not commit: push rejected', { openFile: undefined }));
     vi.advanceTimersByTime(3100);
     expect(jigs.tab().editor?.commit).toBeUndefined();
   });
@@ -72,7 +76,20 @@ describe('commitEditorFile', () => {
     commitRoot.mockRejectedValue(new Error('index lock'));
     commitLeftStagingInPlace.mockReturnValue(true);
     commitEditorFile(jigs.managers, jigs.url, 'sync: notes.txt');
-    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(jigs.managers, 'file-operation', jigs.tab().label, 'Could not commit: index lock — what was staged is still in your index'));
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(jigs.managers, 'file-operation', jigs.tab().label, 'Could not commit: index lock — what was staged is still in your index', { openFile: undefined }));
+  });
+
+  it('reports only the first line of a multi-line git failure, linking its full output', async () => {
+    const jigs = setup();
+    const error = new Error('Command failed: git push origin HEAD\nerror: failed to push some refs\n1:35PM INF no leaks found\n');
+    commitRoot.mockRejectedValue(error);
+    writeGitFailureOutput.mockReturnValueOnce('/project/.janissary/git-errors/notes.log');
+    commitEditorFile(jigs.managers, jigs.url, 'sync: notes.txt');
+    await vi.waitFor(() => expect(notify).toHaveBeenCalledWith(
+      jigs.managers, 'file-operation', jigs.tab().label, 'Could not commit: Command failed: git push origin HEAD',
+      { openFile: '/project/.janissary/git-errors/notes.log' },
+    ));
+    expect(writeGitFailureOutput).toHaveBeenCalledWith(jigs.tab().label, expect.any(Number), error);
   });
 
   it('ignores a second call while one is already committing', async () => {
