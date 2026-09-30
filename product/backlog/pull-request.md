@@ -2,12 +2,3 @@
 
 # pull-request
 
-* Correct the pull request's testing step that expects both totals to be zero on an empty filter
-
-Existing Issue: The sixteenth `How to verify` step confirms that "the pager reads `No rows.` and both totals are zero", but the pager prints no totals at all for an empty page and the object behind the filter is not of size zero either. Severity: 2/10
-
-Existing Risk: 2/10 - A reviewer hunting for two zero figures finds one label and cannot tell whether the counts are broken or simply not shown for an empty page.
-
-Proposal Risk: 1/10 - The corrected step asserts the one thing the pager does promise for an empty result, and nothing else.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: correct the testing step that expects both totals to be zero on an empty filter". Failing step D16 (description), verbatim: "Empty edge cases: filter a table to nothing and confirm the pager reads `No rows.` and both totals are zero; page past the end and confirm **Next** disables." Reproduce from a project with no database: `db sqlite create shop`; `sql shop`; seed four rows into `orders` from another tab; press `Refresh` and choose `orders`; filter `status` with the operator `contains` and the value `zzz-no-such-value`; then create a 120-row table and page it at 50 rows a page. Expected, per the step, a pager reading `No rows.` with both totals zero, and `Next` disabled on the last page. Observed on 8f2fb12: the pager label reads exactly `No rows.` and the grid header beside the object name reads `No rows.` as well, neither printing a total, and the counts behind them are a filtered 0 against an object of 4 rows, so "both totals are zero" is not what the grid holds either; on the 120-row table at 50 rows a page the three pages read `Rows 1–50 of 120 rows`, `Rows 51–100 of 120 rows` and `Rows 101–120 of 120 rows`, with `Next` disabled and `Previous` not disabled on the last page. `pageLabel` in `web/src/plugins/sql/grid-view.ts` returns `No rows.` for an empty page and prints no totals, and `product/specs/sql-database.md` promises a pager that "steps a page at a time" and a range line reading `Rows 1–2 of 3 of 51,882 rows` once a filter is narrowing. Corrected step for the description's `How to verify`: "Empty edge cases: filter a table to nothing and confirm the pager reads `No rows.` and that clearing the filter brings the rows back; on a table of more than one page, page to the last and confirm `Next` is disabled while `Previous` is not."
