@@ -55,10 +55,16 @@ export class SearchSession {
   open(argument: string): void {
     const query = argument.trim();
     if (query !== '') this.payload = payloadOf(this.payload, { seed: this.payload.seed + 1 });
-    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
-      title: TAB_TITLE,
-      payload: query === '' ? this.payload : { ...this.payload, query },
-    }));
+    // The host runs this factory only when it has to build the tab, which means the previous one was
+    // closed — and closing a tab forgets its query, results, narrowing fields, and history. Only the
+    // toggles, remembered on purpose, and the seed, which only moves forward, carry over.
+    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => {
+      this.cancel();
+      this.payload = payloadOf(emptyPayload(), {
+        ...modesFrom(this.payload), seed: this.payload.seed, query,
+      });
+      return { title: TAB_TITLE, payload: this.payload };
+    });
     if (query !== '') this.run({ ...this.payload, query });
   }
 

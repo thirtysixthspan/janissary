@@ -16,7 +16,10 @@ of text with no path-to-line affordance, or to search one already-open buffer at
 (Ctrl+Shift+F elsewhere) does the same as a bare `search`. The tab is titled **search**.
 
 A bare `search` leaves the tab showing whatever it last searched for, so the chord lands the user
-back where they were rather than discarding a query they had built up.
+back where they were rather than discarding a query they had built up. That holds only while the tab
+is open. A search tab opened after the previous one was closed starts empty: no query, no results,
+empty narrowing fields, and no term history. Only the toggles carry over, since they are remembered
+anyway.
 
 `search <phrase>` against a tab that is already open puts the phrase in the search bar, records it in
 the tab's term history, and searches for it, exactly as typing it there would, so the bar never shows
@@ -153,5 +156,6 @@ again.
 ### Lifetime
 
 The search tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is
-not restored on `--relaunch`; only its toggles outlive the application, in the config file. Only one search runs at a time: starting a new one abandons the
+not restored on `--relaunch`; only its toggles outlive the application, in the config file. Closing
+the tab abandons any search still running and forgets everything else it held. Only one search runs at a time: starting a new one abandons the
 previous, so results from a query the user has moved on from never arrive.

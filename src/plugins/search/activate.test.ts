@@ -397,3 +397,58 @@ describe('search plugin remembered modes', () => {
     expect(failingSave).toHaveBeenCalledTimes(2);
   });
 });
+
+// The host runs the `openOrFocusTab` factory only when it has to build the tab, so a fake that runs
+// it stands for a tab closed and opened again, and one that does not for a tab that is still open.
+describe('search plugin tab lifetime', () => {
+  // Records each payload the factory built, running it exactly once as the host does.
+  const building = () => {
+    const made: SearchPayload[] = [];
+    const openOrFocusTab = vi.fn((_key: string, factory: () => { payload: SearchPayload }) => {
+      made.push(factory().payload);
+    });
+    return { openOrFocusTab, made };
+  };
+
+  it('starts a rebuilt tab empty, keeping only the toggles', async () => {
+    const { openOrFocusTab, made } = building();
+    const { capabilities } = makeCapabilities({ openOrFocusTab });
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, include: 'b.ts', matchCase: true }), capabilities);
+    await settle();
+    activation.command?.('', capabilities);
+    expect(made.at(-1)).toMatchObject({ query: '', include: '', exclude: '', rows: [], state: 'done', matchCase: true, regex: false });
+  });
+
+  it('publishes nothing more from a scan still running when the tab is rebuilt', async () => {
+    const { openOrFocusTab } = building();
+    const { capabilities, updateTab } = makeCapabilities({ openOrFocusTab });
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', query), capabilities);
+    activation.command?.('', capabilities);
+    const published = updateTab.mock.calls.length;
+    await settle();
+    expect(updateTab.mock.calls.length).toBe(published);
+  });
+
+  it('builds a tab carrying a command\'s phrase and searches for it', async () => {
+    const { openOrFocusTab, made } = building();
+    const { capabilities, updateTab } = makeCapabilities({ openOrFocusTab });
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, query: 'nothing' }), capabilities);
+    await settle();
+    activation.command?.('todo', capabilities);
+    expect(made.at(-1)?.query).toBe('todo');
+    await settle();
+    expect(lastPayload(updateTab).rows.map((row) => [row.path, row.line])).toEqual([['b.ts', 2]]);
+  });
+
+  it('keeps the state of a tab that is still open', () => {
+    const { capabilities, updateTab } = makeCapabilities();
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, include: 'b.ts' }), capabilities);
+    activation.command?.('', capabilities);
+    activation.command?.('todo', capabilities);
+    expect(lastPayload(updateTab).include).toBe('b.ts');
+  });
+});
