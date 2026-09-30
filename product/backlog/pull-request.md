@@ -2,8 +2,6 @@
 
 # pull-request
 
-* move the search modifier buttons to float right aligned on the command line. move the files to include and files to exclude into the metadatabar. 
-
 * files to include and exclude should accept wildcards and paths
 
 * the search command bar should be at the bottom of the page like the other command bars. it should say `search >` instead of `>`. results should be reverse ordered where the first match is at the bottom of the page and the remainder above in a scrollable result window.

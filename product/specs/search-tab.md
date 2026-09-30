@@ -24,7 +24,7 @@ Every file under the project's launch directory that gitignore does not exclude 
 Quick Open searches, so the two never disagree about what the project contains. Two kinds of file
 are skipped: anything too large for the editor to open, and anything whose bytes are binary.
 
-Two fields beneath the header narrow the search further. **Files to include** and **Files to
+Two fields in the header narrow the search further. **Files to include** and **Files to
 exclude** each take comma-separated glob patterns: a bare `example` matches at any depth, a leading
 `./` anchors to the project root, and a pattern naming a directory also covers everything beneath it.
 An empty include searches everything; an empty exclude excludes nothing; where both name a file, the
@@ -37,7 +37,8 @@ in place there. **The results update as the query is updated** — shortly after
 Return — so refining a search does not mean retyping it. An empty query clears the results rather
 than searching for nothing.
 
-Three toggles in the header choose how the query is read:
+Three toggles sit at the right-hand end of the command line, beside the query they read, and each
+changes how that query is interpreted:
 
 - **Regular expression** — off by default, and the query is then matched as literal text, so
   punctuation in it searches for itself. On, it is a regular expression. One that will not compile is
@@ -45,6 +46,8 @@ Three toggles in the header choose how the query is read:
 - **Match case** — off by default. On, the query is case-sensitive.
 - **Whole word** — off by default. On, a match must sit on a word boundary rather than inside a
   longer word. It composes with the other two, including in regular-expression mode.
+
+Changing a toggle reruns the current query at once, and so does editing either narrowing field.
 
 ### The results
 

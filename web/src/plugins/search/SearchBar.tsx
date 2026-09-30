@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { CommandBarShell, useCommandBarKeys } from '../api';
 import { useDebouncedValue } from './useDebouncedValue';
 
@@ -13,12 +14,15 @@ export type SearchBarProperties = {
   // rerun the same query rather than waiting for more typing.
   onSearch: (query: string) => void;
   active: boolean;
+  // The query's modifiers, right-aligned on the command line beside the query they read. The bar
+  // carries them without knowing what one is, exactly as the shell carries every other slot.
+  trailing: ReactNode;
 };
 
 // The search tab's query input: the host's own command bar, so it looks exactly like the agent
 // tab's rather than being a second textarea that drifts from it. Composed with no history and no
 // ghost, because a search query is not a command this tab remembers.
-export function SearchBar({ query, onChangeQuery, onSearch, active }: SearchBarProperties) {
+export function SearchBar({ query, onChangeQuery, onSearch, active, trailing }: SearchBarProperties) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bar = useCommandBarKeys({
     value: query, setValue: onChangeQuery, inputRef, history: [], onSubmit: () => {},
@@ -46,6 +50,7 @@ export function SearchBar({ query, onChangeQuery, onSearch, active }: SearchBarP
       inputRef={inputRef}
       autoFocus={active}
       ariaLabel="Search the project"
+      trailing={trailing}
     />
   );
 }

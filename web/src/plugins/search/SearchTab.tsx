@@ -1,17 +1,11 @@
 import React, { useCallback, useState } from 'react';
 import type { SearchIntent, SearchPayload } from '@shared/plugins/search/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import { ModeToggles, type ModeKey } from './ModeToggles';
 import { ResultTable } from './ResultTable';
 import { SearchBar } from './SearchBar';
+import { SearchFilters } from './SearchFilters';
 import { useResultSelection } from './useResultSelection';
-
-type Toggle = { key: 'regex' | 'matchCase' | 'wholeWord'; label: string; title: string };
-
-const TOGGLES: Toggle[] = [
-  { key: 'regex', label: '.*', title: 'Regular expression' },
-  { key: 'matchCase', label: 'Aa', title: 'Match case' },
-  { key: 'wholeWord', label: 'W', title: 'Whole word' },
-];
 
 // The three query modes, held as client-local view state. The server does not keep them: every
 // search carries all three in the intent that starts it, so a rerun always sends the current set.
@@ -24,10 +18,11 @@ const modesOf = (value: SearchPayload): Modes => ({
   regex: value.regex, matchCase: value.matchCase, wholeWord: value.wholeWord,
 });
 
-// The search tab: a metadata header carrying the mode toggles, the include and exclude fields, the
-// search bar, and the result table. Everything above the table is input; the table is the output, and
-// it is the only thing that is focusable — the bar keeps its own arrows for caret movement, and the
-// table keeps the selection keys, because only the focused element receives them.
+// The search tab: a metadata header carrying the include and exclude fields, the command line
+// carrying the query and its modifiers, and the result table. Everything above the table is input;
+// the table is the output, and it is the only thing that is focusable — the bar keeps its own arrows
+// for caret movement, and the table keeps the selection keys, because only the focused element
+// receives them.
 export function SearchTab({
   payload, capabilities,
 }: {
@@ -48,7 +43,7 @@ export function SearchTab({
     void capabilities.intent('search', next);
   }, [capabilities]);
 
-  const toggle = (key: Toggle['key']) => {
+  const toggle = (key: ModeKey) => {
     const next = { ...modes, [key]: !modes[key] };
     setModes(next);
     search({ query, include, exclude, ...next });
@@ -89,44 +84,20 @@ export function SearchTab({
   return (
     <div className="plugin-tab search-tab" data-doc-shot="search-tab">
       <div className="plugin-meta">
-        <span className="search-toggles">
-          {TOGGLES.map((toggle_) => (
-            <button
-              key={toggle_.key}
-              type="button"
-              className={modes[toggle_.key] ? 'on' : ''}
-              title={toggle_.title}
-              aria-label={toggle_.title}
-              aria-pressed={modes[toggle_.key]}
-              onClick={() => toggle(toggle_.key)}
-            >
-              {toggle_.label}
-            </button>
-          ))}
-        </span>
+        <SearchFilters
+          include={include}
+          exclude={exclude}
+          onChangeInclude={changeInclude}
+          onChangeExclude={changeExclude}
+        />
         {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
-      </div>
-      <div className="search-filters">
-        <input
-          value={include}
-          spellCheck={false}
-          placeholder="Files to include"
-          aria-label="Files to include"
-          onChange={(event) => changeInclude(event.target.value)}
-        />
-        <input
-          value={exclude}
-          spellCheck={false}
-          placeholder="Files to exclude"
-          aria-label="Files to exclude"
-          onChange={(event) => changeExclude(event.target.value)}
-        />
       </div>
       <SearchBar
         query={query}
         onChangeQuery={setQuery}
         onSearch={(next) => search({ query: next, include, exclude, ...modes })}
         active={capabilities.active}
+        trailing={<ModeToggles modes={modes} onToggle={toggle} />}
       />
       <div className="search-results" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
         <ResultTable

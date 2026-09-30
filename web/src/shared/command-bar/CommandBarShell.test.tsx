@@ -58,6 +58,23 @@ describe('CommandBarShell', () => {
     expect(rendered.container.querySelector('.completions')?.textContent).toBe('one  two');
   });
 
+  it('renders the trailing slot at the end of the command line, after the input', () => {
+    const { rendered } = renderShell({ trailing: <button type="button">Aa</button> });
+    const command = rendered.container.querySelector('.command')!;
+    // Inside the line rather than beside it, and last so the shell's own `margin-left: auto` is
+    // what pins it right — a caller that has to know the line's layout to place a control on it is
+    // the drift the slot exists to prevent.
+    expect(command.lastElementChild?.className).toBe('command-trailing');
+    expect(command.lastElementChild?.querySelector('button')?.textContent).toBe('Aa');
+  });
+
+  it('renders no trailing slot when there is nothing to trail', () => {
+    // The agent tab and the conversation composer pass nothing, so the shell has to leave the line
+    // exactly as it was for them.
+    const { rendered } = renderShell();
+    expect(rendered.container.querySelector('.command-trailing')).toBeNull();
+  });
+
   it('renders a label before the prompt glyph', () => {
     const { rendered } = renderShell({ label: 'queue' });
     expect(rendered.container.querySelector('.command')).toHaveTextContent('queue');

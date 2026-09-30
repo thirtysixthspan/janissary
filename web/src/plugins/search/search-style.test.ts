@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import search from './search.css?raw';
+import theme from '../../theme.css?raw';
 
 // The context either side of a match is bounded by a stylesheet rule, and jsdom lays nothing out —
 // so this file is what stands between a change to that cap and the screen. The selectors and the
@@ -48,5 +49,33 @@ describe('search stylesheet', () => {
     expect(hit).toContain('color: var(--fg)');
     expect(hit).not.toContain('max-height');
     expect(hit).not.toContain('overflow');
+  });
+});
+
+describe('search control placement', () => {
+  it('lets the command line pin a trailing control to its right', () => {
+    // The shell's own rule, not the plugin's: a plugin that has to reach into the command line's
+    // layout to place a control on it is the drift the trailing slot exists to prevent.
+    expect(theme).toMatch(/\.command \.command-trailing \{[^}]*margin-left: auto/);
+    expect(theme).toMatch(/\.command \.command-trailing \{[^}]*flex-shrink: 0/);
+  });
+
+  it('sizes the modifiers as command line chrome, sharing the line’s own font', () => {
+    const button = rule('.search-toggles button');
+
+    // No padding of its own and the line's own size: a row of 12px buttons under a 13px caret reads
+    // as a separate band rather than as part of the line the modifiers qualify.
+    expect(button).toContain('font-family: inherit');
+    expect(button).toContain('font-size: 13.1625px');
+    expect(button).toContain('padding: 0 6px');
+  });
+
+  it('gives the filter fields the room the metadata bar leaves beside the tab actions', () => {
+    const filters = rule('.search-filters');
+
+    // `flex: 1` and `min-width: 0` together, because `.plugin-meta` wraps: without both the fields
+    // claim their intrinsic width, overflow the narrow pane, and push the actions off the line.
+    expect(filters).toContain('flex: 1');
+    expect(filters).toContain('min-width: 0');
   });
 });

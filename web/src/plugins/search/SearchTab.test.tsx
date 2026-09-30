@@ -92,11 +92,25 @@ describe('SearchTab', () => {
       .toEqual(['three', 'four']);
   });
 
-  it('carries the three mode toggles in the header and nothing else', () => {
-    renderTab();
-    expect(screen.getByLabelText('Regular expression')).toBeDefined();
-    expect(screen.getByLabelText('Match case')).toBeDefined();
-    expect(screen.getByLabelText('Whole word')).toBeDefined();
+  it('carries the three mode toggles on the command line, beside the query they read', () => {
+    const { container } = renderTab();
+    const command = container.querySelector('.command')!;
+    expect(command.querySelector(':scope button[aria-label="Regular expression"]')).not.toBeNull();
+    expect(command.querySelector(':scope button[aria-label="Match case"]')).not.toBeNull();
+    expect(command.querySelector(':scope button[aria-label="Whole word"]')).not.toBeNull();
+    // The command line, not the metadata bar a row above it: a control that governs what the query
+    // means belongs where the query is typed.
+    expect(container.querySelector('.plugin-meta :scope button')).toBeNull();
+  });
+
+  it('carries the narrowing fields in the metadata bar, beside the tab actions', () => {
+    const { container } = renderTab(payload());
+    const meta = container.querySelector('.plugin-meta')!;
+    // The fields choose which files the query runs against rather than what the query says, so they
+    // sit with the tab's settings, and they share the line with the actions that stay right-aligned.
+    expect(meta.querySelector(':scope input[aria-label="Files to include"]')).not.toBeNull();
+    expect(meta.querySelector(':scope input[aria-label="Files to exclude"]')).not.toBeNull();
+    expect(container.querySelector('.command :scope input')).toBeNull();
   });
 
   it('shows no match count anywhere', () => {
