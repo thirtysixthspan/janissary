@@ -2,8 +2,6 @@
 
 # pull-request
 
-*  scrolling up with keyboard navigation in the table does not completely scroll the frame back to the top of the table when it should.
-
 * when not all the columns fit in the frame, the entry values should be truncated with an ellipsis in order to shrink the column width.
 
 * the actions column containing the delete button should be on the left hand side of the table.

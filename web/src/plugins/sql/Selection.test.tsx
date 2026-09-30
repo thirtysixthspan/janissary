@@ -217,12 +217,28 @@ describe('the highlighted row', () => {
     expect(highlighted()).toEqual([['1', 'paid']]);
   });
 
-  it('scrolls the page so the highlighted row is in view', () => {
+  // The header is sticky, so the browser's own `nearest` scroll stopped with the first row behind it.
+  // The frame is scrolled directly instead, and the first row takes it the whole way back.
+  it('scrolls the frame back to the top of the table when the first row is reached again', () => {
     shown();
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
-    scrollIntoView.mockClear();
     press('ArrowDown');
-    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    const frame = screen.getByLabelText('Results');
+    frame.scrollTop = 40;
+    press('ArrowUp');
+    expect(frame.scrollTop).toBe(0);
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('brings a row the header is covering out from under it', () => {
+    shown();
+    const frame = screen.getByLabelText('Results');
+    frame.getBoundingClientRect = () => ({ top: 100, bottom: 400 }) as DOMRect;
+    Object.defineProperty(frame, 'clientHeight', { value: 300 });
+    (frame.querySelector('thead') as HTMLElement).getBoundingClientRect = () => ({ height: 30 }) as DOMRect;
+    (frame.querySelector('[data-row="1"]') as HTMLElement).getBoundingClientRect = () => ({ top: 110, bottom: 130 }) as DOMRect;
+    frame.scrollTop = 60;
+    press('ArrowDown');
+    expect(frame.scrollTop).toBe(40);
   });
 
   // The editor is a second press on a cell. A press that highlights the row must not open one, or

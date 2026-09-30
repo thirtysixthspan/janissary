@@ -3,6 +3,7 @@ import type React from 'react';
 import type { SqlRow } from '@shared/plugins/sql/shared';
 import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
 import { rowRange, selectionToTsv, type RowRange } from './grid-view';
+import { revealRow } from './reveal-row';
 
 // The highlighted run of rows, the keys that move it, and its copy.
 //
@@ -73,12 +74,13 @@ export function useGridSelection({
   useEffect(() => { setRange(rows === 0 ? null : { from: 0, to: 0 }); }, [grid, rows]);
 
   // The highlighted row follows the keys that move it, and only when it would otherwise be out of
-  // sight — the same `block: 'nearest'` the file navigator scrolls its cursor with.
+  // sight — the file navigator's `nearest` rule, measured below the sticky header rather than
+  // behind it.
   useEffect(() => {
-    if (range === null) return;
-    containerRef.current
-      ?.querySelector(`[data-row="${CSS.escape(String(range.to))}"]`)
-      ?.scrollIntoView({ block: 'nearest' });
+    const frame = containerRef.current;
+    if (range === null || !frame) return;
+    const row = frame.querySelector(`[data-row="${CSS.escape(String(range.to))}"]`);
+    if (row) revealRow(frame, row, range.to === 0);
   }, [range, containerRef]);
 
   useEffect(() => {

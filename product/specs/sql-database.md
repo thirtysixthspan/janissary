@@ -132,7 +132,10 @@ Double-clicking a cell opens an editor; Enter commits it and Escape leaves it wi
 anything. The rows answer the keyboard while the rows have the focus: the highlighted row starts on
 the first row of whatever page arrives, `ArrowUp` and `ArrowDown` move it a row at a time and stop at
 the ends rather than wrapping, `Home` and `End` reach the first and last row of the page, and `Escape`
-leaves the grid with nothing highlighted. The page scrolls to follow the highlighted row. The left and
+leaves the grid with nothing highlighted. The page scrolls to follow the highlighted row, and it counts
+the column header — which stays put while the rows scroll under it — as out of sight, so a row is
+brought out from under the header rather than left behind it. Reaching the first row again scrolls the
+frame all the way back to the top of the table. The left and
 right arrows are not the grid's — a run of rows has no column to move along — so they are left to the
 application, which scrolls the frame the way it otherwise would. The highlight is back on the first
 row after a new query, so it never sits on a row that now holds other values.
