@@ -48,6 +48,6 @@ Only the `sqlite` engine is supported; any other engine name is rejected. Databa
 
 ### Browsing a database
 
-The command surface above is the only way to *run* SQL, not the only way to *see* a database. The `sql` command opens a dockable tab that browses one: an object list beside a data grid, with filtering, ordering, paging, cell editing, row insert and delete, export, following a foreign key into the row it names, and a SQL console. It uses this same registry, the same name rule, and the same read/write statement split, and it claims no file extensions — a database is reachable only by the name the registry holds it under. See [[sql-database]].
+The command surface above is the only way to *run* SQL, not the only way to *see* a database. The `sql` command opens a dockable tab that browses one: a table dropdown above a data grid, with filtering, ordering, paging, cell editing, row insert and delete, export, following a foreign key into the row it names, and a SQL console. It uses this same registry, the same name rule, and the same read/write statement split, and it claims no file extensions — a database is reachable only by the name the registry holds it under. See [[sql-database]].
 
 Neither surface replaces the other. `db sqlite query` still prints the same aligned text table into a transcript, which is what an agent's tool loop and a scripted workflow want; the browser is what a person wants when they do not yet know what to query.

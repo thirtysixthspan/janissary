@@ -174,9 +174,9 @@ These event types can produce a notification line:
   was typed.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
-  neither the event type, nor the tab it is attributed to, nor any tab to jump to. It may add one
-  link to a file, which is how a plugin offers something too long to read in place — the `sql` tab
-  uses it for the whole result of a query that returned too many rows for the line (see
+  neither the event type, nor any tab to jump to, and it may attribute the line to no tab but one of
+  its own open ones. It may add one link to a file, which is how a plugin offers something too long to
+  read in place — the `sql` tab links every console statement's result this way (see
   [[sql-database]]). A line with no file has no link on it. The bundled
   audio plugin uses it to name a track it had to drop from a playlist because the browser could not
   decode it (see [[audio-tab]]).
@@ -309,9 +309,11 @@ a per-row selection.
 The feed displays **newest first**: the most recently recorded notification appears at the top,
 with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
 compact 12-hour clock time (for example `8:32pm`), the name of the tab the event happened to, and the
-message. A tab's name is what its own tab strip shows, which for most tabs is its label and for a
-plugin tab is what that tab is about — a line the `sql` tab reports leads with the database's name,
-not the `sql` its label is derived from. The name appears **once**, in this header: a `notify <message>`
+message. A tab's name is what its own tab strip shows: its label, unless the tab has a title of its
+own — a renamed tab, or a plugin tab named for what it is about — so a line the `sql` tab reports
+leads with the database's name, not the `sql` its label is derived from. The same name is used inside
+the message wherever an event text names its tab, such as `Question from <tab>`. The label is still
+the tab's identity: the record file, the folding of repeats, and the dot's colour go by it. The name appears **once**, in this header: a `notify <message>`
 shows the message on its own without repeating the name ahead of it. A notification whose actual
 detection time falls on an earlier calendar day than today — a queued report replayed after a
 multi-day detachment — carries a short date ahead of the time (for example `Sep 20 8:32pm`) rather
