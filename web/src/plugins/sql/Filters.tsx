@@ -109,6 +109,7 @@ export function FilterRow({
   };
   return (
     <tr className="sql-filter-row">
+      <td className="sql-gutter sql-row-head" />
       <td colSpan={Math.max(1, payload.grid?.columns.length ?? 1)}>
         <div className="sql-filter-editor">
           <strong>{column}</strong>

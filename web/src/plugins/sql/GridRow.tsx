@@ -11,7 +11,8 @@ import type { CellPosition } from './grid-view';
 // they are selected, and what each one does when it is activated.
 
 /**
- * A row: its cells, and the delete affordance if the object is writable.
+ * A row: the header that selects it whole, its cells, and the delete affordance if the object is
+ * writable.
  *
  * `position` is the row's index in the page, which is what the selection is expressed in: `row.cells`
  * is positional and `selectionToTsv` reads the page's own array, so a selection handed a table-wide
@@ -20,7 +21,7 @@ import type { CellPosition } from './grid-view';
  * skipped by index rather than by whatever happens to be left in the list.
  */
 export function GridRow({
-  row, position, shown, object, editingColumn, deleting, selected, onSelect, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, position, shown, object, editingColumn, deleting, selected, onSelect, onSelectRow, onEdit, onCommit, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
   position: number;
@@ -34,6 +35,8 @@ export function GridRow({
   selected(at: CellPosition): boolean;
   /** Start a run at a cell, or extend the one in progress when `extend` is held. */
   onSelect(at: CellPosition, extend: boolean): void;
+  /** Select this row whole, or extend the run in progress to it. */
+  onSelectRow(extend: boolean): void;
   onEdit(column: string): void;
   onCommit(column: string, value: string | null): void;
   onCancel(): void;
@@ -42,6 +45,14 @@ export function GridRow({
 }) {
   return (
     <tr>
+      {/* The row header: the whole row, in one press, which is otherwise a drag across every column
+          of it. It carries no text — the pager already says which rows the page holds. */}
+      <td
+        className="sql-gutter sql-row-head"
+        title="Select row"
+        onMouseDown={(event) => onSelectRow(event.shiftKey)}
+        onMouseEnter={(event) => { if (event.shiftKey) onSelectRow(true); }}
+      />
       {shown.map(({ name: column, index: cell }) => (
         <td
           key={column}

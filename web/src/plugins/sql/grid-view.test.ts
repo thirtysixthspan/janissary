@@ -15,6 +15,7 @@ import {
   previousOffset,
   readOnlyReason,
   renderRunnableSql,
+  rowRange,
 } from './grid-view';
 
 const GRID: SqlGrid = {
@@ -144,6 +145,19 @@ describe('cellText', () => {
     expect(cellText({ text: '', isNull: true })).toBe('NULL');
     expect(cellText({ text: '', isNull: false })).toBe('');
     expect(cellText({ text: 'x', isNull: false })).toBe('x');
+  });
+});
+
+// A whole row is the widest rectangle the grid has, so the two halves of the rule are that it always
+// reaches the last column and that extending it keeps the anchor the run started from.
+describe('rowRange', () => {
+  it('is that row, every visible column of it', () => {
+    expect(rowRange(1, 2, null)).toEqual({ from: { row: 1, cell: 0 }, to: { row: 1, cell: 2 } });
+  });
+
+  it('extends a run in progress to the row reached, still full width', () => {
+    const from = { from: { row: 0, cell: 1 }, to: { row: 0, cell: 1 } };
+    expect(rowRange(2, 2, from)).toEqual({ from: { row: 0, cell: 0 }, to: { row: 2, cell: 2 } });
   });
 });
 

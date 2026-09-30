@@ -2,8 +2,6 @@
 
 # pull-request
 
-* entire rows should be selectable by mouse click and selectable via keyboard navigation similar to how the file navigator navigation works. the row should be copyable
-
 * the column select icon needs to be changed so as not to be redundant with the split icon
 
 * the statements run selector and popup should be removed and replaced with the UI used for hist functionality in the agent tab. the command bar should be used for entering sequal commands and should show `SQL >` instead of just `>`. 

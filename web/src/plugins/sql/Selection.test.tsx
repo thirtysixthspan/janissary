@@ -117,6 +117,79 @@ describe('a run of cells', () => {
   });
 });
 
+// A row is the widest run there is, so selecting one is selecting a rectangle the page already knows
+// how to copy. What is new is reaching it: a header to click, and the file navigator's keys.
+describe('a whole row', () => {
+  const press = (key: string, shiftKey = true) => {
+    fireEvent.keyDown(document.body, { key, shiftKey });
+  };
+  const headers = () => [...document.querySelectorAll('td.sql-row-head')] as HTMLElement[];
+
+  it('is selected by one click on its header, and by nothing else', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(headers()[0] as HTMLElement);
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid']);
+    expect(headers()[0].getAttribute('title')).toBe('Select row');
+  });
+
+  it('extends to the rows between when shift is held, still full width', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(headers()[0] as HTMLElement);
+    fireEvent.mouseEnter(headers()[1] as HTMLElement, { shiftKey: true });
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid', '2', 'NULL']);
+  });
+
+  it('is selected by the file navigator keys, from a cell cursor', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    // Nothing marked yet, so the first shift-arrow starts the run on the first row.
+    press('ArrowDown');
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid']);
+    press('ArrowDown');
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid', '2', 'NULL']);
+    press('ArrowUp');
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid']);
+  });
+
+  it('steps by one and stops at the ends, as a list does', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    press('ArrowUp');
+    expect(selectedCells()).toHaveLength(2);
+    press('End');
+    expect(selectedCells().map((cell) => cell.textContent)).toEqual(['1', 'paid', '2', 'NULL']);
+    press('End');
+    expect(selectedCells()).toHaveLength(4);
+    press('Home');
+    expect(selectedCells()).toHaveLength(2);
+  });
+
+  // The cell cursor and the row selection are two ways of marking one grid, so Escape has to leave
+  // neither behind — a cursor that cannot be seen cannot be moved either.
+  it('is left by Escape, along with the cell cursor', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    press('ArrowRight', false);
+    expect(dataCells().filter((cell) => cell.className.includes('selected'))).toHaveLength(1);
+    press('ArrowDown');
+    expect(selectedCells()).toHaveLength(2);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(selectedCells()).toHaveLength(0);
+  });
+
+  it('copies as one tab-separated line, which is what a row pastes as', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    clipboardThat(write);
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(headers()[1] as HTMLElement);
+    fireEvent.click(screen.getByLabelText('Copy selection'));
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('2\tNULL'));
+  });
+});
+
 describe('copying a selection', () => {
   function withRun(page = payload()) {
     const { capabilities } = makeCapabilities();

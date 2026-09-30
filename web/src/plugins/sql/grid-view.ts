@@ -58,6 +58,9 @@ export function goToRow(value: string, grid: SqlGrid | null): number | null {
 /** One cell of a selection: which row of the page it is in, and which column's cell. */
 export type CellPosition = { row: number; cell: number };
 
+/** A selection: a rectangle anchored where the run started, reaching wherever it got to. */
+export type CellRange = { from: CellPosition; to: CellPosition };
+
 /**
  * The selection as tab-separated text, one line per row of the run.
  *
@@ -95,11 +98,24 @@ export function selectionToTsv(
  * at to the cell it reached, whichever way round that is. Dragging up and left selects the same
  * rectangle as dragging down and right, because a run of cells has no direction.
  */
-export function selectionTo(anchor: CellPosition, reached: CellPosition): { from: CellPosition; to: CellPosition } {
+export function selectionTo(anchor: CellPosition, reached: CellPosition): CellRange {
   return {
     from: { row: Math.min(anchor.row, reached.row), cell: Math.min(anchor.cell, reached.cell) },
     to: { row: Math.max(anchor.row, reached.row), cell: Math.max(anchor.cell, reached.cell) },
   };
+}
+
+/**
+ * The selection a row's own header makes: that row, every visible column of it.
+ *
+ * A whole row is the widest run the grid has, so it always spans from the first visible column —
+ * including when it extends a run that started at one cell, because a key held with an arrow is a
+ * request for rows and not for a column. Extending keeps the row the run started from and gains
+ * rows. `lastColumn` is the last visible column rather than the last of the row's cells, so a hidden
+ * column does not leave an empty cell at the end of a copied row.
+ */
+export function rowRange(row: number, lastColumn: number, from: CellRange | null): CellRange {
+  return selectionTo({ row: from?.from.row ?? row, cell: 0 }, { row, cell: lastColumn });
 }
 
 /**

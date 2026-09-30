@@ -50,6 +50,9 @@ export function DataGrid({
       const column = shown[at.cell]?.name;
       if (row && column && object?.writable) setEditing({ row: row.key, column });
     },
+    onSelectRow: (row) => selection.selectRow(row, true),
+    edgeRow: selection.range?.to.row ?? null,
+    onClear: selection.clear,
   });
   const selected = (at: CellPosition) => (selection.range
     ? selection.selected(at)
@@ -122,6 +125,7 @@ export function DataGrid({
         <table className="sql-grid">
           <thead>
             <tr>
+              <th className="sql-gutter sql-row-head" />
               {shown.map(({ name: column }) => (
                 <th key={column} scope="col">
                   <span className="sql-head">
@@ -172,6 +176,7 @@ export function DataGrid({
                 deleting={object?.writable === true}
                 selected={selected}
                 onSelect={selection.select}
+                onSelectRow={(extend) => selection.selectRow(index, extend)}
                 onEdit={(column) => {
                   if (object?.writable) setEditing({ row: row.key, column });
                 }}
@@ -186,7 +191,7 @@ export function DataGrid({
             ))}
             {grid && grid.rows.length === 0 && !payload.error && (
               <tr>
-                <td className="sql-empty" colSpan={(grid.columns.length || 1) + 1}>No rows.</td>
+                <td className="sql-empty" colSpan={(grid.columns.length || 1) + 2}>No rows.</td>
               </tr>
             )}
           </tbody>

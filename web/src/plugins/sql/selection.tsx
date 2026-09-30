@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCopy } from '@fortawesome/free-solid-svg-icons';
 import type { SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { selectionTo, selectionToTsv, type CellPosition } from './grid-view';
+import { rowRange, selectionTo, selectionToTsv, type CellPosition, type CellRange } from './grid-view';
 
 // The selection and its copy. A selection is a rectangle of cells, anchored where the run started and
 // reaching wherever it got to; a run has no direction, so dragging back over the anchor selects the
@@ -22,7 +22,7 @@ export function useGridSelection(
   capabilities: TabPluginClientCapabilities,
   onError: (error: string) => void,
 ) {
-  const [range, setRange] = useState<{ from: CellPosition; to: CellPosition } | null>(null);
+  const [range, setRange] = useState<CellRange | null>(null);
   const active = capabilities.active;
 
   // A new page or a new set of columns has nothing to do with the old selection, and keeping it would
@@ -53,6 +53,18 @@ export function useGridSelection(
     setRange((previous) => (extend && previous ? selectionTo(previous.from, at) : { from: at, to: at }));
   };
 
+  /**
+   * Put a whole row in the selection, or extend the one in progress to end at it.
+   *
+   * The same rectangle a run of cells makes — a row is simply the widest one there is, from the first
+   * visible column to the last — so the copy path needs nothing new for it: one row of a run is one
+   * line of tab-separated text.
+   */
+  const selectRow = (row: number, extend: boolean) => {
+    const last = Math.max(0, (grid?.columns.length ?? 1) - 1);
+    setRange((previous) => rowRange(row, last, extend ? previous : null));
+  };
+
   /** Put the selection on the system clipboard, or say why it could not be. */
   const copy = () => {
     if (!range || !grid) return;
@@ -68,6 +80,7 @@ export function useGridSelection(
     range,
     copy,
     select,
+    selectRow,
     clear() { setRange(null); },
     selected(at: CellPosition) {
       return range !== null
@@ -102,7 +115,7 @@ export function CopySelectionButton({ onCopy, enabled }: { onCopy(): void; enabl
 /** The text a selection is copied as, or an empty string when there is none. */
 export function selectionText(
   grid: { columns: string[]; rows: SqlRow[] } | null,
-  range: { from: CellPosition; to: CellPosition } | null,
+  range: CellRange | null,
 ): string {
   if (!grid || !range) return '';
   return selectionToTsv(grid.rows, grid.columns, range.from, range.to);

@@ -65,6 +65,8 @@
 .sql-grid thead th { position: sticky; top: 0; background: var(--bg); z-index: 1; }
 .sql-grid tbody tr:hover { background: var(--bg-hover); }
 .sql-grid .sql-gutter { width: 1%; color: var(--muted); text-align: right; user-select: none; }
+.sql-grid .sql-row-head { width: 2em; cursor: pointer; }
+.sql-grid .sql-row-head:hover { background: var(--bg-hover); }
 .sql-cell.null { color: var(--muted); font-style: italic; }
 .sql-empty { color: var(--muted); padding: 12px; text-align: center; }
 
