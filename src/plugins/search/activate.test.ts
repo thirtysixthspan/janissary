@@ -243,6 +243,35 @@ describe('search plugin activation', () => {
     expect(payload.rows).toEqual([]);
   });
 
+  it('reports a failed project listing in the tab rather than searching forever', async () => {
+    const { capabilities, updateTab } = makeCapabilities({
+      projectFileList: vi.fn(async () => { throw new Error('could not list the project'); }),
+    });
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    await settle();
+    // The third state the spec promises: without it a failed scan reads as a scan still running.
+    const payload = lastPayload(updateTab);
+    expect(payload.state).toBe('error');
+    expect(payload.message).toBe('could not list the project');
+    expect(payload.rows).toEqual([]);
+  });
+
+  it('reports no failure when a scan is cancelled before its file list answers', async () => {
+    // The first listing never answers, so the second query's cancel lands while it is still in
+    // flight; the second listing succeeds, so only the superseded scan could report a failure.
+    const projectFileList = vi.fn()
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockResolvedValue({ root: '/repo', paths: ['b.ts'] });
+    const { capabilities, updateTab } = makeCapabilities({ projectFileList });
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    activation.command?.('todo', capabilities);
+    await settle();
+    // The superseded scan was abandoned by the user, so its outcome is not something to report.
+    expect(lastPayload(updateTab).state).not.toBe('error');
+  });
+
   it('disables itself when the authoritative tab payload is invalid', () => {
     const { capabilities } = makeCapabilities();
     const activation = searchActivation();

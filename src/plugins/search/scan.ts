@@ -31,7 +31,11 @@ export type ScanQuery = {
   matchCase: boolean;
   wholeWord: boolean;
 };
-export type ScanBatch = { rows: SearchMatch[]; done: boolean };
+// A batch of rows as the scan finds them, or the two ways a scan can end without finding anything
+// more: `done` when it settled having found what it was going to, `error` when it could not finish.
+// The two are distinct — a cancelled scan reports neither, because a scan the user abandoned is not
+// a failure — so a failure can never be mistaken for a completion that found nothing.
+export type ScanBatch = { rows: SearchMatch[]; done: boolean; error?: string };
 export type ScanOptions = {
   // The project's gitignore-aware file list, as project-relative paths plus the directory they are
   // relative to — the same list Quick Open searches, so both see the same set.
@@ -179,6 +183,19 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
   });
   const controller = new AbortController();
   const runtime: Runtime = { options, request, read, sizeOf, signal: controller.signal };
-  void run(runtime);
+  // A rejection here would otherwise escape as an unhandled rejection while the tab sat in its
+  // searching state forever, so it is reported through the same channel the rows arrive on. A scan
+  // the user cancelled is not a failure and reports nothing at all.
+  void run(runtime).catch((error: unknown) => {
+    if (runtime.signal.aborted) return;
+    options.onBatch({ rows: [], done: false, error: oneLine(error) });
+  });
   return { cancel: () => controller.abort() };
+}
+
+// A failure reason reduced to one line with no stack, the shape the tab body shows and the plugin
+// failure path uses. A non-Error is reported as its own text rather than coerced to `[object Object]`.
+function oneLine(reason: unknown): string {
+  const text = reason instanceof Error ? reason.message : String(reason);
+  return (text.split('\n', 1)[0] ?? '').trim().replace(/[.\s]+$/u, '');
 }

@@ -2,28 +2,6 @@
 
 # pull-request
 
-* Handle a rejected project file list in the search scan, which currently surfaces as an unhandled rejection and leaves the tab searching forever.
-
-Existing Issue: `startScan` in `src/plugins/search/scan.ts` calls `void run(runtime)` with no rejection handler, and `run` awaits `options.listFiles()`, so a rejected file list escapes as an unhandled promise rejection while the tab stays in its `searching` state with no rows and no message. Severity: 6/10
-
-Existing Risk: 6/10 - A failure to list the project leaves the user looking at a permanent "Searching…" with no explanation and no way forward short of typing a new query, and the unhandled rejection is invisible in the UI.
-
-Proposal Risk: 2/10 - A rejected list becomes a reported error line in the tab body, which is the state the spec already describes; the residual risk is a scan that fails in some other place still escaping the same way.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1481: report a failed project file list in the search tab instead of leaving it searching". In `src/plugins/search/scan.ts`, `startScan` starts the scan with `void run(runtime)`, and `run` awaits `options.listFiles()` and every read, so any rejection from either becomes an unhandled rejection. Attach a rejection handler where the scan is started and route the failure into the batch channel: add a `failed(reason)` member to `ScanBatch` (or reuse a `state` field on it) so a rejection republishes the tab with `state: 'error'` and the reason in `message`. In `src/plugins/search/session.ts`, handle that in `receive` so it sets `state: 'error'` and the message rather than appending rows, and in `run` make the final `onBatch` fire only when the scan was not aborted, so a cancelled scan does not report an error for work the user themselves superseded. `SearchState` in `src/plugins/search/shared.ts` already declares an `error` state and `SearchPayload` already carries a `message`, and `ResultTable` already renders both, so the client needs no change. Add a case to `src/plugins/search/scan.test.ts` asserting that a `listFiles` that rejects produces one `done`-style batch carrying the failure rather than an unhandled rejection, and a case to `src/plugins/search/activate.test.ts` asserting the tab ends in the `error` state with the reason. The existing scan tests that assert `done: true` on the final batch must keep passing.
-
-
-* Deliver the plan's and spec's promised error state, which the search tab can never currently reach.
-
-Existing Issue: The plan's "Header and body states" section and `product/specs/search-tab.md` both promise a third body state showing "the specific reason when a scan fails", and `ResultTable` renders it from `payload.state === 'error'` and `payload.message`, but nothing in `src/plugins/search/session.ts` ever writes either, so the state is unreachable. Severity: 5/10
-
-Existing Risk: 4/10 - A documented behavior that cannot occur, so a reader of the spec is told about a failure mode the implementation does not have and a future change to the scan has no established route to report through.
-
-Proposal Risk: 1/10 - The state becomes reachable only through the failure path that reports it, and the rendering it depends on is already tested.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1481: make the search tab's error state reachable". This is the client-visible half of the failed-file-list work and should land with it rather than separately. `ResultTable` in `web/src/plugins/search/ResultTable.tsx` already returns `search-empty` with `message` when `state === 'error'`, and `SearchTab` already threads `payload.state` and `payload.message` into it, so no component change is needed; what is missing is a server-side path that produces the state. Confirm after the `src/plugins/search/scan.ts` change that a failing scan reaches the tab as `state: 'error'`, and add a case to `web/src/plugins/search/SearchTab.test.tsx` rendering a payload with `state: 'error'` and a message, asserting the message appears in the body — that test already exists as "shows the reason a scan failed" and passes today only because it constructs the payload by hand, so keep it and add the server-side case that makes it reachable. While there, check whether `SearchSession.current` in `src/plugins/search/session.ts` is read anywhere; if it is not, remove it rather than leaving an unused accessor, since a getter whose only purpose was to be called by a test that reads `updateTab` instead is dead surface.
-
-
 * Remove the search plugin's `clear` intent, which the client never sends.
 
 Existing Issue: `src/plugins/search/activate.ts` declares a `clear` intent and `SearchSession.clear` implements it, and `src/plugins/search/activate.test.ts` tests it, but no file under `web/src/plugins/search/` ever sends an intent named `clear`, so the route and its server-side test cover behavior no user can reach. Severity: 3/10

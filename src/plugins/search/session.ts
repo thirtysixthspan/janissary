@@ -41,11 +41,6 @@ export class SearchSession {
     private contents?: ScanRead,
   ) {}
 
-  // What the tab shows now, for a handler that needs to read it back.
-  get current(): SearchPayload {
-    return this.payload;
-  }
-
   // Open the tab if it is not already open, or focus the one that is. A `search` command with an
   // argument seeds the query and starts a scan; a bare `search` just reveals the tab, so the chord
   // and the command both land the user in the same place with whatever they last searched for.
@@ -82,7 +77,7 @@ export class SearchSession {
           return null;
         }
       },
-      onBatch: (batch) => this.receive(batch.rows, batch.done),
+      onBatch: (batch) => this.receive(batch.rows, batch.done, batch.error),
     }, request);
   }
 
@@ -107,9 +102,17 @@ export class SearchSession {
     this.cancel();
   }
 
-  // One batch of rows. The tab is republished on every batch, which is what makes the table fill
-  // while a scan is still running rather than only at the end.
-  private receive(rows: SearchMatch[], done: boolean): void {
+  // One batch from the scan: rows to append, the scan having settled, or the scan having failed. The
+  // tab is republished on every batch, which is what makes the table fill while a scan is still
+  // running rather than only at the end. A failure replaces the rows rather than joining them — a
+  // scan that could not finish reports why, and the partial results it did manage are still on
+  // screen from the batches before it.
+  private receive(rows: SearchMatch[], done: boolean, error?: string): void {
+    if (error !== undefined) {
+      this.payload = payloadOf(this.payload, { state: 'error', message: error });
+      this.publish();
+      return;
+    }
     if (rows.length === 0 && !done) return;
     this.payload = payloadOf(this.payload, {
       rows: rows.length === 0 ? this.payload.rows : [...this.payload.rows, ...rows],
