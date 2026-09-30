@@ -109,12 +109,12 @@ export function buildTabView(
 // The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's
 // endpoint, whichever start brought it up — a fresh one after a death included. Otherwise it reports
 // the tab's launch: `tab.browser` is set from `-b` at spawn and left set afterwards (`profile save`
-// reads it), so a `-b` tab shows `browser` before any browser exists, and the gone-browser report,
-// which the band carries, drops it. See the Metadata row in `product/specs/tabs.md`.
+// reads it), so a `-b` tab shows `browser` before any browser exists and again once a browser is
+// reported gone — the band, not the flag, carries the death. See the Metadata row in
+// `product/specs/tabs.md`.
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];
-  if (tab.harness?.browserRunning) return ['browserInUse'];
-  return tab.harness?.browserError ? [] : ['browser'];
+  return tab.harness?.browserRunning ? ['browserInUse'] : ['browser'];
 }
 
 // The metadata row's display symbol for a workspaced tab's working directory: the clone's own name

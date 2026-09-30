@@ -148,16 +148,15 @@ describe('buildTabView', () => {
     expect(view.flags).toContain('browser');
   });
 
-  // Before any browser has started, the flag is lit from the launch flag, so it stands for the tab's
-  // `-b` launch — and the gone-browser report the band carries darkens it. See the Metadata row in
-  // `tabs.md`.
-  it('drops \'browser\' from flags once the harness reports a browser gone', () => {
+  // The flag stands for the tab's `-b` launch, so a gone-browser report, which the band carries,
+  // leaves it lit. See the Metadata row in `tabs.md`.
+  it('keeps \'browser\' in flags once the harness reports a browser gone', () => {
     const tab = makeTab('claude', '#fff');
     tab.browser = true;
     tab.harness = { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' };
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toContain('browser');
     tab.harness.browserError = 'e2e browser exited';
-    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).not.toContain('browser');
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual(['browser']);
   });
 
   describe('while a browser is in use', () => {
@@ -176,12 +175,12 @@ describe('buildTabView', () => {
       expect(flagsOf(tab)).toEqual(['browserInUse']);
     });
 
-    it('drops it again when that browser is reported gone', () => {
+    it('returns to the plain \'browser\' flag when that browser is reported gone', () => {
       const tab = browserTab();
       tab.harness!.browserRunning = true;
       tab.harness!.browserError = 'e2e browser exited';
       delete tab.harness!.browserRunning;
-      expect(flagsOf(tab)).toEqual([]);
+      expect(flagsOf(tab)).toEqual(['browser']);
     });
 
     // The band keeps the earlier death on record, but a browser is in use again.

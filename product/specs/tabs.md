@@ -155,10 +155,11 @@ The browser flag has two looks. Before any browser has been started behind a `-b
 is the plain globe with the "E2E browser" tooltip: it reports the tab's launch, and it is lit from the
 moment the tab opens. Once a browser comes up and is listening, the globe turns green and its tooltip
 reads "E2E browser in use". It stays green while that browser runs, for a local tab and for a remote
-one alike. When a browser is reported gone, the flag drops on the same update that brings the
-gone-browser band described in `harness.md`. A later connect that starts a fresh browser behind the
-same endpoint brings it back, green, because a browser is in use again; the band stays up as the
-record of the earlier death. The flag does not return in its plain form after a death.
+one alike. When a browser is reported gone, the flag returns to the plain globe with the "E2E
+browser" tooltip on the same update that brings the gone-browser band described in `harness.md`: the
+tab is still a `-b` tab, and the band, not the flag, records the death. A later connect that starts a
+fresh browser behind the same endpoint turns it green again, because a browser is in use again; the
+band stays up as the record of the earlier death.
 
 A remote tab rebuilt by attaching from a new local session learns of a browser only when one starts,
 so a browser already running on the far side before that attach leaves the flag plain until the next
