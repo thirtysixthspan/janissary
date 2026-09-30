@@ -2,6 +2,8 @@
 
 ## ready
 
+* a new search tab implemented as a new plugin that allows the entire project repository to be searched efficently for expressions matching plain text or regex. it should provide a table of results that can be keyboard or mouse navigated, eaach entry showing the match and surrounding context lines with a header that includes file path and line number. clicking on the entry or hitting return on the entry will cause that file to be openned in a new editor tab with the matching line in the center of the window. 
+
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 
 
 * sql database plugin that offers table, visualization, crud and query on sql databases including local sqllite databases. The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, and generated SQL actions. 
