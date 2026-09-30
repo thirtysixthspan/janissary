@@ -54,6 +54,13 @@ Under it, a filter chip row lists the filters in force; above the table, an erro
 last failure. Below the table, a pager steps a page at a time, offers a page size, and re-reads on
 **Refresh**. The table scrolls inside the tab rather than running into the command bar.
 
+When the columns do not all fit across the tab, the values are cut off with an ellipsis so the table
+fits rather than scrolling sideways. The widest values are cut first — a column whose values are all
+short keeps its width — and a cut-off value is shown whole in its cell's tooltip. A column never
+shrinks past its own name, so a table with more columns than the tab has room to name still scrolls
+sideways. A table that fits is drawn with every value whole, the fit is worked out again when the tab
+is resized or docked, and the cell being edited is never cut off.
+
 Every read the tab makes is answered before the next one starts, so a tab that has just opened fills
 in on its own: the table dropdown gains the database's objects and the grid its first page without
 anything being asked of it twice, and a tab never rests in the state it was in before an answer. While

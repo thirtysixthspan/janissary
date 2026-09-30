@@ -8,6 +8,7 @@ import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser } from './ColumnChooser';
 import { useGridSelection } from './selection';
+import { useColumnFit } from './useColumnFit';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
@@ -67,6 +68,7 @@ export function DataGrid({
   const selection = useGridSelection({
     grid, active: capabilities.active, containerRef: scrollRef, onError: setCopyError,
   });
+  useColumnFit({ frameRef: scrollRef, grid, hidden: payload.hidden, editing });
 
   return (
     <div className="sql-grid-area">

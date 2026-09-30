@@ -52,9 +52,18 @@
    accent edge is on the left, as the file navigator's is, so the grid and the tree read alike. */
 .sql-grid tbody tr.selected { background: var(--accent-soft, rgb(120 160 255 / 16%)); box-shadow: inset 2px 0 0 var(--accent, #5a8cff); }
 .sql-grid .sql-gutter { width: 1%; color: var(--muted); text-align: right; user-select: none; }
-.sql-grid .sql-row-head { width: 2em; cursor: pointer; }
+/* The minimum holds the row header's width when the columns are fitted to the frame, which would
+   otherwise squeeze it to its padding. */
+.sql-grid .sql-row-head { width: 2em; min-width: 2em; cursor: pointer; }
 .sql-grid .sql-row-head:hover { background: var(--bg-hover); }
 .sql-cell.null { color: var(--muted); font-style: italic; }
+/* A value that does not fit is cut off rather than widening its column. The grid sets the cap on its
+   frame when the columns do not all fit — the widest a value may be for the table to fit — and leaves
+   it unset when they do, so a table that fits is laid out exactly as it would be without this. The
+   headers are not capped, so a column never shrinks past its own name. The cell being edited is
+   exempt, so the editor is never clipped. */
+.sql-grid td.sql-cell { max-width: var(--sql-cell-cap, none); overflow: hidden; text-overflow: ellipsis; }
+.sql-grid td.sql-cell.editing { max-width: none; overflow: visible; }
 .sql-empty { color: var(--muted); padding: 12px; text-align: center; }
 
 .sql-head { display: inline-flex; align-items: center; gap: 4px; }
@@ -102,7 +111,7 @@
 
 /* A cell holding a foreign key: the value reads as a link because activating it is one, and its
    title names the table and column it points at. */
-.sql-cell-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline dotted; }
+.sql-cell-link { background: none; border: none; padding: 0; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline dotted; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 .sql-cell-link:hover { text-decoration: underline; }
 
 .sql-console { flex-shrink: 0; }

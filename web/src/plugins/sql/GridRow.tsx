@@ -10,6 +10,14 @@ import { startRun } from './selection';
 // the 200-line limit, and both are here because a row is one thing: which cells it shows, whether it
 // is highlighted, and what each cell does when it is activated.
 
+/** What a cell missing from the row reads as. */
+const NULL_CELL: SqlCell = { text: '', isNull: true };
+
+/** A data cell's classes: a null is drawn in its own style, and the cell being edited is not truncated. */
+function cellClass(cell: SqlCell | undefined, editing: boolean): string {
+  return ['sql-cell', cell?.isNull ? 'null' : '', editing ? 'editing' : ''].filter(Boolean).join(' ');
+}
+
 /**
  * A row: the header that highlights it, its cells, and the delete affordance if the object is
  * writable.
@@ -53,7 +61,9 @@ export function GridRow({
       {shown.map(({ name: column, index: cell }) => (
         <td
           key={column}
-          className={row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell'}
+          className={cellClass(row.cells[cell], editingColumn === column)}
+          // A value too wide for its column is cut off with an ellipsis, so the whole of it is here.
+          title={cellText(row.cells[cell] ?? NULL_CELL)}
           // A press anywhere in a row highlights that row, and a second press on the same cell is
           // what opens its editor. The enter handler is the drag case: the mouse button is already
           // down from the mousedown above.
@@ -70,7 +80,7 @@ export function GridRow({
           ) : (
             <Cell
               column={object?.columns.find((entry) => entry.name === column)}
-              cell={row.cells[cell] ?? { text: '', isNull: true }}
+              cell={row.cells[cell] ?? NULL_CELL}
               onFollow={onFollow}
             />
           )}

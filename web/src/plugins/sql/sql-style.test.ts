@@ -67,6 +67,38 @@ describe('the sql stylesheet', () => {
     expect(sql).not.toContain('.sql-cell.selected {');
   });
 
+  // A value too wide for the frame is cut off so its column can shrink, rather than every column
+  // taking the width of its longest value and pushing the rest off the side. With no cap set — a
+  // table that fits — nothing is cut.
+  it('cuts off a value wider than the cap with an ellipsis', () => {
+    const cell = rule('.sql-grid td.sql-cell');
+
+    expect(cell).toContain('max-width: var(--sql-cell-cap, none)');
+    expect(cell).toContain('overflow: hidden');
+    expect(cell).toContain('text-overflow: ellipsis');
+    expect(rule('.sql-cell-link')).toContain('text-overflow: ellipsis');
+  });
+
+  // The editor is wider than most values, so a cell truncated to its value's width would clip it.
+  it('leaves the cell being edited whole', () => {
+    const editing = rule('.sql-grid td.sql-cell.editing');
+
+    expect(editing).toContain('max-width: none');
+    expect(editing).toContain('overflow: visible');
+  });
+
+  // The column names are each column's floor, so a column is never narrower than its own name.
+  it('never truncates a column header', () => {
+    expect(rule('.sql-grid thead th')).not.toContain('text-overflow');
+    expect(rule('.sql-grid thead th')).not.toContain('max-width');
+  });
+
+  // A fitted table is laid out at its columns' narrowest, which squeezes a header with no text in it
+  // down to its padding.
+  it('keeps the row header its width when the columns are fitted', () => {
+    expect(rule('.sql-grid .sql-row-head')).toContain('min-width: 2em');
+  });
+
   // The removed surfaces must not leave their rules behind: a stylesheet entry for a control
   // that no longer exists is how the next reader is misled about what this tab offers.
   it('carries no rule for a control the tab no longer has', () => {

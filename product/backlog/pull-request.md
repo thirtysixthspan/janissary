@@ -2,8 +2,6 @@
 
 # pull-request
 
-* when not all the columns fit in the frame, the entry values should be truncated with an ellipsis in order to shrink the column width.
-
 * the actions column containing the delete button should be on the left hand side of the table.
 
 * sql-errors should not be displayed in the sql tab. 

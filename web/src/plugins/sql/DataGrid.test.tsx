@@ -66,6 +66,24 @@ describe('DataGrid headers and rows', () => {
     expect(screen.getByText('NULL').className).toContain('null');
     expect(screen.getByText('paid').className).not.toContain('null');
   });
+
+  // A value too wide for its column is cut off with an ellipsis, so the tooltip is where it is whole.
+  it('carries each value whole in its cell tooltip, a null as the NULL the grid shows', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    expect(screen.getByText('paid').getAttribute('title')).toBe('paid');
+    expect(screen.getByText('NULL').getAttribute('title')).toBe('NULL');
+  });
+
+  // The editor is never clipped to the width a value was truncated to.
+  it('marks the cell being edited so it is not truncated', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const cell = screen.getByText('paid');
+    expect(cell.className).not.toContain('editing');
+    fireEvent.doubleClick(cell);
+    expect(cellInput(container).closest('td')?.className).toContain('editing');
+  });
 });
 
 describe('DataGrid ordering and paging', () => {
