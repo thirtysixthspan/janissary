@@ -15,6 +15,14 @@ import { InlineEditInput } from '../api';
 // trap: a browser blurs the field on the way to the box, the blur committed the text as it stood, and
 // the editor unmounted before the toggle was read. Preventing the press's default keeps the caret
 // where the user left it, so the null is what Enter carries.
+//
+// A cell that already holds null is the one a user opens this editor on to fill in, and pinning the
+// field empty while the toggle is on threw those keystrokes away: React restored `''` on every one of
+// them, so typing looked like nothing happening and Enter wrote the null back. The field cannot be
+// disabled the way the insert form's is -- a null the user is here to replace is the one value a
+// disabled field could never take -- so the toggle gets out of the way instead. The first keystroke
+// clears it, and what was typed is the value: the field showed nothing, so nothing is what the typed
+// text is added to. Unticking with nothing typed still restores the text the cell held.
 export function CellEditor({
   cell, onCommit, onCancel,
 }: {
@@ -29,7 +37,10 @@ export function CellEditor({
       <InlineEditInput
         className="sql-cell-input"
         value={isNull ? '' : text}
-        onChange={setText}
+        onChange={(value) => {
+          setText(value);
+          if (isNull) setIsNull(false);
+        }}
         onCommit={() => onCommit(isNull ? null : text)}
         onCancel={onCancel}
       />

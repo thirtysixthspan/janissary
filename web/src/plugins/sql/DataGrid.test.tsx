@@ -9,8 +9,8 @@ beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 // The cell editor's field, which has no accessible name and is empty whenever the NULL toggle is on
 // — so the search and the page filter fields are not distinguishable by what they hold.
-function cellInput(container: HTMLElement): HTMLElement {
-  return container.querySelector('.sql-cell-input') as HTMLElement;
+function cellInput(container: HTMLElement): HTMLInputElement {
+  return container.querySelector('.sql-cell-input') as HTMLInputElement;
 }
 
 describe('DataGrid headers and rows', () => {
@@ -341,6 +341,54 @@ describe('DataGrid editing', () => {
     fireEvent.doubleClick(screen.getByText('paid'));
     fireEvent.keyDown(screen.getByDisplayValue('paid'), { key: 'Escape' });
     expect(intent).not.toHaveBeenCalled();
+  });
+
+  // A cell that holds null is the one a user opens the editor on to fill in, and it opens with the
+  // toggle on and the field pinned empty -- so React restored `''` on every keystroke and Enter wrote
+  // the null back. Typing has to take the cell out of null.
+  it('opens a cell that reads NULL with the toggle on, and commits the null when nothing is typed', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('NULL'));
+    const toggle = screen.getByLabelText('Set NULL') as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    expect(cellInput(container).value).toBe('');
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r2', column: 'status', value: null });
+  });
+
+  it('takes a typed value on a cell that already holds NULL', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('NULL'));
+    const input = cellInput(container);
+    fireEvent.change(input, { target: { value: 'recovered' } });
+    // The field is no longer pinned empty, and the toggle has cleared to say the value is text.
+    expect(input.value).toBe('recovered');
+    expect((screen.getByLabelText('Set NULL') as HTMLInputElement).checked).toBe(false);
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r2', column: 'status', value: 'recovered' });
+  });
+
+  // What the field showed is what is being edited: a ticked toggle showed nothing, so what is typed
+  // is the value rather than an addition to the text the toggle was hiding.
+  it('commits what was typed over a cell whose toggle was ticked, and restores its text when it is only unticked', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { container, rerender } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    fireEvent.change(cellInput(container), { target: { value: 'x' } });
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('update-cell', { row: 'r1', column: 'status', value: 'x' });
+
+    rerender(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    fireEvent.click(screen.getByLabelText('Set NULL'));
+    expect(cellInput(container).value).toBe('paid');
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('update-cell', { row: 'r1', column: 'status', value: 'paid' });
   });
 
   it('confirms a delete before it asks for it, and only the confirmed path asks', () => {
