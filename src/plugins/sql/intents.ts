@@ -34,7 +34,7 @@ import { openDatabase } from './open-tab.js';
 
 /**
  * Refuse a write to something the view already calls read-only, and to a table the tab is not
- * showing. The host refuses a read-only write too, but its refusal arrives as an error band after a
+ * showing. The host refuses a read-only write too, but its refusal arrives as a notification after a
  * round trip; this one is immediate and names the reason.
  *
  * `object` is the name the action is about to carry, which is not always the name the payload is

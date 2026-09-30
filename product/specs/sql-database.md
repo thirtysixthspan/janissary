@@ -50,9 +50,10 @@ A trigger is listed but cannot be chosen. Choosing a different database reloads 
 database's.
 
 Below the row, the grid's own header names the object on screen and reports how much of it is there.
-Under it, a filter chip row lists the filters in force; above the table, an error band carries the
-last failure. Below the table, a pager steps a page at a time, offers a page size, and re-reads on
-**Refresh**. The table scrolls inside the tab rather than running into the command bar.
+Under it, a filter chip row lists the filters in force. Below the table, a pager steps a page at a
+time, offers a page size, and re-reads on **Refresh**. The tab shows no SQL errors: a failure is a
+notification attributed to the tab, described under the console below, and a read that failed leaves
+the page it had on screen — `No rows.` included — rather than a message in its place. The table scrolls inside the tab rather than running into the command bar.
 
 When the columns do not all fit across the tab, the values are cut off with an ellipsis so the table
 fits rather than scrolling sideways. The widest values are cut first — a column whose values are all
@@ -181,8 +182,9 @@ about, so a value holding a comma cannot change the shape of what lands. A null 
 the grid shows rather than as an empty cell the paste would turn back into a string, and a run that
 runs off the end of the page copies only what was on screen. A text selection the browser has made
 inside a cell is left alone, so copy still gets the
-word. If the system clipboard is unavailable, the text is shown in the error band rather than
-being dropped.
+word. If the system clipboard is unavailable, the text is shown in a band above the table, with a
+**Dismiss** control, rather than being dropped. That band is the text the user asked to copy, not a SQL
+error.
 
 The grid highlights whole rows and never individual cells, because a row is the unit everything here
 acts on: a write names a row and a column because the statement needs both, and nothing in the tab
@@ -291,16 +293,15 @@ feed.
 A statement that fails is the same kind of notification, and it says the SQLite error. A failure is
 the one result a user did not ask for and cannot predict. It is attributed to the tab the statement
 was run from, and it is said once per failure: an answer that arrives twice for one request says it
-once, and a failure that has gone away and come back says it again. The grid's own error band still
-carries the message where the failed
-read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
-is deleted under an open tab. A failed statement leaves the grid as it was, and is not also reported
-as a count.
+once, and a failure that has gone away and come back says it again. The notification is the only place
+it is said: the tab shows no SQL error of its own, whether the failure was a statement typed here, a
+page the grid asked for, a write, or an export. A failed statement leaves the grid as it was, and is
+not also reported as a count.
 
 The tab keeps no record of the statements it has run. What ran is in the notifications feed, and the
 command bar's own `ArrowUp` walk is the way back to what was typed.
 
-A statement that succeeds reports its outcome and adds nothing to the error band, and the tab then
+A statement that succeeds reports its outcome, and the tab then
 reads itself again: the object list, then the page it was showing. That is the same reading **Refresh**
 does, and it is what makes a `CREATE`, an `ALTER` or a `DROP` typed into the command bar show up
 without a second press — the console is the only way to change a schema, so the schema changes there.
@@ -321,9 +322,11 @@ be written to.
 Nothing a grid or a console does disables the plugin, and nothing is written to a transcript.
 
 A database deleted by `db sqlite delete` while its tab is open is not an ordinary read failure. The
-tab drops the grid and reads `Database "<name>" does not exist. Create it to start.` rather than
-keeping rows that describe a file which is gone, and pressing **Refresh** says the same thing instead
-of bringing the empty database back.
+tab drops the grid, and the grid's header — where the range line would be — reads
+`Database "<name>" does not exist. Create it to start.` rather than keeping rows that describe a file
+which is gone. That is the one failure the tab itself states, because with no page left the header
+would otherwise read `Loading…` for good. Pressing **Refresh** says the same thing instead of bringing
+the empty database back.
 
 ### What it does not do
 

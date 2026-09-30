@@ -104,8 +104,6 @@ export function DataGrid({
 
       <FilterChips payload={payload} onSend={send} />
 
-      {payload.error && <div className="sql-error" role="alert">{payload.error}</div>}
-
       {copyError && (
         <div className="sql-error" role="alert">
           {copyError}
@@ -192,7 +190,7 @@ export function DataGrid({
                 onDelete={() => setDeleting(row)}
               />
             ))}
-            {grid && grid.rows.length === 0 && !payload.error && (
+            {grid && grid.rows.length === 0 && (
               <tr>
                 <td className="sql-empty" colSpan={(grid.columns.length || 1) + 2}>No rows.</td>
               </tr>

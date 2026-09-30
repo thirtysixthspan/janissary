@@ -446,11 +446,29 @@ describe('DataGrid read-only objects', () => {
   });
 });
 
+// A failure is a notification, attributed to this tab, so the tab does not say it a second time.
 describe('DataGrid errors', () => {
-  it('shows a failed read in an error band above the grid', () => {
+  it('shows a failed read nowhere in the tab, and keeps the page it had', () => {
     const { capabilities } = makeCapabilities();
-    render(<DataGrid payload={payload({ error: 'Query error: no such table' })} capabilities={capabilities} />);
-    expect(screen.getByRole('alert').textContent).toBe('Query error: no such table');
+    const { container } = render(<DataGrid payload={payload({ error: 'Query error: no such table' })} capabilities={capabilities} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(container.textContent).not.toContain('no such table');
     expect(screen.getByText('paid')).toBeTruthy();
+  });
+
+  it('still says an empty page has no rows after a failure', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload({ grid: grid({ rows: [], total: 0 }), error: 'Query error: no such column: nope' })} capabilities={capabilities} />);
+    expect(container.querySelector('td.sql-empty')?.textContent).toBe('No rows.');
+    expect(screen.queryByText(/no such column/)).toBeNull();
+  });
+
+  // A deleted database leaves nothing to show, so the header says why rather than loading for good.
+  it('says in the header that the database is gone when there is no page left', () => {
+    const { capabilities } = makeCapabilities();
+    const error = 'Database "shop" does not exist. Create it to start.';
+    const { container } = render(<DataGrid payload={payload({ grid: null, error })} capabilities={capabilities} />);
+    expect((container.querySelector('.sql-grid-count') as HTMLElement).textContent).toBe(error);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -42,10 +42,16 @@ export function pageLabel(grid: SqlGrid): string {
  * nothing pending against an empty object list is a read that finished — so the label is a question
  * about the payload rather than about the grid. `Loading…` answers the remaining case, a tab that
  * has read nothing and is not waiting on anything, which is what it read before this existed.
+ *
+ * The tab shows no failures — they are notifications — except the one that leaves it nothing to
+ * show: with no grid and nothing outstanding, a recorded failure is why, and it is what the header
+ * says. In practice that is a database deleted under the tab, since a failed read otherwise keeps the
+ * page it had.
  */
 export function countLabel(payload: SqlPayload): string {
   if (payload.grid) return pageLabel(payload.grid);
   if (payload.pending !== null) return 'Loading…';
+  if (payload.error) return payload.error;
   return payload.objects.length === 0 ? 'No tables.' : 'Loading…';
 }
 

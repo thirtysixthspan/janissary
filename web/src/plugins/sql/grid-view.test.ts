@@ -126,6 +126,23 @@ describe('countLabel', () => {
   it('still reads as loading when a refused query left no page and no request', () => {
     expect(countLabel(payload({ grid: null }))).toBe('Loading…');
   });
+
+  // The tab shows no failures, so a database deleted under it would otherwise read as loading for good.
+  it('says why there is no page when a failure left nothing to show', () => {
+    const error = 'Database "shop" does not exist. Create it to start.';
+    expect(countLabel(payload({ grid: null, error }))).toBe(error);
+    expect(countLabel(payload({ grid: null, objects: [], object: '', error }))).toBe(error);
+  });
+
+  it('reads as loading rather than the old failure while a request is outstanding', () => {
+    expect(countLabel(payload({
+      grid: null, error: 'Query error: no such table', pending: { id: 'r1', followUp: 'schema' },
+    }))).toBe('Loading…');
+  });
+
+  it('reads the range line, not a failure, while the page it had is still there', () => {
+    expect(countLabel(payload({ error: 'Query error: no such column: nope' }))).toBe(pageLabel(GRID));
+  });
 });
 
 describe('pager arithmetic', () => {
