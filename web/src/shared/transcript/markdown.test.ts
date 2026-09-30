@@ -45,6 +45,17 @@ describe('renderMarkdown', () => {
     expect(out).not.toContain('<script');
   });
 
+  it('strips event handlers smuggled out of a style block', async () => {
+    const out = await sanitize('<style>a{}</style><img src=x onerror=alert(1)></style>');
+    expect(out).not.toContain('onerror');
+  });
+
+  it('keeps SVG pointer-events and vector-effect presentation attributes', async () => {
+    const out = await sanitize('<svg><path d="M0 0" pointer-events="none" vector-effect="non-scaling-stroke"></path></svg>');
+    expect(out).toContain('pointer-events="none"');
+    expect(out).toContain('vector-effect="non-scaling-stroke"');
+  });
+
   it('preserves safe markdown (headings, bold, links)', async () => {
     const out = await sanitize('# Hello\n**bold** [safe](https://example.com)');
     expect(out).toContain('<h1');
