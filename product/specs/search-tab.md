@@ -25,7 +25,8 @@ Quick Open searches, so the two never disagree about what the project contains. 
 are skipped: anything too large for the editor to open, and anything whose bytes are binary.
 
 Two fields in the header narrow the search further. **Files to include** and **Files to
-exclude** each take comma-separated glob patterns.
+exclude** each take comma-separated glob patterns. The header is a single line: the two fields
+share it with the tab's split control, which sits at its right-hand end.
 
 A pattern that says nothing about *where* to look names a file at any depth, so `*.md` and `*config*`
 reach every one of them and not only the ones at the project root. A pattern that says where to look

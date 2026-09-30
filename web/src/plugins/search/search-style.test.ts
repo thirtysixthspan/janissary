@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import search from './search.css?raw';
+import entry from './index?raw';
+import shared from '../shared.css?raw';
 import theme from '../../theme.css?raw';
 
 // The context either side of a match is bounded by a stylesheet rule, and jsdom lays nothing out —
@@ -66,6 +68,15 @@ describe('search stylesheet', () => {
 });
 
 describe('search control placement', () => {
+  it('loads the shared plugin frame when search is the first plugin opened', () => {
+    // Without the shared sheet the metadata bar is a plain block, and the split icon wraps onto a
+    // second line at the left edge instead of sitting at the right end of the fields' line.
+    expect(entry).toContain("import '../shared.css'");
+    expect(entry.indexOf("import '../shared.css'")).toBeLessThan(entry.indexOf("import './search.css'"));
+    expect(shared).toMatch(/\.plugin-meta \{[^}]*display: flex/);
+    expect(shared).toMatch(/\.plugin-actions \{[^}]*margin-left: auto/);
+  });
+
   it('lets the command line pin a trailing control to its right', () => {
     // The shell's own rule, not the plugin's: a plugin that has to reach into the command line's
     // layout to place a control on it is the drift the trailing slot exists to prevent.

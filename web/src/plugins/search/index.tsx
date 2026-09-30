@@ -1,3 +1,4 @@
+import '../shared.css';
 import './search.css';
 
 export { SearchTab as default } from './SearchTab';

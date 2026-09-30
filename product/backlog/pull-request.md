@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the metadatabar should be a single line with the tab split icon floated to the right.
-
 * the results list should be in a scrollable frame
 
 * a search should be limited to 250 results then terminate
