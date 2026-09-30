@@ -18,11 +18,11 @@ const modesOf = (value: SearchPayload): Modes => ({
   regex: value.regex, matchCase: value.matchCase, wholeWord: value.wholeWord,
 });
 
-// The search tab: a metadata header carrying the include and exclude fields, the command line
-// carrying the query and its modifiers, and the result table. Everything above the table is input;
-// the table is the output, and it is the only thing that is focusable — the bar keeps its own arrows
-// for caret movement, and the table keeps the selection keys, because only the focused element
-// receives them.
+// The search tab: a metadata header carrying the include and exclude fields, a result window that
+// stacks upward, and the command line at the bottom edge. Everything above the command line is
+// output; the command line is where the query goes, and the modifiers sit at its right-hand end.
+// Only the result window is focusable — the bar keeps its own arrows for caret movement, and the
+// window keeps the selection keys, because only the focused element receives them.
 export function SearchTab({
   payload, capabilities,
 }: {
@@ -92,13 +92,6 @@ export function SearchTab({
         />
         {capabilities.splitAction && <span className="plugin-actions">{capabilities.splitAction}</span>}
       </div>
-      <SearchBar
-        query={query}
-        onChangeQuery={setQuery}
-        onSearch={(next) => search({ query: next, include, exclude, ...modes })}
-        active={capabilities.active}
-        trailing={<ModeToggles modes={modes} onToggle={toggle} />}
-      />
       <div className="search-results" ref={listRef} tabIndex={0} onKeyDown={onKeyDown}>
         <ResultTable
           rows={rows}
@@ -109,6 +102,14 @@ export function SearchTab({
           message={payload.message}
         />
       </div>
+      <SearchBar
+        query={query}
+        onChangeQuery={setQuery}
+        onSearch={(next) => search({ query: next, include, exclude, ...modes })}
+        active={capabilities.active}
+        trailing={<ModeToggles modes={modes} onToggle={toggle} />}
+        label="search"
+      />
     </div>
   );
 }

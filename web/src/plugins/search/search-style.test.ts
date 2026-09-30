@@ -78,4 +78,25 @@ describe('search control placement', () => {
     expect(filters).toContain('flex: 1');
     expect(filters).toContain('min-width: 0');
   });
+
+  it('stacks the result window upward, first match at the bottom edge', () => {
+    const results = rule('.search-results');
+
+    // A reversed column, so the first row the scan produced sits at the bottom and each later row
+    // above it — which is also where a reversed column puts its scroll origin, so the window opens
+    // on the first match and stays there while rows stream in above it.
+    expect(results).toContain('display: flex');
+    expect(results).toContain('flex-direction: column-reverse');
+  });
+
+  it('keeps the result window scrollable and shrinkable', () => {
+    const results = rule('.search-results');
+
+    // Reversing the column changes which end it grows from and nothing else: a window that stopped
+    // scrolling, or that refused to shrink inside the tab's column, would look like a search that
+    // had stopped updating.
+    expect(results).toContain('overflow-y: auto');
+    expect(results).toContain('min-height: 0');
+    expect(results).toContain('flex: 1');
+  });
 });

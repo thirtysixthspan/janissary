@@ -19,7 +19,15 @@
 }
 .search-toggles button:hover { color: var(--fg); }
 .search-toggles button.on { border-color: var(--border); color: var(--accent); }
-.search-results { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
+/* The result window, stacking upward: a search finds its first match first, so the first row goes at
+   the bottom edge and each later row above it, which is the order the scan produced them in. A
+   reversed column also puts the scroll origin at the bottom, so the window opens on the first match
+   and stays there as rows stream in above it — the first match does not scroll out from under the
+   reader while the scan runs. */
+.search-results {
+  flex: 1; min-height: 0; display: flex; flex-direction: column-reverse;
+  overflow-y: auto; outline: none;
+}
 .search-empty { padding: 8px 12px; color: var(--muted); }
 .search-row {
   border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;

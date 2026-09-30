@@ -40,10 +40,11 @@ it. The comma is always a separator, so neither field can narrow by a brace list
 
 ### How a search is run
 
-The tab's own search bar is styled exactly like an agent tab's command bar, and the query is edited
-in place there. **The results update as the query is updated** — shortly after typing stops, not on
-Return — so refining a search does not mean retyping it. An empty query clears the results rather
-than searching for nothing.
+The tab's own command bar sits at the bottom of the tab, where every other command bar in the
+application sits, and it is styled exactly like an agent tab's. Its prompt reads `search >`, so the
+line is not mistaken for a shell's. The query is edited in place there. **The results update as the
+query is updated** — shortly after typing stops, not on Return — so refining a search does not mean
+retyping it. An empty query clears the results rather than searching for nothing.
 
 Three toggles sit at the right-hand end of the command line, beside the query they read, and each
 changes how that query is interpreted:
@@ -70,14 +71,19 @@ as much room as it needs, so the context is bounded at two displayed lines eithe
 and cut off at the far end — the lines nearest the match are always the ones that show. A match line
 that wraps is never cut: it is what the entry was opened for.
 
-**Rows stream in while the search is still running**, so a large project starts filling the table
+**The results stack upward, with the first match at the bottom of the window.** A search finds its
+first match first, so the first entry is the one at the bottom edge and each later one is above it,
+reading upward in the order the search found them. The window opens on the first match and stays
+there, so a match does not scroll away while the rest of the search is still running.
+
+**Rows stream in while the search is still running**, so a large project starts filling the window
 before it has been fully searched, and the rows already found stay on screen. The first results
 arrive as soon as any file is known to match rather than only once the whole project has been read
 in order.
 
-There is no cap and no tally: the header shows no count of matches or files, and the body shows the
+There is no cap and no tally: the header shows no count of matches or files, and the window shows the
 rows and nothing else. Three states cover everything the body can say — **Searching…** while a scan
-is running (alongside whatever rows have already arrived), **`No matches found for "<query>".`** when
+is running (over whatever rows have already arrived), **`No matches found for "<query>".`** when
 one settles with nothing, and the reason when a search fails.
 
 ### Navigating and opening a result

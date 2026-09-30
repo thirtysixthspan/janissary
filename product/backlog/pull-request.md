@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the search command bar should be at the bottom of the page like the other command bars. it should say `search >` instead of `>`. results should be reverse ordered where the first match is at the bottom of the page and the remainder above in a scrollable result window.
-
 * the keyboard focus should be alter between the search term and the results using the tab key.
 
 * when the keyboard focus is on the search bar, up and down arrows will scroll through the search term history.

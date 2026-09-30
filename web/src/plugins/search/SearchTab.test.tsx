@@ -51,6 +51,33 @@ describe('SearchTab', () => {
     expect((screen.getByLabelText('Search the project') as HTMLTextAreaElement).value).toBe('todo');
   });
 
+  it('puts the command bar last, at the bottom edge like every other command bar', () => {
+    const { container } = renderTab();
+    const tab = container.querySelector('.search-tab')!;
+    // The agent tab renders its metadata row, then its body, then the bar last, so the prompt is
+    // always at the bottom edge under whatever the tab is showing. The bar is the tab's last child
+    // and the result window the one before it, for the same reason.
+    expect(tab.lastElementChild?.querySelector('.command')).not.toBeNull();
+    expect(tab.lastElementChild?.previousElementSibling?.className).toBe('search-results');
+  });
+
+  it('labels the command line so the prompt says what the line is', () => {
+    const { container } = renderTab();
+    // `search >`, through the shell's own label slot rather than markup of the plugin's own, so the
+    // label and the glyph cannot drift apart.
+    expect(container.querySelector('.command')).toHaveTextContent('search');
+  });
+
+  it('emits the rows in the order the scan produced them', () => {
+    const { container } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
+    }));
+    // The window is a reversed column, so the first row the scan produced is the one at the bottom.
+    // Shuffling the array would read bottom-up as the reverse of what the scan found.
+    const paths = [...container.querySelectorAll('.search-row-path')].map((el) => el.textContent);
+    expect(paths).toEqual(['a.ts', 'b.ts']);
+  });
+
   it('shows a row per match with its path and line in the header', () => {
     const { container } = renderTab();
     expect(container.querySelectorAll('.search-row-header')).toHaveLength(1);
