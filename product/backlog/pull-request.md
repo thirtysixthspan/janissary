@@ -2,4 +2,3 @@
 
 # pull-request
 
-* in the search result frame, up arrow should move back through history (up the page) and down arrow should move forward through history (down the page). It is currrently the opposite.

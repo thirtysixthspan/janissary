@@ -1,12 +1,8 @@
 import { useCallback } from 'react';
 // The shared list selection comes through the client plugin API, not by reaching into the host —
 // the boundary rule forbids the direct import, and the API is where it is published.
-import {
-  nextListSelection,
-  useListSelection,
-  type ListRowClick,
-  type ListSelection,
-} from '../api';
+import { useListSelection, type ListRowClick, type ListSelection } from '../api';
+import { nextResultSelection } from './result-keys';
 
 export type ResultSelection = {
   listRef: React.RefObject<HTMLDivElement | null>;
@@ -35,8 +31,10 @@ export function useResultSelection({ count }: Properties): ResultSelection {
   const selection: ListSelection = useListSelection(count);
   const { listRef, selected } = selection;
 
+  // The window stacks upward, so the arrows step by the screen rather than by the shared top-down
+  // rule: up the page is a later match.
   const navigate = useCallback(
-    (key: string) => selection.navigate(key, nextListSelection), [selection],
+    (key: string) => selection.navigate(key, nextResultSelection), [selection],
   );
   const rowClicked = useCallback(
     (index: number) => selection.rowClicked(index, clickOpens), [selection],

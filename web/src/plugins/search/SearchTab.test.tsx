@@ -401,7 +401,7 @@ describe('SearchTab', () => {
       rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
     }));
     const results = container.querySelector('.search-results')!;
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
     fireEvent.keyDown(results, { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('open', { path: 'b.ts', line: 2 });
   });
@@ -411,9 +411,26 @@ describe('SearchTab', () => {
       rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
     }));
     const results = container.querySelector('.search-results')!;
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
     expect(results.querySelectorAll('.search-row.selected')).toHaveLength(1);
     expect(results.querySelectorAll('.search-row')[1]?.className).toContain('selected');
+  });
+
+  it('moves up the window on ArrowUp and back down on ArrowDown', () => {
+    const { container, intent } = renderTab(payload({
+      rows: [match({ path: 'a.ts', line: 1 }), match({ path: 'b.ts', line: 2 })],
+    }));
+    const results = container.querySelector('.search-results')!;
+    // The first match is the bottom row, so there is nowhere lower for ArrowDown to go.
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    fireEvent.keyDown(results, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { path: 'a.ts', line: 1 });
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    fireEvent.keyDown(results, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { path: 'b.ts', line: 2 });
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    fireEvent.keyDown(results, { key: 'Enter' });
+    expect(intent).toHaveBeenLastCalledWith('open', { path: 'a.ts', line: 1 });
   });
 
   it('moves the selection with Home and End', () => {
@@ -558,11 +575,11 @@ describe('SearchTab result scrolling', () => {
     const { container } = renderTab(threeRows());
     const results = container.querySelector<HTMLDivElement>('.search-results')!;
     scrollIntoView.mockClear();
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
-    expect(scrollIndexes()).toEqual(['1']);
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
-    expect(scrollIndexes()).toEqual(['1', '2']);
     fireEvent.keyDown(results, { key: 'ArrowUp' });
+    expect(scrollIndexes()).toEqual(['1']);
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    expect(scrollIndexes()).toEqual(['1', '2']);
+    fireEvent.keyDown(results, { key: 'ArrowDown' });
     expect(scrollIndexes()).toEqual(['1', '2', '1']);
     // Row 0 is the bottom of the window, so walking back to the start of the list is a scroll to the
     // bottom edge and not to the top of the list.
@@ -584,9 +601,9 @@ describe('SearchTab result scrolling', () => {
     const { container } = renderTab(threeRows());
     const results = container.querySelector<HTMLDivElement>('.search-results')!;
     scrollIntoView.mockClear();
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
-    // `nearest` moves the window the minimum distance to show the row, so stepping down a long list
-    // does not jump it on every key.
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
+    // `nearest` moves the window the minimum distance to show the row, so stepping through a long
+    // list does not jump it on every key.
     expect(scrollIntoView.mock.calls.at(-1)?.[0]).toEqual({ block: 'nearest' });
   });
 
@@ -613,7 +630,7 @@ describe('SearchTab result scrolling', () => {
     const { container } = renderTab(threeRows());
     const results = container.querySelector<HTMLDivElement>('.search-results')!;
     results.focus();
-    fireEvent.keyDown(results, { key: 'ArrowDown' });
+    fireEvent.keyDown(results, { key: 'ArrowUp' });
     scrollIntoView.mockClear();
     fireEvent.keyDown(results, { key: 'Enter' });
     // The selection did not move, so there is nothing new to bring into view.

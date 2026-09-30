@@ -136,8 +136,10 @@ keeps walking backwards out of the tab, which is what it is for.
 
 The search bar and the result window each keep their own keys, because only the focused element
 receives them. Click into the window to give it focus: the arrow keys then move the highlighted entry
-and scroll the window only as far as it must to keep that entry visible, `Home` and `End` jump to the
-first and the last, and `Return` opens the highlighted match. While the search bar has focus the
+the way they point on screen, so `↑` climbs the window to a later match and `↓` comes back down to
+an earlier one, stopping at the top and the bottom rather than wrapping. The window scrolls only as
+far as it must to keep that entry visible, `Home` and `End` jump to the first match and the last, and
+`Return` opens the highlighted match. While the search bar has focus the
 arrow keys walk the searched terms instead, and a term that has wrapped onto a second line leaves them
 to the caret.
 
