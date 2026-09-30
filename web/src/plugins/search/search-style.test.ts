@@ -41,6 +41,19 @@ describe('search stylesheet', () => {
     expect(rule('.search-context-block')).toContain('flex-direction: column');
   });
 
+  it('draws a divider between two consecutive results', () => {
+    // A reversed column puts a row's DOM predecessor directly beneath it, so the bottom edge of every
+    // row after the first is the line between the two.
+    expect(rule('.search-row + .search-row')).toContain('border-bottom: 1px solid var(--border)');
+  });
+
+  it('leaves the first result and a lone result undivided', () => {
+    const row = rule('.search-row');
+
+    expect(row).not.toContain('border-bottom');
+    expect(row).not.toContain('border-top');
+  });
+
   it('leaves the match line itself uncapped however long it wraps', () => {
     // A wrapped match is the code the user opened the row to read, so the two-display-line cap
     // applies to the context and to nothing else.

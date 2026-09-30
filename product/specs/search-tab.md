@@ -71,7 +71,8 @@ One entry per matching line, in file path then line order. Each entry is a dimme
 the file's project-relative path and the matching line's number, followed by the two lines above the
 match, the match itself, and the two below. Context is cut short at the start and end of a file
 rather than padded, and a run of matches in one file repeats the path on every entry so each is
-readable on its own.
+readable on its own. A thin horizontal rule separates each entry from the next, so where one match
+ends and the next begins is plain at a glance.
 
 **The context is two lines on screen, not two lines of the file.** A line long enough to wrap takes
 as much room as it needs, so the context is bounded at two displayed lines either side of the match

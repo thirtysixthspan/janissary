@@ -2,8 +2,6 @@
 
 # pull-request
 
-* add a horizontal divider between the results
-
 * the metadatabar should be a single line with the tab split icon floated to the right.
 
 * the results list should be in a scrollable frame

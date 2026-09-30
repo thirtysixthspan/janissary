@@ -33,6 +33,10 @@
   border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;
   font-family: var(--mono, monospace); font-size: 12px; line-height: 1.5;
 }
+/* A hairline between two results, and only between two: the window is a reversed column, so a row's
+   DOM predecessor is the row directly beneath it on screen, and its bottom edge is the line between
+   them. The first match at the window's edge, and a lone result, carry no rule. */
+.search-row + .search-row { border-bottom: 1px solid var(--border); }
 .search-row:hover { background: var(--border); }
 .search-row.selected { background: var(--border); border-left-color: var(--accent); }
 .search-row-header {
