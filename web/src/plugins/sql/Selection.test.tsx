@@ -115,6 +115,17 @@ describe('a run of cells', () => {
     rerender(<DataGrid payload={payload({ offset: 100 })} capabilities={capabilities} />);
     expect(selectedCells()).toHaveLength(0);
   });
+
+  // The run is the grid's own selection, so the browser must not leave a second one over the same
+  // cells. A press that extends a run is cancelled; a plain one is not, because collapsing the caret
+  // is what lets a user then select a word inside that cell and press Copy for the word.
+  it('claims a press that extends a run from the browser, and leaves a plain press to it', () => {
+    shown();
+    const cell = dataCells()[0] as HTMLElement;
+    expect(fireEvent.mouseDown(cell)).toBe(true);
+    expect(fireEvent.mouseDown(cell, { shiftKey: true })).toBe(false);
+    expect(fireEvent.mouseDown([...document.querySelectorAll('td.sql-row-head')][0] as HTMLElement, { shiftKey: true })).toBe(false);
+  });
 });
 
 // A row is the widest run there is, so selecting one is selecting a rectangle the page already knows
@@ -253,9 +264,47 @@ describe('copying a selection', () => {
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
     fireEvent.mouseDown(dataCells()[0] as HTMLElement);
     fireEvent.mouseDown(dataCells()[1] as HTMLElement, { shiftKey: true });
-    vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'paid' } as unknown as Selection);
+    // Both ends inside one cell: a word the user selected there, not a run. A collapsed selection is
+    // what a plain click or a keyboard run leaves behind, and that is the browser's nothing to keep.
+    const word = dataCells()[1]?.firstChild as Node;
+    browserSelection(word, word, 'paid');
     const event = copyKey();
     expect(write).not.toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(false);
   });
+
+  // A shift-click leaves a browser selection over the very cells the run covers, running from
+  // wherever the caret landed in the first to the end of the last — so standing aside for any
+  // non-empty selection handed the copy key that one, and a pasted run lost its first value.
+  it('copies the run whole even when a shift-click left a browser selection over the same cells', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    clipboardThat(write);
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const cells = dataCells();
+    fireEvent.mouseDown(cells[0] as HTMLElement);
+    fireEvent.mouseDown(cells[1] as HTMLElement, { shiftKey: true });
+    browserSelection(cells[0]?.firstChild as Node, cells[1]?.lastChild as Node, '\tpaid');
+    copyKey();
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
+  });
+
+  it('copies a single clicked cell, which a plain click leaves nothing selected in the browser', async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    clipboardThat(write);
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(dataCells()[1] as HTMLElement);
+    copyKey();
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('paid'));
+  });
 });
+
+// The two selections are told apart by where their ends are, so the browser's own selection has to
+// answer with those ends rather than with text. `getSelection` is stubbed rather than driven, since
+// jsdom neither makes a selection from a click nor keeps one.
+function browserSelection(anchorNode: Node, focusNode: Node, text: string) {
+  vi.spyOn(globalThis, 'getSelection').mockReturnValue({
+    isCollapsed: false, anchorNode, focusNode, toString: () => text,
+  } as unknown as Selection);
+}

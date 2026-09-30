@@ -4,6 +4,7 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { SqlCell, SqlColumn, SqlObject, SqlRow } from '@shared/plugins/sql/shared';
 import { cellText } from './grid-view';
 import { CellEditor } from './CellEditor';
+import { startRun } from './selection';
 import type { CellPosition } from './grid-view';
 
 // One row of the grid, and the cell inside it. Both were in `DataGrid.tsx` until the file passed
@@ -50,7 +51,7 @@ export function GridRow({
       <td
         className="sql-gutter sql-row-head"
         title="Select row"
-        onMouseDown={(event) => onSelectRow(event.shiftKey)}
+        onMouseDown={(event) => onSelectRow(startRun(event))}
         onMouseEnter={(event) => { if (event.shiftKey) onSelectRow(true); }}
       />
       {shown.map(({ name: column, index: cell }) => (
@@ -62,7 +63,7 @@ export function GridRow({
           ].join(' ')}
           // A run starts at this cell, or extends the one in progress when shift is held. The enter
           // handler is the drag case: the mouse button is already down from the mousedown above.
-          onMouseDown={(event) => onSelect({ row: position, cell }, event.shiftKey)}
+          onMouseDown={(event) => onSelect({ row: position, cell }, startRun(event))}
           onMouseEnter={(event) => { if (event.shiftKey) onSelect({ row: position, cell }, true); }}
           onDoubleClick={() => onEdit(column)}
         >

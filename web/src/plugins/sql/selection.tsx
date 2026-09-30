@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type React from 'react';
 import type { SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { rowRange, selectionTo, selectionToTsv, type CellPosition, type CellRange } from './grid-view';
@@ -14,6 +15,45 @@ import { rowRange, selectionTo, selectionToTsv, type CellPosition, type CellRang
 //
 // A cell is not rendered inside a button, so a click on the text inside it is an ordinary selection
 // and the browser's own copy still works: a user who selects a word and presses Copy gets the word.
+
+/** The `td` a node sits in, or null for anything outside the grid's cells. */
+function cellOf(node: Node | null): Element | null {
+  const element = node instanceof Element ? node : node?.parentElement;
+  return element?.closest('td.sql-cell') ?? null;
+}
+
+/**
+ * Whether the browser's own selection was made inside one cell, which is a word the user selected
+ * and not a run of cells.
+ *
+ * A shift-click extending a run leaves a browser selection too — from wherever the caret landed in
+ * the first cell to the end of the last — and standing aside for *any* non-empty selection is what
+ * stopped the grid's own copy of a run from ever running, so a pasted run lost its first value. The
+ * two ends of the selection are the whole of the difference: a word's are in one cell, a run's are
+ * not, however much text either of them covers.
+ */
+function selectedWithinOneCell(): boolean {
+  const selection = getSelection();
+  if (!selection || selection.isCollapsed) return false;
+  const cell = cellOf(selection.anchorNode);
+  return cell !== null && cell === cellOf(selection.focusNode);
+}
+
+/**
+ * Whether a press starts or extends a run of cells, claiming it from the browser when it extends.
+ *
+ * A shift-click would otherwise leave the browser selecting the text between the first cell's caret
+ * and the end of the last, and the copy chord finds that one first. A plain press is left alone, so
+ * the caret still lands where it was clicked and a word inside that cell can be selected afterwards.
+ *
+ * It answers and acts in one step because they are one fact: this press extends a run exactly when
+ * the browser's own selection over the same cells has become wrong.
+ */
+export function startRun(event: React.MouseEvent): boolean {
+  if (!event.shiftKey) return false;
+  event.preventDefault();
+  return true;
+}
 
 export function useGridSelection(
   grid: { columns: string[]; rows: SqlRow[] } | null,
@@ -34,7 +74,7 @@ export function useGridSelection(
     // gets that text from the browser's own handler first; this only fires when nothing else did.
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key !== 'c') return;
-      if (getSelection()?.toString()) return;
+      if (selectedWithinOneCell()) return;
       if (!range || !grid) return;
       const text = selectionToTsv(grid.rows, grid.columns, range.from, range.to);
       if (!text) return;

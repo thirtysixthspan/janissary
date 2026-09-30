@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Copy a whole run of cells rather than dropping the first value
-
-Existing Issue: Clicking one cell, shift-clicking another and pressing the platform copy key puts a tab-separated string on the clipboard whose first value is empty, so a pasted run silently loses its first cell. Severity: 6/10
-
-Existing Risk: 6/10 - A user pastes a run of grid cells into a spreadsheet and the first cell of every pasted row is blank, which reads as missing data rather than as a copy that went wrong.
-
-Proposal Risk: 2/10 - Writing the run itself rather than deferring to a browser text selection is the ordinary implementation of a grid copy and has no other surface to disturb.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: copying a run of cells loses the run's first value". Step D10 (description), verbatim: "Click a cell and shift-click another, press the platform's copy key, and confirm the tab-separated text pastes into a spreadsheet as a table; confirm a null in the run copies as `NULL`." In a `sql shop` tab on a table with at least one `NULL` cell — `orders` holds `a_b` with a `NULL` status — click the cell before the `NULL` in that row (the `td` one place along, offset by the row's leading header cell) and shift-click the `NULL` cell, then press `Meta+c` and read the clipboard. Expected: the clipboard holds both values separated by a tab, with the null copied as `NULL` — `product/specs/sql-database.md` says "A run of cells is copied as tab-separated text, one line per row … A null copies as the `NULL` the grid shows rather than as an empty cell the paste would turn back into a string". Observed, twice: the run covered `a_b` and the `NULL` that follows it, the grid marked exactly those two cells with the `selected` class, and the clipboard held `"\tNULL"` — the first value empty — with `getSelection().toString()` returning the same `"\tNULL"`. That non-empty selection is precisely the condition `useGridSelection` in `web/src/plugins/sql/selection.tsx` uses to stand aside: `if (getSelection()?.toString()) return;`, so a shift-click across cells always leaves a browser text selection and the grid's own `selectionToTsv` never runs for the gesture the spec names. Making the same run by dragging with the button held copied only the anchor cell. The likely fix is to tell the two apart — stand aside for a selection made *inside* one cell, as the spec asks, rather than for any selection at all — and to suppress the browser's own selection on the shift-click that extends a run. A regression test should select two cells, fire the copy chord, and assert the clipboard holds both values joined by a tab.
-
 * Correct the description's **How to verify**, which still tests controls this branch removed
 
 Existing Issue: Eight of the description's testing steps name a **SQL** drawer, a **Copy** control, a **Stats** panel, a per-entry **Copy**, a **Schema** / **Data** switch, a per-object `4 cols` report, and a sent-null insert preview, none of which this branch builds. Severity: 3/10
