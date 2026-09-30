@@ -54,6 +54,11 @@ match, the match itself, and the two below. Context is cut short at the start an
 rather than padded, and a run of matches in one file repeats the path on every entry so each is
 readable on its own.
 
+**The context is two lines on screen, not two lines of the file.** A line long enough to wrap takes
+as much room as it needs, so the context is bounded at two displayed lines either side of the match
+and cut off at the far end — the lines nearest the match are always the ones that show. A match line
+that wraps is never cut: it is what the entry was opened for.
+
 **Rows stream in while the search is still running**, so a large project starts filling the table
 before it has been fully searched, and the rows already found stay on screen. The first results
 arrive as soon as any file is known to match rather than only once the whole project has been read

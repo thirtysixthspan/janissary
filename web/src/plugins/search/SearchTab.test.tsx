@@ -76,6 +76,22 @@ describe('SearchTab', () => {
     expect(container.querySelectorAll('.search-context')).toHaveLength(4);
   });
 
+  it('wraps each side of the match in its own bounded context block', () => {
+    const { container } = renderTab();
+    const above = container.querySelector('.search-context-above')!;
+    const below = container.querySelector('.search-context-below')!;
+    // The two sides are separate blocks because they are bounded separately, and each is clipped at
+    // the end furthest from the match — so the block above the match, then the match, then the one
+    // below, with each side's lines still reading top to bottom as the file does.
+    expect(above.nextElementSibling?.className).toBe('search-line search-hit');
+    expect(above.previousElementSibling?.className).toBe('search-row-header');
+    expect(below.previousElementSibling?.className).toBe('search-line search-hit');
+    expect([...above.querySelectorAll('.search-text')].map((el) => el.textContent))
+      .toEqual(['one', 'two']);
+    expect([...below.querySelectorAll('.search-text')].map((el) => el.textContent))
+      .toEqual(['three', 'four']);
+  });
+
   it('carries the three mode toggles in the header and nothing else', () => {
     renderTab();
     expect(screen.getByLabelText('Regular expression')).toBeDefined();

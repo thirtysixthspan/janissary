@@ -22,9 +22,14 @@ function ContextLine({ text, line }: { text: string; line: number }) {
 }
 
 // One match: a dimmed header carrying the file path and the line the match is on, then the two
-// context lines above it, the match itself, and the two below. The context carries its own line
-// numbers, derived from the header's and the position within the block, so a reader can see where
-// every line sits without the server sending five numbers per row to draw one.
+// display lines of context above it, the match itself, and the two below. The context carries its
+// own line numbers, derived from the header's and the position within the block, so a reader can
+// see where every line sits without the server sending five numbers per row to draw one.
+//
+// The two context lines are buffer lines, and a buffer line long enough to wrap becomes two or more
+// display lines — so each side sits in its own block that the stylesheet caps at two display lines.
+// The server's two buffer lines are the upper bound, and always enough to fill two display lines,
+// because a narrower pane wraps a line sooner rather than later.
 function SearchRow({ row, index, selected, onClick }: {
   row: SearchMatch; index: number; selected: boolean; onClick: () => void;
 }) {
@@ -41,16 +46,20 @@ function SearchRow({ row, index, selected, onClick }: {
         <span className="search-row-path">{row.path}</span>
         <span className="search-row-line">{row.line}</span>
       </div>
-      {row.above.map((text, offset) => (
-        <ContextLine key={first + offset} text={text} line={first + offset} />
-      ))}
+      <div className="search-context-block search-context-above">
+        {row.above.map((text, offset) => (
+          <ContextLine key={first + offset} text={text} line={first + offset} />
+        ))}
+      </div>
       <div className="search-line search-hit">
         <span className="search-lineno">{row.line}</span>
         <span className="search-text">{row.match}</span>
       </div>
-      {row.below.map((text, offset) => (
-        <ContextLine key={row.line + 1 + offset} text={text} line={row.line + 1 + offset} />
-      ))}
+      <div className="search-context-block search-context-below">
+        {row.below.map((text, offset) => (
+          <ContextLine key={row.line + 1 + offset} text={text} line={row.line + 1 + offset} />
+        ))}
+      </div>
     </div>
   );
 }

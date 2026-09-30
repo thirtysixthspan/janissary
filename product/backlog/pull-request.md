@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the search context should be two display lines, not two buffer lines.
-
 * move the search modifier buttons to float right aligned on the command line. move the files to include and files to exclude into the metadatabar. 
 
 * files to include and exclude should accept wildcards and paths
