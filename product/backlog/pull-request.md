@@ -2,3 +2,7 @@
 
 # pull-request
 
+* when the search results have focus, the selected row should have its left border colored (as it is currently) but when focus is elsewhere the color should not be shown.
+
+* a double click on a search result row should be required to open an editor tab. a single click will select the row brinking the keyboard focused selection to that row.
+	
