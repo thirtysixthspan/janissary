@@ -83,3 +83,13 @@ describe('tab strip theme', () => {
     expect(tabRule).toContain('user-select: none');
   });
 });
+
+describe('notification theme', () => {
+  it('sets a notification line\'s file links side by side with no gap between them', () => {
+    const groupRule = theme.match(/\.line\.message \.message-files \{[^}]+\}/)?.[0];
+
+    expect(groupRule).toBeDefined();
+    expect(groupRule).toContain('display: inline-flex');
+    expect(groupRule).not.toContain('gap');
+  });
+});

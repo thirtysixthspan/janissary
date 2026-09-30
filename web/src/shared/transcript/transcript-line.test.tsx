@@ -255,10 +255,28 @@ describe('renderLine — message openFiles links', () => {
     expect(intents.onEditFile).toHaveBeenNthCalledWith(2, '/captures/3.txt');
   });
 
+  it('groups every link of a folded line in one container, so no row gap falls between icons', () => {
+    const line: BufferLine = {
+      type: 'message', text: 'Auto-approved a permission prompt (3 times)', from: '12:32pm claude',
+      openFiles: ['/captures/1.txt', '/captures/2.txt', '/captures/3.txt'],
+    };
+    const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
+    const groups = container.querySelector('.line.message')!.querySelectorAll(':scope > .message-files');
+    expect(groups).toHaveLength(1);
+    expect(groups[0].querySelectorAll(':scope > .file-link')).toHaveLength(3);
+  });
+
+  it('leaves no whitespace around a link\'s icon', () => {
+    const line: BufferLine = { type: 'message', text: 'Auto-approved a permission prompt', from: '8:32pm claude', openFiles: ['/captures/claude-now.txt'] };
+    const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
+    expect(container.querySelector('.file-link')!.textContent).toBe('');
+  });
+
   it('renders no link when the message has no openFiles', () => {
     const line: BufferLine = { type: 'message', text: 'a plain notification', from: '8:32pm janus' };
     const { container } = render(<>{renderLine(line, 0, intentsStub, noop, vi.fn())}</>);
     expect(container.querySelector('[role="link"]')).toBeNull();
+    expect(container.querySelector('.message-files')).toBeNull();
   });
 
   it('exposes the notifying tab color as a CSS variable, not by coloring the whole line', () => {

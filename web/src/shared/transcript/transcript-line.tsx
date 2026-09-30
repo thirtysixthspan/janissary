@@ -47,7 +47,18 @@ function OpenFileLink({ path, onEditFile }: { path: string; onEditFile: (target:
       title="Open the linked file in an editor tab"
       onClick={() => onEditFile(path)}
     >
-      <FontAwesomeIcon icon={viewCaptureIcon} />{' '}
+      <FontAwesomeIcon icon={viewCaptureIcon} />
+    </span>
+  );
+}
+
+function OpenFileLinks({ paths, onEditFile }: { paths: string[] | undefined; onEditFile: (target: string) => void }) {
+  if (!paths?.length) return null;
+  return (
+    <span className="message-files">
+      {paths.map((path, position) => (
+        <OpenFileLink key={position} path={path} onEditFile={onEditFile} />
+      ))}
     </span>
   );
 }
@@ -145,9 +156,7 @@ export function renderLine(
       >
         <span className="message-time">{time}</span>
         {tab && renderMessageTab(tab, line.openTab, intents.onFocusTab)}
-        {line.openFiles?.map((path, position) => (
-          <OpenFileLink key={position} path={path} onEditFile={intents.onEditFile} />
-        ))}
+        <OpenFileLinks paths={line.openFiles} onEditFile={intents.onEditFile} />
         {line.text && <span className="message-text">{highlightText(line.text, highlight, index)}</span>}
       </div>
     );
