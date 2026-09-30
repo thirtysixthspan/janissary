@@ -11,20 +11,18 @@ import type { CellPosition } from './grid-view';
 // they are selected, and what each one does when it is activated.
 
 /**
- * A row: its number in the table, its cells, and the delete affordance if the object is writable.
+ * A row: its cells, and the delete affordance if the object is writable.
  *
- * `index` is the row's number in the whole table, which is what the gutter prints. `position` is
- * its index in the page, which is what the selection is expressed in: `row.cells` is positional and
- * `selectionToTsv` reads the page's own array, so a selection handed the table-wide number would
- * point past the end of that array on every page but the first. `shown` is the visible columns with
- * the position each holds in the row's own cells, because a hidden column still has to be skipped
- * by index rather than by whatever happens to be left in the list.
+ * `position` is the row's index in the page, which is what the selection is expressed in: `row.cells`
+ * is positional and `selectionToTsv` reads the page's own array, so a selection handed a table-wide
+ * number would point past the end of that array on every page but the first. `shown` is the visible
+ * columns with the position each holds in the row's own cells, because a hidden column still has to be
+ * skipped by index rather than by whatever happens to be left in the list.
  */
 export function GridRow({
-  row, index, position, shown, object, editingColumn, deleting, selected, onSelect, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, position, shown, object, editingColumn, deleting, selected, onSelect, onEdit, onCommit, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
-  index: number;
   position: number;
   shown: readonly { name: string; index: number }[];
   object: SqlObject | undefined;
@@ -44,7 +42,6 @@ export function GridRow({
 }) {
   return (
     <tr>
-      <td className="sql-gutter">{index + 1}</td>
       {shown.map(({ name: column, index: cell }) => (
         <td
           key={column}

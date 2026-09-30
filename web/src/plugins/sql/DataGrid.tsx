@@ -122,7 +122,6 @@ export function DataGrid({
         <table className="sql-grid">
           <thead>
             <tr>
-              <th className="sql-gutter" />
               {shown.map(({ name: column }) => (
                 <th key={column} scope="col">
                   <span className="sql-head">
@@ -166,7 +165,6 @@ export function DataGrid({
               <GridRow
                 key={row.key || index}
                 row={row}
-                index={index + (grid?.offset ?? 0)}
                 position={index}
                 shown={shown}
                 object={object}
@@ -188,7 +186,7 @@ export function DataGrid({
             ))}
             {grid && grid.rows.length === 0 && !payload.error && (
               <tr>
-                <td className="sql-empty" colSpan={(grid.columns.length || 1) + 2}>No rows.</td>
+                <td className="sql-empty" colSpan={(grid.columns.length || 1) + 1}>No rows.</td>
               </tr>
             )}
           </tbody>

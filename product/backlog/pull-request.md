@@ -2,8 +2,6 @@
 
 # pull-request
 
-* remove row numbers from teh ssql gutter
-
 * entire rows should be selectable by mouse click and selectable via keyboard navigation similar to how the file navigator navigation works. the row should be copyable
 
 * the column select icon needs to be changed so as not to be redundant with the split icon

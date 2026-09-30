@@ -11,13 +11,28 @@ function cellInput(container: HTMLElement): HTMLElement {
 }
 
 describe('DataGrid headers and rows', () => {
-  it('renders every column in order, and the row numbers beside them', () => {
+  it('renders every column in order, and nothing beside them but the row controls', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
-    expect(headers[1]).toContain('id');
-    expect(headers[2]).toContain('status');
+    expect(headers).toHaveLength(3);
+    expect(headers[0]).toContain('id');
+    expect(headers[1]).toContain('status');
     expect(screen.getByText('paid')).toBeTruthy();
+  });
+
+  // The gutter held a number in front of every row and one behind it. The one behind is the delete
+  // control, so the grid is now exactly the object's columns plus that.
+  it('shows no row number, and spans the empty row across every column the table has', () => {
+    const { capabilities } = makeCapabilities();
+    const { container, rerender } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const firstRow = () => [...container.querySelectorAll(':scope tbody tr:first-child > td')].map((cell) => cell.textContent);
+    expect(firstRow()).toEqual(['1', 'paid', '']);
+
+    rerender(<DataGrid payload={payload({ grid: grid({ rows: [], total: 0 }) })} capabilities={capabilities} />);
+    const empty = container.querySelector('td.sql-empty') as HTMLElement;
+    expect(empty.textContent).toBe('No rows.');
+    expect(empty.getAttribute('colspan')).toBe('3');
   });
 
   it('renders the header for an object whose page is empty', () => {
