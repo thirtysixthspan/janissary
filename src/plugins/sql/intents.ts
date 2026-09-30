@@ -93,14 +93,13 @@ function apply(change: SqlChange, capabilities: TabPluginServerCapabilities, tab
 
 export function intentsFor(tabs: SqlTabs) {
   return defineIntents('sql', isSqlPayload, {
-    // The tab's own switcher sends this, in both its forms: picking a database the registry has, and
-    // typing one it has not. Either is an explicit wish for a database to exist — unlike a typed
-    // `sql <name>`, where an unknown name is far more likely a typo than an intention. So this one
-    // creates; the command refuses.
+    // The tab's own switcher sends this, for a database the registry has. One it has not is refused
+    // exactly as the command refuses one, and for the same reason: reading a schema opens a
+    // connection, so a name that is a typo would create a database nobody asked for.
     open: {
       payload: isOpenIntent,
       run: (_payload, value: { name: string }, capabilities): null => {
-        openDatabase(value.name, undefined, capabilities, tabs, true);
+        openDatabase(value.name, undefined, capabilities, tabs);
         return null;
       },
     },

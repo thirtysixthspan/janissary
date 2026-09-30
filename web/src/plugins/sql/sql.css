@@ -6,8 +6,6 @@
 .sql-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); }
 .sql-header-icon { color: var(--fg); }
 .sql-database { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font: inherit; }
-.sql-database-new { display: inline-flex; align-items: center; gap: 4px; }
-.sql-database-new input { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font: inherit; }
 .sql-header-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .sql-exports { display: flex; align-items: center; gap: 8px; }
 .sql-export { color: var(--accent); font-size: 12px; text-decoration: none; white-space: nowrap; }

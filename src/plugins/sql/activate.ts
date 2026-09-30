@@ -53,15 +53,15 @@ function runCommand(argument: string, capabilities: TabPluginServerCapabilities,
     if (!isValidDatabaseName(name)) return capabilities.rejectRequest(`Invalid database name "${name}".`);
     // A command is typed, and a typo in a typed command is the ordinary case — so a name the
     // registry has never heard of is refused rather than created. `db sqlite create` is how a
-    // database gets made; the tab's own switcher is how one is made from here.
-    openDatabase(name, dock, capabilities, tabs, false);
+    // database gets made, and the tab's own switcher refuses one for the same reason.
+    openDatabase(name, dock, capabilities, tabs);
     return;
   }
   // The most recently reached open database, which is what a bare `sql` means by "the one I was in".
   // With none open the first by name is the only answer there is.
   const current = data.lastOpened ?? data.databases[0]?.name;
   if (!current) return capabilities.rejectRequest(NO_DATABASES);
-  openDatabase(current, dock, capabilities, tabs, false);
+  openDatabase(current, dock, capabilities, tabs);
 }
 
 /**

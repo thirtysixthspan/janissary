@@ -2,8 +2,6 @@
 
 # pull-request
 
-* remove new database functionality from the sql tab
-
 * when creating a new row, the defaul for all rows except the primary key row should not be set with a null default.
 
 * double clicking a filter once created should toggle the filter. When disable it should be greyed out. tooltip on hover should be enable or disable depending.

@@ -18,20 +18,19 @@ export const UNKNOWN_DATABASE = (name: string): string =>
  * through, including `undefined` for "no dock argument", which is what leaves an already-docked tab
  * where it is instead of undocking it as a side effect of being reopened.
  *
- * `create` is the whole difference between "show me a database" and "make a database", and it matters
- * because reading a schema opens a connection, and opening a connection creates the file. A caller
- * that has a name in front of a user has to choose; a caller that already knows the database exists
- * does not.
+ * A name the registry has never heard of is refused rather than created, because reading a schema
+ * opens a connection and opening a connection creates the file: a name that is a typo would leave an
+ * empty database behind that nothing ever asked for. `db sqlite create <name>` is how a database is
+ * made.
  */
 export function openDatabase(
   database: string,
   dock: Dock,
   capabilities: TabPluginServerCapabilities,
   tabs: SqlTabs,
-  create: boolean,
 ): void {
   const known = databasesFrom(capabilities).databases.some((entry) => entry.name === database);
-  if (!create && !known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
+  if (!known) capabilities.rejectRequest(UNKNOWN_DATABASE(database));
   const key = instanceKeyFor(database);
   const existing = tabs.read(key);
   if (existing) {

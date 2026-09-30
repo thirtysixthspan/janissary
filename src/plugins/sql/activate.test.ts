@@ -740,13 +740,15 @@ describe('sql plugin intents', () => {
     expect(fixture.opened[0]?.key).toBe('sqlite:blog');
   });
 
-  // The two intentions are deliberately different: a typed name is far more likely a typo than a wish
-  // for a new database, so the command refuses an unknown one and the switcher — which asked for one
-  // — creates it.
-  it('opens a name the registry has never heard of when the switcher asks for one', () => {
+  // Reading a schema opens a connection, and opening a connection creates the file — so a name that
+  // is a typo would leave an empty database behind. `db sqlite create` is how one is made, and the
+  // switcher refuses an unknown name for the same reason the command does.
+  it('refuses a name the registry has never heard of rather than making one, and opens no tab', () => {
     const fixture = fakeCapabilities();
-    intent('open', { name: 'fresh' }, fixture);
-    expect(fixture.opened[0]?.key).toBe('sqlite:fresh');
+    expect(() => intent('open', { name: 'fresh' }, fixture)).toThrow(
+      new TabPluginRejection('No database named "fresh". Create it with: db sqlite create fresh'),
+    );
+    expect(fixture.opened).toEqual([]);
   });
 
   it('refuses a database name the registry would reject, and a malformed payload, without failing', () => {

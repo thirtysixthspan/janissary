@@ -17,9 +17,9 @@ one the command was last pointed at. `sql <name>` opens or focuses that
 database's tab, and refuses a name the registry has never heard of with
 `No database named "<name>". Create it with: db sqlite create <name>` — a typed command is far more
 likely to carry a typo than a wish for a new database, so it does not create one. A database is made
-with `db sqlite create <name>`, or from the tab's own database switcher, which ends in a
-`New database…` entry: choosing it asks for a name, and Enter or **Create** makes the database and
-opens its tab. A name the registry's rule refuses is refused here as it is there, with
+with `db sqlite create <name>`, which is the only way to make one: the tab's switcher lists the
+databases the registry has and refuses an unknown name the same way the command does. A name the
+registry's rule refuses is refused here as it is there, with
 `Invalid database name "<name>".`
 `sql <name> left` and `sql <name> right` dock that tab into that sidebar, and a bare `sql` on a docked
 tab undocks it back to the centre. These are the `schedules [left|right]` grammar, so a database
@@ -243,6 +243,10 @@ of bringing the empty database back.
 
 - It browses only the project's own databases, by name. A `.sqlite` file anywhere else on disk is
   not reachable, because the registry derives every path from a validated name.
+- It does not make a database. Its switcher offers the ones the registry has and refuses an unknown
+  name, because reading a schema opens a connection and that would create the file behind a name
+  that is more likely a typo than a wish. `db sqlite create <name>` is the way to make one, and
+  `db sqlite delete` is the way to remove one.
 - It does not change a schema from the grid. The console is the way to run `CREATE`, `ALTER`, or
   `DROP`, exactly as `db sqlite query` already is.
 - It does not join tables, follow a foreign key, or build a query.

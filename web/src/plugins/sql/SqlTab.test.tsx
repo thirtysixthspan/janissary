@@ -41,35 +41,22 @@ describe('SqlTab header', () => {
       databases: [{ name: 'shop', exists: true, open: true }, { name: 'blog', exists: true, open: false }],
     })} capabilities={capabilities} />);
     const select = screen.getByLabelText('Database') as HTMLSelectElement;
-    expect([...select.options].map((option) => option.value)).toEqual(['shop', 'blog', '']);
+    expect([...select.options].map((option) => option.value)).toEqual(['shop', 'blog']);
     fireEvent.change(select, { target: { value: 'blog' } });
     expect(intent).toHaveBeenCalledWith('open', { name: 'blog' });
   });
 
-  it('takes a name for a database the registry has not, which is the only way to make one here', () => {
-    const { capabilities, intent } = makeCapabilities();
+  // A browser tab is not where a database gets made: `db sqlite create <name>` is, and it prints what
+  // it did. The list is the registry's databases and nothing else, so there is no name to be typed.
+  it('offers nothing to start a name being typed, so the only way to make a database is a command', () => {
+    const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload({
       databases: [{ name: 'shop', exists: true, open: true }],
     })} capabilities={capabilities} />);
-    fireEvent.change(screen.getByLabelText('Database'), { target: { value: '' } });
-    const field = screen.getByLabelText('New database name');
-    expect(field).toBeTruthy();
-    fireEvent.change(field, { target: { value: ' fresh' } });
-    fireEvent.keyDown(field, { key: 'Enter' });
-    expect(intent).toHaveBeenCalledWith('open', { name: 'fresh' });
-  });
-
-  it('asks for nothing when a name is typed and then abandoned', () => {
-    const { capabilities, intent } = makeCapabilities();
-    render(<SqlTab payload={payload({
-      databases: [{ name: 'shop', exists: true, open: true }],
-    })} capabilities={capabilities} />);
-    fireEvent.change(screen.getByLabelText('Database'), { target: { value: '' } });
-    const field = screen.getByLabelText('New database name');
-    fireEvent.change(field, { target: { value: 'fresh' } });
-    fireEvent.keyDown(field, { key: 'Escape' });
-    expect(intent).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Database')).toBeTruthy();
+    const select = screen.getByLabelText('Database') as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual(['shop']);
+    expect(screen.queryByLabelText('New database name')).toBeNull();
+    expect(screen.queryByText('Create')).toBeNull();
   });
 
   it('asks for statistics only when the panel is opened, and again to close it', () => {
