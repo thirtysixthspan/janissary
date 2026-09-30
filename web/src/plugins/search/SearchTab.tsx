@@ -7,6 +7,7 @@ import { SearchBar } from './SearchBar';
 import { SearchFilters } from './SearchFilters';
 import { recordSearch } from './search-history';
 import { useResultSelection } from './useResultSelection';
+import { useSeededQuery } from './useSeededQuery';
 
 // The three query modes, held as client-local view state. The server does not keep them: every
 // search carries all three in the intent that starts it, so a rerun always sends the current set.
@@ -32,17 +33,19 @@ export function SearchTab({
   payload: SearchPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const [query, setQuery] = useState(payload.query);
   const [include, setInclude] = useState(payload.include);
   const [exclude, setExclude] = useState(payload.exclude);
   const [modes, setModes] = useState<Modes>(modesOf(payload));
   // The terms this tab has searched, oldest first, walked by the arrow keys from the command bar. A
   // tab opened by `search <phrase>` has already searched it, so that phrase seeds the list rather
-  // than waiting for a keystroke that will never come.
+  // than waiting for a keystroke that will never come — and so does a later `search <phrase>` the
+  // tab adopts while it is open.
   const [history, setHistory] = useState<string[]>(() => {
     const opened = payload.query.trim();
     return opened === '' ? [] : [opened];
   });
+  const adopt = useCallback((term: string) => { setHistory((entries) => recordSearch(entries, term)); }, []);
+  const { query, setQuery, isAdoptedEcho } = useSeededQuery(payload, adopt);
   const rows = payload.rows;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { listRef, selected, navigate, rowClicked } = useResultSelection({ count: rows.length });
@@ -58,9 +61,10 @@ export function SearchTab({
   // only place a *new* term arrives. Toggling a mode or editing a narrowing field reruns the term
   // already in the bar, and recording that again would only shuffle the list for no reason.
   const onQuerySearched = useCallback((next: string) => {
+    if (isAdoptedEcho(next)) return;
     setHistory((entries) => recordSearch(entries, next));
     search({ query: next, include, exclude, ...modes });
-  }, [exclude, include, modes, search]);
+  }, [exclude, include, isAdoptedEcho, modes, search]);
 
   const toggle = (key: ModeKey) => {
     const next = { ...modes, [key]: !modes[key] };

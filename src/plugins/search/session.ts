@@ -13,7 +13,7 @@ export function emptyPayload(): SearchPayload {
   return {
     query: '', include: '', exclude: '',
     regex: false, matchCase: false, wholeWord: false,
-    state: 'done', message: '', rows: [],
+    state: 'done', message: '', rows: [], seed: 0,
   };
 }
 
@@ -54,6 +54,7 @@ export class SearchSession {
   // and the command both land the user in the same place with whatever they last searched for.
   open(argument: string): void {
     const query = argument.trim();
+    if (query !== '') this.payload = payloadOf(this.payload, { seed: this.payload.seed + 1 });
     this.capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
       title: TAB_TITLE,
       payload: query === '' ? this.payload : { ...this.payload, query },

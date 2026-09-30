@@ -18,6 +18,12 @@ of text with no path-to-line affordance, or to search one already-open buffer at
 A bare `search` leaves the tab showing whatever it last searched for, so the chord lands the user
 back where they were rather than discarding a query they had built up.
 
+`search <phrase>` against a tab that is already open puts the phrase in the search bar, records it in
+the tab's term history, and searches for it, exactly as typing it there would, so the bar never shows
+one query while the results answer another. It is searched once: the bar settling on the phrase does
+not start the same search again. Only the command replaces what is in the bar; results arriving for a
+search already under way leave a partly typed query alone.
+
 ### What is searched
 
 Every file under the project's launch directory that gitignore does not exclude — the same set

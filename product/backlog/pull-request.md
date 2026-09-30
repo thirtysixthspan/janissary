@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Update the search bar's query when a `search <phrase>` command reaches a search tab that is already open.
-
-Existing Issue: Running `search todo` while the search tab is open searches for `todo` and fills the results with `todo` matches, but the search bar keeps showing the previous query, so the bar and the results disagree. Severity: 5/10
-
-Existing Risk: 5/10 - The next toggle click or filter edit reruns the stale query still shown in the bar, silently replacing the results the user just asked for, and the command a user reaches for most often is the one that desynchronises the tab.
-
-Proposal Risk: 3/10 - Syncing the bar from the server risks overwriting a query the user is mid-way through typing when a server update lands, which a test typing during an update would show.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1481: show the query a search command seeded in an already-open search tab's bar". Replication: plan step from `product/plans/complete/search-tab.md` **Verification** ("type `search todo` and confirm the same", meaning the tab opens with the search bar focused as Cmd+Shift+F does, with that query), failed 2 of 2 on a fresh app. On a scratch project that is its own git repository, press Cmd+Shift+F from the `janus` agent tab, type `checkTokenList` in the search bar and let it settle, click the `janus` tab, type `search todo` in its command bar and press Return. Expected: the search tab is active, its bar is focused and reads `todo`, and the rows are `todo` matches; the spec says `search <phrase>` "opens it and searches for that phrase straight away". Observed: the tab is active and focused and holds 101 rows whose highlighted match is `todo`, but the bar (`.tab-body:visible .search-tab textarea`) still reads `checkTokenList`. Root cause: `SearchTab` in `web/src/plugins/search/SearchTab.tsx` copies `payload.query`, `include`, `exclude`, and the three modes into `useState` once, at mount, and never reads them again; `SearchSession.open` in `src/plugins/search/session.ts` seeds the query through `run`, which updates the payload of the tab that is already mounted, so only the first `search <phrase>` (the one that creates the tab) reaches the bar. The history list is seeded the same way, so the command's term is not recorded either. Likely fix: have the client adopt a query the server seeded, for example by carrying a seed counter or the seeded query in the payload and resetting the bar's query (and recording it in the history) when it changes, rather than re-reading `payload.query` on every update, which would fight the user's own typing. Regression test in `web/src/plugins/search/SearchTab.test.tsx`: rerender the mounted tab with a payload whose seeded query changes to `todo` and assert the textarea reads `todo` and ArrowUp recalls it, while a payload update that only appends rows leaves a partly typed query alone.
-
-
 * Clear the search results when the query is emptied after a search that found matches.
 
 Existing Issue: Deleting the whole query after a search that found matches leaves every row of the old search on screen instead of clearing them and showing `Type to search`. Severity: 4/10

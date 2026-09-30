@@ -32,7 +32,7 @@ function makeCapabilities(overrides: Capability = {}) {
 // tab payload, not whatever the test last published.
 const settledTab: SearchPayload = {
   query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
-  state: 'done', message: '', rows: [],
+  state: 'done', message: '', rows: [], seed: 0,
 };
 
 // The payload the tab would be showing after the last `updateTab`, which is how a test reads what
@@ -155,6 +155,19 @@ describe('search plugin activation', () => {
     await settle();
     expect(projectFileList).not.toHaveBeenCalled();
     expect(lastPayload(updateTab).state).toBe('done');
+  });
+
+  it('moves the seed when a command carries a query, and at no other time', () => {
+    const { capabilities, updateTab } = makeCapabilities();
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    expect(lastPayload(updateTab).seed).toBe(1);
+    activation.intent(intent(settledTab, 'search', { ...query, query: 'other' }), capabilities);
+    expect(lastPayload(updateTab).seed).toBe(1);
+    activation.command?.('', capabilities);
+    activation.command?.('fixme', capabilities);
+    expect(lastPayload(updateTab).seed).toBe(2);
+    expect(lastPayload(updateTab).query).toBe('fixme');
   });
 
   it('reports a regex that will not compile instead of searching for it', async () => {

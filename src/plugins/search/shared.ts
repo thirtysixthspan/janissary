@@ -31,6 +31,10 @@ export type SearchPayload = {
   // The reason a failed scan gives, and empty otherwise.
   message: string;
   rows: SearchMatch[];
+  // Moves each time a `search <phrase>` command seeds the query, and at no other time. The bar is the
+  // user's own editing surface, so the client adopts `query` only when this changes — an echo of a
+  // search the client started itself must never overwrite what is being typed.
+  seed: number;
 };
 
 export type SearchIntent = { query: string; include: string; exclude: string; regex: boolean; matchCase: boolean; wholeWord: boolean };
@@ -66,7 +70,8 @@ export function isSearchPayload(value: unknown): value is SearchPayload {
     && ['searching', 'done', 'error'].includes(value.state as string)
     && typeof value.message === 'string'
     && Array.isArray(value.rows)
-    && value.rows.every((row) => isMatch(row));
+    && value.rows.every((row) => isMatch(row))
+    && typeof value.seed === 'number';
 }
 
 export function isSearchIntent(value: unknown): value is SearchIntent {

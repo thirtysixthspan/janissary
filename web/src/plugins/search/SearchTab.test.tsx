@@ -17,7 +17,7 @@ function payload(overrides: Partial<SearchPayload> = {}): SearchPayload {
   return {
     query: 'todo', include: '', exclude: '',
     regex: false, matchCase: false, wholeWord: false,
-    state: 'done', message: '', rows: [match()], ...overrides,
+    state: 'done', message: '', rows: [match()], seed: 0, ...overrides,
   };
 }
 
@@ -164,6 +164,55 @@ describe('SearchTab history', () => {
     // The ghost is derived from the same list inside the shared hook, so a term already searched
     // trails the text being typed — and the walk and the suggestion cannot disagree.
     expect(container.querySelector('.ghost')?.textContent).toBe('compileMatcher');
+  });
+});
+
+// `search <phrase>` against a tab that is already open. The server marks the query it seeded by
+// moving `seed`, and the bar adopts it then and only then.
+describe('SearchTab seeded query', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const mount = () => {
+    const { capabilities, intent } = makeCapabilities();
+    const rendered = render(<SearchTab payload={payload({ query: 'checkTokenList' })} capabilities={capabilities} />);
+    const update = (value: SearchPayload) => {
+      rendered.rerender(<SearchTab payload={value} capabilities={capabilities} />);
+    };
+    return { intent, update };
+  };
+
+  it('puts a command\'s query in the bar and makes it walkable', () => {
+    const { update } = mount();
+    update(payload({ query: 'todo', seed: 1 }));
+    expect(searchTerm().value).toBe('todo');
+    fireEvent.change(searchTerm(), { target: { value: '' } });
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('todo');
+  });
+
+  it('does not send the adopted query again once the bar settles on it', () => {
+    const { intent, update } = mount();
+    update(payload({ query: 'todo', seed: 1 }));
+    act(() => { vi.advanceTimersByTime(SETTLED_MS); });
+    // The command already started this search; the bar's echo would only restart it.
+    expect(searches(intent)).toEqual([]);
+  });
+
+  it('leaves a partly typed query alone when an update carries the same seed', () => {
+    const { update } = mount();
+    fireEvent.change(searchTerm(), { target: { value: 'half' } });
+    update(payload({ query: 'checkTokenList', rows: [match(), match({ path: 'b.ts' })] }));
+    expect(searchTerm().value).toBe('half');
+  });
+
+  it('still searches a term the user types after an adoption', () => {
+    const { intent, update } = mount();
+    update(payload({ query: 'todo', seed: 1 }));
+    act(() => { vi.advanceTimersByTime(SETTLED_MS); });
+    settle('fixme');
+    settle('todo');
+    expect(searches(intent).map((sent: { query: string }) => sent.query)).toEqual(['fixme', 'todo']);
   });
 });
 

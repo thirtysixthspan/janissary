@@ -14,6 +14,7 @@ const payload: SearchPayload = {
       below: ['three'],
     },
   ],
+  seed: 0,
 };
 
 const intent = {
@@ -52,6 +53,11 @@ describe('isSearchPayload', () => {
 
   it('rejects a missing field', () => {
     expect(isSearchPayload(without(payload, 'query'))).toBe(false);
+  });
+
+  it('rejects a payload without a numeric seed', () => {
+    expect(isSearchPayload(without(payload, 'seed'))).toBe(false);
+    expect(isSearchPayload({ ...payload, seed: '1' })).toBe(false);
   });
 
   it('rejects a wrong field type', () => {
