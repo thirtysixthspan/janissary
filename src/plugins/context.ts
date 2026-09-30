@@ -12,6 +12,9 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import { projectFilesFor } from '../project/files.js';
+import { isInsideRoot } from './files.js';
+import { readPluginSettings, savePluginSettings } from './settings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -25,6 +28,10 @@ export function isJsonCompatible(value: unknown, seen = new Set<object>()): bool
     : Object.values(value).every((item) => isJsonCompatible(item, seen));
   seen.delete(value);
   return valid;
+}
+
+function isSettingsObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && isJsonCompatible(value);
 }
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
@@ -140,6 +147,26 @@ export function createPluginContext(
       if (!isEnabled()) return;
       openRequests.push(target);
     },
+    // The same gitignore-aware file list the `projectFiles` RPC already serves to Quick Open, so a
+    // plugin that scans the repository cannot drift from the set Quick Open searches. The root comes
+    // back alongside the paths because a relative path is not a path a plugin can open without it.
+    projectFileList: () => {
+      if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
+      return projectFilesFor(managers);
+    },
+    // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
+    // so the tab is de-duplicated, the line is centered, and the file is served by the same
+    // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
+    // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
+    //
+    // A path outside the launch directory is refused. The capability is this plugin's whole reach
+    // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
+    // plugin holding one could otherwise name any path on the machine and have it opened and served.
+    openInEditor: (absPath, line) => {
+      if (!isEnabled()) return;
+      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
+      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+    },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
       return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
@@ -150,6 +177,11 @@ export function createPluginContext(
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
+    readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},
+    saveSettings: (settings) => {
+      if (!isSettingsObject(settings)) throw new Error('saved settings that are not a JSON object');
+      return isEnabled() && savePluginSettings(declaration.id, settings);
+    },
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

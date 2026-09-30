@@ -110,10 +110,21 @@ function ctrlChordOpener(key: string, cb: Callbacks): (() => void) | undefined {
   }
 }
 
-// The Cmd-key chord openers (Cmd+F search, Cmd+P quick open) — split out of `handleChordKeys` to
-// keep its own cognitive complexity under the file's lint threshold.
+// The Cmd-key chord openers (Cmd+Shift+F project search, Cmd+F transcript search, Cmd+P quick open)
+// — split out of `handleChordKeys` to keep its own cognitive complexity under the file's lint
+// threshold.
+//
+// The two `f` chords are ordered deliberately: the project search is matched first because the
+// transcript search below matches on the key alone and never looks at `shiftKey`, so without this
+// order Cmd+Shift+F would open the transcript search bar instead. Both run the same plugin command
+// the user could type, so there is one route into that tab rather than two.
 function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.key.toLowerCase() === 'f') {
+    if (e.shiftKey) {
+      e.preventDefault();
+      cb.runCommand('search');
+      return true;
+    }
     if (!snap.canSearch) return true;
     e.preventDefault();
     if (!snap.searchOpen) cb.openSearch();
@@ -127,8 +138,9 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
   return false;
 }
 
-// The chord openers (Cmd+F search, Cmd+P quick open, the Ctrl picker chords, Cmd+T new agent tab)
-// — split out of `onKey` to keep its own cognitive complexity under the file's lint threshold.
+// The chord openers (Cmd+Shift+F search, Cmd+F search, Cmd+P quick open, the Ctrl picker chords,
+// Cmd+T new agent tab) — split out of `onKey` to keep its own cognitive complexity under the file's
+// lint threshold.
 function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {

@@ -1,0 +1,78 @@
+/* Search tab: the include and exclude fields in the metadata bar, the query's three modifiers on
+   the command line beside it, and a scrollable column of match rows. Each row is a dimmed
+   path-and-line header above its context block, in the monospace the editor uses, so a match reads
+   as a piece of code rather than as prose. */
+.search-tab { gap: 6px; }
+.search-filters { display: flex; flex: 1; min-width: 0; gap: 8px; }
+.search-filters input {
+  flex: 1; min-width: 0; background: transparent; border: 1px solid var(--border); border-radius: 3px;
+  color: var(--fg); font: inherit; font-size: 12px; padding: 3px 6px;
+}
+.search-filters input::placeholder { color: var(--faint); }
+.search-filters input:focus { outline: none; border-color: var(--accent); }
+/* Command line chrome, not a row of its own: the buttons sit on the caret's line box and carry the
+   line's own font, so the modifiers read as part of the line they qualify. */
+.search-toggles { display: flex; align-items: center; gap: 2px; font-family: var(--mono, monospace); }
+.search-toggles button {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font-family: inherit; font-size: 13.1625px; line-height: 1.6; padding: 0 6px;
+}
+.search-toggles button:hover { color: var(--fg); }
+.search-toggles button.on { border-color: var(--border); color: var(--accent); }
+/* The result window, stacking upward: a search finds its first match first, so the first row goes at
+   the bottom edge and each later row above it, which is the order the scan produced them in. A
+   reversed column also puts the scroll origin at the bottom, so the window opens on the first match
+   and stays there as rows stream in above it — the first match does not scroll out from under the
+   reader while the scan runs.
+
+   The window is framed with the same hairline and radius as the filter fields, so the region that
+   scrolls is visibly its own box between the metadata bar and the command line. It is bounded only
+   because the shared plugin frame makes the tab a column that the window can shrink inside. */
+.search-results {
+  flex: 1; min-height: 0; display: flex; flex-direction: column-reverse;
+  overflow-y: auto; outline: none; border: 1px solid var(--border); border-radius: 3px;
+}
+.search-empty { padding: 8px 12px; color: var(--muted); }
+.search-row {
+  border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;
+  font-family: var(--mono, monospace); font-size: 12px; line-height: 1.5;
+}
+/* A hairline between two results, and only between two: the window is a reversed column, so a row's
+   DOM predecessor is the row directly beneath it on screen, and its bottom edge is the line between
+   them. The first match at the window's edge, and a lone result, carry no rule. */
+.search-row + .search-row { border-bottom: 1px solid var(--border); }
+.search-row:hover { background: var(--border); }
+.search-row.selected { background: var(--border); }
+.search-results:focus-within .search-row.selected { border-left-color: var(--accent); }
+.search-row-header {
+  display: flex; align-items: baseline; gap: 12px; color: var(--muted); font-size: 11px;
+  margin-bottom: 2px; user-select: text;
+}
+.search-row-path { word-break: break-all; }
+.search-row-line { flex-shrink: 0; }
+.search-line { display: flex; gap: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.search-lineno { flex: 0 0 4em; text-align: right; color: var(--faint); user-select: none; }
+.search-text { flex: 1; }
+.search-context { color: var(--muted); }
+.search-hit { color: var(--fg); background: var(--border); }
+
+/* The context either side of a match is two *display* lines, not two buffer lines: a source line
+   long enough to wrap would otherwise turn the context into six or eight lines and outweigh the
+   match it is there to frame. The cap is the browser's own wrapped height, so it is exact at any
+   pane width and font size, and `3em` against the row's own 12px/1.5 is exactly two line boxes.
+
+   `3em` is the default, for a match line that fits on one display line. A match line that wraps
+   supplies some of those two lines itself, and the row narrows each block's cap inline to what is
+   left once it has measured where the match wrapped to.
+
+   Each side is clipped at the end furthest from the match, so the lines that survive are the ones
+   adjacent to it. The block above the match is packed to the end — that is, it overflows off the
+   top — and the block below it to the start, the default, overflowing off the bottom. */
+.search-context-block { display: flex; flex-direction: column; max-height: 3em; overflow: hidden; }
+.search-context-above { justify-content: flex-end; }
+
+/* The match line's own window. The row caps the text's height inline at the display lines it shows
+   and shifts the block inside it up to the first of them, so a match deep inside a long line is what
+   the window lands on. With no measurement yet there is no cap and the whole line shows. */
+.search-hit-text { overflow: hidden; }
+.search-hit-block { display: block; }

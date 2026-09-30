@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { getConfig, loadConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../notifications/queue.js';
@@ -32,6 +36,7 @@ function makeManagers() {
   const managers = {
     tab: {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
+      launchDir: '/repo',
       ...fakeNotificationsHost(tabs),
     },
     openFile: { runAs: vi.fn(async () => {}) },
@@ -40,16 +45,19 @@ function makeManagers() {
   return { append, managers };
 }
 
+function activationFor(): TabPluginActivation {
+  return {
+    isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
+  };
+}
+
 function contextFor(
   capabilities: readonly TabPluginCapabilityName[],
   isEnabled: () => boolean = () => true,
   openRequests: string[] = [],
 ): TabPluginServerCapabilities {
-  const activation: TabPluginActivation = {
-    isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
-  };
   return createPluginContext(
-    makeManagers().managers, declaration(capabilities), activation, origin, isEnabled, openRequests,
+    makeManagers().managers, declaration(capabilities), activationFor(), origin, isEnabled, openRequests,
   );
 }
 
@@ -251,6 +259,114 @@ describe('capability revocation', () => {
     const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => true, openRequests);
     capabilities.openClaimedFiles('~/clips/*.fixture');
     expect(openRequests).toEqual(['~/clips/*.fixture']);
+  });
+
+  it('opens a line in an editor tab through the ordinary edit pipeline', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    capabilities.openInEditor('/repo/src/a.ts', 42);
+
+    expect(edit).toHaveBeenCalledWith(
+      'fixture /repo/src/a.ts:42', '/repo/src/a.ts', 'janus', 42,
+    );
+  });
+
+  it('refuses a line in a file outside the launch directory', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    // The capability is the plugin's whole reach over the filesystem, so the boundary lives here
+    // rather than in each plugin that asks — a plugin holding one must not be able to name any
+    // path on the machine and have it opened and served.
+    capabilities.openInEditor('/etc/passwd', 1);
+    capabilities.openInEditor('/repo/../etc/passwd', 1);
+    capabilities.openInEditor('/repo-evil/a.ts', 1);
+
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a revoked plugin asking to open a line', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+    );
+
+    capabilities.openInEditor('/repo/src/a.ts', 42);
+
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it('serves the project file list the projectFiles RPC serves to quick open', async () => {
+    const { managers } = makeManagers();
+    (managers.tab as unknown as { launchDir: string }).launchDir = '/repo';
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    const list = await capabilities.projectFileList();
+
+    expect(list.root).toBe('/repo');
+  });
+
+  it('answers an empty file list to a revoked plugin rather than reading the project', async () => {
+    const { managers } = makeManagers();
+    (managers.tab as unknown as { launchDir: string }).launchDir = '/repo';
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+    );
+
+    expect(await capabilities.projectFileList()).toEqual({ root: '', paths: [] });
+  });
+
+  it('reads and saves settings under the declaring plugin\'s own id', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'context-settings-test-'));
+    try {
+      loadConfig(directory);
+      const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES);
+
+      expect(capabilities.readSettings()).toEqual({});
+      expect(capabilities.saveSettings({ regex: true })).toBe(true);
+
+      expect(capabilities.readSettings()).toEqual({ regex: true });
+      expect(getConfig().pluginSettings).toEqual({ fixture: { regex: true } });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('reads nothing and saves nothing for a revoked plugin', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'context-settings-test-'));
+    try {
+      loadConfig(directory);
+      contextFor(TAB_PLUGIN_CAPABILITY_NAMES).saveSettings({ regex: true });
+      const revoked = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => false);
+
+      expect(revoked.readSettings()).toEqual({});
+      expect(revoked.saveSettings({ regex: false })).toBe(false);
+      expect(getConfig().pluginSettings).toEqual({ fixture: { regex: true } });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('treats settings that are not a plain JSON object as a plugin bug', () => {
+    const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES);
+
+    for (const value of [null, ['regex'], 'regex', { size: NaN }]) {
+      expect(() => capabilities.saveSettings(value as never))
+        .toThrow('saved settings that are not a JSON object');
+    }
   });
 
   it('reports a thrown non-Error as a failure without losing what it said', () => {

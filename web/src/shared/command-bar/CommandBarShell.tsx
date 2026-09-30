@@ -14,6 +14,10 @@ export type CommandBarShellProperties = {
   // A row above the command line — the agent bar's completion strip. A slot rather than a prop of
   // its own so this component never learns what a completion is.
   above?: ReactNode;
+  // Rendered at the end of the command line and pinned to its right, for controls that act on the
+  // line rather than supply its text. A slot rather than a prop of its own, for the same reason as
+  // `above`: this component lays the line out and never learns what a control is.
+  trailing?: ReactNode;
   // Rendered just before the prompt glyph. The agent bar puts `queue` here while commands are
   // waiting; an input with nothing to announce passes nothing.
   label?: ReactNode;
@@ -29,7 +33,7 @@ export type CommandBarShellProperties = {
 // every key is handled by whatever `onKeyDown` the owner passes, which for both of today's callers
 // is built from `useCommandBarKeys`.
 export function CommandBarShell({
-  value, onChange, onKeyDown, inputRef, ghost, above, label, rootRef,
+  value, onChange, onKeyDown, inputRef, ghost, above, trailing, label, rootRef,
   dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel,
 }: CommandBarShellProperties) {
   // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
@@ -66,6 +70,7 @@ export function CommandBarShell({
             onKeyDown={onKeyDown}
           />
         </div>
+        {trailing !== undefined && <span className="command-trailing">{trailing}</span>}
       </div>
     </div>
   );

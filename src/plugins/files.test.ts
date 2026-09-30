@@ -6,8 +6,43 @@ import type { TabPluginServerCapabilities } from './api.js';
 import { audioManifest } from './audio/manifest.js';
 import { markdownManifest } from './markdown/manifest.js';
 import {
-  fileSize, fileTabPayload, openFileExternally, openFileInConfiguredViewer, servesContentType,
+  fileSize, fileTabPayload, isInsideRoot, openFileExternally, openFileInConfiguredViewer, servesContentType,
 } from './files.js';
+
+describe('isInsideRoot', () => {
+  it('accepts the root itself and anything beneath it', () => {
+    expect(isInsideRoot('/repo', '/repo')).toBe(true);
+    expect(isInsideRoot('/repo', '/repo/src/a.ts')).toBe(true);
+    expect(isInsideRoot('/repo', '/repo/a/b/c/d/e.ts')).toBe(true);
+    expect(isInsideRoot('/repo/', '/repo/src/a.ts')).toBe(true);
+  });
+
+  it('refuses a path that escapes with ..', () => {
+    expect(isInsideRoot('/repo', '/repo/../etc/passwd')).toBe(false);
+    expect(isInsideRoot('/repo', '/repo/src/../../etc/passwd')).toBe(false);
+  });
+
+  it('refuses an absolute path elsewhere', () => {
+    expect(isInsideRoot('/repo', '/etc/passwd')).toBe(false);
+    expect(isInsideRoot('/repo', '/Users/someone/dev/other/a.ts')).toBe(false);
+  });
+
+  it('refuses a sibling directory whose name starts with the root name', () => {
+    expect(isInsideRoot('/repo', '/repo-evil/a.ts')).toBe(false);
+    expect(isInsideRoot('/repo', '/repository/a.ts')).toBe(false);
+    expect(isInsideRoot('/repo', '/repository')).toBe(false);
+  });
+
+  it('refuses everything when the root is empty', () => {
+    expect(isInsideRoot('', '/repo/src/a.ts')).toBe(false);
+    expect(isInsideRoot('', '')).toBe(false);
+  });
+
+  it('resolves a relative candidate before comparing it', () => {
+    expect(isInsideRoot(process.cwd(), 'package.json')).toBe(true);
+    expect(isInsideRoot('/definitely-not-here', 'package.json')).toBe(false);
+  });
+});
 
 // Only the three primitives these helpers compose over. Everything else is left off deliberately: a
 // helper reaching for anything more would fail here rather than in whichever plugin adopted it.

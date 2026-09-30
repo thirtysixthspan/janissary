@@ -15,10 +15,14 @@ export type TabPluginCapabilityName =
   | 'dockTab'
   | 'snapshotTab'
   | 'openClaimedFiles'
+  | 'projectFileList'
+  | 'openInEditor'
   | 'topicData'
   | 'topicAction'
   | 'configuredViewer'
   | 'openExternally'
+  | 'readSettings'
+  | 'saveSettings'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -34,10 +38,14 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   dockTab: true,
   snapshotTab: true,
   openClaimedFiles: true,
+  projectFileList: true,
+  openInEditor: true,
   topicData: true,
   topicAction: true,
   configuredViewer: true,
   openExternally: true,
+  readSettings: true,
+  saveSettings: true,
   rejectRequest: true,
   reportFailure: true,
 };

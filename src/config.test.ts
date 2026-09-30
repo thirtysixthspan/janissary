@@ -231,6 +231,35 @@ describe('loadConfig', () => {
     const config = loadConfig(tmpDir);
     expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
   });
+
+  it('defaults pluginSettings to an empty map and writes it on first launch', () => {
+    const config = loadConfig(tmpDir);
+    expect(config.pluginSettings).toEqual({});
+
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
+    expect(parsed.pluginSettings).toEqual({});
+  });
+
+  it('keeps each object entry in pluginSettings and drops one that is not an object', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      pluginSettings: { search: { regex: true }, broken: 'nope', listed: [1] },
+    }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.pluginSettings).toEqual({ search: { regex: true } });
+  });
+
+  it('falls back to an empty pluginSettings map when the value is not an object', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ pluginSettings: ['search'] }) + '\n');
+
+    const config = loadConfig(tmpDir);
+    expect(config.pluginSettings).toEqual({});
+  });
 });
 
 describe('updateConfig', () => {
@@ -317,5 +346,15 @@ describe('updateConfig', () => {
 
     const reloaded = loadConfig(tmpDir);
     expect(reloaded.syncPaths).toEqual(['docs/notes.md', 'src/config.ts']);
+  });
+
+  it('round-trips pluginSettings like other settings', () => {
+    loadConfig(tmpDir);
+    const ok = updateConfig({ pluginSettings: { search: { matchCase: true } } });
+    expect(ok).toBe(true);
+    expect(getConfig().pluginSettings).toEqual({ search: { matchCase: true } });
+
+    const reloaded = loadConfig(tmpDir);
+    expect(reloaded.pluginSettings).toEqual({ search: { matchCase: true } });
   });
 });
