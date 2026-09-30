@@ -63,6 +63,16 @@ describe('hidden columns', () => {
     render(<DataGrid payload={payload({ hidden: ['status'] })} capabilities={capabilities} />);
     expect(screen.getByLabelText('Choose columns').getAttribute('title')).toContain('1 hidden');
   });
+
+  // The host's Split is drawn as a table's columns, so a column glyph here would be two answers to
+  // one question. What this control is about is what the grid shows, and an eye is not that glyph.
+  it('is not drawn as the split glyph, so the two controls apart are not the same shape', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const glyph = screen.getByLabelText('Choose columns').querySelector('svg') as SVGElement;
+    expect(glyph.dataset.icon).toBe('eye');
+    expect(glyph.dataset.icon).not.toBe('table-columns');
+  });
 });
 
 describe('Pager', () => {

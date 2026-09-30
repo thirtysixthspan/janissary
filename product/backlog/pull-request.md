@@ -2,9 +2,8 @@
 
 # pull-request
 
-* the column select icon needs to be changed so as not to be redundant with the split icon
+* the statements run selector and popup should be removed and replaced with the UI used for hist functionality in the agent tab. the command bar should be used for entering sequal commands and should show `SQL >` instead of just `>`.
 
-* the statements run selector and popup should be removed and replaced with the UI used for hist functionality in the agent tab. the command bar should be used for entering sequal commands and should show `SQL >` instead of just `>`. 
 
 * the rendering of the data table must not overflow into the command bar but rather be scrollable
 
