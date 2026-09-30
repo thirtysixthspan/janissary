@@ -178,7 +178,10 @@ These event types can produce a notification line:
   was typed.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
-  neither the event type, nor the tab it is attributed to, nor any link on the line. The bundled
+  neither the event type, nor any tab to jump to, and it may attribute the line to no tab but one of
+  its own open ones. It may add one link to a file, which is how a plugin offers something too long to
+  read in place — the `sql` tab links every console statement's result this way (see
+  [[sql-database]]). A line with no file has no link on it. The bundled
   audio plugin uses it to name a track it had to drop from a playlist because the browser could not
   decode it (see [[audio-tab]]).
 - **`launch-refused`** — a harness or agent launch was refused because its name is already in use:
@@ -233,7 +236,7 @@ suppresses it only in clients currently showing the notifications body; when ano
 selected, the feed is off screen and the client shows a toast. A toast never opens or moves a tab —
 the layout the user arranged is left alone.
 
-A toast reads `● <tab>: <message>`: the same colored dot and originating tab label the feed line
+A toast reads `● <tab>: <message>`: the same colored dot and tab name the feed line
 carries, and the same message body, with **no timestamp** — a toast is by definition happening now.
 Link targets are not rendered on it; they are preserved in the queue and the record, so the link is
 still there in the feed. A long message is clamped to two lines.
@@ -309,10 +312,15 @@ a per-row selection.
 
 The feed displays **newest first**: the most recently recorded notification appears at the top,
 with earlier ones below it. Each line reads `● <time> <tab>: <message>` — the colored dot, then a
-compact 12-hour clock time (for example `8:32pm`), the originating tab's label, and the message.
-The tab label appears **once**, in this header: a `notify <message>` shows the message on its own
-without repeating the label ahead of it. A notification whose actual detection time falls on an
-earlier calendar day than today — a queued report replayed after a multi-day detachment — carries
-a short date ahead of the time (for example `Sep 20 8:32pm`) rather than the bare time alone, so it
-does not read as having happened today; the comparison is calendar day, not elapsed hours, so an
-event from late the previous night is still dated even a few hours later.
+compact 12-hour clock time (for example `8:32pm`), the name of the tab the event happened to, and the
+message. A tab's name is what its own tab strip shows: its label, unless the tab has a title of its
+own — a renamed tab, or a plugin tab named for what it is about — so a line the `sql` tab reports
+leads with the database's name, not the `sql` its label is derived from. The same name is used inside
+the message wherever an event text names its tab, such as `Question from <tab>`. The label is still
+the tab's identity: the record file, the folding of repeats, and the dot's colour go by it. The name appears **once**, in this header: a `notify <message>`
+shows the message on its own without repeating the name ahead of it. A notification whose actual
+detection time falls on an earlier calendar day than today — a queued report replayed after a
+multi-day detachment — carries a short date ahead of the time (for example `Sep 20 8:32pm`) rather
+than the bare time alone, so it does not read as having happened today; the comparison is calendar
+day, not elapsed hours, so an event from late the previous night is still dated even a few hours
+later.

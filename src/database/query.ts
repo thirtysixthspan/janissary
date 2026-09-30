@@ -17,7 +17,9 @@ function formatRows(rows: Record<string, unknown>[]): string {
   return [header, separator, ...body, '', count].join('\n');
 }
 
-const READ_QUERY = /^\s*(select|pragma|with|explain)\b/i;
+// Which statements come back as rows. Every SQL surface in the app routes through this one test, so
+// the browser's console and `db sqlite query` cannot drift on what counts as a read.
+export const READ_QUERY = /^\s*(select|pragma|with|explain)\b/i;
 
 export function queryDatabase(name: string, query: string): string {
   if (!databaseFileExists(name) && !isConnectionOpen(name)) {

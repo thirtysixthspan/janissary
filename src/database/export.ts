@@ -1,0 +1,178 @@
+import { closeSync, existsSync, mkdirSync, openSync, statSync, writeSync } from 'node:fs';
+import path from 'node:path';
+import type { DatabaseSync } from 'node:sqlite';
+import type { DatabaseColumnView, DatabaseGridQuery } from '../protocol.js';
+import { selectStatement } from './grid-sql.js';
+import { coerce } from './row-keys.js';
+import { humanSize } from '../openers/size.js';
+import { errorText } from '../error-text.js';
+import { dbExportDir } from '../connections.js';
+
+// Writes the export. It runs the grid's own filters and order with the limit removed, because an
+// export of a filtered view that silently stopped at the page would be worse than no export — and it
+// streams the rows through `iterate()` rather than materializing them, which is the one place in this
+// feature where an unbounded result set would otherwise land in the server's memory at once.
+//
+// The writes are synchronous on purpose. A stream would return before the file was flushed, and the
+// caller needs the byte count to report a size and needs the file to exist before it hands the path
+// to the `/open/` allow-list. The cost is a blocked event loop for the duration, which is exactly
+// what `EXPORT_ROW_LIMIT` bounds.
+
+export const EXPORT_ROW_LIMIT = 1_000_000;
+
+// A result file holds a statement's rows rather than an export's, and the same ceiling bounds it: a
+// query of ten million rows is not something to write to disk on the strength of a notification.
+export const RESULT_ROW_LIMIT = 1_000_000;
+
+/** A file a result is streaming into, opened only once a result has proved long. */
+export type ResultWriter = {
+  path: string;
+  write(chunk: string): void;
+  end(trailer: string): void;
+};
+
+/** What opens one, called only when a result turns out to need it and answering nothing if it cannot. */
+export type OpenResult = () => ResultWriter | undefined;
+
+export type ExportOutcome =
+  | { ok: true; path: string; name: string; size: string; rows: number }
+  | { ok: false; error: string };
+
+/**
+ * An object name reduced to what a filename can carry.
+ *
+ * A SQLite object may be called anything, including something holding `../`, and the name arrives
+ * from `sqlite_schema` rather than from anything validated — so the name that reaches a path has to
+ * be reduced before it is used, not checked after. Every character outside `[A-Za-z0-9._-]` becomes
+ * a dash, and a name left with no alphanumeric character is refused rather than written: `..` and
+ * `.` have no stem to number and would produce a candidate that is a directory reference.
+ *
+ * This is not a check that the object exists — `hasObject` answers that, and the two questions
+ * diverge (an index is a real object whose name is not a browsable grid, and a safe-looking name may
+ * still name nothing).
+ */
+export function safeFileName(name: string): string | null {
+  const safe = name.replaceAll(/[^A-Za-z0-9._-]/gu, '-');
+  return /[A-Za-z0-9]/u.test(safe) ? safe : null;
+}
+
+// The same shape as `nextNumberedSibling` (`src/openers/numbered-sibling.ts`) — always numbered,
+// `-n` before the extension, first free wins — but not that function, which appends `.png` to every
+// name it builds and is about a captured frame beside a video.
+function nextExportName(dir: string, base: string, extension: string): string {
+  for (let n = 1; ; n++) {
+    const candidate = `${base}-${n}.${extension}`;
+    if (!existsSync(path.join(dir, candidate))) return candidate;
+  }
+}
+
+// RFC 4180's minimum: a field is quoted when it holds a comma, a quote, or a line break, and an
+// interior quote is doubled.
+export function csvField(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+function csvRow(values: readonly (string | number)[]): string {
+  return `${values.map((value) => csvField(String(value))).join(',')}\r\n`;
+}
+
+/** Beside the project's databases, so an export is where a user would look for one. */
+export function exportDir(): string {
+  return dbExportDir();
+}
+
+function writeRows(
+  database: DatabaseSync,
+  sql: string,
+  parameters: (string | number)[],
+  names: string[],
+  file: string,
+  format: 'csv' | 'json',
+): number {
+  const handle = openSync(file, 'w');
+  let written = 0;
+  try {
+    if (format === 'csv') writeSync(handle, csvRow(names));
+    else writeSync(handle, '[');
+    const rows = database.prepare(sql).iterate(...parameters) as Iterable<Record<string, unknown>>;
+    for (const row of rows) {
+      const values = names.map((name) => coerce(row[name]));
+      if (format === 'csv') writeSync(handle, csvRow(values));
+      else {
+        const record: Record<string, string | number> = {};
+        for (const [i, name] of names.entries()) { record[name] = values[i] ?? ''; }
+        writeSync(handle, `${written ? ',' : ''}${JSON.stringify(record)}`);
+      }
+      written += 1;
+    }
+    if (format !== 'csv') writeSync(handle, ']');
+  } finally {
+    closeSync(handle);
+  }
+  return written;
+}
+
+export function exportRows(
+  database: DatabaseSync,
+  databaseName: string,
+  query: DatabaseGridQuery,
+  columns: DatabaseColumnView[],
+  format: 'csv' | 'json',
+  total: number,
+): ExportOutcome {
+  const names = columns.map((column) => column.name);
+  if (names.length === 0) return { ok: false, error: `"${query.object}" has no columns.` };
+  const object = safeFileName(query.object);
+  if (!object) {
+    return { ok: false, error: `Cannot export "${query.object}": its name has no characters a file can carry.` };
+  }
+  if (total > EXPORT_ROW_LIMIT) {
+    return {
+      ok: false,
+      error: `Export too large: ${total.toLocaleString('en-US')} rows (limit ${EXPORT_ROW_LIMIT.toLocaleString('en-US')}). Add a filter and try again.`,
+    };
+  }
+  const statement = selectStatement({ ...query, limit: total || 1, offset: 0 }, columns);
+  const dir = exportDir();
+  try {
+    mkdirSync(dir, { recursive: true });
+    const name = nextExportName(dir, `${databaseName}-${object}`, format);
+    const file = path.join(dir, name);
+    const written = writeRows(database, statement.sql, statement.parameters, names, file, format);
+    return { ok: true, path: file, name, size: humanSize(statSync(file).size), rows: written };
+  } catch (error) {
+    return { ok: false, error: errorText(error) };
+  }
+}
+
+/**
+ * A writer for a statement's whole result, beside the exports.
+ *
+ * A notification that links somewhere has to have somewhere to point, and a result is not an export —
+ * it is not a filtered view of one object and it is not CSV — but it is the same kind of thing: a
+ * file the user asked for by running a statement, in the directory a user would look in for one. The
+ * name carries a timestamp rather than a number, because a result is not numbered against its
+ * predecessors: two statements that both return a great many rows are two different results, and a
+ * link on the older notification has to keep opening the older one.
+ *
+ * A file that cannot be opened returns nothing, and the caller falls back to the shortened result on
+ * its own rather than failing a statement that ran perfectly well.
+ */
+export function openResultFile(databaseName: string, at: number): ResultWriter | undefined {
+  const dir = exportDir();
+  const stamp = new Date(at).toISOString().replaceAll(/[:.]/gu, '-');
+  const name = `${safeFileName(databaseName) ?? 'database'}-result-${stamp}.txt`;
+  const file = path.join(dir, name);
+  let handle: number;
+  try {
+    mkdirSync(dir, { recursive: true });
+    handle = openSync(file, 'w');
+  } catch {
+    return undefined;
+  }
+  return {
+    path: file,
+    write: (chunk) => { writeSync(handle, chunk); },
+    end: (trailer) => { writeSync(handle, trailer); closeSync(handle); },
+  };
+}

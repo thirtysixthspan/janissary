@@ -17,6 +17,7 @@
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
 | `db` | Create, delete, query, or list SQLite databases |
+| `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the last one opened (`sql [<name>] left`/`right` to dock it) |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |

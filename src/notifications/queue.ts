@@ -25,8 +25,12 @@ export const NOTIFICATION_BURST_WINDOW_MS = 10_000;
 
 export type RecordedNotification = {
   event: NotificationEventType;
-  // The tab the event happened to — the label the feed line and the toast both lead with.
+  // The tab the event happened to, as its label: the identity a repeat folds on and the name the
+  // record file carries, so a user can grep for the tab they can also type at the command line.
   tabLabel: string;
+  // The name the feed line and the toast lead with, when it is not the label — a plugin tab labelled
+  // `sql` that the strip calls `shop`. Absent means the label said the right thing.
+  tabName?: string;
   // The rendered message body (see `notificationText`), without the provenance header.
   message: string;
   // The sending tab's own dot color, so a toast can carry the same dot the feed line does.

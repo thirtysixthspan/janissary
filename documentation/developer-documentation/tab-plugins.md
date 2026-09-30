@@ -94,7 +94,7 @@ type TabPluginActivation = {
 The host supplies seventeen capabilities:
 
 - `note(text)` writes to the originating transcript.
-- `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
+- `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query from a line that only says how many rows came back; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way. A line is attributed to the tab you were invoked from, which a `notify` handler doesn't have, so pass `tab` with one of your own instance keys — `notifyUser(text, { tab: key })` — to have the line carry that tab's name and colour instead. A key you have no open tab for falls back to the invoking tab, so you can't attribute a line to a tab you don't own.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
@@ -161,7 +161,7 @@ notify: (event, capabilities) => {
 },
 ```
 
-v1 defines one topic, `schedules`, whose data is the aggregated scheduled-command rows. A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
+v1 defines four topics, and a fifth kind of state reaches a plugin the same way: `schedules` (the aggregated scheduled-command rows), `conversations` (the conversation list, windows, and model pairs), `sessions` (the remote-session rows), and `databases` (which SQLite databases exist, and the recent answers to the requests a plugin has issued against them). A topic is always a named, already-coalesced signal — never the raw state broadcast, which fires on essentially every mutation including per-keystroke shell output.
 
 A notification tells you a topic changed, which leaves two gaps a view has to fill on its own. `topicData(topic)` closes the first: it reads what the topic carries right now, which is what you need when you are building a tab for the first time and no notification has fired yet. `topicAction(action)` closes the second: it is how you act on what you are showing. Each topic names its own actions — `schedules` defines `cancel` (drop one row), `clear` (drop them all), and `focusOwner` (focus the tab a row belongs to, refused for a tab that owns no row):
 
@@ -170,6 +170,8 @@ capabilities.topicAction({ topic: 'schedules', action: 'cancel', tab, id });
 ```
 
 Both are scoped to topics your manifest declared. Reaching for one it did not name throws `used topic "<name>" without declaring it` and disables the plugin, exactly as an undeclared capability does — a plugin may act only on state the host already agreed to show it.
+
+A topic whose action needs a round trip carries a **request id**, and the answer comes back on the next notification carrying the same one. `databases` is the example: `topicAction` returns nothing, so a plugin mints an id, records in its tab payload that it is waiting for that id, and folds the matching answer in when it arrives. Keep the id and the follow-up together in the payload — `pending: { id, followUp }` — so "what do I do once this lands" is part of the request rather than a guess made during the notification. Mint it with `randomUUID()` rather than a counter: the host echoes the id rather than issuing it, so two plugins on one topic cannot collide on `q1`. If an answer never arrives — evicted, or the delivery predates the request — re-issue rather than leave the tab waiting on a request nobody will answer.
 
 The delivery rules are narrow on purpose:
 
@@ -277,5 +279,6 @@ Add server tests for declaration claims, playable/external routes, payload valid
 - Seventeen server and seven client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. All four are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
+- `notifyUser` takes an optional `tab` instance key, attributing the line to one of the plugin's own tabs. Additive, so still v1.
 
 Additive optional fields, capabilities, and hooks remain v1-compatible. Removals, renames, tighter types, changed payload meaning, or observable ordering changes require a new API integer and are major changes. Introduce a replacement and deprecation window before removal. Keep the v1 fixture until v1 is formally removed; future deprecations and removals belong in this section.

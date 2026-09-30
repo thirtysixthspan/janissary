@@ -19,7 +19,7 @@ seeded from the queue.
 <img class="agent-float" src="/agents/hamza-south-west.png" alt="" />
 
 You don't have to open it first. A notification with no feed on screen appears as a **toast** in
-the window's upper-right corner instead: the tab it came from's colored dot, that tab's label, and
+the window's upper-right corner instead: the tab it came from's colored dot, that tab's name, and
 the message, and nothing else. It is visible for about four seconds, then fading out over two,
 without opening or rearranging anything. Hovering a toast holds its clock; moving away resumes it
 with the time that was left. Clicking a toast makes the feed visible — docked into the right
@@ -60,7 +60,7 @@ file that has stopped growing has no symptom to explain it.
 
 ## Read and scroll the feed
 
-The newest notification appears at the top. Each entry starts with the originating tab's colored dot, a compact 12-hour time such as `8:32pm`, and the tab label. The message follows that header. A notification detected on an earlier calendar day than today — for example, one queued while a remote harness sat detached over a weekend — carries a short date ahead of the time, such as `Sep 20 8:32pm`, so it doesn't read as having just happened.
+The newest notification appears at the top. Each entry starts with the originating tab's colored dot, a compact 12-hour time such as `8:32pm`, and the tab's name — the name its own tab strip shows, so a line the SQL browser reports leads with the database's name rather than `sql`. The message follows that header. A notification detected on an earlier calendar day than today — for example, one queued while a remote harness sat detached over a weekend — carries a short date ahead of the time, such as `Sep 20 8:32pm`, so it doesn't read as having just happened.
 
 When the same tab reports the same message several times in a row, the feed shows it once with a count after the message, such as `Could not pull: network unreachable (3 times)`. That line shows the time of the latest repeat. Anything else arriving in between starts a fresh line. Each repeat still toasts on its own and still gets its own line in the record file.
 

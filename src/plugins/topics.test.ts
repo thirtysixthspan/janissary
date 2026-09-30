@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { AggregatedScheduleView, RemoteSessionView } from '../protocol.js';
+import { initDbDir } from '../connections.js';
+import { DatabaseManager } from '../database/manager.js';
 import {
   TAB_PLUGIN_API_VERSION,
   type TabPluginCapabilityName,
@@ -79,6 +84,12 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       refresh: vi.fn(), detach: vi.fn(), attach: vi.fn(), terminate: vi.fn(), forget: vi.fn(),
       focus: vi.fn(), close: vi.fn(),
     },
+    database: {
+      readView: vi.fn(() => ({ databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop' })),
+      browseCreate: vi.fn(), browseSchema: vi.fn(), browseQuery: vi.fn(), browseRun: vi.fn(),
+      browseUpdateCell: vi.fn(), browseInsertRow: vi.fn(), browseDeleteRow: vi.fn(),
+      browseExport: vi.fn(),
+    },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
 }
@@ -146,6 +157,100 @@ describe('the conversations topic source', () => {
     runTopicAction(managers, { topic: 'conversations', action: 'launchAgent', id: 'one' });
     expect(managers.conversations.openFiles).toHaveBeenCalledWith('one');
     expect(managers.conversations.launchAgent).toHaveBeenCalledWith('one');
+  });
+});
+
+describe('the databases topic source', () => {
+  it('reads the browser view and routes every one of the eight actions', () => {
+    const { managers } = makeManagers();
+    expect(readTopicData(managers, 'databases')).toEqual({
+      databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop',
+    });
+    const query = { object: 'orders', filters: [], order: [], limit: 100, offset: 0 };
+    const actions: TabPluginTopicAction[] = [
+      { topic: 'databases', action: 'create', database: 'shop', requestId: 'a' },
+      { topic: 'databases', action: 'schema', database: 'shop', requestId: 'b' },
+      { topic: 'databases', action: 'query', database: 'shop', requestId: 'c', query },
+      { topic: 'databases', action: 'run', database: 'shop', requestId: 'd', sql: 'SELECT 1', returnsRows: true },
+      { topic: 'databases', action: 'updateCell', database: 'shop', requestId: 'e', row: 'r1', column: 'status', value: null },
+      { topic: 'databases', action: 'insertRow', database: 'shop', requestId: 'f', object: 'orders', cells: [{ column: 'id', value: null }] },
+      { topic: 'databases', action: 'deleteRow', database: 'shop', requestId: 'g', row: 'r1' },
+      { topic: 'databases', action: 'stats', database: 'shop', requestId: 'h', object: 'orders' },
+      { topic: 'databases', action: 'export', database: 'shop', requestId: 'i', query, format: 'json' },
+    ];
+    for (const action of actions) runTopicAction(managers, action);
+    expect(managers.database.browseCreate).toHaveBeenCalledWith('shop', 'a');
+    expect(managers.database.browseSchema).toHaveBeenCalledWith('shop', 'b');
+    expect(managers.database.browseQuery).toHaveBeenCalledWith('shop', 'c', query);
+    expect(managers.database.browseRun).toHaveBeenCalledWith('shop', 'd', 'SELECT 1', true);
+    expect(managers.database.browseUpdateCell).toHaveBeenCalledWith('shop', 'e', 'r1', 'status', null);
+    expect(managers.database.browseInsertRow).toHaveBeenCalledWith('shop', 'f', 'orders', [{ column: 'id', value: null }]);
+    expect(managers.database.browseDeleteRow).toHaveBeenCalledWith('shop', 'g', 'r1');
+    expect(managers.database.browseExport).toHaveBeenCalledWith('shop', 'i', query, 'json');
+  });
+
+  // The request id is minted by the plugin and echoed by the host, and that round trip is the whole
+  // addressing scheme: an answer stamped with an id of the host's own devising can never be matched
+  // to the request that asked for it. Routing above proves each id reaches the manager; this proves
+  // it survives the manager and comes back out on the answer.
+  it('echoes the id the plugin minted back on the answer it produces', () => {
+    const project = mkdtempSync(path.join(tmpdir(), 'janus-topics-'));
+    initDbDir(project);
+    const managers = { database: new DatabaseManager() } as unknown as Managers;
+    try {
+      runTopicAction(managers, { topic: 'databases', action: 'create', database: 'shop', requestId: 'plugin-1' });
+      runTopicAction(managers, { topic: 'databases', action: 'schema', database: 'shop', requestId: 'plugin-2' });
+      const results = managers.database.readView().results;
+      expect(results.map((result) => result.requestId)).toEqual(['plugin-2', 'plugin-1']);
+      expect(results[1]?.kind).toBe('schema');
+    } finally {
+      managers.database.closeAll();
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  it('subscribes to the databases change signal rather than the state broadcast', () => {
+    const fire = vi.fn();
+    const subscription = subscribeTopic('databases', fire);
+    messageBus.emit('databases', { type: 'changed' });
+    expect(fire).toHaveBeenCalledTimes(1);
+    subscription.unsubscribe();
+  });
+
+  // An action is fire-and-forget, so the emit after it is the whole of how an answer gets back to
+  // the plugin that asked. Without it a request would be issued and never heard from again.
+  it('emits the change signal once per action, whatever the action was', () => {
+    const { managers } = makeManagers();
+    const fire = vi.fn();
+    const subscription = subscribeTopic('databases', fire);
+    runTopicAction(managers, { topic: 'databases', action: 'schema', database: 'shop', requestId: 'a' });
+    runTopicAction(managers, {
+      topic: 'databases', action: 'query', database: 'shop', requestId: 'b',
+      query: { object: 'orders', filters: [], order: [], limit: 100, offset: 0 },
+    });
+    expect(fire).toHaveBeenCalledTimes(2);
+    subscription.unsubscribe();
+  });
+
+  it('refuses a databases action when the plugin did not declare the topic', () => {
+    const { managers } = makeManagers();
+    const capabilities = contextFor(managers, ['topicAction'], []);
+    expect(() => capabilities.topicAction({
+      topic: 'databases', action: 'schema', database: 'shop', requestId: 'a',
+    })).toThrow('used topic "databases" without declaring it');
+    expect(managers.database.browseSchema).not.toHaveBeenCalled();
+  });
+
+  it('gives a disabled plugin the topic own zero value rather than an array it never declared', () => {
+    const { managers } = makeManagers();
+    const capabilities = createPluginContext(
+      managers,
+      declaration(['topicData'], ['databases']),
+      { isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} } },
+      origin,
+      () => false,
+    );
+    expect(capabilities.topicData('databases')).toEqual({ databases: [], results: [], lastOpened: null });
   });
 });
 

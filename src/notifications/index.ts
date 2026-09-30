@@ -154,8 +154,16 @@ export interface NotifyOptions {
 // `shouldNotify`: an event they reject costs nothing, records nothing, and shows nothing, which is
 // what keeps the ambient toggles a volume control rather than a way to fill the screen. An event
 // they accept always reaches the queue and the record file; which surface shows it — the feed, a
-// toast, or an escalation to the feed — is `deliverNotification`'s decision. `shouldNotify` has to
-// be asked before any of that because it reads the active tab's label, which opening a tab changes.
+// toast, or an escalation to the feed — is `deliverNotification`'s decision. `shouldNotify` has to be
+// asked before any of that because it reads the active tab's label, which opening a tab changes.
+//
+// A label is an identity, not a name: a plugin tab's is derived from its prefix (`sql`, then `sql-2`)
+// while the name its strip shows and its title carries is what the tab is about (`shop`). A line that
+// leads with the label names neither the database a failure came from nor the file a suggestion
+// failed on, so the header, the message and the toast lead with the name instead — the same
+// `title ?? label` the tab strip uses. The label stays wherever it is the identity: the focus rule,
+// the colour lookup, the record file's `tab`, and the pair a repeat folds on, so two `sql` tabs
+// sharing a name still hold their own lines.
 // `message` is the event-specific detail (see `notificationText`); everything rarer arrives by name
 // in `options`, so the two link targets cannot be transposed.
 export function notify(
@@ -167,12 +175,15 @@ export function notify(
 ): void {
   const activeLabel = managers.tab.cur().label;
   if (!shouldNotify(getConfig().notifications, event, tabLabel, activeLabel)) return;
-  const color = managers.tab.byLabel(tabLabel)?.dotColor;
+  const tab = managers.tab.byLabel(tabLabel);
+  const color = tab?.dotColor;
+  const name = tab?.title ?? tabLabel;
   const recordedAt = new Date();
-  const output = notificationText(event, tabLabel, message);
+  const output = notificationText(event, name, message);
   deliverNotification(managers, {
     event,
     tabLabel,
+    ...(name !== tabLabel && { tabName: name }),
     message: output,
     ...(color && { color }),
     entry: {
@@ -180,7 +191,7 @@ export function notify(
       output,
       // The dot label is the notification's provenance header — when, then who — so the line reads
       // `● 8:32pm janus: <message>`. `fromColor` (looked up from tabLabel) still colors the dot.
-      from: `${provenanceTimestamp(detectedAt ?? recordedAt)} ${tabLabel}`,
+      from: `${provenanceTimestamp(detectedAt ?? recordedAt)} ${name}`,
       fromColor: color,
       ...(openFile && { openFiles: [openFile] }),
       ...(openTab && { openTab }),

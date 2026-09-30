@@ -46,7 +46,7 @@ export function deliverNotification(
   if (replayed) return;
   messageBus.emit('notifications', {
     type: 'toast',
-    from: notification.tabLabel,
+    from: notification.tabName ?? notification.tabLabel,
     message: notification.message,
     ...(notification.color && { color: notification.color }),
   });
