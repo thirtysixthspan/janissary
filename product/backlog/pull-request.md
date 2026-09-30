@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the keyboard focus should be alter between the search term and the results using the tab key.
-
 * when the keyboard focus is on the search bar, up and down arrows will scroll through the search term history.
 
 * when the keyboard focus is on the search results, up and down arrows will scrol through the selected results moving the selected item and scroll the page as necessary to keep the selected result visible. 

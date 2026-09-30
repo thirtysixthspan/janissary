@@ -20,15 +20,20 @@ export type SearchBarProperties = {
   // Rendered before the prompt glyph, so the line says what it is — `search >` rather than a bare
   // `>` that is indistinguishable from a shell prompt at a glance.
   label: string;
+  // The tab's own ref for the textarea, rather than one of this component's own, so the tab can hold
+  // both of its focusable elements by name and step between them.
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
+  // Move the focus to the results. Taken on a bare Tab: the window is the tab's other focusable
+  // element, and without this the bar — the last one in the DOM — hands Tab straight out of the tab.
+  onFocusResults(): void;
 };
 
 // The search tab's query input: the host's own command bar, so it looks exactly like the agent
 // tab's rather than being a second textarea that drifts from it. Composed with no history and no
 // ghost, because a search query is not a command this tab remembers.
 export function SearchBar({
-  query, onChangeQuery, onSearch, active, trailing, label,
+  query, onChangeQuery, onSearch, active, trailing, label, inputRef, onFocusResults,
 }: SearchBarProperties) {
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const bar = useCommandBarKeys({
     value: query, setValue: onChangeQuery, inputRef, history: [], onSubmit: () => {},
   });
@@ -45,13 +50,24 @@ export function SearchBar({
 
   useEffect(() => {
     if (active) inputRef.current?.focus();
-  }, [active]);
+  }, [active, inputRef]);
+
+  // Tab steps to the results; Shift+Tab is left to the browser, because walking backwards out of the
+  // tab is what a user presses it for. Every other key belongs to the bar's own keymap.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Tab' && !event.shiftKey) {
+      event.preventDefault();
+      onFocusResults();
+      return;
+    }
+    bar.onKeyDown(event);
+  };
 
   return (
     <CommandBarShell
       value={query}
       onChange={onChangeQuery}
-      onKeyDown={bar.onKeyDown}
+      onKeyDown={onKeyDown}
       inputRef={inputRef}
       autoFocus={active}
       ariaLabel="Search the project"

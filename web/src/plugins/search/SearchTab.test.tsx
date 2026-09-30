@@ -244,6 +244,51 @@ describe('SearchTab', () => {
     expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
   });
 
+  it('steps from the search bar to the results on Tab', () => {
+    const { container } = renderTab();
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    results.focus();
+    // Without this the bar — the tab's last focusable child — hands Tab straight out of the tab,
+    // since nothing in the DOM after it is focusable.
+    fireEvent.keyDown(screen.getByLabelText('Search the project'), { key: 'Tab' });
+    expect(results).toHaveFocus();
+  });
+
+  it('steps from the results back to the search bar on Tab', () => {
+    const { container } = renderTab();
+    const bar = screen.getByLabelText('Search the project');
+    container.querySelector<HTMLDivElement>('.search-results')!.focus();
+    fireEvent.keyDown(container.querySelector('.search-results')!, { key: 'Tab' });
+    expect(bar).toHaveFocus();
+  });
+
+  it('leaves Shift+Tab to the browser so it walks backwards out of the tab', () => {
+    const { container } = renderTab();
+    const bar = screen.getByLabelText('Search the project');
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    // Shift+Tab is what a user presses to leave, so neither handler claims it and the focus stays
+    // put rather than folding the two elements into a loop the user cannot exit.
+    bar.focus();
+    fireEvent.keyDown(bar, { key: 'Tab', shiftKey: true });
+    expect(bar).toHaveFocus();
+    results.focus();
+    fireEvent.keyDown(results, { key: 'Tab', shiftKey: true });
+    expect(results).toHaveFocus();
+  });
+
+  it('offers the window and the bar as the tab’s only two focusable elements, window first', () => {
+    const { container } = renderTab();
+    const results = container.querySelector<HTMLDivElement>('.search-results')!;
+    // The order the two handlers agree with: Tab walks forward from the window to the bar, and the
+    // window is one stop in its own right however many rows it holds — the rows take -1, so the
+    // arrows move a selection rather than walking a tab stop per match.
+    expect(results.getAttribute('tabindex')).toBe('0');
+    expect(container.querySelectorAll('.search-row[tabindex="0"]')).toHaveLength(0);
+    expect(container.querySelectorAll('.search-row[tabindex="-1"]')).toHaveLength(1);
+    expect(results.compareDocumentPosition(container.querySelector('.command')!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
   it('does not move the selection as streaming rows arrive beneath it', () => {
     const { capabilities, intent } = makeCapabilities();
     const { container, rerender } = render(<SearchTab payload={payload()} capabilities={capabilities} />);

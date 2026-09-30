@@ -88,8 +88,13 @@ one settles with nothing, and the reason when a search fails.
 
 ### Navigating and opening a result
 
-The search bar and the result table each keep their own keys, because only the focused element
-receives them. Click into the table to give it focus: the arrow keys then move the highlighted row,
+**Tab alternates between the search term and the results.** The two are the tab's only focusable
+elements, and the whole result window is one stop however many matches it holds, so Tab moves the
+focus from the term to the window and Tab again moves it back. **Shift+Tab is not affected** — it
+keeps walking backwards out of the tab, which is what it is for.
+
+The search bar and the result window each keep their own keys, because only the focused element
+receives them. Click into the window to give it focus: the arrow keys then move the highlighted row,
 Home and End jump to the first and last, and `Return` opens the highlighted match. The search bar
 keeps the arrow keys for moving the caret while it holds focus.
 

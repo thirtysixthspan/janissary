@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { SearchIntent, SearchPayload } from '@shared/plugins/search/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { ModeToggles, type ModeKey } from './ModeToggles';
@@ -21,8 +21,10 @@ const modesOf = (value: SearchPayload): Modes => ({
 // The search tab: a metadata header carrying the include and exclude fields, a result window that
 // stacks upward, and the command line at the bottom edge. Everything above the command line is
 // output; the command line is where the query goes, and the modifiers sit at its right-hand end.
-// Only the result window is focusable — the bar keeps its own arrows for caret movement, and the
-// window keeps the selection keys, because only the focused element receives them.
+//
+// The bar and the window are the tab's only focusable elements, and this component owns both refs so
+// Tab can step between them. Whichever one has focus keeps its own keys — the window the selection
+// keys, the bar its caret — because only the focused element receives them.
 export function SearchTab({
   payload, capabilities,
 }: {
@@ -34,6 +36,7 @@ export function SearchTab({
   const [exclude, setExclude] = useState(payload.exclude);
   const [modes, setModes] = useState<Modes>(modesOf(payload));
   const rows = payload.rows;
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const { listRef, selected, navigate, rowClicked } = useResultSelection({ count: rows.length });
 
   // One search, whatever asked for it. Every caller passes the value it is about to hold, rather
@@ -73,13 +76,23 @@ export function SearchTab({
     if (rowClicked(index)) onOpen(index);
   }, [onOpen, rowClicked]);
 
+  // Tab steps back to the bar, which is the tab's next focusable element; Shift+Tab is left to the
+  // browser, so it keeps walking backwards out of the tab rather than folding into a two-element
+  // loop. Checked before the selection keys, none of which answer to Tab.
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Tab' && !event.shiftKey) {
+      event.preventDefault();
+      inputRef.current?.focus();
+      return;
+    }
     if (navigate(event.key)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selected !== null) {
       event.preventDefault();
       onOpen(selected);
     }
   };
+
+  const onFocusResults = useCallback(() => { listRef.current?.focus(); }, [listRef]);
 
   return (
     <div className="plugin-tab search-tab" data-doc-shot="search-tab">
@@ -109,6 +122,8 @@ export function SearchTab({
         active={capabilities.active}
         trailing={<ModeToggles modes={modes} onToggle={toggle} />}
         label="search"
+        inputRef={inputRef}
+        onFocusResults={onFocusResults}
       />
     </div>
   );
