@@ -4,8 +4,6 @@
 
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 
 
-* sql database plugin that offers table, visualization, crud and query on sql databases including local sqllite databases. The database feature (`product/specs/database.md`, `product/specs/connection.md`) is a SQLite command surface that renders row queries as aligned text tables, a schema/object navigator plus a data grid with filtering, ordering, editing, refresh, export, and SQL generation. a dockable SQLite schema browser and table data view with safe cell editing, filters, refresh, and generated SQL actions. 
-
 * Given that provising a workspace can be slow due to cloning, add a provising indicator in the metadata bar of agents and harnesses, both local and remote. The indicator should be animated and stop and disappear when the provisioning is complete.
 
 ## development
