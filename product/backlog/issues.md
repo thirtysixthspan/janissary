@@ -2,8 +2,6 @@
 
 ## ready
 
-* when a harness is using an e2e browser and the browser exists, the browser icon in the metadatabar should return to normal, not disappear.
-
 * remove the spacing between clipboard icons in notifications with multiple icons.
 
 * the error below was output directly to the notifications tab. It should be a notification that follows the notification formating and any error output added to a capture file and linked to the notification.
