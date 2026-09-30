@@ -42,6 +42,11 @@ export function fold(
         error: null,
         log: answer.sql ? addToLog(base.log, { sql: answer.sql, changed: answer.changed }) : base.log,
       };
+      // With no object selected there is no page to re-read, and the re-read would be issued for
+      // the empty object name — which the host answers with `" is not in "<database>".` and the tab
+      // would show that beside a statement it has just reported as `OK.`. The schema is re-read on
+      // a `Refresh`, so the write simply settles.
+      if (written.object === '') return settled(written);
       return { payload: written, followUp: planRequest('query', written) };
     }
     case 'export': { return foldExport(key, base, answer, tabs);

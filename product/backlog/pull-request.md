@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear the grid's error band when a console write succeeds on a database that has no object selected, instead of reporting `"" is not in "<database>".`
-
-Existing Issue: Running a schema statement in the console on a tab that has no object selected — an empty database, or one whose objects have all gone — writes the statement successfully and reports `OK.` on the line under the prompt, and then puts `"" is not in "shop".` in the grid's error band, because the re-read the write triggers is issued for the empty object name the tab is holding. Severity: 7/10
-
-Existing Risk: 6/10 - The console is the documented way to change a schema, and this is the first statement a user runs on a new database, so the tab looks broken immediately after it works: a red band naming an object that does not exist sits under a line saying `OK.`, and the navigator stays empty until the user guesses that **Refresh** is what clears it.
-
-Proposal Risk: 2/10 - The write still lands and the navigator still only refreshes on **Refresh**, so what remains is one spurious error band on a tab with no object selected, now gone.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: clear the grid's error band when a console write succeeds on a database with no object selected". Reproduce on an empty database: `db sqlite create shop`, then `sql shop`, then type `CREATE TABLE t (id INTEGER PRIMARY KEY, a TEXT)` into the SQL console and press Enter. Observed: the line under the prompt reads `OK.`, the table is created (`SELECT COUNT(*)` through `db sqlite query` confirms the rows the following statements add), and the grid's error band reads `"" is not in "shop".`; the table dropdown still lists no objects. Pressing **Refresh** clears the band and lists the new table. `fold` in `src/plugins/sql/fold.ts` returns `followUp: planRequest('query', written)` from its `'write'` branch unconditionally, and `gridQueryOf` in `src/plugins/sql/request.ts` builds that query from `payload.object`, which is `''` when the last schema read found no objects; `DatabaseBrowser.query` in `src/database/browser.ts` then reaches `handleFor`, whose `hasObject` check fails and whose error the fold puts in the payload. Make the `'write'` branch skip the follow-up when there is no object to re-read, so a write on a tab with nothing selected neither issues a query nor sets an error; the `schema` follow-up is the better answer there, since a console statement is the documented way a new table appears. Add cases to `src/plugins/sql/activate.test.ts` beside the existing write-intent cases: a successful `run` against a payload whose `object` is `''` leaves `error` null and issues no `query`, and a `run` on a payload that does name an object still re-queries it. `src/database/browser.test.ts` needs no change.
-
-
 * Keep the pager's unfiltered row count correct after a write, rather than reporting a filtered total larger than the unfiltered one.
 
 Existing Issue: The unfiltered count an object is reported at is cached the first time it is read and reused for every later read of that object, so once a console or grid write changes the row count the pager's range line reports the count from before the write — `Rows 1–5 of 5 of 4 rows`, whose filtered total is larger than the unfiltered total it is divided against. Severity: 7/10

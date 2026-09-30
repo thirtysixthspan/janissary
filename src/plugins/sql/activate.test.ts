@@ -482,6 +482,24 @@ describe('sql plugin answering a request before it returns', () => {
     expect(payload.grid?.rows).toHaveLength(1);
   });
 
+  it('leaves a successful statement on an objectless tab with no error and nothing to re-read', () => {
+    const fixture = fakeCapabilities();
+    const empty = basePayload({ object: '', objects: [], grid: null });
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'run', payload: { sql: 'CREATE TABLE t (id INTEGER PRIMARY KEY)' }, tabPayload: empty },
+      fixture.capabilities,
+    );
+    const runId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    const before = fixture.actions.length;
+    deliver(fixture, [{ kind: 'write', requestId: runId, database: 'shop', sql: 'CREATE TABLE t (id INTEGER PRIMARY KEY)', parameters: [], changed: 0 }]);
+    const payload = lastPayload(fixture);
+    expect(payload.error).toBeNull();
+    expect(payload.pending).toBeNull();
+    expect(payload.log.map((entry) => entry.sql)).toEqual(['CREATE TABLE t (id INTEGER PRIMARY KEY)']);
+    // Nothing was asked for after the statement itself: a re-read would name the empty object.
+    expect(fixture.actions.slice(before)).toEqual([]);
+  });
+
   it('has every request recorded on the tab before it leaves for the host', () => {
     // What the tab was showing at the instant each request was sent, which is the ordering the whole
     // exchange rests on: an answer delivered before the tab named its request is an answer to a

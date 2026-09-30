@@ -269,6 +269,9 @@ carries the message where the failed
 read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
 is deleted under an open tab. A failed statement leaves the grid as it was and stays on the history.
 
+A statement that succeeds reports its outcome and adds nothing to the error band, including on a tab
+with no object selected, where there is no page for it to have disturbed and so nothing to re-read.
+
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query
 the console refused to finish is not the same thing as a small one. What it fills the grid with is
