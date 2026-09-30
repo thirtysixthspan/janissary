@@ -15,6 +15,14 @@ import { clearContributionRejections, contributionRejection } from './rejections
 // each case starts from a clean one rather than reading a neighbour's conflict.
 beforeEach(() => { clearContributionRejections(); });
 
+// The built-in commands, without the plugin commands the production registry appends to them. The
+// adapter is handed this list by `src/commands/index.ts`, so a test that wants to ask what the host
+// itself reserves has to ask about this list: `commands` already carries each plugin's generated
+// command, including the search tab's, and would answer a different question.
+function coreCommands(): Command[] {
+  return commands.filter((command) => !command.run.toString().includes('runCommand'));
+}
+
 function manifest(id: string, overrides: Partial<TabPluginDeclaration> = {}): TabPluginDeclaration {
   return {
     id, version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION, payloadSchemaVersion: 1,
@@ -122,9 +130,14 @@ describe('tab plugin web claim', () => {
 
 describe('tab plugin command adapter', () => {
   it('refuses every production reserved name without contributing a command', () => {
+    // A name is reserved when a built-in actually answers to that bare name. The transcript search
+    // is registered as `search` but matches only `search transcript <pattern>`, so it does not
+    // reserve the bare token and is excluded here — see the case below.
     const reserved = new Set([
       ...RESERVED_NON_COMMAND_NAMES,
-      ...commands.map((command) => command.name),
+      ...commands
+        .filter((command) => command.match(command.name))
+        .map((command) => command.name),
       'schedule', 'harness', 'ssh', 'shell',
     ]);
     for (const name of reserved) {
@@ -133,6 +146,31 @@ describe('tab plugin command adapter', () => {
       expect(contributionRejection('fixture'))
         .toBe(`reserved tab plugin command claim "${name.toLowerCase()}"`);
     }
+  });
+
+  it('reserves the name a built-in matches rather than the name it is registered under', () => {
+    // The transcript search is registered as `search` and matches only `search transcript …`, so a
+    // bare `search` reaches nothing of its. A plugin may hold that name — which is what the search
+    // tab does, and what reserving it by registry name prevented. `coreCommands()` is the list
+    // production hands this adapter: `commands` would carry the search tab's own generated command,
+    // which reserves the name for a second claimant that is the very plugin under discussion.
+    clearContributionRejections();
+    const built = createPluginCommands([manifest('fixture', { command: 'search' })], coreCommands());
+    expect(built.map((command) => command.name)).toEqual(['search']);
+    expect(contributionRejection('fixture')).toBeUndefined();
+  });
+
+  it('still lets the built-in win an input both forms match', () => {
+    // The plugin claims the bare name and must yield on the longer form the built-in owns. Matching
+    // on the first token alone would swallow `search transcript …`, so the generated command defers
+    // to any core command that already matches the input.
+    const plugin = createPluginCommands([manifest('fixture', { command: 'search' })], coreCommands())
+      .find((command) => command.name === 'search');
+    const builtIn = coreCommands().find((command) => command.name === 'search');
+    expect(plugin?.match('search foo')).toBe(true);
+    expect(builtIn?.match('search transcript foo')).toBe(true);
+    expect(builtIn?.match('search foo')).toBe(false);
+    expect(plugin?.match('search transcript foo')).toBe(false);
   });
 
   it('keeps the first plugin to claim a command name and drops the second', () => {

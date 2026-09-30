@@ -53,6 +53,25 @@ describe('CommandManager async commands', () => {
       input: 'video clip.mp4', output: 'async plugin rejected',
     });
   });
+
+  it('runs the command that matches the input, not the first with that name', async () => {
+    // A plugin command and a built-in can share a name when the built-in answers only to a longer
+    // form of it: the search tab claims `search`, and the transcript search is registered as `search`
+    // while matching only `search transcript …`. A bare `search` must reach the plugin, so the
+    // lookup has to test `match` rather than take the first entry carrying the name.
+    const { managers } = makeManagers();
+    const runCommand = vi.fn();
+    managers.plugins = { runCommand } as unknown as Managers['plugins'];
+
+    await managers.command.executeCommand('search', 'search', 'janus', 0);
+    expect(runCommand).toHaveBeenCalledWith('search', 'search', { label: 'janus', command: 'search' });
+
+    runCommand.mockClear();
+    await managers.command.executeCommand('search', 'search transcript fox', 'janus', 0);
+    // The built-in's own form still reaches the built-in, so the pair coexists.
+    expect(runCommand).not.toHaveBeenCalled();
+    expect(managers.tab.cur().log.at(-1)?.output).toContain('transcript');
+  });
 });
 
 
