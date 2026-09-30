@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request's testing step that types a row number into the pager's Row field
-
-Existing Issue: The seventh `How to verify` step types a row number "into the pager's **Row** field", and the pager holds no such field, so the step cannot be followed as written. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer following the step finds nothing to type into and cannot tell whether the feature is missing or they have misread the tab, so the step stalls rather than passing.
-
-Proposal Risk: 1/10 - The corrected step names only controls the pager does draw, so nothing is left to guess.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: correct the testing step that types a row number into the pager's Row field". Failing step D7 (description), verbatim: "Type a row number into the pager's **Row** field and confirm it lands there, that a number past the end lands on the last page rather than an empty one, and that a non-number asks for nothing." Reproduce from a project with no database: `db sqlite create shop`; `sql shop`; seed `orders` from another tab; press `Refresh` and choose `orders`; read the pager. Expected, per the step, a `Row` field in the pager beside Previous and Next. Observed on 8f2fb12 in two runs: the pager renders exactly `Previous`, the range label, `Next`, a `Rows` per-page select offering 50, 100 and 500, and `Refresh`, and holds no input element at all; `web/src/plugins/sql/Pager.tsx` renders no row field and `product/plans/complete/jump-to-a-row.md` sits in `complete/`, so the control this step names does not ship on this branch. Corrected step for the description's `How to verify`: "Set `Rows` to 50 on a table of more than 50 rows, press `Next` until the last page is showing, and confirm the range line names the final page, that `Next` is disabled and that `Previous` is not." The completed plan's own Verification section is a historical record and stays as it is.
-
-
 * Correct the pull request's testing steps that expect a schema navigator with a marked trigger row
 
 Existing Issue: The second `How to verify` step and the plan's manual step both expect a schema navigator that lists objects under group headings, reports a per-object column count as `4 cols`, and carries a marked trigger row that does nothing when clicked; the tab offers a grouped table dropdown instead. Severity: 4/10
