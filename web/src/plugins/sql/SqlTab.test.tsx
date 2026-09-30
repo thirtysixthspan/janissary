@@ -183,6 +183,66 @@ describe('SqlTab console', () => {
     expect(intent).toHaveBeenCalledWith('run', { sql: 'SELECT 1' });
   });
 
+  // The shared keymap steps back from the end of the list it is handed, so a list kept newest-first
+  // recalled the oldest statement first — and a user reaching for what they just ran edited and
+  // re-ran something from before it, which on this surface is a write.
+  it('recalls the statement typed last on one ArrowUp, and the one before it on the next', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const bar = screen.getByLabelText('SQL');
+    for (const sql of ['UPDATE orders SET total = 1 WHERE id = 1', 'UPDATE orders SET total = 2 WHERE id = 2']) {
+      fireEvent.change(bar, { target: { value: sql } });
+      fireEvent.keyDown(bar, { key: 'Enter' });
+    }
+    fireEvent.keyDown(bar, { key: 'ArrowUp' });
+    expect((bar as HTMLTextAreaElement).value).toBe('UPDATE orders SET total = 2 WHERE id = 2');
+    fireEvent.keyDown(bar, { key: 'ArrowUp' });
+    expect((bar as HTMLTextAreaElement).value).toBe('UPDATE orders SET total = 1 WHERE id = 1');
+  });
+
+  it('hands back the draft when the walk comes back down past the newest statement', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const bar = screen.getByLabelText('SQL');
+    for (const sql of ['SELECT 1', 'SELECT 2']) {
+      fireEvent.change(bar, { target: { value: sql } });
+      fireEvent.keyDown(bar, { key: 'Enter' });
+    }
+    fireEvent.change(bar, { target: { value: 'half typed' } });
+    fireEvent.keyDown(bar, { key: 'ArrowUp' });
+    expect((bar as HTMLTextAreaElement).value).toBe('SELECT 2');
+    fireEvent.keyDown(bar, { key: 'ArrowDown' });
+    expect((bar as HTMLTextAreaElement).value).toBe('half typed');
+  });
+
+  // The ghost walks the same list from its other end, so the completion offered while typing was
+  // drawn from the oldest entry that matched rather than the newest.
+  it('offers the most recent statement that extends what is typed', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const bar = screen.getByLabelText('SQL');
+    for (const sql of ['SELECT id FROM orders', 'SELECT id FROM customers']) {
+      fireEvent.change(bar, { target: { value: sql } });
+      fireEvent.keyDown(bar, { key: 'Enter' });
+    }
+    fireEvent.change(bar, { target: { value: 'SELECT id FROM' } });
+    expect(container.querySelector('.ghost')?.textContent).toBe('SELECT id FROM customers');
+  });
+
+  it('recalls a re-sent statement as the newest, so the list is a history and not a log', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const bar = screen.getByLabelText('SQL');
+    for (const sql of ['SELECT 1', 'SELECT 2', 'SELECT 1']) {
+      fireEvent.change(bar, { target: { value: sql } });
+      fireEvent.keyDown(bar, { key: 'Enter' });
+    }
+    fireEvent.keyDown(bar, { key: 'ArrowUp' });
+    expect((bar as HTMLTextAreaElement).value).toBe('SELECT 1');
+    fireEvent.keyDown(bar, { key: 'ArrowUp' });
+    expect((bar as HTMLTextAreaElement).value).toBe('SELECT 2');
+  });
+
   // The line says how the last statement went and nothing about one that failed. A failure is a
   // notification: this line is where the next thing typed goes, and a user who has looked away needs
   // to be told rather than to come back and find the tab exactly as they left it.

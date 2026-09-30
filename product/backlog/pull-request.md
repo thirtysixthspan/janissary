@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Make `ArrowUp` in the SQL console recall the statement typed last, not the first one typed
-
-Existing Issue: The first `ArrowUp` in the SQL console recalls the oldest statement typed in that tab, so the most recent one is only reached after pressing it as many times as the tab has statements. Severity: 5/10
-
-Existing Risk: 5/10 - A user reaching for the statement they just ran instead edits and re-runs an old one, which on this surface is a write.
-
-Proposal Risk: 2/10 - Reordering the list the shared keymap is handed is a one-line change inside a component that owns nothing else.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: `ArrowUp` in the SQL console recalls the oldest statement, not the newest". Step G18 (generated), quoting the spec: "Arrow keys walk back through the last fifty statements typed in this tab" (product/specs/sql-database.md). In a `sql shop` tab, type and send `UPDATE orders SET total = 21 WHERE id = 3`, then `... id = 4`, then `... id = 5`, each followed by Enter, then press `ArrowUp` three times in the console field, reading the field after each press. Expected: the first press recalls `... id = 5`, the second `... id = 4`, the third `... id = 3`. Observed, twice: the first press recalled `UPDATE orders SET total = total + 0 WHERE id = 2`, an earlier statement from before the three; the second recalled `... id = 3` and the third `... id = 4`, so the walk runs from the oldest entry forwards. `SqlConsole` in `web/src/plugins/sql/SqlConsole.tsx` keeps its own recall list newest-first (`setHistory((previous) => [text, ...previous.filter(...)])`) and hands it to `useCommandBarKeys`, whose `history` parameter is documented in `web/src/shared/command-bar/useCommandBarKeys.ts` as "Walked by ArrowUp/ArrowDown, oldest first" and is the order `ConversationComposer` in `web/src/plugins/conversations/ConversationComposer.tsx` passes too; `useCommandHistoryRecall` therefore starts its walk at `history[history.length - 1]`, which for this list is the oldest statement. The same list is also the ghost overlay's source, so the completion offered while typing is drawn from the wrong end of it. The fix is to reverse the list before passing it, or to store it oldest-first. A regression test should mount `SqlConsole`, send two statements, and assert that one `ArrowUp` yields the second.
-
 * Copy a whole run of cells rather than dropping the first value
 
 Existing Issue: Clicking one cell, shift-clicking another and pressing the platform copy key puts a tab-separated string on the clipboard whose first value is empty, so a pasted run silently loses its first cell. Severity: 6/10

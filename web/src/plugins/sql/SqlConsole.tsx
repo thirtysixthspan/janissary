@@ -45,8 +45,12 @@ export function SqlConsole({
   const [picked, setPicked] = useState(0);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Oldest first, which is the order the shared keymap's `history` is walked in: it steps back from
+  // the end of the list, so a list kept newest-first recalled the oldest statement first. Keeping the
+  // console's own state in the order its consumer documents costs nothing at the call site, where a
+  // reversal would have to be repeated on every render to read the same list.
   const send = (text: string) => {
-    setHistory((previous) => [text, ...previous.filter((entry) => entry !== text)].slice(0, HISTORY_LIMIT));
+    setHistory((previous) => [...previous.filter((entry) => entry !== text), text].slice(-HISTORY_LIMIT));
     onSend(text);
   };
 
