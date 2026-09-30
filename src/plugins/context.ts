@@ -14,6 +14,7 @@ import {
 import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
+import { readPluginSettings, savePluginSettings } from './settings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -27,6 +28,10 @@ export function isJsonCompatible(value: unknown, seen = new Set<object>()): bool
     : Object.values(value).every((item) => isJsonCompatible(item, seen));
   seen.delete(value);
   return valid;
+}
+
+function isSettingsObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && isJsonCompatible(value);
 }
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
@@ -172,6 +177,11 @@ export function createPluginContext(
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
+    readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},
+    saveSettings: (settings) => {
+      if (!isSettingsObject(settings)) throw new Error('saved settings that are not a JSON object');
+      return isEnabled() && savePluginSettings(declaration.id, settings);
+    },
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

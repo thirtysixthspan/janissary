@@ -21,6 +21,8 @@ export const searchManifest = {
     'updateTab',
     'projectFileList',
     'openInEditor',
+    'readSettings',
+    'saveSettings',
     'rejectRequest',
     'reportFailure',
   ],

@@ -2,5 +2,3 @@
 
 # pull-request
 
-* values for the search toggles, regex, case and full word, should be remembered in the .janissary/config.json settings.
-  

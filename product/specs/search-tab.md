@@ -59,6 +59,14 @@ changes how that query is interpreted:
 
 Changing a toggle reruns the current query at once, and so does editing either narrowing field.
 
+**The toggles are remembered across restarts.** They are saved to `.janissary/config.json`, under the
+search tab's own entry in `pluginSettings`, whenever a search runs with a different combination from
+the one last saved, and the tab opens with them the next time the application starts. A search that
+leaves them alone does not rewrite the file. A value missing from the file, or one that is not
+`true` or `false`, reads as off without affecting the other two. If the file cannot be written, the
+toggles keep working for the rest of the session and the next change tries the write again. Only the
+toggles are remembered: the query, the narrowing fields, and the term history are not.
+
 **The arrow keys walk the terms this tab has searched.** While the search term has focus, `↑` steps
 back from the most recent term and `↓` steps forward again, and stepping past the newest one brings
 back the term that was being typed. A term searched again becomes the most recent one rather than
@@ -133,5 +141,5 @@ again.
 ### Lifetime
 
 The search tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is
-not restored on `--relaunch`. Only one search runs at a time: starting a new one abandons the
+not restored on `--relaunch`; only its toggles outlive the application, in the config file. Only one search runs at a time: starting a new one abandons the
 previous, so results from a query the user has moved on from never arrive.

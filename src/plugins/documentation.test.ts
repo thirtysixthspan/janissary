@@ -14,7 +14,7 @@ const documentation = readFileSync(
 
 const COUNT_WORDS = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-  'twelve', 'thirteen', 'fourteen', 'fifteen',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
 ];
 
 describe('tab plugin developer documentation', () => {

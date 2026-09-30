@@ -122,6 +122,10 @@ A plugin may report one line of its own to the notifications feed, attributed to
 
 The line obeys every rule the feed already has, including opening the feed in the right sidebar when none is open — a plugin's note is a report to the user on the same terms as any other, and one about the view being watched is the case that matters most. It is never suppressed for being about the tab the user is looking at. Like every capability it is gated by the declaration: a plugin that did not ask for it and reports anyway is disabled. See [[notifications]].
 
+### Remembering its own settings
+
+A plugin may keep a small set of preferences across restarts, in its own entry of the `pluginSettings` map in `.janissary/config.json`, keyed by its id. It can read that entry, which answers an empty object when it has saved nothing, and replace it wholesale, which answers whether the write succeeded. It cannot see or change another plugin's entry or any other setting. The value must be a plain JSON object; anything else — an array, `null`, a number that JSON cannot carry — is the plugin's own mistake and disables it rather than being written. A write replaces the file atomically and preserves every other key in it. A revoked plugin reads an empty object and its writes do nothing. The search tab uses this to remember its toggles; see [[search-tab]] and [[application-config]].
+
 ### Contributing an action for a file navigator selection
 
 A declaration may contribute one entry for a **selection** of file navigator rows: a label to draw and an action name. It is the only route by which a plugin acts on more than one file at once, and the only navigator entry that acts on the selection rather than on the clicked row.

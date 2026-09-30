@@ -15,12 +15,16 @@ function makeCapabilities(overrides: Capability = {}) {
   const projectFileList = vi.fn(async () => ({ root: '/repo', paths: Object.keys(files) }));
   const openInEditor = vi.fn();
   const rejectRequest = vi.fn((reason: string) => { throw new Error(reason); });
+  const readSettings = vi.fn(() => ({}));
+  const saveSettings = vi.fn((_settings: Record<string, unknown>) => true);
   const capabilities = {
-    openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest,
+    openOrFocusTab, updateTab, projectFileList, openInEditor, rejectRequest, readSettings, saveSettings,
     reportFailure: vi.fn((reason: unknown) => { throw new Error(String(reason)); }),
     ...overrides,
   };
-  return { capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor };
+  return {
+    capabilities: capabilities as never, openOrFocusTab, updateTab, projectFileList, openInEditor, saveSettings,
+  };
 }
 
 // A tab payload to hand a handler that only needs a valid one — an intent reads the authoritative
@@ -294,5 +298,53 @@ describe('search plugin activation', () => {
     // Nothing further was published after disposal, so a scan still running cannot repaint a tab
     // this plugin no longer owns.
     expect(updateTab.mock.calls.length).toBe(before);
+  });
+});
+
+describe('search plugin remembered modes', () => {
+  it('opens the tab with the modes saved in the config', () => {
+    const { capabilities, openOrFocusTab } = makeCapabilities({
+      readSettings: vi.fn(() => ({ regex: true, matchCase: false, wholeWord: true })),
+    });
+    const activation = searchActivation();
+    activation.command?.('', capabilities);
+    const factory = openOrFocusTab.mock.calls[0]?.[1] as () => { payload: SearchPayload };
+    const { regex, matchCase, wholeWord } = factory().payload;
+    expect({ regex, matchCase, wholeWord }).toEqual({ regex: true, matchCase: false, wholeWord: true });
+  });
+
+  it('searches with the saved modes when a search command seeds the query', () => {
+    const { capabilities, updateTab, saveSettings } = makeCapabilities({
+      readSettings: vi.fn(() => ({ matchCase: true })),
+    });
+    const activation = searchActivation();
+    activation.command?.('todo', capabilities);
+    expect(lastPayload(updateTab).matchCase).toBe(true);
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('saves the modes once when a search changes them', () => {
+    const { capabilities, saveSettings } = makeCapabilities();
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, regex: true }), capabilities);
+    activation.intent(intent(settledTab, 'search', { ...query, query: 'two', regex: true }), capabilities);
+    expect(saveSettings).toHaveBeenCalledTimes(1);
+    expect(saveSettings).toHaveBeenCalledWith({ regex: true, matchCase: false, wholeWord: false });
+  });
+
+  it('does not rewrite the config for a search that leaves the modes alone', () => {
+    const { capabilities, saveSettings } = makeCapabilities();
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', query), capabilities);
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('tries again on the next search when a save fails', () => {
+    const failingSave = vi.fn(() => false);
+    const { capabilities } = makeCapabilities({ saveSettings: failingSave });
+    const activation = searchActivation();
+    activation.intent(intent(settledTab, 'search', { ...query, wholeWord: true }), capabilities);
+    activation.intent(intent(settledTab, 'search', { ...query, wholeWord: true }), capabilities);
+    expect(failingSave).toHaveBeenCalledTimes(2);
   });
 });

@@ -91,7 +91,7 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies fifteen capabilities:
+The host supplies seventeen capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
@@ -106,6 +106,8 @@ The host supplies fifteen capabilities:
 - `topicAction(action)` asks the host to perform one of the actions that topic defines.
 - `configuredViewer()` reads the viewer configured for this plugin id.
 - `openExternally(path, application?)` asks the OS to open a file.
+- `readSettings()` reads your plugin's own remembered settings from the `pluginSettings` map in `.janissary/config.json`, keyed by your plugin id, or `{}` when you have saved none. Treat every field as untrusted: the user can edit the file by hand, so check each value's type and fall back to a default rather than assuming the shape you last wrote.
+- `saveSettings(settings)` replaces your plugin's own entry in that map and answers whether the write succeeded. The file is replaced atomically and every other plugin's entry is left alone. A value that is not a plain JSON object is a bug in your plugin and disables it. The search tab uses the pair to remember its three toggles across restarts.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
 
@@ -272,7 +274,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Fifteen server and seven client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. Both are additive optional capabilities, so the API integer is unchanged.
+- Seventeen server and seven client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. All four are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

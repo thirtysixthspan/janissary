@@ -21,6 +21,8 @@ export type TabPluginCapabilityName =
   | 'topicAction'
   | 'configuredViewer'
   | 'openExternally'
+  | 'readSettings'
+  | 'saveSettings'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -42,6 +44,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   topicAction: true,
   configuredViewer: true,
   openExternally: true,
+  readSettings: true,
+  saveSettings: true,
   rejectRequest: true,
   reportFailure: true,
 };

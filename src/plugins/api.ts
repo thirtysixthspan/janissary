@@ -127,6 +127,12 @@ export type TabPluginServerCapabilities = {
   openInEditor(absPath: string, line: number): void;
   configuredViewer(): string;
   openExternally(absPath: string, application?: string): boolean;
+  // This plugin's own remembered settings from `.janissary/config.json`, or `{}` when it has saved
+  // none. Keyed by the plugin's id, so a plugin can read no other plugin's settings.
+  readSettings(): Record<string, unknown>;
+  // Replace this plugin's own remembered settings, answering whether the write succeeded. A value
+  // that is not a plain JSON object is a plugin bug and disables the plugin rather than being saved.
+  saveSettings(settings: Record<string, unknown>): boolean;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

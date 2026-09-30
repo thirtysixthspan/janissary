@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import { startScan, type ScanHandle, type ScanRead } from './scan.js';
+import { modesFrom, sameModes, type SearchModes } from './saved-modes.js';
 import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
 
 const INSTANCE_KEY = 'search';
@@ -29,9 +30,12 @@ function payloadOf(
 // what the tab already shows instead of replacing it. One scan is in flight at a time: a new query
 // cancels the previous one, which is what keeps a superseded scan's rows off the screen.
 export class SearchSession {
-  private payload: SearchPayload = emptyPayload();
+  private payload: SearchPayload;
   private scan: ScanHandle | null = null;
   private root = '';
+  // The modes as last read from or written to the config, so a search that changes none of them
+  // does not rewrite the file on every keystroke.
+  private saved: SearchModes;
 
   constructor(
     private capabilities: TabPluginServerCapabilities,
@@ -39,7 +43,10 @@ export class SearchSession {
     // the real file, which is the only route a result's text can come from — and because the
     // contents are already in hand when one is supplied, its size is the contents' own length.
     private contents?: ScanRead,
-  ) {}
+  ) {
+    this.saved = modesFrom(capabilities.readSettings());
+    this.payload = payloadOf(emptyPayload(), this.saved);
+  }
 
   // Open the tab if it is not already open, or focus the one that is. A `search` command with an
   // argument seeds the query and starts a scan; a bare `search` just reveals the tab, so the chord
@@ -58,6 +65,7 @@ export class SearchSession {
   // row lands, and rows append as batches arrive. Only the query half of the payload is taken; the
   // rest is what this method produces.
   run(request: SearchIntent): void {
+    this.remember(request);
     this.cancel();
     this.payload = payloadOf(this.payload, { ...request, state: 'searching', message: '', rows: [] });
     this.publish();
@@ -112,6 +120,15 @@ export class SearchSession {
       state: done ? 'done' : this.payload.state,
     });
     this.publish();
+  }
+
+  // Every search carries all three modes, so this is where a toggle reaches the config. A failed
+  // write is not reported: the toggles still work for this session, and nothing in the tab could fix
+  // the file. It is retried by the next search that differs from what was last saved.
+  private remember(request: SearchIntent): void {
+    const modes = modesFrom(request);
+    if (sameModes(modes, this.saved)) return;
+    if (this.capabilities.saveSettings({ ...modes })) this.saved = modes;
   }
 
   private publish(): void {

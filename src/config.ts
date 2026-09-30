@@ -47,6 +47,10 @@ export type Config = {
   // entry means "use the OS default handler". Only the `video` entry is read today. Hand-edited
   // in `.janissary/config.json`, like `syncPaths` and `notifications`.
   externalViewers: Record<string, string>;
+  // Each tab plugin's own remembered preferences, keyed by plugin id — the search tab's toggles, for
+  // one. A plugin reaches only its own entry, through the `readSettings`/`saveSettings` capabilities
+  // (see `plugins/settings.ts`), and the value is whatever JSON object that plugin chose to save.
+  pluginSettings: Record<string, Record<string, unknown>>;
 };
 
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
@@ -78,6 +82,7 @@ const DEFAULT_CONFIG: Config = {
   },
   syncPaths: DEFAULT_SYNC_PATHS,
   externalViewers: DEFAULT_EXTERNAL_VIEWERS,
+  pluginSettings: {},
 };
 
 let config: Config = { ...DEFAULT_CONFIG };

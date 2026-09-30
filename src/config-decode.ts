@@ -29,6 +29,15 @@ function stringMap(value: unknown, fallback: Readonly<Record<string, string>>): 
   return value as Record<string, string>;
 }
 
+// Keeps every entry whose value is an object and drops the rest, so one malformed plugin entry costs
+// that plugin its remembered settings without discarding anyone else's.
+function settingsMap(value: unknown): Record<string, Record<string, unknown>> {
+  if (!isRecord(value)) return {};
+  const entries = Object.entries(value)
+    .filter((entry): entry is [string, Record<string, unknown>] => isRecord(entry[1]));
+  return Object.fromEntries(entries);
+}
+
 function notifications(value: unknown, fallback: NotificationConfig): NotificationConfig {
   const record = isRecord(value) ? value : {};
   const events = isRecord(record.events) ? record.events : {};
@@ -57,6 +66,7 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     notifications: defaultNotifications && notifications(record.notifications, defaultNotifications),
     syncPaths: strings(record.syncPaths, defaults.syncPaths),
     externalViewers: stringMap(record.externalViewers, defaults.externalViewers),
+    pluginSettings: settingsMap(record.pluginSettings),
   };
 }
 

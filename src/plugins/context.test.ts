@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { getConfig, loadConfig } from '../config.js';
 import type { Managers } from '../managers.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../notifications/queue.js';
@@ -323,6 +327,46 @@ describe('capability revocation', () => {
     );
 
     expect(await capabilities.projectFileList()).toEqual({ root: '', paths: [] });
+  });
+
+  it('reads and saves settings under the declaring plugin\'s own id', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'context-settings-test-'));
+    try {
+      loadConfig(directory);
+      const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES);
+
+      expect(capabilities.readSettings()).toEqual({});
+      expect(capabilities.saveSettings({ regex: true })).toBe(true);
+
+      expect(capabilities.readSettings()).toEqual({ regex: true });
+      expect(getConfig().pluginSettings).toEqual({ fixture: { regex: true } });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('reads nothing and saves nothing for a revoked plugin', () => {
+    const directory = mkdtempSync(path.join(tmpdir(), 'context-settings-test-'));
+    try {
+      loadConfig(directory);
+      contextFor(TAB_PLUGIN_CAPABILITY_NAMES).saveSettings({ regex: true });
+      const revoked = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => false);
+
+      expect(revoked.readSettings()).toEqual({});
+      expect(revoked.saveSettings({ regex: false })).toBe(false);
+      expect(getConfig().pluginSettings).toEqual({ fixture: { regex: true } });
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('treats settings that are not a plain JSON object as a plugin bug', () => {
+    const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES);
+
+    for (const value of [null, ['regex'], 'regex', { size: NaN }]) {
+      expect(() => capabilities.saveSettings(value as never))
+        .toThrow('saved settings that are not a JSON object');
+    }
   });
 
   it('reports a thrown non-Error as a failure without losing what it said', () => {
