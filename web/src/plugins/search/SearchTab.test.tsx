@@ -8,7 +8,7 @@ import { SearchTab } from './SearchTab';
 function match(overrides: Partial<SearchMatch> = {}): SearchMatch {
   return {
     path: 'src/a.ts', line: 12, above: ['one', 'two'],
-    match: '  // todo: fix', below: ['three', 'four'],
+    match: '  // todo: fix', start: 5, end: 9, below: ['three', 'four'],
     ...overrides,
   };
 }

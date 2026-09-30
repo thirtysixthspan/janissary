@@ -2,7 +2,5 @@
 
 # pull-request
 
-* the search content should only show two display lines not buffer lines which means that a search returning a value from a really long line will only show two display lines before and after that are drawn from the same buffer line as the match. 
-
 * values for the search toggles, regex, case and full word, should be remembered in the .janissary/config.json settings.
   

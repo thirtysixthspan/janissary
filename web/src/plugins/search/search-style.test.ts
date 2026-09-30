@@ -56,14 +56,22 @@ describe('search stylesheet', () => {
     expect(row).not.toContain('border-top');
   });
 
-  it('leaves the match line itself uncapped however long it wraps', () => {
-    // A wrapped match is the code the user opened the row to read, so the two-display-line cap
-    // applies to the context and to nothing else.
+  it('leaves the match line’s height to the window the row measures', () => {
+    // A fixed stylesheet height would cut a long match line at its start, wherever the match sat in
+    // it. The row caps it inline at the display lines around the match instead, so the stylesheet
+    // sets no height on the line at all.
     const hit = rule('.search-hit');
 
     expect(hit).toContain('color: var(--fg)');
     expect(hit).not.toContain('max-height');
-    expect(hit).not.toContain('overflow');
+    expect(rule('.search-hit-text')).not.toContain('max-height');
+  });
+
+  it('clips the match line to its inline cap and lets its text shift to the match', () => {
+    // The cap is inline, so the rule only has to clip whatever overflows it; the text inside is a
+    // block so the row can move it up to the first display line it shows.
+    expect(rule('.search-hit-text')).toContain('overflow: hidden');
+    expect(rule('.search-hit-block')).toContain('display: block');
   });
 });
 

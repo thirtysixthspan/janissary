@@ -9,6 +9,10 @@ export type SearchMatch = {
   line: number;
   above: string[];
   match: string;
+  // Where the line's first match sits in `match`, as UTF-16 offsets, `end` exclusive. The client
+  // needs it to find which wrapped display line holds the match, which only the browser can measure.
+  start: number;
+  end: number;
   below: string[];
 };
 
@@ -46,6 +50,8 @@ function isMatch(value: unknown): value is SearchMatch {
     && typeof value.line === 'number'
     && isStringArray(value.above)
     && typeof value.match === 'string'
+    && typeof value.start === 'number'
+    && typeof value.end === 'number'
     && isStringArray(value.below);
 }
 

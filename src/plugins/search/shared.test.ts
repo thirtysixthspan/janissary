@@ -9,7 +9,10 @@ import {
 const payload: SearchPayload = {
   query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,
   state: 'done', message: '', rows: [
-    { path: 'src/a.ts', line: 12, above: ['one', 'two'], match: '  // todo: fix', below: ['three'] },
+    {
+      path: 'src/a.ts', line: 12, above: ['one', 'two'], match: '  // todo: fix', start: 5, end: 9,
+      below: ['three'],
+    },
   ],
 };
 
@@ -32,7 +35,9 @@ describe('isSearchPayload', () => {
   });
 
   it('accepts a row whose context is clipped to nothing on both sides', () => {
-    expect(isSearchPayload({ ...payload, rows: [{ path: 'a', line: 1, above: [], match: 'x', below: [] }] })).toBe(true);
+    expect(isSearchPayload({
+      ...payload, rows: [{ path: 'a', line: 1, above: [], match: 'x', start: 0, end: 1, below: [] }],
+    })).toBe(true);
   });
 
   it('accepts every state', () => {
@@ -58,6 +63,14 @@ describe('isSearchPayload', () => {
     expect(isSearchPayload({ ...payload, rows: [{ ...payload.rows[0], line: '12' }] })).toBe(false);
     expect(isSearchPayload({ ...payload, rows: [{ ...payload.rows[0], above: [1] }] })).toBe(false);
     expect(isSearchPayload({ ...payload, rows: [{ ...payload.rows[0], match: 3 }] })).toBe(false);
+  });
+
+  it('rejects a row missing or mistyping where its match sits', () => {
+    const row = payload.rows[0]!;
+    expect(isSearchPayload({ ...payload, rows: [without(row, 'start')] })).toBe(false);
+    expect(isSearchPayload({ ...payload, rows: [without(row, 'end')] })).toBe(false);
+    expect(isSearchPayload({ ...payload, rows: [{ ...row, start: '5' }] })).toBe(false);
+    expect(isSearchPayload({ ...payload, rows: [{ ...row, end: null }] })).toBe(false);
   });
 
   it('rejects a row that is not an object', () => {

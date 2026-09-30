@@ -22,17 +22,20 @@ export function fileMatches(lines: readonly string[], matcher: Matcher): boolean
 }
 
 // Every match in one file, as self-describing rows: the path, the 1-based line number, the match
-// line itself, and up to two lines of context either side.
+// line itself with where its first match sits, and up to two lines of context either side.
 export function matchFile(relPath: string, text: string, matcher: Matcher): SearchMatch[] {
   const lines = splitLines(text);
   const rows: SearchMatch[] = [];
   for (const [index, line] of lines.entries()) {
-    if (!matcher.test(line)) continue;
+    const span = matcher.locate(line);
+    if (!span) continue;
     rows.push({
       path: relPath,
       line: index + 1,
       above: lines.slice(Math.max(0, index - CONTEXT), index),
       match: line,
+      start: span.start,
+      end: span.end,
       below: lines.slice(index + 1, Math.min(lines.length, index + 1 + CONTEXT)),
     });
   }

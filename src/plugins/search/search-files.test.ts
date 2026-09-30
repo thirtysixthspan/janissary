@@ -75,6 +75,11 @@ describe('matchFile', () => {
   it('counts every occurrence on one line as a single row', () => {
     expect(matchFile('a.ts', 'todo and todo', todo)).toHaveLength(1);
   });
+
+  it('records where the first occurrence on the line sits', () => {
+    const [row] = matchFile('a.ts', 'one\n  // TODO and todo\nthree', todo);
+    expect(row).toMatchObject({ line: 2, start: 5, end: 9 });
+  });
 });
 
 describe('fileMatches', () => {

@@ -85,3 +85,31 @@ describe('compileMatcher', () => {
     expect(compileMatcher('[unclosed', { ...off, regex: true, wholeWord: true })).toBeNull();
   });
 });
+
+describe('Matcher.locate', () => {
+  const locate = (query: string, line: string, modes = off) => compileMatcher(query, modes)?.locate(line);
+
+  it('locates the first occurrence of a plain-text query', () => {
+    expect(locate('todo', '  // todo: todo')).toEqual({ start: 5, end: 9 });
+  });
+
+  it('locates a case-insensitive match in the case the line has', () => {
+    expect(locate('todo', 'x TODO')).toEqual({ start: 2, end: 6 });
+  });
+
+  it('spans the text a regex actually matched', () => {
+    expect(locate('to+do', 'a toooodo b', { ...off, regex: true })).toEqual({ start: 2, end: 9 });
+  });
+
+  it('spans the word itself under whole word, not the boundary around it', () => {
+    expect(locate('cat', 'concatenate, the cat', { ...off, wholeWord: true })).toEqual({ start: 17, end: 20 });
+  });
+
+  it('finds nothing on a line the matcher does not accept', () => {
+    const matcher = compileMatcher('cat', { ...off, wholeWord: true })!;
+    for (const line of ['concatenate', 'cats', 'dog', '']) {
+      expect(matcher.test(line)).toBe(false);
+      expect(matcher.locate(line)).toBeNull();
+    }
+  });
+});

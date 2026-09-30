@@ -79,10 +79,13 @@ rather than padded, and a run of matches in one file repeats the path on every e
 readable on its own. A thin horizontal rule separates each entry from the next, so where one match
 ends and the next begins is plain at a glance.
 
-**The context is two lines on screen, not two lines of the file.** A line long enough to wrap takes
-as much room as it needs, so the context is bounded at two displayed lines either side of the match
-and cut off at the far end — the lines nearest the match are always the ones that show. A match line
-that wraps is never cut: it is what the entry was opened for.
+**The context is two lines on screen, not two lines of the file.** An entry shows the displayed line
+the match sits on and two displayed lines either side of it. When the matching line is long enough
+to wrap, it supplies as many of those lines as it can itself: a match deep inside a very long line
+shows only the stretch of that line around the match, two displayed lines before it and two after,
+and none of the neighbouring lines. Where the matching line runs out first, the neighbouring lines
+make up the rest, cut off at the far end, so the lines nearest the match are always the ones that
+show.
 
 **The results stack upward, with the first match at the bottom of the window.** A search finds its
 first match first, so the first entry is the one at the bottom edge and each later one is above it,

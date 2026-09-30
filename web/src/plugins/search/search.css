@@ -61,8 +61,18 @@
    match it is there to frame. The cap is the browser's own wrapped height, so it is exact at any
    pane width and font size, and `3em` against the row's own 12px/1.5 is exactly two line boxes.
 
+   `3em` is the default, for a match line that fits on one display line. A match line that wraps
+   supplies some of those two lines itself, and the row narrows each block's cap inline to what is
+   left once it has measured where the match wrapped to.
+
    Each side is clipped at the end furthest from the match, so the lines that survive are the ones
    adjacent to it. The block above the match is packed to the end — that is, it overflows off the
    top — and the block below it to the start, the default, overflowing off the bottom. */
 .search-context-block { display: flex; flex-direction: column; max-height: 3em; overflow: hidden; }
 .search-context-above { justify-content: flex-end; }
+
+/* The match line's own window. The row caps the text's height inline at the display lines it shows
+   and shifts the block inside it up to the first of them, so a match deep inside a long line is what
+   the window lands on. With no measurement yet there is no cap and the whole line shows. */
+.search-hit-text { overflow: hidden; }
+.search-hit-block { display: block; }

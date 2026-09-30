@@ -1,6 +1,11 @@
 export type MatcherModes = { regex: boolean; matchCase: boolean; wholeWord: boolean };
 
-export type Matcher = { test(line: string): boolean };
+// Where the first match on a line sits, as UTF-16 offsets into it: `start` inclusive, `end` exclusive.
+export type MatchSpan = { start: number; end: number };
+
+// `test` answers whether a line matches and `locate` where. Both run the same compiled pattern, so a
+// line `test` accepts is always one `locate` finds.
+export type Matcher = { test(line: string): boolean; locate(line: string): MatchSpan | null };
 
 // A match must sit on a word boundary: not preceded and not followed by a word character, where a
 // word character is a letter, a digit, or an underscore. Applied as a lookaround around the pattern
@@ -27,7 +32,13 @@ export function compileMatcher(query: string, modes: MatcherModes): Matcher | nu
   const pattern = modes.wholeWord ? bounded(source, flags) : safe(source, flags);
   if (!pattern) return null;
   if (pattern.test('')) return null;
-  return { test: (line) => pattern.test(line) };
+  return {
+    test: (line) => pattern.test(line),
+    locate: (line) => {
+      const found = pattern.exec(line);
+      return found ? { start: found.index, end: found.index + found[0].length } : null;
+    },
+  };
 }
 
 function safe(source: string, flags: string): RegExp | null {
