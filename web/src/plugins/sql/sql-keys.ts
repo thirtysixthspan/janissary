@@ -99,10 +99,14 @@ export function useGridKeys({ active, rows, columns, onEdit, onSelectRow, edgeRo
     if (!active) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        if (!cursor) return;
+        // A run the mouse started has marked cells without a cursor, so asking whether there is a
+        // cursor is asking the wrong question: the spec says Escape leaves nothing marked at all,
+        // whichever way it was marked. `edgeRow` is the run the selection holds, so the two are
+        // told apart with what the hook is already given.
+        const marked = cursor !== null || edgeRow !== null;
+        if (marked) event.preventDefault();
         setCursor(null);
         onClear();
-        event.preventDefault();
         return;
       }
       if (event.key === 'Enter') {

@@ -190,6 +190,26 @@ describe('a whole row', () => {
     expect(selectedCells()).toHaveLength(0);
   });
 
+  it('is left by Escape when a click started the run, with no cell cursor behind it', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(dataCells()[0] as HTMLElement);
+    expect(selectedCells()).toHaveLength(1);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(selectedCells()).toHaveLength(0);
+  });
+
+  it('is left by Escape from a row run started with shift, with no cell cursor behind it', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    // Nothing marked, and no cell cursor either: the first shift-arrow starts the run on row one.
+    press('ArrowDown');
+    press('ArrowDown');
+    expect(selectedCells().length).toBeGreaterThan(1);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(selectedCells()).toHaveLength(0);
+  });
+
   it('copies as one tab-separated line, which is what a row pastes as', async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboardThat(write);

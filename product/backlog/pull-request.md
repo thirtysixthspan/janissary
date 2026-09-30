@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Let Escape clear a selection that was started with the mouse, not only one made with the arrow keys.
-
-Existing Issue: Escape leaves the grid's selection alone whenever no cell cursor is set, so a cell chosen by a click stays marked and a whole-row run built with `Shift`+arrow stays marked, while the same run clears once an arrow key has been pressed first. Severity: 5/10
-
-Existing Risk: 4/10 - Escape reads as "clear what I marked" and silently does nothing for the ordinary way a selection is started, so a user pressing it to start again keeps editing the cell they thought they had deselected, and a row run they thought they had dropped still copies to the clipboard.
-
-Proposal Risk: 1/10 - Escape would also stop clearing a cell cursor in the state it already handles, so nothing that works today changes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: let Escape clear a selection started with the mouse". Reproduce on a three-row table: click any cell and press **Escape** — the cell stays marked; press `Shift`+`ArrowDown` twice and press **Escape** — all nine cells of the first two rows stay marked; press `ArrowDown`, then `Shift`+`ArrowDown`, then **Escape** — everything clears. Observed counts were 1 and 9 surviving against 0 in the third case. `product/specs/sql-database.md` says "`Escape` leaves the grid with nothing marked at all, whichever way it was marked", so the spec and the code disagree. `useGridKeys` in `web/src/plugins/sql/sql-keys.ts` handles Escape by returning early when `cursor` is null, so it never calls `onClear`, and `useGridSelection` in `web/src/plugins/sql/selection.tsx` holds the range a mouse run sets. Make Escape call `onClear` and reset the cursor whether or not a cursor exists, and only `preventDefault` when something was actually marked. Add cases to `web/src/plugins/sql/SqlTab.test.tsx` or a new `web/src/plugins/sql/sql-keys.test.tsx`: Escape with a click selection and no cursor clears it, Escape with a row run and no cursor clears it, and Escape with nothing marked still does nothing.
-
-
 * Correct the spec's claim that the tab does not follow a foreign key, which the same spec describes in detail two sections earlier.
 
 Existing Issue: `product/specs/sql-database.md` describes the foreign-key control in its filtering section — "Activating it selects that table filtered to the value" — and then lists "It does not join tables, follow a foreign key, or build a query." under "What it does not do", and `product/specs/database.md` still advertises the browsing surface as offering "per-column statistics, the SQL behind the current view", neither of which this branch builds. Severity: 4/10
