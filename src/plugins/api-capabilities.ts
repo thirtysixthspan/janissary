@@ -15,6 +15,8 @@ export type TabPluginCapabilityName =
   | 'dockTab'
   | 'snapshotTab'
   | 'openClaimedFiles'
+  | 'projectFileList'
+  | 'openInEditor'
   | 'topicData'
   | 'topicAction'
   | 'configuredViewer'
@@ -34,6 +36,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   dockTab: true,
   snapshotTab: true,
   openClaimedFiles: true,
+  projectFileList: true,
+  openInEditor: true,
   topicData: true,
   topicAction: true,
   configuredViewer: true,

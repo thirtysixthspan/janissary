@@ -114,6 +114,17 @@ export type TabPluginServerCapabilities = {
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.
   openClaimedFiles(target: string): void;
+  // The project's gitignore-aware file list as project-relative forward-slash paths, and the
+  // directory they are relative to. The same list the `projectFiles` RPC serves to Quick Open, so a
+  // plugin scanning the repository and a user picking a file see the same set. The root is returned
+  // because a relative path cannot be opened without it.
+  projectFileList(): Promise<{ root: string; paths: string[] }>;
+  // Open a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline: an
+  // already-open file is focused rather than duplicated, the line is centered, and the file is
+  // served by the authenticated `/open/<id>` allow-list like any other editor open. This is the
+  // route for a plugin that must put a user on a specific line, which `openClaimedFiles` cannot
+  // express — it is pinned to the plugin's own claimed extensions and takes no line.
+  openInEditor(absPath: string, line: number): void;
   configuredViewer(): string;
   openExternally(absPath: string, application?: string): boolean;
   rejectRequest(reason: string): never;

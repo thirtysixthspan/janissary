@@ -104,6 +104,8 @@ A plugin may dock one of its own tabs into either sidebar, or move it back to th
 
 The bundled list plugins — schedules, sessions, and conversations — read their command's dock argument with one shared grammar (`parseDockArgument`, published through the plugin API): `left` or `right` in any case, with surrounding whitespace ignored, docks into that sidebar; an empty argument means the centre; anything else is not a side. Schedules and sessions refuse that with `Usage: <command> [left|right]`, while conversations treats it as a conversation title. Because the grammar has one owner, the three commands cannot drift apart.
 
+A bundled plugin tab may also be reachable from a global keyboard chord, when its command opens a singleton tab — the search tab answers Cmd+Shift+F by issuing the same `search` command a user would type, so there is one route into the plugin rather than two. A chord belonging to one plugin must not shadow another's: the search tab's Cmd+Shift+F is matched before the transcript search's Cmd+F precisely because the latter matches the key without testing `shift` (see [[keyboard-navigation]]).
+
 A plugin reached only through its own command claims no files, yet the contract still requires it to supply an opener. Those plugins share one (`noFileOpener`), which refuses both the inline and the external presentation with `<id> opens no files` rather than pretending to have opened something.
 
 ### Intents and resources

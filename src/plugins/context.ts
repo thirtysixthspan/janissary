@@ -12,6 +12,7 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import { projectFilesFor } from '../project/files.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -139,6 +140,21 @@ export function createPluginContext(
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;
       openRequests.push(target);
+    },
+    // The same gitignore-aware file list the `projectFiles` RPC already serves to Quick Open, so a
+    // plugin that scans the repository cannot drift from the set Quick Open searches. The root comes
+    // back alongside the paths because a relative path is not a path a plugin can open without it.
+    projectFileList: () => {
+      if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
+      return projectFilesFor(managers);
+    },
+    // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
+    // so the tab is de-duplicated, the line is centered, and the file is served by the same
+    // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
+    // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
+    openInEditor: (absPath, line) => {
+      if (!isEnabled()) return;
+      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
     },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);

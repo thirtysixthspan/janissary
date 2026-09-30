@@ -1,0 +1,38 @@
+/* Search tab: the mode toggles, the include and exclude fields, and a scrollable column of match
+   rows. Each row is a dimmed path-and-line header above its context block, in the monospace the
+   editor uses, so a match reads as a piece of code rather than as prose. */
+.search-tab { gap: 6px; }
+.search-toggles { display: flex; align-items: center; gap: 2px; }
+.search-toggles button {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font-family: var(--mono, monospace); font-size: 12px; line-height: 1;
+  padding: 2px 6px;
+}
+.search-toggles button:hover { color: var(--fg); }
+.search-toggles button.on { border-color: var(--border); color: var(--accent); }
+.search-filters { display: flex; gap: 8px; }
+.search-filters input {
+  flex: 1; min-width: 0; background: transparent; border: 1px solid var(--border); border-radius: 3px;
+  color: var(--fg); font: inherit; font-size: 12px; padding: 3px 6px;
+}
+.search-filters input::placeholder { color: var(--faint); }
+.search-filters input:focus { outline: none; border-color: var(--accent); }
+.search-results { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
+.search-empty { padding: 8px 12px; color: var(--muted); }
+.search-row {
+  border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;
+  font-family: var(--mono, monospace); font-size: 12px; line-height: 1.5;
+}
+.search-row:hover { background: var(--border); }
+.search-row.selected { background: var(--border); border-left-color: var(--accent); }
+.search-row-header {
+  display: flex; align-items: baseline; gap: 12px; color: var(--muted); font-size: 11px;
+  margin-bottom: 2px; user-select: text;
+}
+.search-row-path { word-break: break-all; }
+.search-row-line { flex-shrink: 0; }
+.search-line { display: flex; gap: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.search-lineno { flex: 0 0 4em; text-align: right; color: var(--faint); user-select: none; }
+.search-text { flex: 1; }
+.search-context { color: var(--muted); }
+.search-hit { color: var(--fg); background: var(--border); }

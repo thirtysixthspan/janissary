@@ -1,0 +1,126 @@
+import path from 'node:path';
+import type { TabPluginServerCapabilities } from '../api.js';
+import { startScan, type ScanHandle, type ScanRead } from './scan.js';
+import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
+
+const INSTANCE_KEY = 'search';
+const TAB_TITLE = 'search';
+
+export function emptyPayload(): SearchPayload {
+  return {
+    query: '', include: '', exclude: '',
+    regex: false, matchCase: false, wholeWord: false,
+    state: 'done', message: '', rows: [],
+  };
+}
+
+function payloadOf(
+  base: SearchPayload, changes: Partial<SearchPayload>,
+): SearchPayload {
+  return { ...base, ...changes };
+}
+
+// The state one search tab holds between calls: what it currently shows, and the scan still feeding
+// it. Kept beside `activate.ts` rather than inside it because it is the plugin's whole lifetime —
+// `dispose` has to reach the scan through it — and `activate.ts` is about wiring handlers.
+//
+// The rows accumulate here rather than being sent whole each time, so a batch arriving appends to
+// what the tab already shows instead of replacing it. One scan is in flight at a time: a new query
+// cancels the previous one, which is what keeps a superseded scan's rows off the screen.
+export class SearchSession {
+  private payload: SearchPayload = emptyPayload();
+  private scan: ScanHandle | null = null;
+  private root = '';
+
+  constructor(
+    private capabilities: TabPluginServerCapabilities,
+    // Overridable so a test can supply file contents without a filesystem. Production always reads
+    // the real file, which is the only route a result's text can come from — and because the
+    // contents are already in hand when one is supplied, its size is the contents' own length.
+    private contents?: ScanRead,
+  ) {}
+
+  // What the tab shows now, for a handler that needs to read it back.
+  get current(): SearchPayload {
+    return this.payload;
+  }
+
+  // Open the tab if it is not already open, or focus the one that is. A `search` command with an
+  // argument seeds the query and starts a scan; a bare `search` just reveals the tab, so the chord
+  // and the command both land the user in the same place with whatever they last searched for.
+  open(argument: string): void {
+    const query = argument.trim();
+    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => ({
+      title: TAB_TITLE,
+      payload: query === '' ? this.payload : { ...this.payload, query },
+    }));
+    if (query !== '') this.run({ ...this.payload, query });
+  }
+
+  // Start a scan for a query and its filters, replacing whatever the tab was showing. The tab is
+  // repainted into the searching state immediately so the body reads `Searching…` before the first
+  // row lands, and rows append as batches arrive. Only the query half of the payload is taken; the
+  // rest is what this method produces.
+  run(request: SearchIntent): void {
+    this.cancel();
+    this.payload = payloadOf(this.payload, { ...request, state: 'searching', message: '', rows: [] });
+    this.publish();
+    const contents = this.contents;
+    this.scan = startScan({
+      listFiles: async () => {
+        const listed = await this.capabilities.projectFileList();
+        this.root = listed.root;
+        return listed;
+      },
+      readFile: contents,
+      fileSize: contents === undefined ? undefined : async (absPath) => {
+        try {
+          const text = await contents(absPath);
+          return text.length;
+        } catch {
+          return null;
+        }
+      },
+      onBatch: (batch) => this.receive(batch.rows, batch.done),
+    }, request);
+  }
+
+  // Drop the query and the results, leaving the tab open and empty.
+  clear(): void {
+    this.cancel();
+    this.payload = emptyPayload();
+    this.publish();
+  }
+
+  // Put the file a result names on the line that result names, in an editor tab.
+  openMatch(relPath: string, line: number): void {
+    if (this.root === '') return;
+    this.capabilities.openInEditor(path.join(this.root, relPath), line);
+  }
+
+  dispose(): void {
+    this.cancel();
+  }
+
+  // One batch of rows. The tab is republished on every batch, which is what makes the table fill
+  // while a scan is still running rather than only at the end.
+  private receive(rows: SearchMatch[], done: boolean): void {
+    if (rows.length === 0 && !done) return;
+    this.payload = payloadOf(this.payload, {
+      rows: rows.length === 0 ? this.payload.rows : [...this.payload.rows, ...rows],
+      state: done ? 'done' : this.payload.state,
+    });
+    this.publish();
+  }
+
+  private publish(): void {
+    this.capabilities.updateTab(INSTANCE_KEY, () => ({ payload: this.payload }));
+  }
+
+  private cancel(): void {
+    this.scan?.cancel();
+    this.scan = null;
+  }
+}
+
+export { INSTANCE_KEY as SEARCH_INSTANCE_KEY };

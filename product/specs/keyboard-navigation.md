@@ -22,6 +22,7 @@
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
+| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches the current tab's transcript |
 | Cmd+T | Open a new workspaced agent tab (same as typing `agent`) |
 | Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
 | Ctrl+O | Move the running shell command into a full-tab terminal (no-op when nothing is running) |

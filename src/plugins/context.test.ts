@@ -40,16 +40,19 @@ function makeManagers() {
   return { append, managers };
 }
 
+function activationFor(): TabPluginActivation {
+  return {
+    isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
+  };
+}
+
 function contextFor(
   capabilities: readonly TabPluginCapabilityName[],
   isEnabled: () => boolean = () => true,
   openRequests: string[] = [],
 ): TabPluginServerCapabilities {
-  const activation: TabPluginActivation = {
-    isPayload: () => true, intent: () => null, opener: { inline: () => {}, external: () => {} },
-  };
   return createPluginContext(
-    makeManagers().managers, declaration(capabilities), activation, origin, isEnabled, openRequests,
+    makeManagers().managers, declaration(capabilities), activationFor(), origin, isEnabled, openRequests,
   );
 }
 
@@ -251,6 +254,56 @@ describe('capability revocation', () => {
     const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => true, openRequests);
     capabilities.openClaimedFiles('~/clips/*.fixture');
     expect(openRequests).toEqual(['~/clips/*.fixture']);
+  });
+
+  it('opens a line in an editor tab through the ordinary edit pipeline', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    capabilities.openInEditor('/repo/src/a.ts', 42);
+
+    expect(edit).toHaveBeenCalledWith(
+      'fixture /repo/src/a.ts:42', '/repo/src/a.ts', 'janus', 42,
+    );
+  });
+
+  it('does nothing for a revoked plugin asking to open a line', () => {
+    const { managers } = makeManagers();
+    const edit = vi.fn();
+    (managers.openFile as unknown as { edit: unknown }).edit = edit;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+    );
+
+    capabilities.openInEditor('/repo/src/a.ts', 42);
+
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it('serves the project file list the projectFiles RPC serves to quick open', async () => {
+    const { managers } = makeManagers();
+    (managers.tab as unknown as { launchDir: string }).launchDir = '/repo';
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    const list = await capabilities.projectFileList();
+
+    expect(list.root).toBe('/repo');
+  });
+
+  it('answers an empty file list to a revoked plugin rather than reading the project', async () => {
+    const { managers } = makeManagers();
+    (managers.tab as unknown as { launchDir: string }).launchDir = '/repo';
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+    );
+
+    expect(await capabilities.projectFileList()).toEqual({ root: '', paths: [] });
   });
 
   it('reports a thrown non-Error as a failure without losing what it said', () => {

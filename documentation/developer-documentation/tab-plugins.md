@@ -91,7 +91,7 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies thirteen capabilities:
+The host supplies fifteen capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text)` reports one line to the notifications feed. Text only — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way.
@@ -100,6 +100,8 @@ The host supplies thirteen capabilities:
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
 - `snapshotTab(instanceKey, text)` caches the text currently visible in one of your own tabs, so a monitor watching it has something to feed on.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
+- `projectFileList()` reads the project's gitignore-aware file list — the same list Quick Open searches — as project-relative paths plus the directory they are relative to. It is how a plugin that scans the repository stays in step with the rest of the application rather than growing its own walker.
+- `openInEditor(absPath, line)` opens a file in an editor tab with the cursor on that line, through the ordinary `edit` pipeline: an already-open file is focused rather than duplicated, the line is centered, and the file is served by the authenticated `/open/<id>` allow-list like any other editor open. This is the route for a plugin that has to put a user on a specific line, which `openClaimedFiles` cannot express — it is pinned to your own claimed extensions and takes no line.
 - `topicData(topic)` reads what a topic you declared carries right now.
 - `topicAction(action)` asks the host to perform one of the actions that topic defines.
 - `configuredViewer()` reads the viewer configured for this plugin id.
@@ -254,6 +256,12 @@ The budgets are 1000 ms for server activation, 5000 ms per server opener, comman
 
 An incompatible contract, a refused contribution claim, load or activation failure, invalid produced payload, guarded-call failure, client load/schema/validation/timeout failure, or render exception disables only that plugin until restart. The host reports `Tab plugin "<id>" disabled: <reason>.`, closes all of its tabs, releases their served files, and disposes it once. Other plugins and core continue.
 
+## Reaching a plugin from a keyboard chord
+
+A plugin whose command opens a singleton tab can be given a global chord. The chord belongs to the **host**, not the plugin: the client key handler issues the same command the user would type, so the plugin gains no new route and no way to be reached that its own declaration does not already describe. The search tab works this way — Cmd+Shift+F runs `search`, which opens or focuses the one search tab.
+
+Two rules follow from the chord living in the host. A chord must not shadow an existing one, and where two chords share a key the more specific is matched first: the transcript search's Cmd+F tests only the key, so a plugin wanting Cmd+Shift+F has to be matched ahead of it or it will never fire. Pin both halves in a test — that the new chord does what it should, and that the old one still does.
+
 ## Testing a plugin
 
 Add server tests for declaration claims, playable/external routes, payload validation, deduplication before factory work, command routing, intent round trips, rejection leaving the plugin active, failure, cleanup, and disposal. Add client tests for the entry guard, lazy load, rendering, actions/intents, persistent mounting, and contained failure. Run `./scripts/run.mjs check-diff`, then confirm the production web build emits the client entry and its shared contract as a separate chunk — inspect the build source maps rather than trusting the file list, since a stray runtime import in the registry moves modules into the entry without changing how many chunks appear.
@@ -264,7 +272,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Thirteen server and seven client capabilities.
+- Fifteen server and seven client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. Both are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 

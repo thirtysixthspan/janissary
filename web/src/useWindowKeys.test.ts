@@ -146,6 +146,39 @@ describe('useWindowKeys', () => {
     expect(openSearch).toHaveBeenCalled();
   });
 
+  it('Cmd+Shift+F runs the project search command', () => {
+    const runCommand = vi.fn();
+    const openSearch = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { runCommand, openSearch } }));
+    dispatchKey('f', { metaKey: true, shiftKey: true });
+    expect(runCommand).toHaveBeenCalledWith('search');
+  });
+
+  // The two `f` chords share one branch, and the transcript search matches on the key alone without
+  // looking at `shiftKey`. This pins the order that keeps them apart.
+  it('Cmd+Shift+F does not open the transcript search bar', () => {
+    const openSearch = vi.fn();
+    render(React.createElement(TestComponent, { canSearch: true, callbacks: { openSearch } }));
+    dispatchKey('f', { metaKey: true, shiftKey: true });
+    expect(openSearch).not.toHaveBeenCalled();
+  });
+
+  it('Cmd+Shift+F runs the search command even where the transcript is not searchable', () => {
+    const runCommand = vi.fn();
+    render(React.createElement(TestComponent, { canSearch: false, callbacks: { runCommand } }));
+    dispatchKey('f', { metaKey: true, shiftKey: true });
+    expect(runCommand).toHaveBeenCalledWith('search');
+  });
+
+  it('Cmd+F still opens the transcript search bar', () => {
+    const openSearch = vi.fn();
+    const runCommand = vi.fn();
+    render(React.createElement(TestComponent, { canSearch: true, callbacks: { openSearch, runCommand } }));
+    dispatchKey('f', { metaKey: true });
+    expect(openSearch).toHaveBeenCalled();
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
   it('Cmd+F does nothing when canSearch is false', () => {
     const openSearch = vi.fn();
     render(React.createElement(TestComponent, { canSearch: false, callbacks: { openSearch } }));
