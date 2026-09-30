@@ -45,6 +45,23 @@ export class DatabaseBrowser {
     return store;
   }
 
+  /**
+   * Forget every remembered row count for one database.
+   *
+   * The count is cached so a filtered query can report the object's size without counting it again,
+   * and between a schema re-read and a write an object's size cannot change through this surface. So
+   * those two events are exactly what invalidates it — and a write the cache outlived is how a pager
+   * came to report `Rows 1–5 of 5 of 4 rows`, a filtered total larger than the one it is divided
+   * against. A console statement clears the whole database rather than one object, because it may be
+   * a `DROP` or an `ALTER` and nothing here is told what it touched.
+   */
+  private forgetTotals(database: string): void {
+    const prefix = `${database} `;
+    for (const key of this.unfiltered.keys()) {
+      if (key.startsWith(prefix)) this.unfiltered.delete(key);
+    }
+  }
+
   view(): DatabasesView {
     return { databases: databaseRefs(), results: this.state.results(), lastOpened: lastOpenedDatabase() };
   }
@@ -93,11 +110,13 @@ export class DatabaseBrowser {
   create(database: string, requestId: string): void {
     const opened = this.open(database, true);
     if ('error' in opened) { this.record(this.schemaResult(requestId, database, [], opened.error)); return; }
+    this.forgetTotals(database);
     this.record(this.schemaResult(requestId, database, schemaObjects(opened.handle)));
   }
 
   schema(database: string, requestId: string): void {
     const opened = this.open(database);
+    this.forgetTotals(database);
     this.record('error' in opened
       ? this.schemaResult(requestId, database, [], opened.error)
       : this.schemaResult(requestId, database, schemaObjects(opened.handle)));
@@ -148,6 +167,7 @@ export class DatabaseBrowser {
    */
   run(database: string, requestId: string, sql: string, returnsRows: boolean): void {
     const opened = this.open(database);
+    this.forgetTotals(database);
     if ('error' in opened) {
       this.record({ kind: 'write', requestId, database, sql, parameters: [], changed: 0, error: opened.error });
       return;
@@ -165,6 +185,7 @@ export class DatabaseBrowser {
   }
 
   private write(database: string, requestId: string, outcome: WriteOutcome): void {
+    this.forgetTotals(database);
     this.record(outcome.ok
       ? { kind: 'write', requestId, database, sql: outcome.sql, parameters: outcome.parameters, changed: outcome.changed }
       : { kind: 'write', requestId, database, sql: '', parameters: [], changed: 0, error: outcome.error });

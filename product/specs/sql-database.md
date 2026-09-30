@@ -113,7 +113,9 @@ Pages hold 50, 100 (the default), or 500 rows. The pager reads `Rows 1–100 of 
 only the filtered total would read as though the table were that small. The second figure counts the
 object with no filters at all — and an **Search every column** term narrows a query as much as a
 per-column filter does — so it is right even when the first query for an object arrives
-already filtered, as following a key into an unvisited table does. Changing the page size
+already filtered, as following a key into an unvisited table does. The second figure is the object's
+size as of the last read, and it is re-counted by a write and by **Refresh**, so it never reports an
+object smaller than the one the first figure is counting. Changing the page size
 returns to the first page. **Refresh** re-reads the schema and the current query.
 
 A **Row** field beside the range label jumps to a row the user names, so a table far larger than a

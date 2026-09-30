@@ -170,6 +170,66 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
+  it('reports an object at its new size after a write, not the size it was read at', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    const before = nextId();
+    browser.query('shop', before, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const first = browser.view().results.find((result) => result.requestId === before);
+    if (first?.kind !== 'query') throw new Error('expected a query answer');
+    expect(first.grid.unfilteredTotal).toBe(2);
+
+    const writeId = nextId();
+    browser.insertRow('shop', writeId, 'orders', [{ column: 'id', value: null }, { column: 'status', value: 'new' }]);
+    const after = nextId();
+    browser.query('shop', after, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === after);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    // A count the write outlived reports a filtered total larger than the one it is divided against.
+    expect(answer.grid.total).toBe(3);
+    expect(answer.grid.unfilteredTotal).toBe(3);
+    browser.dispose();
+  });
+
+  it('reports a filtered object at its new size after a console statement', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    const first = nextId();
+    browser.query('shop', first, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
+    const counted = browser.view().results.find((result) => result.requestId === first);
+    if (counted?.kind !== 'query') throw new Error('expected a query answer');
+    expect(counted.grid.unfilteredTotal).toBe(2);
+
+    // A statement may be a DROP or an ALTER, and nothing here is told what it touched.
+    browser.run('shop', nextId(), 'INSERT INTO orders (status) VALUES (\'paid\')', false);
+    const after = nextId();
+    browser.query('shop', after, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === after);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.total).toBe(2);
+    expect(answer.grid.unfilteredTotal).toBe(3);
+    browser.dispose();
+  });
+
+  it('forgets a remembered count when the schema is re-read', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, SHOP);
+    const first = nextId();
+    browser.query('shop', first, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
+    const counted = browser.view().results.find((result) => result.requestId === first);
+    if (counted?.kind !== 'query') throw new Error('expected a query answer');
+    expect(counted.grid.unfilteredTotal).toBe(2);
+
+    // What Refresh issues, after a change made from outside this surface.
+    browser.schema('shop', nextId());
+    const after = nextId();
+    browser.query('shop', after, { object: 'orders', filters: [{ column: 'status', op: 'eq', value: 'paid' }], order: [], limit: 10, offset: 0 });
+    const answer = browser.view().results.find((result) => result.requestId === after);
+    if (answer?.kind !== 'query') throw new Error('expected a query answer');
+    expect(answer.grid.unfilteredTotal).toBe(2);
+    browser.dispose();
+  });
+
   it('records a query for an object the database does not have as an error, not an empty page', () => {
     const browser = new DatabaseBrowser();
     seeded(browser, SHOP);

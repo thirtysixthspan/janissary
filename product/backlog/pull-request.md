@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the pager's unfiltered row count correct after a write, rather than reporting a filtered total larger than the unfiltered one.
-
-Existing Issue: The unfiltered count an object is reported at is cached the first time it is read and reused for every later read of that object, so once a console or grid write changes the row count the pager's range line reports the count from before the write — `Rows 1–5 of 5 of 4 rows`, whose filtered total is larger than the unfiltered total it is divided against. Severity: 7/10
-
-Existing Risk: 6/10 - The figure is the one the grid's own design calls its most important one, since a filtered view reporting the wrong denominator is indistinguishable from a table that really is that small, and the impossible `5 of 4` tells a reader the pager is broken rather than that the number is stale, so they stop trusting every count the tab shows after their first write.
-
-Proposal Risk: 2/10 - The count is one statement more per read unless it stays cached, so the residual cost is a `SELECT COUNT(*)` on writes rather than on every page change.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: keep the pager's unfiltered row count correct after a write". Reproduce: open a database, select `customers` (four rows, no filters), then run `INSERT INTO customers (name) VALUES ('zoe')` in the console. Observed: the pager reads `Rows 1–4 of 4 rows` before the write and `Rows 1–5 of 5 of 4 rows` after, with five rows rendered; the second figure is the count cached before the insert. `DatabaseBrowser.query` in `src/database/browser.ts` seeds `this.unfiltered` from every read's `grid.unfilteredTotal` and `rememberedTotal` returns that entry before it looks at whether the query has filters, so the cached figure survives every later read; the map is cleared only in `dispose`. A write is what makes it wrong, so either drop the entry for the object on any `write` answer — `updateCell`, `insertRow`, `deleteRow` and `run` all record one — or stop serving the cache for a query with no filters and compute the unfiltered count from the query itself, which is what `totals` in `src/database/grid.ts` already does when handed `undefined`. Add a case to `src/database/browser.test.ts`: an object read with no filters, then written to, then re-read with no filters, reports the new count on both figures; keep the case that covers `rememberedTotal` seeding the cache for a first filtered query, since that is the reason the cache exists.
-
-
 * Let Escape clear a selection that was started with the mouse, not only one made with the arrow keys.
 
 Existing Issue: Escape leaves the grid's selection alone whenever no cell cursor is set, so a cell chosen by a click stays marked and a whole-row run built with `Shift`+arrow stays marked, while the same run clears once an arrow key has been pressed first. Severity: 5/10
