@@ -26,17 +26,22 @@ export type SearchBarProperties = {
   // Move the focus to the results. Taken on a bare Tab: the window is the tab's other focusable
   // element, and without this the bar — the last one in the DOM — hands Tab straight out of the tab.
   onFocusResults(): void;
-};
+  // The terms this tab has searched, oldest first. Walked by ArrowUp and ArrowDown, and the source
+  // of the inline ghost — one list answering both, which is how the agent bar's history works.
+  history: string[];
+}
 
 // The search tab's query input: the host's own command bar, so it looks exactly like the agent
-// tab's rather than being a second textarea that drifts from it. Composed with no history and no
-// ghost, because a search query is not a command this tab remembers.
+// tab's rather than being a second textarea that drifts from it. Composed with the tab's own history
+// and the ghost that follows from it, and with no ghost history of its own: a search is answered by
+// this tab's own terms, not by every command the application has run.
 export function SearchBar({
-  query, onChangeQuery, onSearch, active, trailing, label, inputRef, onFocusResults,
+  query, onChangeQuery, onSearch, active, trailing, label, inputRef, onFocusResults, history,
 }: SearchBarProperties) {
   const bar = useCommandBarKeys({
-    value: query, setValue: onChangeQuery, inputRef, history: [], onSubmit: () => {},
+    value: query, setValue: onChangeQuery, inputRef, history, onSubmit: () => {},
   });
+
   const debounced = useDebouncedValue(query, DEBOUNCE_MS);
 
   // A tab that opens with a query already in it must not immediately re-run that same query, so the
@@ -71,6 +76,7 @@ export function SearchBar({
       inputRef={inputRef}
       autoFocus={active}
       ariaLabel="Search the project"
+      ghost={bar.ghost}
       trailing={trailing}
       label={label}
     />

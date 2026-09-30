@@ -5,6 +5,7 @@ import { ModeToggles, type ModeKey } from './ModeToggles';
 import { ResultTable } from './ResultTable';
 import { SearchBar } from './SearchBar';
 import { SearchFilters } from './SearchFilters';
+import { recordSearch } from './search-history';
 import { useResultSelection } from './useResultSelection';
 
 // The three query modes, held as client-local view state. The server does not keep them: every
@@ -35,6 +36,13 @@ export function SearchTab({
   const [include, setInclude] = useState(payload.include);
   const [exclude, setExclude] = useState(payload.exclude);
   const [modes, setModes] = useState<Modes>(modesOf(payload));
+  // The terms this tab has searched, oldest first, walked by the arrow keys from the command bar. A
+  // tab opened by `search <phrase>` has already searched it, so that phrase seeds the list rather
+  // than waiting for a keystroke that will never come.
+  const [history, setHistory] = useState<string[]>(() => {
+    const opened = payload.query.trim();
+    return opened === '' ? [] : [opened];
+  });
   const rows = payload.rows;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { listRef, selected, navigate, rowClicked } = useResultSelection({ count: rows.length });
@@ -45,6 +53,14 @@ export function SearchTab({
   const search = useCallback((next: SearchIntent) => {
     void capabilities.intent('search', next);
   }, [capabilities]);
+
+  // A term becomes part of the history in exactly one place — the bar's debounce, which is also the
+  // only place a *new* term arrives. Toggling a mode or editing a narrowing field reruns the term
+  // already in the bar, and recording that again would only shuffle the list for no reason.
+  const onQuerySearched = useCallback((next: string) => {
+    setHistory((entries) => recordSearch(entries, next));
+    search({ query: next, include, exclude, ...modes });
+  }, [exclude, include, modes, search]);
 
   const toggle = (key: ModeKey) => {
     const next = { ...modes, [key]: !modes[key] };
@@ -118,12 +134,13 @@ export function SearchTab({
       <SearchBar
         query={query}
         onChangeQuery={setQuery}
-        onSearch={(next) => search({ query: next, include, exclude, ...modes })}
+        onSearch={onQuerySearched}
         active={capabilities.active}
         trailing={<ModeToggles modes={modes} onToggle={toggle} />}
         label="search"
         inputRef={inputRef}
         onFocusResults={onFocusResults}
+        history={history}
       />
     </div>
   );

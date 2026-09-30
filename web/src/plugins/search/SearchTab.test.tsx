@@ -1,6 +1,6 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SearchMatch, SearchPayload } from '@shared/plugins/search/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { SearchTab } from './SearchTab';
@@ -44,6 +44,114 @@ const searches = (intent: ReturnType<typeof vi.fn>) =>
 
 // The shared list selection scrolls the highlighted row into view, which jsdom does not implement.
 beforeEach(() => { Element.prototype.scrollIntoView = vi.fn(); });
+
+// How long a typed term rests before it becomes a search, from the bar's own debounce. Longer than
+// the real one so a test that advances by this is never racing it.
+const SETTLED_MS = 250;
+
+const searchTerm = () => screen.getByLabelText('Search the project') as HTMLTextAreaElement;
+
+// Type a term and let it rest, which is the one moment a term joins the history.
+const settle = (text: string) => {
+  fireEvent.change(searchTerm(), { target: { value: text } });
+  act(() => { vi.advanceTimersByTime(SETTLED_MS); });
+};
+
+const press = (key: string) => { fireEvent.keyDown(searchTerm(), { key }); };
+
+describe('SearchTab history', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it('walks back through the terms searched with the up arrow', () => {
+    renderTab();
+    // The tab opened having searched `todo`, and `fixme` was searched after it.
+    settle('fixme');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('fixme');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('todo');
+  });
+
+  it('stops at the oldest term rather than wrapping past it', () => {
+    renderTab();
+    settle('fixme');
+    press('ArrowUp');
+    press('ArrowUp');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('todo');
+  });
+
+  it('walks forward again and hands back the draft the walk started from', () => {
+    renderTab();
+    settle('fixme');
+    press('ArrowUp');
+    press('ArrowUp');
+    press('ArrowDown');
+    expect(searchTerm().value).toBe('fixme');
+    // Past the newest entry the walk is over, and the term the user was typing comes back rather
+    // than the list cycling.
+    press('ArrowDown');
+    expect(searchTerm().value).toBe('fixme');
+  });
+
+  it('records a term re-searched once, so the walk never stops on two copies of it', () => {
+    const { intent } = renderTab(payload({ query: '' }));
+    settle('todo');
+    settle('fixme');
+    settle('todo');
+    expect(searches(intent).map((sent: { query: string }) => sent.query)).toEqual(['todo', 'fixme', 'todo']);
+    // `todo` searched again is the newest entry, and the copy from the first search is gone rather
+    // than left where it was: the walk runs todo, fixme, and then stops — a third `todo` at the
+    // far end would be the duplicate this rule exists to prevent.
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('todo');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('fixme');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('fixme');
+  });
+
+  it('starts a tab opened by a phrase with that phrase already walkable', () => {
+    renderTab(payload({ query: 'compileMatcher' }));
+    settle('compileMismatcher');
+    press('ArrowUp');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('compileMatcher');
+  });
+
+  it('leaves the term where it is when there is nothing to walk', () => {
+    renderTab(payload({ query: '', rows: [] }));
+    // An empty list must be a no-op rather than a throw or a cleared field — a tab that has never
+    // searched anything is exactly the state a freshly opened one is in.
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('');
+    press('ArrowDown');
+    expect(searchTerm().value).toBe('');
+  });
+
+  it('does not record a term when a mode or a filter reruns the one already in the bar', () => {
+    renderTab();
+    settle('fixme');
+    fireEvent.click(screen.getByLabelText('Match case'));
+    fireEvent.change(screen.getByLabelText('Files to exclude'), { target: { value: '*.md' } });
+    // Both reran `fixme`, and a rerun is not a new term: recording it would only shuffle the list so
+    // that ArrowUp answered with a search the user did not just make.
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('fixme');
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('todo');
+  });
+
+  it('completes a partly typed term from the one list it walks', () => {
+    const { container } = renderTab();
+    settle('compileMatcher');
+    fireEvent.change(searchTerm(), { target: { value: 'compile' } });
+    // The ghost is derived from the same list inside the shared hook, so a term already searched
+    // trails the text being typed — and the walk and the suggestion cannot disagree.
+    expect(container.querySelector('.ghost')?.textContent).toBe('compileMatcher');
+  });
+});
 
 describe('SearchTab', () => {
   it('shows the query the search ran', () => {

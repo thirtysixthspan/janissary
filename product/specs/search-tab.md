@@ -58,6 +58,13 @@ changes how that query is interpreted:
 
 Changing a toggle reruns the current query at once, and so does editing either narrowing field.
 
+**The arrow keys walk the terms this tab has searched.** While the search term has focus, `↑` steps
+back from the most recent term and `↓` steps forward again, and stepping past the newest one brings
+back the term that was being typed. A term searched again becomes the most recent one rather than
+appearing twice, and a partly typed term is completed from the same list. Toggling a mode or editing
+a narrowing field reruns the term already in the bar and does not add it to the list again. The list
+is the tab's own, and closing the tab forgets it along with the query.
+
 ### The results
 
 One entry per matching line, in file path then line order. Each entry is a dimmed header carrying
@@ -95,8 +102,9 @@ keeps walking backwards out of the tab, which is what it is for.
 
 The search bar and the result window each keep their own keys, because only the focused element
 receives them. Click into the window to give it focus: the arrow keys then move the highlighted row,
-Home and End jump to the first and last, and `Return` opens the highlighted match. The search bar
-keeps the arrow keys for moving the caret while it holds focus.
+Home and End jump to the first and last, and `Return` opens the highlighted match. While the search
+bar has focus the arrow keys walk the searched terms instead, and a term that has wrapped onto a
+second line leaves them to the caret.
 
 **A single click on an entry opens it** — no double click, and no separate selecting step. Rows
 arriving as a search runs never move the highlight, so an entry picked early is still the entry
