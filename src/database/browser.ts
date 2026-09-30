@@ -170,25 +170,37 @@ export class DatabaseBrowser {
       : { kind: 'write', requestId, database, sql: '', parameters: [], changed: 0, error: outcome.error });
   }
 
-  updateCell(database: string, requestId: string, row: string, column: string, value: string | null): void {
+  // A write the database refuses is an ordinary outcome, not a broken plugin: a `NOT NULL`, `UNIQUE`
+  // or `CHECK` violation arrives as a throw out of `DatabaseSync`, and letting it escape took the
+  // whole `sql` plugin down and closed every one of its tabs. It is recorded here as the refusal the
+  // write layer already reports deliberately, so the caller draws one answer rather than a failure.
+  private attempted(
+    database: string,
+    requestId: string,
+    action: (handle: DatabaseSync) => WriteOutcome,
+  ): void {
     const opened = this.open(database);
     if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
-    this.write(database, requestId, updateCell(
-      this.keyStore(database), row, column, value, (object) => objectColumns(opened.handle, object), opened.handle,
+    try {
+      this.write(database, requestId, action(opened.handle));
+    } catch (error) {
+      this.write(database, requestId, { ok: false, error: errorText(error) });
+    }
+  }
+
+  updateCell(database: string, requestId: string, row: string, column: string, value: string | null): void {
+    this.attempted(database, requestId, (handle) => updateCell(
+      this.keyStore(database), row, column, value, (object) => objectColumns(handle, object), handle,
     ));
   }
 
   insertRow(database: string, requestId: string, object: string, cells: { column: string; value: string | null }[]): void {
-    const opened = this.open(database);
-    if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
-    this.write(database, requestId, insertRow(object, cells, objectColumns(opened.handle, object), opened.handle));
+    this.attempted(database, requestId, (handle) => insertRow(object, cells, objectColumns(handle, object), handle));
   }
 
   deleteRow(database: string, requestId: string, row: string): void {
-    const opened = this.open(database);
-    if ('error' in opened) { this.write(database, requestId, { ok: false, error: opened.error }); return; }
-    this.write(database, requestId, deleteRow(
-      this.keyStore(database), row, (object) => objectColumns(opened.handle, object), opened.handle,
+    this.attempted(database, requestId, (handle) => deleteRow(
+      this.keyStore(database), row, (object) => objectColumns(handle, object), handle,
     ));
   }
 

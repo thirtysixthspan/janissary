@@ -264,6 +264,59 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
+  // A constraint the database itself enforces arrives as a throw out of `DatabaseSync`. Letting it
+  // escape the browser reached the plugin host, which reported it as a plugin failure and closed
+  // every `sql` tab in the session — so a user who left one required column alone lost the plugin.
+  // A refusal is an answer the tab already knows how to draw, and it has to arrive as one.
+  it('records a refused insert as a write carrying the database message, rather than throwing', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, 'CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT, required TEXT NOT NULL);');
+    const requestId = nextId();
+    expect(() => browser.insertRow('shop', requestId, 'notes', [
+      { column: 'id', value: null }, { column: 'body', value: 'b2' },
+    ])).not.toThrow();
+    expect(browser.view().results.find((result) => result.requestId === requestId))
+      .toMatchObject({ kind: 'write', changed: 0, sql: '', error: 'NOT NULL constraint failed: notes.required' });
+    browser.dispose();
+  });
+
+  it('records a refused cell edit the same way, and leaves the rows it refused to change alone', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, `CREATE TABLE codes (id INTEGER PRIMARY KEY, code TEXT UNIQUE);
+      INSERT INTO codes (code) VALUES ('a'), ('b');`);
+    const queryId = nextId();
+    browser.query('shop', queryId, { object: 'codes', filters: [], order: [], limit: 10, offset: 0 });
+    const page = browser.view().results.find((result) => result.requestId === queryId);
+    if (page?.kind !== 'query') throw new Error('expected a query answer');
+    const first = page.grid.rows[0]?.key ?? '';
+    const requestId = nextId();
+    expect(() => browser.updateCell('shop', requestId, first, 'code', 'b')).not.toThrow();
+    expect(browser.view().results.find((result) => result.requestId === requestId))
+      .toMatchObject({ kind: 'write', error: 'UNIQUE constraint failed: codes.code' });
+    const after = nextId();
+    browser.query('shop', after, { object: 'codes', filters: [], order: [], limit: 10, offset: 0 });
+    const reread = browser.view().results.find((result) => result.requestId === after);
+    if (reread?.kind !== 'query') throw new Error('expected a query answer');
+    expect(reread.grid.rows.map((row) => row.cells[1].text)).toEqual(['a', 'b']);
+    browser.dispose();
+  });
+
+  it('records a refused row delete the same way, so a trigger that aborts does not disable the plugin', () => {
+    const browser = new DatabaseBrowser();
+    seeded(browser, `${SHOP}
+      CREATE TRIGGER keep_orders BEFORE DELETE ON orders
+        BEGIN SELECT RAISE(ABORT, 'orders is not deletable'); END;`);
+    const queryId = nextId();
+    browser.query('shop', queryId, { object: 'orders', filters: [], order: [], limit: 10, offset: 0 });
+    const page = browser.view().results.find((result) => result.requestId === queryId);
+    if (page?.kind !== 'query') throw new Error('expected a query answer');
+    const requestId = nextId();
+    expect(() => browser.deleteRow('shop', requestId, page.grid.rows[0]?.key ?? '')).not.toThrow();
+    expect(browser.view().results.find((result) => result.requestId === requestId))
+      .toMatchObject({ kind: 'write', error: 'orders is not deletable' });
+    browser.dispose();
+  });
+
   it('lists the databases on disk with whether each exists and is open', () => {
     const browser = new DatabaseBrowser();
     browser.create('alpha', nextId());

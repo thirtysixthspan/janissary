@@ -771,6 +771,27 @@ describe('sql plugin intents', () => {
     expect(fixture.actions[0]).toMatchObject({ action: 'insertRow', object: 'orders' });
   });
 
+  // A constraint the database itself enforces is an answer, not a failure of this plugin. The host
+  // reports anything thrown out of an intent as a plugin failure, which disabled `sql` and closed
+  // every one of its tabs — so a user who left one required column alone lost the tab they were in.
+  it('draws a refused insert as a message and a history entry, and asks for no re-read', () => {
+    const refused = 'NOT NULL constraint failed: notes.required';
+    const fixture = fakeCapabilities(emptyView(), (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'insertRow') {
+        return { kind: 'write', requestId, database: 'shop', sql: '', parameters: [], changed: 0, error: refused };
+      }
+    });
+    openTab(fixture);
+    expect(() => intent('insert-row', { object: 'orders', cells: [{ column: 'id', value: null }] }, fixture)).not.toThrow();
+    const payload = lastPayload(fixture);
+    expect(payload.error).toBe(refused);
+    expect(payload.grid).not.toBeNull();
+    expect(payload.log).toEqual([{ sql: '', changed: 0, error: refused }]);
+    expect(fixture.actions.slice(1).map((action) => action.action)).toEqual(['insertRow']);
+    expect(fixture.notifyUser.mock.calls).toEqual([[refused]]);
+  });
+
   it('opens another database from the header switcher', () => {
     const fixture = fakeCapabilities();
     intent('open', { name: 'blog' }, fixture);
