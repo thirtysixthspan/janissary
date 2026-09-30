@@ -76,7 +76,7 @@ The workspace is prepared from the primary branch first, so `node_modules/` star
 
 ## Step 3 — Update the packages the branch changes
 
-Testing means running code from the branch, which [`pull-request-review.md`](pull-request-review.md) avoids on purpose. This step contains the part that can be contained: install-time code. `node_modules/` already matches `master`. So install only the packages where the branch differs from it, and only behind the supply-chain gate.
+Testing means running code from the branch, which [`review-pull-request.md`](review-pull-request.md) avoids on purpose. This step contains the part that can be contained: install-time code. `node_modules/` already matches `master`. So install only the packages where the branch differs from it, and only behind the supply-chain gate.
 
 1. **Find the difference.** Run `git diff --stat master HEAD -- package.json package-lock.json`. Compare against `master`'s tip, not the merge base, because that tip is what Step 2 installed. A branch that is behind `master` differs from it in the packages `master` has changed since, and those have to be put back to the branch's versions too. **If the diff is empty, install nothing** and go to Step 4. The branch runs on `master`'s install as it is.
 2. **Audit the branch's lockfile** through the installation's runner:
@@ -172,7 +172,7 @@ A failure whose root cause you cannot locate is still filed. Say plainly that th
 
 ## Step 10 — Record the failures
 
-1. **Dedupe first.** Read `./product/backlog/pull-request.md` if it exists and treat **every** entry in it as the dedupe set, identifying each by its lead `*` bullet — including entries [`pull-request-review.md`](pull-request-review.md) wrote and entries inherited from `master`. Match on underlying behavior and cause, not wording.
+1. **Dedupe first.** Read `./product/backlog/pull-request.md` if it exists and treat **every** entry in it as the dedupe set, identifying each by its lead `*` bullet — including entries [`review-pull-request.md`](review-pull-request.md) wrote and entries inherited from `master`. Match on underlying behavior and cause, not wording.
 2. **A failure an entry already covers gets evidence, not a new entry.** Append one sentence beginning `re-observed on <YYYY-MM-DD>:` to the end of that entry's `Proposal` paragraph, carrying only the reproduction or root-cause detail it lacked. Leave the rest of the entry byte-for-byte untouched. When the entry already holds all of it, change nothing.
 3. **Every other finding is appended to the end of the file** as a new entry: a failing step from the description or the plan, a failing generated step, a step correction, and the missing-steps finding from Step 4. Leave every existing entry byte-for-byte untouched, and never add headings or sections.
 4. **If nothing is new and no entry needs evidence, write nothing** and go to Step 11. Otherwise, if the file does not exist, create it with exactly the skeleton the review uses, a leading comment and one heading:
@@ -201,7 +201,7 @@ Proposal Risk: <N>/10 - <one sentence>
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR <number>: <concrete issue summary>". <The replication, the cause, and the fix.>
 ```
 
-This is the format [`pull-request-review.md`](pull-request-review.md) Step 4 defines, restated so this task stands alone. That file, [`find-technical-debt.md`](research/find-technical-debt.md), and this one share it, so a change to the format or to either scale belongs in all three.
+This is the format [`review-pull-request.md`](review-pull-request.md) Step 4 defines, restated so this task stands alone. That file, [`find-technical-debt.md`](research/find-technical-debt.md), and this one share it, so a change to the format or to either scale belongs in all three.
 
 - **The summary bullet.** One sentence written as a change, not a complaint, naming what the fix makes work and where a user meets it: "Make the empty queue show its placeholder after the last item is removed", "Correct the pull request's testing step that expects a toast after saving". No fixed opener and no paths.
 - **Existing Issue.** One sentence stating what is wrong today — the failure as observed, or the step as wrong — then a trailing `Severity: <N>/10`.

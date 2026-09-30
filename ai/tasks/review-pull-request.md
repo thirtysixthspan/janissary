@@ -39,7 +39,7 @@ Read any file in the repo. Check out the pull request's head branch. Run read-on
 
 ## Step 0 — Identify the pull request
 
-1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/pull-request-review.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
+1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/review-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
 2. **Otherwise, recognize the pull request from context.** Run `gh pr view --json state,number,headRefName,url` with no argument — it resolves the pull request for the branch currently checked out. If that finds nothing, run `gh pr list --state open --json number,title,headRefName,url` and take the pull request only when **exactly one** is open. With zero or more than one, report the candidates and stop.
 3. Run `gh pr view <target> --json state,number,headRefName,url` and record the number, head branch, and URL for the rest of the task. If the lookup fails or the state is not `OPEN`, stop as required above.
 
