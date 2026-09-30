@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Say that a console read was cut off instead of reporting it as a table of two hundred
-
-Existing Issue: A read typed into the console that returns more than two hundred rows stops at two hundred and the range line reads `Rows 1–200 of 200 rows`, so a truncated result is indistinguishable from a small one. Severity: 5/10
-
-Existing Risk: 5/10 - A user reads a report off a truncated export or console result believing they have the whole thing, and acts on a count or a total that is wrong, with nothing on screen to prompt a second look.
-
-Proposal Risk: 2/10 - The cut-off is already reported to the grid as a flag on the result, so being wrong about it would need a deliberate change to what the console read returns.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: a console read longer than 200 rows is cut off with nothing saying so". Step G9 (generated), quoting the spec: "A result longer than that is cut off there and the range line says so rather than reporting a table of two hundred, because a query the console refused to finish is not the same thing as a small one" (product/specs/sql-database.md). With a `shop` database holding `orders`, select `orders` and type `WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<250) SELECT x, x*2 AS y FROM c` into the tab's console (`.sql-console textarea`) and press Enter. Expected: the grid stops at 200 rows and the range line says the result was cut off. Observed, twice: 200 rows rendered with headers `x` and `y`, the grid header reading `Rows 1–200 of 200 rows` and the pager reading the same, with no truncation wording anywhere on screen and no notification. `readStatement` in `src/database/console-read.ts` knows the answer was cut off — `takeRows` returns `truncated: true` — but `consoleGrid` spends it by setting `total` to `CONSOLE_ROW_LIMIT`, and the wire type `DatabaseGridView` in `src/protocol/database.ts` has nowhere to carry the flag; `pageLabel` in `web/src/plugins/sql/grid-view.ts` therefore reads a table of exactly two hundred. The fix is to carry the cut-off on the grid view and have `pageLabel` read it, the same way it already reads a filtered total. A regression test should assert that a read returning 250 rows produces a grid whose label names the truncation, and one returning 5 rows produces `Rows 1–5 of 5 rows`.
-
 * Stop a console result's grid from writing refused statements into the log on every click
 
 Existing Issue: After a read typed into the console fills the grid, double-clicking a cell opens no editor at all and instead issues refused `update-cell` writes, one per row, each adding a `That row is no longer loaded. Refresh and try again.` entry to the statement log and a notification. Severity: 6/10

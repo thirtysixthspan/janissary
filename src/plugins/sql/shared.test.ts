@@ -102,6 +102,22 @@ describe('isSqlPayload', () => {
     expect(isSqlPayload(payload({ pending: { id: 'q1', followUp: 'delete' } as never }))).toBe(false);
   });
 
+  // The flag a cut-off console read carries is what tells the range line to stop reporting a total,
+  // so a guard that refused it would turn a label into a plugin failure.
+  it('accepts a grid the console cut off, and refuses a flag that is not a boolean', () => {
+    const cut = (truncated: unknown) => payload({
+      grid: {
+        sql: 'SELECT x FROM t', parameters: [], columns: ['x'],
+        rows: [{ key: 'r1', cells: [{ text: '1', isNull: false }] }],
+        total: 200, unfilteredTotal: 200, offset: 0, limit: 200, order: [], truncated,
+      } as never,
+    });
+    expect(isSqlPayload(cut(true))).toBe(true);
+    expect(isSqlPayload(cut(false))).toBe(true);
+    expect(isSqlPayload(cut(undefined))).toBe(true);
+    expect(isSqlPayload(cut('yes'))).toBe(false);
+  });
+
   // The page sizes ride in the payload so the control and the guard that accepts one read the same
   // list, which is only safe while the list itself is sound.
   it('rejects a payload whose page sizes are missing, empty, or not numbers', () => {

@@ -100,6 +100,9 @@ export type DatabaseGridView = {
   limit: number;
   // The order actually used, including the primary-key fallback applied when none was chosen.
   order: DatabaseOrderView[];
+  // The console's own ceiling cut this result short, so the rows are the first of more rather than
+  // all of them. Absent for a page of an object, which is a count and not a cut.
+  truncated?: boolean;
 };
 
 export type DatabaseResultView =

@@ -52,6 +52,7 @@ function consoleGrid(
     offset: 0,
     limit: CONSOLE_ROW_LIMIT,
     order: [],
+    truncated,
   };
 }
 

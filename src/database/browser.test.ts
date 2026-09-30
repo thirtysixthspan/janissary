@@ -212,6 +212,7 @@ describe('DatabaseBrowser', () => {
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
     expect(answer.grid.rows).toHaveLength(CONSOLE_ROW_LIMIT);
     expect(answer.grid.total).toBe(CONSOLE_ROW_LIMIT);
+    expect(answer.grid.truncated).toBe(true);
     expect(answer.error).toBeUndefined();
     browser.dispose();
   });
@@ -225,6 +226,7 @@ describe('DatabaseBrowser', () => {
     if (answer?.kind !== 'query') throw new Error('expected a query answer');
     expect(answer.grid.rows).toHaveLength(2);
     expect(answer.grid.total).toBe(2);
+    expect(answer.grid.truncated).toBeFalsy();
     browser.dispose();
   });
 

@@ -71,6 +71,14 @@ describe('pageLabel', () => {
   it('uses the singular for one row', () => {
     expect(pageLabel(grid({ rows: GRID.rows.slice(0, 1), total: 1, unfilteredTotal: 1 }))).toBe('Rows 1–1 of 1 row');
   });
+
+  // A console result the ceiling cut off reports the rows it holds, not a total — a total here is
+  // exactly the claim that makes a cut-off read look like a small one.
+  it('says a result the console cut off is the first of more, and names no total', () => {
+    const cut = grid({ rows: Array.from({ length: 200 }, () => GRID.rows[0]), total: 200, unfilteredTotal: 200, limit: 200 });
+    expect(pageLabel({ ...cut, truncated: true })).toBe('First 200 rows of more than 200.');
+    expect(pageLabel(cut)).toBe('Rows 1–200 of 200 rows');
+  });
 });
 
 describe('countLabel', () => {

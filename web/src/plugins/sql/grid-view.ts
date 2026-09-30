@@ -10,9 +10,21 @@ import type {
 // Pure view arithmetic, kept out of the components so it is testable without a render: where a page
 // starts and ends, what the pager says, what a filter chip reads, and what a cell shows.
 
-/** `Rows 1–100 of 4,213`, with the object's own total beside it once a filter is narrowing. */
+/**
+ * `Rows 1–100 of 4,213`, with the object's own total beside it once a filter is narrowing.
+ *
+ * A result the console cut off is the one case that reports no total at all, because a total is the
+ * claim it cannot make: the rows are the first of more, and naming the ceiling as the size is what
+ * makes a truncated read look like a small one. It reads as how many there are and that there are
+ * more, and the pager's **Next** stays disabled either way — a console result is one iterator taken
+ * once, with no second page behind it.
+ */
 export function pageLabel(grid: SqlGrid): string {
   if (grid.rows.length === 0) return 'No rows.';
+  if (grid.truncated) {
+    const shown = grid.rows.length.toLocaleString('en-US');
+    return `First ${shown} rows of more than ${shown}.`;
+  }
   const first = grid.offset + 1;
   const last = grid.offset + grid.rows.length;
   const total = grid.total === grid.unfilteredTotal
