@@ -45,12 +45,14 @@ export function SearchBar({
   const debounced = useDebouncedValue(query, DEBOUNCE_MS);
 
   // A tab that opens with a query already in it must not immediately re-run that same query, so the
-  // first settled value is remembered and only a change after it fires.
+  // first settled value is remembered and only a change after it fires. An emptied query is sent too,
+  // as the empty string: the server answers it with no rows, which is what clears the previous
+  // search's results — a bar of only spaces is not a search for spaces.
   const settled = useRef(query);
   useEffect(() => {
     if (settled.current === debounced) return;
     settled.current = debounced;
-    if (debounced.trim() !== '') onSearch(debounced);
+    onSearch(debounced.trim() === '' ? '' : debounced);
   }, [debounced, onSearch]);
 
   useEffect(() => {

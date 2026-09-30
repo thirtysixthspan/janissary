@@ -157,6 +157,27 @@ describe('SearchTab history', () => {
     expect(searchTerm().value).toBe('todo');
   });
 
+  it('sends an emptied query, which is what clears the previous results, without recording it', () => {
+    const { intent } = renderTab();
+    settle('fixme');
+    settle('');
+    expect(searches(intent).map((sent: { query: string }) => sent.query)).toEqual(['fixme', '']);
+    press('ArrowUp');
+    expect(searchTerm().value).toBe('fixme');
+  });
+
+  it('sends a query of only spaces as an empty one', () => {
+    const { intent } = renderTab();
+    settle(' '.repeat(3));
+    expect(searches(intent).map((sent: { query: string }) => sent.query)).toEqual(['']);
+  });
+
+  it('sends nothing when a tab opens with an empty query', () => {
+    const { intent } = renderTab(payload({ query: '', rows: [] }));
+    act(() => { vi.advanceTimersByTime(SETTLED_MS); });
+    expect(searches(intent)).toEqual([]);
+  });
+
   it('completes a partly typed term from the one list it walks', () => {
     const { container } = renderTab();
     settle('compileMatcher');

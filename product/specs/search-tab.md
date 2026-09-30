@@ -51,7 +51,9 @@ The tab's own command bar sits at the bottom of the tab, where every other comma
 application sits, and it is styled exactly like an agent tab's. Its prompt reads `search >`, so the
 line is not mistaken for a shell's. The query is edited in place there. **The results update as the
 query is updated** — shortly after typing stops, not on Return — so refining a search does not mean
-retyping it. An empty query clears the results rather than searching for nothing.
+retyping it. An empty query clears the results rather than searching for nothing: emptying the bar
+after a search that found matches removes those rows and shows `Type to search`, and a bar holding
+only spaces counts as empty. An empty query is never added to the term history.
 
 Three toggles sit at the right-hand end of the command line, beside the query they read, and each
 changes how that query is interpreted:

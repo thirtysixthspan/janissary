@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Clear the search results when the query is emptied after a search that found matches.
-
-Existing Issue: Deleting the whole query after a search that found matches leaves every row of the old search on screen instead of clearing them and showing `Type to search`. Severity: 4/10
-
-Existing Risk: 4/10 - The tab shows results for a query that is no longer in the bar, so a user can open a match believing it answers what the bar says, and the empty-query state the spec defines is only reachable from a search that found nothing.
-
-Proposal Risk: 2/10 - Sending the empty query costs one extra intent per clear and the server already settles it without reading the project, so the only exposure is an initial-mount empty query being sent, which the existing first-value guard should keep covered.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1481: clear the search results when the query is emptied". Replication: generated step from this test run, failed 2 of 2 on a fresh app. On a scratch project that is its own git repository, open the search tab with Cmd+Shift+F, type `compileMatcher` and wait for the 21 rows to settle, then select the bar's text and delete it all, and wait about a second. Expected, per `product/specs/search-tab.md` ("An empty query clears the results rather than searching for nothing.") and `ResultTable`'s own `Type to search` state. Observed: the bar is empty but all 21 `compileMatcher` rows remain and no `.search-empty` message appears. Description step 11 passes only because it clears the query after a search that found nothing, when there are no rows to remove. Root cause: the debounce effect in `SearchBar` in `web/src/plugins/search/SearchBar.tsx` calls `onSearch` only when `debounced.trim() !== ''`, so an emptied query never reaches the server, the payload keeps the previous rows, and `ResultTable` in `web/src/plugins/search/ResultTable.tsx` renders rows whenever there are any, without looking at the query. The server already handles an empty query correctly: `activate.test.ts` pins that a `search` intent with `query: ''` settles as done without listing the project, and `SearchSession.run` publishes it with `rows: []`. Likely fix: let the settled empty query through to `onSearch` (keeping the guard that skips the value the tab opened with) and leave the history untouched for an empty term. Regression test in `web/src/plugins/search/SearchTab.test.tsx`: after a search, change the bar to an empty string, advance past the debounce, and assert a `search` intent with `query: ''` is sent and no history entry is recorded.
-
-
 * Forget the search tab's query, results, and term history when the tab is closed.
 
 Existing Issue: Closing the search tab and opening it again, with Cmd+Shift+F or a bare `search`, brings back the previous query, its rows, and that query in the arrow-key history, although the spec says closing the tab forgets the history along with the query. Severity: 3/10
