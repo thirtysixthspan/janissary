@@ -31,7 +31,6 @@ export type SearchPayload = {
 
 export type SearchIntent = { query: string; include: string; exclude: string; regex: boolean; matchCase: boolean; wholeWord: boolean };
 export type OpenIntent = { path: string; line: number };
-export type ClearIntent = Record<string, never>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -76,8 +75,4 @@ export function isSearchIntent(value: unknown): value is SearchIntent {
 
 export function isOpenIntent(value: unknown): value is OpenIntent {
   return isRecord(value) && typeof value.path === 'string' && typeof value.line === 'number';
-}
-
-export function isClearIntent(value: unknown): value is ClearIntent {
-  return isRecord(value) && Object.keys(value).length === 0;
 }

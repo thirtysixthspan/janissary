@@ -5,11 +5,9 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isClearIntent,
   isOpenIntent,
   isSearchIntent,
   isSearchPayload,
-  type ClearIntent,
   type OpenIntent,
   type SearchIntent,
 } from './shared.js';
@@ -49,13 +47,6 @@ export function activate(readFile?: ScanRead): TabPluginActivation {
         payload: isOpenIntent,
         run: (_tab, payload: OpenIntent, capabilities) => {
           sessionFor(capabilities).openMatch(payload.path, payload.line);
-          return null;
-        },
-      },
-      clear: {
-        payload: isClearIntent,
-        run: (_tab, _payload: ClearIntent, capabilities) => {
-          sessionFor(capabilities).clear();
           return null;
         },
       },

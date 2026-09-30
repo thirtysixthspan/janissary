@@ -221,12 +221,15 @@ describe('search plugin activation', () => {
     expect(openInEditor).toHaveBeenCalledWith('/repo/src/a.ts', 3);
   });
 
-  it('clears the query and the rows', async () => {
+  it('clears the query and the rows when the query is emptied', async () => {
     const { capabilities, updateTab } = makeCapabilities();
     const activation = searchActivation();
     activation.command?.('todo', capabilities);
     await settle();
-    activation.intent(intent(settledTab, 'clear', {}), capabilities);
+    // Emptying the query is how a user clears the tab: an empty query is not searched, so the rows
+    // go with it. This is the route that replaced the removed `clear` intent.
+    activation.intent(intent(settledTab, 'search', { ...query, query: '' }), capabilities);
+    await settle();
     const payload = lastPayload(updateTab);
     expect(payload.query).toBe('');
     expect(payload.rows).toEqual([]);

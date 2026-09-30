@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  isClearIntent,
   isOpenIntent,
   isSearchIntent,
   isSearchPayload,
@@ -105,17 +104,5 @@ describe('isOpenIntent', () => {
   it('rejects arrays and null', () => {
     expect(isOpenIntent([])).toBe(false);
     expect(isOpenIntent(null)).toBe(false);
-  });
-});
-
-describe('isClearIntent', () => {
-  it('accepts an empty object', () => {
-    expect(isClearIntent({})).toBe(true);
-  });
-
-  it('rejects an object with a field and rejects arrays and null', () => {
-    expect(isClearIntent({ query: 'todo' })).toBe(false);
-    expect(isClearIntent([])).toBe(false);
-    expect(isClearIntent(null)).toBe(false);
   });
 });

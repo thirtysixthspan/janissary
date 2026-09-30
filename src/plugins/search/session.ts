@@ -81,13 +81,6 @@ export class SearchSession {
     }, request);
   }
 
-  // Drop the query and the results, leaving the tab open and empty.
-  clear(): void {
-    this.cancel();
-    this.payload = emptyPayload();
-    this.publish();
-  }
-
   // Put the file a result names on the line that result names, in an editor tab. The path arrived
   // from the client, and `path.join` collapses `..`, so it is resolved and checked against the
   // project root before it goes anywhere: a row's path is one the scan itself produced, and a
