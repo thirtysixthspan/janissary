@@ -2,8 +2,6 @@
 
 # pull-request
 
-* files to include and exclude should accept wildcards and paths
-
 * the search command bar should be at the bottom of the page like the other command bars. it should say `search >` instead of `>`. results should be reverse ordered where the first match is at the bottom of the page and the remainder above in a scrollable result window.
 
 * the keyboard focus should be alter between the search term and the results using the tab key.

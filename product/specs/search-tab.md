@@ -25,10 +25,18 @@ Quick Open searches, so the two never disagree about what the project contains. 
 are skipped: anything too large for the editor to open, and anything whose bytes are binary.
 
 Two fields in the header narrow the search further. **Files to include** and **Files to
-exclude** each take comma-separated glob patterns: a bare `example` matches at any depth, a leading
-`./` anchors to the project root, and a pattern naming a directory also covers everything beneath it.
-An empty include searches everything; an empty exclude excludes nothing; where both name a file, the
-exclude wins. A pattern that matches nothing narrows the search to nothing rather than failing it.
+exclude** each take comma-separated glob patterns.
+
+A pattern that says nothing about *where* to look names a file at any depth, so `*.md` and `*config*`
+reach every one of them and not only the ones at the project root. A pattern that says where to look
+is anchored to the project root: `src/*.ts` covers `src/` and nothing below it, `*` in it does not
+cross a directory boundary, and a leading `./` or a trailing `/` states the same thing without
+changing the match. A pattern that is not a wildcard at all also names a directory, and selects
+everything beneath it, so `src` behaves as `src/**`.
+
+An empty include searches everything and an empty exclude excludes nothing. Where both name a file,
+the exclude wins. A pattern that matches nothing narrows the search to nothing rather than failing
+it. The comma is always a separator, so neither field can narrow by a brace list.
 
 ### How a search is run
 
