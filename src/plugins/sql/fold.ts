@@ -1,5 +1,5 @@
 import type { DatabaseResultView, TabPluginResources } from '../api.js';
-import type { SqlExport, SqlObject, SqlPayload } from './shared.js';
+import type { SqlExport, SqlObject, SqlPayload, SqlPending } from './shared.js';
 import { planRequest, type SqlRequest } from './request.js';
 import { addExport, addToLog, firstObject, type SqlTabs } from './tabs.js';
 
@@ -19,6 +19,7 @@ export function fold(
   payload: SqlPayload,
   answer: DatabaseResultView,
   tabs: SqlTabs,
+  followUp: SqlPending['followUp'],
 ): SqlFold {
   const base: SqlPayload = { ...payload, pending: null };
   switch (answer.kind) {
@@ -31,7 +32,8 @@ export function fold(
     }
     case 'write': {
       // A statement that failed is still a statement the user ran, so it is logged too: a log that
-      // only kept successes would not say what happened.
+      // only kept successes would not say what happened. It also changed nothing the tab can show, so
+      // it asks for no re-read at all and the failure is reported as a notification instead.
       if (answer.error) {
         return settled({ ...base, ...missing(answer.error), log: addToLog(base.log, { sql: answer.sql, changed: 0, error: answer.error }) });
       }
@@ -42,10 +44,16 @@ export function fold(
         error: null,
         log: answer.sql ? addToLog(base.log, { sql: answer.sql, changed: answer.changed }) : base.log,
       };
-      // With no object selected there is no page to re-read, and the re-read would be issued for
-      // the empty object name — which the host answers with `" is not in "<database>".` and the tab
-      // would show that beside a statement it has just reported as `OK.`. The schema is re-read on
-      // a `Refresh`, so the write simply settles.
+      // A statement the user typed is arbitrary SQL, so it may have changed anything at all — a table
+      // it created, one it dropped, a column it added. The tab reads itself again the way **Refresh**
+      // does, and that schema read is also what picks an object for a tab that had none. A grid's own
+      // write is one cell value in a table that already exists, so it re-reads the page and stops.
+      if (followUp === 'console') {
+        return { payload: written, followUp: planRequest('schema', written) };
+      }
+      // With no object selected there is no page to re-read, and the re-read would be issued for the
+      // empty object name — which the host answers with `" is not in "<database>".` and the tab
+      // would show that beside a statement it has just reported as `OK.`.
       if (written.object === '') return settled(written);
       return { payload: written, followUp: planRequest('query', written) };
     }

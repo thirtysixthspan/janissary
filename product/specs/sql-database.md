@@ -256,8 +256,16 @@ carries the message where the failed
 read happened, and still says `Database "<name>" does not exist. Create it to start.` when a database
 is deleted under an open tab. A failed statement leaves the grid as it was.
 
-A statement that succeeds reports its outcome and adds nothing to the error band, including on a tab
-with no object selected, where there is no page for it to have disturbed and so nothing to re-read.
+A statement that succeeds reports its outcome and adds nothing to the error band, and the tab then
+reads itself again: the object list, then the page it was showing. That is the same reading **Refresh**
+does, and it is what makes a `CREATE`, an `ALTER` or a `DROP` typed into the command bar show up
+without a second press — the console is the only way to change a schema, so the schema changes there.
+It is also how a table a `CREATE` made becomes the tab's page: there is nothing on screen to re-read
+before the statement, and the object list is what picks one.
+
+A statement that failed changes nothing the tab can show, so it asks for no re-read at all and the
+failure is the notification described above. A statement that returns rows only fills the grid, since
+a read cannot have changed anything.
 
 A read fills the grid with the first two hundred rows it returns. A result longer than that is cut
 off there and the range line says so rather than reporting a table of two hundred, because a query

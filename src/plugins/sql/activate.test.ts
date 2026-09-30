@@ -464,22 +464,89 @@ describe('sql plugin answering a request before it returns', () => {
     expect(payload.grid?.rows).toHaveLength(1);
   });
 
-  it('leaves a successful statement on an objectless tab with no error and nothing to re-read', () => {
-    const fixture = fakeCapabilities();
-    const empty = basePayload({ object: '', objects: [], grid: null });
+  // A statement the user typed is arbitrary SQL, so the tab has to read itself again: the object list
+  // first, then the page. A page re-read alone would leave a created or dropped table unnoticed.
+  it('reads the tab again after a statement, so a schema change in it is not missed', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    const before = fixture.actions.length;
+
     fixture.activation.intent(
-      { tab: 'sqlite:shop', intent: 'run', payload: { sql: 'CREATE TABLE t (id INTEGER PRIMARY KEY)' }, tabPayload: empty },
+      { tab: 'sqlite:shop', intent: 'run', payload: { sql: 'DROP TABLE orders' }, tabPayload: lastPayload(fixture) },
+      fixture.capabilities,
+    );
+    const runId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{ kind: 'write', requestId: runId, database: 'shop', sql: 'DROP TABLE orders', parameters: [], changed: 0 }]);
+
+    expect(fixture.actions.slice(before).map((action) => action.action)).toEqual(['run', 'schema', 'query']);
+    expect(lastPayload(fixture).pending).toBeNull();
+    expect(lastPayload(fixture).grid?.rows).toHaveLength(1);
+  });
+
+  // The schema read is also what chooses an object, so a table made by a statement is the one the tab
+  // lands on — which is the whole of what the objectless tab had no way to show before.
+  it('lands on the table a CREATE made, on a tab that had no object at all', () => {
+    const made = [{
+      name: 't', kind: 'table' as const, writable: true,
+      columns: [{ name: 'id', type: 'INTEGER', notNull: false, pk: 1 }],
+    }];
+    // The database holds nothing until the statement runs, and holds `t` after it.
+    let exists = false;
+    const sql = 'CREATE TABLE t (id INTEGER PRIMARY KEY)';
+    const fixture = fakeCapabilities(emptyView(), (action) => {
+      const { requestId } = action as { requestId: string };
+      if (action.action === 'schema') {
+        return { kind: 'schema', requestId, database: 'shop', objects: exists ? made : [] };
+      }
+      if (action.action === 'query') return { kind: 'query', requestId, database: 'shop', grid: grid() };
+      exists = true;
+      return { kind: 'write', requestId, database: 'shop', sql, parameters: [], changed: 0 };
+    });
+    openTab(fixture);
+    expect(lastPayload(fixture).object).toBe('');
+    const before = fixture.actions.length;
+
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'run', payload: { sql }, tabPayload: lastPayload(fixture) },
+      fixture.capabilities,
+    );
+
+    expect(fixture.actions.slice(before).map((action) => action.action)).toEqual(['run', 'schema', 'query']);
+    const payload = lastPayload(fixture);
+    expect(payload.error).toBeNull();
+    expect(payload.object).toBe('t');
+    expect(payload.grid?.rows).toHaveLength(1);
+    expect(payload.log.map((entry) => entry.sql)).toEqual([sql]);
+  });
+
+  // A grid write is one cell value in a table that already exists, so it cannot have changed the
+  // schema: it re-reads the page it disturbed and stops there.
+  it('re-reads only the page after a write the grid made itself', () => {
+    const fixture = fakeCapabilities(emptyView(), answering());
+    openTab(fixture);
+    const before = fixture.actions.length;
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'update-cell', payload: { row: 'r1', column: 'status', value: 'x' }, tabPayload: lastPayload(fixture) },
+      fixture.capabilities,
+    );
+    const writeId = (fixture.actions.at(-1) as { requestId: string }).requestId;
+    deliver(fixture, [{ kind: 'write', requestId: writeId, database: 'shop', sql: 'UPDATE orders SET status = ?', parameters: ['x'], changed: 1 }]);
+    expect(fixture.actions.slice(before).map((action) => action.action)).toEqual(['updateCell', 'query']);
+  });
+
+  it('asks for nothing after a statement that failed, because it changed nothing', () => {
+    const fixture = fakeCapabilities();
+    const tab = basePayload();
+    fixture.activation.intent(
+      { tab: 'sqlite:shop', intent: 'run', payload: { sql: 'DROP TABLE nope' }, tabPayload: tab },
       fixture.capabilities,
     );
     const runId = (fixture.actions.at(-1) as { requestId: string }).requestId;
     const before = fixture.actions.length;
-    deliver(fixture, [{ kind: 'write', requestId: runId, database: 'shop', sql: 'CREATE TABLE t (id INTEGER PRIMARY KEY)', parameters: [], changed: 0 }]);
-    const payload = lastPayload(fixture);
-    expect(payload.error).toBeNull();
-    expect(payload.pending).toBeNull();
-    expect(payload.log.map((entry) => entry.sql)).toEqual(['CREATE TABLE t (id INTEGER PRIMARY KEY)']);
-    // Nothing was asked for after the statement itself: a re-read would name the empty object.
+    deliver(fixture, [{ kind: 'write', requestId: runId, database: 'shop', sql: 'DROP TABLE nope', parameters: [], changed: 0, error: 'no such table: nope' }]);
     expect(fixture.actions.slice(before)).toEqual([]);
+    expect(lastPayload(fixture).pending).toBeNull();
+    expect(lastPayload(fixture).error).toBe('no such table: nope');
   });
 
   it('has every request recorded on the tab before it leaves for the host', () => {

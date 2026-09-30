@@ -108,7 +108,7 @@ function deliver(
     dispatch(key, refreshed, planRequest(action, refreshed), capabilities, tabs, publish);
     return;
   }
-  const folded = fold(key, refreshed, answer, tabs);
+  const folded = fold(key, refreshed, answer, tabs, pending.followUp);
   report(refreshed.error, folded.payload.error, capabilities);
   if (folded.followUp) {
     dispatch(key, folded.payload, folded.followUp, capabilities, tabs, publish);
