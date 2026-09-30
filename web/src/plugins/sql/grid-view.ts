@@ -21,6 +21,22 @@ export function pageLabel(grid: SqlGrid): string {
   return `Rows ${first.toLocaleString('en-US')}–${last.toLocaleString('en-US')} of ${total}`;
 }
 
+/**
+ * What the grid's header reports about how much of the object is there.
+ *
+ * A page, once one has been read. Before that a bare "no grid" stands for two different states that
+ * have to be told apart: a request the tab is still waiting on, and a schema read that landed with
+ * nothing in it. The payload holds them apart already — `pending` is the outstanding request, and
+ * nothing pending against an empty object list is a read that finished — so the label is a question
+ * about the payload rather than about the grid. `Loading…` answers the remaining case, a tab that
+ * has read nothing and is not waiting on anything, which is what it read before this existed.
+ */
+export function countLabel(payload: SqlPayload): string {
+  if (payload.grid) return pageLabel(payload.grid);
+  if (payload.pending !== null) return 'Loading…';
+  return payload.objects.length === 0 ? 'No tables.' : 'Loading…';
+}
+
 export function hasPrevious(grid: SqlGrid | null): boolean {
   return grid !== null && grid.offset > 0;
 }

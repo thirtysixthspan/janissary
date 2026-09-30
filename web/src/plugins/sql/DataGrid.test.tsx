@@ -40,6 +40,23 @@ describe('DataGrid headers and rows', () => {
     expect(screen.getAllByText('No rows.').length).toBeGreaterThan(0);
   });
 
+  // A tab opened on a database holding nothing settles its grid to nothing, and a header reading
+  // `Loading…` for the rest of the session is indistinguishable from a read that never came back.
+  it('reads an empty database as no tables, and a read still outstanding as loading', () => {
+    const { capabilities } = makeCapabilities();
+    const { container, rerender } = render(
+      <DataGrid payload={payload({ objects: [], object: '', grid: null })} capabilities={capabilities} />,
+    );
+    const count = () => (container.querySelector('.sql-grid-count') as HTMLElement).textContent;
+    expect(count()).toBe('No tables.');
+
+    rerender(<DataGrid
+      payload={payload({ objects: [], object: '', grid: null, pending: { id: 'r1', followUp: 'schema' } })}
+      capabilities={capabilities}
+    />);
+    expect(count()).toBe('Loading…');
+  });
+
   it('shows a null cell in its own style and an empty string in another', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);

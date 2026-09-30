@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Show `No tables.` in a database that has none instead of leaving the tab on `Loading…`
-
-Existing Issue: Opening a tab on a database with no objects leaves its grid reading `Loading…` with the object line `—` forever, so an empty database is indistinguishable from one still being read. Severity: 6/10
-
-Existing Risk: 6/10 - A user who has just created a database is told the tab is still loading something, and either waits on a read that already finished or assumes the browser cannot see their own database.
-
-Proposal Risk: 2/10 - A tab that reads `No tables.` when the answer lands is what every other empty state in the application already does, so being wrong about it would take a deliberate change to the schema read.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1467: an empty database leaves the `sql` tab reading `Loading…` instead of `No tables.`". Step D1 (description), verbatim: "From a project with no database, run `sql` and confirm it reports `No databases. Create one with: db sqlite create <name>`. Run `db sqlite create shop`, then `sql shop`, and confirm a tab opens and shows `No tables.`" Step P1 (plan) asserts the same thing. In a project with no database, type `db sqlite create shop` in the agent tab's command bar, then `sql shop`. Expected: the tab opens reading `No tables.` — `product/specs/sql-database.md` says "While a read is still outstanding the grid header reads `Loading…`, and once the answer lands `No tables.` means the database is empty rather than that nothing has been read yet." Observed, three times on a freshly started instance: the bare `sql` and `db sqlite create shop` halves were right (`No databases. Create one with: db sqlite create <name>` and `Created sqlite database "shop".`), the tab opened and was titled `shop`, and the grid read object `—`, count `Loading…`, pager empty, table dropdown value empty, for the rest of the session. `foldSchema` in `src/plugins/sql/fold.ts` settles an object list of zero as `grid: null`, and `DataGrid` in `web/src/plugins/sql/DataGrid.tsx` renders `grid ? pageLabel(grid) : 'Loading…'`, so the only place that could say the database is empty is the one place that is standing in for a read in flight. The fix is to tell the two apart: the payload already knows the schema answer landed (`pending` is null and `objects` is an empty list), so the grid can read `No tables.` for that case while keeping `Loading…` for a genuinely outstanding read. A regression test should render `DataGrid` with an empty `objects` list, a null `grid` and a null `pending`, and assert the header reads `No tables.`, and with a non-null `pending` assert it still reads `Loading…`.
-
 * Say that a console read was cut off instead of reporting it as a table of two hundred
 
 Existing Issue: A read typed into the console that returns more than two hundred rows stops at two hundred and the range line reads `Rows 1–200 of 200 rows`, so a truncated result is indistinguishable from a small one. Severity: 5/10

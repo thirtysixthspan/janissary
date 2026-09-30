@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { pageLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
+import { countLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser } from './ColumnChooser';
@@ -74,7 +74,7 @@ export function DataGrid({
     <div className="sql-grid-area">
       <div className="sql-grid-bar">
         <span className="sql-grid-object">{object?.name ?? '—'}</span>
-        <span className="sql-grid-count">{grid ? pageLabel(grid) : 'Loading…'}</span>
+        <span className="sql-grid-count">{countLabel(payload)}</span>
         {readOnly && <span className="sql-readonly">{readOnly}</span>}
       </div>
 

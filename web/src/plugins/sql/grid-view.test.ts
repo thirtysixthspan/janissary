@@ -4,6 +4,7 @@ import {
   browsable,
   cellText,
   columnCount,
+  countLabel,
   filterLabel,
   groupedObjects,
   hasNext,
@@ -69,6 +70,54 @@ describe('pageLabel', () => {
 
   it('uses the singular for one row', () => {
     expect(pageLabel(grid({ rows: GRID.rows.slice(0, 1), total: 1, unfilteredTotal: 1 }))).toBe('Rows 1–1 of 1 row');
+  });
+});
+
+describe('countLabel', () => {
+  function payload(over: Partial<SqlPayload> = {}): SqlPayload {
+    return {
+      database: 'shop',
+      databases: [{ name: 'shop', exists: true, open: true }],
+      objects: [ORDERS],
+      object: 'orders',
+      filters: [],
+      hidden: [],
+      global: '',
+      order: [],
+      limit: 100,
+      offset: 0,
+      pageSizes: [50, 100, 500],
+      grid: GRID,
+      log: [],
+      exports: [],
+      error: null,
+      pending: null,
+      ...over,
+    };
+  }
+
+  it('reads the range line once a page has arrived', () => {
+    expect(countLabel(payload())).toBe(pageLabel(GRID));
+  });
+
+  it('reads as loading while a request is still outstanding', () => {
+    expect(countLabel(payload({ grid: null, pending: { id: 'r1', followUp: 'query' } }))).toBe('Loading…');
+  });
+
+  it('reads as an empty database once the schema read has landed with nothing in it', () => {
+    expect(countLabel(payload({ objects: [], object: '', grid: null }))).toBe('No tables.');
+  });
+
+  // A tab that has just opened holds an empty object list too, so the two states differ only by
+  // whether anything is still outstanding — and the one still outstanding is the one to read.
+  it('reads as loading on a tab whose first read has not answered yet', () => {
+    expect(countLabel(payload({
+      objects: [], object: '', grid: null, pending: { id: 'r1', followUp: 'schema' },
+    }))).toBe('Loading…');
+  });
+
+  it('still reads as loading when a refused query left no page and no request', () => {
+    expect(countLabel(payload({ grid: null }))).toBe('Loading…');
   });
 });
 
