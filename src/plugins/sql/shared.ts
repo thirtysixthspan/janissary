@@ -59,7 +59,14 @@ export function insertStatement(object: string, cells: readonly SqlInsertCell[],
 export type SqlFilterOperator =
   | 'contains' | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'isNull' | 'notNull';
 
-export type SqlFilter = { column: string; op: SqlFilterOperator; value?: string };
+export type SqlFilter = { column: string; op: SqlFilterOperator; value?: string; enabled?: boolean };
+
+/**
+ * Whether a filter narrows the query. A filter with no `enabled` is on, which is what a payload
+ * written before the flag existed means — the tab's payload is stored in a profile and restored from
+ * one, so this contract has to read a filter it would not write today.
+ */
+export const isFilterOn = (filter: SqlFilter): boolean => filter.enabled !== false;
 export type SqlOrder = { column: string; desc: boolean };
 
 export type SqlGrid = {
@@ -135,7 +142,7 @@ export type SqlPayload = {
   grid: SqlGrid | null;
   stats: SqlStatsColumn[] | null;
   // Every statement the tab has run, newest first, capped server-side. The last entry is what the
-  // console line under the prompt reports; the rest are the session, readable rather than
+  //   console line under the prompt reports; the rest are the session, readable rather than
   // reconstructable from memory.
   log: SqlConsoleResult[];
   exports: SqlExport[];
@@ -186,6 +193,7 @@ function isFilter(value: unknown): value is SqlFilter {
   if (!isRecord(value) || !isString(value.column) || !isString(value.op) || !OPERATORS.has(value.op)) {
     return false;
   }
+  if (value.enabled !== undefined && typeof value.enabled !== 'boolean') return false;
   if (value.op === 'isNull' || value.op === 'notNull') return true;
   return isString(value.value);
 }
@@ -255,6 +263,16 @@ function isExport(value: unknown): value is SqlExport {
   return isRecord(value) && isString(value.name) && isString(value.size) && typeof value.rows === 'number' && isString(value.ref);
 }
 
+function isConsoleResult(value: unknown): value is SqlConsoleResult {
+  return isRecord(value) && isString(value.sql) && typeof value.changed === 'number'
+    && (value.error === undefined || isString(value.error));
+}
+
+function isPending(value: unknown): value is SqlPending {
+  if (!isRecord(value) || !isString(value.id) || !isString(value.followUp)) return false;
+  return FOLLOW_UPS.has(value.followUp as SqlPending['followUp']);
+}
+
 // Composed from the per-part guards rather than written out field by field: each part is already
 // guarded where it is defined, so the payload guard's own job is only to check that every part is
 // present and of the right kind. `null` is the "not asked for yet" value for the optional parts, and
@@ -287,12 +305,3 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
   return parts.every(([part, guard]) => guard(part));
 }
 
-function isConsoleResult(value: unknown): value is SqlConsoleResult {
-  return isRecord(value) && isString(value.sql) && typeof value.changed === 'number'
-    && (value.error === undefined || isString(value.error));
-}
-
-function isPending(value: unknown): value is SqlPending {
-  if (!isRecord(value) || !isString(value.id) || !isString(value.followUp)) return false;
-  return FOLLOW_UPS.has(value.followUp as SqlPending['followUp']);
-}

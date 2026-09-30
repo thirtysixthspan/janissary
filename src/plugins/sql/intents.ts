@@ -4,7 +4,7 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import { isSqlPayload, type SqlFilterOperator, type SqlPayload } from './shared.js';
-import { selected, toggledOrder, withFilter, withHidden } from './payload-changes.js';
+import { selected, toggledOrder, withFilter, withFilterEnabled, withHidden } from './payload-changes.js';
 import {
   isClearFiltersIntent,
   isClearLogIntent,
@@ -16,6 +16,7 @@ import {
   isRunIntent,
   isSelectObjectIntent,
   isSetColumnsIntent,
+  isSetFilterEnabledIntent,
   isSetFilterIntent,
   isSetGlobalFilterIntent,
   isSetOrderIntent,
@@ -24,30 +25,14 @@ import {
   isStatsIntent,
   isUpdateCellIntent,
 } from './shared-intents.js';
-import { instanceKeyFor, type SqlTabs } from './tabs.js';
-import { newRequestId, planFor, planRequest, planRun, dispatch, type SqlRequest } from './request.js';
+import type { SqlTabs } from './tabs.js';
+import { newRequestId, planFor, planRequest, planRun, apply, reread } from './request.js';
 import { openDatabase } from './open-tab.js';
 
 // One client intent to one topic action, each behind the payload guard that decides whether the
 // request is well formed. Every branch returns null — the answer arrives later on the topic — or
 // throws through `rejectRequest`. Nothing here reports a failure: a filter the host will not accept
 // is a user mistake, not a broken plugin.
-
-/** A tab's new state, and the request that state is waiting on once recorded. */
-type SqlChange = { payload: SqlPayload; request?: SqlRequest };
-
-/**
- * A view change re-reads the same grid query from the first page, because an offset is page-relative.
- *
- * Every intent goes through here or through the same two-step shape beside it, and both build the
- * topic action from the payload the tab is about to hold — never from the one it already held. The
- * query the host runs and the state the tab records are then the same state by construction, which is
- * the only way a filter chip, a page number, and the rows on screen cannot disagree.
- */
-function reread(payload: SqlPayload): SqlChange {
-  const next = { ...payload, offset: 0 };
-  return { payload: next, request: planRequest('query', next) };
-}
 
 /**
  * Refuse a write to something the view already calls read-only, and to a table the tab is not
@@ -71,24 +56,6 @@ function requireWritable(
   const what = entry?.kind === 'view' ? 'A view' : 'This table';
   const why = entry?.kind === 'view' ? 'it is a view' : 'it has no primary key';
   capabilities.rejectRequest(`${what} cannot be ${verb}: ${why}.`);
-}
-
-/**
- * Record the new payload and redraw the tab it belongs to, then send the request it is waiting on.
- * The only way this plugin changes a tab. The send comes last and `dispatch` is what guarantees it,
- * so no intent can send a request the tab has not yet recorded as outstanding.
- */
-function apply(change: SqlChange, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): null {
-  const key = instanceKeyFor(change.payload.database);
-  if (change.request) {
-    dispatch(key, change.payload, change.request, capabilities, tabs, (payload) => {
-      capabilities.updateTab(key, () => ({ payload }));
-    });
-    return null;
-  }
-  tabs.write(key, change.payload);
-  capabilities.updateTab(key, () => ({ payload: change.payload }));
-  return null;
 }
 
 export function intentsFor(tabs: SqlTabs) {
@@ -120,6 +87,16 @@ export function intentsFor(tabs: SqlTabs) {
       run: (payload, value: { column: string; op: SqlFilterOperator; value?: string }, capabilities): null => {
         return apply(
           reread({ ...payload, filters: withFilter(payload, value.column, value.op, value.value) }),
+          capabilities,
+          tabs,
+        );
+      },
+    },
+    'set-filter-enabled': {
+      payload: isSetFilterEnabledIntent,
+      run: (payload, value: { column: string; enabled: boolean }, capabilities): null => {
+        return apply(
+          reread(withFilterEnabled(payload, value.column, value.enabled)),
           capabilities,
           tabs,
         );

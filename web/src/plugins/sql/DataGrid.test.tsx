@@ -119,6 +119,42 @@ describe('DataGrid filtering', () => {
     fireEvent.click(screen.getByText(/Clear filters/));
     expect(intent).toHaveBeenCalledWith('clear-filters', {});
   });
+
+  it('switches a filter off and on again by double-clicking its chip', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<DataGrid
+      payload={payload({ filters: [{ column: 'status', op: 'eq', value: 'paid' }] })}
+      capabilities={capabilities}
+    />);
+    const chip = screen.getByRole('button', { name: 'status = paid' });
+    fireEvent.doubleClick(chip);
+    expect(intent).toHaveBeenCalledWith('set-filter-enabled', { column: 'status', enabled: false });
+  });
+
+  // A chip that is parked still carries its column, operator and value, so a double-click brings it
+  // back without retyping any of that. The tooltip says which press is which.
+  it('draws a parked filter greyed out, and says which press brings it back', () => {
+    const { capabilities, intent } = makeCapabilities();
+    const { rerender } = render(<DataGrid
+      payload={payload({ filters: [{ column: 'status', op: 'eq', value: 'paid' }] })}
+      capabilities={capabilities}
+    />);
+    const on = screen.getByRole('button', { name: 'status = paid' }) as HTMLButtonElement;
+    expect(on.getAttribute('aria-pressed')).toBe('true');
+    expect(on.title).toBe('Disable');
+    expect(on.className).not.toContain('off');
+
+    rerender(<DataGrid
+      payload={payload({ filters: [{ column: 'status', op: 'eq', value: 'paid', enabled: false }] })}
+      capabilities={capabilities}
+    />);
+    const off = screen.getByRole('button', { name: 'status = paid' }) as HTMLButtonElement;
+    expect(off.getAttribute('aria-pressed')).toBe('false');
+    expect(off.title).toBe('Enable');
+    expect(off.className).toContain('off');
+    fireEvent.doubleClick(off);
+    expect(intent).toHaveBeenCalledWith('set-filter-enabled', { column: 'status', enabled: true });
+  });
 });
 
 describe('the insert form', () => {

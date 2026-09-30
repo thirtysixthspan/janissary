@@ -502,6 +502,40 @@ describe('sql plugin intents', () => {
     };
   }
 
+  // A parked filter keeps its column, operator and value in the payload and leaves the query, so
+  // bringing it back is one press rather than a retyped column, an operator, and a value.
+  it('parks a filter out of the query without losing it, and brings it back on a second press', () => {
+    const fixture = fakeCapabilities();
+    const tab = basePayload({ filters: [{ column: 'status', op: 'eq', value: 'paid' }] });
+    intent('set-filter-enabled', { column: 'status', enabled: false }, fixture, tab);
+    expect(fixture.actions[0]).toMatchObject({ action: 'query', query: { filters: [] } });
+    const parked = lastPayload(fixture);
+    expect(parked.filters).toEqual([{ column: 'status', op: 'eq', value: 'paid', enabled: false }]);
+
+    intent('set-filter-enabled', { column: 'status', enabled: true }, fixture, parked);
+    expect(fixture.actions[1]).toMatchObject({
+      action: 'query', query: { filters: [{ column: 'status', op: 'eq', value: 'paid' }] },
+    });
+  });
+
+  // A tab restored from a profile saved before the flag existed carries filters with no `enabled` at
+  // all, and the contract reads one as being on.
+  it('reads a filter with no enabled flag as being on, and never sends the flag to the host', () => {
+    const fixture = fakeCapabilities();
+    intent('set-filter', { column: 'status', op: 'eq', value: 'paid' }, fixture, basePayload());
+    expect(fixture.actions[0]).toMatchObject({
+      action: 'query', query: { filters: [{ column: 'status', op: 'eq', value: 'paid' }] },
+    });
+    expect(fixture.actions[0]?.query?.filters[0]).toEqual({ column: 'status', op: 'eq', value: 'paid' });
+  });
+
+  it('refuses a set-filter-enabled that names no column or is not a boolean', () => {
+    const fixture = fakeCapabilities();
+    expect(() => intent('set-filter-enabled', { enabled: false }, fixture)).toThrow(new TabPluginRejection('invalid set-filter-enabled payload'));
+    expect(() => intent('set-filter-enabled', { column: 'status', enabled: 'no' }, fixture)).toThrow(new TabPluginRejection('invalid set-filter-enabled payload'));
+    expect(fixture.actions).toEqual([]);
+  });
+
   it('turns a filter, an order, and a page change into one query each, from the first page', () => {
     const fixture = fakeCapabilities();
     // Each intent answers with the payload it produced, and the next one is sent against that — the

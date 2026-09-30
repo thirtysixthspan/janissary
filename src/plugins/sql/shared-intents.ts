@@ -13,6 +13,9 @@ export type OpenIntent = { name: string };
 // sent just after a `select-object` would build its query against the object the user just left.
 export type SelectObjectIntent = { object: string; column?: string; value?: string };
 export type SetFilterIntent = { column: string; op: SqlFilterOperator; value?: string };
+// Which state the chip is switching *to*, not a flip: two presses in quick succession would each ask
+// for "the other one" and undo each other, while naming the state lands on it either way.
+export type SetFilterEnabledIntent = { column: string; enabled: boolean };
 // The one term matched against every column. Any string is accepted and bound, exactly as a
 // per-column value is; an empty one removes the term, so clearing it needs no separate intent.
 export type SetGlobalFilterIntent = { value: string };
@@ -110,6 +113,10 @@ export function isSetFilterIntent(value: unknown): value is SetFilterIntent {
   if (!isRecord(value) || !isString(value.column) || !isOperator(value.op)) return false;
   if (isNoFilterValue(value.op)) return true;
   return isString(value.value);
+}
+
+export function isSetFilterEnabledIntent(value: unknown): value is SetFilterEnabledIntent {
+  return isRecord(value) && isString(value.column) && typeof value.enabled === 'boolean';
 }
 
 export function isSetOrderIntent(value: unknown): value is SetOrderIntent {

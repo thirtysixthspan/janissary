@@ -1,11 +1,45 @@
 import { randomUUID } from 'node:crypto';
 import type { TabPluginServerCapabilities, TabPluginTopicAction } from '../api.js';
-import type { SqlPayload, SqlPending } from './shared.js';
-import type { SqlTabs } from './tabs.js';
+import { isFilterOn, type SqlPayload, type SqlPending } from './shared.js';
+import { instanceKeyFor, type SqlTabs } from './tabs.js';
 
 // A request the plugin is about to make, and the topic action that will answer it. Kept together so
 // the payload that records "I am waiting for this" and the action that is sent cannot drift apart.
 export type SqlRequest = { pending: SqlPending; action: TabPluginTopicAction };
+
+/** A tab's new state, and the request that state is waiting on once recorded. */
+export type SqlChange = { payload: SqlPayload; request?: SqlRequest };
+
+/**
+ * A view change re-reads the same grid query from the first page, because an offset is page-relative.
+ *
+ * Every view intent goes through here or through the same two-step shape beside it, and both build the
+ * topic action from the payload the tab is about to hold — never from the one it already held. The
+ * query the host runs and the state the tab records are then the same state by construction, which is
+ * the only way a filter chip, a page number, and the rows on screen cannot disagree.
+ */
+export function reread(payload: SqlPayload): SqlChange {
+  const next = { ...payload, offset: 0 };
+  return { payload: next, request: planRequest('query', next) };
+}
+
+/**
+ * Record the new payload and redraw the tab it belongs to, then send the request it is waiting on.
+ * The only way this plugin changes a tab. The send comes last and `dispatch` is what guarantees it,
+ * so no intent can send a request the tab has not yet recorded as outstanding.
+ */
+export function apply(change: SqlChange, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): null {
+  const key = instanceKeyFor(change.payload.database);
+  if (change.request) {
+    dispatch(key, change.payload, change.request, capabilities, tabs, (payload) => {
+      capabilities.updateTab(key, () => ({ payload }));
+    });
+    return null;
+  }
+  tabs.write(key, change.payload);
+  capabilities.updateTab(key, () => ({ payload: change.payload }));
+  return null;
+}
 
 /** A fresh request id, minted here because the host echoes one back rather than issuing it. */
 export function newRequestId(): string {
@@ -15,7 +49,12 @@ export function newRequestId(): string {
 export function gridQueryOf(payload: SqlPayload) {
   return {
     object: payload.object,
-    filters: payload.filters.map((filter) => ({ ...filter })),
+    // Only the filters that are in force: a parked one is dropped here rather than taught to the
+    // query builder, so the host never sees a filter the user is not asking for. Each one is built
+    // by hand because `enabled` is view state, and view state does not travel to the host.
+    filters: payload.filters.filter(isFilterOn).map((filter) => ({
+      column: filter.column, op: filter.op, value: filter.value,
+    })),
     global: payload.global,
     order: payload.order.map((entry) => ({ ...entry })),
     limit: payload.limit,

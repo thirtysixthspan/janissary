@@ -2,8 +2,6 @@
 
 # pull-request
 
-* double clicking a filter once created should toggle the filter. When disable it should be greyed out. tooltip on hover should be enable or disable depending.
-
 * remove row numbers from teh ssql gutter
 
 * entire rows should be selectable by mouse click and selectable via keyboard navigation similar to how the file navigator navigation works. the row should be copyable

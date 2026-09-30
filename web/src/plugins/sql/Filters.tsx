@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilter, faSearch } from '@fortawesome/free-solid-svg-icons';
-import type { SqlFilterOperator, SqlPayload } from '@shared/plugins/sql/shared';
+import { isFilterOn, type SqlFilterOperator, type SqlPayload } from '@shared/plugins/sql/shared';
 import { filterLabel } from './grid-view';
 
 // The filter row and the chips above it. A filter is a column, an operator, and a value, and it is
 // set inline under the header it applies to rather than in a dialog — two choices and Enter. Setting
 // the same column's filter again the same way removes it, which is what the server-side toggle does.
+//
+// A chip is also a switch: double-clicking it parks the filter without retyping it, and the parked
+// one is drawn greyed out with a tooltip saying which press brings it back. It is a toggle button
+// rather than a disabled one, because a disabled button takes no pointer events at all — there would
+// be nothing to hover for the tooltip and nothing to press to undo it.
 export function FilterChips({
   payload, onSend,
 }: {
@@ -17,11 +22,21 @@ export function FilterChips({
   return (
     <div className="sql-filters">
       {payload.global !== '' && <span className="sql-filter-chip"><span>matches "{payload.global}" anywhere</span></span>}
-      {payload.filters.map((filter) => (
-        <span className="sql-filter-chip" key={filter.column}>
-          <span>{filterLabel(filter)}</span>
-        </span>
-      ))}
+      {payload.filters.map((filter) => {
+        const on = isFilterOn(filter);
+        return (
+          <button
+            type="button"
+            key={filter.column}
+            className={`sql-filter-chip sql-filter-toggle${on ? '' : ' off'}`}
+            aria-pressed={on}
+            title={on ? 'Disable' : 'Enable'}
+            onDoubleClick={() => onSend('set-filter-enabled', { column: filter.column, enabled: !on })}
+          >
+            {filterLabel(filter)}
+          </button>
+        );
+      })}
       <button type="button" className="sql-clear-filters" onClick={() => onSend('clear-filters', {})}>
         <FontAwesomeIcon icon={faFilter} /> Clear filters
       </button>

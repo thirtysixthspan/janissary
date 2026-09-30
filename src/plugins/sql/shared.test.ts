@@ -6,6 +6,7 @@ import {
   isOpenIntent,
   isClearLogIntent,
   isSetColumnsIntent,
+  isSetFilterEnabledIntent,
   isSetFilterIntent,
   isSetGlobalFilterIntent,
   isSetPageIntent,
@@ -68,6 +69,16 @@ describe('isSqlPayload', () => {
     expect(isSqlPayload(keyed({ table: 'c', columns: 'id' }))).toBe(false);
     expect(isSqlPayload(keyed({ table: 7, columns: ['id'] }))).toBe(false);
     expect(isSqlPayload(keyed(null))).toBe(false);
+  });
+
+  // A tab restored from a profile saved before the flag existed carries filters with none at all,
+  // and the contract has to read one as a filter rather than refuse the whole payload.
+  it('accepts a filter with or without the enabled flag, and refuses one that is not a boolean', () => {
+    const filtered = (enabled: unknown) => payload({ filters: [{ column: 'status', op: 'eq', value: 'paid', enabled }] } as never);
+    expect(isSqlPayload(filtered(undefined))).toBe(true);
+    expect(isSqlPayload(filtered(true))).toBe(true);
+    expect(isSqlPayload(filtered(false))).toBe(true);
+    expect(isSqlPayload(filtered('no'))).toBe(false);
   });
 
 
@@ -133,6 +144,14 @@ describe('intent payload guards', () => {
     expect(isSetFilterIntent({ column: 'status', op: 'isNull' })).toBe(true);
     expect(isSetFilterIntent({ column: 'status', op: 'eq' })).toBe(false);
     expect(isSetFilterIntent({ column: 'status', op: 'nope', value: 'x' })).toBe(false);
+  });
+
+  it('accepts a parked filter naming a column and a state, and refuses either alone', () => {
+    expect(isSetFilterEnabledIntent({ column: 'status', enabled: false })).toBe(true);
+    expect(isSetFilterEnabledIntent({ column: 'status', enabled: true })).toBe(true);
+    expect(isSetFilterEnabledIntent({ column: 'status' })).toBe(false);
+    expect(isSetFilterEnabledIntent({ enabled: true })).toBe(false);
+    expect(isSetFilterEnabledIntent({ column: 7, enabled: true })).toBe(false);
   });
 
   it('accepts a global term of any text, including an empty one that means none', () => {

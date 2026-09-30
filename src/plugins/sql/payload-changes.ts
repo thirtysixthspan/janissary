@@ -37,6 +37,23 @@ export function withFilter(
 }
 
 /**
+ * The filter list with one column's filter switched on or off, keeping the filter itself.
+ *
+ * A filter is otherwise only ever removed by setting the same one again, which means retyping it. A
+ * parked filter stays in the payload with its column, operator and value intact and leaves the query
+ * instead, so bringing it back is one double-click rather than a retyped column, an operator, and a
+ * value that may have to be looked up again.
+ */
+export function withFilterEnabled(payload: SqlPayload, column: string, enabled: boolean) {
+  return {
+    ...payload,
+    filters: payload.filters.map((filter) => (
+      filter.column === column ? { ...filter, enabled } : filter
+    )),
+  };
+}
+
+/**
  * The payload as it should read once another object has been selected.
  *
  * A filter, a hidden column and a sort order are all facts about a column of *one* object, not facts

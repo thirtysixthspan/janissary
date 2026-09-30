@@ -60,12 +60,18 @@ re-reads on **Refresh**.
 A filter is a column, an operator, and a value, chosen under the header it applies to. The
 operators are `contains`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `isNull`, and `notNull`; the last two
 bind no value and hide the value field. Filtering the same column the same way again removes that
-filter, so experimenting does not accumulate a list of them. **Clear filters** removes them all.
+filter, so experimenting does not accumulate a list of them. Double-clicking a filter's chip switches
+it off and on without retyping it: a switched-off filter stays in the chip row, drawn greyed out and
+struck through, its tooltip reading **Enable** where a live one reads **Disable**, and the query
+leaves it out, so the grid shows what the remaining filters say. It keeps its column, operator and
+value while it is parked, so bringing it back is that one double-click. **Clear filters** removes
+them all.
 
 A filter belongs to a column of one object, so selecting a different object drops the filters naming
 columns it does not have — keeping them would build a statement naming a column that is not there.
 A filter on a column the new object does have stays, and an object the tab has never listed has no
-known columns and so keeps everything.
+known columns and so keeps everything. A parked filter is still a filter, so it is dropped with the
+rest of that column's.
 
 **Search every column** takes one term and matches it against the whole row, so a value can be found
 without knowing which column holds it. It is the other order of narrowing — a per-column filter is
