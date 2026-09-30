@@ -14,12 +14,30 @@ function cellInput(container: HTMLElement): HTMLElement {
 }
 
 describe('DataGrid headers and rows', () => {
-  it('renders every column in order, between the row header and the row controls', () => {
+  it('renders every column in order, after the row controls and the row header', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
-    expect(headers).toEqual(['', 'id', 'status', '']);
+    expect(headers).toEqual(['', '', 'id', 'status']);
     expect(screen.getByText('paid')).toBeTruthy();
+  });
+
+  // The actions are in the first column, so they are on screen however wide the data is.
+  it('puts a row\'s delete control in its first cell, ahead of the row header', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    const cells = container.querySelectorAll(':scope tbody tr:first-child > td');
+    expect(cells[0]?.querySelector('[aria-label="Delete row"]')).not.toBeNull();
+    expect(cells[1]?.getAttribute('title')).toBe('Highlight row');
+  });
+
+  it('keeps the filter editor under the columns, after both leading cells', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Filter status'));
+    const cells = [...container.querySelectorAll(':scope .sql-filter-row > td')];
+    expect(cells.map((cell) => cell.className)).toEqual(['sql-gutter', 'sql-gutter sql-row-head', '']);
+    expect(cells[2]?.querySelector('.sql-filter-editor')).not.toBeNull();
   });
 
   // The gutter in front of a row carries no number — the pager already says which rows the page holds —
@@ -28,7 +46,7 @@ describe('DataGrid headers and rows', () => {
     const { capabilities } = makeCapabilities();
     const { container, rerender } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
     const firstRow = () => [...container.querySelectorAll(':scope tbody tr:first-child > td')].map((cell) => cell.textContent);
-    expect(firstRow()).toEqual(['', '1', 'paid', '']);
+    expect(firstRow()).toEqual(['', '', '1', 'paid']);
 
     rerender(<DataGrid payload={payload({ grid: grid({ rows: [], total: 0 }) })} capabilities={capabilities} />);
     const empty = container.querySelector('td.sql-empty') as HTMLElement;

@@ -172,7 +172,8 @@ on — a blank field and an explicit null are different values, so the distincti
 than a convention about typing nothing, and turning the toggle off leaves the column unnamed again. A
 field whose column is null is disabled, so a typed value cannot silently contradict the toggle beside
 it. **Delete row** is on every row and asks first, through the application's own confirmation, naming
-the table.
+the table. It sits in the table's first column, ahead of the row header, so it is in the same place on
+every table and on screen without scrolling across a wide one.
 A run of highlighted rows is copied as tab-separated text, one line per row, by the platform's own
 copy key.
 A spreadsheet pastes it as a table with no quoting rules to disagree

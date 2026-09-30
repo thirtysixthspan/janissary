@@ -109,6 +109,7 @@ export function FilterRow({
   };
   return (
     <tr className="sql-filter-row">
+      <td className="sql-gutter" />
       <td className="sql-gutter sql-row-head" />
       <td colSpan={Math.max(1, payload.grid?.columns.length ?? 1)}>
         <div className="sql-filter-editor">
@@ -136,7 +137,6 @@ export function FilterRow({
           <button type="button" onClick={onClose}>Cancel</button>
         </div>
       </td>
-      <td className="sql-gutter" />
     </tr>
   );
 }

@@ -129,6 +129,7 @@ export function DataGrid({
         <table className="sql-grid">
           <thead>
             <tr>
+              <th className="sql-gutter" />
               <th className="sql-gutter sql-row-head" />
               {shown.map(({ name: column }) => (
                 <th key={column} scope="col">
@@ -157,7 +158,6 @@ export function DataGrid({
                   </span>
                 </th>
               ))}
-              <th className="sql-gutter" />
             </tr>
             {filtering !== null && (
               <FilterRow

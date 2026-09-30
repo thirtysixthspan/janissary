@@ -19,8 +19,8 @@ function cellClass(cell: SqlCell | undefined, editing: boolean): string {
 }
 
 /**
- * A row: the header that highlights it, its cells, and the delete affordance if the object is
- * writable.
+ * A row: the delete affordance if the object is writable, the header that highlights it, and its
+ * cells, in that order from the left.
  *
  * `position` is the row's index in the page, which is what the highlight is expressed in and what the
  * scroll query looks for. `shown` is the visible columns with the position each holds in the row's
@@ -50,6 +50,21 @@ export function GridRow({
 }) {
   return (
     <tr className={selected ? 'selected' : ''} data-row={position}>
+      {/* The actions come first, so they are in the same place on every table however wide its
+          data is, and on screen without scrolling across to the last column. */}
+      <td className="sql-gutter">
+        {deleting && (
+          <button
+            type="button"
+            className="sql-icon"
+            title="Delete row"
+            aria-label="Delete row"
+            onClick={onDelete}
+          >
+            <FontAwesomeIcon icon={faTrash} />
+          </button>
+        )}
+      </td>
       {/* The row header: it highlights the whole row, and carries no text — the pager already says
           which rows the page holds. */}
       <td
@@ -86,19 +101,6 @@ export function GridRow({
           )}
         </td>
       ))}
-      <td className="sql-gutter">
-        {deleting && (
-          <button
-            type="button"
-            className="sql-icon"
-            title="Delete row"
-            aria-label="Delete row"
-            onClick={onDelete}
-          >
-            <FontAwesomeIcon icon={faTrash} />
-          </button>
-        )}
-      </td>
     </tr>
   );
 }

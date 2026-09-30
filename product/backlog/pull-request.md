@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the actions column containing the delete button should be on the left hand side of the table.
-
 * sql-errors should not be displayed in the sql tab. 
 
 * results from the sql command line should be presented as a notification, formatted the same as all other notifications including the source tab, not directly written in the notifications tab.
