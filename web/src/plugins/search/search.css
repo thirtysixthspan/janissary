@@ -32,7 +32,6 @@
   flex: 1; min-height: 0; display: flex; flex-direction: column-reverse;
   overflow-y: auto; outline: none; border: 1px solid var(--border); border-radius: 3px;
 }
-.search-results:focus-visible { border-color: var(--accent); }
 .search-empty { padding: 8px 12px; color: var(--muted); }
 .search-row {
   border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;

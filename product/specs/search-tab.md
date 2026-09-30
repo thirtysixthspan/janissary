@@ -93,7 +93,8 @@ is the tab's own, and closing the tab forgets it along with the query.
 
 The results sit in their own framed window between the header and the command line. The window
 scrolls inside itself, so a long list never grows past the tab or pushes the command line out of
-view, and the frame is highlighted while the window has keyboard focus.
+view. The frame looks the same whether or not the window has keyboard focus; the highlighted entry
+is what shows where the keyboard is.
 
 One entry per matching line, in file path then line order. Each entry is a dimmed header carrying
 the file's project-relative path and the matching line's number, followed by the two lines above the

@@ -148,8 +148,10 @@ describe('search control placement', () => {
     expect(results).toContain('border-radius: 3px');
   });
 
-  it('marks keyboard focus on the result window’s frame', () => {
-    // The window hides the browser's outline, so its frame is where focus shows.
-    expect(rule('.search-results:focus-visible')).toContain('border-color: var(--accent)');
+  it('leaves the result window’s frame unchanged when the window has keyboard focus', () => {
+    // The selected row carries the accent, so the frame does not repeat it. The browser's own ring
+    // stays hidden too, or it would draw the highlight this leaves out.
+    expect(search).not.toContain('.search-results:focus');
+    expect(rule('.search-results')).toContain('outline: none');
   });
 });
