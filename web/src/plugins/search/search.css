@@ -23,11 +23,16 @@
    the bottom edge and each later row above it, which is the order the scan produced them in. A
    reversed column also puts the scroll origin at the bottom, so the window opens on the first match
    and stays there as rows stream in above it — the first match does not scroll out from under the
-   reader while the scan runs. */
+   reader while the scan runs.
+
+   The window is framed with the same hairline and radius as the filter fields, so the region that
+   scrolls is visibly its own box between the metadata bar and the command line. It is bounded only
+   because the shared plugin frame makes the tab a column that the window can shrink inside. */
 .search-results {
   flex: 1; min-height: 0; display: flex; flex-direction: column-reverse;
-  overflow-y: auto; outline: none;
+  overflow-y: auto; outline: none; border: 1px solid var(--border); border-radius: 3px;
 }
+.search-results:focus-visible { border-color: var(--accent); }
 .search-empty { padding: 8px 12px; color: var(--muted); }
 .search-row {
   border-left: 2px solid transparent; cursor: pointer; padding: 4px 12px 6px;

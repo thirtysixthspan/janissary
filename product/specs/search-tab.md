@@ -68,6 +68,10 @@ is the tab's own, and closing the tab forgets it along with the query.
 
 ### The results
 
+The results sit in their own framed window between the header and the command line. The window
+scrolls inside itself, so a long list never grows past the tab or pushes the command line out of
+view, and the frame is highlighted while the window has keyboard focus.
+
 One entry per matching line, in file path then line order. Each entry is a dimmed header carrying
 the file's project-relative path and the matching line's number, followed by the two lines above the
 match, the match itself, and the two below. Context is cut short at the start and end of a file

@@ -123,4 +123,25 @@ describe('search control placement', () => {
     expect(results).toContain('min-height: 0');
     expect(results).toContain('flex: 1');
   });
+
+  it('bounds the result window inside the shared plugin frame', () => {
+    // `flex: 1` and `min-height: 0` only cap the window when its parent is a flex column; without the
+    // shared frame the window grew to its content and pushed the command line off the screen.
+    const frame = shared.match(/\.plugin-tab \{([^}]*)\}/u)?.[1] ?? '';
+    expect(frame).toContain('display: flex');
+    expect(frame).toContain('flex-direction: column');
+    expect(frame).toContain('min-height: 0');
+  });
+
+  it('frames the result window with the filter fields’ hairline', () => {
+    const results = rule('.search-results');
+
+    expect(results).toContain('border: 1px solid var(--border)');
+    expect(results).toContain('border-radius: 3px');
+  });
+
+  it('marks keyboard focus on the result window’s frame', () => {
+    // The window hides the browser's outline, so its frame is where focus shows.
+    expect(rule('.search-results:focus-visible')).toContain('border-color: var(--accent)');
+  });
 });
