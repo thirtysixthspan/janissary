@@ -58,6 +58,15 @@ describe('the sql stylesheet', () => {
     expect(rule('.sql-console')).toContain('flex-shrink: 0');
   });
 
+  // The highlight marks whole rows, so the rule has to be a row's. Left as a cell rule it would
+  // outline every cell of a run separately, which reads as a rectangle the grid no longer has.
+  it('highlights a whole row rather than a cell', () => {
+    const highlight = rule('.sql-grid tbody tr.selected');
+
+    expect(highlight).toContain('background:');
+    expect(sql).not.toContain('.sql-cell.selected {');
+  });
+
   // The removed surfaces must not leave their rules behind: a stylesheet entry for a control
   // that no longer exists is how the next reader is misled about what this tab offers.
   it('carries no rule for a control the tab no longer has', () => {

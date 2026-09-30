@@ -168,16 +168,19 @@ describe('cellText', () => {
   });
 });
 
-// A whole row is the widest rectangle the grid has, so the two halves of the rule are that it always
-// reaches the last column and that extending it keeps the anchor the run started from.
+// A run of whole rows: extending it keeps the row the run started from and reaches the row it was
+// taken to, and a run has no direction.
 describe('rowRange', () => {
-  it('is that row, every visible column of it', () => {
-    expect(rowRange(1, 2, null)).toEqual({ from: { row: 1, cell: 0 }, to: { row: 1, cell: 2 } });
+  it('is that row alone when there is no run to extend', () => {
+    expect(rowRange(1, null)).toEqual({ from: 1, to: 1 });
   });
 
-  it('extends a run in progress to the row reached, still full width', () => {
-    const from = { from: { row: 0, cell: 1 }, to: { row: 0, cell: 1 } };
-    expect(rowRange(2, 2, from)).toEqual({ from: { row: 0, cell: 0 }, to: { row: 2, cell: 2 } });
+  it('extends a run in progress from the row it started at', () => {
+    expect(rowRange(2, { from: 0, to: 0 })).toEqual({ from: 0, to: 2 });
+  });
+
+  it('reaches the same rows whichever way the run was taken', () => {
+    expect(rowRange(0, { from: 2, to: 2 })).toEqual({ from: 0, to: 2 });
   });
 });
 

@@ -5,24 +5,22 @@ import type { SqlCell, SqlColumn, SqlObject, SqlRow } from '@shared/plugins/sql/
 import { cellText } from './grid-view';
 import { CellEditor } from './CellEditor';
 import { startRun } from './selection';
-import type { CellPosition } from './grid-view';
 
 // One row of the grid, and the cell inside it. Both were in `DataGrid.tsx` until the file passed
-// the 200-line limit, and both are here because a row is one thing: which cells it shows, whether
-// they are selected, and what each one does when it is activated.
+// the 200-line limit, and both are here because a row is one thing: which cells it shows, whether it
+// is highlighted, and what each cell does when it is activated.
 
 /**
- * A row: the header that selects it whole, its cells, and the delete affordance if the object is
+ * A row: the header that highlights it, its cells, and the delete affordance if the object is
  * writable.
  *
- * `position` is the row's index in the page, which is what the selection is expressed in: `row.cells`
- * is positional and `selectionToTsv` reads the page's own array, so a selection handed a table-wide
- * number would point past the end of that array on every page but the first. `shown` is the visible
- * columns with the position each holds in the row's own cells, because a hidden column still has to be
- * skipped by index rather than by whatever happens to be left in the list.
+ * `position` is the row's index in the page, which is what the highlight is expressed in and what the
+ * scroll query looks for. `shown` is the visible columns with the position each holds in the row's
+ * own cells, because a hidden column still has to be skipped by index rather than by whatever happens
+ * to be left in the list.
  */
 export function GridRow({
-  row, position, shown, object, editingColumn, deleting, selected, onSelect, onSelectRow, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, position, shown, object, editingColumn, deleting, selected, onSelectRow, onEdit, onCommit, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
   position: number;
@@ -32,11 +30,9 @@ export function GridRow({
   // cell opens that cell only, and a click on another closes it.
   editingColumn: string | null;
   deleting: boolean;
-  /** Whether this cell is the one the run or the keyboard cursor is on. */
-  selected(at: CellPosition): boolean;
-  /** Start a run at a cell, or extend the one in progress when `extend` is held. */
-  onSelect(at: CellPosition, extend: boolean): void;
-  /** Select this row whole, or extend the run in progress to it. */
+  /** Whether the run of highlighted rows covers this one. */
+  selected: boolean;
+  /** Highlight this row, or extend the run in progress to it. */
   onSelectRow(extend: boolean): void;
   onEdit(column: string): void;
   onCommit(column: string, value: string | null): void;
@@ -45,26 +41,24 @@ export function GridRow({
   onDelete(): void;
 }) {
   return (
-    <tr>
-      {/* The row header: the whole row, in one press, which is otherwise a drag across every column
-          of it. It carries no text — the pager already says which rows the page holds. */}
+    <tr className={selected ? 'selected' : ''} data-row={position}>
+      {/* The row header: it highlights the whole row, and carries no text — the pager already says
+          which rows the page holds. */}
       <td
         className="sql-gutter sql-row-head"
-        title="Select row"
+        title="Highlight row"
         onMouseDown={(event) => onSelectRow(startRun(event))}
         onMouseEnter={(event) => { if (event.shiftKey) onSelectRow(true); }}
       />
       {shown.map(({ name: column, index: cell }) => (
         <td
           key={column}
-          className={[
-            row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell',
-            selected({ row: position, cell }) ? 'selected' : '',
-          ].join(' ')}
-          // A run starts at this cell, or extends the one in progress when shift is held. The enter
-          // handler is the drag case: the mouse button is already down from the mousedown above.
-          onMouseDown={(event) => onSelect({ row: position, cell }, startRun(event))}
-          onMouseEnter={(event) => { if (event.shiftKey) onSelect({ row: position, cell }, true); }}
+          className={row.cells[cell]?.isNull ? 'sql-cell null' : 'sql-cell'}
+          // A press anywhere in a row highlights that row, and a second press on the same cell is
+          // what opens its editor. The enter handler is the drag case: the mouse button is already
+          // down from the mousedown above.
+          onMouseDown={(event) => onSelectRow(startRun(event))}
+          onMouseEnter={(event) => { if (event.shiftKey) onSelectRow(true); }}
           onDoubleClick={() => onEdit(column)}
         >
           {editingColumn === column ? (

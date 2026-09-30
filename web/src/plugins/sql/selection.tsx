@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { SqlRow } from '@shared/plugins/sql/shared';
-import type { TabPluginClientCapabilities } from '../api';
-import { rowRange, selectionTo, selectionToTsv, type CellPosition, type CellRange } from './grid-view';
+import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
+import { rowRange, selectionToTsv, type RowRange } from './grid-view';
 
-// The selection and its copy. A selection is a rectangle of cells, anchored where the run started and
-// reaching wherever it got to; a run has no direction, so dragging back over the anchor selects the
-// same rectangle as dragging away from it.
+// The highlighted run of rows, the keys that move it, and its copy.
+//
+// The grid highlights rows and not cells: a press anywhere in a row highlights that whole row, which
+// is the unit everything else in this tab acts on — a write names a row and a column because the
+// statement needs both, and nothing here acts on a cell alone. A run has no direction, so selecting
+// upwards reaches the same rows as selecting downwards.
 //
 // A plugin tab stays mounted while another tab covers it, so a window-level key listener is gated on
-// `capabilities.active` — otherwise Copy would act on a grid the user is not looking at. That is the
-// same rule the plugin contract states for any window-wide listener, and the markdown and pdf
+// `capabilities.active` — otherwise the arrow keys would move a grid the user is not looking at. That
+// is the same rule the plugin contract states for any window-wide listener, and the markdown and pdf
 // plugins follow it for their own keys.
 //
 // A cell is not rendered inside a button, so a click on the text inside it is an ordinary selection
@@ -24,7 +27,7 @@ function cellOf(node: Node | null): Element | null {
 
 /**
  * Whether the browser's own selection was made inside one cell, which is a word the user selected
- * and not a run of cells.
+ * and not a run of rows.
  *
  * A shift-click extending a run leaves a browser selection too — from wherever the caret landed in
  * the first cell to the end of the last — and standing aside for *any* non-empty selection is what
@@ -40,14 +43,11 @@ function selectedWithinOneCell(): boolean {
 }
 
 /**
- * Whether a press starts or extends a run of cells, claiming it from the browser when it extends.
+ * Whether a press starts or extends a run, claiming it from the browser when it extends.
  *
- * A shift-click would otherwise leave the browser selecting the text between the first cell's caret
+ * A shift-click would otherwise leave the browser selecting the text between the first row's caret
  * and the end of the last, and the copy chord finds that one first. A plain press is left alone, so
  * the caret still lands where it was clicked and a word inside that cell can be selected afterwards.
- *
- * It answers and acts in one step because they are one fact: this press extends a run exactly when
- * the browser's own selection over the same cells has become wrong.
  */
 export function startRun(event: React.MouseEvent): boolean {
   if (!event.shiftKey) return false;
@@ -55,17 +55,31 @@ export function startRun(event: React.MouseEvent): boolean {
   return true;
 }
 
-export function useGridSelection(
-  grid: { columns: string[]; rows: SqlRow[] } | null,
-  capabilities: TabPluginClientCapabilities,
-  onError: (error: string) => void,
-) {
-  const [range, setRange] = useState<CellRange | null>(null);
-  const active = capabilities.active;
+export function useGridSelection({
+  grid, active, containerRef, onError,
+}: {
+  grid: { rows: SqlRow[] } | null;
+  active: boolean;
+  /** The frame the rows scroll inside, so a run that leaves the page is brought back into it. */
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onError(error: string): void;
+}) {
+  const [range, setRange] = useState<RowRange | null>(null);
+  const rows = grid?.rows.length ?? 0;
 
-  // A new page or a new set of columns has nothing to do with the old selection, and keeping it would
-  // leave cells highlighted that now hold different values.
-  useEffect(() => setRange(null), [grid]);
+  // A new page or a new query has nothing to do with the old run, and keeping it would highlight rows
+  // that now hold other values. The first row is what the new page highlights, so a grid that has
+  // just been read is ready for the keyboard without a keypress.
+  useEffect(() => { setRange(rows === 0 ? null : { from: 0, to: 0 }); }, [grid, rows]);
+
+  // The highlighted row follows the keys that move it, and only when it would otherwise be out of
+  // sight — the same `block: 'nearest'` the file navigator scrolls its cursor with.
+  useEffect(() => {
+    if (range === null) return;
+    containerRef.current
+      ?.querySelector(`[data-row="${CSS.escape(String(range.to))}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [range, containerRef]);
 
   useEffect(() => {
     if (!active) return;
@@ -75,8 +89,8 @@ export function useGridSelection(
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key !== 'c') return;
       if (selectedWithinOneCell()) return;
-      if (!range || !grid) return;
-      const text = selectionToTsv(grid.rows, grid.columns, range.from, range.to);
+      if (range === null || !grid) return;
+      const text = selectionToTsv(grid.rows, range);
       if (!text) return;
       event.preventDefault();
       void navigator.clipboard.writeText(text)
@@ -86,32 +100,36 @@ export function useGridSelection(
     return () => globalThis.removeEventListener('keydown', onKey);
   }, [active, range, grid, onError]);
 
-  /** Start a run at this cell, or extend the one in progress when shift is held. */
-  const select = (at: CellPosition, extend: boolean) => {
-    setRange((previous) => (extend && previous ? selectionTo(previous.from, at) : { from: at, to: at }));
-  };
-
-  /**
-   * Put a whole row in the selection, or extend the one in progress to end at it.
-   *
-   * The same rectangle a run of cells makes — a row is simply the widest one there is, from the first
-   * visible column to the last — so the copy path needs nothing new for it: one row of a run is one
-   * line of tab-separated text.
-   */
-  const selectRow = (row: number, extend: boolean) => {
-    const last = Math.max(0, (grid?.columns.length ?? 1) - 1);
-    setRange((previous) => rowRange(row, last, extend ? previous : null));
-  };
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (range === null) return;
+        event.preventDefault();
+        setRange(null);
+        return;
+      }
+      if (!GRID_NAVIGATION_KEYS.has(event.key)) return;
+      // A held shift asks for a run of rows rather than the one row, so it is answered with the run
+      // extended from where it started and a plain press is answered with the run restarted.
+      const row = nextRowSelection(rows, range?.to ?? null, event.key);
+      if (row === null) return;
+      event.preventDefault();
+      setRange((previous) => (event.shiftKey && previous ? rowRange(row, previous) : { from: row, to: row }));
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, [active, rows, range]);
 
   return {
     range,
-    select,
-    selectRow,
+    /** Highlight this row, or extend the run in progress to it. */
+    selectRow(row: number, extend: boolean) {
+      setRange((previous) => rowRange(row, extend ? previous : null));
+    },
     clear() { setRange(null); },
-    selected(at: CellPosition) {
-      return range !== null
-        && at.row >= range.from.row && at.row <= range.to.row
-        && at.cell >= range.from.cell && at.cell <= range.to.cell;
+    selected(row: number): boolean {
+      return range !== null && row >= range.from && row <= range.to;
     },
   };
 }

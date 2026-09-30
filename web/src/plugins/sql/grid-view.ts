@@ -65,67 +65,44 @@ export function nextOffset(grid: SqlGrid | null): number {
   return (grid?.offset ?? 0) + (grid?.limit ?? 100);
 }
 
-/** One cell of a selection: which row of the page it is in, and which column's cell. */
-export type CellPosition = { row: number; cell: number };
-
-/** A selection: a rectangle anchored where the run started, reaching wherever it got to. */
-export type CellRange = { from: CellPosition; to: CellPosition };
+/** A selection: a run of whole rows, anchored where it started, reaching wherever it got to. */
+export type RowRange = { from: number; to: number };
 
 /**
  * The selection as tab-separated text, one line per row of the run.
  *
- * Tab-separated rather than CSV because a spreadsheet pastes it as a table with no quoting rules to
- * disagree about, and a value containing a comma or a quote cannot change the shape of what is
+ * Every cell of a selected row is copied, because the highlight covers the row rather than part of
+ * it. Tab-separated rather than CSV because a spreadsheet pastes it as a table with no quoting rules
+ * to disagree about, and a value containing a comma or a quote cannot change the shape of what is
  * copied. Each value is read through `cellText`, so a null reads as `NULL` exactly as the grid shows
  * it rather than as an empty cell the paste would turn back into a string. A selection read outside
  * the page — a range the user cannot see because it runs off the end — is skipped rather than
  * invented, so what is copied is only what was on screen.
  */
-export function selectionToTsv(
-  rows: readonly SqlRow[],
-  columns: readonly string[],
-  from: CellPosition,
-  to: CellPosition,
-): string {
-  const firstRow = Math.max(0, Math.min(from.row, to.row));
-  const lastRow = Math.min(rows.length - 1, Math.max(from.row, to.row));
-  const firstCell = Math.max(0, Math.min(from.cell, to.cell));
-  const lastCell = Math.min(columns.length - 1, Math.max(from.cell, to.cell));
-  if (lastRow < firstRow || lastCell < firstCell) return '';
+export function selectionToTsv(rows: readonly SqlRow[], range: RowRange): string {
+  const first = Math.max(0, range.from);
+  const last = Math.min(rows.length - 1, range.to);
+  if (last < first) return '';
   const lines: string[] = [];
-  for (let row = firstRow; row <= lastRow; row += 1) {
-    const cells: string[] = [];
-    for (let cell = firstCell; cell <= lastCell; cell += 1) {
-      cells.push(cellText(rows[row]?.cells[cell] ?? { text: '', isNull: true }));
-    }
+  for (let row = first; row <= last; row += 1) {
+    const cells = (rows[row]?.cells ?? []).map((cell) => cellText(cell));
     lines.push(cells.join('\t'));
   }
   return lines.join('\n');
 }
 
 /**
- * The selection a second click or a shift-click extends: a rectangle from the cell the run started
- * at to the cell it reached, whichever way round that is. Dragging up and left selects the same
- * rectangle as dragging down and right, because a run of cells has no direction.
+ * The selection a shift-click or a held arrow extends: the run from the row it started at to the row
+ * it reached, whichever way round that is. A run of rows has no direction, so selecting upwards
+ * reaches the same rows as selecting downwards.
  */
-export function selectionTo(anchor: CellPosition, reached: CellPosition): CellRange {
-  return {
-    from: { row: Math.min(anchor.row, reached.row), cell: Math.min(anchor.cell, reached.cell) },
-    to: { row: Math.max(anchor.row, reached.row), cell: Math.max(anchor.cell, reached.cell) },
-  };
+export function selectionTo(anchor: number, reached: number): RowRange {
+  return { from: Math.min(anchor, reached), to: Math.max(anchor, reached) };
 }
 
-/**
- * The selection a row's own header makes: that row, every visible column of it.
- *
- * A whole row is the widest run the grid has, so it always spans from the first visible column —
- * including when it extends a run that started at one cell, because a key held with an arrow is a
- * request for rows and not for a column. Extending keeps the row the run started from and gains
- * rows. `lastColumn` is the last visible column rather than the last of the row's cells, so a hidden
- * column does not leave an empty cell at the end of a copied row.
- */
-export function rowRange(row: number, lastColumn: number, from: CellRange | null): CellRange {
-  return selectionTo({ row: from?.from.row ?? row, cell: 0 }, { row, cell: lastColumn });
+/** The run a row's header or a press in the row makes: that row alone, or a run reaching it. */
+export function rowRange(row: number, from: RowRange | null): RowRange {
+  return from === null ? { from: row, to: row } : selectionTo(from.from, row);
 }
 
 /**

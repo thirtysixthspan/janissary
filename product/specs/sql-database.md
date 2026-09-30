@@ -129,12 +129,14 @@ escapes any `%` or `_` the value itself contains.
 ### Editing
 
 Double-clicking a cell opens an editor; Enter commits it and Escape leaves it without changing
-anything. The grid also answers the keyboard on its own: the arrow keys move a visible cursor, `Home`
-and `End` reach the ends of its row, `Enter` opens the editor on the cell it is on, and `Escape`
-leaves it. Moving stops at the edges rather than wrapping, and the cursor is forgotten when a new
-page arrives, so it never sits on cells that now hold other values. Those keys with `Shift` held
-select whole rows instead, which is described with the rest of the selection below. `Tab` is left to
-the application, which walks out of the tab as it does from anywhere else. A cell holds either text
+anything. The grid also answers the keyboard on its own: the highlighted row starts on the first row
+of whatever page arrives, `ArrowUp` and `ArrowDown` move it a row at a time and stop at the ends
+rather than wrapping, `Home` and `End` reach the first and last row of the page, and `Escape` leaves
+the grid with nothing highlighted. The page scrolls to follow the highlighted row. The left and right
+arrows are not the grid's — a run of rows has no column to move along — so they are left to the
+application, which scrolls the frame the way it otherwise would. The highlight is back on the first
+row after a new query, so it never sits on a row that now holds other values. `Tab` is left to the
+application as well, which walks out of the tab as it does from anywhere else. A cell holds either text
 or null, and they are drawn differently: a null reads `NULL` in a muted style rather than as a blank
 cell, so an empty string and a null are never confused. The editor has a **NULL** toggle, so writing a
 null and writing the four characters `NULL` are two different acts. The toggle is part of the value
@@ -158,26 +160,27 @@ than a convention about typing nothing, and turning the toggle off leaves the co
 field whose column is null is disabled, so a typed value cannot silently contradict the toggle beside
 it. **Delete row** is on every row and asks first, through the application's own confirmation, naming
 the table.
-A run of cells is copied as tab-separated text, one line per row, by the platform's own copy key.
+A run of highlighted rows is copied as tab-separated text, one line per row, by the platform's own
+copy key.
 A spreadsheet pastes it as a table with no quoting rules to disagree
 about, so a value holding a comma cannot change the shape of what lands. A null copies as the `NULL`
-the grid shows rather than as an empty cell the paste would turn back into a string, and a range that
-runs off the end of the page copies only what was on screen. Selection is a rectangle: a click starts
-one and a shift-click or a drag extends it, and dragging back over the start selects the same cells
-as dragging away from it. A new page forgets the selection, so cells are never marked that now hold
-other values. A text selection the browser has made inside a cell is left alone, so copy still gets
-the word. If the system clipboard is unavailable, the text is shown in the error band rather than
+the grid shows rather than as an empty cell the paste would turn back into a string, and a run that
+runs off the end of the page copies only what was on screen. A text selection the browser has made
+inside a cell is left alone, so copy still gets the
+word. If the system clipboard is unavailable, the text is shown in the error band rather than
 being dropped.
 
-A whole row is a selection too, and the narrow header in front of each row is how one is reached
-without a drag across every column of it: a click selects that row whole, a shift-click extends the
-run to the row it is held over, and the run stays full width however far it reaches. The keyboard
-does the same with `Shift` held: `Shift+ArrowDown` and `Shift+ArrowUp` move the run's edge a row at a
-time and stop at the ends rather than wrapping, and `Shift+Home` and `Shift+End` take it to the first
-and last row of the page — the file navigator's own rules, so the two feel the same. With nothing
-marked, those keys start the run on the first row. `Escape` leaves the grid with nothing marked at
-all, whichever way it was marked. A whole row copies as one tab-separated line, which is what a row
-pastes as.
+The grid highlights whole rows and never individual cells, because a row is the unit everything here
+acts on: a write names a row and a column because the statement needs both, and nothing in the tab
+acts on a cell alone. One press anywhere in a row highlights that whole row, and a second press on a
+cell is what opens its editor — so reading down a table does not open an editor on every row it
+passes. The narrow header in front of each row highlights a row the same way, and carries no text
+because the pager already says which rows the page holds. A shift-click extends the run to the row it
+is held over, and the run reaches the same rows whether it was taken downwards or upwards. The
+keyboard does the same with `Shift` held: `Shift+ArrowDown` and `Shift+ArrowUp` move the run's edge a
+row at a time, and `Shift+Home` and `Shift+End` take it to the first and last row of the page — the
+file navigator's own rules, so the two feel the same, and it moves its own highlight and scrolls to
+follow it the same way. A whole row copies as one tab-separated line, which is what a row pastes as.
 
 
 A **view** is always read-only, and so is a **table with no primary key**: there is no statement
@@ -283,7 +286,7 @@ of bringing the empty database back.
   The console is the only place SQL is entered.
 - It does not join tables or build a query. The grid is one object at a time.
 - It does not report statistics. A per-column distribution is a statement in the command bar.
-- It has no copy control. A selection is copied by the application's own copy key.
+- It has no copy control. The highlighted rows are copied by the application's own copy key.
 - It does not watch other tabs. A `db` command run elsewhere that changes the data leaves this view
   showing what it last read, which is what **Refresh** is for.
 - It does not undo. A cell edit commits or it does not.

@@ -1,10 +1,14 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataGrid } from './DataGrid';
 import { Pager } from './Pager';
 import { grid, makeCapabilities, payload } from './fixture';
 import { toggleColumn, visibleColumns } from './grid-view';
+
+// The hidden-column case renders the whole grid, and the grid scrolls the highlighted row into view,
+// which jsdom neither lays out nor does.
+beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 describe('Pager', () => {
   const big = grid({ total: 51_882, unfilteredTotal: 51_882, limit: 100, offset: 0 });

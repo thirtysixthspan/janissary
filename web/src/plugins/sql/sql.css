@@ -48,6 +48,9 @@
 .sql-grid th, .sql-grid td { border-bottom: 1px solid var(--border); padding: 3px 8px; text-align: left; white-space: nowrap; }
 .sql-grid thead th { position: sticky; top: 0; background: var(--bg); z-index: 1; }
 .sql-grid tbody tr:hover { background: var(--bg-hover); }
+/* The highlighted run: whole rows, because a row is the unit everything in this tab acts on. The
+   accent edge is on the left, as the file navigator's is, so the grid and the tree read alike. */
+.sql-grid tbody tr.selected { background: var(--accent-soft, rgb(120 160 255 / 16%)); box-shadow: inset 2px 0 0 var(--accent, #5a8cff); }
 .sql-grid .sql-gutter { width: 1%; color: var(--muted); text-align: right; user-select: none; }
 .sql-grid .sql-row-head { width: 2em; cursor: pointer; }
 .sql-grid .sql-row-head:hover { background: var(--bg-hover); }
@@ -74,7 +77,6 @@
 .sql-pager button:disabled { opacity: 0.4; cursor: default; }
 .sql-pager button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
 .sql-pager-label { color: var(--muted); }
-.sql-cell.selected { background: var(--accent-soft, rgb(120 160 255 / 16%)); outline: 1px solid var(--accent, #5a8cff); outline-offset: -1px; }
 
 .sql-columns { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 4px 0; }
 .sql-column { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }

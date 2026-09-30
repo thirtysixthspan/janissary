@@ -1,8 +1,12 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SqlTab } from './SqlTab';
 import { grid, makeCapabilities, payload } from './fixture';
+
+// The tab carries the grid, and the grid scrolls the highlighted row into view, which jsdom neither
+// lays out nor does.
+beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 describe('SqlTab layout', () => {
   // A harness tab is one metadata row across the full width and one body below it. This is the same

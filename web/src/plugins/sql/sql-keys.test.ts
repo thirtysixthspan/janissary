@@ -1,45 +1,52 @@
 import { describe, expect, it } from 'vitest';
-import { nextCellSelection } from './sql-keys';
+import { GRID_NAVIGATION_KEYS, nextRowSelection } from './sql-keys';
 
-// The grid's keyboard rule on its own. The rule is two-dimensional where the shared list rule is one,
-// so it is its own module — but it keeps that rule's character, which is that the arrows stop at the
-// ends rather than wrapping.
+// The grid's keyboard rule on its own. It is `nextListSelection` from the shared list module written
+// out, so it keeps that rule's character: the arrows stop at the ends rather than wrapping.
 
-const at = (row: number, cell: number) => ({ row, cell });
+describe('the navigation keys the grid claims', () => {
+  it('are the vertical ones, because a run of rows has no column to move along', () => {
+    expect(GRID_NAVIGATION_KEYS).toEqual(new Set(['ArrowUp', 'ArrowDown', 'Home', 'End']));
+  });
 
-describe('nextCellSelection', () => {
-  it('moves along the row and down the column', () => {
-    expect(nextCellSelection(3, 2, at(0, 0), 'ArrowRight')).toEqual(at(0, 1));
-    expect(nextCellSelection(3, 2, at(0, 1), 'ArrowLeft')).toEqual(at(0, 0));
-    expect(nextCellSelection(3, 2, at(0, 0), 'ArrowDown')).toEqual(at(1, 0));
-    expect(nextCellSelection(3, 2, at(1, 0), 'ArrowUp')).toEqual(at(0, 0));
+  // Left and right are left to the browser rather than swallowed: a key that moves nothing should
+  // not also stop the frame from scrolling the way it otherwise would.
+  it('do not include the left and right arrows', () => {
+    expect(GRID_NAVIGATION_KEYS.has('ArrowLeft')).toBe(false);
+    expect(GRID_NAVIGATION_KEYS.has('ArrowRight')).toBe(false);
+  });
+});
+
+describe('nextRowSelection', () => {
+  it('moves a row at a time', () => {
+    expect(nextRowSelection(3, 1, 'ArrowDown')).toBe(2);
+    expect(nextRowSelection(3, 1, 'ArrowUp')).toBe(0);
   });
 
   it('stops at the ends rather than wrapping', () => {
-    expect(nextCellSelection(3, 2, at(0, 0), 'ArrowLeft')).toEqual(at(0, 0));
-    expect(nextCellSelection(3, 2, at(0, 1), 'ArrowRight')).toEqual(at(0, 1));
-    expect(nextCellSelection(3, 2, at(0, 0), 'ArrowUp')).toEqual(at(0, 0));
-    expect(nextCellSelection(3, 2, at(2, 0), 'ArrowDown')).toEqual(at(2, 0));
+    expect(nextRowSelection(3, 0, 'ArrowUp')).toBe(0);
+    expect(nextRowSelection(3, 2, 'ArrowDown')).toBe(2);
   });
 
-  it('jumps to the ends of the row with Home and End', () => {
-    expect(nextCellSelection(3, 2, at(1, 1), 'Home')).toEqual(at(1, 0));
-    expect(nextCellSelection(3, 2, at(1, 0), 'End')).toEqual(at(1, 1));
+  it('reaches the first and last row with Home and End', () => {
+    expect(nextRowSelection(10, 5, 'Home')).toBe(0);
+    expect(nextRowSelection(10, 5, 'End')).toBe(9);
   });
 
-  it('leaves the position alone for a key it does not answer', () => {
-    expect(nextCellSelection(3, 2, at(1, 1), 'Enter')).toEqual(at(1, 1));
-    expect(nextCellSelection(3, 2, at(1, 1), 'a')).toEqual(at(1, 1));
+  it('leaves the row alone for a key it does not answer', () => {
+    expect(nextRowSelection(3, 1, 'Enter')).toBe(1);
+    expect(nextRowSelection(3, 1, 'a')).toBe(1);
   });
 
-  it('has no selection on an empty grid, whatever the key', () => {
-    expect(nextCellSelection(0, 2, null, 'ArrowRight')).toBeNull();
-    expect(nextCellSelection(3, 0, null, 'ArrowRight')).toBeNull();
-    expect(nextCellSelection(0, 0, at(0, 0), 'Home')).toBeNull();
+  it('has no row on a page with none', () => {
+    expect(nextRowSelection(0, null, 'ArrowDown')).toBeNull();
+    expect(nextRowSelection(0, 0, 'Home')).toBeNull();
   });
 
-  it('starts at the first cell when nothing was selected yet', () => {
-    expect(nextCellSelection(3, 2, null, 'ArrowRight')).toEqual(at(0, 1));
-    expect(nextCellSelection(3, 2, null, 'End')).toEqual(at(0, 1));
+  it('starts on the first row when nothing was highlighted, and the last for End', () => {
+    expect(nextRowSelection(3, null, 'ArrowDown')).toBe(0);
+    expect(nextRowSelection(3, null, 'ArrowUp')).toBe(0);
+    expect(nextRowSelection(3, null, 'Home')).toBe(0);
+    expect(nextRowSelection(3, null, 'End')).toBe(2);
   });
 });

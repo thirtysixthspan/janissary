@@ -1,8 +1,11 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataGrid } from './DataGrid';
 import { CUSTOMERS, KEYED, grid, makeCapabilities, payload } from './fixture';
+
+// The grid scrolls the highlighted row into view, and jsdom neither lays out nor scrolls.
+beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 // The cell editor's field, which has no accessible name and is empty whenever the NULL toggle is on
 // — so the search and the page filter fields are not distinguishable by what they hold.
@@ -189,46 +192,26 @@ describe('DataGrid filtering', () => {
 
 describe('DataGrid keyboard', () => {
   // The listener is on the window, so the event goes to the document and bubbles up — dispatched
-  // through fireEvent rather than raw so React flushes the cursor the key moves.
+  // through fireEvent rather than raw so React flushes the row the key moves.
   const press = (key: string) => { fireEvent.keyDown(document.body, { key }); };
-  const marked = () => screen.getAllByRole('cell')
-    .filter((cell) => cell.className.includes('selected')) as HTMLElement[];
+  const highlighted = () => [...document.querySelectorAll('tr.selected')] as HTMLElement[];
 
-  it('moves a visible cursor with the arrows', () => {
+  it('moves the highlighted row with the arrows', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
-    // No cursor yet, so the first arrow starts at the first cell and steps right from it.
-    press('ArrowRight');
-    expect(marked().map((cell) => cell.textContent)).toEqual(['paid']);
+    expect(highlighted()).toHaveLength(1);
     press('ArrowDown');
-    expect(marked().map((cell) => cell.textContent)).toEqual(['NULL']);
-  });
-
-  it('opens the editor on the cursor\'s cell with Enter, and writes that cell', () => {
-    const { capabilities, intent } = makeCapabilities();
-    const { container } = render(<DataGrid payload={payload()} capabilities={capabilities} />);
-    press('ArrowRight');
-    press('Enter');
-    fireEvent.change(cellInput(container), { target: { value: 'shipped' } });
-    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
-    expect(intent).toHaveBeenCalledWith('update-cell', { row: 'r1', column: 'status', value: 'shipped' });
-  });
-
-  it('leaves the grid with Escape rather than moving focus', () => {
-    const { capabilities } = makeCapabilities();
-    render(<DataGrid payload={payload()} capabilities={capabilities} />);
-    press('ArrowRight');
-    expect(marked()).toHaveLength(1);
-    press('Escape');
-    expect(marked()).toHaveLength(0);
+    expect(highlighted().map((row) => row.textContent)).toEqual(['2NULL']);
   });
 
   it('does nothing at all while another tab is in front', () => {
     const { capabilities } = makeCapabilities();
     capabilities.active = false;
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
-    press('ArrowRight');
-    expect(marked()).toHaveLength(0);
+    press('ArrowDown');
+    // The first row is highlighted because the page arrived, not because a key was pressed, so
+    // nothing moved at all.
+    expect(highlighted().map((row) => row.textContent)).toEqual(['1paid']);
   });
 });
 
