@@ -62,7 +62,6 @@ export function emptyPayload(database: string, databases: readonly SqlDatabaseRe
     offset: 0,
     pageSizes: [...PAGE_SIZES],
     grid: null,
-    stats: null,
     log: [],
     exports: [],
     error: null,

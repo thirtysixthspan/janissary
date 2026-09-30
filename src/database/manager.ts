@@ -97,10 +97,6 @@ export class DatabaseManager {
     this.browser.deleteRow(database, requestId, row);
   }
 
-  browseStats(database: string, requestId: string, object: string): void {
-    this.browser.stats(database, requestId, object);
-  }
-
   browseExport(database: string, requestId: string, query: DatabaseGridQuery, format: 'csv' | 'json'): void {
     this.browser.exportObject(database, requestId, query, format);
   }

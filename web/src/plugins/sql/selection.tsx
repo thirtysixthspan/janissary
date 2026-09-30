@@ -1,6 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCopy } from '@fortawesome/free-solid-svg-icons';
+import { useEffect, useState } from 'react';
 import type { SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { rowRange, selectionTo, selectionToTsv, type CellPosition, type CellRange } from './grid-view';
@@ -65,20 +63,8 @@ export function useGridSelection(
     setRange((previous) => rowRange(row, last, extend ? previous : null));
   };
 
-  /** Put the selection on the system clipboard, or say why it could not be. */
-  const copy = () => {
-    if (!range || !grid) return;
-    const text = selectionToTsv(grid.rows, grid.columns, range.from, range.to);
-    if (!text) return;
-    // A clipboard a browser has withheld is not a failure the plugin can act on, so the text is
-    // surfaced in the error band rather than being silently dropped.
-    void navigator.clipboard.writeText(text)
-      .catch(() => onError(`Copy is unavailable here. Select and copy this text: ${text}`));
-  };
-
   return {
     range,
-    copy,
     select,
     selectRow,
     clear() { setRange(null); },
@@ -88,35 +74,4 @@ export function useGridSelection(
         && at.cell >= range.from.cell && at.cell <= range.to.cell;
     },
   };
-}
-
-/**
- * The control that copies the selection, disabled when there is none.
- *
- * Present as well as the keyboard route because the toolbar is where a user looks for an action
- * they do not have a shortcut for, and a disabled control answers "is there anything selected"
- * without the user having to try.
- */
-export function CopySelectionButton({ onCopy, enabled }: { onCopy(): void; enabled: boolean }) {
-  return (
-    <button
-      type="button"
-      className="sql-icon"
-      title="Copy selection"
-      aria-label="Copy selection"
-      disabled={!enabled}
-      onClick={onCopy}
-    >
-      <FontAwesomeIcon icon={faCopy} />
-    </button>
-  );
-}
-
-/** The text a selection is copied as, or an empty string when there is none. */
-export function selectionText(
-  grid: { columns: string[]; rows: SqlRow[] } | null,
-  range: CellRange | null,
-): string {
-  if (!grid || !range) return '';
-  return selectionToTsv(grid.rows, grid.columns, range.from, range.to);
 }

@@ -185,34 +185,29 @@ describe('a whole row', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
     fireEvent.mouseDown(headers()[1] as HTMLElement);
-    fireEvent.click(screen.getByLabelText('Copy selection'));
+    copyKey();
     await vi.waitFor(() => expect(write).toHaveBeenCalledWith('2\tNULL'));
   });
 });
 
 describe('copying a selection', () => {
-  function withRun(page = payload()) {
-    const { capabilities } = makeCapabilities();
-    render(<DataGrid payload={page} capabilities={capabilities} />);
-    const cells = dataCells();
-    fireEvent.mouseDown(cells[0] as HTMLElement);
-    fireEvent.mouseDown(cells[1] as HTMLElement, { shiftKey: true });
-  }
-
-  it('writes the rendered text to the clipboard from the control', async () => {
+  // There is no copy control in this tab. The platform's chord is the one, and the window listener
+  // that answers it is the whole of the copy behaviour — so these are the only route there is.
+  it('writes the rendered text to the clipboard from the platform copy key', async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboardThat(write);
-    withRun();
-    fireEvent.click(screen.getByLabelText('Copy selection'));
-    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(dataCells()[0] as HTMLElement);
+    fireEvent.mouseDown(dataCells()[1] as HTMLElement, { shiftKey: true });
+    copyKey();
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1	paid'));
   });
 
-  it('writes the same text from the keyboard', async () => {
-    const write = vi.fn().mockResolvedValue(undefined);
-    clipboardThat(write);
-    withRun();
-    copyKey();
-    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
+  it('offers no control to copy with', () => {
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('Copy selection')).toBeNull();
   });
 
   // The copy reads the page's own row array, so a selection expressed in the table's numbering would
@@ -221,23 +216,22 @@ describe('copying a selection', () => {
   it('writes the same text from a page that is not the first', async () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboardThat(write);
-    withRun(payload({ offset: 100 }));
-    fireEvent.click(screen.getByLabelText('Copy selection'));
-    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1\tpaid'));
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload({ offset: 100 })} capabilities={capabilities} />);
+    fireEvent.mouseDown(dataCells()[0] as HTMLElement);
+    fireEvent.mouseDown(dataCells()[1] as HTMLElement, { shiftKey: true });
+    copyKey();
+    await vi.waitFor(() => expect(write).toHaveBeenCalledWith('1	paid'));
   });
 
   it('says the text in the error band when the clipboard is withheld, rather than doing nothing', async () => {
     clipboardThat(vi.fn().mockRejectedValue(new Error('denied')));
-    withRun();
-    fireEvent.click(screen.getByLabelText('Copy selection'));
-    await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toContain('1\tpaid'));
-    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
-  });
-
-  it('offers nothing to copy until a cell is chosen', () => {
     const { capabilities } = makeCapabilities();
     render(<DataGrid payload={payload()} capabilities={capabilities} />);
-    expect((screen.getByLabelText('Copy selection') as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.mouseDown(dataCells()[0] as HTMLElement);
+    copyKey();
+    await vi.waitFor(() => expect(screen.getByRole('alert').textContent).toContain('1'));
+    expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
   });
 
   // A plugin tab stays mounted while another tab covers it, so a window-level listener that ignored
@@ -255,7 +249,10 @@ describe('copying a selection', () => {
   it('leaves a text selection inside a cell to the browser, so Copy still gets the word', () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboardThat(write);
-    withRun();
+    const { capabilities } = makeCapabilities();
+    render(<DataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.mouseDown(dataCells()[0] as HTMLElement);
+    fireEvent.mouseDown(dataCells()[1] as HTMLElement, { shiftKey: true });
     vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'paid' } as unknown as Selection);
     const event = copyKey();
     expect(write).not.toHaveBeenCalled();

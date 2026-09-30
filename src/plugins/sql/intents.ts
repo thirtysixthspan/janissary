@@ -22,7 +22,6 @@ import {
   isSetOrderIntent,
   isSetPageIntent,
   isSetPageSizeIntent,
-  isStatsIntent,
   isUpdateCellIntent,
 } from './shared-intents.js';
 import type { SqlTabs } from './tabs.js';
@@ -76,7 +75,7 @@ export function intentsFor(tabs: SqlTabs) {
         // A filter carried with the selection is applied before the query is issued, so the action
         // is built from the state the tab will hold — see SelectObjectIntent.
         return apply(
-          reread({ ...selected(payload, value), object: value.object, stats: null, error: null }),
+          reread({ ...selected(payload, value), object: value.object, error: null }),
           capabilities,
           tabs,
         );
@@ -201,13 +200,6 @@ export function intentsFor(tabs: SqlTabs) {
           requestId: newRequestId(), row: value.row,
         });
         return apply({ payload, request }, capabilities, tabs);
-      },
-    },
-    stats: {
-      payload: isStatsIntent,
-      run: (payload, value: { object: string }, capabilities): null => {
-        const next = { ...payload, object: value.object, stats: null };
-        return apply({ payload: next, request: planRequest('stats', next) }, capabilities, tabs);
       },
     },
     export: {

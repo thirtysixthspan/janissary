@@ -15,7 +15,6 @@ import { exportRows } from './export.js';
 import { runGrid, totals, unfilteredTotal } from './grid.js';
 import { RowKeyStore } from './row-keys.js';
 import { objectColumns, hasObject, schemaObjects } from './schema.js';
-import { columnStats } from './stats.js';
 import { deleteRow, insertRow, updateCell, type WriteOutcome } from './write.js';
 
 // The browser's half of the database manager: everything the `sql` plugin reaches through the
@@ -191,17 +190,6 @@ export class DatabaseBrowser {
     this.write(database, requestId, deleteRow(
       this.keyStore(database), row, (object) => objectColumns(opened.handle, object), opened.handle,
     ));
-  }
-
-  stats(database: string, requestId: string, object: string): void {
-    const opened = this.handleFor(database, object);
-    if ('error' in opened) { this.record({ kind: 'stats', requestId, database, object, columns: [], error: opened.error }); return; }
-    try {
-      const columns = opened.columns.map((column) => columnStats(opened.handle, object, column));
-      this.record({ kind: 'stats', requestId, database, object, columns });
-    } catch (error) {
-      this.record({ kind: 'stats', requestId, database, object, columns: [], error: errorText(error) });
-    }
   }
 
   exportObject(database: string, requestId: string, query: DatabaseGridQuery, format: 'csv' | 'json'): void {

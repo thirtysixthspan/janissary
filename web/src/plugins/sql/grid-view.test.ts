@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SqlGrid, SqlObject, SqlPayload, SqlStatsColumn } from '@shared/plugins/sql/shared';
+import type { SqlGrid, SqlObject, SqlPayload } from '@shared/plugins/sql/shared';
 import {
-  barScale,
   browsable,
   cellText,
   columnCount,
@@ -195,24 +194,13 @@ describe('columnCount', () => {
   });
 });
 
-describe('barScale', () => {
-  const column = (values: { label: string; count: number }[]): SqlStatsColumn => ({
-    name: 'a', type: 'TEXT', nulls: 0, distinct: values.length, total: 0, distinctLimit: 20, values,
-  });
-
-  it('is the largest count, so every bar scales against a real maximum', () => {
-    expect(barScale(column([{ label: 'x', count: 4 }, { label: 'y', count: 17 }]))).toBe(17);
-    expect(barScale(column([]))).toBe(0);
-  });
-});
-
 describe('SqlPayload shape used by the view', () => {
   it('carries everything the grid renders without reaching for anything else', () => {
     const payload: SqlPayload = {
       database: 'shop', databases: [{ name: 'shop', exists: true, open: true }],
       objects: [ORDERS], object: 'orders', filters: [], hidden: [], global: '', order: [], limit: 100, offset: 0,
       pageSizes: [50, 100, 500],
-      grid: GRID, stats: null, log: [], exports: [], error: null, pending: null,
+      grid: GRID, log: [], exports: [], error: null, pending: null,
     };
     expect(payload.grid?.columns).toEqual(['a']);
   });

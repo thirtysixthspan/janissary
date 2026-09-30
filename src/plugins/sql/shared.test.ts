@@ -30,7 +30,6 @@ function payload(over: Partial<SqlPayload> = {}): SqlPayload {
     offset: 0,
     pageSizes: [50, 100, 500],
     grid: null,
-    stats: null,
     log: [],
     exports: [],
     error: null,
@@ -82,14 +81,13 @@ describe('isSqlPayload', () => {
   });
 
 
-  it('accepts a populated grid, stats, console, exports, error, and pending', () => {
+  it('accepts a populated grid, console, exports, error, and pending', () => {
     expect(isSqlPayload(payload({
       grid: {
         sql: 'SELECT 1', parameters: [1], columns: ['a'],
         rows: [{ key: 'r1', cells: [{ text: 'x', isNull: false }] }],
         total: 1, unfilteredTotal: 4, offset: 0, limit: 100, order: [{ column: 'a', desc: false }],
       },
-      stats: [{ name: 'a', type: 'TEXT', nulls: 0, distinct: 1, total: 4, distinctLimit: 20, values: [{ label: 'x', count: 4 }] }],
       log: [{ sql: 'UPDATE t', changed: 1 }],
       exports: [{ name: 'shop-orders-1.csv', size: '1.2 kB', rows: 4, ref: '/open/7' }],
       error: 'Query error: nope',

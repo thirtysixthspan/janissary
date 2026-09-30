@@ -1,35 +1,47 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faSortUp, faSortDown, faPlus, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
+import { faSort, faSortUp, faSortDown, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { pageLabel, readOnlyReason, toggleColumn, visibleColumns, type CellPosition } from './grid-view';
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
-import { ColumnChooser, ColumnChooserButton } from './ColumnChooser';
-import { ExportButtons } from './ExportButtons';
-import { CopySelectionButton, useGridSelection } from './selection';
+import { ColumnChooser } from './ColumnChooser';
+import { useGridSelection } from './selection';
 import { useGridKeys } from './sql-keys';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
 
-// The data grid: a filter row under the column headers, one page of rows, and a pager. A read-only
-// object keeps the whole grid and loses only the write affordances, so a view is still useful when
-// it cannot be edited — and it keeps the export, which is a read of the whole query.
+// The data grid: the object on screen and one page of its rows. A read-only object keeps the whole
+// grid and loses only the write affordances, so a view is still useful when it cannot be edited.
+//
+// The grid owns no actions. The row above it holds them — the frame's metadata row — so this is the
+// facts and the page, and the two forms the row's controls open are rendered here because they are
+// about the grid: the insert form is a reviewable statement about the object on screen, and the
+// column chooser can only list the columns the statement that ran carries.
 export function DataGrid({
   payload, capabilities,
+  inserting = false, onInserting = () => {},
+  choosingColumns = false, onChoosingColumns = () => {},
 }: {
   payload: SqlPayload;
   capabilities: TabPluginClientCapabilities;
+  /**
+   * Whether the metadata row's **Insert row** has the form open, and whether the **Columns** control
+   * has the chooser open. Both default closed, which is what a grid with no row above it looks like —
+   * the frame that owns the row is the one that opens them, because it is where the controls are.
+   */
+  inserting?: boolean;
+  onInserting?(open: boolean): void;
+  choosingColumns?: boolean;
+  onChoosingColumns?(open: boolean): void;
 }) {
   const object = payload.objects.find((entry) => entry.name === payload.object);
   const [editing, setEditing] = useState<{ row: string; column: string } | null>(null);
   const [deleting, setDeleting] = useState<SqlRow | null>(null);
   const [filtering, setFiltering] = useState<string | null>(null);
-  const [choosingColumns, setChoosingColumns] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
-  const [inserting, setInserting] = useState(false);
   const grid = payload.grid;
   const readOnly = readOnlyReason(object);
   const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
@@ -64,33 +76,13 @@ export function DataGrid({
         <span className="sql-grid-object">{object?.name ?? '—'}</span>
         <span className="sql-grid-count">{grid ? pageLabel(grid) : 'Loading…'}</span>
         {readOnly && <span className="sql-readonly">{readOnly}</span>}
-        <span className="sql-grid-actions">
-          {object?.writable && (
-            <button
-              type="button"
-              className="sql-icon"
-              title="Insert row"
-              aria-label="Insert row"
-              onClick={() => setInserting(true)}
-            >
-              <FontAwesomeIcon icon={faPlus} />
-            </button>
-          )}
-          <CopySelectionButton onCopy={selection.copy} enabled={selection.range !== null} />
-          <ColumnChooserButton hiddenCount={payload.hidden.length} onClick={() => setChoosingColumns(!choosingColumns)} />
-          <ExportButtons
-            enabled={payload.pending === null && object !== undefined}
-            onExport={(format) => send('export', { format })}
-          />
-          {capabilities.splitAction}
-        </span>
       </div>
 
       {choosingColumns && (
         <ColumnChooser
           columns={grid?.columns ?? []}
           hidden={payload.hidden}
-          onClose={() => setChoosingColumns(false)}
+          onClose={() => onChoosingColumns(false)}
           onToggle={(name) => setHidden(toggleColumn(grid?.columns ?? [], payload.hidden, name))}
           onShowAll={() => setHidden([])}
         />
@@ -101,10 +93,10 @@ export function DataGrid({
           object={object.name}
           columns={object.columns}
           onSave={(cells) => {
-            setInserting(false);
+            onInserting(false);
             send('insert-row', { object: payload.object, cells });
           }}
-          onCancel={() => setInserting(false)}
+          onCancel={() => onInserting(false)}
         />
       )}
 

@@ -5,34 +5,14 @@ import { SqlTab } from './SqlTab';
 import { makeCapabilities, payload } from './fixture';
 
 describe('SqlTab layout', () => {
-  it('shows the navigator beside the grid in the centre, with no Schema/Data switch', () => {
-    const { capabilities } = makeCapabilities(null);
-    render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    expect(screen.getByRole('tree', { name: 'Schema' })).toBeTruthy();
-    expect(screen.getByRole('table')).toBeTruthy();
-    expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
-  });
-
-  it('shows one at a time in a sidebar, and switches between them', () => {
+  // A harness tab is one metadata row across the full width and one body below it. This is the same
+  // shape, rebuilt with the plugin's own classes because a plugin may not reach the host's.
+  it('is the same tab in a sidebar, with no Schema/Data switch to press', () => {
     const { capabilities } = makeCapabilities('left');
-    render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    expect(screen.getByRole('table')).toBeTruthy();
-    expect(screen.queryByRole('tree', { name: 'Schema' })).toBeNull();
-    fireEvent.click(screen.getByText('Schema'));
-    expect(screen.getByRole('tree', { name: 'Schema' })).toBeTruthy();
-    expect(screen.queryByRole('table')).toBeNull();
-  });
-
-  // The pane is the box the stylesheet bounds the grid in; a grid outside it would be laid out
-  // against nothing and paint over the command bar. The rule and the class have to agree.
-  it('puts the grid in a bounded pane beside the navigator, which is what keeps it out of the bar', () => {
-    const { capabilities } = makeCapabilities();
     const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    const body = container.querySelector('.sql-body') as HTMLElement;
-    const pane = body.querySelector('.sql-grid-pane') as HTMLElement;
-    expect(pane.querySelector('.sql-grid-area')).toBeTruthy();
-    expect(pane.querySelector('.sql-grid-scroll')).toBeTruthy();
-    expect(body.querySelector('.sql-nav-pane')).toBeTruthy();
+    expect(screen.getByRole('table')).toBeTruthy();
+    expect(container.querySelectorAll('.sql-meta')).toHaveLength(1);
+    expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
   });
 
   it('marks both layouts for the documentation screenshot', () => {
@@ -41,12 +21,13 @@ describe('SqlTab layout', () => {
     const shot = container.querySelector<HTMLElement>('[data-doc-shot="sql-tab"]');
     expect(shot?.dataset.docked).toBe('false');
     const docked = makeCapabilities('right');
-    render(<SqlTab payload={payload()} capabilities={docked.capabilities} />);
-    expect(screen.getAllByText('Schema').length).toBeGreaterThan(0);
+    const narrow = render(<SqlTab payload={payload()} capabilities={docked.capabilities} />);
+    const narrowShot = narrow.container.querySelector<HTMLElement>('[data-doc-shot="sql-tab"]');
+    expect(narrowShot?.dataset.docked).toBe('true');
   });
 });
 
-describe('SqlTab header', () => {
+describe('SqlTab metadata row', () => {
   it('offers every database and asks to open the one chosen', () => {
     const { capabilities, intent } = makeCapabilities();
     render(<SqlTab payload={payload({
@@ -71,16 +52,6 @@ describe('SqlTab header', () => {
     expect(screen.queryByText('Create')).toBeNull();
   });
 
-  it('asks for statistics only when the panel is opened, and again to close it', () => {
-    const { capabilities, intent } = makeCapabilities();
-    render(<SqlTab payload={payload()} capabilities={capabilities} />);
-    fireEvent.click(screen.getByLabelText('Toggle statistics'));
-    expect(intent).toHaveBeenCalledTimes(1);
-    expect(intent).toHaveBeenCalledWith('stats', { object: 'orders' });
-    fireEvent.click(screen.getByLabelText('Toggle statistics'));
-    expect(intent).toHaveBeenCalledTimes(1);
-  });
-
   it('links each export through the authenticated resource URL', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload({
@@ -93,6 +64,49 @@ describe('SqlTab header', () => {
 
   // The command bar is the only place SQL is entered, so there is no second control for it and no
   // panel showing a statement the user did not type.
+  // Everything the tab can do to an object, in one row: the two switches that choose it and the four
+  // controls that act on it. Three controls that used to be here are gone, and this is where that is
+  // pinned — a statistics panel, a generated-SQL panel, and a copy button the platform's own key does.
+  it('carries both switches and the object actions, and no control that is gone', () => {
+    const { capabilities } = makeCapabilities();
+    const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const row = container.querySelector('.sql-meta') as HTMLElement;
+    expect(row.querySelector('.sql-meta-actions')).toBeTruthy();
+    for (const name of ['Database', 'Table', 'Insert row', 'Choose columns']) {
+      expect(screen.getByLabelText(name)).toBeTruthy();
+    }
+    for (const name of ['CSV', 'JSON']) {
+      expect(screen.getByRole('button', { name })).toBeTruthy();
+    }
+    for (const gone of ['Toggle statistics', 'Toggle generated SQL', 'Copy selection']) {
+      expect(screen.queryByLabelText(gone)).toBeNull();
+    }
+  });
+
+  it('offers no insert control for an object that cannot be written to', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload({ object: 'paid' })} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('Insert row')).toBeNull();
+  });
+
+  it('opens the insert form from the row, which is where the control now lives', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('New status')).toBeNull();
+    fireEvent.click(screen.getByLabelText('Insert row'));
+    expect(screen.getByLabelText('New status')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Insert row'));
+    expect(screen.queryByLabelText('New status')).toBeNull();
+  });
+
+  it('opens the column chooser from the row', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    expect(screen.queryByLabelText('Choose columns', { selector: 'input' })).toBeNull();
+    fireEvent.click(screen.getByLabelText('Choose columns'));
+    expect(screen.getByRole('checkbox', { name: 'status' })).toBeTruthy();
+  });
+
   it('offers no control for showing or re-running a statement', () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload()} capabilities={capabilities} />);
@@ -106,9 +120,7 @@ describe('SqlTab export', () => {
   const csv = () => screen.getByRole('button', { name: 'CSV' }) as HTMLButtonElement;
   const json = () => screen.getByRole('button', { name: 'JSON' }) as HTMLButtonElement;
 
-  // The server already had everything an export needs; what was missing was anything that asked for
-  // one, so the header's export links could only ever be empty.
-  it('asks for each format by name, from the control beside the grid', () => {
+  it('asks for each format by name', () => {
     const { capabilities, intent } = makeCapabilities();
     render(<SqlTab payload={payload()} capabilities={capabilities} />);
     fireEvent.click(csv());
@@ -134,7 +146,7 @@ describe('SqlTab export', () => {
     expect(json().disabled).toBe(false);
   });
 
-  it('offers neither format before the navigator has chosen an object', () => {
+  it('offers neither format before an object has been chosen', () => {
     const { capabilities, intent } = makeCapabilities();
     render(<SqlTab payload={payload({ object: '', grid: null })} capabilities={capabilities} />);
     expect(csv().disabled).toBe(true);
@@ -181,3 +193,122 @@ describe('SqlTab console', () => {
     expect(container.querySelector('.dot.busy')).toBeTruthy();
   });
 });
+
+describe('the insert form', () => {
+  function opened(over = {}) {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlTab payload={payload(over)} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Insert row'));
+    return intent;
+  }
+
+  it('writes nothing at all when the control is pressed, which is the whole point of it', () => {
+    // A row used to land in the database on this click, before a value was typed.
+    expect(opened()).not.toHaveBeenCalled();
+  });
+
+  it('offers an input for every column, so the form is a picture of the row', () => {
+    opened();
+    expect(screen.getByLabelText('New id')).toBeTruthy();
+    expect(screen.getByLabelText('New status')).toBeTruthy();
+  });
+
+  it('previews the statement the save will run', () => {
+    opened();
+    expect(screen.getByTestId('sql-insert-statement').textContent)
+      .toBe('INSERT INTO "orders" ("id") VALUES (?)');
+  });
+
+  it('sends only the columns that were given a value', () => {
+    const intent = opened();
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }, { column: 'status', value: 'open' }],
+    });
+  });
+
+  // A column the insert does not name is stored as whatever the table's own DEFAULT says, which is
+  // the whole reason a form should leave one out rather than write a null over it.
+  it('does not name a column left alone, so its default runs', () => {
+    const intent = opened();
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }],
+    });
+  });
+
+  it('leaves the primary key as the one column a new row names without being asked', () => {
+    opened();
+    expect((screen.getByLabelText('id is null') as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText('status is null') as HTMLInputElement).checked).toBe(false);
+  });
+
+  it('turning the NULL toggle off leaves the column unnamed, and on again names it null', () => {
+    const intent = opened();
+    fireEvent.click(screen.getByLabelText('status is null'));
+    fireEvent.click(screen.getByLabelText('status is null'));
+    expect(screen.getByTestId('sql-insert-statement').textContent)
+      .toBe('INSERT INTO "orders" ("id") VALUES (?)');
+    fireEvent.click(screen.getByLabelText('status is null'));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(intent).toHaveBeenCalledWith('insert-row', {
+      object: 'orders',
+      cells: [{ column: 'id', value: null }, { column: 'status', value: null }],
+    });
+  });
+
+  it('disables a field whose column is null, so a typed value cannot be a silent contradiction', () => {
+    opened();
+    expect((screen.getByLabelText('New id') as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('status is null'));
+    expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('status is null'));
+    expect((screen.getByLabelText('New status') as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('closes without writing on Cancel', () => {
+    const intent = opened();
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0] as HTMLElement);
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('New status')).toBeNull();
+  });
+});
+
+describe('the column chooser', () => {
+  it('asks for the whole hidden set when a column is toggled', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Choose columns'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'status' }));
+    expect(intent).toHaveBeenCalledWith('set-columns', { hidden: ['status'] });
+  });
+
+  it('takes every column back at once', () => {
+    const { capabilities, intent } = makeCapabilities();
+    render(<SqlTab payload={payload({ hidden: ['status'] })} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Choose columns'));
+    fireEvent.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(intent).toHaveBeenCalledWith('set-columns', { hidden: [] });
+  });
+
+  it('says how many are hidden on the control that opens the chooser', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload({ hidden: ['status'] })} capabilities={capabilities} />);
+    expect(screen.getByLabelText('Choose columns').title).toContain('1 hidden');
+  });
+
+  // The host's Split is drawn as a table's columns, so a column glyph here would be two answers to
+  // one question. What this control is about is what the grid shows, and an eye is not that glyph.
+  it('is not drawn as the split glyph, so the two controls apart are not the same shape', () => {
+    const { capabilities } = makeCapabilities();
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    const glyph = screen.getByLabelText('Choose columns').querySelector('svg') as SVGElement;
+    expect(glyph.dataset.icon).toBe('eye');
+    expect(glyph.dataset.icon).not.toBe('table-columns');
+  });
+});
+

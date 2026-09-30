@@ -125,7 +125,6 @@ function actOnDatabases(managers: Managers, action: TabPluginTopicAction): void 
     case 'updateCell': { database.browseUpdateCell(action.database, id, action.row, action.column, action.value); break; }
     case 'insertRow': { database.browseInsertRow(action.database, id, action.object, action.cells); break; }
     case 'deleteRow': { database.browseDeleteRow(action.database, id, action.row); break; }
-    case 'stats': { database.browseStats(action.database, id, action.object); break; }
     case 'export': { database.browseExport(action.database, id, action.query, action.format); break; }
   }
   messageBus.emit('databases', { type: 'changed' });

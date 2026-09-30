@@ -264,28 +264,6 @@ describe('DatabaseBrowser', () => {
     browser.dispose();
   });
 
-  it('answers a statistics read with one entry per column', () => {
-    const browser = new DatabaseBrowser();
-    seeded(browser, SHOP);
-    const requestId = nextId();
-    browser.stats('shop', requestId, 'orders');
-    const answer = browser.view().results.find((result) => result.requestId === requestId);
-    if (answer?.kind !== 'stats') throw new Error('expected a stats answer');
-    expect(answer.columns.map((column) => column.name)).toEqual(['id', 'status']);
-    expect(answer.columns[1]).toMatchObject({ nulls: 0, distinct: 2, total: 2 });
-    browser.dispose();
-  });
-
-  it('reports a statistics read for an object the database does not have as an error', () => {
-    const browser = new DatabaseBrowser();
-    seeded(browser, SHOP);
-    const requestId = nextId();
-    browser.stats('shop', requestId, 'nope');
-    expect(browser.view().results.find((result) => result.requestId === requestId))
-      .toMatchObject({ kind: 'stats', columns: [], error: '"nope" is not in "shop".' });
-    browser.dispose();
-  });
-
   it('lists the databases on disk with whether each exists and is open', () => {
     const browser = new DatabaseBrowser();
     browser.create('alpha', nextId());

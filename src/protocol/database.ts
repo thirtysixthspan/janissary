@@ -102,24 +102,6 @@ export type DatabaseGridView = {
   order: DatabaseOrderView[];
 };
 
-export type DatabaseColumnStatsView = {
-  name: string;
-  type: string;
-  // Nulls, distinct values, and the total, over the whole object.
-  nulls: number;
-  distinct: number;
-  total: number;
-  // Present for a column SQLite stores numerically, and only when it holds at least one.
-  min?: string;
-  max?: string;
-  // The full value distribution when the column is low-cardinality (twenty or fewer distinct
-  // values); empty otherwise, and the client draws a count instead of bars. A column with no
-  // distinct values at all is also empty, which is why the threshold travels with the figures: the
-  // client cannot tell the two cases apart without it, and must not say "too many" about the first.
-  distinctLimit: number;
-  values: { label: string; count: number }[];
-};
-
 export type DatabaseResultView =
   | {
     kind: 'schema';
@@ -144,14 +126,6 @@ export type DatabaseResultView =
     // query's may not: no filter operator binds null.
     parameters: (string | number | null)[];
     changed: number;
-    error?: string;
-  }
-  | {
-    kind: 'stats';
-    requestId: string;
-    database: string;
-    object: string;
-    columns: DatabaseColumnStatsView[];
     error?: string;
   }
   | {

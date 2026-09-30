@@ -6,26 +6,35 @@ import sql from './sql.css?raw';
 // below names one link in the chain, because a link removed anywhere is the same defect — a hundred
 // rows painting over the command bar.
 
-// A block whose selector list is exactly this one. The `}` or `,` in front of it is what keeps a
-// compound selector such as `.sql-docked .sql-grid-area` from answering for a bare `.sql-grid-area`.
 const rule = (selector: string): string =>
   sql.match(new RegExp(`(?:^|[},])\\s*\\${selector} \\{[^}]+\\}`, 'm'))?.[0] ?? '';
 
 describe('the sql stylesheet', () => {
-  // The grid sits in a pane beside the navigator, and that pane is the box the tab's height has to
-  // reach. It was a content-sized block, so the bounded grid below it was never bounded at all.
-  it('bounds the pane the grid sits in, and makes it a flex container', () => {
-    const pane = rule('.sql-grid-pane');
+  // The tab is a column of three: the metadata row, the grid, and the bar. It has to bound its own
+  // height, or the grid below it is laid out against a box that never ends.
+  it('bounds the tab it is all inside', () => {
+    const tab = rule('.sql-tab');
 
-    expect(pane).toContain('flex: 1');
-    expect(pane).toContain('min-width: 0');
-    expect(pane).toContain('min-height: 0');
-    expect(pane).toContain('display: flex');
+    expect(tab).toContain('flex: 1');
+    expect(tab).toContain('min-height: 0');
+    expect(tab).toContain('display: flex');
+    expect(tab).toContain('flex-direction: column');
   });
 
-  // Only meaningful because the pane above is a flex container; without that, `flex: 1` on the grid
-  // area is a declaration about nothing.
-  it('lets the grid area take that height rather than the height of its rows', () => {
+  // One metadata row above one body: the band is the width of the tab, the actions sit at its right
+  // end, and the grid below it is what takes the remaining height.
+  it('is one metadata row above the grid, with the actions at the right end', () => {
+    const meta = rule('.sql-meta');
+    const actions = rule('.sql-meta-actions');
+
+    expect(meta).toContain('display: flex');
+    expect(meta).toContain('border-bottom: 1px solid var(--border)');
+    expect(actions).toContain('margin-left: auto');
+  });
+
+  // Only meaningful because the tab above is a flex column; without that, `flex: 1` on the grid area
+  // is a declaration about nothing.
+  it('lets the grid take the height between the row and the bar', () => {
     const area = rule('.sql-grid-area');
 
     expect(area).toContain('flex: 1');
@@ -47,5 +56,13 @@ describe('the sql stylesheet', () => {
   // not allowed to give way when the table is tall.
   it('never lets the table squeeze the command bar', () => {
     expect(rule('.sql-console')).toContain('flex-shrink: 0');
+  });
+
+  // The three removed surfaces must not leave their rules behind: a stylesheet entry for a control
+  // that no longer exists is how the next reader is misled about what this tab offers.
+  it('carries no rule for a control the tab no longer has', () => {
+    for (const gone of ['.sql-header', '.sql-nav-row', '.sql-stats', '.sql-switch', '.sql-grid-pane']) {
+      expect(sql).not.toContain(`${gone} {`);
+    }
   });
 });

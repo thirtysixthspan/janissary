@@ -44,11 +44,6 @@ export function fold(
       };
       return { payload: written, followUp: planRequest('query', written) };
     }
-    case 'stats': {
-      return settled(answer.error
-        ? { ...base, stats: null, ...missing(answer.error) }
-        : { ...base, stats: answer.columns, error: null });
-    }
     case 'export': { return foldExport(key, base, answer, tabs);
     }
   }

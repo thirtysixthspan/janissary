@@ -131,7 +131,6 @@ export type TabPluginTopicAction =
     cells: { column: string; value: string | null }[];
   }
   | { topic: 'databases'; action: 'deleteRow'; database: string; requestId: string; row: string }
-  | { topic: 'databases'; action: 'stats'; database: string; requestId: string; object: string }
   | {
     topic: 'databases';
     action: 'export';

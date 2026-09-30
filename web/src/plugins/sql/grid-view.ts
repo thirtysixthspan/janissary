@@ -6,7 +6,6 @@ import type {
   SqlPayload,
   SqlRow,
 } from '@shared/plugins/sql/shared';
-import type { SqlStatsColumn } from '@shared/plugins/sql/shared';
 
 // Pure view arithmetic, kept out of the components so it is testable without a render: where a page
 // starts and ends, what the pager says, what a filter chip reads, and what a cell shows.
@@ -212,10 +211,4 @@ export function columnCount(object: SqlObject): string {
   return `${object.columns.length} col${object.columns.length === 1 ? '' : 's'}`;
 }
 
-/** The largest bar in a column's distribution, so the others scale against a real maximum. */
-export function barScale(column: SqlStatsColumn): number {
-  let largest = 0;
-  for (const entry of column.values) largest = Math.max(largest, entry.count);
-  return largest;
-}
 

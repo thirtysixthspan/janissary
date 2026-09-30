@@ -56,7 +56,6 @@ export type ConversationsView = {
 
 export type {
   DatabaseCellView,
-  DatabaseColumnStatsView,
   DatabaseColumnView,
   DatabaseFilterOperator,
   ForeignKey,

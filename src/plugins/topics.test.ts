@@ -88,7 +88,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       readView: vi.fn(() => ({ databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop' })),
       browseCreate: vi.fn(), browseSchema: vi.fn(), browseQuery: vi.fn(), browseRun: vi.fn(),
       browseUpdateCell: vi.fn(), browseInsertRow: vi.fn(), browseDeleteRow: vi.fn(),
-      browseStats: vi.fn(), browseExport: vi.fn(),
+      browseExport: vi.fn(),
     },
   } as unknown as Managers;
   return { cancel, clearAll, managers, setActiveTab };
@@ -161,7 +161,7 @@ describe('the conversations topic source', () => {
 });
 
 describe('the databases topic source', () => {
-  it('reads the browser view and routes every one of the nine actions', () => {
+  it('reads the browser view and routes every one of the eight actions', () => {
     const { managers } = makeManagers();
     expect(readTopicData(managers, 'databases')).toEqual({
       databases: [{ name: 'shop', exists: true, open: true }], results: [], lastOpened: 'shop',
@@ -186,7 +186,6 @@ describe('the databases topic source', () => {
     expect(managers.database.browseUpdateCell).toHaveBeenCalledWith('shop', 'e', 'r1', 'status', null);
     expect(managers.database.browseInsertRow).toHaveBeenCalledWith('shop', 'f', 'orders', [{ column: 'id', value: null }]);
     expect(managers.database.browseDeleteRow).toHaveBeenCalledWith('shop', 'g', 'r1');
-    expect(managers.database.browseStats).toHaveBeenCalledWith('shop', 'h', 'orders');
     expect(managers.database.browseExport).toHaveBeenCalledWith('shop', 'i', query, 'json');
   });
 

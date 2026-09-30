@@ -1,9 +1,9 @@
 # SQL database browser
 
-A dockable tab that browses one of the project's SQLite databases: a schema navigator beside a data
-grid, with filtering, ordering, paging, cell editing, row insert and delete, export, per-column
-statistics, the SQL behind whatever the grid is showing, and a SQL console. Reached by the `sql`
-command. It is a bundled tab plugin like the other file and list views, so everything about how it
+A dockable tab that browses one of the project's SQLite databases: a metadata row naming the database
+and the object, and a data grid with filtering, ordering, paging, cell editing, row insert and delete,
+export, and a SQL console. Reached by the `sql` command. It is a bundled tab plugin like the other
+file and list views, so everything about how it
 is loaded, docked, and broken is described in [[tab-plugins]]; this describes what it does.
 
 It reads and writes through the same connection registry `db sqlite query` uses, and it changes
@@ -36,24 +36,29 @@ filters, page, and exports; the schema is re-read only when a `Refresh` is press
 
 ### What the tab shows
 
-In the centre the tab is a schema navigator beside the grid. Docked in a sidebar — which is narrow —
-it is one column with a **Schema** / **Data** switch at the top. The plugin is told which it is and
-lays itself out accordingly; it does not measure the frame around it.
+The tab is one metadata row across the top and one body below it. The row is the shape a harness tab
+has: the facts on the left, the actions at its right end, a border under the lot. Docked in a sidebar
+— which is narrow — it is the same tab, narrower; there is nothing to switch between, so there is no
+view switch.
 
-The navigator lists every table, view, index, and trigger in the database, grouped in that order,
-with each object's column count. A trigger is listed but not browsable, and its row says so rather
-than doing nothing when pressed. An empty database reads `No tables.`
+The row carries a database dropdown and, beside it, a table dropdown, then the actions: **Insert
+row**, **Columns**, the **CSV** and **JSON** exports, any finished exports as download links, and the
+split control. **Insert row** is offered only for an object that can be written to.
+
+The table dropdown lists every table, view, index, and trigger in the database, grouped in that order.
+A trigger is listed but cannot be chosen. Choosing a different database reloads it, because the objects it lists are the new
+database's.
+
+Below the row, the grid's own header names the object on screen and reports how much of it is there.
+Under it, a filter chip row lists the filters in force; above the table, an error band carries the
+last failure. Below the table, a pager steps a page at a time, offers a page size, and re-reads on
+**Refresh**. The table scrolls inside the tab rather than running into the command bar.
 
 Every read the tab makes is answered before the next one starts, so a tab that has just opened fills
-in on its own: the navigator gains its objects and the grid its first page without anything being
-asked of it twice, and a tab never rests in the state it was in before an answer. While a read is
-still outstanding the grid header reads `Loading…`, and once the answer lands `No tables.` means the
-database is empty rather than that nothing has been read yet.
-
-The grid's header names the object, reports how much of it is on screen, and carries the write
-affordances. Below it, a filter chip row lists the filters in force; above the table, an error band
-carries the last failure. Below the table, a pager steps a page at a time, offers a page size, and
-re-reads on **Refresh**.
+in on its own: the table dropdown gains the database's objects and the grid its first page without
+anything being asked of it twice, and a tab never rests in the state it was in before an answer. While
+a read is still outstanding the grid header reads `Loading…`, and once the answer lands `No tables.`
+means the database is empty rather than that nothing has been read yet.
 
 ### Filtering, ordering, and paging
 
@@ -80,10 +85,9 @@ column contributes its own match and they are joined with `OR`, with every value
 first so a number and a string are searched alike, and a null column passing rather than hiding the
 row. The term is its own group, so a row must match the term *and* every per-column filter. It names
 no column, so it survives a switch to another object. Submitting an empty term removes it, and
-**Clear filters** takes it away with the rest. It is not the statistics panel's business: those
-counts are the object's, and the term does not reach them.
+**Clear filters** takes it away with the rest.
 
-A **Columns** control in the grid's action bar lists the object's columns, each one toggling, with
+A **Columns** control in the metadata row lists the object's columns, each one toggling, with
 **Show all** to take them all back. A wide table is otherwise only usable by horizontal scrolling, and
 a dock or a split pane leaves little width to scroll within. Hiding a column does not change the
 query: it is still selected and still filtered, so this is about which columns are on screen, not
@@ -157,8 +161,8 @@ than a convention about typing nothing, and turning the toggle off leaves the co
 field whose column is null is disabled, so a typed value cannot silently contradict the toggle beside
 it. **Delete row** is on every row and asks first, through the application's own confirmation, naming
 the table.
-A run of cells is copied as tab-separated text, one line per row, from **Copy selection** or from the
-platform's own copy key. A spreadsheet pastes it as a table with no quoting rules to disagree
+A run of cells is copied as tab-separated text, one line per row, by the platform's own copy key.
+A spreadsheet pastes it as a table with no quoting rules to disagree
 about, so a value holding a comma cannot change the shape of what lands. A null copies as the `NULL`
 the grid shows rather than as an empty cell the paste would turn back into a string, and a range that
 runs off the end of the page copies only what was on screen. Selection is a rectangle: a click starts
@@ -212,7 +216,7 @@ command bar is the only place SQL is entered, which is what makes one answer to 
 
 Exporting writes the whole filtered, ordered query — not one page — as CSV or JSON, to
 `.janissary/db/exports/<database>-<object>-<n>.<ext>`, and the tab offers it as a download. A
-`CSV` and a `JSON` control beside the grid's other actions start one, and the file appears in the
+`CSV` and a `JSON` control in the metadata row start one, and the file appears in the
 tab's own list of exports as a link. Both are unavailable while the tab is waiting on something else,
 because it takes one request at a time. A second export of the same object gets the next number
 rather than overwriting the first. A CSV field containing a comma, a quote, or a line break is
@@ -231,10 +235,9 @@ filter and try again.` rather than blocking the whole application while it is wr
 
 ### Statistics
 
-A **Stats** control reads every column of the selected object: its null count, its distinct count,
-the minimum and maximum when it is numeric, and — when it has twenty or fewer distinct values — one
-bar per value scaled to the largest. A column with more distinct values than that gets its count and
-a line saying it has too many to chart. It is read when asked, never on a refresh.
+There is no statistics panel. A per-column distribution of the selected object is a question the
+command bar answers with a statement, and a control that asks the database for one is one more thing
+between the user and the rows.
 
 ### The console
 
@@ -274,6 +277,8 @@ of bringing the empty database back.
 - It does not show the statement behind the grid, and offers no way to run one the user did not type.
   The console is the way to run SQL, and the history is a record of what has been run.
 - It does not join tables, follow a foreign key, or build a query.
+- It does not report statistics. A per-column distribution is a statement in the command bar.
+- It has no copy control. A selection is copied by the application's own copy key.
 - It does not watch other tabs. A `db` command run elsewhere that changes the data leaves this view
   showing what it last read, which is what **Refresh** is for.
 - It does not undo. A cell edit commits or it does not.

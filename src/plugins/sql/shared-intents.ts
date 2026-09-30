@@ -32,7 +32,6 @@ export type RunIntent = { sql: string };
 export type UpdateCellIntent = { row: string; column: string; value: string | null };
 export type InsertRowIntent = { object: string; cells: { column: string; value: string | null }[] };
 export type DeleteRowIntent = { row: string };
-export type StatsIntent = { object: string };
 export type ExportIntent = { format: 'csv' | 'json' };
 
 // The page sizes the grid offers. Kept here rather than in the component so the guard that decides
@@ -159,9 +158,6 @@ export function isDeleteRowIntent(value: unknown): value is DeleteRowIntent {
   return isRecord(value) && isString(value.row);
 }
 
-export function isStatsIntent(value: unknown): value is StatsIntent {
-  return isRecord(value) && isString(value.object);
-}
 
 export function isExportIntent(value: unknown): value is ExportIntent {
   return isRecord(value) && (value.format === 'csv' || value.format === 'json');

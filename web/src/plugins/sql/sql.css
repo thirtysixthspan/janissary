@@ -3,10 +3,14 @@
 
 .sql-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; }
 
-.sql-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); }
-.sql-header-icon { color: var(--fg); }
-.sql-database { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font: inherit; }
-.sql-header-actions { margin-left: auto; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+/* The metadata row: one band across the tab, the facts on the left and the actions pushed right,
+   with a border under the lot. The shape a harness tab draws, rebuilt with the plugin's own names
+   because a client plugin may reach only its own stylesheet and the shared plugin one. */
+.sql-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); padding: 0 0 4px; }
+.sql-meta-icon { color: var(--fg); }
+.sql-meta-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+
+.sql-database, .sql-table { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font: inherit; max-width: 16em; }
 .sql-exports { display: flex; align-items: center; gap: 8px; }
 .sql-export { color: var(--accent); font-size: 12px; text-decoration: none; white-space: nowrap; }
 .sql-export:hover { text-decoration: underline; }
@@ -15,36 +19,11 @@
 .sql-icon[aria-pressed='true'] { color: var(--fg); }
 .sql-icon:disabled { opacity: 0.4; cursor: default; }
 
-.sql-switch { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-.sql-switch button { background: none; border: none; color: var(--muted); font: inherit; padding: 2px 10px; cursor: pointer; }
-.sql-switch button.active { background: var(--bg-hover); color: var(--fg); }
-
-.sql-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
-.sql-nav-pane { width: 220px; flex-shrink: 0; min-height: 0; overflow: auto; border-right: 1px solid var(--border); }
-/* The grid's half of the body. It has to be a flex container itself, or `.sql-grid-area`'s own
-   `flex: 1; min-height: 0` has no parent to be flexed in and the table sizes to its content — which
-   overflows the pane, is not clipped, and lands on the command bar. `min-width: 0` is the horizontal
-   half of the same repair: without it a wide table sizes the pane instead of scrolling inside it. */
-.sql-grid-pane { flex: 1; min-width: 0; min-height: 0; display: flex; }
-.sql-docked .sql-nav-pane, .sql-docked .sql-grid-area { width: 100%; border-right: none; }
-
-.sql-nav { display: flex; flex-direction: column; gap: 8px; padding-right: 8px; }
-.sql-nav-empty { color: var(--muted); padding: 8px 4px; }
-.sql-nav-group-label { display: flex; align-items: center; gap: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.sql-nav-row { display: flex; align-items: baseline; gap: 8px; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
-.sql-nav-row:hover { background: var(--bg-hover); }
-.sql-nav-row.selected { background: var(--bg-hover); color: var(--fg); font-weight: 600; }
-.sql-nav-row.inert { opacity: 0.5; cursor: default; }
-.sql-nav-row.inert:hover { background: none; }
-.sql-nav-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sql-nav-count { margin-left: auto; font-size: 11px; color: var(--muted); flex-shrink: 0; }
-
 .sql-grid-area { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 .sql-grid-bar { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .sql-grid-object { color: var(--fg); font-weight: 600; }
 .sql-grid-count { font-size: 12px; }
 .sql-readonly { font-size: 12px; color: var(--muted); font-style: italic; }
-.sql-grid-actions { margin-left: auto; display: flex; align-items: center; gap: 2px; }
 
 .sql-export-actions { display: inline-flex; gap: 4px; margin-left: 4px; }
 .sql-export-actions button { font: inherit; font-size: 11px; letter-spacing: 0.04em; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; cursor: pointer; }
@@ -141,22 +120,6 @@
 .sql-history-actions button { background: none; border: 1px solid var(--border); color: var(--muted); font: inherit; font-size: 12px; border-radius: 4px; padding: 2px 8px; cursor: pointer; }
 .sql-history-actions button:disabled { opacity: 0.4; cursor: default; }
 .sql-history-actions button:hover:not(:disabled) { color: var(--fg); background: var(--bg-hover); }
-
-.sql-stats { border: 1px solid var(--border); border-radius: 4px; padding: 8px; max-height: 30%; overflow: auto; }
-.sql-stats-empty { color: var(--muted); }
-.sql-stats-column + .sql-stats-column { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
-.sql-stats-head { display: flex; align-items: baseline; gap: 8px; }
-.sql-stats-name { color: var(--fg); font-weight: 600; font-size: 12px; }
-.sql-stats-type { font-size: 11px; color: var(--muted); }
-.sql-stats-figures { display: flex; gap: 10px; font-size: 11px; color: var(--muted); margin: 2px 0 4px; }
-.sql-stats-toomany { font-size: 11px; color: var(--muted); margin: 0; }
-
-.sql-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
-.sql-bar { display: grid; grid-template-columns: minmax(80px, 1fr) 3fr auto; align-items: center; gap: 8px; font-size: 11px; }
-.sql-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-.sql-bar-track { background: var(--bg-hover); border-radius: 3px; height: 8px; overflow: hidden; }
-.sql-bar-fill { display: block; height: 100%; background: var(--accent); }
-.sql-bar-count { color: var(--muted); }
 
 .sql-console { flex-shrink: 0; }
 .sql-console-bar { display: flex; align-items: flex-end; gap: 4px; }

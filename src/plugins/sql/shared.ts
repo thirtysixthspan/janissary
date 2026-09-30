@@ -87,20 +87,6 @@ export type SqlGrid = {
 // work, which is the half of a log that is worth keeping.
 export type SqlConsoleResult = { sql: string; changed: number; error?: string };
 
-export type SqlStatsColumn = {
-  name: string;
-  type: string;
-  nulls: number;
-  distinct: number;
-  total: number;
-  min?: string;
-  max?: string;
-  // The host's own threshold, so "too many to chart" is a statement about the data rather than
-  // about a constant the client re-declared. A column with no distinct values also has no bars, and
-  // without this the panel could not tell those two apart.
-  distinctLimit: number;
-  values: { label: string; count: number }[];
-};
 
 // One finished export. `ref` is the authenticated `/open/<id>` reference the host issued, minted
 // once when the file was registered; the client turns it into a download URL with `resourceUrl`.
@@ -113,7 +99,7 @@ export type SqlDatabaseRef = { name: string; exists: boolean; open: boolean };
 // so a write knows to re-run the grid while a statistics read just fills the panel.
 export type SqlPending = {
   id: string;
-  followUp: 'schema' | 'query' | 'stats' | 'console' | 'export' | 'none';
+  followUp: 'schema' | 'query' | 'console' | 'export' | 'none';
 };
 
 export type SqlPayload = {
@@ -140,7 +126,6 @@ export type SqlPayload = {
   // accepts one read the same list rather than two copies of it.
   pageSizes: number[];
   grid: SqlGrid | null;
-  stats: SqlStatsColumn[] | null;
   // Every statement the tab has run, newest first, capped server-side. The last entry is what the
   //   console line under the prompt reports; the rest are the session, readable rather than
   // reconstructable from memory.
@@ -182,7 +167,7 @@ function isPageSizes(value: unknown): boolean {
 }
 
 const FOLLOW_UPS = new Set<SqlPending['followUp']>([
-  'schema', 'query', 'stats', 'console', 'export', 'none',
+  'schema', 'query', 'console', 'export', 'none',
 ]);
 
 const OPERATORS = new Set<string>([
@@ -243,17 +228,6 @@ function isGrid(value: unknown): value is SqlGrid {
     && Array.isArray(value.order) && value.order.every(isOrder);
 }
 
-function isStatsColumn(value: unknown): value is SqlStatsColumn {
-  return isRecord(value)
-    && isString(value.name)
-    && isString(value.type)
-    && typeof value.nulls === 'number'
-    && typeof value.distinct === 'number'
-    && typeof value.total === 'number'
-    && typeof value.distinctLimit === 'number'
-    && Array.isArray(value.values)
-    && value.values.every((entry) => isRecord(entry) && isString(entry.label) && typeof entry.count === 'number');
-}
 
 function isRef(value: unknown): value is SqlDatabaseRef {
   return isRecord(value) && isString(value.name) && typeof value.exists === 'boolean' && typeof value.open === 'boolean';
@@ -297,7 +271,6 @@ export function isSqlPayload(value: unknown): value is SqlPayload {
     [value.databases, isListOf(isRef)],
     [value.exports, isListOf(isExport)],
     [value.grid, isOptional(isGrid)],
-    [value.stats, isOptional(isListOf(isStatsColumn))],
     [value.log, isListOf(isConsoleResult)],
     [value.error, isOptional(isString)],
     [value.pending, isOptional(isPending)],

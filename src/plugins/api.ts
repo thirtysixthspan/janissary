@@ -231,7 +231,6 @@ export type {
 // only through the `databases` topic, and typing that topic's data and actions needs these.
 export type {
   DatabaseCellView,
-  DatabaseColumnStatsView,
   DatabaseColumnView,
   DatabaseFilterOperator,
   ForeignKey,

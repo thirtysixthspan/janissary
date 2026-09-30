@@ -65,26 +65,22 @@ export function gridQueryOf(payload: SqlPayload) {
 /**
  * Plan a read the tab will make once it has been told what to do with the answer. `then` is what
  * makes a follow-up part of the request rather than a guess in the notification: a schema read picks
- * an object, a write re-runs the grid, a statistics read only fills the panel.
+ * an object, a write re-runs the grid.
  */
 export function planRequest(
-  action: 'schema' | 'query' | 'stats' | 'export' | 'create',
+  action: 'schema' | 'query' | 'export',
   payload: SqlPayload,
   options: { format?: 'csv' | 'json' } = {},
 ): SqlRequest {
   const id = newRequestId();
-  const pending: SqlPending = { id, followUp: action === 'create' ? 'schema' : action };
+  const pending: SqlPending = { id, followUp: action };
   const shared = { topic: 'databases', database: payload.database, requestId: id } as const;
   switch (action) {
-    case 'create':
     case 'schema': {
       return { pending, action: { ...shared, action } };
     }
     case 'query': {
       return { pending, action: { ...shared, action, query: gridQueryOf(payload) } };
-    }
-    case 'stats': {
-      return { pending, action: { ...shared, action, object: payload.object } };
     }
     case 'export': {
       return { pending, action: { ...shared, action, query: gridQueryOf(payload), format: options.format ?? 'csv' } };
