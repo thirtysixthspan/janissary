@@ -434,6 +434,23 @@ describe('TabManager open and activation', () => {
       vi.useRealTimers();
     }
   });
+  it('drops a pending unread dwell on dispose', () => {
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+      tm.tabs[1].hasUnread = true;
+      tm.setActiveTab(1);
+
+      // The release `Controller.shutdown` reaches through `MANAGER_DISPOSE_ORDER`.
+      tm.dispose();
+      vi.advanceTimersByTime(UNREAD_DWELL_MS * 2);
+
+      expect(tm.tabs[1].hasUnread).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('TabManager split panes', () => {

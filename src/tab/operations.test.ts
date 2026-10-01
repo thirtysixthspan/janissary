@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { closeTab, insertTab, moveTabToOtherPane, setDock, toggleCollapse } from './operations.js';
+import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setDock, toggleCollapse } from './operations.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
@@ -272,5 +272,62 @@ describe('insertTab', () => {
     const report = { label: 'quality', view: 'monitor' } as unknown as Tab;
     insertTab(port, report);
     expect(port.tabs.at(-1)?.pane).toBeUndefined();
+  });
+});
+
+// Each of these three operations re-selects a tab and wires its own call into the dwell, so the badge
+// has to survive the operation itself and go only once the interval is up. The two reorders carry the
+// *same* tab along to its new index rather than changing which one is selected, so what they prove is
+// that the dwell is re-armed for it; the close promotes a different tab outright. Read back through
+// `port.tabs` because `removeTabAt` maps every survivor into a fresh object.
+describe('operations that reselect a tab and the unread dwell', () => {
+  const strip = () => [tab('a'), tab('b'), tab('c')];
+
+  it('defers the badge of the tab a reorder carries to its new index', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(strip());
+      reorderTab(port, 1);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('defers the badge of the tab a reorder-to carries to its new index', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(strip());
+      reorderTabTo(port, 0, 2);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('defers the badge of the tab a close promotes to active', () => {
+    vi.useFakeTimers();
+    try {
+      // An unsplit strip, so the surviving tab's index is the one the port's own `activeTab` names.
+      // `makePort`'s `findIndex` closes over the pre-close array, which a split would make stale.
+      const port = makePort(strip());
+      closeTab(port, 0);
+      expect(port.tabs.map((t) => t.label)).toEqual(['b', 'c']);
+      expect(port.tabs[port.activeTab].label).toBe('b');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
